@@ -1,0 +1,31 @@
+# Machine-local configuration and credentials
+/.agents/
+/.aws/
+/.codex/
+/.docker/
+.env
+.env.*
+*.pem
+*.key
+
+# Python and analysis caches
+.venv/
+__pycache__/
+*.py[cod]
+.matplotlib/
+
+# Downloaded upstream repositories and archived experiments
+/harness/mini-swe-agent/
+/harness/SWE-agent/
+/docs/archive/
+
+# Reproducible downloads and generated measurements
+/harness/trace-replay/data/native/
+/harness/trace-replay/data/image*.json
+/harness/trace-replay/results/
+*.part
+*.log
+*.img
+*.qcow2
+*.tar
+*.tar.gz

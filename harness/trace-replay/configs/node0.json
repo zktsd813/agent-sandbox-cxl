@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "status": "shared_memory_budget_validated_full_run_pending",
+  "numa_node": 0,
+  "node_cpu_pool": "0-31",
+  "controller_cpus": "0-1",
+  "workload_cpus": "2-5",
+  "memory_nodes": "0",
+  "memory_limit_bytes": 17179869184,
+  "aggregate_memory_limit_bytes": 51539607552,
+  "swap_limit_bytes": 0,
+  "pids_limit": 4096,
+  "max_concurrent_sessions": 4,
+  "sampling": {
+    "cpu_interval_ms": 20,
+    "memory_interval_ms": 100,
+    "clock": "monotonic_with_actual_elapsed_interval"
+  },
+  "sample": {
+    "instance_id": "gin-gonic__gin-3741",
+    "trace_url": "https://raw.githubusercontent.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash/8dcca98587e7f698753903e3b1747eb5dc013cb1/trajs/gin-gonic__gin-3741.traj.json",
+    "trace_sha256": "5837d6d1dc2e53031ed8c4e11c122fd1f822097c0735c741ece201285947f997",
+    "image_reference_from_trace": "docker.io/swebench/sweb.eval.x86_64.gin-gonic_1776_gin-3741:latest",
+    "currently_observed_image": "docker.io/swebench/sweb.eval.x86_64.gin-gonic_1776_gin-3741@sha256:c134cc213a09fd5060dd3d3a70adde0eb6607750c111f397b163a306d0ee5a1e",
+    "image_digest_note": "Pinned from the public registry on 2026-10-07; the original collection digest was not recorded or verified.",
+    "cwd": "/testbed",
+    "interpreter": ["bash", "-c"],
+    "command_timeout_seconds": 60
+  }
+}
