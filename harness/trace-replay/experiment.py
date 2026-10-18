@@ -7,6 +7,8 @@ import json
 import math
 import os
 from pathlib import Path
+import select
+import signal
 import subprocess
 import sys
 import threading
@@ -14,6 +16,110 @@ import time
 import urllib.request
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+
+PERF_EVENTS = "{instructions,cycles,cache-references,cache-misses,cpu/event=0xd1,umask=0x20,name=retired_l3_misses/}"
+
+
+def build_numa_helper(root):
+    """Bind the payload after runc setup; movable-only CXL cannot hold kernel buffers."""
+    source = root / "numa-bind.c"
+    source.write_text(r'''#include <linux/mempolicy.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+
+int main(int argc, char **argv) {
+    if (argc < 3 || (strcmp(argv[1], "0") && strcmp(argv[1], "2"))) return 125;
+    unsigned long mask = 1UL << atoi(argv[1]), actual = 0;
+    int policy = 0;
+    if (syscall(SYS_set_mempolicy, MPOL_BIND, &mask, 8 * sizeof(mask)) ||
+        syscall(SYS_get_mempolicy, &policy, &actual, 8 * sizeof(actual), 0, 0) ||
+        policy != MPOL_BIND || actual != mask) {
+        perror("mini-numa-bind: memory policy verification failed");
+        return 125;
+    }
+    execvp(argv[2], &argv[2]);
+    perror("mini-numa-bind: exec failed");
+    return 127;
+}
+''')
+    binary = root / "numa-bind"
+    subprocess.run(["gcc", "-O2", "-static", str(source), "-o", str(binary)], check=True)
+    return str(binary)
+
+
+def read_perf(path):
+    rows = [json.loads(line) for line in path.read_text().splitlines() if line.startswith("{")]
+    totals = {row["event"]: row for row in rows if "interval" not in row}
+    required = ("instructions", "cycles", "cache-references", "cache-misses", "retired_l3_misses")
+    valid = all(event in totals and totals[event]["counter-value"] not in ("<not counted>", "<not supported>")
+                and float(totals[event]["pcnt-running"]) >= 99 for event in required)
+    valid = valid and all(float(row["pcnt-running"]) >= 99 for row in rows if row["event"] in required and row["event-runtime"] > 0)
+    counts = {key: int(float(row["counter-value"])) for key, row in totals.items()
+              if row["counter-value"] not in ("<not counted>", "<not supported>")}
+    instructions = counts.get("instructions", 0)
+    valid = valid and instructions > 0
+    return {"valid": valid, "counts": counts, "totals": totals,
+            "llc_mpki": 1000 * counts["cache-misses"] / instructions if valid else None,
+            "retired_load_l3_mpki": 1000 * counts["retired_l3_misses"] / instructions if valid else None,
+            "ipc": instructions / counts["cycles"] if valid and counts["cycles"] else None}, rows
+
+
+def perf_control(monitor, command):
+    os.write(monitor["control_fd"], (command + "\n").encode())
+    if not select.select([monitor["ack_fd"]], [], [], 15)[0]:
+        raise RuntimeError(f"perf did not acknowledge {command}; inspect {monitor['path']}")
+    if not os.read(monitor["ack_fd"], 1024).startswith(b"ack\n"):
+        raise RuntimeError("Invalid perf acknowledgement")
+
+
+def start_perf(session, arguments, clock, record, output):
+    path = output / f"{session['name']}.perf.jsonl"
+    monitor = {"path": path, "process": None, "origin_s": time.monotonic() - clock}
+    session["perf"] = monitor  # Keep partial setup reachable by cleanup.
+    for kind in ("control", "ack"):
+        fifo = path.with_suffix(f".{kind}.fifo")
+        os.mkfifo(fifo, 0o600)
+        monitor[kind + "_path"] = fifo
+        monitor[kind + "_fd"] = os.open(fifo, os.O_RDWR | os.O_NONBLOCK)
+    group = str(session["cgroup"].relative_to("/sys/fs/cgroup"))
+    command = ["sudo", "-n", str(arguments.perf_bin), "stat", "-a", "-C", arguments.workload_cpus,
+               "-e", PERF_EVENTS, "-G", group, "-j", "-I", str(arguments.perf_interval_ms),
+               "--summary", "--delay=-1", f"--control=fifo:{monitor['control_path']},{monitor['ack_path']}"]
+    with path.open("w") as stream:
+        monitor["origin_s"] = time.monotonic() - clock
+        monitor["process"] = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=stream)
+    perf_control(monitor, "enable")
+    record("perf_start", session=session["name"], origin_s=monitor["origin_s"], command=command)
+
+
+def stop_perf(session, record):
+    monitor = session.get("perf")
+    if not monitor:
+        return
+    try:
+        process = monitor["process"]
+        if process and process.poll() is None:
+            perf_control(monitor, "disable")
+            process.send_signal(signal.SIGINT)
+            process.wait(timeout=15)
+        result, _ = read_perf(monitor["path"])
+        record("perf_end", session=session["name"], **result)
+        if not result["valid"]:
+            raise RuntimeError("Invalid PMU measurement (missing counts or counter coverage below 99%)")
+    finally:
+        process = monitor["process"]
+        if process and process.poll() is None:
+            process.send_signal(signal.SIGINT)
+            process.wait(timeout=15)
+        for kind in ("control", "ack"):
+            if kind + "_fd" in monitor:
+                os.close(monitor[kind + "_fd"])
+            if kind + "_path" in monitor:
+                monitor[kind + "_path"].unlink(missing_ok=True)
 
 
 def download_traces(inventory_path, destination):
@@ -122,21 +228,22 @@ def container_group(name):
 
 
 def create_budget(config, name, image_id):
+    allowed_mems = "0,2" if config.get("numa_bind_helper") else ",".join(str(n) for n in sorted({0, int(config["memory_nodes"])}))
     docker("run", "-d", "--name", name, "--cgroup-parent", config["budget_unit"],
            "--cpuset-cpus", config["controller_cpus"], "--cpuset-mems", "0", "--memory", "64m",
            "--memory-swap", "64m", "--pids-limit", "64", "--network", "none", image_id, "sleep", "infinity")
     systemd("set-property", "--runtime", config["budget_unit"],
             f"MemoryMax={config['aggregate_memory_limit_bytes']}", "MemorySwapMax=0",
-            f"AllowedCPUs={config['node_cpu_pool']}", "AllowedMemoryNodes=0", "TasksMax=65536")
+            f"AllowedCPUs={config['node_cpu_pool']}", f"AllowedMemoryNodes={allowed_mems}", "TasksMax=65536")
     group = container_group(name).parent
     if int((group / "memory.max").read_text()) != config["aggregate_memory_limit_bytes"]:
         raise RuntimeError("Shared memory budget was not applied")
-    if (group / "memory.swap.max").read_text().strip() != "0" or (group / "cpuset.mems.effective").read_text().strip() != "0":
+    if (group / "memory.swap.max").read_text().strip() != "0" or cpu_ids((group / "cpuset.mems.effective").read_text().strip()) != cpu_ids(allowed_mems):
         raise RuntimeError("Shared NUMA/swap constraint was not applied")
     return group
 
 
-def resources(cgroup, memory=True):
+def resources(cgroup, memory=True, target_node=0):
     cpu = dict(line.split() for line in (cgroup / "cpu.stat").read_text().splitlines())
     result = {"cpu_usec": int(cpu["usage_usec"]), "throttled_usec": int(cpu.get("throttled_usec", 0))}
     if not memory:
@@ -149,13 +256,28 @@ def resources(cgroup, memory=True):
             numa[kind] = dict(node.split("=") for node in nodes)
     events = dict(line.split() for line in (cgroup / "memory.events").read_text().splitlines())
     pids = dict(line.split() for line in (cgroup / "pids.events").read_text().splitlines())
+    io = {}
+    for line in (cgroup / "io.stat").read_text().splitlines():
+        for item in line.split()[1:]:
+            key, value = item.split("=")
+            io[key] = io.get(key, 0) + int(value)
+    pressure = {}
+    for kind in ("cpu", "memory", "io"):
+        for line in (cgroup / f"{kind}.pressure").read_text().splitlines():
+            fields = dict(item.split("=") for item in line.split()[1:])
+            pressure[f"{kind}_pressure_{line.split()[0]}_usec"] = int(fields["total"])
     peak = cgroup / "memory.peak"
-    return {**result, "memory_bytes": int((cgroup / "memory.current").read_text()),
+    return {**result, **pressure, "io_read_bytes": io.get("rbytes", 0), "io_write_bytes": io.get("wbytes", 0),
+            "minor_and_major_faults": int(memory_stat.get("pgfault", 0)),
+            "major_faults": int(memory_stat.get("pgmajfault", 0)),
+            "memory_bytes": int((cgroup / "memory.current").read_text()),
             "peak_bytes": int(peak.read_text()) if peak.exists() else None,
             "anon_bytes": int(memory_stat["anon"]), "file_bytes": int(memory_stat["file"]),
             "anon_node0_bytes": int(numa["anon"].get("N0", 0)),
-            "anon_other_bytes": sum(int(size) for node, size in numa["anon"].items() if node != "N0"),
-            "file_other_bytes": sum(int(size) for node, size in numa["file"].items() if node != "N0"),
+            "anon_target_bytes": int(numa["anon"].get(f"N{target_node}", 0)),
+            "file_target_bytes": int(numa["file"].get(f"N{target_node}", 0)),
+            "anon_other_bytes": sum(int(size) for node, size in numa["anon"].items() if node != f"N{target_node}"),
+            "file_other_bytes": sum(int(size) for node, size in numa["file"].items() if node != f"N{target_node}"),
             "swap_bytes": int((cgroup / "memory.swap.current").read_text()),
             "oom_kill": int(events.get("oom_kill", 0)),
             "pids_current": int((cgroup / "pids.current").read_text()), "pids_limit_events": int(pids.get("max", 0))}
@@ -166,21 +288,28 @@ def prepare(trace, config, name, pull, image_id=None):
     if pull:
         docker("pull", image, timeout=1800)
     image_id = image_id or docker("image", "inspect", "--format", "{{.Id}}", image)
+    memory_mask = "0,2" if config.get("numa_bind_helper") else config["memory_nodes"]
+    extra, init = [], ["sleep", "infinity"]
+    if config.get("numa_bind_helper"):
+        extra = ["--mount", f"type=bind,src={config['numa_bind_helper']},dst=/opt/mini-numa-bind,readonly", "--cap-add", "SYS_NICE"]
+        init = ["/opt/mini-numa-bind", config["memory_nodes"], *init]
     docker("run", "-d", "--name", name, "--cgroup-parent", config["budget_unit"], "--cpuset-cpus", config["workload_cpus"],
-           "--cpuset-mems", config["memory_nodes"], "--memory", str(config["memory_limit_bytes"]),
+           "--cpuset-mems", memory_mask, "--memory", str(config["memory_limit_bytes"]),
            "--memory-swap", str(config["memory_limit_bytes"]), "--pids-limit", str(config["pids_limit"]),
-           "-w", trace["environment"]["cwd"], image_id, "sleep", "infinity")
+           "-w", trace["environment"]["cwd"], *extra, image_id, *init)
     cgroup = container_group(name)
     cpus = (cgroup / "cpuset.cpus.effective").read_text().strip()
     mems = (cgroup / "cpuset.mems.effective").read_text().strip()
-    if cpu_ids(cpus) != cpu_ids(config["workload_cpus"]) or mems != "0":
+    if cpu_ids(cpus) != cpu_ids(config["workload_cpus"]) or cpu_ids(mems) != cpu_ids(memory_mask):
         raise RuntimeError(f"Unexpected effective cpuset for {name}: {cpus}, {mems}")
     if (cgroup / "memory.swap.max").read_text().strip() != "0":
         raise RuntimeError(f"Swap was not disabled for {name}")
     for filename, value in (("memory.max", config["memory_limit_bytes"]), ("pids.max", config["pids_limit"])):
         if (cgroup / filename).read_text().strip() != str(value):
             raise RuntimeError(f"Unexpected {filename} for {name}")
-    return {"name": name, "trace": trace, "image_id": image_id, "cgroup": cgroup, "phase": "ready", "failure": None}
+    return {"name": name, "trace": trace, "image_id": image_id, "cgroup": cgroup,
+            "memory_node": int(config["memory_nodes"]), "numa_bind_helper": bool(config.get("numa_bind_helper")),
+            "phase": "ready", "failure": None}
 
 
 def sample(sessions, clock, intervals, stop, record, destination, keep_going=False):
@@ -194,7 +323,8 @@ def sample(sessions, clock, intervals, stop, record, destination, keep_going=Fal
                 if session["phase"] == "done" or session["failure"]:
                     continue
                 try:
-                    values = resources(session["cgroup"], memory=read_memory or session["name"] not in cached)
+                    values = resources(session["cgroup"], memory=read_memory or session["name"] not in cached,
+                                       target_node=session["memory_node"])
                     cached.setdefault(session["name"], {}).update(values)
                     row = {"elapsed_s": time.monotonic() - clock, "sample_cycle_s": started - clock,
                            "session": session["name"],
@@ -203,7 +333,8 @@ def sample(sessions, clock, intervals, stop, record, destination, keep_going=Fal
                         writer = csv.DictWriter(stream, fieldnames=row)
                         writer.writeheader()
                     writer.writerow(row)
-                    if row["anon_other_bytes"] or row["swap_bytes"] or row["oom_kill"] or row["pids_limit_events"]:
+                    wrong_node = row["anon_other_bytes"] and (not session["numa_bind_helper"] or row["phase"] in ("ready", "waiting"))
+                    if wrong_node or row["swap_bytes"] or row["oom_kill"] or row["pids_limit_events"]:
                         record("error", session=session["name"], error="NUMA/swap/OOM/PID constraint failure", resources=values)
                         session["failure"] = "NUMA/swap/OOM/PID constraint failure"
                         if not keep_going:
@@ -235,21 +366,25 @@ def remove_container(name, record):
 def run_action(command, log, timeout, session, stop):
     deadline = time.monotonic() + timeout
     with subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT) as process:
-        while process.poll() is None:
-            if stop.is_set() or session["failure"]:
-                process.kill()
-                process.wait()
-                raise RuntimeError(session["failure"] or "Replay interrupted")
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                process.kill()
-                process.wait()
-                return -1, True  # mini kills the CLI; the container command may survive.
-            try:
-                process.wait(timeout=min(.2, remaining))
-            except subprocess.TimeoutExpired:
-                pass
-        return process.returncode, False
+        try:
+            pidfd = os.pidfd_open(process.pid)
+        except ProcessLookupError:
+            return process.wait(), False
+        try:
+            while process.poll() is None:
+                if stop.is_set() or session["failure"]:
+                    process.kill()
+                    process.wait()
+                    raise RuntimeError(session["failure"] or "Replay interrupted")
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    process.kill()
+                    process.wait()
+                    return -1, True  # mini kills the CLI; the container command may survive.
+                select.select([pidfd], [], [], min(.2, remaining))
+            return process.returncode, False
+        finally:
+            os.close(pidfd)
 
 
 def replay(session, origin, clock, arguments, record, stop, output):
@@ -259,11 +394,18 @@ def replay(session, origin, clock, arguments, record, stop, output):
     command = ["docker", "exec", "-w", environment["cwd"]]
     for key, value in environment.get("env", {}).items():
         command.extend(["-e", f"{key}={value}"])
-    command.extend([session["name"], *environment["interpreter"]])
+    command.append(session["name"])
+    if session["numa_bind_helper"]:
+        command.extend(["/opt/mini-numa-bind", str(session["memory_node"])])
+    command.extend(environment["interpreter"])
     try:
+        if arguments.perf:
+            start_perf(session, arguments, clock, record, output)
         with (output / f"{session['name']}.log").open("w") as log:
             for index, batch in enumerate(trace["batches"]):
-                if arguments.schedule == "timestamps" or index == 0:
+                if arguments.schedule == "immediate":
+                    planned = time.monotonic()
+                elif arguments.schedule == "timestamps" or index == 0:
                     planned = clock + (offset + batch["at"] - trace["first"]) * arguments.scale
                 else:
                     planned = time.monotonic() + batch["gap"] * arguments.scale
@@ -276,7 +418,7 @@ def replay(session, origin, clock, arguments, record, stop, output):
                     return
                 session["phase"] = "running"
                 if index == 0:
-                    record("session_start", session=session["name"], initial_resources=resources(session["cgroup"]))
+                    record("session_start", session=session["name"], initial_resources=resources(session["cgroup"], target_node=session["memory_node"]))
                 record("batch_start", session=session["name"], batch=index,
                        planned_s=planned - clock, lateness_s=max(0, time.monotonic() - planned))
                 for action_index, action in enumerate(batch["actions"]):
@@ -288,6 +430,8 @@ def replay(session, origin, clock, arguments, record, stop, output):
                     record("command_start", session=session["name"], batch=index, action=action_index, started_s=started - clock)
                     returncode, timed_out = run_action([*command, action["command"]], log,
                                                        environment.get("timeout", 60), session, stop)
+                    if session["numa_bind_helper"] and returncode == 125:
+                        raise RuntimeError("NUMA binding or Docker execution failed; inspect the command log")
                     if timed_out:
                         log.write("\n[Docker CLI timeout; preserving mini's command semantics]\n")
                     expected = batch["observations"][action_index]["returncode"] if batch["observations"] else None
@@ -295,14 +439,14 @@ def replay(session, origin, clock, arguments, record, stop, output):
                            started_s=started - clock, duration_s=time.monotonic() - started,
                            returncode=returncode, expected_returncode=expected, timed_out=timed_out)
                 record("batch_end", session=session["name"], batch=index)
-            final = resources(session["cgroup"])
+            final = resources(session["cgroup"], target_node=session["memory_node"])
             if final["oom_kill"] or final["anon_other_bytes"] or final["swap_bytes"] or final["pids_limit_events"]:
                 raise RuntimeError(f"OOM or NUMA/swap constraint failure: {final}")
             record("session_end", session=session["name"], final_resources=final)
     except Exception as error:
         record("error", session=session["name"], error=str(error))
         try:
-            record("session_failed", session=session["name"], final_resources=resources(session["cgroup"]))
+            record("session_failed", session=session["name"], final_resources=resources(session["cgroup"], target_node=session["memory_node"]))
         except OSError:
             pass
         if not arguments.keep_going:
@@ -310,9 +454,160 @@ def replay(session, origin, clock, arguments, record, stop, output):
             raise
     finally:
         session["phase"] = "done"
-        if not remove_container(session["name"], record):
-            stop.set()
-            raise RuntimeError(f"Could not clean up {session['name']}")
+        try:
+            stop_perf(session, record)
+        finally:
+            if not remove_container(session["name"], record):
+                stop.set()
+                raise RuntimeError(f"Could not clean up {session['name']}")
+
+
+def replay_command(arguments, sources, output, memory_node, sequential=False):
+    command = [sys.executable, str(Path(__file__).resolve()), *sources,
+               "--config", str(arguments.config.resolve()), "--output", str(output),
+               "--schedule", arguments.schedule, "--starts", "together", "--scale", str(arguments.scale),
+               "--workload-cpus", arguments.workload_cpus, "--memory-node", str(memory_node), "--max-active", "1"]
+    if arguments.perf:
+        command += ["--perf", "--perf-bin", str(arguments.perf_bin.resolve()),
+                    "--perf-interval-ms", str(arguments.perf_interval_ms)]
+    if arguments.pull:
+        command.append("--pull")
+    if sequential:
+        command.append("--sequential")
+        if arguments.keep_going:
+            command.append("--keep-going")
+    return command
+
+
+def compare_memory(arguments, traces, config):
+    """Finish the complete DRAM suite before starting the complete CXL suite."""
+    from analyze import compare_runs
+
+    root = arguments.output.resolve()
+    root.mkdir(parents=True, exist_ok=False)
+    config["numa_bind_helper"] = build_numa_helper(root)
+    config["numa_bind_sha256"] = hashlib.sha256(Path(config["numa_bind_helper"]).read_bytes()).hexdigest()
+    config["memory_policy"] = "Every payload uses verified MPOL_BIND to memory_nodes. cpuset allows 0,2 so non-movable kernel/runtime buffers can use node 0."
+    references = sorted({task_image(trace, config) for trace in traces})
+    image_ids = docker("image", "inspect", "--format", "{{.Id}}", *references).splitlines()
+    if len(image_ids) != len(references):
+        raise RuntimeError("Image inventory inspection returned incomplete results")
+    config["image_ids"] = dict(zip(references, image_ids))
+    arguments.config = root / "config.json"
+    arguments.config.write_text(json.dumps(config, indent=2) + "\n")
+    campaign = {"state": "running", "started_unix": time.time(), "memory_nodes": [0, 2],
+                "schedule": "immediate", "traces": len(traces), "config": config,
+                "code_sha256": {name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
+                                for name in ("experiment.py", "analyze.py")}, "runs": []}
+    path = root / "comparison.json"
+
+    def save():
+        temporary = path.with_suffix(".json.part")
+        temporary.write_text(json.dumps(campaign, indent=2) + "\n")
+        temporary.replace(path)
+
+    save()
+    try:
+        for node in (0, 2):
+            for name, digest in campaign["code_sha256"].items():
+                if hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest() != digest:
+                    raise RuntimeError(f"Code changed during comparison: {name}")
+            run = {"memory_node": node, "directory": f"node{node}", "state": "running", "started_unix": time.time()}
+            campaign["runs"].append(run)
+            save()
+            print(f"START memory node {node}: {len(traces)} sequential traces without scheduling waits", flush=True)
+            command = replay_command(arguments, [trace["source"] for trace in traces], root / run["directory"], node, sequential=True)
+            with (root / "runner.log").open("a") as log:
+                result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT)
+            run.update(state="complete" if result.returncode == 0 else "failed",
+                       returncode=result.returncode, finished_unix=time.time())
+            save()
+            compare_runs(root)
+            if result.returncode:
+                raise RuntimeError(f"Memory node {node} suite failed; inspect {root / run['directory']}")
+        campaign["state"] = "complete"
+    except BaseException as error:
+        if campaign["runs"] and campaign["runs"][-1]["state"] == "running":
+            campaign["runs"][-1].update(state="interrupted", finished_unix=time.time())
+        campaign.update(state="interrupted" if isinstance(error, KeyboardInterrupt) else "failed", error=str(error))
+        raise
+    finally:
+        campaign["updated_unix"] = time.time()
+        save()
+        compare_runs(root)
+
+
+def sequential(arguments, traces, config):
+    """Run each trace in a separate child; wait for its cleanup before the next."""
+    from analyze import summarize, summarize_suite
+
+    if len({trace["name"] for trace in traces}) != len(traces):
+        raise ValueError("Sequential inputs must contain distinct traces")
+    config["max_concurrent_sessions"] = 1
+    root = arguments.output.resolve()
+    root.mkdir(parents=True, exist_ok=False)
+    suite = {"state": "running", "started_unix": time.time(), "mode": "sequential",
+             "schedule": arguments.schedule, "scale": arguments.scale, "perf": arguments.perf,
+             "source_span_sum_s": sum(t["last"] - t["first"] for t in traces),
+             "config": config, "attempts": [],
+             "code_sha256": {name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
+                             for name in ("experiment.py", "analyze.py")},
+             "traces": [{"name": t["name"], "source": t["source"], "sha256": t["sha256"]} for t in traces]}
+
+    def save():
+        temporary = root / "suite.json.part"
+        temporary.write_text(json.dumps(suite, indent=2) + "\n")
+        temporary.replace(root / "suite.json")
+
+    save()
+    try:
+        for index, trace in enumerate(traces, 1):
+            for name, digest in suite["code_sha256"].items():
+                if hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest() != digest:
+                    raise RuntimeError(f"Code changed during the experiment: {name}")
+            destination = root / f"{index:03d}-{Path(trace['name']).name}"
+            attempt = {"index": index, "trace": trace["name"], "directory": destination.name,
+                       "state": "running", "started_unix": time.time()}
+            suite["attempts"].append(attempt)
+            save()
+            summarize_suite(root)
+            print(f"[{index}/{len(traces)}] START {trace['name']}", flush=True)
+            command = replay_command(arguments, [trace["source"]], destination, int(config["memory_nodes"]))
+            # The child fails on an invalid session; the suite records it and can continue.
+            with (root / "runner.log").open("a") as log:
+                result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT)
+            attempt.update(state="finished" if result.returncode == 0 else "failed",
+                           returncode=result.returncode, finished_unix=time.time())
+            save()
+            if (destination / "manifest.json").exists():
+                child_manifest = json.loads((destination / "manifest.json").read_text())
+                run_id = child_manifest["config"]["budget_unit"].removeprefix("minireplay").removesuffix(".slice")
+                remaining = docker("ps", "-a", "--filter", "name=mini-replay", "--format", "{{.Names}}")
+                if any(run_id in name for name in remaining.splitlines()):
+                    raise RuntimeError("Previous containers were not removed; refusing to start the next trace")
+                summary = summarize(destination)
+                attempt["infrastructure_passed"] = summary["infrastructure_passed"]
+                attempt["mpki_valid"] = all(s.get("perf", {}).get("valid", False) for s in summary["sessions"].values())
+            save()
+            summarize_suite(root)
+            if (root.parent / "comparison.json").exists():
+                from analyze import compare_runs
+                compare_runs(root.parent)
+            print(f"[{index}/{len(traces)}] {attempt['state'].upper()} {trace['name']}", flush=True)
+            if result.returncode and not arguments.keep_going:
+                raise RuntimeError(f"Trace failed; inspect {destination}")
+            if arguments.perf and not attempt.get("mpki_valid"):
+                raise RuntimeError("Stopping suite because a required MPKI measurement failed")
+        suite["state"] = "complete"
+    except BaseException as error:
+        if suite["attempts"] and suite["attempts"][-1]["state"] == "running":
+            suite["attempts"][-1].update(state="interrupted", finished_unix=time.time())
+        suite.update(state="interrupted" if isinstance(error, KeyboardInterrupt) else "failed", error=str(error))
+        raise
+    finally:
+        suite["updated_unix"] = time.time()
+        save()
+        summarize_suite(root)
 
 
 def main():
@@ -321,13 +616,19 @@ def main():
     parser.add_argument("--download-traces", action="store_true", help="Download and verify the pinned trace inventory, then exit")
     parser.add_argument("--config", type=Path, default=Path(__file__).parent / "configs/node0.json")
     parser.add_argument("--output", type=Path, default=Path("harness/trace-replay/results"))
-    parser.add_argument("--schedule", choices=("timestamps", "gaps"), default="timestamps")
+    parser.add_argument("--schedule", choices=("timestamps", "gaps", "immediate"), default="timestamps")
     parser.add_argument("--starts", choices=("recorded", "together"), default="recorded")
     parser.add_argument("--scale", type=float, default=1.0)
     parser.add_argument("--setup", choices=("precreate", "on-arrival"), default="precreate")
     parser.add_argument("--max-active", type=int, help="Maximum resident containers; still subject to the memory budget")
     parser.add_argument("--workload-cpus", help="Shared workload CPU pool, restricted to node 0")
     parser.add_argument("--keep-going", action="store_true", help="Continue other sessions after an individual workload failure")
+    parser.add_argument("--sequential", action="store_true", help="Execute each trace once, with one workload container at a time")
+    parser.add_argument("--memory-node", type=int, choices=(0, 2), help="Workload memory NUMA node; controller remains on node 0")
+    parser.add_argument("--compare-memory", action="store_true", help="Run all traces on memory node 0, then node 2; requires immediate schedule")
+    parser.add_argument("--perf", action="store_true", help="Measure cgroup LLC MPKI using Intel Sapphire/Emerald Rapids PMU events")
+    parser.add_argument("--perf-bin", type=Path, default=Path("/usr/lib/linux-tools-6.8.0-146/perf"))
+    parser.add_argument("--perf-interval-ms", type=int, default=1000)
     parser.add_argument("--pull", action="store_true", help="Download missing task images before measurement")
     parser.add_argument("--plan", action="store_true", help="Inspect timing; do not contact Docker or execute actions")
     arguments = parser.parse_args()
@@ -342,8 +643,24 @@ def main():
     if not math.isfinite(arguments.scale) or arguments.scale <= 0:
         parser.error("--scale must be finite and positive")
     config = json.loads(arguments.config.read_text())
+    if config.get("numa_bind_helper") and hashlib.sha256(Path(config["numa_bind_helper"]).read_bytes()).hexdigest() != config["numa_bind_sha256"]:
+        parser.error("NUMA binding helper changed during the experiment")
+    if arguments.memory_node is not None:
+        config["memory_nodes"] = str(arguments.memory_node)
+    if arguments.compare_memory:
+        if arguments.schedule != "immediate":
+            parser.error("--compare-memory requires --schedule immediate")
+        arguments.sequential = True
     if arguments.workload_cpus:
         config["workload_cpus"] = arguments.workload_cpus
+    arguments.workload_cpus = config["workload_cpus"]
+    if arguments.perf_interval_ms < 100:
+        parser.error("Use a perf interval of at least 100 ms to limit measurement overhead")
+    if arguments.perf:
+        cpu = dict(line.split(":", 1) for line in Path("/proc/cpuinfo").read_text().split("\n\n")[0].splitlines() if ":" in line)
+        cpu = {key.strip(): value.strip() for key, value in cpu.items()}
+        if cpu.get("vendor_id") != "GenuineIntel" or int(cpu.get("model", 0)) not in (143, 207):
+            parser.error("The raw retired-load event must be verified for this CPU model before using --perf")
     if arguments.max_active is not None:
         if arguments.max_active < 1:
             parser.error("--max-active must be positive")
@@ -370,29 +687,59 @@ def main():
             "setup_note": "On-arrival creates containers at the first recorded action; original creation times are unknown.",
             "timeout_semantics": "Like mini: kill the Docker CLI, record -1 and continue; its container command may survive.",
             "config": config, "traces": [{key: value for key, value in trace.items() if key != "batches"} for trace in traces]}
+    if arguments.perf:
+        plan["perf"] = {"events": PERF_EVENTS, "interval_ms": arguments.perf_interval_ms,
+                        "scope": "Container cgroup on workload CPUs, user and kernel; excludes container setup/teardown",
+                        "llc_mpki": "1000 * LONGEST_LAT_CACHE.MISS (event=0x2e,umask=0x41) / instructions",
+                        "retired_load_l3_mpki": "1000 * MEM_LOAD_RETIRED.L3_MISS (event=0xd1,umask=0x20) / instructions",
+                        "event_reference": "https://perfmon-events.intel.com/platforms/emeraldrapids/core-events/core/",
+                        "minimum_counter_running_percent": 99,
+                        "binary": str(arguments.perf_bin),
+                        "version": subprocess.check_output([str(arguments.perf_bin), "--version"], text=True).strip()}
+    if arguments.sequential:
+        plan.update(mode="sequential", observed_window_peak=1,
+                    observed_schedule_span_s=sum(t["last"] - t["first"] for t in traces) * arguments.scale,
+                    clock_assumption="Reset each trace clock; no inter-trace wall-clock schedule is preserved.")
+    if arguments.schedule == "immediate":
+        plan["clock_assumption"] = "No timestamp/gap waits. Execute commands in recorded order as soon as the preceding command returns."
+        plan["observed_schedule_span_s"] = None
+    plan["latency_definition"] = "Host monotonic elapsed time from launching Docker exec to its completion; includes Docker control-plane overhead."
     if arguments.plan:
         print(json.dumps(plan, ensure_ascii=False, indent=2))
         return
-    if arguments.setup == "precreate" and len(traces) > config["max_concurrent_sessions"]:
+    if not arguments.sequential and arguments.setup == "precreate" and len(traces) > config["max_concurrent_sessions"]:
         parser.error("Too many resident sessions for the configured budget")
     available = cpu_ids(Path(f"/sys/devices/system/node/node{config['numa_node']}/cpulist").read_text().strip())
-    if config["numa_node"] != 0 or config["memory_nodes"] != "0" or not cpu_ids(config["workload_cpus"]) <= available:
-        parser.error("This baseline requires node 0 CPUs and memory")
+    if config["numa_node"] != 0 or config["memory_nodes"] not in ("0", "2") or not cpu_ids(config["workload_cpus"]) <= available:
+        parser.error("This experiment requires node 0 CPUs and memory node 0 or 2")
     if not cpu_ids(config["controller_cpus"]) <= available:
         parser.error("Controller CPUs must also belong to node 0")
     if cpu_ids(config["controller_cpus"]) & cpu_ids(config["workload_cpus"]):
         parser.error("Controller and workload CPUs must be disjoint")
-    meminfo = Path("/sys/devices/system/node/node0/meminfo").read_text().splitlines()
-    free_bytes = next(int(line.split()[-2]) * 1024 for line in meminfo if "MemFree:" in line)
+    meminfo = Path(f"/sys/devices/system/node/node{config['memory_nodes']}/meminfo").read_text().splitlines()
+    node_memory = {line.split()[-3].rstrip(":"): int(line.split()[-2]) * 1024 for line in meminfo if line.endswith(" kB")}
+    free_bytes = node_memory["MemFree"]
+    # Keep 20% headroom; clean inactive file cache is reclaimable, slab only partly so.
+    reclaimable = max(0, node_memory["Inactive(file)"] - node_memory["Shmem"] - node_memory["Dirty"] - node_memory["Writeback"])
+    safe_available = free_bytes + reclaimable + node_memory.get("SReclaimable", 0) // 2
     budget_sessions = min(len(traces), config["max_concurrent_sessions"])
-    config["aggregate_memory_limit_bytes"] = min(config["aggregate_memory_limit_bytes"], int(free_bytes * .8) // 4096 * 4096)
+    config["aggregate_memory_limit_bytes"] = min(config["aggregate_memory_limit_bytes"], int(safe_available * .8) // 4096 * 4096)
     if config["memory_limit_bytes"] > config["aggregate_memory_limit_bytes"]:
         parser.error("Shared budget is smaller than one session's limit")
-    plan["node0_free_bytes_at_check"] = free_bytes
+    plan["memory_node_free_bytes_at_check"] = free_bytes
+    plan["memory_node_available_budget_estimate_bytes"] = safe_available
+    plan["memory_budget_method"] = "80% of (MemFree + clean inactive file pages minus shmem + half SReclaimable); estimate, not kernel MemAvailable"
+    plan["host_pressure_at_start"] = {kind: Path(f"/proc/pressure/{kind}").read_text() for kind in ("cpu", "memory", "io")}
     if not os.environ.get("MINI_REPLAY_BOUND"):
         os.execvpe("numactl", ["numactl", f"--physcpubind={config['controller_cpus']}", "--membind=0",
                               sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]],
                    {**os.environ, "MINI_REPLAY_BOUND": "1"})
+    if arguments.compare_memory:
+        compare_memory(arguments, traces, config)
+        return
+    if arguments.sequential:
+        sequential(arguments, traces, config)
+        return
     if docker("info", "--format", "{{.CgroupVersion}}") != "2":
         raise RuntimeError("cgroup v2 is required")
     subprocess.run(["sudo", "-n", "true"], check=True)
@@ -402,7 +749,7 @@ def main():
         if image not in images:
             if arguments.pull:
                 docker("pull", image, timeout=1800)
-            images[image] = docker("image", "inspect", "--format", "{{.Id}}", image)
+            images[image] = config.get("image_ids", {}).get(image) or docker("image", "inspect", "--format", "{{.Id}}", image)
     run_id = uuid.uuid4().hex
     config["budget_unit"] = f"minireplay{run_id}.slice"
     budget_name = f"mini-replay-budget-{run_id}"
@@ -499,4 +846,8 @@ def main():
 
 
 if __name__ == "__main__":
+    def interrupt(signum, frame):
+        raise KeyboardInterrupt()
+
+    signal.signal(signal.SIGTERM, interrupt)
     main()

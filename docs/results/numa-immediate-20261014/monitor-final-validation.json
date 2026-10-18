@@ -1,0 +1,495 @@
+{
+  "checked_unix": 1791994606.3076718,
+  "campaign_state": "complete",
+  "runs": [
+    {
+      "memory_node": 0,
+      "directory": "node0",
+      "state": "complete",
+      "started_unix": 1791954320.0391703,
+      "returncode": 0,
+      "finished_unix": 1791973030.0386503
+    },
+    {
+      "memory_node": 2,
+      "directory": "node2",
+      "state": "complete",
+      "started_unix": 1791973030.0497348,
+      "returncode": 0,
+      "finished_unix": 1791994500.2949991
+    }
+  ],
+  "comparison": {
+    "state": "complete",
+    "selected_per_run": 264,
+    "finished_node0": 264,
+    "finished_node2": 264,
+    "paired": 264,
+    "eligible_pairs": 211,
+    "excluded_pairs": 53,
+    "trace_latency_ratio_cxl_over_dram": {
+      "max": 1.7984839062582636,
+      "p50": 1.1115884410803532,
+      "p95": 1.427897001684642,
+      "p99": 1.5374597347849939
+    },
+    "geomean_trace_latency_ratio": 1.131499310689582,
+    "total_paired_trace_latency_ratio": 1.1737950677372417,
+    "eligible_commands": 10807,
+    "command_latency_ratio_cxl_over_dram": {
+      "max": 3.539276645658915,
+      "p50": 1.0184376598628864,
+      "p95": 1.214547789591557,
+      "p99": 1.474295709024904
+    }
+  },
+  "nodes": {
+    "0": {
+      "suite_state": "complete",
+      "attempts": 264,
+      "attempt_states": {
+        "finished": 264
+      },
+      "commands": 13600,
+      "expected_commands": 13600,
+      "source_statuses": {
+        "Submitted": 260,
+        "LimitsExceeded": 3,
+        "InternalServerError": 1
+      },
+      "infra_bad": [],
+      "pmu_bad": [],
+      "placement_bad": [],
+      "resource_bad": [],
+      "source_submission_bad": [],
+      "source_submission_unverifiable": [
+        "prometheus__prometheus-9248",
+        "apache__lucene-12022",
+        "gohugoio__hugo-12448",
+        "google__gson-2479"
+      ],
+      "minimum_final_counter_running_percent": 100.0,
+      "timeout_traces": 39,
+      "timeout_commands": 74,
+      "timeouts_by_trace": {
+        "phpoffice__phpspreadsheet-4114": 1,
+        "phpoffice__phpspreadsheet-4186": 1,
+        "tokio-rs__axum-682": 1,
+        "php-cs-fixer__php-cs-fixer-8256": 1,
+        "phpoffice__phpspreadsheet-3903": 1,
+        "fmtlib__fmt-2317": 1,
+        "apache__druid-15402": 1,
+        "gohugoio__hugo-12343": 1,
+        "fmtlib__fmt-2457": 1,
+        "fmtlib__fmt-3750": 1,
+        "prometheus__prometheus-15142": 1,
+        "fluent__fluentd-3631": 1,
+        "javaparser__javaparser-4561": 1,
+        "fluent__fluentd-3328": 1,
+        "prometheus__prometheus-14861": 1,
+        "tokio-rs__axum-734": 1,
+        "prometheus__prometheus-11859": 1,
+        "phpoffice__phpspreadsheet-3940": 1,
+        "axios__axios-6539": 1,
+        "reactivex__rxjava-7597": 3,
+        "prometheus__prometheus-12874": 2,
+        "fluent__fluentd-3608": 2,
+        "fluent__fluentd-3466": 1,
+        "fluent__fluentd-3640": 2,
+        "fmtlib__fmt-2310": 1,
+        "apache__lucene-13170": 4,
+        "fmtlib__fmt-3863": 1,
+        "apache__lucene-12212": 3,
+        "preactjs__preact-4245": 1,
+        "apache__lucene-12626": 2,
+        "apache__lucene-11760": 4,
+        "apache__druid-14092": 1,
+        "facebook__docusaurus-9897": 1,
+        "apache__lucene-12196": 6,
+        "apache__lucene-13494": 5,
+        "apache__lucene-13301": 5,
+        "apache__druid-14136": 1,
+        "apache__lucene-13704": 5,
+        "apache__lucene-12022": 5
+      },
+      "llc_mpki_median": 1.0802339766838738,
+      "llc_mpki_weighted": 1.5356823650404892,
+      "retired_load_l3_mpki_median": 0.09297221752846574,
+      "retired_load_l3_mpki_weighted": 0.1482898531742159,
+      "total_cpu_s": 51942.415782000004,
+      "total_payload_duration_s": 17438.83726133965,
+      "maximum_memory_gib": 18.084148406982422,
+      "maximum_pids": 5138,
+      "eligible_llc_mpki_median": 1.0179085951417375
+    },
+    "2": {
+      "suite_state": "complete",
+      "attempts": 264,
+      "attempt_states": {
+        "finished": 264
+      },
+      "commands": 13600,
+      "expected_commands": 13600,
+      "source_statuses": {
+        "Submitted": 260,
+        "LimitsExceeded": 3,
+        "InternalServerError": 1
+      },
+      "infra_bad": [],
+      "pmu_bad": [],
+      "placement_bad": [],
+      "resource_bad": [],
+      "source_submission_bad": [],
+      "source_submission_unverifiable": [
+        "prometheus__prometheus-9248",
+        "apache__lucene-12022",
+        "gohugoio__hugo-12448",
+        "google__gson-2479"
+      ],
+      "minimum_final_counter_running_percent": 100.0,
+      "timeout_traces": 50,
+      "timeout_commands": 94,
+      "timeouts_by_trace": {
+        "phpoffice__phpspreadsheet-4114": 1,
+        "phpoffice__phpspreadsheet-4186": 1,
+        "tokio-rs__axum-682": 1,
+        "phpoffice__phpspreadsheet-3463": 1,
+        "php-cs-fixer__php-cs-fixer-8256": 1,
+        "fmtlib__fmt-3248": 1,
+        "phpoffice__phpspreadsheet-3903": 1,
+        "tokio-rs__tokio-7139": 1,
+        "javaparser__javaparser-4538": 1,
+        "fmtlib__fmt-2317": 1,
+        "apache__druid-15402": 2,
+        "gohugoio__hugo-12343": 1,
+        "fmtlib__fmt-2457": 1,
+        "phpoffice__phpspreadsheet-3469": 1,
+        "fmtlib__fmt-3750": 1,
+        "prometheus__prometheus-15142": 1,
+        "fmtlib__fmt-3901": 1,
+        "fluent__fluentd-3631": 1,
+        "javaparser__javaparser-4561": 1,
+        "fluent__fluentd-3328": 1,
+        "babel__babel-13928": 1,
+        "prometheus__prometheus-14861": 1,
+        "immutable-js__immutable-js-2005": 3,
+        "tokio-rs__axum-734": 2,
+        "prometheus__prometheus-11859": 1,
+        "phpoffice__phpspreadsheet-3940": 1,
+        "axios__axios-6539": 1,
+        "reactivex__rxjava-7597": 4,
+        "tokio-rs__axum-691": 1,
+        "prometheus__prometheus-12874": 2,
+        "fluent__fluentd-3608": 2,
+        "fluent__fluentd-3466": 1,
+        "fluent__fluentd-3640": 2,
+        "fmtlib__fmt-2310": 1,
+        "apache__lucene-13170": 4,
+        "fmtlib__fmt-3863": 1,
+        "apache__lucene-12212": 6,
+        "preactjs__preact-4245": 1,
+        "apache__lucene-12626": 5,
+        "tokio-rs__axum-1119": 1,
+        "apache__lucene-11760": 4,
+        "apache__druid-14092": 1,
+        "facebook__docusaurus-9897": 1,
+        "astral-sh__ruff-15309": 1,
+        "apache__lucene-12196": 7,
+        "apache__lucene-13494": 2,
+        "apache__lucene-13301": 5,
+        "apache__druid-14136": 1,
+        "apache__lucene-13704": 5,
+        "apache__lucene-12022": 5
+      },
+      "llc_mpki_median": 1.031888844967116,
+      "llc_mpki_weighted": 1.4835616180595466,
+      "retired_load_l3_mpki_median": 0.03810208983108669,
+      "retired_load_l3_mpki_weighted": 0.057940210595027145,
+      "total_cpu_s": 76273.203502,
+      "total_payload_duration_s": 20124.877576450817,
+      "maximum_memory_gib": 20.273441314697266,
+      "maximum_pids": 5079,
+      "eligible_llc_mpki_median": 0.9780675243439364
+    }
+  },
+  "code_hashes_unchanged": {
+    "experiment.py": true,
+    "analyze.py": true
+  },
+  "excluded_by_reason": {
+    "timeout-censored latency": 29,
+    "different return codes": 3,
+    "different return codes; timeout-censored latency": 21
+  },
+  "excluded_pairs": [
+    {
+      "trace": "phpoffice__phpspreadsheet-4114",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "preactjs__preact-2927",
+      "reason": "different return codes"
+    },
+    {
+      "trace": "phpoffice__phpspreadsheet-4186",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "tokio-rs__axum-682",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "phpoffice__phpspreadsheet-3463",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "php-cs-fixer__php-cs-fixer-8256",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "fmtlib__fmt-3248",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "preactjs__preact-3062",
+      "reason": "different return codes"
+    },
+    {
+      "trace": "phpoffice__phpspreadsheet-3903",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "tokio-rs__tokio-7139",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "javaparser__javaparser-4538",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "fmtlib__fmt-2317",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "apache__druid-15402",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "gohugoio__hugo-12343",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "fmtlib__fmt-2457",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "phpoffice__phpspreadsheet-3469",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "fmtlib__fmt-3750",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "prometheus__prometheus-15142",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "fmtlib__fmt-3901",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "fluent__fluentd-3631",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "javaparser__javaparser-4561",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "fluent__fluentd-3328",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "babel__babel-13928",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "prometheus__prometheus-14861",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "immutable-js__immutable-js-2005",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "tokio-rs__axum-734",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "prometheus__prometheus-11859",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "phpoffice__phpspreadsheet-3940",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "axios__axios-6539",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "reactivex__rxjava-7597",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "tokio-rs__axum-691",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "prometheus__prometheus-12874",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "fluent__fluentd-3608",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "fluent__fluentd-3466",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "fluent__fluentd-3640",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "fmtlib__fmt-2310",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "caddyserver__caddy-5995",
+      "reason": "different return codes"
+    },
+    {
+      "trace": "apache__lucene-13170",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "fmtlib__fmt-3863",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "apache__lucene-12212",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "preactjs__preact-4245",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "apache__lucene-12626",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "tokio-rs__axum-1119",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "apache__lucene-11760",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "apache__druid-14092",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "facebook__docusaurus-9897",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "astral-sh__ruff-15309",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "apache__lucene-12196",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "apache__lucene-13494",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "apache__lucene-13301",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "apache__druid-14136",
+      "reason": "timeout-censored latency"
+    },
+    {
+      "trace": "apache__lucene-13704",
+      "reason": "different return codes; timeout-censored latency"
+    },
+    {
+      "trace": "apache__lucene-12022",
+      "reason": "timeout-censored latency"
+    }
+  ],
+  "timeout_pair_sets": {
+    "both": [
+      "apache__druid-14092",
+      "apache__druid-14136",
+      "apache__druid-15402",
+      "apache__lucene-11760",
+      "apache__lucene-12022",
+      "apache__lucene-12196",
+      "apache__lucene-12212",
+      "apache__lucene-12626",
+      "apache__lucene-13170",
+      "apache__lucene-13301",
+      "apache__lucene-13494",
+      "apache__lucene-13704",
+      "axios__axios-6539",
+      "facebook__docusaurus-9897",
+      "fluent__fluentd-3328",
+      "fluent__fluentd-3466",
+      "fluent__fluentd-3608",
+      "fluent__fluentd-3631",
+      "fluent__fluentd-3640",
+      "fmtlib__fmt-2310",
+      "fmtlib__fmt-2317",
+      "fmtlib__fmt-2457",
+      "fmtlib__fmt-3750",
+      "fmtlib__fmt-3863",
+      "gohugoio__hugo-12343",
+      "javaparser__javaparser-4561",
+      "php-cs-fixer__php-cs-fixer-8256",
+      "phpoffice__phpspreadsheet-3903",
+      "phpoffice__phpspreadsheet-3940",
+      "phpoffice__phpspreadsheet-4114",
+      "phpoffice__phpspreadsheet-4186",
+      "preactjs__preact-4245",
+      "prometheus__prometheus-11859",
+      "prometheus__prometheus-12874",
+      "prometheus__prometheus-14861",
+      "prometheus__prometheus-15142",
+      "reactivex__rxjava-7597",
+      "tokio-rs__axum-682",
+      "tokio-rs__axum-734"
+    ],
+    "dram_only": [],
+    "cxl_only": [
+      "astral-sh__ruff-15309",
+      "babel__babel-13928",
+      "fmtlib__fmt-3248",
+      "fmtlib__fmt-3901",
+      "immutable-js__immutable-js-2005",
+      "javaparser__javaparser-4538",
+      "phpoffice__phpspreadsheet-3463",
+      "phpoffice__phpspreadsheet-3469",
+      "tokio-rs__axum-1119",
+      "tokio-rs__axum-691",
+      "tokio-rs__tokio-7139"
+    ]
+  }
+}

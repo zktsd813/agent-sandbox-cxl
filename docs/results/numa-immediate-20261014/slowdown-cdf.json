@@ -1,0 +1,26 @@
+{
+  "source": "paired-traces.csv",
+  "included_pairs": 211,
+  "excluded_pairs": 53,
+  "excluded_by_reason": {
+    "timeout-censored latency": 29,
+    "different return codes": 3,
+    "different return codes; timeout-censored latency": 21
+  },
+  "definition": "100 * (CXL trace elapsed time / DRAM trace elapsed time - 1)",
+  "geometric_mean_increase_percent": 13.14993106895821,
+  "total_elapsed_time_increase_percent": 17.379506773724174,
+  "percentiles_increase_percent": {
+    "max": 79.84839062582635,
+    "p50": 11.158844108035314,
+    "p95": 42.78970016846418,
+    "p99": 53.74597347849938
+  },
+  "above_threshold_counts": {
+    "0": 193,
+    "10": 113,
+    "20": 66,
+    "30": 35,
+    "50": 4
+  }
+}

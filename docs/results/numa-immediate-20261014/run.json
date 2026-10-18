@@ -1,0 +1,1118 @@
+{
+  "status": "complete",
+  "dataset_inventory": "../../../harness/trace-replay/data/inventory.json",
+  "schedule": "immediate",
+  "runs": [
+    {
+      "memory_node": 0,
+      "directory": "node0",
+      "state": "complete",
+      "started_unix": 1791954320.0391703,
+      "returncode": 0,
+      "finished_unix": 1791973030.0386503
+    },
+    {
+      "memory_node": 2,
+      "directory": "node2",
+      "state": "complete",
+      "started_unix": 1791973030.0497348,
+      "returncode": 0,
+      "finished_unix": 1791994500.2949991
+    }
+  ],
+  "config": {
+    "schema_version": 1,
+    "status": "immediate_dram_cxl_comparison",
+    "numa_node": 0,
+    "node_cpu_pool": "0-31",
+    "controller_cpus": "0-1",
+    "workload_cpus": "2-31",
+    "memory_nodes": "0",
+    "memory_limit_bytes": 34359738368,
+    "aggregate_memory_limit_bytes": 35433480192,
+    "swap_limit_bytes": 0,
+    "pids_limit": 16384,
+    "max_concurrent_sessions": 1,
+    "sampling": {
+      "cpu_interval_ms": 20,
+      "memory_interval_ms": 100,
+      "clock": "monotonic_with_actual_elapsed_interval"
+    },
+    "memory_policy": "Every payload uses verified MPOL_BIND to memory_nodes. cpuset allows 0,2 so non-movable kernel/runtime buffers can use node 0."
+  },
+  "measured_code_sha256": {
+    "experiment.py": "0fd0566abaa329339a01502db189f3a9c80a5daab881b0ebf5ac644432c8886e",
+    "analyze.py": "08fc4587dd0cdbcb67636f8568efb9f02c75912f8092c91cf35cf472e9533e33"
+  },
+  "kernel": "6.6.0-rc6-niagara-lreclaim-20260923",
+  "perf": {
+    "events": "{instructions,cycles,cache-references,cache-misses,cpu/event=0xd1,umask=0x20,name=retired_l3_misses/}",
+    "interval_ms": 1000,
+    "scope": "Container cgroup on workload CPUs, user and kernel; excludes container setup/teardown",
+    "llc_mpki": "1000 * LONGEST_LAT_CACHE.MISS (event=0x2e,umask=0x41) / instructions",
+    "retired_load_l3_mpki": "1000 * MEM_LOAD_RETIRED.L3_MISS (event=0xd1,umask=0x20) / instructions",
+    "event_reference": "https://perfmon-events.intel.com/platforms/emeraldrapids/core-events/core/",
+    "minimum_counter_running_percent": 99,
+    "binary": "/usr/lib/linux-tools-6.8.0-146/perf",
+    "version": "perf version 6.8.12"
+  },
+  "trace_order": [
+    {
+      "name": "laravel__framework-53949",
+      "sha256": "dddc30b6c920e5dd2d31f4301c68455f9545d833db8bb6091007f8dd2a9152bc"
+    },
+    {
+      "name": "gin-gonic__gin-3741",
+      "sha256": "5837d6d1dc2e53031ed8c4e11c122fd1f822097c0735c741ece201285947f997"
+    },
+    {
+      "name": "prometheus__prometheus-13845",
+      "sha256": "881aaa3f4f2a2d6fca468b3e3539b1ecd51d4a6f3fd9a4988914b00e1398f727"
+    },
+    {
+      "name": "gin-gonic__gin-4003",
+      "sha256": "3df6e5aa5771c61cc268025b4a6cb041a82ae4900b5856a65de95694581b3158"
+    },
+    {
+      "name": "preactjs__preact-3454",
+      "sha256": "5c44ffcb98f05436a53f4f4a890a3b3246df41ea57a7faebd145aa7ff6940948"
+    },
+    {
+      "name": "laravel__framework-51890",
+      "sha256": "ced7ed1f760c6dae55e119e724075ae14f6743b5ca46d9a0977d9abba69e4323"
+    },
+    {
+      "name": "laravel__framework-48636",
+      "sha256": "75bbe86f4f68b9a589ec760222cc36e7da7341b44085201286475efc73690a94"
+    },
+    {
+      "name": "jqlang__jq-2598",
+      "sha256": "531d2bbc40a499d10980a05ae18bcd53e2c70dc521f9e5e0beffcf6f93dc9c46"
+    },
+    {
+      "name": "jqlang__jq-2728",
+      "sha256": "1d30c0153511d97f592cc5511173a8b391ea818ae66925eb6ca8d48083772c78"
+    },
+    {
+      "name": "fluent__fluentd-4598",
+      "sha256": "0bdc1fcb3e4daabed4251c6cb91f221d53c0dcf7a8d0dcfb624f297936ccc389"
+    },
+    {
+      "name": "gohugoio__hugo-12768",
+      "sha256": "75a6eb5c18d8bcb2794865af18575d9fd0693c6ea5764bb12c9f7d2a04dcb79b"
+    },
+    {
+      "name": "laravel__framework-52680",
+      "sha256": "9b5937510fe0e7c8f3b3a680a7dc2131252f3d0bba26b04a092b5080e2b728e3"
+    },
+    {
+      "name": "rubocop__rubocop-13503",
+      "sha256": "d287efdeaa37f2769cc58e9657e2bb45abfbabd2eea751ddd5275486ec8f43fc"
+    },
+    {
+      "name": "micropython__micropython-13039",
+      "sha256": "2d7e8554e2c813758727a7bea75588a99a473f9d2cf70ec8280856a9d0519f84"
+    },
+    {
+      "name": "prometheus__prometheus-10633",
+      "sha256": "6bc597cc4024d48dc1ed3dd1d2c03799e0c2b23e834d175abe18475fcbd7d7ce"
+    },
+    {
+      "name": "rubocop__rubocop-13705",
+      "sha256": "aaee0d7f5968ae3b2bff496ad2eede480e74e2860e505507b841db75ab1772f5"
+    },
+    {
+      "name": "jordansissel__fpm-1850",
+      "sha256": "1e77a7e22f6f8568ebdb7aaa28dbbe61a9173d5e71f944cd7e02ff58f3bcfcbe"
+    },
+    {
+      "name": "fastlane__fastlane-19765",
+      "sha256": "cff8fedda35f4427ac5b468c3525daf5b6da2d06b836e8e478b638b0b938a68f"
+    },
+    {
+      "name": "phpoffice__phpspreadsheet-3570",
+      "sha256": "c288521aa585024cc1076a8554e8b13584615a595e9b7cb162fdf6a8f99ad51a"
+    },
+    {
+      "name": "gin-gonic__gin-2121",
+      "sha256": "a44884fede1df1b245fd95750cd9c6a8f512e7f68ed957d2b2442e74757de4a0"
+    },
+    {
+      "name": "gin-gonic__gin-2755",
+      "sha256": "9f032bec07aa4bafe6635903b5d66060cd4311f9fa1761ffac09ba7f85148c42"
+    },
+    {
+      "name": "rubocop__rubocop-13479",
+      "sha256": "8468a3471b46ebfc674cf839ca09a5d70edbd6f2c6724aa7fe7ffaf61987a109"
+    },
+    {
+      "name": "laravel__framework-52684",
+      "sha256": "33b1bcbf28dcdc0d0ffb00caf60034bad19a53f5894c6a5f3b8dcd9a671222cc"
+    },
+    {
+      "name": "tokio-rs__tokio-4898",
+      "sha256": "160174b8e50d0e2e5f19d36f4a3432743a2a43530e95a011938c7123adc4b7c9"
+    },
+    {
+      "name": "php-cs-fixer__php-cs-fixer-8331",
+      "sha256": "bbcf3a9cd07fc7d3c324f5c7d3338309ff88e0b126a3bd91e9e05ac62397a022"
+    },
+    {
+      "name": "google__gson-2134",
+      "sha256": "8449be21d85be20220f6f60fa370d61f5902ff6014906513e6036d9d78b80de0"
+    },
+    {
+      "name": "fastlane__fastlane-20958",
+      "sha256": "5a47f75e8c943472d3de4738f181f1457c9af2f55584917cc4e1ca7f8c66dc1c"
+    },
+    {
+      "name": "laravel__framework-53914",
+      "sha256": "3b33d296db05cb446fdbc0d821d3775a03190f814e523d2d642eca4b9f46ccdb"
+    },
+    {
+      "name": "google__gson-1100",
+      "sha256": "fc212cbbd6959cb46e8541a320a13d92000d4dd8cb48804474d07989c498d8d3"
+    },
+    {
+      "name": "tokio-rs__tokio-6838",
+      "sha256": "34119df234a9a62ce0c7b2978efeb6e6eff710d18d44cca36125d90fcb4e8318"
+    },
+    {
+      "name": "fastlane__fastlane-20642",
+      "sha256": "7f6c330dd0238ab1bb6c24b98ea2375decf1c1f84dc87b363e533414ef0c57c1"
+    },
+    {
+      "name": "fluent__fluentd-3641",
+      "sha256": "6378f8e053df073e25327d5d47abb4b48ca6d3521a59983f121accdb1e7b394d"
+    },
+    {
+      "name": "fastlane__fastlane-19304",
+      "sha256": "574245d21a73e0f3165e9a24b76301ecba2be238959f01edf58a60f9dd59ca47"
+    },
+    {
+      "name": "phpoffice__phpspreadsheet-3659",
+      "sha256": "41930ec61db04f5c39917561304973f4c41f537d7bccc28042c5e6d5d00e1729"
+    },
+    {
+      "name": "redis__redis-10764",
+      "sha256": "465a0070225256108e755ddbc92796717a01b94b312dddfd3ef9375f2e799141"
+    },
+    {
+      "name": "laravel__framework-53696",
+      "sha256": "4c1b6a820646ad9fe0083b63dfc4ceab13f6ca7ee85bc3c8be3c6ba740e1647f"
+    },
+    {
+      "name": "laravel__framework-46234",
+      "sha256": "6d7d055882515af21faada8fc4d47a9b65f7589ceca1a20d5627fde709b65ace"
+    },
+    {
+      "name": "tokio-rs__tokio-6724",
+      "sha256": "23e3849890101412c6cf7f8162f2c39bee688d242cb2aa0fb694b47a06527dc2"
+    },
+    {
+      "name": "briannesbitt__carbon-3103",
+      "sha256": "c24ecb489722fd4f61d1e5713c54bcc6da11b03d832987b7b21957ff583b7730"
+    },
+    {
+      "name": "laravel__framework-52866",
+      "sha256": "48ca676242cd144155b1ec1d86b07a25b567c7c06ef3ed8da7842834fd881908"
+    },
+    {
+      "name": "google__gson-1093",
+      "sha256": "345703aa02aa46f1df7c66fe94fc4b0ca38dc5601273dbfd341578d36fc0dbf6"
+    },
+    {
+      "name": "axios__axios-5892",
+      "sha256": "3defd543f3dce9e17203f4dc0c4eebf5565216b69aa3d0cae489bbeb6954d354"
+    },
+    {
+      "name": "rubocop__rubocop-13431",
+      "sha256": "1da3e9692f9ebe861678b6dca913e1501d8f0eec4002c15db64813ff925f58ae"
+    },
+    {
+      "name": "rubocop__rubocop-13375",
+      "sha256": "774acbc8e9ac9952ed3c30eed88d7653d8852165fe5f52e82d1586a34388ffa0"
+    },
+    {
+      "name": "caddyserver__caddy-5404",
+      "sha256": "222cc48253d8588fe3c003b91dbc613d74395ab8562d8607c80a2a02799018d4"
+    },
+    {
+      "name": "caddyserver__caddy-6051",
+      "sha256": "6857ab0d51dd043e0698d401ac010b2db112d10c09f28523357c67db53bc30ee"
+    },
+    {
+      "name": "jqlang__jq-2919",
+      "sha256": "7c6c116a5209c4ecfe32988d701ade936015f527b65297d38629be8616ee0b4b"
+    },
+    {
+      "name": "redis__redis-11279",
+      "sha256": "e0df92aa572e0e30bd5f29a811e5ef702d93ffa3408dd4b096beb95d5994d80f"
+    },
+    {
+      "name": "projectlombok__lombok-3602",
+      "sha256": "02bb9f164e00b3670e892c83470d63a7c585f9ec7bee77d3fe026a1611bf8bfc"
+    },
+    {
+      "name": "laravel__framework-48573",
+      "sha256": "113cbaebeb3acb2d0e8333edf21978b91519d39377a633d06f410e28afb460eb"
+    },
+    {
+      "name": "redis__redis-12472",
+      "sha256": "aa72a6e7b0b448e9c424997d78ea0a03baf9bc356e04707e25363611b46f6c54"
+    },
+    {
+      "name": "laravel__framework-52451",
+      "sha256": "15dd32b78223169c8dec1ae63def2b6617fe431e79e3a96a123e18207d7df801"
+    },
+    {
+      "name": "redis__redis-10095",
+      "sha256": "1f6bea3920aae140c171f5ff85c82332b5bd5615d31b94c9cface3598f7fb3b3"
+    },
+    {
+      "name": "jqlang__jq-2658",
+      "sha256": "2eee52c3bde2b44d357a63141fa04b9885834427b68131bb06b9f60a7bdbab94"
+    },
+    {
+      "name": "fastlane__fastlane-20975",
+      "sha256": "cb70d71cb4b77a7cb5ac19a2bd9ba1af464b161a8848ebabdd9430ed3c5ee201"
+    },
+    {
+      "name": "fluent__fluentd-3917",
+      "sha256": "ca9eda911c1298dead379ca234fe0e9a26f97a9b60ef0d8ce590adfeeca48093"
+    },
+    {
+      "name": "jekyll__jekyll-8047",
+      "sha256": "2ab6886451e7ec860dcfc525b12702a28de6ecb7aa7ed4958bf9753d003bd3db"
+    },
+    {
+      "name": "immutable-js__immutable-js-2006",
+      "sha256": "b29d1b22712037f216957f56d38554c898b63ce4fdf962e83f8141fddc4df432"
+    },
+    {
+      "name": "briannesbitt__carbon-2813",
+      "sha256": "6e1194c3f60d0d3d926630480916f247b77c84ec4d58f3490cb17adf0ca96e49"
+    },
+    {
+      "name": "apache__druid-16875",
+      "sha256": "c661358abba1d815be3564a47e12874321fae4445f6d4bf3a0e89f623a1a8b7e"
+    },
+    {
+      "name": "jekyll__jekyll-8761",
+      "sha256": "d3aa4cc2845655c4cff256659ef85984a0bfdb660ea372a30f387fd78eefac65"
+    },
+    {
+      "name": "tokio-rs__tokio-6752",
+      "sha256": "c7784801280ee5501ba55d462a4ae13c2037c6444bfe36f131c341a9295c99db"
+    },
+    {
+      "name": "gin-gonic__gin-3820",
+      "sha256": "2dc999b0d6a07d78afbd33a0ad004ad10bde91617cedcf611f3dcc5c94e1c993"
+    },
+    {
+      "name": "micropython__micropython-15898",
+      "sha256": "04cd223d65b47b66d0488375479cde68e09c875027a1736f96f264638afd5f66"
+    },
+    {
+      "name": "sharkdp__bat-2393",
+      "sha256": "bd8f97e3f35a5de44f8123f45a9046cbb2a8e5bdfee1268545af33b480d3f1fb"
+    },
+    {
+      "name": "sharkdp__bat-2650",
+      "sha256": "eaff67b25c90acbbacf1046cfb7de4f91292c96c170ca71f5f088a8856336fa9"
+    },
+    {
+      "name": "hashicorp__terraform-34580",
+      "sha256": "e49a2502b9afbd9f7873617bc71bfc846cf7185801e45a746d379c3d13cc6f7f"
+    },
+    {
+      "name": "sharkdp__bat-562",
+      "sha256": "3272aca36462c70e33628216b4d61604b5b7380863b11c4c3d060cdd675c74f2"
+    },
+    {
+      "name": "sharkdp__bat-2260",
+      "sha256": "187dc2d4cc9ad4b966245196f41fcee86934b26165e8abbc5a1ed826208ffefa"
+    },
+    {
+      "name": "phpoffice__phpspreadsheet-4114",
+      "sha256": "07c612c2922ca48aa3cc8b1bfd4c5cfbbda5f7357d83b1d7f23f71329e311c66"
+    },
+    {
+      "name": "gin-gonic__gin-1805",
+      "sha256": "55a476b3010317a8fe42afee0b1af920338ed4b7a6c81226a8597afe5198100e"
+    },
+    {
+      "name": "rubocop__rubocop-13653",
+      "sha256": "9f1303b59cedbcb520557546c5de2a7afdb32d727a8eb4289dc33e6a4ca49224"
+    },
+    {
+      "name": "caddyserver__caddy-5761",
+      "sha256": "63f08ba1fd7824f0c7d51a4dab7a15c7c2d0db4a6af74d99c00bade8cf5e94ad"
+    },
+    {
+      "name": "fmtlib__fmt-3272",
+      "sha256": "4d29fe247e0777c1462377963a5473cbcb5dda1dfd50e2ac7a95959c3388d52b"
+    },
+    {
+      "name": "php-cs-fixer__php-cs-fixer-8367",
+      "sha256": "f8b1276e642937c99e4746d17e3173ca98a088c16202643f1ee458d9ae996349"
+    },
+    {
+      "name": "preactjs__preact-2927",
+      "sha256": "c11fb443fe1d4a1c6ae39d5a4031d4285d5a055710ccfa94eff22f8b1d6bb1d2"
+    },
+    {
+      "name": "redis__redis-11510",
+      "sha256": "58fe3e8b9c8a985624e8049977cc88d63746be52831d7baafe8a70879b5b9d70"
+    },
+    {
+      "name": "php-cs-fixer__php-cs-fixer-7998",
+      "sha256": "7150d296e86ce8404d013d3f4a2b9797fb2de80d9aec235747f67ec2c4e8be7c"
+    },
+    {
+      "name": "redis__redis-11734",
+      "sha256": "6f5e314a3172da9a5322777766719d1ac1b22062edb1099f46044d8950ca6147"
+    },
+    {
+      "name": "fastlane__fastlane-21857",
+      "sha256": "c6f71b705749893ae37b959eb9becbf8b81ada048dff5948a2406c36ea89a72c"
+    },
+    {
+      "name": "caddyserver__caddy-6115",
+      "sha256": "354d91c0419229137881ff262dd3068e80f4bea196f7966d416122440a2e4ef7"
+    },
+    {
+      "name": "phpoffice__phpspreadsheet-4186",
+      "sha256": "7fa272fec896df1621949aaa9fc082824b5c425ea78b0a620ea8f300748b0463"
+    },
+    {
+      "name": "tokio-rs__axum-682",
+      "sha256": "edf2f5b03bd9ec7f252e5ec8408a92c2c87e6d6985204e6bb9a4f5a65c0ceaad"
+    },
+    {
+      "name": "rubocop__rubocop-13579",
+      "sha256": "57cd4449c41bdbe43c346a30002a4e986148c361091e953a50ee4807a652e344"
+    },
+    {
+      "name": "phpoffice__phpspreadsheet-3463",
+      "sha256": "8d928ce1af4d8a25cfe15dbd2cc63d3500273179baa68b62e4b68cb3d88f0bd3"
+    },
+    {
+      "name": "hashicorp__terraform-34814",
+      "sha256": "d261a036ae631343a9966b9b038875d135644c1323cd5050d3bb0c717fcaaaef"
+    },
+    {
+      "name": "projectlombok__lombok-3312",
+      "sha256": "da266f6c834c31c4dc78effd16541169d9eecabe2b1b16d3eef68a59f4a84cdc"
+    },
+    {
+      "name": "rubocop__rubocop-13424",
+      "sha256": "618c57df75ff9b4eb1d975b439b9f0e897881a471bad8f16a9ca36212f7d9c42"
+    },
+    {
+      "name": "php-cs-fixer__php-cs-fixer-8256",
+      "sha256": "2672964b8d26520cf2752149c56683167084645fec736160fb719ceaaec5dd7c"
+    },
+    {
+      "name": "redis__redis-10068",
+      "sha256": "96be7ccca98951fc10b9e04ccde6b080b0ba7f415b05e3f4e1c104277c60bf3d"
+    },
+    {
+      "name": "phpoffice__phpspreadsheet-4214",
+      "sha256": "c0ba6202cd639db6827b0d02aba0b50178ada96273c30db18c3ec57c7abdb33e"
+    },
+    {
+      "name": "prometheus__prometheus-10720",
+      "sha256": "cb6633838135252d630f7dbec4e4f053d0f597d17b48282a681e346fca553c21"
+    },
+    {
+      "name": "jqlang__jq-2839",
+      "sha256": "0a59bc42eb3805a0043f9f5e07c55d4506c2e4e8c0f5a8e945dbca005a3b95f5"
+    },
+    {
+      "name": "caddyserver__caddy-5870",
+      "sha256": "63aadd813b704c1bc696a56b82f38da46e83943cce4c31f1006df3e3a710fa76"
+    },
+    {
+      "name": "rubocop__rubocop-13560",
+      "sha256": "c819ffd7360f80bfecf69fe0c9e60cf6747f5eedfac8b10fbafaea1056f3581a"
+    },
+    {
+      "name": "fmtlib__fmt-3248",
+      "sha256": "fad6e7b722ecebe148f04626f49d250b0decb75712b78d87c05e76eb633e2c86"
+    },
+    {
+      "name": "tokio-rs__tokio-6603",
+      "sha256": "612f247efc210c92737515e30fd947ba2a89765413f2870f25113e318eedfe28"
+    },
+    {
+      "name": "preactjs__preact-3062",
+      "sha256": "145ce60c42df9fa1a2e3e37c0f05fe9b0ad1111f8225b0acb91d4fe7d9191c5b"
+    },
+    {
+      "name": "fluent__fluentd-4655",
+      "sha256": "0ea02285b0dfd9450cd7f96f75cc9b2d17d9f8c0363cffc93ae67ae96226d80d"
+    },
+    {
+      "name": "faker-ruby__faker-2705",
+      "sha256": "21b935a20e48192414b02a2931188308c85968ac193ebaa7331705b9049e36ea"
+    },
+    {
+      "name": "fluent__fluentd-4311",
+      "sha256": "f962409e5b33c22e39d47992db6a37a9849d5225f33ef681995a02f0e32bde42"
+    },
+    {
+      "name": "redis__redis-12272",
+      "sha256": "6b5e5c290ef481ba7af3395ed4ce01fbad7fc4172fffd4b1bc59e6f41625ba3b"
+    },
+    {
+      "name": "micropython__micropython-10095",
+      "sha256": "379e208636ffde0e1157dd1b8e130c09559808eaa0370e52530245e67102e9b0"
+    },
+    {
+      "name": "php-cs-fixer__php-cs-fixer-8064",
+      "sha256": "7cb9272c3112774499cac4400dd7df1d187d883beea67ab70e04e8230554ad7c"
+    },
+    {
+      "name": "babel__babel-15445",
+      "sha256": "fce668d79cc31f438629fa25fe9197a43b944f98706ffe3e891334d6e9d3e058"
+    },
+    {
+      "name": "projectlombok__lombok-3422",
+      "sha256": "574f219f505d45002deba1353b424c53f22b9b06154f763fcc017a8eef5abb8f"
+    },
+    {
+      "name": "jqlang__jq-2235",
+      "sha256": "251789310312d4a6517df066bc039317f086a9bb1c04f745f5838c0536f9e473"
+    },
+    {
+      "name": "babel__babel-14532",
+      "sha256": "aed369ad27ba07d077832755ff0473daa5ae94dacda14c4a4ef3fa6b14fb688b"
+    },
+    {
+      "name": "google__gson-2024",
+      "sha256": "052d7a6c4f27d08bc6e183bb1c1bf59bdcb9401660cbe8c45aec11336fc0a85d"
+    },
+    {
+      "name": "faker-ruby__faker-2970",
+      "sha256": "395bdb4b3b012c0f427e738edc33397741fa875543a0ed5b78bc2ac0f049e3b0"
+    },
+    {
+      "name": "gohugoio__hugo-12579",
+      "sha256": "0ba9a17a9a0277f64c6762d6d1a4a6a1f727bdb61e5e2a3e28290b5786d9bb83"
+    },
+    {
+      "name": "rubocop__rubocop-13362",
+      "sha256": "873eec78b96f92aa861b5dfc14104a7f407920719c58d46afd3f0aba2ab0820a"
+    },
+    {
+      "name": "phpoffice__phpspreadsheet-3903",
+      "sha256": "4877fbc8bf9e7ecebeece09b4af9ae59e71a9726352092566279b879e1ee6d73"
+    },
+    {
+      "name": "preactjs__preact-2896",
+      "sha256": "95580ea67c26d08a27ee81ecb8c97c3446a49820a1d1415c13f09ba2eec8552d"
+    },
+    {
+      "name": "fluent__fluentd-4030",
+      "sha256": "7450dc7eea5561303705916046923447455dcccd89ce3f80cbc344070b4ca308"
+    },
+    {
+      "name": "fmtlib__fmt-3729",
+      "sha256": "ad121c165b8324b81b386fa1440df2734cc12017c54e307dc39dec1cd3e5eaad"
+    },
+    {
+      "name": "php-cs-fixer__php-cs-fixer-8075",
+      "sha256": "da42aaa79b50b975b898f44bccafbc952928a87b8e458038d3f9354534d6e943"
+    },
+    {
+      "name": "google__gson-1014",
+      "sha256": "d24ad1dd4021417255244153f9cf50e66ab629feb66dd65a285a113c79dfb5af"
+    },
+    {
+      "name": "sharkdp__bat-2835",
+      "sha256": "f2237dc29f79db63c550b1fde3289962102d036553a5dfb1e334122da240294a"
+    },
+    {
+      "name": "gohugoio__hugo-12204",
+      "sha256": "b0f277224353d7b949901d8662ec9ed40a7696f32acb024ae65643a51a9b39b2"
+    },
+    {
+      "name": "projectlombok__lombok-3042",
+      "sha256": "7ced9baa4db99511ae2c9513e3b299ca3911ca92b7a3836f95dcffcd211fa85d"
+    },
+    {
+      "name": "fastlane__fastlane-19207",
+      "sha256": "5e481d61b60e05f8a6b9f57e4cb73b9b556c08815437cbccf2cddf6ea8053830"
+    },
+    {
+      "name": "google__gson-2061",
+      "sha256": "fe35960934493e01299e0feb77c996d4ca14f6ea068864b99297301c92942d54"
+    },
+    {
+      "name": "preactjs__preact-3763",
+      "sha256": "6a62d691af8a03138d7eb87664343d10094e8a53712b9f2987b3b726851047de"
+    },
+    {
+      "name": "hashicorp__terraform-35611",
+      "sha256": "31c3ad6d7cf58fa26d725aff6a9b31bcca5fcc935d7181f10c9e4b70d959a88b"
+    },
+    {
+      "name": "briannesbitt__carbon-3073",
+      "sha256": "1d4f178556535c3d95f7084ec21f1bea5acd1635fbe50618901be5cd1ee70a3d"
+    },
+    {
+      "name": "tokio-rs__tokio-7139",
+      "sha256": "60099f4b9624d41d899bef415b086d0f8168e444296cac66d6357e0ca7a817d8"
+    },
+    {
+      "name": "projectlombok__lombok-3479",
+      "sha256": "1e8779221939c935e5c7fb616060b67aff637be6ba923dc3fc798fe4670c57d9"
+    },
+    {
+      "name": "gin-gonic__gin-1957",
+      "sha256": "a5722be52f56c11a62cc919ba249c25abbc9b06fa823f262aabe77759f7fea9f"
+    },
+    {
+      "name": "fmtlib__fmt-1683",
+      "sha256": "d7490bd80840fdb3c25052051ed8492c0bf6dd5614c2a191703a509bccb27579"
+    },
+    {
+      "name": "laravel__framework-53206",
+      "sha256": "29d8d56fa70585485d42e9dedb9d9450c3907f064448ebfd8e5b51b125f2bc4c"
+    },
+    {
+      "name": "briannesbitt__carbon-3041",
+      "sha256": "5fae7fc3617803beb748edf5469497019626d8cf127245862e906e6673ff6bf8"
+    },
+    {
+      "name": "jekyll__jekyll-8167",
+      "sha256": "cc5860465735d63f7669b6d1db1fbf51f16609133aabf670ee743872304abb4d"
+    },
+    {
+      "name": "preactjs__preact-3562",
+      "sha256": "93682f22165de0778defed18a2db8f9292e0ec8967f5e0d522bc8dc4c552de53"
+    },
+    {
+      "name": "jordansissel__fpm-1829",
+      "sha256": "fd8c038dcfd40716028b6f0424e779317f5b33e034be08a8373e478c442ec327"
+    },
+    {
+      "name": "preactjs__preact-3739",
+      "sha256": "5e0ff3d0c7322193f82558f56e672b8e15aea35bb78b81653fc7433dfec27406"
+    },
+    {
+      "name": "babel__babel-16130",
+      "sha256": "1a8e28d2dc64067bf00eb998bc8d04e80eb588fb3f700b6bda07f363735b5ba7"
+    },
+    {
+      "name": "gohugoio__hugo-12171",
+      "sha256": "dfca365c38209161607fc294320512233a1387cd33a4413bfcc8538dafbeea4c"
+    },
+    {
+      "name": "redis__redis-13115",
+      "sha256": "43d352811c112a8130d0648b24b28563565349a86f4f70f13ba76dee3437fb50"
+    },
+    {
+      "name": "caddyserver__caddy-5626",
+      "sha256": "dfb809005d1b31e5ca1cce73764bdd67f6d11e76263f78c848994252dad1c55f"
+    },
+    {
+      "name": "javaparser__javaparser-4538",
+      "sha256": "5c14f99ae3e600fb40fd807a2d3d23e9be750c4b3a01ced01554722c51d02925"
+    },
+    {
+      "name": "fmtlib__fmt-2317",
+      "sha256": "e93a72f07ed876bc00454e880f73cfafecaca97ef492152fd2b031330efc480a"
+    },
+    {
+      "name": "jqlang__jq-2650",
+      "sha256": "73c325fdf446f570be4702286768666297bcc33645f5612e1a73a1d433e407c0"
+    },
+    {
+      "name": "rubocop__rubocop-13393",
+      "sha256": "d04d3ae4c11a3050cd5386ba9668f694f900012293a1b1557b6bceae18294d89"
+    },
+    {
+      "name": "apache__druid-15402",
+      "sha256": "57945e58561b7f0297d633868799af74c9acb6e5c67a04e999ff0e48d3d3cf2b"
+    },
+    {
+      "name": "tokio-rs__tokio-4867",
+      "sha256": "1c444c734a359c8598d565bc8530c4fad598e8e82861ba32d33e512e404ac22f"
+    },
+    {
+      "name": "gohugoio__hugo-12343",
+      "sha256": "3877951f84fb398542257dec91190334fba28604cb5e7ce46775f6c462e49477"
+    },
+    {
+      "name": "burntsushi__ripgrep-2209",
+      "sha256": "f91480066615f27a382145c35257dc2f2ac12afed03d3839d63015317a7a0a6a"
+    },
+    {
+      "name": "projectlombok__lombok-3215",
+      "sha256": "10bfafbf884abf6b64ec5195ae15b0987488c1156bc02bb5f3790bf8dca9d350"
+    },
+    {
+      "name": "fluent__fluentd-3616",
+      "sha256": "a201007626a5a0e025e3adadd50aa7c2270a455da860c960299383513ee16be9"
+    },
+    {
+      "name": "projectlombok__lombok-3697",
+      "sha256": "b652fb3ff0df85476cdba3268f99e06bef8e0735c43a97a4a7c49249d4ebe0de"
+    },
+    {
+      "name": "preactjs__preact-2757",
+      "sha256": "3a5923276fd2e14129e45fdf41466da8e37ddf1d8d665c22b66668a8f012afc2"
+    },
+    {
+      "name": "laravel__framework-51195",
+      "sha256": "8b44b26027571a979876ea178b124039e9a0dfdcde036dc6271fc5689da60889"
+    },
+    {
+      "name": "fmtlib__fmt-2457",
+      "sha256": "7b965f3f1990aa86faddd5fde431964c02eff33a61fb9e1744deafeb2bd7d38b"
+    },
+    {
+      "name": "google__gson-2158",
+      "sha256": "cb57ec12bd40c2d16c59d5ac3d89d4e2d7d1a313d707c6656e9c67798340a8de"
+    },
+    {
+      "name": "phpoffice__phpspreadsheet-3469",
+      "sha256": "d4146ca641e564a07efe75a431158f159bbaa5c6886421610d314aa49cc92eee"
+    },
+    {
+      "name": "fmtlib__fmt-3750",
+      "sha256": "731ba3d2dcd8776e2d841d2058056c83ac55812119f8891ed294ed77614757c8"
+    },
+    {
+      "name": "jqlang__jq-2681",
+      "sha256": "10dee894a86dbff2828f12b465035e53934de68efacf87a8e08b4c12489b282a"
+    },
+    {
+      "name": "prometheus__prometheus-15142",
+      "sha256": "850c723318a31108e3f8e41e93cc3475656a33deb025e243c1b46a75be8774b9"
+    },
+    {
+      "name": "preactjs__preact-4152",
+      "sha256": "1c4319e769c79766d26b9a0e0ba29e384311f9d662b229ad035c2a81391a31cd"
+    },
+    {
+      "name": "apache__druid-13704",
+      "sha256": "7de6d67f245610d6660d9cad642d4ed6d9e1a5f8804ba02b6500320950431763"
+    },
+    {
+      "name": "caddyserver__caddy-4774",
+      "sha256": "6b21d1f2ade4b1aa277e95427b6c18a64ace9d946cfa7379044f9253c956ad35"
+    },
+    {
+      "name": "fmtlib__fmt-3901",
+      "sha256": "826a95b81057adf5612c3fc5a208efd4ff56f5ad81a0200449135a467f3e60ab"
+    },
+    {
+      "name": "preactjs__preact-3689",
+      "sha256": "43083558dba9d989513edc9fc02abe6b6e9a26d54b864502af76e2ba51ad5ff8"
+    },
+    {
+      "name": "briannesbitt__carbon-2762",
+      "sha256": "2c0c6f532a822550acbd5a335a048c7dbb415eb39d61762c52320c62978b2745"
+    },
+    {
+      "name": "fluent__fluentd-3631",
+      "sha256": "e44bb89ce405f79630ecb1e1bd1ade524dc91c751bc7d53b2bca0728e54875ae"
+    },
+    {
+      "name": "javaparser__javaparser-4561",
+      "sha256": "d5ec1724877fa0887064fa67972b623bfc21fdac6af87550396aa0b839bb2488"
+    },
+    {
+      "name": "fluent__fluentd-3328",
+      "sha256": "24e3f2a947966693572a61c0b29a81ceba100213ba4d1ad6f8c86e2839bb13e3"
+    },
+    {
+      "name": "babel__babel-13928",
+      "sha256": "2efbbc6678af08777295e68f3c185949107048f5d9661e4a1f35da81537e19b8"
+    },
+    {
+      "name": "rubocop__rubocop-13627",
+      "sha256": "7a1e37e1d6c542340b6a2c2f4ea0c75eeaa75077426f6462ba335be196e3b5c1"
+    },
+    {
+      "name": "sharkdp__bat-2201",
+      "sha256": "97403e5aa60ec1a3a0b037ef720eb415e03fafab5371b8f1c7ae32c764cf5d24"
+    },
+    {
+      "name": "prometheus__prometheus-14861",
+      "sha256": "9b1bb88fb27fcabaeb5eed745d9d44a89c6e7ef72499ed1a20d69e472d952b59"
+    },
+    {
+      "name": "caddyserver__caddy-6411",
+      "sha256": "2b576c97e74a681fb7d41f05fe6496cc3524b2c7a184eab2aceffc1c818efef6"
+    },
+    {
+      "name": "immutable-js__immutable-js-2005",
+      "sha256": "36575aab9157a8cd92d5216df5762f1af4f6f815152dfbec34303b419cb88b1f"
+    },
+    {
+      "name": "preactjs__preact-3010",
+      "sha256": "81ecb54a21badec7f7596e55b4cf430ea40ccc0dd7c968ea7fc21ce496704d8d"
+    },
+    {
+      "name": "tokio-rs__axum-734",
+      "sha256": "cdc77f89cd26597126060430e626a9a5e778e8dad2f1b6cead9299d075639cec"
+    },
+    {
+      "name": "rubocop__rubocop-13680",
+      "sha256": "e6e48d2220fbf79841b9b4d629463d34ce059bf77d2dd27d37a116bcb42b5d98"
+    },
+    {
+      "name": "prometheus__prometheus-11859",
+      "sha256": "92538957b78b68d804ac21c3bc1037682e80aec92746da6569eb908480973634"
+    },
+    {
+      "name": "preactjs__preact-4316",
+      "sha256": "53dad57a0b645f87664dffc9e1c4ee106c939b7446ea6fa95b2885b14a6ed977"
+    },
+    {
+      "name": "phpoffice__phpspreadsheet-3940",
+      "sha256": "bb81024b71e998040aadfcc6e0ffe453df592b93d0784acdee3bdd7ed059101f"
+    },
+    {
+      "name": "projectlombok__lombok-3052",
+      "sha256": "d0de8619060cbd4afde9b6cdecf9fe72e50168a2a9b01fcecdfe085cca5a783f"
+    },
+    {
+      "name": "briannesbitt__carbon-2752",
+      "sha256": "55f5b025f0021c1b63ddb542b39d827cf0857925f84bcab2a733c265c701f34a"
+    },
+    {
+      "name": "axios__axios-6539",
+      "sha256": "4a060d8ac1790863e33f854103fdf6bb57cfce288d70cc7a1e8fb41331dfdc94"
+    },
+    {
+      "name": "projectlombok__lombok-3486",
+      "sha256": "64d5dfafe638a7dcf9ec9fb88719892d6d1e1413f3aead81ed987a309b9ba8aa"
+    },
+    {
+      "name": "reactivex__rxjava-7597",
+      "sha256": "8fd1e6e55f5a2ed01708c2fde5304497c9f01eafad4ae7287e92615032924519"
+    },
+    {
+      "name": "gohugoio__hugo-12562",
+      "sha256": "608d11369f335de98eefdc6d26a218e75d5da266597d623ed93c83df143c5588"
+    },
+    {
+      "name": "google__gson-2311",
+      "sha256": "31e8d097793c4d72e828f958ea5cee216189959f8aca3711846eb280e5cc5c43"
+    },
+    {
+      "name": "tokio-rs__axum-691",
+      "sha256": "f795b065784ff13469ea7dbe2cd9e31054dd1410fe83761e52f978bfddfa519c"
+    },
+    {
+      "name": "redis__redis-11631",
+      "sha256": "92d29119ebd9902f1dc2c08df7c182a755eaacda315d24c3af0c7757fedd2b03"
+    },
+    {
+      "name": "gin-gonic__gin-3227",
+      "sha256": "5aaf3a688fbfac18c437aa5bf84fd5e54b7963296bd700f4014c76610eead47d"
+    },
+    {
+      "name": "projectlombok__lombok-3326",
+      "sha256": "2a8e58092e072d20b0a8f17bb93305d4376075c4ea2ccb4a5c5f0197d581b074"
+    },
+    {
+      "name": "mrdoob__three.js-26589",
+      "sha256": "2421cf3269a03e1862f69988ce2d0a0f8abf66c4a05aa4fa4440b37e6642001c"
+    },
+    {
+      "name": "php-cs-fixer__php-cs-fixer-7635",
+      "sha256": "a4e4a0a85e82ba7194fdee996987502bc821aefd2e87a45bc6dab4c969b5efe2"
+    },
+    {
+      "name": "php-cs-fixer__php-cs-fixer-7875",
+      "sha256": "fc360fc7bd7e78e8ca465f33d2a0bf143002aaf9b04731871360ca80ea7c5fc5"
+    },
+    {
+      "name": "briannesbitt__carbon-3005",
+      "sha256": "0d7a09a890a0f8dbafd9ffc907fba8f7c6ea8d969a8f70c96f88eed2614c9a04"
+    },
+    {
+      "name": "tokio-rs__tokio-4384",
+      "sha256": "32f8d55141cb2135530807320517583435cfc5610b393ab1bff9d42c162cf94e"
+    },
+    {
+      "name": "rubocop__rubocop-13668",
+      "sha256": "446a4a69ea0c71878bcfbbfa1d2244e43295c91d716f5b73f3cd089d13079e3c"
+    },
+    {
+      "name": "nlohmann__json-4237",
+      "sha256": "f77b0669304d60f72cdf4fea24d7b47c4b52308f29bd53b6b48b79995663cc8c"
+    },
+    {
+      "name": "briannesbitt__carbon-2665",
+      "sha256": "014d5262682a9d28a942946577b702660a5922abc05bc980c4aa86ffe7a84a74"
+    },
+    {
+      "name": "projectlombok__lombok-3371",
+      "sha256": "93564b3cd6018c18bee06dc42227720fb57556daa72efcc606809df72fb5e4a4"
+    },
+    {
+      "name": "briannesbitt__carbon-2981",
+      "sha256": "0fb08da70a0f68156dcf37865c21fec356f29146cbf83bfaf3014238507017be"
+    },
+    {
+      "name": "prometheus__prometheus-12874",
+      "sha256": "97841d2d87442fa0c7bec51a404b8d107c40ff7313f6a0ecb5d7304512553a28"
+    },
+    {
+      "name": "phpoffice__phpspreadsheet-4313",
+      "sha256": "57bb42a7c0a790ce19fff6cdd88defceb4c56d5dacfaf827d909918680cf56be"
+    },
+    {
+      "name": "hashicorp__terraform-34900",
+      "sha256": "5dcafba0705fdf54e6721590bb5949f0e1ab67060feacf7d23ac55ab53ffaef5"
+    },
+    {
+      "name": "babel__babel-15649",
+      "sha256": "efacf6f898f17c1736b7212933c5a1fcbd87e0a05df94bb5a1ebd3c807b415cd"
+    },
+    {
+      "name": "tokio-rs__tokio-6551",
+      "sha256": "c0daf2fc70af391d4b15e73232c54a38164f7e9a6a1cf7bfcdddd8d7247ef955"
+    },
+    {
+      "name": "preactjs__preact-3567",
+      "sha256": "02d1207ed83c40caae670d84274a4fc7e1e4f36f797ca2df046faa64a5b326e6"
+    },
+    {
+      "name": "sharkdp__bat-3108",
+      "sha256": "10b193577ac2168ca84ec37b4b533a9d5bc60a3e034c0c4d1a15719ec56f5015"
+    },
+    {
+      "name": "briannesbitt__carbon-3098",
+      "sha256": "d2e3ad0a2f03ba33df69efff0bf47a3d1cf66aab61776cedfe02b8e449485878"
+    },
+    {
+      "name": "fluent__fluentd-3608",
+      "sha256": "662a1c65fb1c1a99eb3b387560e1ff350ffb74035ae766c39d125eedd7a6106b"
+    },
+    {
+      "name": "jekyll__jekyll-9141",
+      "sha256": "8f517600acf50b7a59d1e0e7cad04b5b0df95763d3ccbd221254a50ede2c2645"
+    },
+    {
+      "name": "fluent__fluentd-3466",
+      "sha256": "c7ba5a4296877bc03cf51dd59572360eb182833d052b87f2e29e04ed3e8fe98d"
+    },
+    {
+      "name": "caddyserver__caddy-6350",
+      "sha256": "7c55fbcb5904f3e0cb85f02d574e4908954a5a091e0327580865eeeecdbdc4d0"
+    },
+    {
+      "name": "tokio-rs__axum-1934",
+      "sha256": "643d068365ed4675616563da120c1b8169130fc3e6d06709226be3e274ef06f1"
+    },
+    {
+      "name": "projectlombok__lombok-3571",
+      "sha256": "037f04301339ab7a75439f970988f084cc722814fc52d7ed09965a2764a66210"
+    },
+    {
+      "name": "tokio-rs__axum-2096",
+      "sha256": "f07c1fb5d6e1061a7bbe5cb33135c8aa9d7794f350ebfccfa41b6afc6ca854b8"
+    },
+    {
+      "name": "mrdoob__three.js-25687",
+      "sha256": "78631bcbdfab52799e0595eed9102159514925e91072145a44b0968dee39aaf8"
+    },
+    {
+      "name": "preactjs__preact-4182",
+      "sha256": "0f4665e0f803a9d7b5b71d993ba2dc0d1745b94eaae95ef0f5f835baff5deae9"
+    },
+    {
+      "name": "fluent__fluentd-3640",
+      "sha256": "e1e583b634dc758a047f92d67544d05faeacdc8738e864df8ae3da38790c1ecc"
+    },
+    {
+      "name": "redis__redis-9733",
+      "sha256": "1d379863b5563eaca9620dd0dce053dd600edabcc2cd639d9c57aafbd9a606e1"
+    },
+    {
+      "name": "caddyserver__caddy-6370",
+      "sha256": "b7d9491c6d8d93ea5dd2ead15bbcb037be1c0b764ef2b0c19ac08c0111513ccb"
+    },
+    {
+      "name": "fmtlib__fmt-2310",
+      "sha256": "987b7da797825b439bbd3a731a0f0931b0c202a4ee01c91be1e90b3bcf8ed4af"
+    },
+    {
+      "name": "projectlombok__lombok-3009",
+      "sha256": "4ca276930ce1c6cf296f1f710682ac47e426038e5a2b63a950c672cd1ac8cf82"
+    },
+    {
+      "name": "projectlombok__lombok-3350",
+      "sha256": "ef4d28766eddf0cceca739dc5e6ee3cf376c45a6693a70fa99d60c15f271e14c"
+    },
+    {
+      "name": "redis__redis-13338",
+      "sha256": "b6201868e6c24192df60b88e91861be1e4fa4ba596b1e62da0aa424a277ae57d"
+    },
+    {
+      "name": "sharkdp__bat-1892",
+      "sha256": "c5ee07237b28bb7e74bda9f822d89aff17d5da2b0262d3057f80aba17bb3b1da"
+    },
+    {
+      "name": "caddyserver__caddy-5995",
+      "sha256": "ddf10b666cde5733672d4ab76186172cedd1d464ea4f4887e8895697c437f41b"
+    },
+    {
+      "name": "apache__lucene-13170",
+      "sha256": "85e42175180924061f9a252abd0a1f59b7eb76f4b2c91199b9d7f2df7fb4b110"
+    },
+    {
+      "name": "fmtlib__fmt-3863",
+      "sha256": "985b3c253e78e9ab386558ee85f6c7ac6aee42543e2c5ceb1e494ee7cd19a882"
+    },
+    {
+      "name": "preactjs__preact-3345",
+      "sha256": "7dc5e898275c81f2aa86daac80109add521d40cec69dcbb56813fb3a85f786b7"
+    },
+    {
+      "name": "apache__lucene-12212",
+      "sha256": "610d62192f573d091fbd5e34655aace42f23e294442d0ba9477e80e8eccdfc74"
+    },
+    {
+      "name": "preactjs__preact-4245",
+      "sha256": "8dec5aa9ac3f948bbfbc1e5f20d7195ab5a4221126a5e72beae1554d35a2a779"
+    },
+    {
+      "name": "hashicorp__terraform-35543",
+      "sha256": "a42936b302e6fa75f493dfda68978c52f32769d34689b8d164882e95a0a02239"
+    },
+    {
+      "name": "apache__lucene-12626",
+      "sha256": "e9f866072d834c0e939a04200c14522139f25c0ca4fb1ac725ee8da237461527"
+    },
+    {
+      "name": "tokio-rs__axum-1119",
+      "sha256": "f4aa754449546ef2ba3e0097287aa512ce80d44d48eba02469c87bc4ddfd27bd"
+    },
+    {
+      "name": "caddyserver__caddy-6345",
+      "sha256": "1fd00e3adfb20e433bfe0c97747ef44c99dfda2c6caebae83f73bcc5033a1cf9"
+    },
+    {
+      "name": "rubocop__rubocop-13687",
+      "sha256": "ff269112a0d9378bf7baecf19aed56f4c0617497fbcace7838a2f13720298a9d"
+    },
+    {
+      "name": "apache__lucene-11760",
+      "sha256": "9b2e20f66f79142288d3d30c0b7cf4dacc1f5bc0a35935fead9b61055764b6f9"
+    },
+    {
+      "name": "caddyserver__caddy-4943",
+      "sha256": "893eb9bbcfaaa6d0aaac459e7b43c65d2e9ed82644da86dd0fb74c9d687090b6"
+    },
+    {
+      "name": "micropython__micropython-13569",
+      "sha256": "88280e26e585cd479320462c2ad746e01ca50a207933d756b52dd9370a5468b3"
+    },
+    {
+      "name": "apache__druid-14092",
+      "sha256": "2f1e76e1c6a6366c03ad42057cdc885cf90939014457689863a8d55615b7fb66"
+    },
+    {
+      "name": "projectlombok__lombok-2792",
+      "sha256": "2a5a59243507be275a74e35c0186e8362b8f0d5828fb3920ac5967e1f9d0a774"
+    },
+    {
+      "name": "micropython__micropython-12158",
+      "sha256": "8698c4e0fe27480769c1aea59abd33e17aba0e5b239e3a58cc7200d3249b3df8"
+    },
+    {
+      "name": "preactjs__preact-4436",
+      "sha256": "907b32a3cc8d955a935991ecc934bced228edaaf25b4e1694087a1caad783251"
+    },
+    {
+      "name": "fmtlib__fmt-3158",
+      "sha256": "ce27991bcc99e5c0f81bc0fc4fe583e0c816d4c3a056707001987306479a352a"
+    },
+    {
+      "name": "projectlombok__lombok-3674",
+      "sha256": "e70524fcb281f9e29bb6fe4e7e3c8d7be870483e6c20135186b281a725dca1ea"
+    },
+    {
+      "name": "facebook__docusaurus-9897",
+      "sha256": "ac92241405d2d58d4543893c6e2181e26a4fa915cccde7d2b56aea661c01ca8c"
+    },
+    {
+      "name": "rubocop__rubocop-13396",
+      "sha256": "447abd8a77a544b574747536a3c528174d75e9106a2fc9d87b55232d7610ed91"
+    },
+    {
+      "name": "php-cs-fixer__php-cs-fixer-7663",
+      "sha256": "5f24518b43b6533e994bf7deec68700429f91a2f1c0672aa678f72cfae63c019"
+    },
+    {
+      "name": "caddyserver__caddy-6288",
+      "sha256": "f88da588558f1f0c8c5bd96a63d5eab77f7db6a1133e942d6495f8514e4e7b7b"
+    },
+    {
+      "name": "projectlombok__lombok-3594",
+      "sha256": "5d24360746f4f734a4ac0f9de2a118660fe5d8371e09ee1033e6d211c39573dc"
+    },
+    {
+      "name": "astral-sh__ruff-15309",
+      "sha256": "c4c6b203e8c475ff6c4c44f511243b1cd58dd0bd8162e61e0accc41e5139c515"
+    },
+    {
+      "name": "burntsushi__ripgrep-2576",
+      "sha256": "5a16226887efb4fa9ef81947a787541f2429eb721e002ac5999d7aefb9c4dce2"
+    },
+    {
+      "name": "jekyll__jekyll-8771",
+      "sha256": "2d03897a8846a5e5f3c9096934fe16212f4a7267beed2839b8ac413cc4a13c08"
+    },
+    {
+      "name": "jqlang__jq-2750",
+      "sha256": "e4e02a8fd7ea1930ac698bc79190cd29bf26c178a3ba17398bac93f54bb34d57"
+    },
+    {
+      "name": "apache__lucene-12196",
+      "sha256": "c4af34c9949dfab50a026854cd9ee99eeadd0d212c1526aa62c43b5ce84efa2b"
+    },
+    {
+      "name": "apache__lucene-13494",
+      "sha256": "03a3c0205c7b0e455655bda523f030539cebef4af2077db503ce23c494796281"
+    },
+    {
+      "name": "prometheus__prometheus-9248",
+      "sha256": "1094bbe137c8128f676ce0c69d81005980219330bb684c8703bca2d1895a6fca"
+    },
+    {
+      "name": "apache__lucene-13301",
+      "sha256": "8d8903728ba945f7d437170da36c1dcc214454eead1987bdfdc3808fd694f825"
+    },
+    {
+      "name": "apache__druid-14136",
+      "sha256": "8b37be403e16320801146c0bb1dbab8293a60a60613286cef12af51b10ba351a"
+    },
+    {
+      "name": "apache__lucene-13704",
+      "sha256": "4b12b9329bdf3b9be1e077615133798ed5c25d3801b373cb130912c76043c9db"
+    },
+    {
+      "name": "apache__lucene-12022",
+      "sha256": "dcdf292f04785420dd51a36ed6100ceef88af1d95e798f852eca475f1954dcab"
+    },
+    {
+      "name": "gohugoio__hugo-12448",
+      "sha256": "2c907e74fc4b0704e6d8064769f28a2b80b59604e0d85c156d293d3ab0118301"
+    },
+    {
+      "name": "google__gson-2479",
+      "sha256": "34a4fd7f364050e34355091b3c171d11ad178cde012cc0b4bb8de828dcfa43bd"
+    }
+  ],
+  "provenance_note": "Code hashes describe the measured run. The current analysis script additionally supports CDF regeneration. Raw events, metrics, logs, containers and downloaded traces are not included."
+}

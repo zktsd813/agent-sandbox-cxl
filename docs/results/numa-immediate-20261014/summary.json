@@ -1,0 +1,24 @@
+{
+  "state": "complete",
+  "selected_per_run": 264,
+  "finished_node0": 264,
+  "finished_node2": 264,
+  "paired": 264,
+  "eligible_pairs": 211,
+  "excluded_pairs": 53,
+  "trace_latency_ratio_cxl_over_dram": {
+    "max": 1.7984839062582636,
+    "p50": 1.1115884410803532,
+    "p95": 1.427897001684642,
+    "p99": 1.5374597347849939
+  },
+  "geomean_trace_latency_ratio": 1.131499310689582,
+  "total_paired_trace_latency_ratio": 1.1737950677372417,
+  "eligible_commands": 10807,
+  "command_latency_ratio_cxl_over_dram": {
+    "max": 3.539276645658915,
+    "p50": 1.0184376598628864,
+    "p95": 1.214547789591557,
+    "p99": 1.474295709024904
+  }
+}
