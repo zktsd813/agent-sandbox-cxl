@@ -1,0 +1,309 @@
+{
+  "result": "passed",
+  "created_utc": "2026-10-16T01:33:43.287798+00:00",
+  "fresh_measurements": [
+    "physical host blocking-futex context switch benchmark only"
+  ],
+  "snapshot_restore_benchmarks_executed_this_turn": 0,
+  "context_switch": {
+    "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/context-switch/1792114193944046698/report.json",
+    "cpu_model": "Intel(R) Xeon(R) Gold 5317 CPU @ 3.00GHz",
+    "kernel": "5.15.0-191-generic",
+    "cpu": 1,
+    "roundtrips_per_trial": 100000,
+    "trials_per_mode": 9,
+    "summary_us": {
+      "thread-private": {
+        "median_trial_mean": 1.40034,
+        "p95_trial_mean": 1.408516,
+        "min_trial_mean": 1.209954,
+        "max_trial_mean": 1.408516,
+        "observed_switches": 1799994,
+        "expected_handoffs": 1800000
+      },
+      "thread-shared": {
+        "median_trial_mean": 1.374362,
+        "p95_trial_mean": 1.385979,
+        "min_trial_mean": 1.355043,
+        "max_trial_mean": 1.385979,
+        "observed_switches": 1799996,
+        "expected_handoffs": 1800000
+      },
+      "process-shared": {
+        "median_trial_mean": 4.441396,
+        "p95_trial_mean": 4.466408,
+        "min_trial_mean": 4.42815,
+        "max_trial_mean": 4.466408,
+        "observed_switches": 1800017,
+        "expected_handoffs": 1800000
+      }
+    },
+    "statistic": "median of per-trial mean elapsed times per handoff, not individual-switch p50",
+    "measurement": "two tasks pinned to the same CPU; blocking futex ping-pong; elapsed roundtrip / 2; includes syscalls, wakeup, scheduler and user loop"
+  },
+  "historical_context_switch_inside_vm": {
+    "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/context-switch/1792063927396397150/report.json",
+    "note": "Prior measurements only. Existing soak-watchdog VM pair is no longer running; a fresh guest context benchmark aborted before execution."
+  },
+  "historical_direct_handoff": {
+    "optimized_firecracker": {
+      "source_report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261015T190026Z-zsvsz5uh/direct-linux-handoff-1792090828508053671/report.json",
+      "measurement": "source stop request to destination guest acknowledgement observed by source",
+      "summary_ms": {
+        "pause": {
+          "n": 490,
+          "p50": 0.255899,
+          "p95": 0.573303,
+          "min": 0.027968,
+          "max": 3.3085109999999998
+        },
+        "guest_observed": {
+          "n": 490,
+          "p50": 0.7013259999999999,
+          "p95": 1.089823,
+          "min": 0.298394,
+          "max": 3.749293
+        },
+        "detach_total": {
+          "n": 490,
+          "p50": 0.26032350000000004,
+          "p95": 0.576346,
+          "min": 0.067037,
+          "max": 3.3106799999999996
+        },
+        "kernel_detach": {
+          "n": 490,
+          "p50": 0.0440595,
+          "p95": 0.08294,
+          "min": 0.02859,
+          "max": 0.230726
+        },
+        "handoff": {
+          "n": 490,
+          "p50": 0.7558005,
+          "p95": 1.182223,
+          "min": 0.29873,
+          "max": 4.397025999999999
+        },
+        "quiesce": {
+          "n": 490,
+          "p50": 0.001911,
+          "p95": 0.003832,
+          "min": 0.001078,
+          "max": 0.025289000000000002
+        },
+        "mmu_drain": {
+          "n": 490,
+          "p50": 0.0031615000000000002,
+          "p95": 0.007053,
+          "min": 0.00138,
+          "max": 0.042414
+        },
+        "binding": {
+          "n": 490,
+          "p50": 0.0233725,
+          "p95": 0.048549,
+          "min": 0.007581,
+          "max": 0.09018300000000001
+        },
+        "attach_resume": {
+          "n": 490,
+          "p50": 0.1874385,
+          "p95": 0.53161,
+          "min": 0.046895000000000006,
+          "max": 2.299359
+        },
+        "kernel_attach": {
+          "n": 490,
+          "p50": 0.0575055,
+          "p95": 0.080247,
+          "min": 0.04136,
+          "max": 0.734638
+        },
+        "guest_ack": {
+          "n": 490,
+          "p50": 0.10717650000000001,
+          "p95": 0.414772,
+          "min": 0.0005909999999999999,
+          "max": 2.438834
+        }
+      },
+      "context_ratio": {
+        "thread-private": 539.7264235828442,
+        "thread-shared": 549.9282576206268,
+        "process-shared": 170.17183336050195
+      }
+    },
+    "optimized_native": {
+      "source_report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261015T190101Z-dpvy4m4d/direct-linux-handoff-1792090862849301934/report.json",
+      "measurement": "source stop request to destination guest acknowledgement observed by source",
+      "summary_ms": {
+        "pause": {
+          "n": 490,
+          "p50": 0.046670500000000004,
+          "p95": 0.07073099999999999,
+          "min": 0.029079,
+          "max": 3.002734
+        },
+        "guest_observed": {
+          "n": 490,
+          "p50": 0.4305465,
+          "p95": 0.719518,
+          "min": 0.217969,
+          "max": 7.131031
+        },
+        "detach_total": {
+          "n": 490,
+          "p50": 0.0959455,
+          "p95": 0.159663,
+          "min": 0.062917,
+          "max": 3.142723
+        },
+        "kernel_detach": {
+          "n": 490,
+          "p50": 0.044176,
+          "p95": 0.077863,
+          "min": 0.026907,
+          "max": 1.2092049999999999
+        },
+        "handoff": {
+          "n": 490,
+          "p50": 0.5054605,
+          "p95": 0.854654,
+          "min": 0.29608,
+          "max": 7.238789
+        },
+        "quiesce": {
+          "n": 490,
+          "p50": 0.002019,
+          "p95": 0.0038,
+          "min": 0.001118,
+          "max": 0.029889
+        },
+        "mmu_drain": {
+          "n": 490,
+          "p50": 0.002813,
+          "p95": 0.007143,
+          "min": 0.0014399999999999999,
+          "max": 1.086887
+        },
+        "binding": {
+          "n": 490,
+          "p50": 0.016996499999999998,
+          "p95": 0.044237,
+          "min": 0.008878,
+          "max": 0.11929300000000001
+        },
+        "attach_resume": {
+          "n": 490,
+          "p50": 0.070111,
+          "p95": 0.10143600000000001,
+          "min": 0.046079,
+          "max": 0.6134700000000001
+        },
+        "kernel_attach": {
+          "n": 490,
+          "p50": 0.0617665,
+          "p95": 0.08611400000000001,
+          "min": 0.04251,
+          "max": 0.579921
+        },
+        "guest_ack": {
+          "n": 490,
+          "p50": 0.2092025,
+          "p95": 0.48208100000000004,
+          "min": 0.07768000000000001,
+          "max": 3.355531
+        }
+      },
+      "context_ratio": {
+        "thread-private": 360.95555365125614,
+        "thread-shared": 367.7782854881028,
+        "process-shared": 113.80667249666546
+      }
+    }
+  },
+  "historical_direct_soak": {
+    "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261015T185719Z-u84w5r3c/direct-linux-handoff-1792090641584643369/report.json",
+    "summary_ms": {
+      "n": 9990,
+      "p50": 1.054153,
+      "p95": 1.8332940000000002,
+      "min": 0.408887,
+      "max": 17.926956999999998
+    },
+    "warmup": 10
+  },
+  "historical_state_only_snapshot": {
+    "source_report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261015T171833Z-z2n04o5l/handoff-128m-warm-1792084718460931223/report.json",
+    "snapshot_p50_ms": 0.6156619999999999,
+    "restore_p50_ms": 11.038992499999999,
+    "handoff_p50_ms": 15.311361,
+    "note": "Existing DAX-RAM reference; no RAM transfer, destination KVM recreated. Not freshly measured."
+  },
+  "external_reports": [
+    {
+      "name": "Marc Brooker, Lambda Snapstart, and snapshots as a tool for system builders",
+      "year": 2022,
+      "url": "https://brooker.co.za/blog/2022/11/29/snapstart.html",
+      "snapshot_create_ms": null,
+      "restore_ms": {
+        "as_little_as": 4,
+        "decent_sized_linux_approx": 10
+      },
+      "note": "Firsthand author-reported restore capability; VM sizing, statistical definition and detailed measurement boundary not supplied. Not snapshot creation plus restoration."
+    },
+    {
+      "name": "AgentENV issue 125: Analyze boot/resume latency",
+      "year": 2026,
+      "url": "https://github.com/kvcache-ai/AgentENV/issues/125",
+      "environment": "Xeon Gold 5317; Linux 6.8.0-111; patched Firecracker 1.15.1; Ubuntu 24.04; 1 vCPU / 128 MiB; warm process/network/shared-memory-device pools; NVMe/ext4",
+      "samples": 10,
+      "snapshot_create_ms": null,
+      "restore_load_p50_ms": 7.631,
+      "resume_p50_ms": 0.527,
+      "ready_sandbox_p50_ms": 44.8,
+      "ready_sandbox_mean_ms": 46.948,
+      "note": "Pre-existing snapshot; ready boundary includes runtime setup, networking, envd health and initialization. Not equivalent to our guest heartbeat. Do not add per-stage medians."
+    },
+    {
+      "name": "NumaVM, Benchmarking Firecracker Boot and Restore",
+      "year": 2026,
+      "url": "https://numavm.com/blog/2026-03-10-1-second-boot/",
+      "environment": "AWS Graviton; NVMe/XFS; Firecracker 1.14.2; Alpine; 2 vCPU / 256 MiB",
+      "samples": 5,
+      "reported_snapshot_memory_dump_ms": 1200,
+      "restore_load_ms": 25,
+      "restore_load_plus_resume_ms": 43,
+      "restore_tcp_ready_pipeline_ms": 176,
+      "note": "Author-reported pipeline values, not specified as medians. Memory dump save boundary/durability is not fully specified. TCP connection readiness is not full guest working-set population."
+    },
+    {
+      "name": "REAP, ASPLOS 2021, section 6.2",
+      "year": 2021,
+      "url": "https://marioskogias.github.io/docs/reap.pdf",
+      "environment": "Firecracker vHive snapshot restore with host page cache flushed; helloworld",
+      "snapshot_create_ms": null,
+      "vanilla_vmm_restore_ms": 50,
+      "vanilla_first_invocation_total_ms": 232,
+      "reap_first_invocation_total_ms": 60,
+      "note": "First invocation includes page faults, connection restoration and function execution; snapshots already exist. Not pure restoration or contemporary general-purpose VM constant."
+    }
+  ],
+  "amortization": {
+    "assumption": "one complete measured microVM handoff for each useful execution interval; elapsed-time share = transition / (work + transition)",
+    "handoff_ms": 0.7558005,
+    "overhead_fraction_by_useful_work_ms": {
+      "1": 0.4304592121940961,
+      "10": 0.0702691073528186,
+      "100": 0.007501310061052018
+    }
+  },
+  "comparison_limits": [
+    "Context benchmark uses small hot working set on one CPU; no CPU migration or workload cache misses.",
+    "Context summary is median trial mean; microVM summary is per-transition p50/p95; ratios indicate scale, not identical statistical populations.",
+    "MicroVM measurements use nested KVM and CXL emulation on one physical host, with Firecracker control/device runtime retained on A.",
+    "External reports use different hardware, guest sizes, device scope, cache state and readiness boundaries; no universal speedup is established.",
+    "Snapshot creation, loading, resumed execution, first request and storage/network distribution are separate boundaries."
+  ]
+}

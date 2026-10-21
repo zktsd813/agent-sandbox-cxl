@@ -1,0 +1,1912 @@
+{
+  "version": 6,
+  "residency_review": {
+    "reviewed_on": "2026-10-19",
+    "current_inventory": "implementation/virtual_machine/host-cxl-residency.json",
+    "current_live_evidence": "implementation/virtual_machine/.local/residency-live-review.json",
+    "note": "Current inventory distinguishes storage from native pointer/handle meaning, inactive feature paths, and L0 nested-KVM scope. Historical design_candidate and initial allocation reports remain historical evidence, not a current implementation inventory.",
+    "necessity_inventory": "implementation/virtual_machine/host-reference-audit.json"
+  },
+  "scope": "CXL-resident KVM state: host pointer audit plus restricted direct VM/vCPU/VMCS ownership handoff prototype; full VMM/device migration not implemented",
+  "ownership_handoff_implemented": true,
+  "entries": [
+    {
+      "group": "guest_state",
+      "object": "guest RAM",
+      "fields": [
+        "kernel",
+        "process heap/stack",
+        "guest page tables",
+        "initramfs"
+      ],
+      "target": "guest RAM bytes",
+      "current_placement": "DAX [2MiB,130MiB)",
+      "future_handling": "동일 backing 유지. Guest CR3 register 값과 guest page table의 내용은 별개이다.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/firecracker/src/vmm/src/vstate/memory.rs",
+        "line": 931
+      },
+      "live_fields": [],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P00",
+      "function": "Guest OS·process·guest page table의 영속 bytes. Guest 주소 체계를 보존한다.",
+      "handoff_class": "guest_state",
+      "audit_level": "source_only",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R01"
+        ]
+      }
+    },
+    {
+      "group": "pool_reference",
+      "object": "struct kvm",
+      "fields": [
+        "memslots[]",
+        "vcpu_array",
+        "buses[]",
+        "arch.vpic/vioapic/vpit",
+        "arch.apic_map",
+        "irq_routing"
+      ],
+      "target": "VM 소유 KVM 객체",
+      "current_placement": "주요 객체 및 현재 1-vCPU memslot/tree node는 DAX. Generic xarray/SRCU 내부 할당까지 모두 대체한 것은 아님.",
+      "future_handling": "현재는 동일 KVA/physical mapping 조건에서 pool 내부 raw pointer를 유지하고 B에서의 attach/실행을 검증했다. Kernel global list와 node별 등록은 detach/attach한다. Offset/object ID로 일반화하는 작업은 별도다.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/include/linux/kvm_host.h",
+        "line": 705
+      },
+      "live_fields": [
+        "vm.pic",
+        "vm.ioapic",
+        "vm.pit",
+        "vm.irq_routing",
+        "vm.apic_map"
+      ],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P01",
+      "function": "VM에 속한 vCPU·memslot·장치 객체를 찾는 컨테이너. 내부 참조와 host 전역 등록을 구분한다.",
+      "handoff_class": "pool_reference",
+      "audit_level": "source_and_selected_live_fields",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R00",
+          "R19",
+          "R21"
+        ]
+      }
+    },
+    {
+      "group": "host_binding",
+      "object": "struct kvm",
+      "fields": [
+        "mm",
+        "userspace_pid",
+        "mmu_notifier.mm"
+      ],
+      "target": "Firecracker host 주소 공간 및 kernel mm",
+      "current_placement": "참조 field는 DAX, mm_struct와 host page table은 local",
+      "future_handling": "목적지 프로세스의 mm에 새로 연결하고 MMU notifier 등록. mm_struct를 raw checkpoint로 복사하지 않는다.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/include/linux/kvm_host.h",
+        "line": 722
+      },
+      "live_fields": [
+        "vm.mm",
+        "vm.mmu_notifier.mm"
+      ],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P02",
+      "function": "mm는 RAM HVA의 주소공간 identity와 lifetime 및 ioctl caller 일치를 제공한다. userspace_pid는 pointer가 아닌 pid_t 정수다.",
+      "handoff_class": "host_binding",
+      "audit_level": "source_and_selected_live_fields",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R02"
+        ]
+      }
+    },
+    {
+      "group": "host_binding",
+      "object": "struct kvm",
+      "fields": [
+        "srcu",
+        "irq_srcu",
+        "srcu.sda"
+      ],
+      "target": "kernel별 SRCU per-CPU 상태",
+      "current_placement": "srcu wrapper는 DAX, sda per-CPU storage는 local",
+      "future_handling": "이전 reader/callback을 drain한 후 목적지에서 SRCU 초기화. Per-CPU pointer는 일반 KVA와 표현도 다르다.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/include/linux/kvm_host.h",
+        "line": 798
+      },
+      "live_fields": [
+        "vm.srcu.sda"
+      ],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P03",
+      "function": "Memslot·I/O bus 교체 중 reader가 참조하는 객체를 해제하지 않게 보호한다. Reader와 grace period는 kernel별이다.",
+      "handoff_class": "host_binding",
+      "audit_level": "source_and_selected_live_fields",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R17"
+        ]
+      }
+    },
+    {
+      "group": "host_binding",
+      "object": "struct kvm",
+      "fields": [
+        "vm_list",
+        "debugfs_dentry",
+        "debugfs_stat_data"
+      ],
+      "target": "host 전역 VM list와 VFS/debugfs",
+      "current_placement": "VM field와 일부 stats payload는 DAX, 전역 list/VFS는 local",
+      "future_handling": "현재 source VM list/debugfs를 제거하고 destination VM list/PM notifier를 등록한다. Debugfs는 destination에서 재생성하지 않으며 live dentry는 ERR_PTR(-ENOENT)다. Debug 정보 자체는 guest 복구 상태가 아니다.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/include/linux/kvm_host.h",
+        "line": 199
+      },
+      "live_fields": [
+        "vm.global_list.next",
+        "vm.debugfs_dentry"
+      ],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P04",
+      "function": "Host가 VM을 열거하고 통계·debugfs 파일을 제공한다. Global list와 VFS의 수명 관리에 참여한다.",
+      "handoff_class": "host_binding",
+      "audit_level": "source_and_selected_live_fields",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R19"
+        ]
+      }
+    },
+    {
+      "group": "code_pointer",
+      "object": "struct mmu_notifier",
+      "fields": [
+        "ops"
+      ],
+      "target": "kernel callback table",
+      "current_placement": "field DAX, ops table 및 함수 code local",
+      "future_handling": "동일 동작 종류로 목적지 kernel의 ops를 선택하여 등록.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/include/linux/mmu_notifier.h",
+        "line": 237
+      },
+      "live_fields": [
+        "vm.mmu_notifier.ops"
+      ],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P05",
+      "function": "VMM mapping 변경 시 KVM EPT와 주소 cache를 무효화하는 callback 집합이다.",
+      "handoff_class": "code_pointer",
+      "audit_level": "source_and_selected_live_fields",
+      "implemented_handling": "Unregister old mm notifier and register destination notifier. During opt-in mode >=2 unregister, GPL-exported RCU expedite nesting forces the existing global MMU-notifier SRCU reader grace period to expedited mode; nesting is restored immediately after this void call. No change to mm core.",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R03"
+        ]
+      }
+    },
+    {
+      "group": "pool_reference",
+      "object": "struct kvm_memory_slot",
+      "fields": [
+        "base_gfn",
+        "npages",
+        "userspace_addr",
+        "hva_node",
+        "gfn_node",
+        "id_node",
+        "dirty_bitmap",
+        "arch"
+      ],
+      "target": "guest GPA→host HVA 및 mapping indexes",
+      "current_placement": "slot/tree node DAX. userspace_addr는 VM A의 DAX mmap HVA. Dirty logging은 현재 off.",
+      "future_handling": "GPA/backing ID/offset/size를 유지하고 HVA 및 tree index를 목적지 mapping에 맞게 재연결.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/include/linux/kvm_host.h",
+        "line": 580
+      },
+      "live_fields": [],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P06",
+      "function": "GPA 범위를 HVA로 연결하고 GPA/HVA/slot-ID별 검색과 dirty 추적을 지원한다.",
+      "handoff_class": "mixed_reference",
+      "audit_level": "source_only",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R04"
+        ]
+      }
+    },
+    {
+      "group": "pool_reference",
+      "object": "struct kvm_vcpu",
+      "fields": [
+        "kvm",
+        "run",
+        "last_used_slot"
+      ],
+      "target": "VM/통신 page/memslot 객체",
+      "current_placement": "현재 DAX",
+      "future_handling": "DAX offset 또는 object ID로 변환. last_used_slot은 재생성 가능한 cache이므로 invalidate 가능.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/include/linux/kvm_host.h",
+        "line": 323
+      },
+      "live_fields": [
+        "vcpu.kvm",
+        "vcpu.run"
+      ],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P07",
+      "function": "vCPU가 소속 VM·userspace 통신 page·최근 memslot을 찾는다.",
+      "handoff_class": "pool_reference",
+      "audit_level": "source_and_selected_live_fields",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R00"
+        ]
+      }
+    },
+    {
+      "group": "host_binding",
+      "object": "struct kvm_vcpu",
+      "fields": [
+        "pid",
+        "cpu",
+        "preempt_notifier",
+        "wait",
+        "sigset"
+      ],
+      "target": "host task/PID/scheduler/preemption",
+      "current_placement": "field는 DAX, task/PID와 CPU별 scheduler는 local",
+      "future_handling": "목적지 vCPU thread에 연결. CPU 번호의 namespace와 preempt notifier를 다시 설정.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/include/linux/kvm_host.h",
+        "line": 323
+      },
+      "live_fields": [
+        "vcpu.pid",
+        "vcpu.preempt_notifier.ops"
+      ],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P08",
+      "function": "pid는 stable thread identity/directed yield/PID 변경·진단에 사용. Sleeping wakeup은 wait.task, running kick은 cpu+IPI. Preempt notifier는 native sched-out/in에서 CPU 연결을 관리한다.",
+      "handoff_class": "host_binding",
+      "audit_level": "source_and_selected_live_fields",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R11"
+        ]
+      }
+    },
+    {
+      "group": "guest_state",
+      "object": "struct kvm_vcpu_arch",
+      "fields": [
+        "regs",
+        "cr0/cr2/cr3/cr4/cr8",
+        "efer",
+        "exception",
+        "interrupt",
+        "mp_state"
+      ],
+      "target": "vCPU architectural state",
+      "current_placement": "저장 공간은 pooled vCPU 안. 실행 중 최신 값 일부는 CPU/VMCS cache에 있음.",
+      "future_handling": "정지 경계에서 register/cache 상태를 DAX 공간과 동기화. 실행 중 DAX 사본이 항상 최신이라는 보장은 아님.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/include/asm/kvm_host.h",
+        "line": 715
+      },
+      "live_fields": [],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P09",
+      "function": "Guest instruction·privilege·interrupt 진행 상태. regs_avail/dirty와 VMCS에 분산된 값까지 정지 시 일관화해야 한다.",
+      "handoff_class": "guest_state",
+      "audit_level": "source_only",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R14"
+        ]
+      }
+    },
+    {
+      "group": "guest_state",
+      "object": "struct fpu_guest",
+      "fields": [
+        "fpstate",
+        "xfeatures",
+        "perm",
+        "xfd_err"
+      ],
+      "target": "FPU/SIMD register image",
+      "current_placement": "guest fpstate DAX. 초기 kernel helper의 temporary allocation을 초기화 후 DAX로 이동.",
+      "future_handling": "정지 시 FPU save가 필요. 현재 XFD/AMX dynamic reallocation은 거부한다.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/include/asm/fpu/types.h",
+        "line": 518
+      },
+      "live_fields": [
+        "vcpu.fpu"
+      ],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P10",
+      "function": "Guest SIMD/FPU/XSAVE 상태를 host thread FPU 상태와 교환한다. CXL bytes가 실행 중 최신이라는 뜻은 아니다.",
+      "handoff_class": "guest_state",
+      "audit_level": "source_and_selected_live_fields",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R14"
+        ]
+      }
+    },
+    {
+      "group": "pool_reference",
+      "object": "struct kvm_vcpu_arch",
+      "fields": [
+        "cpuid_entries",
+        "mce_banks",
+        "mci_ctl2_banks",
+        "pio_data",
+        "emulate_ctxt"
+      ],
+      "target": "CPU model 및 emulation data",
+      "current_placement": "현재 DAX",
+      "future_handling": "내용 유지, 내부 pointer와 emulator callback은 재연결.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/include/asm/kvm_host.h",
+        "line": 715
+      },
+      "live_fields": [
+        "vcpu.cpuid",
+        "vcpu.pio",
+        "vcpu.emulate_ctxt"
+      ],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P11",
+      "function": "Guest feature·machine-check 값과 PIO buffer 및 instruction emulator를 제공한다.",
+      "handoff_class": "mixed_reference",
+      "audit_level": "source_and_selected_live_fields",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R14",
+          "R23"
+        ]
+      }
+    },
+    {
+      "group": "mixed_reference",
+      "object": "struct kvm_mmu",
+      "fields": [
+        "root.hpa",
+        "pae_root",
+        "pml4_root",
+        "pml5_root",
+        "page_fault",
+        "gva_to_gpa",
+        "sync_spte"
+      ],
+      "target": "EPT/host physical address와 code callback",
+      "current_placement": "현재 Intel/EPT root 및 page/header는 DAX. callback은 local code. Shadow/32-bit DMA32 경로는 검증하지 않음.",
+      "future_handling": "일반화 후보는 node별 HPA/code binding. 현재 구현은 동일 PFN/KVA/code VA 아래 EPT와 raw MMU callback을 유지하며 모든 callback을 재작성하지 않는다.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/include/asm/kvm_host.h",
+        "line": 437
+      },
+      "live_fields": [
+        "vcpu.mmu",
+        "vcpu.mmu.page_fault"
+      ],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P12",
+      "function": "Guest 주소 변환 방식과 EPT root를 선택하고 page fault·page-table 동기화 callback을 제공한다.",
+      "handoff_class": "mixed_reference",
+      "audit_level": "source_and_selected_live_fields",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R06",
+          "R20"
+        ]
+      }
+    },
+    {
+      "group": "hardware_address",
+      "object": "EPT/SPTE",
+      "fields": [
+        "PFN address bits",
+        "access flags",
+        "root HPA"
+      ],
+      "target": "host physical pages",
+      "current_placement": "EPT page 자체는 DAX, entry는 해당 host physical address 체계",
+      "future_handling": "같은 CXL offset이어도 host별 HPA가 다르면 entry를 재구성/보정. EPT raw bytes 공유만으로 충분하지 않다.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/vmx/vmx.c",
+        "line": 3389
+      },
+      "live_fields": [],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P13",
+      "function": "CPU가 GPA를 HPA로 변환하는 hardware page table. CXL offset과 HPA는 다른 주소 체계다.",
+      "handoff_class": "hardware_address",
+      "audit_level": "source_only",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R06"
+        ]
+      }
+    },
+    {
+      "group": "mixed_reference",
+      "object": "struct kvm_mmu_page",
+      "fields": [
+        "spt",
+        "shadowed_translation",
+        "link",
+        "hash_link",
+        "parent_ptes",
+        "rcu_head"
+      ],
+      "target": "EPT page와 MMU bookkeeping",
+      "current_placement": "활성 EPT pages 및 MMU cache objects는 DAX. RCU queue와 struct page는 host 관리 상태.",
+      "future_handling": "Pool 내부 MMU graph 공유와 node별 MMU graph를 구분한다. 양쪽 방식 모두 kernel별 page.private·RCU·HPA를 준비해야 한다. List/refcount를 일괄 초기화하면 안 된다.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/mmu/mmu_internal.h",
+        "line": 51
+      },
+      "live_fields": [
+        "ept.root"
+      ],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P14",
+      "function": "EPT/shadow page를 검색·연결·해제하고 RCU 수명을 관리한다. struct page.private 역참조도 필요하다.",
+      "handoff_class": "mixed_reference",
+      "audit_level": "source_and_selected_live_fields",
+      "implemented_handling": "DAX-linked kvm_mmu_page registry; each kernel caches its last seen head and initializes page.private only for new headers; immutable allocation addresses until lab shutdown.",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R06"
+        ]
+      }
+    },
+    {
+      "group": "mixed_reference",
+      "object": "struct loaded_vmcs",
+      "fields": [
+        "vmcs",
+        "shadow_vmcs",
+        "msr_bitmap",
+        "cpu",
+        "loaded_vmcss_on_cpu_link",
+        "host_state"
+      ],
+      "target": "VMCS pages와 host CPU별 실행 관리",
+      "current_placement": "현재 VMCS/MSR bitmap은 DAX; loaded_vmcs wrapper는 pooled vCPU 내",
+      "future_handling": "VMCS CPU active 상태 해제 및 host 필드 보정 필요. Kernel의 CPU별 loaded list는 새로 연결.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/vmx/vmcs.h",
+        "line": 61
+      },
+      "live_fields": [
+        "vmx.loaded_vmcs",
+        "vmx.vmcs",
+        "vmx.msr_bitmap"
+      ],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P15",
+      "function": "VMCS가 어느 host CPU에 active인지, launched 여부와 host register cache를 추적한다.",
+      "handoff_class": "mixed_reference",
+      "audit_level": "source_and_selected_live_fields",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R12",
+          "R28"
+        ]
+      }
+    },
+    {
+      "group": "hardware_address",
+      "object": "VMCS host fields",
+      "fields": [
+        "HOST_RIP",
+        "HOST_RSP",
+        "HOST_CR3",
+        "host segment/base registers"
+      ],
+      "target": "host kernel code/stack/page table",
+      "current_placement": "VMCS backing DAX, 값이 가리키는 host 실행 대상은 local",
+      "future_handling": "다음 실행 node의 host 복귀 context로 갱신. VMCS raw 내용을 일반 memory load/store로 해석하지 않는다.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/vmx/vmx.c",
+        "line": 4299
+      },
+      "live_fields": [],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P16",
+      "function": "VM-exit 때 돌아갈 host code·stack·page table·per-CPU GDT/TSS/IDT를 지정한다.",
+      "handoff_class": "hardware_address",
+      "audit_level": "source_only",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R12"
+        ]
+      }
+    },
+    {
+      "group": "pool_reference",
+      "object": "struct kvm_lapic",
+      "fields": [
+        "vcpu",
+        "regs",
+        "vapic_cache"
+      ],
+      "target": "vCPU, APIC register page, HVA cache",
+      "current_placement": "LAPIC 객체/register page DAX. vapic cache는 host mapping 종속.",
+      "future_handling": "APIC semantic registers 유지, host mapping cache 재연결.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/lapic.h",
+        "line": 59
+      },
+      "live_fields": [
+        "vcpu.apic",
+        "lapic.regs"
+      ],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P17",
+      "function": "Guest local APIC register·pending interrupt·timer를 제공하고 guest page의 host mapping을 cache한다.",
+      "handoff_class": "mixed_reference",
+      "audit_level": "source_and_selected_live_fields",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R15"
+        ]
+      }
+    },
+    {
+      "group": "host_binding",
+      "object": "struct hrtimer",
+      "fields": [
+        "function",
+        "base",
+        "timerqueue node"
+      ],
+      "target": "kernel code 및 per-CPU timer queue",
+      "current_placement": "LAPIC/PIT timer wrapper와 deadline은 DAX, base/queue와 callback code는 local",
+      "future_handling": "논리 deadline/period/pending 값을 유지하고 목적지 clock에 맞게 timer 재등록. queue node나 base pointer는 복사하지 않는다.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/include/linux/hrtimer.h",
+        "line": 118
+      },
+      "live_fields": [
+        "lapic.timer.base",
+        "lapic.timer.function",
+        "pit.timer.base",
+        "pit.timer.function"
+      ],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P18",
+      "function": "Host clock으로 guest timer 만료를 감지해 interrupt를 발생시킨다. base와 queue는 host CPU의 timer subsystem이다.",
+      "handoff_class": "host_binding",
+      "audit_level": "source_and_selected_live_fields",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R15"
+        ]
+      }
+    },
+    {
+      "group": "host_binding",
+      "object": "struct kvm_pit",
+      "fields": [
+        "worker",
+        "expired",
+        "mask_notifier",
+        "irq_ack_notifier"
+      ],
+      "target": "PIT worker thread와 kernel callback/queue",
+      "current_placement": "PIT state DAX, kthread_worker/task 및 workqueue binding은 local",
+      "future_handling": "작업을 drain한 뒤 목적지 worker와 notifier 연결. 처리 중 작업 여부는 별도 정지 경계에서 확보.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/i8254.h",
+        "line": 40
+      },
+      "live_fields": [
+        "pit.worker"
+      ],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P19",
+      "function": "PIT channel 값을 보존하면서 timer 만료를 host worker에서 IRQ로 처리하고 acknowledge/reinject를 관리한다.",
+      "handoff_class": "host_binding",
+      "audit_level": "source_and_selected_live_fields",
+      "implemented_handling": "Stop hrtimer; flush only pit.expired work; detach then reuse one native PIT worker per kernel; preserve pending counters and guest timer state.",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R15"
+        ]
+      }
+    },
+    {
+      "group": "host_binding",
+      "object": "struct kvm_arch",
+      "fields": [
+        "kvmclock_update_work",
+        "kvmclock_sync_work",
+        "tsc offset/generation"
+      ],
+      "target": "clock state 및 delayed workqueue",
+      "current_placement": "논리 clock/TSC 값과 work wrapper는 pooled VM 내, host time source/workqueue는 local",
+      "future_handling": "Clock continuity 정책과 TSC 변환을 적용하고 work를 목적지에서 재등록.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/include/asm/kvm_host.h",
+        "line": 1246
+      },
+      "live_fields": [],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P20",
+      "function": "Guest TSC와 pvclock의 시간 연속성을 유지한다. Host monotonic/TSC 원점과 delayed work는 노드별이다.",
+      "handoff_class": "mixed_reference",
+      "audit_level": "source_only",
+      "implemented_handling": "PV clock cache/timer work rebound; guest logical time frozen. Guest TSC is retained while last_host_tsc, suspend correction and TSC generation are rebased to destination host time domain.",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R16"
+        ]
+      }
+    },
+    {
+      "group": "mixed_reference",
+      "object": "struct kvm_kernel_irqfd",
+      "fields": [
+        "kvm",
+        "eventfd",
+        "resamplefd",
+        "wait.func",
+        "inject.func",
+        "shutdown",
+        "producer"
+      ],
+      "target": "VM, eventfd_ctx, workqueue 및 IRQ bypass",
+      "current_placement": "irqfd 객체는 DAX, eventfd_ctx 및 callbacks/host queues는 local",
+      "future_handling": "GSI/MSI/등록 의미를 보존하고 eventfd 및 wakeup/IRQ 연결을 목적지에 새로 등록.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/include/linux/kvm_irqfd.h",
+        "line": 39
+      },
+      "live_fields": [
+        "irqfd.kvm",
+        "irqfd.eventfd",
+        "irqfd.wait.func",
+        "irqfd.inject.func"
+      ],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P21",
+      "function": "VMM/backend의 eventfd 알림을 GSI/MSI interrupt로 바꾸고 level IRQ resample을 처리한다.",
+      "handoff_class": "mixed_reference",
+      "audit_level": "source_and_selected_live_fields",
+      "implemented_handling": "Deassign native IRQFD before detach; preserve IRQFD reader grace periods with expedited SRCU. Set shared handoff policy during the one initial VM creation, before the first deassign preceding EXPORT. Re-register A native IRQFD on return.",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R22"
+        ]
+      }
+    },
+    {
+      "group": "code_pointer",
+      "object": "struct kvm_kernel_irq_routing_entry",
+      "fields": [
+        "set",
+        "link",
+        "gsi/type/MSI fields"
+      ],
+      "target": "IRQ callback와 routing list",
+      "current_placement": "routing 객체/data DAX, set callback은 local code",
+      "future_handling": "Routing 값 유지, callback 및 list 연결은 목적지 kernel에서 구성.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/include/linux/kvm_host.h",
+        "line": 635
+      },
+      "live_fields": [],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P22",
+      "function": "GSI/MSI를 PIC·IOAPIC·LAPIC 또는 irqchip에 전달한다. Routing 값과 host callback/list 연결이 섞인다.",
+      "handoff_class": "mixed_reference",
+      "audit_level": "source_only",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R20",
+          "R21"
+        ]
+      }
+    },
+    {
+      "group": "runtime_synchronization",
+      "object": "struct mutex",
+      "fields": [
+        "owner",
+        "osq",
+        "wait_list"
+      ],
+      "target": "task_struct pointer/owner flags 및 kernel waiter",
+      "current_placement": "VM 내 mutex storage DAX, contended owner/waiter는 host일 수 있음",
+      "future_handling": "현재는 foreign-kernel waiter가 없는 협력적 정지 경계를 요구한다. 공유 lock/refcount를 일괄 초기화하지 않으며 vCPU mutex를 해제한 뒤 DETACHED를 게시한다. Contended owner/waiter bytes를 다른 kernel에서 재생하는 기능은 없다.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/include/linux/mutex.h",
+        "line": 64
+      },
+      "live_fields": [],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P23",
+      "function": "VM/vCPU/memslot 변경을 직렬화하고 lock 소유 task·waiter를 관리한다. Sleep/wakeup은 해당 kernel scheduler에 의존한다.",
+      "handoff_class": "runtime_synchronization",
+      "audit_level": "source_only",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R18"
+        ]
+      }
+    },
+    {
+      "group": "runtime_synchronization",
+      "object": "RCU/SRCU/refcount/list",
+      "fields": [
+        "rcu callback function",
+        "pending queue",
+        "reference counters",
+        "list next/prev"
+      ],
+      "target": "kernel별 grace period/수명 관리",
+      "current_placement": "wrapper는 DAX일 수 있으나 queue/reader namespace는 kernel별",
+      "future_handling": "Pool graph의 alias·논리 refcount는 유지한다. Host task/file reference와 reader/callback domain은 node별 관리하며 source 접근 중단·callback drain이 필요하다.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/include/linux/kvm_host.h",
+        "line": 798
+      },
+      "live_fields": [],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P24",
+      "function": "객체 수명·reader 보호·연결 관계를 관리한다. Pool의 논리 refcount와 host FD/task refcount를 구분해야 한다.",
+      "handoff_class": "runtime_synchronization",
+      "audit_level": "source_only",
+      "implemented_handling": "Global callback-completion barriers omitted only for immutable retired DAX blocks and native xarray nodes. MMU notifier unregister, SRCU cleanup, IRQFD expedited SRCU and PID RCU reader grace periods remain.",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R17",
+          "R18"
+        ]
+      }
+    },
+    {
+      "group": "host_binding",
+      "object": "KVM internal memory slots",
+      "fields": [
+        "APIC access page",
+        "identity page table",
+        "TSS helper mapping"
+      ],
+      "target": "VMX emulation의 host-specific scratch mapping",
+      "current_placement": "조건부 __x86_set_memory_region 경로는 여전히 local anonymous mapping을 사용한다. 현재 live unrestricted_guest=Y, enable_apicv=N, flexpriority=N이므로 해당 TSS/identity/APIC-access helper는 활성 구성의 RAM이 아니다. LAPIC register image는 별도로 DAX다.",
+      "future_handling": "이 조건부 helper mapping까지 DAX로 전환한 구현은 아니다. 향후 해당 기능을 활성화하면 배치와 node별 재연결을 별도 구현해야 한다.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/x86.c",
+        "line": 12452
+      },
+      "live_fields": [],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P25",
+      "function": "VMX의 APIC access·real-mode TSS·identity paging에 쓰는 내부 mapping을 제공한다.",
+      "handoff_class": "mixed_reference",
+      "audit_level": "source_only",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R26"
+        ]
+      }
+    },
+    {
+      "group": "host_binding",
+      "object": "DAX struct page/dev_pagemap",
+      "fields": [
+        "pgmap",
+        "refcount",
+        "page.private",
+        "linear mapping metadata"
+      ],
+      "target": "kernel별 DAX page metadata",
+      "current_placement": "struct page/dev_pagemap은 local. EPT page.private는 pooled MMU object를 가리킬 수 있음.",
+      "future_handling": "각 kernel이 자기 metadata를 유지. 현재 4KiB metadata가 필요한 이유이며 metadata 자체의 multi-kernel 공유는 검증하지 않음.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/drivers/dax/device.c",
+        "line": 393
+      },
+      "live_fields": [],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P26",
+      "function": "DAX PFN의 kernel metadata와 mapping 수명을 제공한다. 동일 CXL bytes에도 kernel별 struct page/dev_pagemap이 존재한다.",
+      "handoff_class": "host_binding",
+      "audit_level": "source_only",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R07"
+        ]
+      }
+    },
+    {
+      "group": "mixed_reference",
+      "object": "Firecracker VmCommon",
+      "fields": [
+        "fd",
+        "guest_memory",
+        "kvm",
+        "interrupts",
+        "mmio_bus",
+        "vcpus_handles",
+        "vcpus_exit_evt"
+      ],
+      "target": "DAX heap objects 및 host FD/thread identity",
+      "current_placement": "Vmm/VmCommon과 동적 Rust heap data는 DAX. FD table/kernel file 객체는 local.",
+      "future_handling": "VM 의미와 host 실행 연결을 나누고 FD/eventfd/thread 연결 재생성. FD 숫자도 raw pointer와 같은 비이식 참조이다.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/firecracker/src/vmm/src/vstate/vm.rs",
+        "line": 65
+      },
+      "live_fields": [],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P27",
+      "function": "Userspace VM 관리 객체에서 kernel VM FD·guest RAM·MMIO bus·IRQ·vCPU thread를 연결한다.",
+      "handoff_class": "mixed_reference",
+      "audit_level": "source_only",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R24"
+        ]
+      }
+    },
+    {
+      "group": "mixed_reference",
+      "object": "Firecracker GuestRegionMmap",
+      "fields": [
+        "raw mmap pointer",
+        "guest address",
+        "FileOffset",
+        "Arc<File>"
+      ],
+      "target": "guest DAX mapping 및 File/FD",
+      "current_placement": "wrapper는 DAX heap, guest bytes는 별도 DAX RAM; HVA/FD는 VM A에 종속",
+      "future_handling": "backing ID/offset/GPA/size 유지, node의 mmap 주소와 FD를 재연결.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/firecracker/src/vmm/src/vstate/memory.rs",
+        "line": 332
+      },
+      "live_fields": [],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P28",
+      "function": "Guest GPA를 VMM mmap 주소와 backing FD/offset에 연결한다. VMA identity는 process별이다.",
+      "handoff_class": "mixed_reference",
+      "audit_level": "source_only",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R01",
+          "R24"
+        ]
+      }
+    },
+    {
+      "group": "mixed_reference",
+      "object": "Firecracker Vcpu/VcpuHandle",
+      "fields": [
+        "KvmVcpu.fd",
+        "Sender/Receiver",
+        "vcpu_thread",
+        "JoinHandle"
+      ],
+      "target": "vCPU FD, channel heap 및 pthread",
+      "current_placement": "Vcpu wrapper/동적 Rust data는 DAX heap. Native stack/TLS/pthread/scheduler는 local.",
+      "future_handling": "Channel payload와 실행 identity 분리. 새 executor thread와 FD에 연결하며 native thread stack을 그대로 다른 kernel에서 실행하지 않는다.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/firecracker/src/vmm/src/vstate/vcpu.rs",
+        "line": 91
+      },
+      "live_fields": [],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P29",
+      "function": "vCPU 실행 thread를 생성·제어하고 pause/resume 요청과 응답·kick을 전달한다.",
+      "handoff_class": "mixed_reference",
+      "audit_level": "source_only",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R24"
+        ]
+      }
+    },
+    {
+      "group": "code_pointer",
+      "object": "Firecracker Bus",
+      "fields": [
+        "Weak<Mutex<dyn BusDevice>>",
+        "trait-object vtable",
+        "ranges BTreeMap"
+      ],
+      "target": "device data와 executable vtable",
+      "current_placement": "device data/containers는 DAX heap. vtable/code target은 local Firecracker ELF.",
+      "future_handling": "device type/state로 실행 method table을 다시 선택. Raw trait-object의 vtable pointer 저장만으로 복구할 수 없음.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/firecracker/src/vmm/src/vstate/bus.rs",
+        "line": 116
+      },
+      "live_fields": [],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P30",
+      "function": "Guest MMIO 주소를 emulated device로 전달한다. Trait-object data pointer와 executable vtable이 함께 존재한다.",
+      "handoff_class": "code_pointer",
+      "audit_level": "source_only",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R24"
+        ]
+      }
+    },
+    {
+      "group": "guest_state",
+      "object": "Firecracker device model",
+      "fields": [
+        "SerialState",
+        "virtio register/queue state",
+        "backend FDs"
+      ],
+      "target": "virtual device semantic state 및 backend resource",
+      "current_placement": "현재 serial heap state는 DAX. Disk/network는 이 실험에서 구성하지 않음.",
+      "future_handling": "구성한 장치만 검증됨. 이후 virtio ring/buffer와 backend FD·in-flight I/O를 따로 추적.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/firecracker/src/vmm/src/device_manager/persist.rs",
+        "line": 47
+      },
+      "live_fields": [],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P31",
+      "function": "Serial/virtio register·queue index·buffer 상태를 유지하고 host I/O backend와 연결한다.",
+      "handoff_class": "mixed_reference",
+      "audit_level": "source_only",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R25"
+        ]
+      }
+    },
+    {
+      "group": "host_binding",
+      "object": "DAX arena allocators",
+      "fields": [
+        "kernel gen_pool descriptor/bitmap",
+        "module globals",
+        "Rust HEAP base anchor"
+      ],
+      "target": "allocator control 및 mapping anchor",
+      "current_placement": "Kernel gen_pool metadata는 local. Rust heap control/free-list/header는 DAX; process-global base anchor는 local.",
+      "future_handling": "현재 kernel shared mode는 DAX header/bump를 공유하고 B는 초기화 없이 연결한다. Local gen_pool/slab anchor는 kernel별이며 shared bump 할당은 lab 종료까지 회수하지 않는다. Rust allocator는 A process cold initialization용으로, B가 동일 heap의 실행 owner를 승계하는 기능은 없다.",
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/virt/kvm/dax_pool.c",
+        "line": 30
+      },
+      "live_fields": [],
+      "evidence": "source analysis; live_fields refer to kvm-dax-state.json when present",
+      "id": "P32",
+      "function": "CXL arena의 allocation 소유·free 영역·통계·base mapping을 관리한다. 현재 kernel gen_pool은 독립 host 상태다.",
+      "handoff_class": "mixed_reference",
+      "audit_level": "source_only",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R09",
+          "R24"
+        ]
+      }
+    },
+    {
+      "id": "P33",
+      "group": "host_binding",
+      "object": "KVM VM/vCPU file wrappers",
+      "fields": [
+        "file.private_data",
+        "file.f_op",
+        "file.f_count",
+        "kvm.users_count",
+        "kvm_vcpu_fops",
+        "kvm_vm_fops"
+      ],
+      "target": "kernel별 FD table/VFS/module 수명",
+      "current_placement": "현재 local. 모두 CXL에 놓아도 FD 및 VFS identity는 kernel별이다.",
+      "function": "FD에서 KVM 객체로 진입하고 ioctl·mmap·close를 처리한다. close는 kvm_put_kvm 및 VM 파괴로 이어질 수 있다.",
+      "future_handling": "현재 ATTACH/VCPU로 목적지 native FD wrapper를 만들고 이후 REATTACH로 재사용한다. Shared graph는 pin해 수명을 유지하고 ioctl에서 owner와 mm를 검사한다. FD 번호/struct file 자체를 다른 kernel로 이전하지 않는다.",
+      "handoff_class": "host_binding",
+      "conditional": false,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/virt/kvm/kvm_main.c",
+        "line": 4131
+      },
+      "live_fields": [],
+      "audit_level": "source_only",
+      "evidence": "Source analysis added 2026-10-15; no new cross-node execution validation",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R10"
+        ]
+      }
+    },
+    {
+      "id": "P34",
+      "group": "mixed_reference",
+      "object": "GFN→HVA/PFN caches",
+      "fields": [
+        "gfn_to_pfn_cache.uhva/khva/pfn/memslot",
+        "gfn_to_pfn_cache.list/lock",
+        "arch.pv_time",
+        "arch.st.cache",
+        "arch.pv_eoi.data",
+        "arch.apf.data"
+      ],
+      "target": "node별 guest-page mapping 및 host page pin",
+      "current_placement": "pv_time wrapper는 DAX vCPU 안. uhva/khva target은 guest CXL RAM일 수 있다. Native 의미는 각 mm의 mapping/reference/notifier lifetime이며 host-private target bytes라는 뜻이 아니다.",
+      "function": "Pvclock·steal time·PV EOI 등을 위해 guest page를 빠르게 읽고 쓴다. GPA가 같아도 cached HVA/PFN은 다를 수 있다.",
+      "future_handling": "Guest GPA와 기능 상태는 유지. Host translation·pin·notifier 연결은 node별 미리 준비하거나 invalidate/refresh한다.",
+      "handoff_class": "mixed_reference",
+      "conditional": false,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/include/linux/kvm_types.h",
+        "line": 65
+      },
+      "live_fields": [],
+      "audit_level": "source_only",
+      "evidence": "Source analysis added 2026-10-15; no new cross-node execution validation",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R05"
+        ]
+      }
+    },
+    {
+      "id": "P35",
+      "group": "host_binding",
+      "object": "VMX CPU/VPID identifiers",
+      "fields": [
+        "vcpu.cpu",
+        "loaded_vmcs.cpu",
+        "vmx.vpid",
+        "arch.last_vmentry_cpu",
+        "arch.wbinvd_dirty_mask",
+        "vmx_vpid_bitmap"
+      ],
+      "target": "kernel CPU namespace·TLB tag allocator",
+      "current_placement": "CPU 번호·VPID는 DAX field에 있어도 node별 handle. Bitmap은 module global.",
+      "function": "Loaded VMCS의 CPU 및 translation tag를 추적하고 IPI·TLB invalidation 대상 CPU를 선택한다.",
+      "future_handling": "Node ID+CPU를 구분. 목적지 VPID를 예약하고 EPT/VPID TLB invalidation을 수행한다. A CPU 0과 B CPU 0이 같다고 기존 load가 갱신을 생략하지 않게 한다.",
+      "handoff_class": "host_binding",
+      "conditional": false,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/vmx/vmx.c",
+        "line": 1415
+      },
+      "live_fields": [],
+      "audit_level": "source_only",
+      "evidence": "Source analysis added 2026-10-15; no new cross-node execution validation",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R11",
+          "R13"
+        ]
+      }
+    },
+    {
+      "id": "P36",
+      "group": "mixed_reference",
+      "object": "Posted interrupt descriptor and wakeup lists",
+      "fields": [
+        "pi_desc.ndst/nv/sn/pir",
+        "pi_wakeup_list",
+        "wakeup_vcpus_on_cpu",
+        "irq_bypass_consumer/producer"
+      ],
+      "target": "host APIC destination·per-CPU wakeup list·IOMMU interrupt route",
+      "current_placement": "Descriptor storage는 vcpu_vmx 내부 DAX지만 현재 direct boot는 enable_apicv=0이며 live 값도 N이다. Posted-interrupt 실행 경로는 이 구성의 활성 기능이 아니다.",
+      "function": "Guest interrupt bitmap을 유지하면서 실행/HLT 상태에 맞는 host CPU로 notification을 보낸다.",
+      "future_handling": "Guest pending PIR 보존과 host notification destination 전환을 구분한다. Source list detach, 목적지 APIC ID/vector·list 등록. Device PI 사용 시 IOMMU 경로도 별도 처리.",
+      "handoff_class": "mixed_reference",
+      "conditional": true,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/vmx/posted_intr.c",
+        "line": 52
+      },
+      "live_fields": [],
+      "audit_level": "source_only",
+      "evidence": "Source analysis added 2026-10-15; no new cross-node execution validation",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R26"
+        ]
+      }
+    },
+    {
+      "id": "P37",
+      "group": "hardware_address",
+      "object": "VMCS side-buffer addresses and host MSR state",
+      "fields": [
+        "MSR_BITMAP",
+        "POSTED_INTR_DESC_ADDR",
+        "VM_ENTRY_MSR_LOAD_ADDR",
+        "VM_EXIT_MSR_LOAD_ADDR",
+        "PML_ADDRESS",
+        "pml_pg",
+        "msr_autoload.host"
+      ],
+      "target": "node별 hardware physical address·host MSR 값·struct page",
+      "current_placement": "VMCS 및 주요 buffer bytes는 DAX. pml_pg는 kernel별 struct page pointer.",
+      "function": "VM-entry/exit에서 MSR를 교환하고 intercept·dirty page 기록·interrupt 전달을 수행한다.",
+      "future_handling": "EPTP만 보정해서는 부족하다. 활성 VMCS physical address field 전체를 검토하고 node별 HPA·host MSR 값·page metadata를 연결한다. PML 사용 시 기록을 수거한다.",
+      "handoff_class": "hardware_address",
+      "conditional": false,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/vmx/vmx.c",
+        "line": 4721
+      },
+      "live_fields": [],
+      "audit_level": "source_only",
+      "evidence": "Source analysis added 2026-10-15; no new cross-node execution validation",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R12",
+          "R13"
+        ]
+      }
+    },
+    {
+      "id": "P38",
+      "group": "mixed_reference",
+      "object": "Pending userspace I/O and instruction emulator",
+      "fields": [
+        "arch.complete_userspace_io",
+        "mmio_fragments[].data",
+        "arch.emulate_ctxt.ops",
+        "pio.count",
+        "mmio_needed"
+      ],
+      "target": "host code callback·buffer·부분 실행한 guest 명령",
+      "current_placement": "Emulator·PIO buffer는 DAX이지만 callback은 code reference. 일부 fragment는 해당 실행 context buffer를 참조.",
+      "function": "I/O/MMIO/hypercall exit 뒤 guest 명령의 남은 작업을 다음 KVM_RUN에서 마무리한다.",
+      "future_handling": "현재 DETACH는 complete_userspace_io가 남으면 거부한다. Native executor는 pending I/O completion을 끝내고 정지한다. 임의의 미완료 userspace I/O 중간 상태를 승계하는 기능은 없다.",
+      "handoff_class": "mixed_reference",
+      "conditional": false,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/x86.c",
+        "line": 11182
+      },
+      "live_fields": [],
+      "audit_level": "source_only",
+      "evidence": "Source analysis added 2026-10-15; no new cross-node execution validation",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R20",
+          "R23"
+        ]
+      }
+    },
+    {
+      "id": "P39",
+      "group": "host_binding",
+      "object": "Asynchronous page fault work",
+      "fields": [
+        "kvm_async_pf.mm",
+        "addr",
+        "work",
+        "vcpu",
+        "async_pf.queue/done"
+      ],
+      "target": "host mm·workqueue·page fault 작업",
+      "current_placement": "일반 KVM의 조건부 host work 경로다. 현재 direct CPUID는 APF를 노출하지 않고 detach는 활성 APF MSR을 거부하므로 지원 구성에서 사용하지 않는다.",
+      "function": "Guest page가 즉시 준비되지 않을 때 host worker가 remote GUP를 수행한 뒤 vCPU를 깨운다.",
+      "future_handling": "고정 DAX mapping으로 page fault 의존성을 줄이는 후보. Pending 작업은 drain/cancel하고 guest 통지 의미를 보존해야 하며 source work가 새 owner RAM을 뒤늦게 건드리지 않아야 한다.",
+      "handoff_class": "host_binding",
+      "conditional": true,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/virt/kvm/async_pf.c",
+        "line": 46
+      },
+      "live_fields": [],
+      "audit_level": "source_only",
+      "evidence": "Source analysis added 2026-10-15; no new cross-node execution validation",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R26"
+        ]
+      }
+    },
+    {
+      "id": "P40",
+      "group": "host_binding",
+      "object": "Virtual PMU perf events",
+      "fields": [
+        "kvm_pmc.perf_event",
+        "perf_event.overflow_handler_context",
+        "pmu.reprogram_pmi",
+        "pmc.counter/eventsel"
+      ],
+      "target": "host perf subsystem·PMI callback",
+      "current_placement": "일반 KVM의 조건부 perf_event 경로다. 현재 direct boot는 enable_pmu=0이고 Firecracker가 CPUID PMU leaf를 비우므로 지원 구성의 활성 PMU event가 아니다.",
+      "function": "Guest performance counter를 host hardware event에 연결하고 overflow interrupt를 전달한다.",
+      "future_handling": "Guest counter/config/pending PMI 보존. Host perf event는 node별 생성/재프로그램. 첫 prototype에서 PMU를 명시적으로 제외하는 선택 가능.",
+      "handoff_class": "host_binding",
+      "conditional": true,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/pmu.c",
+        "line": 164
+      },
+      "live_fields": [],
+      "audit_level": "source_only",
+      "evidence": "Source analysis added 2026-10-15; no new cross-node execution validation",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R26",
+          "R27"
+        ]
+      }
+    },
+    {
+      "id": "P41",
+      "group": "host_binding",
+      "object": "NX huge-page recovery worker",
+      "fields": [
+        "arch.nx_huge_page_recovery_thread",
+        "possible_nx_huge_pages"
+      ],
+      "target": "kernel task·MMU background traversal",
+      "current_placement": "일반 KVM에는 조건부 worker 생성 경로가 있다. 현재 direct boot는 nx_huge_pages=never이며 EXPORT/arch handoff도 살아 있는 NX recovery worker를 거부한다.",
+      "function": "EPT/shadow page를 주기적으로 검사해 NX huge-page mitigation 때문에 쪼개진 mapping을 회복한다.",
+      "future_handling": "vCPU 정지만으로 MMU writer가 없어졌다고 볼 수 없다. Source worker park/drain 또는 node별 MMU 관리와 lifetime 분리 필요.",
+      "handoff_class": "host_binding",
+      "conditional": true,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/mmu/mmu.c",
+        "line": 7143
+      },
+      "live_fields": [],
+      "audit_level": "source_only",
+      "evidence": "Source analysis added 2026-10-15; no new cross-node execution validation",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R26"
+        ]
+      }
+    },
+    {
+      "id": "P42",
+      "group": "mixed_reference",
+      "object": "MMU allocation caches",
+      "fields": [
+        "mmu_page_header_cache.kmem_cache",
+        "mmu_pte_list_desc_cache.kmem_cache",
+        "kvm_mmu_memory_cache.objects",
+        "gfp flags"
+      ],
+      "target": "kernel slab descriptor 및 미리 확보한 pool 객체",
+      "current_placement": "Cache는 DAX vCPU 내부. kmem_cache descriptor는 host/module allocator.",
+      "function": "Page fault 중 lock을 잡은 채 큰 allocation을 하지 않도록 MMU 객체를 미리 확보한다.",
+      "future_handling": "미사용 pool 객체와 slab allocator identity를 구분. Descriptor를 목적지에 바인딩하고 pool allocation/free를 공유 lifetime 규칙에 연결한다.",
+      "handoff_class": "mixed_reference",
+      "conditional": false,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/mmu/mmu.c",
+        "line": 6050
+      },
+      "live_fields": [],
+      "audit_level": "source_only",
+      "evidence": "Source analysis added 2026-10-15; no new cross-node execution validation",
+      "implemented_handling": "Attach rebinds four local kmem_cache anchors. DAX allocation still reads kmem_cache_size(); explicit size/kind could remove this dependency.",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R08"
+        ]
+      }
+    },
+    {
+      "id": "P43",
+      "group": "mixed_reference",
+      "object": "Firecracker event loop and native execution runtime",
+      "fields": [
+        "EventManager epoll_context",
+        "EventFd/TimerFd/Tap/File",
+        "Arc/Weak counts",
+        "Mutex/Condvar/futex",
+        "JoinHandle",
+        "native stack/TLS"
+      ],
+      "target": "kernel별 epoll·FD table·futex waiters·pthread identity",
+      "current_placement": "Rust heap은 DAX. Event manager wrapper도 FD를 가짐. Native stack/TLS/bootstrap/libc는 현재 미배치.",
+      "function": "Host I/O readiness를 device handler에 전달하고 thread·heap 객체의 수명과 실행을 관리한다.",
+      "future_handling": "VMM 실행 stack을 이식하지 않고 목적지 executor/event loop를 준비한다. Pool 상태와 local channel·futex waiters 분리. 같은 memory address라도 서로 다른 kernel의 futex waiters를 깨우지 못한다.",
+      "handoff_class": "mixed_reference",
+      "conditional": false,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/firecracker/src/vmm/src/lib.rs",
+        "line": 170
+      },
+      "live_fields": [],
+      "audit_level": "source_only",
+      "evidence": "Source analysis added 2026-10-15; no new cross-node execution validation",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R24",
+          "R25"
+        ]
+      }
+    },
+    {
+      "id": "P44",
+      "group": "host_binding",
+      "object": "Assigned devices, IOMMU and external backends",
+      "fields": [
+        "arch.iommu_domain",
+        "assigned_dev_head",
+        "VFIO/vhost/io_uring backend handles",
+        "DMA mappings"
+      ],
+      "target": "물리 장치·kernel driver·IOMMU context",
+      "current_placement": "현재 최소 실험의 passthrough/vhost device는 구성하지 않았음.",
+      "function": "Device DMA와 외부 I/O를 VM RAM에 연결한다. Guest RAM 공유만으로 device ownership은 이전되지 않는다.",
+      "future_handling": "별도 device 이동 지원 또는 고정 I/O owner+명시적 remote request/completion 설계 필요. 기본 handoff 경로와 조건부 기능을 구분한다.",
+      "handoff_class": "host_binding",
+      "conditional": true,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/include/asm/kvm_host.h",
+        "line": 1286
+      },
+      "live_fields": [],
+      "audit_level": "source_only",
+      "evidence": "Source analysis added 2026-10-15; no new cross-node execution validation",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R25",
+          "R26"
+        ]
+      }
+    },
+    {
+      "id": "P45",
+      "group": "mixed_reference",
+      "object": "Kernel DAX allocation headers and ownership",
+      "fields": [
+        "dax_alloc_header.raw",
+        "dax_alloc_header.kind",
+        "dax_pool bitmap",
+        "dax_kinds[].name/live",
+        "Rust HEAP base"
+      ],
+      "target": "CXL allocation identity와 node별 allocator anchor",
+      "current_placement": "Header는 DAX이나 raw는 A KVA, kind는 A module table index. Kernel gen_pool bitmap은 현재 local. Rust free-list는 offset.",
+      "function": "기존 객체의 free 위치·영역과 allocation 통계를 결정한다.",
+      "future_handling": "현재 direct mode는 A dax_shared=1에서만 header를 초기화하고 B dax_shared=2에서는 유지한다. 공유 bump allocator를 사용하여 local gen_pool bitmap 충돌을 피하고 할당 주소를 재사용하지 않는다. Production reclamation과 일반 Rust heap attach는 구현하지 않았다.",
+      "handoff_class": "mixed_reference",
+      "conditional": false,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/virt/kvm/dax_pool.c",
+        "line": 14
+      },
+      "live_fields": [],
+      "audit_level": "source_only",
+      "evidence": "Source analysis added 2026-10-15; no new cross-node execution validation",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R09"
+        ]
+      }
+    },
+    {
+      "id": "P46",
+      "group": "host_binding",
+      "object": "Implicit kernel/per-CPU registries",
+      "fields": [
+        "kvm_running_vcpu",
+        "current_vmcs",
+        "loaded_vmcss_on_cpu",
+        "vm_list",
+        "kvm_x86_ops/static_call",
+        "kmem_cache/module globals"
+      ],
+      "target": "각 kernel의 전역·CPU별 실행·allocator domain",
+      "current_placement": "객체 안의 pointer graph만 따라가면 누락되는 외부 등록 및 static code 참조.",
+      "function": "현재 CPU에서 실행하는 VM을 조회하고 VMX load·CPU offline·module exit·global MMU 관리에 사용한다.",
+      "future_handling": "Source registry detach와 destination registry attach 필요. Callback 주소가 같아도 그 code가 접근하는 kernel별 global state는 별개다.",
+      "handoff_class": "host_binding",
+      "conditional": false,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/virt/kvm/kvm_main.c",
+        "line": 211
+      },
+      "live_fields": [],
+      "audit_level": "source_only",
+      "evidence": "Source analysis added 2026-10-15; no new cross-node execution validation",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R13",
+          "R19",
+          "R28"
+        ]
+      }
+    },
+    {
+      "id": "P47",
+      "group": "code_pointer",
+      "object": "Kernel MMIO/PIO device method tables",
+      "fields": [
+        "kvm_io_device.ops",
+        "ops.read/write/destructor",
+        "kvm_io_bus.ranges"
+      ],
+      "target": "kernel module의 장치 구현 code",
+      "current_placement": "장치 객체/bus는 DAX일 수 있으나 ops table과 callback code는 host/module별.",
+      "function": "Guest I/O 주소를 PIC·PIT·IOAPIC·ioeventfd handler에 전달하고 device 해제를 수행한다.",
+      "future_handling": "Device type을 기준으로 목적지 ops를 연결한다. Data pointer만 고쳐서는 충분하지 않으며 destructor도 allocator/lifetime 규칙을 따라야 한다.",
+      "handoff_class": "code_pointer",
+      "conditional": false,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/include/kvm/iodev.h",
+        "line": 17
+      },
+      "live_fields": [],
+      "audit_level": "source_only",
+      "evidence": "Source analysis added 2026-10-15; no new cross-node execution validation",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R20",
+          "R21"
+        ]
+      }
+    },
+    {
+      "id": "P48",
+      "group": "host_binding",
+      "object": "Incremental EPT metadata anchor",
+      "fields": [
+        "kvm_mmu_dax_ept_rebind.seen_head",
+        "kvm_mmu_page.dax_next"
+      ],
+      "target": "Each kernel has private struct page metadata; the shared header link refers to DAX. Addresses remain valid because retired pages are never reused.",
+      "current_placement": "Shared data plus node-local semantic/metadata anchors",
+      "function": "Each kernel has private struct page metadata; the shared header link refers to DAX. Addresses remain valid because retired pages are never reused.",
+      "future_handling": "Bind only headers added since the last visit; first visit binds the whole registry. No per-handoff full page table walk.",
+      "implemented_handling": "Bind only headers added since the last visit; first visit binds the whole registry. No per-handoff full page table walk.",
+      "handoff_class": "host_binding",
+      "conditional": true,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/mmu/mmu.c",
+        "line": 6059
+      },
+      "live_fields": [],
+      "audit_level": "source_and_runtime",
+      "evidence": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/direct-handoff-optimized-summary.json",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R06"
+        ]
+      }
+    },
+    {
+      "id": "P49",
+      "group": "host_clock_domain",
+      "object": "Host TSC samples and generation",
+      "fields": [
+        "vcpu.arch.last_host_tsc",
+        "vcpu.arch.tsc_offset_adjustment",
+        "vcpu.arch.tsc_catchup",
+        "kvm.arch.cur_tsc_offset",
+        "vcpu.arch.this_tsc_nsec"
+      ],
+      "target": "These values are not pointers, but their meaning depends on the host clock domain. Identical code and shared memory do not make host TSC offsets equal.",
+      "current_placement": "Shared data plus node-local semantic/metadata anchors",
+      "function": "These values are not pointers, but their meaning depends on the host clock domain. Identical code and shared memory do not make host TSC offsets equal.",
+      "future_handling": "Save guest TSC, clear host-only samples/adjustments, require equal host frequency, call __kvm_synchronize_tsc with a new generation on the loaded destination VMCS. Raw guest TSC and CLOCK_MONOTONIC checks pass.",
+      "implemented_handling": "Save guest TSC, clear host-only samples/adjustments, require equal host frequency, call __kvm_synchronize_tsc with a new generation on the loaded destination VMCS. Raw guest TSC and CLOCK_MONOTONIC checks pass.",
+      "handoff_class": "host_clock_domain",
+      "conditional": true,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/x86.c",
+        "line": 12406
+      },
+      "live_fields": [],
+      "audit_level": "source_and_runtime",
+      "evidence": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/direct-handoff-optimized-summary.json",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R16"
+        ]
+      }
+    },
+    {
+      "id": "P50",
+      "group": "host_binding",
+      "object": "PIT worker lifetime cache",
+      "fields": [
+        "kvm_pit_dax_handoff.dax_worker",
+        "pit_state.worker",
+        "pit_state.expired"
+      ],
+      "target": "One native kthread worker is cached independently in each kernel, never treated as a transferable shared object.",
+      "current_placement": "Shared data plus node-local semantic/metadata anchors",
+      "function": "One native kthread worker is cached independently in each kernel, never treated as a transferable shared object.",
+      "future_handling": "Cancel timer, flush this PIT work, then park; attach reinitializes work and reconnects to destination worker. Forced periodic PIT tests cover the active path.",
+      "implemented_handling": "Cancel timer, flush this PIT work, then park; attach reinitializes work and reconnects to destination worker. Forced periodic PIT tests cover the active path.",
+      "handoff_class": "host_binding",
+      "conditional": true,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/i8254.c",
+        "line": 666
+      },
+      "live_fields": [],
+      "audit_level": "source_and_runtime",
+      "evidence": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/direct-handoff-optimized-summary.json",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R15"
+        ]
+      }
+    },
+    {
+      "id": "P51",
+      "group": "code_pointer",
+      "object": "Module text address determinism",
+      "fields": [
+        "kvm_dax_sync_init",
+        "init_free_wq",
+        "kvm_dax_vm_ioctl",
+        "vmx_dax_handoff"
+      ],
+      "target": "nokaslr alone does not determine module text allocation order when init-section reclamation is asynchronous.",
+      "current_placement": "Shared data plus node-local semantic/metadata anchors",
+      "function": "nokaslr alone does not determine module text allocation order when init-section reclamation is asynchronous.",
+      "future_handling": "Opt-in boot flag waits for module init-section cleanup before sequential next load; verify compares both KVM module text addresses before the experiment.",
+      "implemented_handling": "Opt-in boot flag waits for module init-section cleanup before sequential next load; verify compares both KVM module text addresses before the experiment.",
+      "handoff_class": "code_pointer",
+      "conditional": true,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/kernel/module/main.c",
+        "line": 82
+      },
+      "live_fields": [],
+      "audit_level": "source_and_runtime",
+      "evidence": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/direct-handoff-optimized-summary.json",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R20"
+        ]
+      }
+    },
+    {
+      "id": "P52",
+      "group": "conditional_unplaced_policy",
+      "object": "KVM x86 MSR filter",
+      "fields": [
+        "arch.msr_filter",
+        "ranges[].bitmap"
+      ],
+      "target": "guest MSR permission policy",
+      "current_placement": "Outer filter DAX; bitmap native memdup_user allocation",
+      "function": "가변 MSR read/write 허용 bitmap. Native placement가 본질적 요구가 아닌 미배치 데이터다.",
+      "future_handling": "현재 설정하지 않음. 지원 시 DAX placement 또는 명시적 거부가 필요하며 아직 구현되지 않았다.",
+      "implemented_handling": "No handoff filter guard/rebind. No configuring call found in current Firecracker/runner source; not claimed active in tested VM.",
+      "handoff_class": "conditional_unplaced_policy",
+      "conditional": true,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/x86.c",
+        "line": 6559
+      },
+      "live_fields": [],
+      "audit_level": "source_only",
+      "evidence": "Fresh source necessity review 2026-10-19; no new VM mutation or handoff test",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R27"
+        ]
+      }
+    },
+    {
+      "id": "P53",
+      "group": "conditional_unplaced_policy",
+      "object": "KVM PMU event filter",
+      "fields": [
+        "arch.pmu_event_filter",
+        "events[]",
+        "includes/excludes"
+      ],
+      "target": "guest PMU event policy",
+      "current_placement": "Entire filter native kzalloc; includes/excludes point into its own events array",
+      "function": "Guest perf event 허용/거부 목록. 현재 PMU 비활성 구성이지만 handoff guard는 이 객체를 검사하지 않는다.",
+      "future_handling": "현재 설정하지 않음. 지원 시 DAX placement 또는 명시적 거부가 필요하며 아직 구현되지 않았다.",
+      "implemented_handling": "No handoff filter guard/rebind. No configuring call found in current Firecracker/runner source; not claimed active in tested VM.",
+      "handoff_class": "conditional_unplaced_policy",
+      "conditional": true,
+      "source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/pmu.c",
+        "line": 858
+      },
+      "live_fields": [],
+      "audit_level": "source_only",
+      "evidence": "Fresh source necessity review 2026-10-19; no new VM mutation or handoff test",
+      "necessity_review": {
+        "inventory": "implementation/virtual_machine/host-reference-audit.json",
+        "entries": [
+          "R27"
+        ]
+      }
+    }
+  ],
+  "summary": "Pool 내부 참조는 offset/object-ID 후보, host binding은 재생성·재연결 후보, guest 의미 상태는 보존 대상이다. 포인터가 있다는 이유만으로 serialize/deserialize가 반드시 필요한 것은 아니며 raw pointer bytes로 host 객체를 복구할 수 없다.",
+  "reviewed_on": "2026-10-19",
+  "assumptions": [
+    "Guest RAM 및 VM 전용 kernel/VMM 상태는 모두 CXL에 놓을 수 있다고 가정한다. 현재 구현의 미배치 영역과 가정을 구분한다.",
+    "동일 kernel build, 호환 CPU/VMCS format, 한 시점의 VM execution owner 하나. 여러 kernel에 걸친 동시 vCPU 실행은 별도 문제다.",
+    "공유 bytes의 visibility/atomicity는 플랫폼 보장이 필요하다. Device-DAX mmap만으로 host 간 coherence나 분산 scheduler를 제공하지 않는다.",
+    "노드별 binding의 저장 매체도 CXL일 수 있다. Physical placement와 kernel별 identity/등록 domain은 별개다."
+  ],
+  "evidence_scope": {
+    "kernel": "implementation/linux, 6.6.0-rc6-dcd-v3 with current DAX allocator patch",
+    "vmm": "firecracker v1.17.0 source with current DAX RAM/heap patch",
+    "historical_live_report": "implementation/virtual_machine/.local/runs/20261015T084128Z-2ki3rcz7/kvm-dax-state.json",
+    "historical_live_pointer_fields": 35,
+    "historical_live_host_targets": 17,
+    "historical_cross_vm_value_comparisons": 10,
+    "live_report_note": "기존 첫 VM-entry 시점 관측이다. Pointer 값 일치는 B에서의 dereference·attach·실행 성공을 증명하지 않는다.",
+    "new_audit": "52 existing groups plus 2 conditional policy allocation gaps (54 total), mapped to 29 causal explanations in host-reference-audit.json. Source audit only in this revision; no new handoff execution.",
+    "raw_kernel_object_resume_tested": true,
+    "cross_kernel_snapshot_resume_tested": true,
+    "raw_resume_scope": "Restricted 1-vCPU direct detach/attach in two independent nested kernels with emulated shared CXL; same KVM/vCPU/VMCS/EPT offsets and guest continuity verified",
+    "full_vmm_device_migration_tested": false
+  },
+  "critical_findings": [
+    {
+      "finding": "vcpu_put is not cross-kernel detach",
+      "sources": [
+        {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/virt/kvm/kvm_main.c",
+          "line": 222
+        },
+        {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/vmx/vmx.c",
+          "line": 1497
+        }
+      ],
+      "implication": "일반 put은 active VMCS를 VMCLEAR하고 모든 timer/worker/FD 연결을 제거하는 절차가 아니다."
+    },
+    {
+      "finding": "Source CPU is in another namespace",
+      "sources": [
+        {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/vmx/vmx.c",
+          "line": 814
+        },
+        {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/vmx/vmx.c",
+          "line": 1420
+        }
+      ],
+      "implication": "목적지에서 old cpu 번호로 smp_call_function_single을 호출해도 source CPU를 clear하지 못한다. 같은 번호는 already_loaded fast path를 잘못 탈 수 있다."
+    },
+    {
+      "finding": "EPT bytes have per-kernel metadata dependencies",
+      "sources": [
+        {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/mmu/tdp_mmu.c",
+          "line": 197
+        },
+        {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/mmu/spte.h",
+          "line": 222
+        }
+      ],
+      "implication": "같은 CXL EPT page라도 B의 struct page.private는 자동으로 A의 MMU header와 연결되지 않는다. Node별 prebuilt EPT 또는 metadata attach 경로 필요."
+    },
+    {
+      "finding": "Some VMCS host fields are initialized once",
+      "sources": [
+        {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/vmx/vmx.c",
+          "line": 4299
+        }
+      ],
+      "implication": "HOST_RIP/IDTR 등과 host-state cache를 목적지에 맞춰 새로 설정해야 한다. 일반 CPU 이동 load 경로만으로 충분하지 않다."
+    },
+    {
+      "finding": "All VM data in CXL does not imply all CPU state is materialized",
+      "sources": [
+        {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/x86.c",
+          "line": 11087
+        },
+        {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/x86.c",
+          "line": 11204
+        }
+      ],
+      "implication": "FPU·register cache·active VMCS를 정지 경계에서 저장/일관화해야 한다."
+    },
+    {
+      "finding": "Conditional policy allocations remain native without handoff guards",
+      "sources": [
+        {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/x86.c",
+          "line": 6559
+        },
+        {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/pmu.c",
+          "line": 858
+        }
+      ],
+      "implication": "Current Firecracker/runner does not configure these filters; supporting arbitrary KVM features needs DAX placement or explicit rejection. This is actual unplaced policy data, not an intrinsic native-service requirement."
+    }
+  ],
+  "design_candidate": {
+    "status": "proposal_from_source_analysis_not_implemented",
+    "shared_state": "Guest RAM·guest CPU/interrupt/device state와 pool 내부 graph를 유지한다. File snapshot과 RAM dump는 handoff 필수 요건이 아니다.",
+    "per_node_bindings": "각 node의 mm/FD/executor/SRCU/timer/VPID/EPT 및 allocator anchor를 미리 준비한다. Binding 자체도 CXL에 놓을 수 있다.",
+    "current_layout_constraint": "현재 struct kvm의 mm/srcu/embedded list와 loaded_vmcs.cpu는 단일 binding이다. B를 미리 생성하는 것만으로 같은 raw 객체를 양쪽에 연결할 수 없다. 구조 분리 또는 명시적 detach/attach 변경이 필요하다.",
+    "ept_candidate": "고정 RAM mapping에서는 node별 EPT/MMU metadata를 CXL에 유지해 반복 handoff의 전체 page-table 재생성을 피하는 후보. Mapping/permission 변화는 generation으로 전파해야 한다.",
+    "vmcs_candidate": "호환 CPU와 VMCS format에서 source VMCLEAR 후 shared VMCS를 목적지에 load하고 host/physical fields를 보정하는 실험 후보. Cross-host 성공은 미검증.",
+    "first_boundary": "VM 전체 single-owner, KVM_RUN 반환 및 pending I/O 완료, source worker/callback 접근 정리 후 목적지 attach. 기존 kernel stack을 다른 kernel에서 이어 실행하지 않는다.",
+    "cost_model": "stop + drain + CPU/VMCS/FPU synchronization + visibility/ownership + binding activation + VM entry + subsequent cache/TLB warmup",
+    "cost_limit": "새 timing 측정 없음. RAM copy·format serialization·full VMM/KVM creation 제거 가능성과 실제 latency는 구분한다."
+  },
+  "primary_references": [
+    {
+      "title": "KVM Lock Overview",
+      "url": "https://docs.kernel.org/virt/kvm/locking.html"
+    },
+    {
+      "title": "The x86 KVM shadow MMU",
+      "url": "https://docs.kernel.org/virt/kvm/x86/mmu.html"
+    },
+    {
+      "title": "KVM API (pending I/O completion)",
+      "url": "https://docs.kernel.org/virt/kvm/api.html"
+    },
+    {
+      "title": "Intel SDM, sections 26.2 and 26.11",
+      "url": "https://cdrdv2-public.intel.com/858441/252046-080-sdm-change-document.pdf"
+    },
+    {
+      "title": "CXL DAX devices",
+      "url": "https://www.kernel.org/doc/html/next/driver-api/cxl/allocation/dax.html"
+    }
+  ],
+  "snapshot_based_handoff_benchmark": {
+    "implemented": true,
+    "description": "State-only snapshot with shared DAX guest RAM and new destination KVM objects; historical baseline, followed by implemented limited raw-object handoff below",
+    "summary": "implementation/virtual_machine/.local/runs/20261015T105718Z-iny8rh5x/handoff-summary.json",
+    "busy_handoffs_validated": 144,
+    "timer_continuity": "sleep heartbeat latency remains unresolved"
+  },
+  "direct_handoff_implementation": {
+    "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/direct-handoff-summary.json",
+    "validated_handoffs_final_image": 52,
+    "shared_objects": "same KVM/vCPU/VMCS offsets and guest RAM; VM/vCPU creation only once per test",
+    "host_bindings": "mm/notifier, SRCU, xarray, PID/preempt notifier, VPID/VMCS host state, clock cache, timers/PIT worker and source IRQFD connections rebound",
+    "additional_runtime_findings": [
+      "vcpu_array radix nodes were native to A; attach rebuilds the index around the existing shared vCPU",
+      "memslot lpage_info/rmap arrays required DAX allocation",
+      "no-APIC static key is initialized on import when bypassing KVM_CREATE_VCPU",
+      "zapping EPT leaves retains a root reference; full root invalidation is needed before crossing kernels with private struct-page metadata",
+      "Optimization retains EPT after rebinding node-local page.private from the shared header registry; full invalidation is now only a control mode"
+    ],
+    "limits": [
+      "nested KVM and emulated CXL on one physical host; fixed kernel/module KVA and matching CXL GPA",
+      "single vCPU; A retains the Firecracker control process; B uses the existing shared-probe executor; no block/network/vsock device handoff",
+      "VM logical clock rebased to paused time; no UTC/physical multi-host clock guarantee",
+      "Historical mode 0 invalidates EPT; optimized mode 3 retains it with native page metadata rebinding. Shared bump allocator retains allocations until lab shutdown."
+    ],
+    "historical_revision": true
+  },
+  "direct_handoff_optimization": {
+    "status": "passed: final probe 10000 long handoffs, final kernel 20000",
+    "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/direct-handoff-optimized-summary.json",
+    "mechanisms": [
+      "Retain EPT root/leaves; bind only newly registered DAX MMU page headers to native struct page.private; initial SPTE scan plus per-fault PFN guard",
+      "Keep DAX retirement callbacks but avoid global completion barriers for immutable never-reused retired objects",
+      "Preserve notifier/IRQFD/PID reader synchronization; use expedited IRQFD SRCU",
+      "Retain one flushed/parked native PIT worker per kernel",
+      "Cache native executor VM/vCPU FDs and run mappings",
+      "Complete Firecracker final clock ioctl before Pause acknowledgement",
+      "Synchronize module init-section cleanup at lab boot for deterministic code placement",
+      "Check RAM PFNs before installing native observers; clean partial attach bindings on failure",
+      "Rebase host TSC domain with a new KVM TSC generation; check guest CLOCK_MONOTONIC and raw RDTSC on every handoff",
+      "Initialize shared IRQFD handoff policy at the one VM creation before first EXPORT",
+      "Scope GPL-exported RCU expedite nesting to the native MMU notifier unregister call; retain the reader grace period and immediately restore nesting"
+    ],
+    "lifetime_dependency": "Retired DAX memory is not reclaimed or reused until outer lab shutdown",
+    "concurrency_contract": "No concurrent VM ioctl/VMA mutation during handoff. An old-owner ioctl recheck is not a complete foreign-kernel mutex waiter protocol.",
+    "retained_ept_conditions": "Fixed contiguous device-DAX RAM, identical PFNs checked before attach; one initial full SPTE scan, then bounds checks on every new TDP mapping; never-reused DAX pages have stable native page metadata",
+    "regression_report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261015T153213Z-ghczftlz/report.json",
+    "evidence": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/direct-handoff-optimized-summary.json",
+    "clock_policy": "Save guest TSC, discard last_host_tsc and suspend adjustment from old host, force a fresh TSC generation while destination VMCS is loaded; require equal host TSC frequency",
+    "rcu_retirement_audit": [
+      {
+        "callback": "tdp_mmu_free_sp_rcu_callback",
+        "source": "arch/x86/kvm/mmu/tdp_mmu.c:69",
+        "behavior": "Free only retired SPT/header; DAX free is a no-op in shared arena, no reference back to active VM"
+      },
+      {
+        "callback": "kvm_apic_map_free",
+        "source": "arch/x86/kvm/lapic.c:210",
+        "behavior": "Free only the old immutable APIC map, without following its APIC pointer array; DAX free is a no-op"
+      },
+      {
+        "callback": "radix_tree_node_rcu_free",
+        "source": "lib/radix-tree.c:290",
+        "behavior": "Clear retired native radix node slots/tags and free the native node; never dereference slot targets"
+      }
+    ],
+    "source_saved_tsc_check": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/handoff-source-tsc-invariants-watchdog.json",
+    "collector_recovery": "Read-only validation of unchanged telemetry after slow serial log collection timed out; historical reports preserved"
+  },
+  "direct_handoff_latency_refinement": {
+    "status": "passed",
+    "state_transfer_audit": "implementation/virtual_machine/handoff-state-audit.json",
+    "report": "implementation/virtual_machine/.local/latency-refinement-summary.json",
+    "native_state_policy": "Preserve shared execution objects; rebuild native bindings; reuse per-node FD wrappers. No active native lock waiters cross kernels.",
+    "source_scalar_state": "56 auxiliary bytes (clock anchors, guest TSC, host frequency, APIC/PIT remaining/active) are written to shared memory. This is not the complete CPU state or CXL traffic count.",
+    "irqfd_retirement": "One SRCU reader grace period, remove native eventfd wait queues and drain inject work synchronously; no resampler/bypass or concurrent close supported."
+  }
+}

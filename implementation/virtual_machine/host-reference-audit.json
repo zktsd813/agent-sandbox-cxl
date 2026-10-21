@@ -1,0 +1,762 @@
+{
+  "version": 1,
+  "reviewed_on": "2026-10-19",
+  "scope": "현재 단일 vCPU, 고정 DAX RAM, retained-EPT direct handoff의 구조체·참조 필요성 source audit. L1 Linux A/B가 host이며, 전체 KVM 기능 또는 물리 L0의 모든 객체에 대한 pointer closure 검증은 아니다.",
+  "method": "현재 allocation, use, lifetime, detach/attach 경로를 다시 읽었다. 이번 조사에서 VM을 변경하거나 전환을 재실행하지 않았다. 직전 residency-live-review.json은 이전 read-only 관측의 보조 근거로만 사용한다.",
+  "related": {
+    "placement": "implementation/virtual_machine/host-cxl-residency.json",
+    "historical_pointer_groups": "implementation/virtual_machine/pointer-audit.json",
+    "previous_live_observation": "implementation/virtual_machine/.local/residency-live-review.json"
+  },
+  "interpretation": [
+    "구조체 bytes의 저장 위치, pointer target의 위치, 해당 값의 kernel/CPU/process namespace를 각각 구분한다.",
+    "native라는 말은 현재 각 kernel이 관리한다는 뜻이다. 아래 native software object가 물리 DRAM에 있어야 한다는 하드웨어 제약을 뜻하지 않는다.",
+    "pointer의 목적은 authoritative object 공유, 수명 유지, 역참조, callback dispatch, 동적 index, per-CPU service 연결 등으로 다르다. pointer라는 이유만으로 serialization이 필요한 것은 아니다.",
+    "일반 pointer 외에 list node, tagged pointer, work_struct.data, mutex.owner, qspinlock tail, FD, PID, CPU, VPID도 native identity를 담는다.",
+    "CXL 객체에서 native 객체로 가는 참조뿐 아니라 native notifier/list/page.private/FPU/timer queue에서 CXL 객체로 가는 역참조도 정지·분리해야 한다.",
+    "비활성/미설정 기능과 guard가 실제 거부하는 기능은 다르다. 현재 runner가 사용하지 않는다는 사실은 kernel ABI 차원의 거부 보장이 아니다."
+  ],
+  "entries": [
+    {
+      "id": "R00",
+      "covers": [
+        "P01",
+        "P07"
+      ],
+      "fields": [
+        "kvm_vcpu.kvm",
+        "kvm.memslots[]",
+        "kvm.buses[]",
+        "kvm.arch.vpic/vioapic/vpit/apic_map",
+        "kvm_vcpu.run/last_used_slot"
+      ],
+      "structure_purpose": "VM은 주소공간·vCPU·interrupt controller·I/O bus를 묶고, vCPU는 guest CPU 실행 상태와 실행 interface를 관리한다.",
+      "why_reference": "같은 VM 소유 객체를 여러 실행 경로에서 참조하며, vCPU 수·RAM slot·장치 크기와 lifetime이 서로 다르다. kvm back-pointer는 vCPU에서 VM의 memory/interrupt 상태에 접근하기 위한 연결이다.",
+      "placement": "주요 container와 현재 구성의 소유 객체는 DAX. 내부 raw pointer도 같은 KVA에서 유지한다.",
+      "native_necessity": "이 VM 전용 graph를 host에 둘 본질적 이유는 없다. 이미 공유한다. last_used_slot은 성능 cache라 유지 필수도 아니다.",
+      "current_handoff": "VM/vCPU를 재생성하지 않고 graph를 유지한다. last_used_slot은 NULL로 무효화하며 native targets는 아래 항목처럼 개별 처리한다.",
+      "source": [
+        "implementation/linux/include/linux/kvm_host.h:323",
+        "implementation/linux/include/linux/kvm_host.h:705",
+        "implementation/linux/virt/kvm/kvm_main.c:5368"
+      ]
+    },
+    {
+      "id": "R01",
+      "covers": [
+        "P00",
+        "P28"
+      ],
+      "fields": [
+        "guest RAM",
+        "guest page tables",
+        "GuestRegionMmap raw pointer",
+        "kvm_memory_slot.userspace_addr"
+      ],
+      "structure_purpose": "Guest OS·process·page table의 실제 bytes와 이를 userspace/KVM에서 접근할 mapping을 제공한다.",
+      "why_reference": "GPA, HVA, kernel alias는 같은 RAM을 서로 다른 주소 체계에서 가리킨다. Memory mapping descriptor를 복사한다고 RAM bytes를 새로 만드는 것은 아니다.",
+      "placement": "128MiB guest RAM은 DAX. HVA 또는 KHVA target도 CXL bytes일 수 있다. Host VMA/PTE는 별도 native 객체다.",
+      "native_necessity": "Guest RAM을 native DRAM에 둘 필요는 없다. HVA를 해석하는 각 process/kernel의 mapping은 필요하다. 같은 HVA는 현 raw-pointer 재사용 조건이며 guest GVA 자체와 다르다.",
+      "current_handoff": "B가 동일 HVA에 동일 DAX backing을 mmap한다. Guest page table과 RAM bytes는 유지하고 native mapping을 별도로 준비한다.",
+      "source": [
+        "firecracker/src/vmm/src/vstate/memory.rs:931",
+        "implementation/virtual_machine/shared_probe.c:1125",
+        "implementation/linux/include/linux/kvm_host.h:590"
+      ]
+    },
+    {
+      "id": "R02",
+      "covers": [
+        "P02"
+      ],
+      "fields": [
+        "kvm.mm",
+        "mm_struct.mm_mt/pgd/mmap_lock/notifier_subscriptions",
+        "kvm.userspace_pid"
+      ],
+      "structure_purpose": "mm_struct는 실행 process의 주소공간 identity, VMA index, host page table과 변경 동기화를 제공한다. userspace_pid는 별도의 정수 식별자다.",
+      "why_reference": "Process의 여러 thread와 subsystem이 같은 authoritative 주소공간을 공유하므로 mm를 VM 내부에 복제하지 않고 mmgrab/mmdrop으로 수명을 잡는다. KVM ioctl은 current->mm와 일치하는지도 확인한다.",
+      "placement": "mm pointer field는 DAX VM. 대상 mm/VMA/host PTE는 각 kernel의 native 주소공간 graph다.",
+      "native_necessity": "독립 Linux에서 현재 executor의 주소공간 의미는 필요하지만 물리 DRAM 저장은 필수가 아니다. 영구 DAX PFN 전용 API로 특수화하면 HVA lookup 의존성은 줄일 수 있으며 권한·수명·회수 정책은 따로 필요하다.",
+      "current_handoff": "Source mmdrop/NULL 후 destination mmgrab(current->mm). userspace_pid도 destination 값으로 바꾼다. Source process의 mm bytes를 이전하지 않는다.",
+      "source": [
+        "implementation/linux/include/linux/mm_types.h:690",
+        "implementation/linux/virt/kvm/kvm_main.c:1228",
+        "implementation/linux/virt/kvm/kvm_main.c:4203",
+        "implementation/linux/virt/kvm/kvm_main.c:5365",
+        "implementation/linux/virt/kvm/kvm_main.c:5448"
+      ]
+    },
+    {
+      "id": "R03",
+      "covers": [
+        "P05"
+      ],
+      "fields": [
+        "kvm.mmu_notifier.mm/ops/hlist",
+        "mm.notifier_subscriptions"
+      ],
+      "structure_purpose": "Userspace RAM의 unmap/remap/protection 변경과 mm 종료를 KVM에 알려 stale EPT/GPC를 무효화한다.",
+      "why_reference": "MM이 모든 KVM 구현을 내장하지 않도록 subscriber list와 ops callback으로 통지한다. .mm은 대상 주소공간, .hlist는 등록 관계, .ops는 처리 방법이다. Native mm에서 DAX notifier로 향하는 역참조도 생긴다.",
+      "placement": "Notifier wrapper는 DAX, native mm 구독자 registry와 callback table/code는 각 kernel 소유다.",
+      "native_necessity": "일반 userspace-backed KVM에서는 memory safety에 필요하다. 고정·회수 불가 DAX backing과 별도 revoke protocol로 대체 가능하지만 단순 삭제는 안전하지 않다. Callback bytes를 DRAM에 둘 필연은 없다.",
+      "current_handoff": "Source unregister의 reader drain을 유지하고 wrapper를 zero한다. Destination local ops를 설정해 current->mm에 등록한다. Mode 3은 unregister release의 전체 EPT flush를 생략한다.",
+      "source": [
+        "implementation/linux/include/linux/mmu_notifier.h:237",
+        "implementation/linux/virt/kvm/kvm_main.c:813",
+        "implementation/linux/virt/kvm/kvm_main.c:959",
+        "implementation/linux/virt/kvm/kvm_main.c:985",
+        "implementation/linux/virt/kvm/kvm_main.c:5340"
+      ]
+    },
+    {
+      "id": "R04",
+      "covers": [
+        "P06"
+      ],
+      "fields": [
+        "kvm_memslots.hva_tree/gfn_tree/id_hash",
+        "slot.base_gfn/npages/userspace_addr",
+        "slot.id_node/hva_node/gfn_node",
+        "slot.arch.rmap/lpage_info",
+        "slot.dirty_bitmap"
+      ],
+      "structure_purpose": "GPA range를 RAM backing에 연결하고 GPA/HVA/slot ID 검색, huge-page eligibility와 조건부 dirty tracking을 제공한다. Guest page table/EPT와 별개의 software metadata다.",
+      "why_reference": "가변 크기의 slot과 배열을 검색 tree/hash에서 공유한다. HVA index는 MMU notifier의 HVA 변경을 관련 guest range로 환산한다. Active/inactive set은 reader가 일관된 세대를 보도록 한다.",
+      "placement": "현재 memslot, embedded tree/hash node와 해당 arch 배열은 DAX. userspace_addr는 정수형 userspace pointer로 CXL RAM을 가리킨다.",
+      "native_necessity": "이 software graph의 native placement는 필요 없다. 다만 userspace_addr의 해석은 native mm에 속한다. Dirty bitmap은 현재 EXPORT가 non-null이면 거부한다.",
+      "current_handoff": "Fixed HVA 계약으로 graph를 보존하고 attach가 첫/끝 PFN을 확인한다. 중간 모든 PFN을 매번 검사하거나 VMA 변경을 봉쇄하는 구현은 아니며 cooperative freeze에 의존한다.",
+      "source": [
+        "implementation/linux/include/linux/kvm_host.h:580",
+        "implementation/linux/include/linux/kvm_host.h:688",
+        "implementation/linux/virt/kvm/kvm_main.c:2099",
+        "implementation/linux/arch/x86/kvm/x86.c:12683",
+        "implementation/linux/virt/kvm/kvm_main.c:5414"
+      ]
+    },
+    {
+      "id": "R05",
+      "covers": [
+        "P34"
+      ],
+      "fields": [
+        "gfn_to_pfn_cache.kvm/vcpu/memslot",
+        "gpc.uhva/khva/pfn/list/lock",
+        "vcpu.arch.pv_time",
+        "gfn_to_hva_cache"
+      ],
+      "structure_purpose": "Pvclock 등의 guest page에 자주 접근할 때 GPA→slot→HVA→PFN→kernel alias 조회를 cache한다.",
+      "why_reference": "Owner back-pointer는 invalidation과 vCPU request에, memslot pointer는 세대 검사에, list는 MMU notifier가 관련 cache를 찾는 데 쓰인다. KHVA는 host에서 guest bytes에 접근하는 alias다.",
+      "placement": "pv_time wrapper는 DAX vCPU 안. .khva target도 guest CXL RAM일 수 있으므로 host-private data로 분류하면 안 된다. Page reference/mapping lifetime은 native다.",
+      "native_necessity": "변환 cache 자체는 재생성 가능하다. 현재 mm/notifier와 연결된 validity/lifetime은 destination에서 확보해야 한다. 고정 PFN 직접 접근으로 간소화할 여지는 있다.",
+      "current_handoff": "Source deactivate로 list·mapping·PFN reference를 정리하고 destination memset/init/activate한다. pv_time 외 활성 GPC, APF 및 steal-time의 일부 활성 상태는 거부한다.",
+      "source": [
+        "implementation/linux/include/linux/kvm_types.h:65",
+        "implementation/linux/virt/kvm/pfncache.c:185",
+        "implementation/linux/virt/kvm/pfncache.c:280",
+        "implementation/linux/virt/kvm/pfncache.c:382",
+        "implementation/linux/arch/x86/kvm/x86.c:12453"
+      ]
+    },
+    {
+      "id": "R06",
+      "covers": [
+        "P12",
+        "P13",
+        "P14",
+        "P48"
+      ],
+      "fields": [
+        "kvm_mmu.root.hpa",
+        "EPT/SPTE PFNs",
+        "kvm_mmu_page.spt/ptep/link/hash_link/dax_next",
+        "ept_rebind.seen_head"
+      ],
+      "structure_purpose": "EPT는 hardware의 GPA→physical translation이다. kvm_mmu_page는 page level/GFN, parent/root lifetime, invalidation·reclaim을 관리하는 software header다.",
+      "why_reference": "Hardware 정렬 page와 관리 header를 분리하고 parent/child/root graph로 탐색한다. CPU는 header가 아닌 EPT entries를 읽는다. dax_next/seen_head는 native metadata를 새 page에만 연결하기 위한 registry/cache다.",
+      "placement": "현재 EPT page와 header/registry는 DAX. seen_head는 각 kernel의 static cache다. CPU TLB는 hardware다.",
+      "native_necessity": "EPT/header를 native RAM에 둘 필요는 없다. Raw EPT를 재사용하려면 물리주소 의미가 양쪽에서 같아야 한다. seen_head는 성능 cache이며 guest semantic state가 아니다.",
+      "current_handoff": "동일 PFN 아래 EPT를 보존하고 초기/private leaf 검사, 새 header의 destination page.private 연결과 TLB flush request를 수행한다. 단일 graph·never-reused arena 전제다. 모든 MMU callback을 재작성하지 않는다.",
+      "source": [
+        "implementation/linux/arch/x86/kvm/mmu/mmu_internal.h:51",
+        "implementation/linux/arch/x86/kvm/mmu/tdp_mmu.c:182",
+        "implementation/linux/arch/x86/kvm/mmu/mmu.c:6059",
+        "implementation/linux/arch/x86/kvm/mmu/tdp_mmu.c:1064"
+      ]
+    },
+    {
+      "id": "R07",
+      "covers": [
+        "P26"
+      ],
+      "fields": [
+        "struct page.private/pgmap",
+        "dev_pagemap.ref/ops/owner/ranges"
+      ],
+      "structure_purpose": "각 kernel의 PFN/device range identity와 mapping 수명을 관리한다. EPT page.private는 PFN에서 KVM 관리 header를 찾는 역색인이다.",
+      "why_reference": "수많은 page가 하나의 dev_pagemap을 공유하고 driver 제거 시 사용자가 모두 사라질 때까지 기다린다. EPT entry에는 software header pointer가 없어서 PFN→page→private로 header를 찾는다.",
+      "placement": "각 kernel의 native metadata에서 DAX header를 참조한다. 실제 EPT/guest page bytes와 metadata의 저장 위치는 별개다.",
+      "native_necessity": "Device lifetime은 kernel별 관리가 필요하지만 metadata의 물리 DRAM 배치는 필연이 아니다. page.private는 hardware 요구가 아니라 KVM 구현 선택이며 별도 PFN→header table 등으로 대체할 수 있다.",
+      "current_handoff": "양쪽 DAX driver가 자기 metadata를 만들고 pool은 dev_pagemap reference를 유지한다. Attach가 local page.private를 DAX header에 연결한다. Metadata graph 자체를 공유하지 않는다.",
+      "source": [
+        "implementation/linux/arch/x86/kvm/mmu/spte.h:225",
+        "implementation/linux/arch/x86/kvm/mmu/mmu.c:6083",
+        "implementation/linux/drivers/dax/device.c:418",
+        "implementation/linux/include/linux/memremap.h:106"
+      ]
+    },
+    {
+      "id": "R08",
+      "covers": [
+        "P42"
+      ],
+      "fields": [
+        "kvm_mmu_memory_cache.kmem_cache/objects/nobjs",
+        "split_page_header_cache",
+        "split_desc_cache"
+      ],
+      "structure_purpose": "Page fault/MMU lock 안에서 allocation 실패나 sleep을 피하도록 필요한 MMU 객체를 미리 확보한다.",
+      "why_reference": "objects[]는 prefetched 객체를 보관하고 kmem_cache는 객체 종류·크기와 allocator를 식별한다. 현재 DAX 분기도 kmem_cache_size()로 native descriptor를 읽는다.",
+      "placement": "Wrapper/pointer array/확보한 객체는 DAX, kmem_cache descriptor는 native global이다.",
+      "native_necessity": "줄일 수 있는 구현 의존성이다. DAX allocation에서는 명시적 size/kind를 보관하면 native slab pointer를 제거할 수 있다. Guest 실행 의미가 descriptor에 있는 것은 아니다.",
+      "current_handoff": "Attach에서 해당 4개 cache anchor를 destination descriptor로 교체한다. 이미 확보된 DAX 객체는 유지한다.",
+      "source": [
+        "implementation/linux/virt/kvm/kvm_main.c:435",
+        "implementation/linux/virt/kvm/kvm_main.c:464",
+        "implementation/linux/arch/x86/kvm/mmu/mmu.c:6050"
+      ]
+    },
+    {
+      "id": "R09",
+      "covers": [
+        "P32",
+        "P45"
+      ],
+      "fields": [
+        "dax_pool/dax_pgmap/dax_base",
+        "dax_alloc_header.raw/kind",
+        "shared.bump",
+        "Rust HEAP base/free-list"
+      ],
+      "structure_purpose": "Arena를 찾고 allocation 정렬·범위·수명·사용량을 관리한다. Kernel arena와 Rust heap은 서로 다른 allocator다.",
+      "why_reference": "Native globals는 현재 kernel/process가 매핑한 arena의 anchor다. Allocation header는 반환 주소에서 원 allocation을 찾는다. 공유 상태와 local configuration을 분리해야 한다.",
+      "placement": "Kernel shared bump/header와 Rust free-list는 DAX. gen_pool/pgmap 및 module/process global anchor는 native다.",
+      "native_necessity": "Shared bump 모드에서는 gen_pool bitmap이 실제 allocation의 authority가 아니다. Gen_pool은 enable/configuration 선택이라 간소화 가능하다. Native pgmap의 device lifetime reference는 별도 유지해야 한다.",
+      "current_handoff": "B kernel은 magic/KVA/phys를 검사해 arena를 초기화하지 않고 붙는다. Kernel free는 no-op이다. Rust heap은 A cold init만 구현했으며 B Firecracker heap attach는 없다.",
+      "source": [
+        "implementation/linux/virt/kvm/dax_pool.c:87",
+        "implementation/linux/virt/kvm/dax_pool.c:156",
+        "implementation/linux/virt/kvm/dax_pool.c:215",
+        "firecracker/src/firecracker/src/dax_heap.rs:52",
+        "firecracker/src/firecracker/src/dax_heap.rs:227"
+      ]
+    },
+    {
+      "id": "R10",
+      "covers": [
+        "P33"
+      ],
+      "fields": [
+        "fdtable",
+        "struct file.private_data/f_op/f_count",
+        "kvm.users_count",
+        "VmFd/VcpuFd"
+      ],
+      "structure_purpose": "Userspace가 ioctl/mmap으로 KVM을 호출할 capability와 해당 객체의 lifetime을 제공한다.",
+      "why_reference": "FD table의 정수는 native struct file을 찾고 file.private_data는 공유 VM/vCPU를 가리킨다. VM/vCPU는 여러 FD/VMA/사용자가 참조하므로 별도 refcount로 수명을 관리한다.",
+      "placement": "FD table/file/inode는 native, users_count와 VM/vCPU target은 DAX. Rust wrapper bytes가 DAX여도 FD 정수의 의미는 A process에 속한다.",
+      "native_necessity": "Linux syscall interface를 쓰는 한 각 kernel/process의 capability·file wrapper는 필요하다. 그 bytes의 DRAM placement는 필수가 아니다. Wrapper 생성은 KVM VM/vCPU 재생성과 다르다.",
+      "current_handoff": "B 최초 attach가 native VM file을 만들고 VCPU ioctl이 기존 vCPU에 file을 붙인다. 이후 wrapper 재사용. EXPORT가 shared graph reference를 pin하므로 실험 종료까지 파괴하지 않는다. Refcount를 매번 reset하지 않는다.",
+      "source": [
+        "implementation/linux/virt/kvm/kvm_main.c:1418",
+        "implementation/linux/virt/kvm/kvm_main.c:3966",
+        "implementation/linux/virt/kvm/kvm_main.c:5262",
+        "implementation/linux/virt/kvm/kvm_main.c:5299",
+        "implementation/linux/virt/kvm/kvm_main.c:5491"
+      ]
+    },
+    {
+      "id": "R11",
+      "covers": [
+        "P08",
+        "P35"
+      ],
+      "fields": [
+        "vcpu.pid/cpu/wait.task/preempt_notifier",
+        "task_struct",
+        "scheduler runqueue",
+        "kernel stack/TLS"
+      ],
+      "structure_purpose": "KVM_RUN을 실행할 native task를 scheduler가 선점·재개하고, sleeping/running vCPU를 깨우거나 CPU에서 내리게 한다.",
+      "why_reference": "pid는 안정된 thread identity로 directed yield/PID 변경/진단에 사용한다. 실제 sleeping wakeup은 rcuwait.task, running kick은 cpu+IPI가 사용된다. Preempt notifier는 sched-out/in 때 VMCS와 CPU별 KVM 연결을 관리하며 FPU는 current task의 일반 FPU 전환 기구와 결합된다.",
+      "placement": "Wrapper와 식별자는 DAX vCPU, task/PID/runqueue/stack 및 CPU identity는 native다.",
+      "native_necessity": "독립 kernel에는 실행을 담당할 자기 task/scheduler가 필요하다. A task를 raw pointer로 B에서 실행할 수는 없다. Bytes의 DRAM 배치 제약이 아니라 scheduling namespace와 수명 문제다.",
+      "current_handoff": "KVM_RUN return에서 rcuwait/preempt 연결이 정상 해제된 협력적 경계를 사용한다. Detach가 pid를 NULL로 바꾸고 RCU readers를 drain한다. Attach는 preempt notifier를 초기화하고 첫 RUN이 B PID를 얻는다.",
+      "source": [
+        "implementation/linux/virt/kvm/kvm_main.c:3695",
+        "implementation/linux/virt/kvm/kvm_main.c:3750",
+        "implementation/linux/virt/kvm/kvm_main.c:4234",
+        "implementation/linux/virt/kvm/kvm_main.c:5359",
+        "implementation/linux/virt/kvm/kvm_main.c:5479"
+      ]
+    },
+    {
+      "id": "R12",
+      "covers": [
+        "P15",
+        "P16",
+        "P37"
+      ],
+      "fields": [
+        "loaded_vmcs.vmcs/host_state/msr_bitmap",
+        "VMCS HOST_CR3/RSP/RIP/GDTR/IDTR/TR/FS/GS",
+        "VM_ENTRY/EXIT_MSR_LOAD_ADDR"
+      ],
+      "structure_purpose": "VMCS는 guest entry/exit와 hardware virtualization controls를 담는다. Host fields는 VM-exit 후 돌아올 kernel 실행 문맥을 지정한다. loaded_vmcs는 software ownership/cache를 관리한다.",
+      "why_reference": "HOST_CR3는 host page-table root, HOST_RSP는 현재 executor stack, HOST_RIP는 VM-exit entry code를 참조한다. Descriptor/base는 native per-CPU context다. Hardware가 직접 주소를 소비하므로 평범한 C pointer 타입이 아니어도 참조다.",
+      "placement": "MicroVM VMCS page, loaded_vmcs, MSR bitmap/autoload arrays는 DAX. HOST field의 target과 live CPU VMCS cache는 owner host에 속한다.",
+      "native_necessity": "VMCS bytes를 DRAM에 둘 필요는 없다. Exit return target은 현재 kernel/task를 나타내야 하므로 목적지 값이 필요하다. A host context를 넘길 필요가 없다. 실행 중 CPU/cache 최신 상태는 아직 shared backing과 같지 않을 수 있다.",
+      "current_handoff": "Source loaded_vmcs_clear/VMCLEAR 후 destination host cache 무효화, vCPU load와 constant host state를 준비한다. Entry path가 HOST_RSP 및 CR3/CR4를 갱신한다. Opaque VMCS bytes를 portable serialized format으로 해석하지 않는다.",
+      "source": [
+        "implementation/linux/arch/x86/kvm/vmx/vmcs.h:61",
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:1505",
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:2889",
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:4328",
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:7214",
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:7415"
+      ]
+    },
+    {
+      "id": "R13",
+      "covers": [
+        "P35",
+        "P37",
+        "P46"
+      ],
+      "fields": [
+        "current_vmcs",
+        "loaded_vmcss_on_cpu",
+        "kvm_running_vcpu",
+        "VMXON region",
+        "VPID bitmap",
+        "user_return_msrs",
+        "guest_uret_msrs_loaded"
+      ],
+      "structure_purpose": "CPU별 VMX enable, 현재 VMCS/실행 vCPU 추적, tagged TLB identifier 할당, host MSR 복귀 값을 관리한다.",
+      "why_reference": "이들은 VM 하나보다 CPU/kernel에 속한 service다. Loaded list는 CPU offline 시 정리에, current pointer는 불필요한 reload 생략에, VPID는 guest translation 구분에, user-return MSR service는 userspace 복귀 값 복원에 사용한다.",
+      "placement": "대부분 native per-CPU/global. Shared loaded_vmcs list node/VPID 값과 guest_uret_msrs 배열은 DAX다. VMXON은 lab pool 활성화 전 module init에서 할당한다.",
+      "native_necessity": "CPU별 현재 상태와 local identifier는 destination에서 관리해야 한다. VMXON/per-CPU 객체의 물리 DRAM 배치는 필수가 아니다. 현 local allocator 아래 source VPID를 검증 없이 유지하지 않는다. 전역 tag allocator도 가능하지만 destination TLB 정합성은 별도 필요하다.",
+      "current_handoff": "Source list/current VMCS 연결과 VPID를 해제하고 B가 VPID를 할당한다. guest_uret_msrs_loaded=false로 B CPU의 MSR service가 다시 설정한다. VMXON은 B의 기존 CPU infrastructure를 사용한다.",
+      "source": [
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:475",
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:1434",
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:1505",
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:2980",
+        "implementation/linux/arch/x86/kvm/x86.c:203",
+        "implementation/linux/arch/x86/kvm/x86.c:428"
+      ]
+    },
+    {
+      "id": "R14",
+      "covers": [
+        "P09",
+        "P10",
+        "P11"
+      ],
+      "fields": [
+        "guest registers/control/MSR state",
+        "guest_fpu.fpstate",
+        "current->thread.fpu.fpstate/__task_fpstate",
+        "CPUID/MCE arrays",
+        "pio_data/emulate_ctxt"
+      ],
+      "structure_purpose": "Guest CPU의 architectural state, XSAVE/FPU 이미지와 emulation/feature metadata를 유지한다.",
+      "why_reference": "XSAVE 크기와 배열은 동적이다. FPU service는 실행 중 current task의 fpstate를 guest 이미지로 일시 교체해 기존 kernel FPU 전환 기구를 재사용한다. 따라서 native task에서 CXL 이미지로 향하는 역참조가 생긴다.",
+      "placement": "지원 구성의 guest backing과 주요 arrays/context는 DAX. Live register는 CPU, host executor의 원래 FPU/stack/thread context는 native다.",
+      "native_necessity": "Guest backing을 local DRAM에 둘 이유는 없다. 실제 실행은 CPU register를 사용하며 guest를 멈출 때 정상 save/put이 필요하다. Host executor 자신의 FPU 값은 B가 A에서 받을 데이터가 아니다.",
+      "current_handoff": "정상 RUN exit/put가 guest FPU를 저장하고 current task의 원래 pointer를 복원한다. Dynamic XFD/AMX 등 모든 확장 path를 지원한 것은 아니다. Emulator callback은 별도 same-code 조건에 의존한다.",
+      "source": [
+        "implementation/linux/arch/x86/kvm/x86.c:11907",
+        "implementation/linux/arch/x86/kvm/x86.c:11931",
+        "implementation/linux/arch/x86/kvm/x86.c:11204",
+        "implementation/linux/arch/x86/kernel/fpu/core.c:330",
+        "implementation/linux/arch/x86/kvm/cpuid.c:515"
+      ]
+    },
+    {
+      "id": "R15",
+      "covers": [
+        "P17",
+        "P18",
+        "P19",
+        "P50"
+      ],
+      "fields": [
+        "kvm_lapic.regs/vcpu",
+        "lapic_timer.timer",
+        "kvm_pit.pit_state.timer/worker/expired",
+        "hrtimer.base/function/node",
+        "work_struct.data/func/entry"
+      ],
+      "structure_purpose": "가상 interrupt register/pending state와 timer가 만료됐을 때 interrupt를 발생시킬 실행 장치를 제공한다.",
+      "why_reference": "LAPIC back-pointer는 interrupt 대상 vCPU를 찾는다. Hrtimer base와 queue node는 어떤 CPU/time queue가 callback을 실행할지 나타낸다. PIT work는 timer interrupt 문맥에서 처리하기 어려운 작업을 worker task로 넘긴다. Work data는 tagged pool pointer/ID도 담는다.",
+      "placement": "Logical state와 timer/work wrapper는 DAX. Queue/base/worker task와 workqueue service는 native다. Native timer tree/worker list가 DAX wrapper를 역참조한다.",
+      "native_necessity": "기존 Linux timer/work API를 쓰면 local service 연결이 필요하다. Bytes가 DRAM일 이유는 없다. Custom shared deadline dispatcher로 통합하는 것은 가능한 별도 설계이며 현재 구현은 아니다.",
+      "current_handoff": "Source cancel/flush로 callback을 멈추고 남은 시간·pending 상태를 공유한다. B에서 timer/work 초기화, native cached PIT worker 연결 후 재시작한다. APICv/hardware timer 활성 등 지원하지 않는 상태는 거부/비활성화한다.",
+      "source": [
+        "implementation/linux/arch/x86/kvm/lapic.c:2806",
+        "implementation/linux/arch/x86/kvm/i8254.c:663",
+        "implementation/linux/include/linux/workqueue.h:24",
+        "implementation/linux/include/linux/workqueue.h:67"
+      ]
+    },
+    {
+      "id": "R16",
+      "covers": [
+        "P20",
+        "P49"
+      ],
+      "fields": [
+        "kvmclock_update_work/sync_work",
+        "kvmclock_offset",
+        "master_kernel_ns/master_cycle_now",
+        "last_host_tsc/last_vmentry_cpu",
+        "guest_clock_ns/guest_tsc"
+      ],
+      "structure_purpose": "Guest의 시간 연속성을 유지하고 native clock/TSC와 guest clock의 관계를 계산·갱신한다.",
+      "why_reference": "시간은 pointer가 없어도 host 의존적이다. Source의 monotonic base, TSC sample, CPU 번호를 B의 sample로 해석하면 잘못된 보정이 생긴다. Delayed work는 해당 kernel의 갱신 service에 등록된다.",
+      "placement": "Guest clock logical value와 wrapper/sample bytes는 DAX. 실제 clocksource와 work scheduling은 native CPU/kernel이다.",
+      "native_necessity": "Guest 의미 값은 공유해야 하지만 source host sample을 그대로 유지할 필요는 없다. Destination의 clock domain에 다시 연결해야 한다. 물리 DRAM 배치와 무관하다.",
+      "current_handoff": "Source work를 cancel하고 guest clock/TSC anchor를 기록한다. B는 같은 TSC frequency를 확인하고 guest logical clock을 전환 중 freeze하는 offset을 계산하며 host samples를 reset한다.",
+      "source": [
+        "implementation/linux/arch/x86/kvm/x86.c:12410",
+        "implementation/linux/arch/x86/kvm/x86.c:12447",
+        "implementation/linux/arch/x86/kvm/x86.c:12463",
+        "implementation/linux/arch/x86/kvm/x86.c:12477"
+      ]
+    },
+    {
+      "id": "R17",
+      "covers": [
+        "P03",
+        "P24"
+      ],
+      "fields": [
+        "kvm.srcu/irq_srcu",
+        "srcu.sda/srcu_sup",
+        "rcu_head",
+        "native RCU callback queues"
+      ],
+      "structure_purpose": "Memslot/I/O bus/IRQ route reader가 참조 중인 객체를 교체·해제하지 않게 하고, reader 종료 뒤 reclaim한다.",
+      "why_reference": "많은 CPU reader를 하나의 update-side service가 추적한다. Per-CPU sda는 일반 KVA와 다른 인코딩일 수 있다. RCU callback head가 공유 객체 안에 있어도 callback 실행 queue와 grace period는 특정 kernel이 소유한다.",
+      "placement": "Wrapper/embedded head는 DAX, per-CPU/update allocations와 RCU execution machinery는 native다.",
+      "native_necessity": "현재 KVM 동시성 모델에서 reader가 없다는 증명은 필요하다. Per-CPU counters를 CXL로 옮겨도 B가 A의 RCU/scheduler domain을 제어할 수는 없다. 고정 graph·단일 reader 전용 runtime으로 줄일 여지는 있다.",
+      "current_handoff": "MMU notifier/IRQFD/PID reader drain을 유지하고 SRCU cleanup/init한다. cleanup_srcu_struct 자체가 모든 reader를 기다려주는 대체 수단은 아니다. 동시 ioctl/VMA/device 변경이 없다는 계약에 의존한다. Never-reused retired 객체의 일부 callback completion wait만 생략한다.",
+      "source": [
+        "implementation/linux/virt/kvm/kvm_main.c:5340",
+        "implementation/linux/virt/kvm/kvm_main.c:5356",
+        "implementation/linux/virt/kvm/kvm_main.c:5452",
+        "implementation/linux/kernel/rcu/srcutree.c:644"
+      ]
+    },
+    {
+      "id": "R18",
+      "covers": [
+        "P23",
+        "P24"
+      ],
+      "fields": [
+        "mutex.owner/wait_list/osq",
+        "qspinlock.val/tail",
+        "refcount",
+        "Rust Mutex/RwLock/futex waiters"
+      ],
+      "structure_purpose": "동시 접근의 순서와 객체 lifetime을 보장하며, contention 시 기다리는 task를 추적하고 깨운다.",
+      "why_reference": "Mutex owner는 task pointer와 flags를 정수에 담고, queued spinlock은 CPU와 native MCS node index를 인코딩한다. Wait queue는 scheduler가 깨울 task를 가리킨다. Refcount 자체는 주소가 아닌 수명 계약이다.",
+      "placement": "Lock/refcount bytes는 DAX에 있을 수 있지만 native owner/waiter/CPU/futex domain은 각 kernel에 속한다.",
+      "native_necessity": "Unlocked lock bytes는 공유 가능하다. Contended native lock을 다른 kernel이 그대로 이어받을 수는 없다. 이를 지원하려면 별도 cross-kernel lock/wakeup protocol이 필요하며 물리 저장 매체 변경만으로 해결되지 않는다.",
+      "current_handoff": "Cooperative quiescent single owner 경계만 사용한다. vCPU mutex는 publish 전에 해제한다. 모든 lock/refcount를 blanket reset하지 않으며 foreign waiter를 이전하지 않는다.",
+      "source": [
+        "implementation/linux/kernel/locking/mutex.c:59",
+        "implementation/linux/kernel/locking/qspinlock.c:45",
+        "implementation/linux/virt/kvm/kvm_main.c:5307",
+        "implementation/linux/virt/kvm/kvm_main.c:5373"
+      ]
+    },
+    {
+      "id": "R19",
+      "covers": [
+        "P01",
+        "P04",
+        "P46"
+      ],
+      "fields": [
+        "kvm.vcpu_array",
+        "kvm.vm_list",
+        "pm_notifier",
+        "debugfs_dentry/stat_data"
+      ],
+      "structure_purpose": "vCPU ID lookup, kernel 내 VM 열거·host suspend 처리와 선택적 통계 파일을 제공한다.",
+      "why_reference": "Xarray는 가변 ID 검색 구조이며 동적 radix node를 쓸 수 있다. Global list/PM registry는 여러 VM을 하나의 kernel service가 관리하는 역참조다. Debugfs는 VFS dentry와 통계 설명 code에 연결된다.",
+      "placement": "Roots/list/notifier wrapper와 일부 통계 payload는 DAX. Global service/VFS 및 조건부 radix node는 native다. 단일 index 0 entry는 xarray root에 직접 들어갈 수도 있다.",
+      "native_necessity": "Global 등록은 각 kernel의 관리 정책이고 diagnostics는 guest 실행 필수 state가 아니다. Xarray local allocation은 구현 선택으로 고정 단일-vCPU pointer로 간소화 가능하다. 물리 DRAM은 필수가 아니다.",
+      "current_handoff": "Source xarray/global list/PM/debugfs를 정리하고 B가 index/list/PM을 등록한다. Debugfs는 attach에서 재생성하지 않는다. 이전 live dentry는 ERR_PTR(-ENOENT)다.",
+      "source": [
+        "implementation/linux/virt/kvm/kvm_main.c:1001",
+        "implementation/linux/virt/kvm/kvm_main.c:1083",
+        "implementation/linux/virt/kvm/kvm_main.c:5331",
+        "implementation/linux/virt/kvm/kvm_main.c:5348",
+        "implementation/linux/virt/kvm/kvm_main.c:5475"
+      ]
+    },
+    {
+      "id": "R20",
+      "covers": [
+        "P12",
+        "P22",
+        "P38",
+        "P47",
+        "P51"
+      ],
+      "fields": [
+        "mmu.page_fault/gva_to_gpa/sync_spte",
+        "emulate_ctxt.ops/execute/check_perm/fop",
+        "kvm_io_device.ops",
+        "irq_routing_entry.set",
+        "module function addresses"
+      ],
+      "structure_purpose": "공통 KVM/MMU/bus/emulator 코드가 paging mode·opcode·device·IRQ 종류에 맞는 동작을 선택하게 한다.",
+      "why_reference": "같은 code/ops table을 수많은 객체가 공유하는 다형성·dispatch 방식이다. 대부분 guest data가 아니라 구현 방법의 식별자다. 이를 객체마다 code 복사로 내장할 이유가 없다.",
+      "placement": "Pointer field는 DAX일 수 있으나 code/table은 각 kernel/module에 있다. Emulator의 일부 operand pointer는 DAX context 내부 self-pointer이므로 native target과 구분한다.",
+      "native_necessity": "동일 code를 양쪽에 설치하면 source code bytes를 전송할 필요가 없다. Raw function address 유지도 필수는 아니며 kind ID/offset으로 local ops 선택 가능하다. 현재는 최소 수정 때문에 동일 kernel/module VA를 요구한다.",
+      "current_handoff": "Notifier/preempt/timer/work 등 일부 callbacks만 다시 초기화한다. 모든 MMU/emulator/bus callback을 재작성하지 않는다. Attach의 두 함수 주소/구조체 크기 검사는 모든 ABI·callback 동일성의 완전한 validator가 아니다.",
+      "source": [
+        "implementation/linux/arch/x86/include/asm/kvm_host.h:437",
+        "implementation/linux/arch/x86/kvm/x86.c:8400",
+        "implementation/linux/arch/x86/kvm/kvm_emulate.h:298",
+        "implementation/linux/include/kvm/iodev.h:17",
+        "implementation/linux/virt/kvm/irqchip.c:88",
+        "implementation/linux/virt/kvm/kvm_main.c:5404"
+      ]
+    },
+    {
+      "id": "R21",
+      "covers": [
+        "P01",
+        "P22",
+        "P47"
+      ],
+      "fields": [
+        "kvm_io_bus.range[].dev",
+        "irq_routing.map[]",
+        "PIC/IOAPIC/PIT kvm_io_device",
+        "IRQ ack/mask notifier lists"
+      ],
+      "structure_purpose": "Guest PIO/MMIO 주소를 장치에 전달하고 GSI/MSI를 올바른 가상 interrupt controller에 배달한다.",
+      "why_reference": "다양한 장치를 공통 bus에서 찾고 하나의 GSI가 여러 interrupt chip과 연결될 수 있도록 range/list/ops를 사용한다. Interrupt ack/mask callbacks는 PIT 등의 logical device 간 연결도 나타낸다.",
+      "placement": "현재 bus/routing/controller logical graph는 DAX. Methods는 native code다. Native eventfd/외부 장치와 연결되는 경우는 별도다.",
+      "native_necessity": "VM 내부 장치 연결은 host private로 남을 이유가 없다. Device dispatch code는 local replica를 사용할 수 있다. 이를 native I/O readiness 등록과 혼동하면 안 된다.",
+      "current_handoff": "같은 KVA/code address 아래 logical graph를 유지하고 native IRQFD observer는 분리한다. 장치 기능을 추가할 때 대상 객체 allocation/lifetime을 추가 감사해야 한다.",
+      "source": [
+        "implementation/linux/virt/kvm/kvm_main.c:5921",
+        "implementation/linux/virt/kvm/kvm_main.c:6015",
+        "implementation/linux/virt/kvm/irqchip.c:21",
+        "implementation/linux/virt/kvm/irqchip.c:186",
+        "implementation/linux/arch/x86/kvm/ioapic.c:709"
+      ]
+    },
+    {
+      "id": "R22",
+      "covers": [
+        "P21"
+      ],
+      "fields": [
+        "kvm_kernel_irqfd.kvm/eventfd/resamplefd/wait/inject/shutdown/producer",
+        "_ioeventfd.eventfd/dev",
+        "eventfd_ctx.wqh/count"
+      ],
+      "structure_purpose": "IRQFD는 backend eventfd 신호를 guest interrupt로, ioeventfd는 guest PIO/MMIO write를 backend notification으로 바꾼다.",
+      "why_reference": "Native eventfd의 counter와 wait queue를 공유 구독하고 callback/work로 KVM에 연결한다. Wrapper가 아니라 native waitqueue에 등록된 관계가 실제 notification path다.",
+      "placement": "IRQFD와 ioeventfd wrapper는 DAX allocation 경로가 있지만 eventfd_ctx/waitqueue service/producer는 native다. 초기 retired IRQFD memory는 현재 active 등록의 증거가 아니다.",
+      "native_necessity": "일반 eventfd API를 유지하면 kernel별 observer 등록이 필요하다. Shared doorbell/별도 interrupt routing으로 대체 가능하지만 현재 구현은 아니다. Eventfd counter bytes가 물리 DRAM이어야 하는 것은 아니다.",
+      "current_handoff": "최대 8개 simple IRQFD를 batch quiesce하며 reader/work/waitqueue를 정리한다. Resampler/active bypass는 거부한다. A 복귀 시 IRQFD 재등록. EXPORT는 남은 IRQFD/ioeventfd를 거부한다. Full remote device notification은 미구현이다.",
+      "source": [
+        "implementation/linux/virt/kvm/eventfd.c:42",
+        "implementation/linux/virt/kvm/eventfd.c:178",
+        "implementation/linux/virt/kvm/eventfd.c:252",
+        "implementation/linux/virt/kvm/eventfd.c:376",
+        "implementation/linux/virt/kvm/eventfd.c:767",
+        "implementation/linux/virt/kvm/kvm_main.c:5272"
+      ]
+    },
+    {
+      "id": "R23",
+      "covers": [
+        "P11",
+        "P38"
+      ],
+      "fields": [
+        "arch.complete_userspace_io",
+        "mmio_fragments[].data",
+        "pio.count",
+        "emulate_ctxt operand/fetch pointers"
+      ],
+      "structure_purpose": "Userspace backend가 처리하는 MMIO/PIO 때문에 중단한 guest instruction을 다음 RUN에서 완료하도록 요청·결과·continuation을 기억한다.",
+      "why_reference": "Fragment data는 결과를 되써야 할 buffer, continuation 함수는 남은 instruction 완료 동작을 지정한다. Buffer가 DAX context 내부일 수도 있고 일시적 실행 문맥과 연결될 수도 있다.",
+      "placement": "Container/context는 주로 DAX. Code pointer는 native text이며 stale unused fragment pointer도 남을 수 있다.",
+      "native_necessity": "완료되지 않은 instruction의 의미 상태는 보존돼야 하지만 host buffer pointer 자체가 본질은 아니다. 지금은 그 상태를 이동시키지 않고 완료된 경계로 제한한다.",
+      "current_handoff": "DETACH는 complete_userspace_io가 있으면 거부한다. 정상 RUN은 pending completion을 수행한 뒤 immediate_exit를 확인한다. 모든 fragment/operand pointer를 전환 시 순회·검증하는 구현은 아니다.",
+      "source": [
+        "implementation/linux/arch/x86/kvm/x86.c:7693",
+        "implementation/linux/arch/x86/kvm/x86.c:11050",
+        "implementation/linux/arch/x86/kvm/x86.c:11182",
+        "implementation/linux/virt/kvm/kvm_main.c:5310"
+      ]
+    },
+    {
+      "id": "R24",
+      "covers": [
+        "P27",
+        "P28",
+        "P29",
+        "P30",
+        "P32",
+        "P43"
+      ],
+      "fields": [
+        "VmCommon/Vmm/Box<Vcpu>",
+        "GuestMemoryMmap/FileOffset/Arc<File>",
+        "VcpuHandle channels/JoinHandle",
+        "Bus Weak<Mutex<dyn BusDevice>>",
+        "Rust vtables/Arc counts"
+      ],
+      "structure_purpose": "Firecracker가 VM 생성·RAM/장치 관리, vCPU thread 제어, 주소별 장치 dispatch와 객체 lifetime을 관리한다.",
+      "why_reference": "Arc/Weak는 동일 장치·RAM·bus를 여러 thread가 공유하며 cycle을 피하게 한다. Trait object는 data+method table로 장치 종류를 dispatch한다. Channels/JoinHandle은 A의 thread 실행과 completion에 연결된다.",
+      "placement": "Allocator 활성화 후 주요 Rust heap allocation과 Box<Vcpu>는 DAX. 초기 System allocation, ELF code/rodata, stacks/TLS, 별도 mmap과 native FDs/thread resources까지 모두 DAX로 바뀌지는 않는다.",
+      "native_necessity": "VMM logical object bytes는 host DRAM에 둘 이유가 없다. 그러나 Arc counts와 FD/channel handle을 공유하는 것만으로 다른 process가 A의 thread·futex·ELF vtable을 이어받을 수는 없다. Destination runtime binding 설계가 별도로 필요하다.",
+      "current_handoff": "Firecracker는 A에 남고 control pause loop가 device event loop를 멈춘다. B는 기존 shared-probe executor를 사용한다. B Firecracker가 A heap을 attach하는 기능은 없다. DAX heap init은 cold-only다.",
+      "source": [
+        "firecracker/src/firecracker/src/dax_heap.rs:44",
+        "firecracker/src/firecracker/src/dax_heap.rs:227",
+        "firecracker/src/vmm/src/vstate/vm.rs:66",
+        "firecracker/src/vmm/src/vstate/vcpu.rs:190",
+        "firecracker/src/vmm/src/vstate/vcpu.rs:598",
+        "firecracker/src/vmm/src/vstate/bus.rs:116",
+        "firecracker/src/firecracker/src/api_server_adapter.rs:88"
+      ]
+    },
+    {
+      "id": "R25",
+      "covers": [
+        "P31",
+        "P43",
+        "P44"
+      ],
+      "fields": [
+        "epoll/eventfd/timerfd/socket/TAP/File/io_uring",
+        "virtio queue/device wrappers",
+        "vsock connection map/UnixStream",
+        "block file description/offset"
+      ],
+      "structure_purpose": "Backend file/network/socket I/O와 readiness/completion을 guest virtio 장치 동작에 연결한다.",
+      "why_reference": "Epoll은 watched file과 ready/waiter graph를, socket은 native connection·buffer·network namespace를, file은 inode/filesystem/offset/lifetime을 유지한다. 가상 장치 register/queue state만으로 이 외부 service 관계를 대체할 수 없다.",
+      "placement": "해당 backend를 A에 구성하면 Rust register/queue/connection wrapper는 DAX heap일 수 있으나 native kernel file/socket/epoll resources는 A의 service에 속한다. 현재 block/network/vsock은 미구성이다. Guest 내부 file 구조체는 guest RAM의 일부라 별개의 문제다.",
+      "native_necessity": "기존 Linux backend를 쓰면 native service 또는 source backend와의 원격 연결이 필요하다. Device logical state를 CXL에 놓는 것은 가능하지만 file/socket resource 전체 승계와는 다르다. 물리 DRAM 저장은 필수가 아니다.",
+      "current_handoff": "현재 diskless initramfs 구성으로 block/network/vsock 승계는 검증하지 않았다. B는 제한된 UART PIO를 처리한다. Source backend anchor/remote queue routing은 제안이며 구현된 기능이 아니다.",
+      "source": [
+        "implementation/linux/fs/eventpoll.c:178",
+        "implementation/linux/fs/eventfd.c:30",
+        "firecracker/src/vmm/src/devices/virtio/vsock/unix/muxer.rs:84",
+        "firecracker/src/vmm/src/vstate/vm.rs:584",
+        "firecracker/src/vmm/src/devices/virtio/block/virtio/io/async_io.rs:39",
+        "firecracker/src/vmm/src/devices/virtio/net/tap.rs:51",
+        "firecracker/src/vmm/src/devices/virtio/vsock/persist.rs:41"
+      ]
+    },
+    {
+      "id": "R26",
+      "covers": [
+        "P25",
+        "P36",
+        "P39",
+        "P40",
+        "P41",
+        "P44"
+      ],
+      "fields": [
+        "APIC-access/TSS/identity helper slots",
+        "PI descriptor/CPU wakeup lists",
+        "APF mm/work",
+        "PMU perf_event",
+        "NX recovery task",
+        "IOMMU/VFIO/vhost/DMA",
+        "special PAE roots"
+      ],
+      "structure_purpose": "선택 기능이 각각 APIC acceleration, page fault 비동기 처리, perf counting, huge-page recovery, 외부 device DMA와 특수 paging을 제공한다.",
+      "why_reference": "이 기능은 native CPU/IRQ destination, process memory, perf/worker task, IOMMU/device driver 등 기존 kernel service에 연결된다. 일부 scratch mapping과 special physical-address 조건도 추가한다.",
+      "placement": "기능마다 혼합이다. Internal helper RAM에는 여전히 anonymous mapping 경로가 있고, perf/device/native task는 각 host에 속한다. 현재 guest 128MiB RAM이 private라는 뜻은 아니다.",
+      "native_necessity": "현재 활성 필수 dependency로 세면 안 된다. 기능을 지원하려면 logical state와 local service 연결을 각각 설계해야 한다. 모든 미지원 기능에 명시적인 guard가 있는 것은 아니다.",
+      "current_handoff": "현재 APICv/flexpriority/PML/hardware timer/PMU 등을 비활성화하고 APF/steal/nested guest/NX worker 등의 일부 활성 상태를 거부한다. PAE/DMA32 요구를 DAX helper가 일반적으로 보장하지도 않는다. 전체 KVM feature 지원 주장에 포함하지 않는다.",
+      "source": [
+        "implementation/virtual_machine/guest-init.sh:43",
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:1510",
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:5104",
+        "implementation/linux/arch/x86/kvm/x86.c:12427",
+        "implementation/linux/arch/x86/kvm/x86.c:12559",
+        "implementation/linux/arch/x86/kvm/mmu/mmu.c:5992"
+      ]
+    },
+    {
+      "id": "R27",
+      "covers": [
+        "P40",
+        "P52",
+        "P53"
+      ],
+      "fields": [
+        "kvm.arch.msr_filter.ranges[].bitmap",
+        "kvm.arch.pmu_event_filter.events/includes/excludes"
+      ],
+      "structure_purpose": "Guest MSR 접근과 PMU event 허용/거부 정책을 나타내는 가변 bitmap/list다. Guest execution을 지원하는 정책 데이터이며 native scheduler service 자체는 아니다.",
+      "why_reference": "정책 범위/크기가 동적이라 별도 bitmap 또는 가변 배열을 참조한다. PMU includes/excludes는 같은 filter 배열 내부의 index pointer다.",
+      "placement": "MSR filter outer wrapper는 DAX지만 bitmap은 memdup_user native allocation. PMU event filter 전체는 plain kzalloc native allocation이다.",
+      "native_necessity": "이 정책 bytes가 host private에 남을 본질적 이유는 없다. DAX allocation으로 바꿀 수 있는 미배치 경로다. Native identity가 필수인 task/mm 문제와 다르다.",
+      "current_handoff": "현재 EXPORT/DETACH/ATTACH에 filter 거부·이전·재연결이 없다. 현재 Firecracker/runner source에서 관련 설정 ioctl 호출을 찾지 못했고 PMU는 제한하지만, 해당 설정을 추가하면 지원 범위를 벗어나는 조건부 누락이다. 이번 조사는 이를 수정하지 않는다.",
+      "source": [
+        "implementation/linux/arch/x86/kvm/x86.c:1793",
+        "implementation/linux/arch/x86/kvm/x86.c:6519",
+        "implementation/linux/arch/x86/kvm/x86.c:6559",
+        "implementation/linux/arch/x86/kvm/pmu.c:826",
+        "implementation/linux/arch/x86/kvm/pmu.c:858",
+        "implementation/linux/virt/kvm/kvm_main.c:5272"
+      ]
+    },
+    {
+      "id": "R28",
+      "covers": [
+        "P15",
+        "P46"
+      ],
+      "fields": [
+        "live CPU registers",
+        "VMCS/TLB caches",
+        "L0 VMCS02/nested EPT/QEMU execution state"
+      ],
+      "structure_purpose": "실제 CPU 실행과 nested virtualization의 outer host 실행 문맥을 제공한다.",
+      "why_reference": "실행 중 일부 최신 상태는 hardware 안에 있고, L0는 L1 VMX 동작을 자신의 native VMCS02 등에 반영한다. Patched L1 객체와 물리 L0 객체는 같은 구조체가 아니다.",
+      "placement": "Hardware 및 수정하지 않은 L0 native runtime. L1이 할당한 microVM VMCS backing은 DAX다.",
+      "native_necessity": "Live register/cache를 memory byte placement로 대체할 수는 없다. CPU exit/put/VMCLEAR 같은 정지 경계가 필요하다. L0 native placement는 현재 실험 범위이지 L1 VMCS가 DAX가 아니라는 근거가 아니다.",
+      "current_handoff": "L1 source를 quiesce한 뒤 B가 동일 backing을 사용한다. Bare-metal 여러 물리 서버의 VMCS revision/CPU compatibility/coherence, 전체 L0 자원 배치는 검증하지 않았다.",
+      "source": [
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:1505",
+        "implementation/linux/arch/x86/kvm/vmx/nested.c:336"
+      ]
+    }
+  ],
+  "conclusions": [
+    "현 Linux API 아래 각 kernel의 executor task, 주소공간, hardware return context와 local service 등록은 필요하지만, 이를 source에서 serialization해 보내야 하는 것은 아니다. B가 자기 연결을 제공한다.",
+    "MMU slab pointer, shared-mode gen_pool, xarray/diagnostic metadata, raw callback address 등은 현재 코드 재사용을 위한 구현 선택이 포함된다. 모든 host reference가 본질적 한계는 아니다.",
+    "MSR/PMU filter는 조건부로 미배치인 실제 policy data다. 현재 테스트 구성과 일반 KVM 지원을 구분해야 한다.",
+    "Pointer뿐 아니라 역참조, tagged values/IDs, pending callbacks와 lifetime을 감사해야 한다. 현재 attach는 transitive pointer closure validator가 아니다."
+  ]
+}

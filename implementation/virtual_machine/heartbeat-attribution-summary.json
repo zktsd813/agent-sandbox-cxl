@@ -1,0 +1,1283 @@
+{
+  "result": "passed",
+  "matrix": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/heartbeat-matrix.json",
+  "measurement_method": {
+    "start": "destination attach/dispatch returns to controller; same boundary as earlier guest_ack_us",
+    "run": "first KVM_RUN case after acquiring the vCPU mutex; includes subsequent PID/arch preparation and retries",
+    "entry": "paired destination CLOCK_MONOTONIC and guest-domain TSC immediately before vmx_vcpu_enter_exit",
+    "guest": "LFENCE/RDTSC on the first heartbeat iteration observing the new epoch, before release ACK publication",
+    "observer": "destination controller CLOCK_MONOTONIC after acquire-load of that ACK",
+    "conversion": "entry_ns + (ack_guest_tsc - entry_guest_tsc) * 1000000 / virtual_tsc_khz",
+    "clock_domains": "guest and pre-entry TSC are in the same guest virtual TSC domain; all ns use destination MONOTONIC; no cross-node subtraction and no MONOTONIC_RAW subtraction",
+    "pair_uncertainty": "paired host time is midpoint of two MONOTONIC reads bracketing guest TSC sample; timestamp uncertainty at most half the pair span under the fixed-rate local clock assumption",
+    "signed_dispatch": "Firecracker vCPU may enter KVM_RUN before controller receives Resume ACK; negative attached_to_run values are retained"
+  },
+  "validation": {
+    "fresh_vm_pairs": 9,
+    "handoffs_including_warmup": 4500,
+    "measured_handoffs": 4410,
+    "profiled_samples": 3920,
+    "all_original_vm_heap_clock_tsc_checks_passed": true,
+    "generation_matches_round": true,
+    "virtual_tsc_khz": [
+      2999998
+    ],
+    "negative_observer_point_estimates": 3,
+    "all_negative_estimates_within_pair_uncertainty": true,
+    "max_partition_rounding_error_us": 1.3389289676979388e-12
+  },
+  "pooled_default_128_us": {
+    "combined": {
+      "guest_ack_us": {
+        "n": 980,
+        "p50": 172.4,
+        "p95": 373.16,
+        "mean": 222.3334030612245,
+        "min": 50.217,
+        "max": 8458.175
+      },
+      "attached_to_run_us": {
+        "n": 980,
+        "p50": 15.576,
+        "p95": 138.401,
+        "mean": 55.98163163265306,
+        "min": -153.852,
+        "max": 8131.986
+      },
+      "run_to_entry_us": {
+        "n": 980,
+        "p50": 87.778,
+        "p95": 114.713,
+        "mean": 83.24820306122449,
+        "min": 34.115,
+        "max": 371.154
+      },
+      "attached_to_entry_us": {
+        "n": 980,
+        "p50": 99.661,
+        "p95": 228.554,
+        "mean": 139.22983469387756,
+        "min": -60.647,
+        "max": 8210.097
+      },
+      "entry_to_guest_write_us": {
+        "n": 980,
+        "p50": 36.3615,
+        "p95": 195.859,
+        "mean": 81.3383806122449,
+        "min": 12.453,
+        "max": 3264.728
+      },
+      "guest_write_to_observed_us": {
+        "n": 980,
+        "p50": 0.4665,
+        "p95": 0.718,
+        "mean": 1.7651877551020407,
+        "min": -6.906,
+        "max": 103.029
+      },
+      "duplicate_check_us": {
+        "n": 980,
+        "p50": 0.874,
+        "p95": 1.675,
+        "mean": 1.0695612244897958,
+        "min": 0.37,
+        "max": 10.673
+      },
+      "tsc_pair_span_us": {
+        "n": 980,
+        "p50": 0.183,
+        "p95": 0.3,
+        "mean": 0.2121765306122449,
+        "min": 0.058,
+        "max": 14.687
+      },
+      "observer_lower_bound_us": {
+        "n": 980,
+        "p50": 0.36524999999999996,
+        "p95": 0.6255,
+        "mean": 1.6744510204081633,
+        "min": 0,
+        "max": 102.9405
+      },
+      "observer_upper_bound_us": {
+        "n": 980,
+        "p50": 0.56075,
+        "p95": 0.7979999999999999,
+        "mean": 1.8712760204081633,
+        "min": 0.11349999999999999,
+        "max": 103.11749999999999
+      },
+      "first_exit_reasons_observed_by_ack": {
+        "1": 62,
+        "49": 275
+      }
+    },
+    "A": {
+      "guest_ack_us": {
+        "n": 490,
+        "p50": 129.1195,
+        "p95": 294.965,
+        "mean": 163.37174693877552,
+        "min": 50.217,
+        "max": 3465.917
+      },
+      "attached_to_run_us": {
+        "n": 490,
+        "p50": -2.6035000000000004,
+        "p95": 0.48,
+        "mean": -4.533661224489796,
+        "min": -153.852,
+        "max": 22.377
+      },
+      "run_to_entry_us": {
+        "n": 490,
+        "p50": 87.51,
+        "p95": 120.148,
+        "mean": 85.8063,
+        "min": 42.168,
+        "max": 371.154
+      },
+      "attached_to_entry_us": {
+        "n": 490,
+        "p50": 83.945,
+        "p95": 117.817,
+        "mean": 81.2726387755102,
+        "min": -60.647,
+        "max": 374.25
+      },
+      "entry_to_guest_write_us": {
+        "n": 490,
+        "p50": 36.437,
+        "p95": 198.456,
+        "mean": 80.88875714285714,
+        "min": 13.595,
+        "max": 3264.728
+      },
+      "guest_write_to_observed_us": {
+        "n": 490,
+        "p50": 0.46,
+        "p95": 0.653,
+        "mean": 1.2103510204081633,
+        "min": -6.906,
+        "max": 102.878
+      },
+      "duplicate_check_us": {
+        "n": 490,
+        "p50": 0.601,
+        "p95": 1.066,
+        "mean": 0.8499408163265306,
+        "min": 0.37,
+        "max": 10.673
+      },
+      "tsc_pair_span_us": {
+        "n": 490,
+        "p50": 0.183,
+        "p95": 0.3,
+        "mean": 0.22664285714285715,
+        "min": 0.062,
+        "max": 14.687
+      },
+      "observer_lower_bound_us": {
+        "n": 490,
+        "p50": 0.35425,
+        "p95": 0.5645,
+        "mean": 1.1270561224489797,
+        "min": 0,
+        "max": 102.6705
+      },
+      "observer_upper_bound_us": {
+        "n": 490,
+        "p50": 0.5535000000000001,
+        "p95": 0.7465,
+        "mean": 1.323672448979592,
+        "min": 0.2425,
+        "max": 103.0855
+      },
+      "first_exit_reasons_observed_by_ack": {
+        "1": 30,
+        "49": 138
+      }
+    },
+    "B": {
+      "guest_ack_us": {
+        "n": 490,
+        "p50": 200.6705,
+        "p95": 412.762,
+        "mean": 281.29505918367346,
+        "min": 62.414,
+        "max": 8458.175
+      },
+      "attached_to_run_us": {
+        "n": 490,
+        "p50": 62.391999999999996,
+        "p95": 144.121,
+        "mean": 116.49692448979592,
+        "min": 10.422,
+        "max": 8131.986
+      },
+      "run_to_entry_us": {
+        "n": 490,
+        "p50": 87.991,
+        "p95": 111.005,
+        "mean": 80.69010612244898,
+        "min": 34.115,
+        "max": 183.384
+      },
+      "attached_to_entry_us": {
+        "n": 490,
+        "p50": 149.57549999999998,
+        "p95": 242.143,
+        "mean": 197.1870306122449,
+        "min": 47.315,
+        "max": 8210.097
+      },
+      "entry_to_guest_write_us": {
+        "n": 490,
+        "p50": 36.2975,
+        "p95": 194.949,
+        "mean": 81.78800408163265,
+        "min": 12.453,
+        "max": 2971.282
+      },
+      "guest_write_to_observed_us": {
+        "n": 490,
+        "p50": 0.4785,
+        "p95": 0.878,
+        "mean": 2.3200244897959186,
+        "min": 0.021,
+        "max": 103.029
+      },
+      "duplicate_check_us": {
+        "n": 490,
+        "p50": 1.2795,
+        "p95": 1.723,
+        "mean": 1.2891816326530612,
+        "min": 0.666,
+        "max": 6.604
+      },
+      "tsc_pair_span_us": {
+        "n": 490,
+        "p50": 0.184,
+        "p95": 0.298,
+        "mean": 0.19771020408163265,
+        "min": 0.058,
+        "max": 0.613
+      },
+      "observer_lower_bound_us": {
+        "n": 490,
+        "p50": 0.37775000000000003,
+        "p95": 0.7875,
+        "mean": 2.221845918367347,
+        "min": 0,
+        "max": 102.9405
+      },
+      "observer_upper_bound_us": {
+        "n": 490,
+        "p50": 0.57775,
+        "p95": 0.9795,
+        "mean": 2.4188795918367347,
+        "min": 0.11349999999999999,
+        "max": 103.11749999999999
+      },
+      "first_exit_reasons_observed_by_ack": {
+        "49": 137,
+        "1": 32
+      }
+    }
+  },
+  "controls_us": {
+    "unprofiled-128": {
+      "attach_resume_us": {
+        "n": 490,
+        "p50": 89.20750000000001,
+        "p95": 232.86,
+        "mean": 140.10643265306123,
+        "min": 41.984,
+        "max": 5666.641
+      },
+      "destination_control_service_us": {
+        "n": 490,
+        "p50": 39.7205,
+        "p95": 221.062,
+        "mean": 109.75165102040816,
+        "min": 0.0,
+        "max": 5651.591
+      },
+      "executor_wake_us": {
+        "n": 490,
+        "p50": 8.821,
+        "p95": 117.017,
+        "mean": 58.20391632653061,
+        "min": 0.0,
+        "max": 7993.805
+      },
+      "guest_ack_us": {
+        "n": 490,
+        "p50": 166.98250000000002,
+        "p95": 363.285,
+        "mean": 218.72083673469388,
+        "min": 42.968,
+        "max": 8450.618
+      },
+      "kernel_attach_us": {
+        "n": 490,
+        "p50": 44.7705,
+        "p95": 56.626,
+        "mean": 46.119697959183675,
+        "min": 37.013,
+        "max": 85.562
+      },
+      "wake_to_run_us": {
+        "n": 490,
+        "p50": 0.051,
+        "p95": 0.343,
+        "mean": 0.18390204081632652,
+        "min": 0.0,
+        "max": 24.073
+      },
+      "handoff_us": {
+        "n": 490,
+        "p50": 399.0525,
+        "p95": 791.282,
+        "mean": 506.067987755102,
+        "min": 233.277,
+        "max": 8610.515
+      }
+    },
+    "profiled-128-a": {
+      "attach_resume_us": {
+        "n": 490,
+        "p50": 96.054,
+        "p95": 248.546,
+        "mean": 156.89318775510205,
+        "min": 51.258,
+        "max": 8065.907
+      },
+      "attached_to_entry_us": {
+        "n": 490,
+        "p50": 103.273,
+        "p95": 226.341,
+        "mean": 141.7521367346939,
+        "min": -60.647,
+        "max": 2528.73
+      },
+      "attached_to_run_us": {
+        "n": 490,
+        "p50": 12.8985,
+        "p95": 136.06,
+        "mean": 56.034848979591835,
+        "min": -153.852,
+        "max": 2442.899
+      },
+      "destination_control_service_us": {
+        "n": 490,
+        "p50": 43.2845,
+        "p95": 232.571,
+        "mean": 116.03258979591837,
+        "min": 0.0,
+        "max": 8035.039
+      },
+      "duplicate_check_us": {
+        "n": 490,
+        "p50": 1.0625,
+        "p95": 1.664,
+        "mean": 1.1093061224489795,
+        "min": 0.37,
+        "max": 7.67
+      },
+      "entry_to_guest_write_us": {
+        "n": 490,
+        "p50": 37.006,
+        "p95": 213.524,
+        "mean": 94.01013469387755,
+        "min": 13.595,
+        "max": 3264.728
+      },
+      "executor_wake_us": {
+        "n": 490,
+        "p50": 6.456,
+        "p95": 136.385,
+        "mean": 58.18474285714286,
+        "min": 0.0,
+        "max": 2443.178
+      },
+      "guest_ack_us": {
+        "n": 490,
+        "p50": 176.28199999999998,
+        "p95": 412.762,
+        "mean": 238.12287346938774,
+        "min": 56.184,
+        "max": 3465.917
+      },
+      "guest_write_to_observed_us": {
+        "n": 490,
+        "p50": 0.478,
+        "p95": 0.727,
+        "mean": 2.3606020408163264,
+        "min": 0.125,
+        "max": 102.878
+      },
+      "kernel_attach_us": {
+        "n": 490,
+        "p50": 51.346999999999994,
+        "p95": 62.75,
+        "mean": 54.251744897959185,
+        "min": 38.238,
+        "max": 1194.228
+      },
+      "run_to_entry_us": {
+        "n": 490,
+        "p50": 89.65350000000001,
+        "p95": 116.69,
+        "mean": 85.71728775510203,
+        "min": 36.893,
+        "max": 303.361
+      },
+      "tsc_pair_span_us": {
+        "n": 490,
+        "p50": 0.203,
+        "p95": 0.308,
+        "mean": 0.20933061224489796,
+        "min": 0.062,
+        "max": 0.613
+      },
+      "wake_to_run_us": {
+        "n": 490,
+        "p50": 0.053,
+        "p95": 0.374,
+        "mean": 0.15354897959183675,
+        "min": 0.0,
+        "max": 1.118
+      },
+      "handoff_us": {
+        "n": 490,
+        "p50": 429.6115,
+        "p95": 1085.486,
+        "mean": 579.6863306122449,
+        "min": 218.673,
+        "max": 12077.586
+      }
+    },
+    "profiled-0": {
+      "attach_resume_us": {
+        "n": 490,
+        "p50": 87.74350000000001,
+        "p95": 230.418,
+        "mean": 132.4705775510204,
+        "min": 43.628,
+        "max": 7467.017
+      },
+      "attached_to_entry_us": {
+        "n": 490,
+        "p50": 108.256,
+        "p95": 229.25,
+        "mean": 132.30055918367347,
+        "min": -35.807,
+        "max": 1985.176
+      },
+      "attached_to_run_us": {
+        "n": 490,
+        "p50": 29.505499999999998,
+        "p95": 139.446,
+        "mean": 52.06502857142857,
+        "min": -161.303,
+        "max": 1896.9
+      },
+      "destination_control_service_us": {
+        "n": 490,
+        "p50": 38.2595,
+        "p95": 219.554,
+        "mean": 101.73506326530612,
+        "min": 0.0,
+        "max": 7452.587
+      },
+      "duplicate_check_us": {
+        "n": 490,
+        "p50": 0.7845,
+        "p95": 1.233,
+        "mean": 0.8197795918367347,
+        "min": 0.404,
+        "max": 6.434
+      },
+      "entry_to_guest_write_us": {
+        "n": 490,
+        "p50": 31.891,
+        "p95": 186.12,
+        "mean": 78.88264693877551,
+        "min": 13.091,
+        "max": 1277.401
+      },
+      "executor_wake_us": {
+        "n": 490,
+        "p50": 15.245,
+        "p95": 139.014,
+        "mean": 53.75452857142857,
+        "min": 0.0,
+        "max": 1895.87
+      },
+      "guest_ack_us": {
+        "n": 490,
+        "p50": 178.83550000000002,
+        "p95": 371.792,
+        "mean": 212.78744897959183,
+        "min": 45.486,
+        "max": 2172.295
+      },
+      "guest_write_to_observed_us": {
+        "n": 490,
+        "p50": 0.405,
+        "p95": 0.652,
+        "mean": 1.604242857142857,
+        "min": 0.069,
+        "max": 100.669
+      },
+      "kernel_attach_us": {
+        "n": 490,
+        "p50": 45.875,
+        "p95": 55.706,
+        "mean": 46.94905918367347,
+        "min": 38.318,
+        "max": 105.03
+      },
+      "run_to_entry_us": {
+        "n": 490,
+        "p50": 83.9905,
+        "p95": 114.068,
+        "mean": 80.2355306122449,
+        "min": 41.778,
+        "max": 638.205
+      },
+      "tsc_pair_span_us": {
+        "n": 490,
+        "p50": 0.1895,
+        "p95": 0.311,
+        "mean": 0.20433673469387756,
+        "min": 0.071,
+        "max": 0.671
+      },
+      "wake_to_run_us": {
+        "n": 490,
+        "p50": 0.0615,
+        "p95": 0.384,
+        "mean": 0.15858979591836736,
+        "min": 0.0,
+        "max": 1.186
+      },
+      "handoff_us": {
+        "n": 490,
+        "p50": 400.62649999999996,
+        "p95": 726.311,
+        "mean": 530.5178142857143,
+        "min": 216.371,
+        "max": 7890.686
+      }
+    },
+    "profiled-1": {
+      "attach_resume_us": {
+        "n": 490,
+        "p50": 86.10849999999999,
+        "p95": 238.183,
+        "mean": 132.28785714285715,
+        "min": 44.057,
+        "max": 3540.178
+      },
+      "attached_to_entry_us": {
+        "n": 490,
+        "p50": 89.99549999999999,
+        "p95": 201.478,
+        "mean": 106.78392857142858,
+        "min": 23.09,
+        "max": 247.85
+      },
+      "attached_to_run_us": {
+        "n": 490,
+        "p50": 16.4005,
+        "p95": 103.516,
+        "mean": 28.657544897959184,
+        "min": -79.015,
+        "max": 140.647
+      },
+      "destination_control_service_us": {
+        "n": 490,
+        "p50": 39.017,
+        "p95": 229.131,
+        "mean": 101.11576530612246,
+        "min": 0.0,
+        "max": 3527.684
+      },
+      "duplicate_check_us": {
+        "n": 490,
+        "p50": 0.7595000000000001,
+        "p95": 1.275,
+        "mean": 0.8560061224489796,
+        "min": 0.394,
+        "max": 5.992
+      },
+      "entry_to_guest_write_us": {
+        "n": 490,
+        "p50": 30.958,
+        "p95": 194.645,
+        "mean": 73.96087142857142,
+        "min": 10.798,
+        "max": 1562.609
+      },
+      "executor_wake_us": {
+        "n": 490,
+        "p50": 8.2705,
+        "p95": 104.672,
+        "mean": 30.821189795918368,
+        "min": 0.0,
+        "max": 141.068
+      },
+      "guest_ack_us": {
+        "n": 490,
+        "p50": 166.60000000000002,
+        "p95": 358.788,
+        "mean": 181.8228081632653,
+        "min": 43.38,
+        "max": 1766.622
+      },
+      "guest_write_to_observed_us": {
+        "n": 490,
+        "p50": 0.4695,
+        "p95": 0.667,
+        "mean": 1.078008163265306,
+        "min": 0.056,
+        "max": 97.964
+      },
+      "kernel_attach_us": {
+        "n": 490,
+        "p50": 45.229,
+        "p95": 56.018,
+        "mean": 46.483816326530615,
+        "min": 38.764,
+        "max": 111.031
+      },
+      "run_to_entry_us": {
+        "n": 490,
+        "p50": 84.16,
+        "p95": 109.823,
+        "mean": 78.12638367346939,
+        "min": 34.952,
+        "max": 260.128
+      },
+      "tsc_pair_span_us": {
+        "n": 490,
+        "p50": 0.18,
+        "p95": 0.264,
+        "mean": 0.1767530612244898,
+        "min": 0.054,
+        "max": 0.651
+      },
+      "wake_to_run_us": {
+        "n": 490,
+        "p50": 0.0485,
+        "p95": 0.309,
+        "mean": 0.12997755102040817,
+        "min": 0.0,
+        "max": 0.827
+      },
+      "handoff_us": {
+        "n": 490,
+        "p50": 387.58399999999995,
+        "p95": 657.15,
+        "mean": 450.07304285714287,
+        "min": 199.785,
+        "max": 4335.079
+      }
+    },
+    "profiled-1024": {
+      "attach_resume_us": {
+        "n": 490,
+        "p50": 89.644,
+        "p95": 184.063,
+        "mean": 111.24356326530612,
+        "min": 41.106,
+        "max": 1952.851
+      },
+      "attached_to_entry_us": {
+        "n": 490,
+        "p50": 84.32849999999999,
+        "p95": 188.19,
+        "mean": 129.4466306122449,
+        "min": -69.457,
+        "max": 10546.101
+      },
+      "attached_to_run_us": {
+        "n": 490,
+        "p50": 4.614,
+        "p95": 95.546,
+        "mean": 58.053877551020406,
+        "min": -138.933,
+        "max": 10286.946
+      },
+      "destination_control_service_us": {
+        "n": 490,
+        "p50": 37.4935,
+        "p95": 168.204,
+        "mean": 80.88537551020409,
+        "min": 0.0,
+        "max": 1930.508
+      },
+      "duplicate_check_us": {
+        "n": 490,
+        "p50": 0.7775000000000001,
+        "p95": 1.454,
+        "mean": 0.8946224489795919,
+        "min": 0.404,
+        "max": 6.375
+      },
+      "entry_to_guest_write_us": {
+        "n": 490,
+        "p50": 60.7375,
+        "p95": 227.577,
+        "mean": 91.75122448979592,
+        "min": 10.535,
+        "max": 2303.488
+      },
+      "executor_wake_us": {
+        "n": 490,
+        "p50": 5.96,
+        "p95": 96.26,
+        "mean": 60.38438163265306,
+        "min": 0.0,
+        "max": 10286.542
+      },
+      "guest_ack_us": {
+        "n": 490,
+        "p50": 163.72899999999998,
+        "p95": 364.875,
+        "mean": 222.77005510204083,
+        "min": 51.724,
+        "max": 10803.502
+      },
+      "guest_write_to_observed_us": {
+        "n": 490,
+        "p50": 0.4365,
+        "p95": 0.656,
+        "mean": 1.5722,
+        "min": 0.067,
+        "max": 93.748
+      },
+      "kernel_attach_us": {
+        "n": 490,
+        "p50": 45.244,
+        "p95": 55.297,
+        "mean": 46.34318979591837,
+        "min": 37.4,
+        "max": 88.343
+      },
+      "run_to_entry_us": {
+        "n": 490,
+        "p50": 83.741,
+        "p95": 107.676,
+        "mean": 71.3927530612245,
+        "min": 23.469,
+        "max": 259.155
+      },
+      "tsc_pair_span_us": {
+        "n": 490,
+        "p50": 0.18,
+        "p95": 0.26,
+        "mean": 0.15625510204081633,
+        "min": 0.037,
+        "max": 0.425
+      },
+      "wake_to_run_us": {
+        "n": 490,
+        "p50": 0.016,
+        "p95": 0.252,
+        "mean": 0.07182857142857142,
+        "min": 0.0,
+        "max": 0.326
+      },
+      "handoff_us": {
+        "n": 490,
+        "p50": 382.6365,
+        "p95": 673.439,
+        "mean": 459.4576551020408,
+        "min": 185.665,
+        "max": 10996.843
+      }
+    },
+    "profiled-poll50": {
+      "attach_resume_us": {
+        "n": 490,
+        "p50": 78.233,
+        "p95": 165.964,
+        "mean": 92.93108571428571,
+        "min": 42.814,
+        "max": 1076.796
+      },
+      "attached_to_entry_us": {
+        "n": 490,
+        "p50": 98.345,
+        "p95": 225.672,
+        "mean": 173.1411224489796,
+        "min": 16.269,
+        "max": 9759.014
+      },
+      "attached_to_run_us": {
+        "n": 490,
+        "p50": 17.6905,
+        "p95": 139.497,
+        "mean": 61.36158571428572,
+        "min": -83.032,
+        "max": 9288.777
+      },
+      "destination_control_service_us": {
+        "n": 490,
+        "p50": 32.7295,
+        "p95": 156.832,
+        "mean": 62.83057755102041,
+        "min": 0.0,
+        "max": 1060.8
+      },
+      "duplicate_check_us": {
+        "n": 490,
+        "p50": 0.738,
+        "p95": 1.314,
+        "mean": 0.8514142857142857,
+        "min": 0.436,
+        "max": 5.89
+      },
+      "entry_to_guest_write_us": {
+        "n": 490,
+        "p50": 34.324,
+        "p95": 186.532,
+        "mean": 85.26250612244898,
+        "min": 10.221,
+        "max": 9997.887
+      },
+      "executor_wake_us": {
+        "n": 490,
+        "p50": 11.2355,
+        "p95": 139.036,
+        "mean": 63.510981632653056,
+        "min": 0.0,
+        "max": 9287.889
+      },
+      "guest_ack_us": {
+        "n": 490,
+        "p50": 211.412,
+        "p95": 420.658,
+        "mean": 312.8662142857143,
+        "min": 61.937,
+        "max": 10150.568
+      },
+      "guest_write_to_observed_us": {
+        "n": 490,
+        "p50": 57.179,
+        "p95": 99.085,
+        "mean": 54.462585714285716,
+        "min": 0.567,
+        "max": 105.902
+      },
+      "kernel_attach_us": {
+        "n": 490,
+        "p50": 43.8855,
+        "p95": 53.241,
+        "mean": 45.2243306122449,
+        "min": 38.294,
+        "max": 83.542
+      },
+      "run_to_entry_us": {
+        "n": 490,
+        "p50": 84.0305,
+        "p95": 117.353,
+        "mean": 111.77953673469388,
+        "min": 30.723,
+        "max": 9616.353
+      },
+      "tsc_pair_span_us": {
+        "n": 490,
+        "p50": 0.18,
+        "p95": 0.243,
+        "mean": 0.16079591836734694,
+        "min": 0.052,
+        "max": 0.63
+      },
+      "wake_to_run_us": {
+        "n": 490,
+        "p50": 0.0465,
+        "p95": 0.235,
+        "mean": 0.09973469387755102,
+        "min": 0.0,
+        "max": 0.648
+      },
+      "handoff_us": {
+        "n": 490,
+        "p50": 529.1105,
+        "p95": 768.495,
+        "mean": 653.3614673469388,
+        "min": 277.212,
+        "max": 10862.171
+      }
+    },
+    "profiled-poll0": {
+      "attach_resume_us": {
+        "n": 490,
+        "p50": 82.2575,
+        "p95": 248.697,
+        "mean": 161.60682040816326,
+        "min": 41.714,
+        "max": 7968.802
+      },
+      "attached_to_entry_us": {
+        "n": 490,
+        "p50": 95.68350000000001,
+        "p95": 224.039,
+        "mean": 131.1600081632653,
+        "min": -0.358,
+        "max": 2367.249
+      },
+      "attached_to_run_us": {
+        "n": 490,
+        "p50": 8.488000000000001,
+        "p95": 137.338,
+        "mean": 51.12053469387755,
+        "min": -107.613,
+        "max": 2279.38
+      },
+      "destination_control_service_us": {
+        "n": 490,
+        "p50": 33.392,
+        "p95": 236.289,
+        "mean": 132.23916326530613,
+        "min": 0.0,
+        "max": 7937.278
+      },
+      "duplicate_check_us": {
+        "n": 490,
+        "p50": 0.69,
+        "p95": 1.371,
+        "mean": 0.7852938775510204,
+        "min": 0.398,
+        "max": 5.839
+      },
+      "entry_to_guest_write_us": {
+        "n": 490,
+        "p50": 35.786,
+        "p95": 201.227,
+        "mean": 112.64437551020409,
+        "min": 10.968,
+        "max": 14783.782
+      },
+      "executor_wake_us": {
+        "n": 490,
+        "p50": 10.8945,
+        "p95": 136.194,
+        "mean": 55.85873673469388,
+        "min": 0.0,
+        "max": 2277.685
+      },
+      "guest_ack_us": {
+        "n": 490,
+        "p50": 175.8135,
+        "p95": 383.081,
+        "mean": 244.2778142857143,
+        "min": 26.208,
+        "max": 14939.635
+      },
+      "guest_write_to_observed_us": {
+        "n": 490,
+        "p50": 0.4775,
+        "p95": 0.7,
+        "mean": 0.47343061224489796,
+        "min": -2.297,
+        "max": 1.088
+      },
+      "kernel_attach_us": {
+        "n": 490,
+        "p50": 44.602,
+        "p95": 54.016,
+        "mean": 45.32497755102041,
+        "min": 37.691,
+        "max": 94.334
+      },
+      "run_to_entry_us": {
+        "n": 490,
+        "p50": 83.547,
+        "p95": 109.548,
+        "mean": 80.03947346938776,
+        "min": 24.942,
+        "max": 178.862
+      },
+      "tsc_pair_span_us": {
+        "n": 490,
+        "p50": 0.18,
+        "p95": 0.24,
+        "mean": 0.1816142857142857,
+        "min": 0.04,
+        "max": 5.46
+      },
+      "wake_to_run_us": {
+        "n": 490,
+        "p50": 0.0705,
+        "p95": 0.412,
+        "mean": 0.16923673469387757,
+        "min": 0.0,
+        "max": 0.708
+      },
+      "handoff_us": {
+        "n": 490,
+        "p50": 398.494,
+        "p95": 924.684,
+        "mean": 556.6934,
+        "min": 185.149,
+        "max": 15199.785
+      }
+    },
+    "profiled-sleep": {
+      "attach_resume_us": {
+        "n": 490,
+        "p50": 99.9805,
+        "p95": 260.345,
+        "mean": 135.5705,
+        "min": 50.371,
+        "max": 2156.246
+      },
+      "attached_to_entry_us": {
+        "n": 490,
+        "p50": 99.055,
+        "p95": 232.307,
+        "mean": 144.21388163265306,
+        "min": 23.893,
+        "max": 9738.185
+      },
+      "attached_to_run_us": {
+        "n": 490,
+        "p50": 17.348,
+        "p95": 140.998,
+        "mean": 44.605877551020406,
+        "min": -36.872,
+        "max": 1592.239
+      },
+      "destination_control_service_us": {
+        "n": 490,
+        "p50": 39.445,
+        "p95": 234.873,
+        "mean": 95.90718979591837,
+        "min": 0.0,
+        "max": 2142.466
+      },
+      "duplicate_check_us": {
+        "n": 490,
+        "p50": 1.0365,
+        "p95": 1.908,
+        "mean": 1.2123836734693878,
+        "min": 0.39,
+        "max": 7.914
+      },
+      "entry_to_guest_write_us": {
+        "n": 490,
+        "p50": 274.2545,
+        "p95": 534.977,
+        "mean": 323.9468,
+        "min": 15.743,
+        "max": 5374.901
+      },
+      "executor_wake_us": {
+        "n": 490,
+        "p50": 12.135,
+        "p95": 140.619,
+        "mean": 47.0378693877551,
+        "min": 0.0,
+        "max": 1590.613
+      },
+      "guest_ack_us": {
+        "n": 490,
+        "p50": 391.2365,
+        "p95": 817.138,
+        "mean": 491.4215775510204,
+        "min": 60.097,
+        "max": 10178.77
+      },
+      "guest_write_to_observed_us": {
+        "n": 490,
+        "p50": 0.501,
+        "p95": 94.886,
+        "mean": 23.260895918367346,
+        "min": -0.071,
+        "max": 1745.999
+      },
+      "kernel_attach_us": {
+        "n": 490,
+        "p50": 51.6095,
+        "p95": 62.544,
+        "mean": 59.967365306122446,
+        "min": 38.383,
+        "max": 1143.023
+      },
+      "run_to_entry_us": {
+        "n": 490,
+        "p50": 85.8755,
+        "p95": 112.033,
+        "mean": 99.60800408163266,
+        "min": 37.391,
+        "max": 9689.087
+      },
+      "tsc_pair_span_us": {
+        "n": 490,
+        "p50": 0.18,
+        "p95": 0.303,
+        "mean": 0.17963469387755102,
+        "min": 0.055,
+        "max": 0.434
+      },
+      "wake_to_run_us": {
+        "n": 490,
+        "p50": 0.04,
+        "p95": 0.348,
+        "mean": 0.15582857142857143,
+        "min": 0.0,
+        "max": 10.45
+      },
+      "handoff_us": {
+        "n": 490,
+        "p50": 689.8955,
+        "p95": 1540.311,
+        "mean": 864.6510469387755,
+        "min": 250.471,
+        "max": 11187.14
+      }
+    },
+    "profiled-128-b": {
+      "attach_resume_us": {
+        "n": 490,
+        "p50": 95.2755,
+        "p95": 245.255,
+        "mean": 152.22602857142857,
+        "min": 42.605,
+        "max": 6579.985
+      },
+      "attached_to_entry_us": {
+        "n": 490,
+        "p50": 95.8595,
+        "p95": 229.632,
+        "mean": 136.70753265306124,
+        "min": 20.365,
+        "max": 8210.097
+      },
+      "attached_to_run_us": {
+        "n": 490,
+        "p50": 17.446,
+        "p95": 139.289,
+        "mean": 55.92841428571428,
+        "min": -86.131,
+        "max": 8131.986
+      },
+      "destination_control_service_us": {
+        "n": 490,
+        "p50": 41.879,
+        "p95": 229.237,
+        "mean": 114.8159081632653,
+        "min": 0.0,
+        "max": 6564.015
+      },
+      "duplicate_check_us": {
+        "n": 490,
+        "p50": 0.805,
+        "p95": 1.724,
+        "mean": 1.0298163265306122,
+        "min": 0.405,
+        "max": 10.673
+      },
+      "entry_to_guest_write_us": {
+        "n": 490,
+        "p50": 35.3745,
+        "p95": 172.836,
+        "mean": 68.66662653061225,
+        "min": 12.453,
+        "max": 1378.667
+      },
+      "executor_wake_us": {
+        "n": 490,
+        "p50": 9.383,
+        "p95": 139.122,
+        "mean": 58.41892448979592,
+        "min": 0.0,
+        "max": 8132.044
+      },
+      "guest_ack_us": {
+        "n": 490,
+        "p50": 164.5975,
+        "p95": 351.332,
+        "mean": 206.54393265306123,
+        "min": 50.217,
+        "max": 8458.175
+      },
+      "guest_write_to_observed_us": {
+        "n": 490,
+        "p50": 0.4485,
+        "p95": 0.708,
+        "mean": 1.169773469387755,
+        "min": -6.906,
+        "max": 103.029
+      },
+      "kernel_attach_us": {
+        "n": 490,
+        "p50": 49.3845,
+        "p95": 63.917,
+        "mean": 52.329148979591835,
+        "min": 38.183,
+        "max": 1131.904
+      },
+      "run_to_entry_us": {
+        "n": 490,
+        "p50": 85.7225,
+        "p95": 111.112,
+        "mean": 80.77911836734694,
+        "min": 34.115,
+        "max": 371.154
+      },
+      "tsc_pair_span_us": {
+        "n": 490,
+        "p50": 0.18,
+        "p95": 0.283,
+        "mean": 0.21502244897959183,
+        "min": 0.058,
+        "max": 14.687
+      },
+      "wake_to_run_us": {
+        "n": 490,
+        "p50": 0.043,
+        "p95": 0.314,
+        "mean": 0.11754081632653061,
+        "min": 0.0,
+        "max": 0.535
+      },
+      "handoff_us": {
+        "n": 490,
+        "p50": 405.82849999999996,
+        "p95": 688.177,
+        "mean": 514.6901428571429,
+        "min": 223.377,
+        "max": 9048.41
+      }
+    }
+  },
+  "limitations": [
+    "Pre-entry marker is an entry attempt, not the hardware timestamp of the first resumed instruction.",
+    "Entry-to-guest-write includes nested VM entry, guest kernel/interrupt execution, possible intervening VM exits, and remaining heartbeat loop work.",
+    "PAUSE-0/1 controls bound heartbeat-loop influence empirically; subtracting medians of independent runs does not produce an exact per-sample VM-entry cost.",
+    "Stage medians do not sum to the median total. Signed per-round partitions and their means do sum.",
+    "Negative observer estimates caused by clock pairing uncertainty are preserved; all lie within their recorded uncertainty intervals.",
+    "One physical optane host, independent L1 kernels and nested KVM, emulated shared CXL; no physical multi-host latency claim."
+  ],
+  "mean_partition_check_us": {
+    "attached_to_run_us": 55.98163163265306,
+    "run_to_entry_us": 83.24820306122449,
+    "entry_to_guest_write_us": 81.3383806122449,
+    "guest_write_to_observed_us": 1.7651877551020407
+  },
+  "mean_partition_sum_us": 222.3334030612245,
+  "mean_guest_ack_us": 222.3334030612245,
+  "build_validation": {
+    "dax_kernel_build": "passed",
+    "ordinary_kvm_config_n_module_build": "passed",
+    "static_probe_warnings_as_errors": "passed",
+    "python_compile": "passed"
+  }
+}

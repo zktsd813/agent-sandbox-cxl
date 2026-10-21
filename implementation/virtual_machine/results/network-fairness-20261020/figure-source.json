@@ -1,0 +1,12 @@
+{
+  "input": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/network-fairness-comparison.json",
+  "sha256": "8b410194fac5b77abd5805200264bcf791d465651ca8faad5ad74e7cedf57437",
+  "matplotlib": "3.10.9",
+  "notes": [
+    "TAP/vhost migration profile, NIC IRQs on L1 CPU1.",
+    "Source-clock means; five sequential intervals add to total.",
+    "Compact layout; y axis fitted to TAP results (0..10.2s).",
+    "Slim bars; labels are total (total minus plotted page-scan component), seconds, rounded to two decimals.",
+    "Page scan shown as an unfilled dashed outline for on-demand access; no EPT-only interpretation."
+  ]
+}

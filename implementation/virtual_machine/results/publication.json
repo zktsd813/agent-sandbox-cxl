@@ -1,0 +1,328 @@
+{
+  "schema": 1,
+  "published_utc": "2026-10-21T07:57:02.942340+00:00",
+  "scope": "Codex microVM implementation, patches, historical results, PML/cache measurements, EMR/DSA and periodic-preflush research",
+  "git_branch": "codex/cxl-microvm-cache-dsa",
+  "base_commit": "7b9c32de97346ff8d42030732e112e259ca541ab",
+  "excluded": [
+    "upstream Firecracker and Linux source trees",
+    "VM images and build caches",
+    "raw scheduler/network traces",
+    "Claude-owned contention work and planning documents"
+  ],
+  "reproduction": "README.md describes supplied DCD ZIP, pinned upstream Firecracker/QEMU sources, patches, dependencies and portable plot commands. Original absolute paths in comparison JSON are historical provenance, not files required in a new clone.",
+  "implemented": "snapshot/state restore, used-worker reuse/prepare, experimental direct detach/attach, full-memory snapshot migration baseline, cache protocol benchmark",
+  "research_only": [
+    "EMR DSA cache flush",
+    "exact cache-line write tracking",
+    "periodic background preflush",
+    "physical noncoherent CXL correctness"
+  ],
+  "checks": {
+    "python_shell_c": "passed in publishing checkout; C static build with -Wall -Wextra -Werror",
+    "rust": "build.sh test passed: 4 reuse contract tests and action parser test in library/binary (2 executions)",
+    "patches": {
+      "firecracker": {
+        "result": "passed",
+        "files": 20,
+        "source_commit": "95f868c8e345b1cc8faccd1a3c910b4989dc3f58",
+        "patch_sha256": "66c3c8c126d4e5f116986374bf584378565aaeeff38a185a038d8b689f3bbfd7"
+      },
+      "qemu": {
+        "result": "passed",
+        "files": 2,
+        "source_commit": "f8ed81651e61d9c2166df6121ce2af0f44f06b3e",
+        "patch_sha256": "fe11a2deff133df81694dc541abf6f61530b1af6c327937366a0ecaa857ff74e"
+      }
+    },
+    "kernel": {
+      "archive_sha256": "5b29096b3c7e4d9dceeb431d5ff35cd549159524c055301d1e5d4cb6b5819975",
+      "patch_order": [
+        "cxl-static-capacity.patch",
+        "kvm-dax-state.patch"
+      ],
+      "clean_archive_patch_output_matches_current_source_files": 28
+    },
+    "cache": "60 passed cases, 1200 measured epochs and 240 excluded warmup epochs; original logs/report pairs and published raw records verified",
+    "portable_figures": "cache, shared-DAX two/three-way, and TAP full-migration plots regenerated from committed comparison JSON",
+    "relative_document_links": "31 checked, no missing files",
+    "credential_patterns": "no matches in selected publication files"
+  },
+  "artifacts": [
+    {
+      "path": "implementation/virtual_machine/.gitignore",
+      "bytes": 21,
+      "sha256": "5fe496a917a6009e370a0368f1f3bf898b3972513ffa0ba7bb8d4ff69c67fdf5"
+    },
+    {
+      "path": "implementation/virtual_machine/README.md",
+      "bytes": 36529,
+      "sha256": "7c521a2eccc830cdfe281c324d27e2c931f29297ffdb4babb7f6564f4f6a0c58"
+    },
+    {
+      "path": "implementation/virtual_machine/ack-ept-breakdown.json",
+      "bytes": 27739,
+      "sha256": "b6e71895110f2328dfacfd50f6a799b1ec0fc86c0fa593b27d7caddce2463402"
+    },
+    {
+      "path": "implementation/virtual_machine/build.sh",
+      "bytes": 8283,
+      "sha256": "ff6a80a6d97fc9d2ca4ba61c1921b4be677aa7fd24cd507f92c5610cc221041f"
+    },
+    {
+      "path": "implementation/virtual_machine/cache-maintenance-comparison.json",
+      "bytes": 2397596,
+      "sha256": "98065da426c23099c902e5c1811d4c152406efc0a3f425b800a1ff150d0e0cd3"
+    },
+    {
+      "path": "implementation/virtual_machine/cache_probe.h",
+      "bytes": 23481,
+      "sha256": "4bb8615c1251d297be0b5ccd1569cb442a59c13713b964afba92c4f3567978a0"
+    },
+    {
+      "path": "implementation/virtual_machine/coarse-prepare-comparison.json",
+      "bytes": 401509,
+      "sha256": "c8c1ff3a787c904f7a5a723598c70eccfec52c9d4b0724adec70d2190a99612e"
+    },
+    {
+      "path": "implementation/virtual_machine/context-switch-comparison.json",
+      "bytes": 11180,
+      "sha256": "aeb22f8af5578e8ac5a8e1badc1ec39913789e6a864d06d89e948b602334f218"
+    },
+    {
+      "path": "implementation/virtual_machine/cxl-static-capacity.patch",
+      "bytes": 1038,
+      "sha256": "86e1aaef0b7892ffccc0e37cea1bcd1e9d6e2565f3c5ed6a973b07e7b95c29f6"
+    },
+    {
+      "path": "implementation/virtual_machine/dax-size-comparison.json",
+      "bytes": 1814871,
+      "sha256": "e0f8d860288abede97adfe27129ef3b8dcc7b5d065b9da2163e3a7bcde7788cc"
+    },
+    {
+      "path": "implementation/virtual_machine/direct-handoff-optimized-summary.json",
+      "bytes": 152440,
+      "sha256": "f484c03963074a30b536be773eea74c164f1b78c751914e761972ca6daae93fa"
+    },
+    {
+      "path": "implementation/virtual_machine/firecracker.patch",
+      "bytes": 128723,
+      "sha256": "66c3c8c126d4e5f116986374bf584378565aaeeff38a185a038d8b689f3bbfd7"
+    },
+    {
+      "path": "implementation/virtual_machine/full-migration-comparison.json",
+      "bytes": 125278,
+      "sha256": "03f84e186a7ba5633d2633c177282aa4f3d18758f672356a31418636ff0c0f8f"
+    },
+    {
+      "path": "implementation/virtual_machine/guest-cxl.sh",
+      "bytes": 2607,
+      "sha256": "a80b7d0b1c8edb4adc613dec7a140d0723a3388eca96cdda1eccd713ff0c7136"
+    },
+    {
+      "path": "implementation/virtual_machine/guest-init.sh",
+      "bytes": 5090,
+      "sha256": "c6bca182cbc1665d632f29e93663c2a0fc620dbfdcb027ab3acac7195fb1894e"
+    },
+    {
+      "path": "implementation/virtual_machine/handoff-state-audit.json",
+      "bytes": 9995,
+      "sha256": "026a17284136c7a9705f45a1b6afa9da5bf36d115909e102785d352b66d1587f"
+    },
+    {
+      "path": "implementation/virtual_machine/heartbeat-attribution-summary.json",
+      "bytes": 31554,
+      "sha256": "63b6ceed64ed1b253223ba7a31a3e73db70ca3e0e7968dd9d88005c13d8722b0"
+    },
+    {
+      "path": "implementation/virtual_machine/host-cxl-residency.json",
+      "bytes": 18084,
+      "sha256": "e9ad7fa343f1a286452a100a57aba1a15d8385eedec3abecb9a159c716291420"
+    },
+    {
+      "path": "implementation/virtual_machine/host-reference-audit.json",
+      "bytes": 51048,
+      "sha256": "f354d97def3ff915eab06852b732f69f06d039b881608f9ca40c8fa893846b4d"
+    },
+    {
+      "path": "implementation/virtual_machine/kernel-source.json",
+      "bytes": 730,
+      "sha256": "fc8f0898843496dbd724969fc06bcd4766075cac5218fd19763b9156901000de"
+    },
+    {
+      "path": "implementation/virtual_machine/kernel.config",
+      "bytes": 141680,
+      "sha256": "5c53820292dbacb123711c8ff654befc704f38266749dec0ce39f85cd6187885"
+    },
+    {
+      "path": "implementation/virtual_machine/kvm-dax-source.json",
+      "bytes": 8341,
+      "sha256": "08d9c58fc56d3cd36ec9f88bbaf05b9f7f13c4532070b60c89357ef88d185599"
+    },
+    {
+      "path": "implementation/virtual_machine/kvm-dax-state.patch",
+      "bytes": 91965,
+      "sha256": "61809e10100a0b7368bb008dc9e1a6967188f8d5ecb0ef490c5066aa4762a958"
+    },
+    {
+      "path": "implementation/virtual_machine/l2-init.sh",
+      "bytes": 2647,
+      "sha256": "161d6265c3e12f754d14995dc27ca218a9a1c42a4aeb829e04d802ec6851a41e"
+    },
+    {
+      "path": "implementation/virtual_machine/lab.py",
+      "bytes": 206762,
+      "sha256": "40ceac73ef055f90d26a86132098af4493231190d8cea1e143cb0c8ef95eda19"
+    },
+    {
+      "path": "implementation/virtual_machine/latency-refinement-summary.json",
+      "bytes": 58566,
+      "sha256": "6535aba71256559cc6db509463669de25e7775a0ddc1937379828020c5dd6cb8"
+    },
+    {
+      "path": "implementation/virtual_machine/network-fairness-comparison.json",
+      "bytes": 935032,
+      "sha256": "8b410194fac5b77abd5805200264bcf791d465651ca8faad5ad74e7cedf57437"
+    },
+    {
+      "path": "implementation/virtual_machine/pointer-audit.json",
+      "bytes": 87122,
+      "sha256": "a4fbd6bc9a2a152e20e61b0d3ce2fd6cac517f98063d431426d569556c33ee4f"
+    },
+    {
+      "path": "implementation/virtual_machine/qemu-cxl-direct-ram.patch",
+      "bytes": 5918,
+      "sha256": "fe11a2deff133df81694dc541abf6f61530b1af6c327937366a0ecaa857ff74e"
+    },
+    {
+      "path": "implementation/virtual_machine/ram-backend-source.json",
+      "bytes": 2864,
+      "sha256": "ad23fd4fe0bdd3432db8ab76120e51ddb17a11d18bd87bfa3599e374b1b83599"
+    },
+    {
+      "path": "implementation/virtual_machine/results/cache-pml-20261021/cache-maintenance-data.json",
+      "bytes": 15351,
+      "sha256": "f813de8cd2d8c78d2ff90cf1f80474a28a7bd3f27f77b8b691830e6820c442da"
+    },
+    {
+      "path": "implementation/virtual_machine/results/cache-pml-20261021/cache-maintenance.pdf",
+      "bytes": 14151,
+      "sha256": "bd5612a8801bd03a64c2c01235fcd45a441b72b9e2309fe1f65f7b835bd62bbd"
+    },
+    {
+      "path": "implementation/virtual_machine/results/cache-pml-20261021/cache-maintenance.png",
+      "bytes": 95483,
+      "sha256": "f1e3e5948ab5b481e708d72c2a8371c071bf26e77580709cfbec10556c52ed29"
+    },
+    {
+      "path": "implementation/virtual_machine/results/cache-pml-20261021/manifest.json",
+      "bytes": 68636,
+      "sha256": "acd93b6ee5b8acdfea8422ffd8271e1c06bc41171297e9c4efffbf962d07fb01"
+    },
+    {
+      "path": "implementation/virtual_machine/results/cache-pml-20261021/plot.py",
+      "bytes": 7804,
+      "sha256": "e0e5cc58491c2c10107de6837fc2fc833b05762eb246b05607350a6e1933c938"
+    },
+    {
+      "path": "implementation/virtual_machine/results/cache-pml-20261021/raw-epochs.jsonl",
+      "bytes": 1700116,
+      "sha256": "6a018d9955b3d94af893737751fdf8ad0ed3cd7c8636b7f0a4d1ba25b9656194"
+    },
+    {
+      "path": "implementation/virtual_machine/results/cache-pml-20261021/summary.json",
+      "bytes": 357103,
+      "sha256": "32d84c2c8ef1773dc50aba367d9d6a30991e3dbaadc22a779edd9d746fa3e087"
+    },
+    {
+      "path": "implementation/virtual_machine/results/dax-scale-20261020/dax-handoff-comparison.pdf",
+      "bytes": 13744,
+      "sha256": "84b2d3c88316e8b4ba20afc825c64a2dcd76cb9566f8126271718ef2ba16832f"
+    },
+    {
+      "path": "implementation/virtual_machine/results/dax-scale-20261020/dax-handoff-comparison.png",
+      "bytes": 99559,
+      "sha256": "7ac9ff034f905934c2dda6f088d8cb899452cf8f754bef49d61e142c0c7a33f9"
+    },
+    {
+      "path": "implementation/virtual_machine/results/dax-scale-20261020/figure-source.json",
+      "bytes": 491,
+      "sha256": "c64d5ea3c34465965ac86558eb0f2cb0d3a8819664bd5505dedd2e3bbdb96ff7"
+    },
+    {
+      "path": "implementation/virtual_machine/results/dax-scale-20261020/migration-three-way-1s.pdf",
+      "bytes": 31962,
+      "sha256": "2b72ed48436eac3bda754e7a39944010a71e3ae8ba7f94e3aef7cd5bcedfe01d"
+    },
+    {
+      "path": "implementation/virtual_machine/results/dax-scale-20261020/migration-three-way-1s.png",
+      "bytes": 97002,
+      "sha256": "d24b678f2a4866251106f157af1e003969d8414d1a17608d02d1cc1e970a8cdc"
+    },
+    {
+      "path": "implementation/virtual_machine/results/dax-scale-20261020/plot-data.csv",
+      "bytes": 953,
+      "sha256": "8fee524722e32dc6497481d2e07e235ecfd4c575263f4a69bddb523731882e37"
+    },
+    {
+      "path": "implementation/virtual_machine/results/dax-scale-20261020/plot.py",
+      "bytes": 10445,
+      "sha256": "182edfd24a00f8533069faeade00d4446f2a3edec37fc138b0d0d9f03a4ddf8d"
+    },
+    {
+      "path": "implementation/virtual_machine/results/dax-scale-20261020/three-way-figure-source.json",
+      "bytes": 1887,
+      "sha256": "eacf93151fca6693f3c4920b8b08975b0b12b6278bbf4db03d73dd4f7d72d75a"
+    },
+    {
+      "path": "implementation/virtual_machine/results/dax-scale-20261020/three-way-plot-data.csv",
+      "bytes": 982,
+      "sha256": "6a99b21ea0137dcfb960c8adf0ef05202967464bc6b18cb22fe07ae97096f25a"
+    },
+    {
+      "path": "implementation/virtual_machine/results/network-fairness-20261020/figure-source.json",
+      "bytes": 637,
+      "sha256": "a02aa20e72d1da579865bab9ea6104f7e4a9df5ae4308d49abf1cbd15d6cea3d"
+    },
+    {
+      "path": "implementation/virtual_machine/results/network-fairness-20261020/latency-data.csv",
+      "bytes": 733,
+      "sha256": "2730f6aa71f3f744e89ef5b7761fed724dddada7c9c64f3e1a27ced1fd6d2f20"
+    },
+    {
+      "path": "implementation/virtual_machine/results/network-fairness-20261020/migration-breakdown-tap.pdf",
+      "bytes": 13397,
+      "sha256": "92ba255e704d7e7d0ea0b0aa19d087950c4d2d531bbb7b7919f9d591b95d6bab"
+    },
+    {
+      "path": "implementation/virtual_machine/results/network-fairness-20261020/migration-breakdown-tap.png",
+      "bytes": 70338,
+      "sha256": "c030d0334a30291502796f54220190cab051570591711d167c96327fde5061ec"
+    },
+    {
+      "path": "implementation/virtual_machine/results/network-fairness-20261020/plot.py",
+      "bytes": 4778,
+      "sha256": "4ac6338f6e06113fb9869a7db8ad62143fc6eee549c9f5046ad00c7401ee8800"
+    },
+    {
+      "path": "implementation/virtual_machine/semantic-snapshot-comparison.json",
+      "bytes": 115992,
+      "sha256": "0df0798effd49e978c4710fd51a97fd5cd3858e3b09999b3efc4eeef53aa6925"
+    },
+    {
+      "path": "implementation/virtual_machine/shared_probe.c",
+      "bytes": 149447,
+      "sha256": "e1abdf5b2305e839eecd6e4a84edfb7214045cfe3d1d6e137a07fbe2130c02ce"
+    },
+    {
+      "path": "implementation/virtual_machine/snapshot-state-inventory.json",
+      "bytes": 8433,
+      "sha256": "b68d03451bfab6a84f9d215c827235cf0995a03c62f60b41492f740f24880441"
+    },
+    {
+      "path": "implementation/virtual_machine/used-kvm-reuse-comparison.json",
+      "bytes": 626485,
+      "sha256": "78cdb2996069d96340934b72ce818b6431738757df77072cde18b9a8c7d77bef"
+    }
+  ]
+}

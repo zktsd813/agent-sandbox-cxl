@@ -1,0 +1,37 @@
+{
+  "firecracker_base_commit": "95f868c8e345b1cc8faccd1a3c910b4989dc3f58",
+  "qemu_base_source": "/home/ijkim/Trenv-openwhisk/labs/niagara-vm/host/state/qemu-src",
+  "qemu_base_commit": "f8ed81651e61d9c2166df6121ce2af0f44f06b3e",
+  "qemu_base_files": {
+    "hw/mem/cxl_type3.c": "6628230c915a6c22246339ed29df0cfe9348e61afe5a8d8babac29ee96ea08a3",
+    "include/hw/cxl/cxl_device.h": "c49da512ac099e04da2068e4926c808fccac0365a931b1b9f2d5bc5ef87e7d0c"
+  },
+  "scope": "one fixed volatile CXL region; DAX RAM cold boot and opt-in state-only checkpoint/restore, optional single-owner native KVM/VMM state placement",
+  "kvm_state_patch": "kvm-dax-state.patch",
+  "state_only_checkpoint": {
+    "environment": "FC_DAX_SNAPSHOT=1 with FC_DAX_RAM and FC_DAX_OFFSET",
+    "create_memory_path": "same device-DAX path, no RAM dump",
+    "restore_backend": "File backend pointing to the same device-DAX path; shared mapping without initialization",
+    "kernel_objects": "recreated separately at destination; do not enable the shared KVM/heap allocator for this benchmark"
+  },
+  "semantic_comparison": {
+    "added_on": "2026-10-19",
+    "preserved_direct": "implementation/virtual_machine/.local/direct-preserved-20261019T054045Z/manifest.json",
+    "fixed_ram_hva": "FC_DAX_FIXED_HVA optional; NOREPLACE reservation; new native EPT per semantic restore",
+    "exact_tsc": "FC_DAX_EXACT_TSC=1 only with state-only DAX snapshot; GET/SET_DEVICE_ATTR TSC offset before deferred deadline MSR; no kernel change",
+    "transport": "serialized Firecracker semantic state in versioned/hash-checked shared DAX mailbox; RAM remains MAP_SHARED",
+    "isolated_assets": "CXL_LAB_ASSETS permits separate images without replacing original direct assets",
+    "serialized_state": "Firecracker MicrovmState containing public KVM guest architectural and device state; never raw struct kvm, native pointers, VMCS image or EPT pages",
+    "repeat_restore_msr_list": "retain ordered saved MSR indices after restore, including CPUID/template-dependent additions; CR3/count/index-hash checked each transfer",
+    "tsc_scope": "one vCPU; saved-TSC-based offset rebase and then destination clock runs; multi-vCPU and physically different TSC rates unverified",
+    "results": "semantic-snapshot-comparison.json",
+    "ack_followup": {
+      "report": "ack-ept-breakdown.json",
+      "mode": "lab.py handoff-bench --profile-ack, opt-in shared-probe markers and guest TSC anchors",
+      "kernel_and_firecracker_changes": "none in ACK/EPT follow-up; kprobe/kretprobe+existingtracepoints only",
+      "assets": ".local/assets-ack-profile-20261019/manifest.json",
+      "results": "23 L1 pre-ACK EPT faults and6new pages eachround; root/fault union947us p50 under reduced tracing; observer50.1us p50; additional outer nested EPT faults measured"
+    }
+  },
+  "firecracker_patch": "firecracker.patch"
+}

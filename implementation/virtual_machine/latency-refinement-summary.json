@@ -1,0 +1,1959 @@
+{
+  "result": "passed",
+  "updated_utc": "2026-10-16T02:59:18.981452+00:00",
+  "environment": "One Xeon Gold 5317 physical host; two independent Linux 6.6.0-rc6-dcd-v3 L1 kernels; nested KVM; emulated coherent shared 2GiB CXL device-DAX; Linux target 1 vCPU/128MiB.",
+  "release": {
+    "result": "passed",
+    "cases": {
+      "release-http": {
+        "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261016T024240Z-oh269su8/direct-linux-handoff-1792118562730089113/report.json",
+        "summary_ms": {
+          "binding": {
+            "n": 490,
+            "p50": 0.025010499999999998,
+            "p95": 0.06892400000000001,
+            "min": 0.006566,
+            "max": 0.120082
+          },
+          "detach_total": {
+            "n": 490,
+            "p50": 0.254087,
+            "p95": 0.5742849999999999,
+            "min": 0.06589,
+            "max": 1.7809480000000002
+          },
+          "guest_observed": {
+            "n": 490,
+            "p50": 0.7561594999999999,
+            "p95": 1.098787,
+            "min": 0.394568,
+            "max": 6.242699
+          },
+          "handoff": {
+            "n": 490,
+            "p50": 0.8955255,
+            "p95": 1.9989700000000001,
+            "min": 0.394836,
+            "max": 6.243085
+          },
+          "kernel_detach": {
+            "n": 490,
+            "p50": 0.043761,
+            "p95": 0.10416800000000001,
+            "min": 0.023431999999999998,
+            "max": 0.155428
+          },
+          "mmu_drain": {
+            "n": 490,
+            "p50": 0.0006475000000000001,
+            "p95": 0.001692,
+            "min": 0.000332,
+            "max": 0.019296
+          },
+          "pause": {
+            "n": 490,
+            "p50": 0.2391065,
+            "p95": 0.570739,
+            "min": 0.034235,
+            "max": 1.723204
+          },
+          "quiesce": {
+            "n": 490,
+            "p50": 0.0019305,
+            "p95": 0.00394,
+            "min": 0.0011200000000000001,
+            "max": 0.040348
+          },
+          "attach_resume": {
+            "n": 490,
+            "p50": 0.216119,
+            "p95": 1.650883,
+            "min": 0.049697000000000005,
+            "max": 2.720679
+          },
+          "guest_ack": {
+            "n": 490,
+            "p50": 0.20835050000000002,
+            "p95": 0.416155,
+            "min": 0.0006,
+            "max": 2.382392
+          },
+          "kernel_attach": {
+            "n": 490,
+            "p50": 0.05442,
+            "p95": 0.08545900000000001,
+            "min": 0.042156,
+            "max": 1.205223
+          },
+          "kick_to_exit": {
+            "n": 245,
+            "p50": 0.035109,
+            "p95": 0.049057,
+            "min": 0.021138,
+            "max": 1.7059000000000002
+          },
+          "stop_ack": {
+            "n": 245,
+            "p50": 0.016343,
+            "p95": 0.036656,
+            "min": 0.0013959999999999999,
+            "max": 0.096376
+          },
+          "wake_to_run": {
+            "n": 245,
+            "p50": 0.000268,
+            "p95": 0.000348,
+            "min": 5.1e-05,
+            "max": 0.000383
+          },
+          "executor_wake": {
+            "n": 245,
+            "p50": 0.052441,
+            "p95": 0.13042099999999998,
+            "min": 0.00836,
+            "max": 0.142496
+          }
+        },
+        "validation": {
+          "handoffs": 500,
+          "identical_object_offsets": [
+            8192,
+            76928,
+            118784
+          ],
+          "vm_creates": 1,
+          "vcpu_creates": 1,
+          "continuity_checks": "Linux heartbeat and retained 16MiB heap",
+          "kernel_taint": 0,
+          "snapshot_api_calls": 0,
+          "duplicate_attach_rejected": true,
+          "old_owner_vcpu_access_revoked": true,
+          "identical_ept_root_offset": 471040,
+          "ept_page_count": 43,
+          "boot_markers": 1,
+          "retained_heap_errors": 0,
+          "guest_clock_errors": 0,
+          "guest_tsc_errors": 0,
+          "raw_tsc_check_enabled": true,
+          "host_backwards_tsc_warnings": 0,
+          "firecracker_checks_scanned_full_log": true,
+          "changing_memory_mib": 0,
+          "guest_clocksource": "kvm-clock"
+        },
+        "controller_cpu_ms": {
+          "A": 1304.81,
+          "B": 1538.077
+        },
+        "controller_wall_ms": {
+          "A": 32222.643747000002,
+          "B": 32066.956539000003
+        },
+        "options": [],
+        "controller_cpu_percent": {
+          "A": 4.049357371930355,
+          "B": 4.79645456259431
+        }
+      },
+      "release-http-split": {
+        "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261016T024318Z-ry6pedbv/direct-linux-handoff-1792118599974288310/report.json",
+        "summary_ms": {
+          "binding": {
+            "n": 490,
+            "p50": 0.010485000000000001,
+            "p95": 0.033117,
+            "min": 0.005337,
+            "max": 0.149303
+          },
+          "detach_total": {
+            "n": 490,
+            "p50": 0.1746545,
+            "p95": 0.471463,
+            "min": 0.06440699999999999,
+            "max": 4.690477
+          },
+          "guest_observed": {
+            "n": 490,
+            "p50": 0.6483625,
+            "p95": 1.062637,
+            "min": 0.383131,
+            "max": 12.954156000000001
+          },
+          "handoff": {
+            "n": 490,
+            "p50": 0.7187005,
+            "p95": 1.115941,
+            "min": 0.405061,
+            "max": 13.13317
+          },
+          "kernel_detach": {
+            "n": 490,
+            "p50": 0.041928,
+            "p95": 0.09035599999999999,
+            "min": 0.02318,
+            "max": 0.178845
+          },
+          "mmu_drain": {
+            "n": 490,
+            "p50": 0.0006485,
+            "p95": 0.001632,
+            "min": 0.000325,
+            "max": 0.0028599999999999997
+          },
+          "pause": {
+            "n": 490,
+            "p50": 0.167074,
+            "p95": 0.46740699999999996,
+            "min": 0.036414999999999996,
+            "max": 4.504792
+          },
+          "quiesce": {
+            "n": 490,
+            "p50": 0.001835,
+            "p95": 0.00376,
+            "min": 0.000897,
+            "max": 0.006354
+          },
+          "attach_resume": {
+            "n": 490,
+            "p50": 0.1258595,
+            "p95": 0.360388,
+            "min": 0.051495,
+            "max": 8.818616
+          },
+          "guest_ack": {
+            "n": 490,
+            "p50": 0.20954499999999998,
+            "p95": 0.415728,
+            "min": 0.075917,
+            "max": 8.854845
+          },
+          "kernel_attach": {
+            "n": 490,
+            "p50": 0.04798,
+            "p95": 0.0588,
+            "min": 0.038812,
+            "max": 0.084559
+          },
+          "kick_to_exit": {
+            "n": 245,
+            "p50": 0.040813,
+            "p95": 0.048782,
+            "min": 0.023765,
+            "max": 4.479863999999999
+          },
+          "stop_ack": {
+            "n": 245,
+            "p50": 0.028758,
+            "p95": 0.040170000000000004,
+            "min": 0.007476,
+            "max": 0.094298
+          },
+          "wake_to_run": {
+            "n": 245,
+            "p50": 0.000195,
+            "p95": 0.00025,
+            "min": 9.1e-05,
+            "max": 0.000323
+          },
+          "executor_wake": {
+            "n": 245,
+            "p50": 0.087203,
+            "p95": 0.140746,
+            "min": 0.025654,
+            "max": 8.474822
+          }
+        },
+        "validation": {
+          "handoffs": 500,
+          "identical_object_offsets": [
+            8192,
+            76928,
+            118784
+          ],
+          "vm_creates": 1,
+          "vcpu_creates": 1,
+          "continuity_checks": "Linux heartbeat and retained 16MiB heap",
+          "kernel_taint": 0,
+          "snapshot_api_calls": 0,
+          "duplicate_attach_rejected": true,
+          "old_owner_vcpu_access_revoked": true,
+          "identical_ept_root_offset": 471040,
+          "ept_page_count": 43,
+          "boot_markers": 1,
+          "retained_heap_errors": 0,
+          "guest_clock_errors": 0,
+          "guest_tsc_errors": 0,
+          "raw_tsc_check_enabled": true,
+          "host_backwards_tsc_warnings": 0,
+          "firecracker_checks_scanned_full_log": true,
+          "changing_memory_mib": 0,
+          "guest_clocksource": "kvm-clock"
+        },
+        "controller_cpu_ms": {
+          "A": 1094.84,
+          "B": 1159.098
+        },
+        "controller_wall_ms": {
+          "A": 31843.054879,
+          "B": 31712.820838
+        },
+        "options": [
+          "--guest-cpu",
+          "0",
+          "--executor-cpu",
+          "1"
+        ],
+        "controller_cpu_percent": {
+          "A": 3.4382379585133016,
+          "B": 3.6549823363902925
+        }
+      },
+      "release-balanced": {
+        "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261016T024354Z-zndmo388/direct-linux-handoff-1792118636413381046/report.json",
+        "summary_ms": {
+          "binding": {
+            "n": 490,
+            "p50": 0.0204515,
+            "p95": 0.035374,
+            "min": 0.0054269999999999995,
+            "max": 0.063248
+          },
+          "detach_total": {
+            "n": 490,
+            "p50": 0.11973149999999999,
+            "p95": 0.231217,
+            "min": 0.041024,
+            "max": 3.498525
+          },
+          "guest_observed": {
+            "n": 490,
+            "p50": 0.4239995,
+            "p95": 0.8160729999999999,
+            "min": 0.240421,
+            "max": 8.271094
+          },
+          "handoff": {
+            "n": 490,
+            "p50": 0.42463850000000003,
+            "p95": 0.816469,
+            "min": 0.240901,
+            "max": 8.27163
+          },
+          "kernel_detach": {
+            "n": 490,
+            "p50": 0.05511050000000001,
+            "p95": 0.074772,
+            "min": 0.020232,
+            "max": 0.111814
+          },
+          "mmu_drain": {
+            "n": 490,
+            "p50": 0.001377,
+            "p95": 0.0018,
+            "min": 0.000376,
+            "max": 0.002512
+          },
+          "pause": {
+            "n": 490,
+            "p50": 0.0877325,
+            "p95": 0.22581299999999999,
+            "min": 0.018344000000000003,
+            "max": 3.496808
+          },
+          "quiesce": {
+            "n": 490,
+            "p50": 0.0031955,
+            "p95": 0.00433,
+            "min": 0.001067,
+            "max": 0.019226
+          },
+          "attach_resume": {
+            "n": 490,
+            "p50": 0.094317,
+            "p95": 0.243058,
+            "min": 0.047111,
+            "max": 7.976132
+          },
+          "guest_ack": {
+            "n": 490,
+            "p50": 0.169333,
+            "p95": 0.355397,
+            "min": 0.054476,
+            "max": 6.872649
+          },
+          "kernel_attach": {
+            "n": 490,
+            "p50": 0.04643,
+            "p95": 0.055882,
+            "min": 0.038530999999999996,
+            "max": 0.6083630000000001
+          },
+          "kick_to_exit": {
+            "n": 245,
+            "p50": 0.040758,
+            "p95": 0.050610999999999996,
+            "min": 0.017352,
+            "max": 0.093507
+          },
+          "source_control_part_1": {
+            "n": 245,
+            "p50": 0.059392,
+            "p95": 0.10296999999999999,
+            "min": 0.022556999999999997,
+            "max": 0.128476
+          },
+          "source_control_part_2": {
+            "n": 245,
+            "p50": 0.023183,
+            "p95": 0.030069,
+            "min": 0.006549999999999999,
+            "max": 0.060326
+          },
+          "source_control_part_0": {
+            "n": 245,
+            "p50": 0.052531,
+            "p95": 0.063723,
+            "min": 0.034945,
+            "max": 3.434184
+          },
+          "stop_ack": {
+            "n": 245,
+            "p50": 0.000419,
+            "p95": 0.000666,
+            "min": 0.000154,
+            "max": 0.026036999999999998
+          },
+          "source_control_service": {
+            "n": 245,
+            "p50": 0.140132,
+            "p95": 0.191477,
+            "min": 0.07257599999999999,
+            "max": 3.480802
+          },
+          "destination_control_part_2": {
+            "n": 245,
+            "p50": 0.002992,
+            "p95": 0.025436,
+            "min": 0.002,
+            "max": 0.063232
+          },
+          "destination_control_service": {
+            "n": 245,
+            "p50": 0.15221600000000002,
+            "p95": 0.24944300000000003,
+            "min": 0.08320699999999999,
+            "max": 7.9418999999999995
+          },
+          "wake_to_run": {
+            "n": 245,
+            "p50": 0.000213,
+            "p95": 0.000264,
+            "min": 0.000101,
+            "max": 0.000342
+          },
+          "executor_wake": {
+            "n": 245,
+            "p50": 0.057479,
+            "p95": 0.140216,
+            "min": 0.021315,
+            "max": 6.554
+          },
+          "destination_control_part_0": {
+            "n": 245,
+            "p50": 0.09588200000000001,
+            "p95": 0.181337,
+            "min": 0.03534,
+            "max": 7.872560999999999
+          },
+          "destination_control_part_1": {
+            "n": 245,
+            "p50": 0.044912999999999995,
+            "p95": 0.06353,
+            "min": 0.039914,
+            "max": 0.6115470000000001
+          }
+        },
+        "validation": {
+          "handoffs": 500,
+          "identical_object_offsets": [
+            8192,
+            76928,
+            118784
+          ],
+          "vm_creates": 1,
+          "vcpu_creates": 1,
+          "continuity_checks": "Linux heartbeat and retained 16MiB heap",
+          "kernel_taint": 0,
+          "snapshot_api_calls": 0,
+          "duplicate_attach_rejected": true,
+          "old_owner_vcpu_access_revoked": true,
+          "identical_ept_root_offset": 471040,
+          "ept_page_count": 43,
+          "boot_markers": 1,
+          "retained_heap_errors": 0,
+          "guest_clock_errors": 0,
+          "guest_tsc_errors": 0,
+          "raw_tsc_check_enabled": true,
+          "host_backwards_tsc_warnings": 0,
+          "firecracker_checks_scanned_full_log": true,
+          "changing_memory_mib": 0,
+          "guest_clocksource": "kvm-clock"
+        },
+        "controller_cpu_ms": {
+          "A": 1176.11,
+          "B": 1289.304
+        },
+        "controller_wall_ms": {
+          "A": 27819.109741999997,
+          "B": 27672.254217
+        },
+        "options": [
+          "--control",
+          "local",
+          "--spin-us",
+          "500",
+          "--reuse-fds",
+          "--irqfd-batch",
+          "--resume-nokick",
+          "--guest-cpu",
+          "0",
+          "--executor-cpu",
+          "1",
+          "--channel-spin-us",
+          "100"
+        ],
+        "controller_cpu_percent": {
+          "A": 4.2277053827655875,
+          "B": 4.65919397057265
+        }
+      },
+      "release-poll5": {
+        "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261016T024426Z-1_q1lobj/direct-linux-handoff-1792118668358882079/report.json",
+        "summary_ms": {
+          "binding": {
+            "n": 490,
+            "p50": 0.0104755,
+            "p95": 0.03397699999999999,
+            "min": 0.005014,
+            "max": 0.096232
+          },
+          "detach_total": {
+            "n": 490,
+            "p50": 0.107037,
+            "p95": 0.21331,
+            "min": 0.04616,
+            "max": 7.730492
+          },
+          "guest_observed": {
+            "n": 490,
+            "p50": 0.3889355,
+            "p95": 0.910254,
+            "min": 0.20812999999999998,
+            "max": 8.260838
+          },
+          "handoff": {
+            "n": 490,
+            "p50": 0.389475,
+            "p95": 0.9106190000000001,
+            "min": 0.208631,
+            "max": 8.261218999999999
+          },
+          "kernel_detach": {
+            "n": 490,
+            "p50": 0.0341955,
+            "p95": 0.072237,
+            "min": 0.017873,
+            "max": 0.16012
+          },
+          "mmu_drain": {
+            "n": 490,
+            "p50": 0.0007245,
+            "p95": 0.001686,
+            "min": 0.000342,
+            "max": 0.0030369999999999998
+          },
+          "pause": {
+            "n": 490,
+            "p50": 0.07954750000000001,
+            "p95": 0.208083,
+            "min": 0.024722,
+            "max": 7.607657000000001
+          },
+          "quiesce": {
+            "n": 490,
+            "p50": 0.001706,
+            "p95": 0.004297,
+            "min": 0.000799,
+            "max": 0.027728000000000003
+          },
+          "attach_resume": {
+            "n": 490,
+            "p50": 0.09193799999999999,
+            "p95": 0.18045599999999998,
+            "min": 0.043375,
+            "max": 2.518818
+          },
+          "guest_ack": {
+            "n": 490,
+            "p50": 0.1776815,
+            "p95": 0.369153,
+            "min": 0.015338,
+            "max": 2.745517
+          },
+          "kernel_attach": {
+            "n": 490,
+            "p50": 0.044825000000000004,
+            "p95": 0.057055999999999996,
+            "min": 0.0384,
+            "max": 0.708321
+          },
+          "kick_to_exit": {
+            "n": 245,
+            "p50": 0.039280999999999996,
+            "p95": 0.05293,
+            "min": 0.024132,
+            "max": 7.5750280000000005
+          },
+          "source_control_part_1": {
+            "n": 245,
+            "p50": 0.037783000000000004,
+            "p95": 0.09408799999999999,
+            "min": 0.019532,
+            "max": 0.212672
+          },
+          "source_control_part_2": {
+            "n": 245,
+            "p50": 0.009661,
+            "p95": 0.028212,
+            "min": 0.006811,
+            "max": 0.051592
+          },
+          "source_control_part_0": {
+            "n": 245,
+            "p50": 0.04297,
+            "p95": 0.054378,
+            "min": 0.024692,
+            "max": 0.064998
+          },
+          "stop_ack": {
+            "n": 245,
+            "p50": 0.000325,
+            "p95": 0.0006540000000000001,
+            "min": 0.00014299999999999998,
+            "max": 0.032234
+          },
+          "source_control_service": {
+            "n": 245,
+            "p50": 0.091905,
+            "p95": 0.17081,
+            "min": 0.063198,
+            "max": 0.277528
+          },
+          "destination_control_part_2": {
+            "n": 245,
+            "p50": 0.003747,
+            "p95": 0.032411999999999996,
+            "min": 0.0020009999999999997,
+            "max": 0.063607
+          },
+          "destination_control_service": {
+            "n": 245,
+            "p50": 0.11923600000000001,
+            "p95": 0.22431600000000002,
+            "min": 0.080836,
+            "max": 2.49841
+          },
+          "wake_to_run": {
+            "n": 245,
+            "p50": 0.000248,
+            "p95": 0.00032700000000000003,
+            "min": 8.5e-05,
+            "max": 0.000533
+          },
+          "executor_wake": {
+            "n": 245,
+            "p50": 0.048387,
+            "p95": 0.07876000000000001,
+            "min": 0.015066000000000001,
+            "max": 2.1030349999999998
+          },
+          "destination_control_part_0": {
+            "n": 245,
+            "p50": 0.054707,
+            "p95": 0.144119,
+            "min": 0.023599000000000002,
+            "max": 2.446968
+          },
+          "destination_control_part_1": {
+            "n": 245,
+            "p50": 0.050305,
+            "p95": 0.075209,
+            "min": 0.040528,
+            "max": 0.102836
+          }
+        },
+        "validation": {
+          "handoffs": 500,
+          "identical_object_offsets": [
+            8192,
+            76928,
+            118784
+          ],
+          "vm_creates": 1,
+          "vcpu_creates": 1,
+          "continuity_checks": "Linux heartbeat and retained 16MiB heap",
+          "kernel_taint": 0,
+          "snapshot_api_calls": 0,
+          "duplicate_attach_rejected": true,
+          "old_owner_vcpu_access_revoked": true,
+          "identical_ept_root_offset": 471040,
+          "ept_page_count": 43,
+          "boot_markers": 1,
+          "retained_heap_errors": 0,
+          "guest_clock_errors": 0,
+          "guest_tsc_errors": 0,
+          "raw_tsc_check_enabled": true,
+          "host_backwards_tsc_warnings": 0,
+          "firecracker_checks_scanned_full_log": true,
+          "changing_memory_mib": 0,
+          "guest_clocksource": "kvm-clock"
+        },
+        "controller_cpu_ms": {
+          "A": 14512.646,
+          "B": 14656.309
+        },
+        "controller_wall_ms": {
+          "A": 35916.554779,
+          "B": 35770.43457
+        },
+        "options": [
+          "--control",
+          "local",
+          "--spin-us",
+          "500",
+          "--reuse-fds",
+          "--irqfd-batch",
+          "--resume-nokick",
+          "--guest-cpu",
+          "0",
+          "--executor-cpu",
+          "1",
+          "--channel-spin-us",
+          "100",
+          "--poll-us",
+          "5",
+          "--timer-slack-ns",
+          "1"
+        ],
+        "controller_cpu_percent": {
+          "A": 40.40656485372416,
+          "B": 40.973248371692904
+        }
+      },
+      "release-native": {
+        "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261016T024506Z-fxiwhopi/direct-linux-handoff-1792118708570096482/report.json",
+        "summary_ms": {
+          "binding": {
+            "n": 490,
+            "p50": 0.01357,
+            "p95": 0.034603,
+            "min": 0.007732,
+            "max": 0.06526900000000001
+          },
+          "detach_total": {
+            "n": 490,
+            "p50": 0.0909505,
+            "p95": 0.134182,
+            "min": 0.051024,
+            "max": 6.127924
+          },
+          "guest_observed": {
+            "n": 490,
+            "p50": 0.353138,
+            "p95": 0.589093,
+            "min": 0.20652099999999998,
+            "max": 10.333487
+          },
+          "handoff": {
+            "n": 490,
+            "p50": 0.353507,
+            "p95": 0.589429,
+            "min": 0.20694300000000002,
+            "max": 10.333844
+          },
+          "kernel_detach": {
+            "n": 490,
+            "p50": 0.0404295,
+            "p95": 0.074582,
+            "min": 0.020462,
+            "max": 0.100592
+          },
+          "mmu_drain": {
+            "n": 490,
+            "p50": 0.000923,
+            "p95": 0.001635,
+            "min": 0.000363,
+            "max": 0.003352
+          },
+          "pause": {
+            "n": 490,
+            "p50": 0.0412,
+            "p95": 0.055752,
+            "min": 0.02367,
+            "max": 6.094698
+          },
+          "quiesce": {
+            "n": 490,
+            "p50": 0.0023935,
+            "p95": 0.004849999999999999,
+            "min": 0.0010509999999999999,
+            "max": 0.037565
+          },
+          "attach_resume": {
+            "n": 490,
+            "p50": 0.052632,
+            "p95": 0.063186,
+            "min": 0.042673,
+            "max": 1.7006759999999999
+          },
+          "guest_ack": {
+            "n": 490,
+            "p50": 0.19752799999999998,
+            "p95": 0.40971300000000005,
+            "min": 0.078565,
+            "max": 10.140424999999999
+          },
+          "kernel_attach": {
+            "n": 490,
+            "p50": 0.047355499999999995,
+            "p95": 0.056711,
+            "min": 0.037468,
+            "max": 1.227425
+          },
+          "kick_to_exit": {
+            "n": 490,
+            "p50": 0.0396455,
+            "p95": 0.052001,
+            "min": 0.022940000000000002,
+            "max": 6.078551999999999
+          },
+          "stop_ack": {
+            "n": 490,
+            "p50": 0.00032,
+            "p95": 0.0006760000000000001,
+            "min": 0.000145,
+            "max": 0.077816
+          },
+          "wake_to_run": {
+            "n": 490,
+            "p50": 0.00026000000000000003,
+            "p95": 0.000367,
+            "min": 8e-05,
+            "max": 0.0011279999999999999
+          },
+          "executor_wake": {
+            "n": 490,
+            "p50": 0.061886000000000004,
+            "p95": 0.147821,
+            "min": 0.020491,
+            "max": 8.925184999999999
+          }
+        },
+        "validation": {
+          "handoffs": 500,
+          "identical_object_offsets": [
+            8192,
+            76928,
+            118784
+          ],
+          "vm_creates": 1,
+          "vcpu_creates": 1,
+          "continuity_checks": "Linux heartbeat and retained 16MiB heap",
+          "kernel_taint": 0,
+          "snapshot_api_calls": 0,
+          "duplicate_attach_rejected": true,
+          "old_owner_vcpu_access_revoked": true,
+          "identical_ept_root_offset": 471040,
+          "ept_page_count": 43,
+          "boot_markers": 1,
+          "retained_heap_errors": 0,
+          "guest_clock_errors": 0,
+          "guest_tsc_errors": 0,
+          "raw_tsc_check_enabled": true,
+          "host_backwards_tsc_warnings": 0,
+          "firecracker_checks_scanned_full_log": true,
+          "changing_memory_mib": 0,
+          "guest_clocksource": "kvm-clock"
+        },
+        "controller_cpu_ms": {
+          "A": 1294.782,
+          "B": 1290.575
+        },
+        "controller_wall_ms": {
+          "A": 28300.007008,
+          "B": 28117.031658
+        },
+        "options": [
+          "--executor",
+          "native",
+          "--spin-us",
+          "500",
+          "--reuse-fds",
+          "--guest-cpu",
+          "0",
+          "--executor-cpu",
+          "1",
+          "--channel-spin-us",
+          "100"
+        ],
+        "controller_cpu_percent": {
+          "A": 4.575200280459238,
+          "B": 4.59001154779722
+        }
+      },
+      "release-cpu-floor": {
+        "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261016T024539Z-13k7npwt/direct-handoff-1792118741526549738/report.json",
+        "summary_ms": {
+          "detach": {
+            "n": 490,
+            "p50": 0.010984,
+            "p95": 0.017225,
+            "min": 0.010091,
+            "max": 9.942915000000001
+          },
+          "handoff": {
+            "n": 490,
+            "p50": 0.07733799999999999,
+            "p95": 0.109722,
+            "min": 0.074614,
+            "max": 10.049029
+          },
+          "kernel_detach": {
+            "n": 490,
+            "p50": 0.010232000000000002,
+            "p95": 0.016445,
+            "min": 0.009364,
+            "max": 9.939785
+          },
+          "attach": {
+            "n": 490,
+            "p50": 0.0326875,
+            "p95": 0.039777,
+            "min": 0.032005000000000006,
+            "max": 1.098025
+          },
+          "kernel_attach": {
+            "n": 490,
+            "p50": 0.031978,
+            "p95": 0.038933999999999996,
+            "min": 0.031352,
+            "max": 0.59026
+          },
+          "run_to_hlt": {
+            "n": 490,
+            "p50": 0.032291,
+            "p95": 0.040299999999999996,
+            "min": 0.030947,
+            "max": 0.07772
+          }
+        },
+        "validation": {
+          "handoffs": 500,
+          "identical_object_offsets": [
+            8192,
+            64896,
+            98304
+          ],
+          "vm_creates": 1,
+          "vcpu_creates": 1,
+          "continuity_checks": "integer register, RIP and x87 accumulator",
+          "kernel_taint": 0,
+          "snapshot_api_calls": 0,
+          "duplicate_attach_rejected": true,
+          "old_owner_vcpu_access_revoked": true,
+          "identical_ept_root_offset": 442368,
+          "ept_page_count": 4
+        },
+        "controller_cpu_ms": null,
+        "controller_wall_ms": null,
+        "options": [
+          "--poll-us",
+          "0",
+          "--guest-cpu",
+          "0"
+        ]
+      },
+      "release-busy-pit": {
+        "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261016T024544Z-5xkmruh0/direct-linux-handoff-1792118746277505705/report.json",
+        "summary_ms": {
+          "binding": {
+            "n": 190,
+            "p50": 0.0090435,
+            "p95": 0.017942,
+            "min": 0.005476,
+            "max": 0.050277999999999996
+          },
+          "detach_total": {
+            "n": 190,
+            "p50": 0.0824575,
+            "p95": 0.12204999999999999,
+            "min": 0.04939,
+            "max": 6.3345519999999995
+          },
+          "guest_observed": {
+            "n": 190,
+            "p50": 0.3756235,
+            "p95": 0.879916,
+            "min": 0.22515700000000002,
+            "max": 8.446435
+          },
+          "handoff": {
+            "n": 190,
+            "p50": 0.376247,
+            "p95": 0.880892,
+            "min": 0.225546,
+            "max": 8.446735
+          },
+          "kernel_detach": {
+            "n": 190,
+            "p50": 0.0295435,
+            "p95": 0.04525,
+            "min": 0.018897999999999998,
+            "max": 0.14181
+          },
+          "mmu_drain": {
+            "n": 190,
+            "p50": 0.0005165,
+            "p95": 0.001071,
+            "min": 0.00028100000000000005,
+            "max": 0.005925
+          },
+          "pause": {
+            "n": 190,
+            "p50": 0.0625465,
+            "p95": 0.12055800000000001,
+            "min": 0.021161000000000003,
+            "max": 6.333171999999999
+          },
+          "quiesce": {
+            "n": 190,
+            "p50": 0.0014815000000000002,
+            "p95": 0.0025459999999999997,
+            "min": 0.0010329999999999998,
+            "max": 0.011427
+          },
+          "attach_resume": {
+            "n": 190,
+            "p50": 0.08485699999999999,
+            "p95": 0.208625,
+            "min": 0.043762999999999996,
+            "max": 7.981768
+          },
+          "guest_ack": {
+            "n": 190,
+            "p50": 0.189307,
+            "p95": 0.48768599999999995,
+            "min": 0.046347,
+            "max": 1.922268
+          },
+          "kernel_attach": {
+            "n": 190,
+            "p50": 0.049621,
+            "p95": 0.060839,
+            "min": 0.041706,
+            "max": 0.071815
+          },
+          "kick_to_exit": {
+            "n": 95,
+            "p50": 0.030886,
+            "p95": 0.039168,
+            "min": 0.020488,
+            "max": 0.045944000000000006
+          },
+          "source_control_part_1": {
+            "n": 95,
+            "p50": 0.035258000000000005,
+            "p95": 0.059376,
+            "min": 0.020956,
+            "max": 0.148386
+          },
+          "source_control_part_2": {
+            "n": 95,
+            "p50": 0.00903,
+            "p95": 0.014407999999999999,
+            "min": 0.00641,
+            "max": 0.056320999999999996
+          },
+          "source_control_part_0": {
+            "n": 95,
+            "p50": 0.038362,
+            "p95": 0.051621,
+            "min": 0.029128,
+            "max": 6.260059
+          },
+          "stop_ack": {
+            "n": 95,
+            "p50": 0.000187,
+            "p95": 0.000314,
+            "min": 0.00014299999999999998,
+            "max": 0.000509
+          },
+          "source_control_service": {
+            "n": 95,
+            "p50": 0.08403400000000001,
+            "p95": 0.140146,
+            "min": 0.064353,
+            "max": 6.31834
+          },
+          "destination_control_part_2": {
+            "n": 95,
+            "p50": 0.0033490000000000004,
+            "p95": 0.035908,
+            "min": 0.002197,
+            "max": 0.064164
+          },
+          "destination_control_service": {
+            "n": 95,
+            "p50": 0.14143899999999998,
+            "p95": 0.213375,
+            "min": 0.08439,
+            "max": 7.960093
+          },
+          "wake_to_run": {
+            "n": 95,
+            "p50": 0.000263,
+            "p95": 0.00032,
+            "min": 0.00011,
+            "max": 0.000443
+          },
+          "executor_wake": {
+            "n": 95,
+            "p50": 0.080761,
+            "p95": 0.14319900000000002,
+            "min": 0.023123,
+            "max": 1.631533
+          },
+          "destination_control_part_0": {
+            "n": 95,
+            "p50": 0.06850400000000001,
+            "p95": 0.14407599999999998,
+            "min": 0.014889,
+            "max": 7.908735
+          },
+          "destination_control_part_1": {
+            "n": 95,
+            "p50": 0.051976999999999995,
+            "p95": 0.071643,
+            "min": 0.044343,
+            "max": 0.079738
+          }
+        },
+        "validation": {
+          "handoffs": 200,
+          "identical_object_offsets": [
+            8192,
+            76928,
+            118784
+          ],
+          "vm_creates": 1,
+          "vcpu_creates": 1,
+          "continuity_checks": "Linux heartbeat and retained 16MiB heap",
+          "kernel_taint": 0,
+          "snapshot_api_calls": 0,
+          "duplicate_attach_rejected": true,
+          "old_owner_vcpu_access_revoked": true,
+          "identical_ept_root_offset": 471040,
+          "ept_page_count": 58,
+          "boot_markers": 1,
+          "retained_heap_errors": 0,
+          "guest_clock_errors": 0,
+          "guest_tsc_errors": 0,
+          "raw_tsc_check_enabled": true,
+          "host_backwards_tsc_warnings": 0,
+          "firecracker_checks_scanned_full_log": true,
+          "changing_memory_mib": 32,
+          "periodic_pit_handoff": true,
+          "guest_clocksource": "kvm-clock"
+        },
+        "controller_cpu_ms": {
+          "A": 536.924,
+          "B": 559.523
+        },
+        "controller_wall_ms": {
+          "A": 12412.194557,
+          "B": 12269.026087999999
+        },
+        "options": [
+          "--control",
+          "local",
+          "--spin-us",
+          "500",
+          "--reuse-fds",
+          "--irqfd-batch",
+          "--resume-nokick",
+          "--guest-cpu",
+          "0",
+          "--executor-cpu",
+          "1",
+          "--channel-spin-us",
+          "100",
+          "--heartbeat-churn",
+          "--heartbeat-pit"
+        ],
+        "controller_cpu_percent": {
+          "A": 4.325778149337785,
+          "B": 4.560451628245002
+        }
+      },
+      "release-sleep-pit": {
+        "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261016T024601Z-oiqi8lqd/direct-linux-handoff-1792118763102665773/report.json",
+        "summary_ms": {
+          "binding": {
+            "n": 190,
+            "p50": 0.008677500000000001,
+            "p95": 0.028254,
+            "min": 0.005652,
+            "max": 0.039918999999999996
+          },
+          "detach_total": {
+            "n": 190,
+            "p50": 0.087924,
+            "p95": 0.125219,
+            "min": 0.047088,
+            "max": 5.485346
+          },
+          "guest_observed": {
+            "n": 190,
+            "p50": 0.698343,
+            "p95": 1.6681320000000002,
+            "min": 0.24298599999999998,
+            "max": 9.909834
+          },
+          "handoff": {
+            "n": 190,
+            "p50": 0.7024889999999999,
+            "p95": 1.668609,
+            "min": 0.24358600000000002,
+            "max": 9.919849000000001
+          },
+          "kernel_detach": {
+            "n": 190,
+            "p50": 0.0321125,
+            "p95": 0.057349,
+            "min": 0.020651,
+            "max": 0.086176
+          },
+          "mmu_drain": {
+            "n": 190,
+            "p50": 0.0005685,
+            "p95": 0.001335,
+            "min": 0.00032900000000000003,
+            "max": 0.002169
+          },
+          "pause": {
+            "n": 190,
+            "p50": 0.06895699999999999,
+            "p95": 0.11996,
+            "min": 0.020069,
+            "max": 5.422097
+          },
+          "quiesce": {
+            "n": 190,
+            "p50": 0.0016020000000000001,
+            "p95": 0.003822,
+            "min": 0.000923,
+            "max": 0.019263000000000002
+          },
+          "attach_resume": {
+            "n": 190,
+            "p50": 0.09674650000000001,
+            "p95": 0.238928,
+            "min": 0.043967,
+            "max": 7.678446
+          },
+          "guest_ack": {
+            "n": 190,
+            "p50": 0.4245895,
+            "p95": 1.028585,
+            "min": 0.069127,
+            "max": 7.457553
+          },
+          "kernel_attach": {
+            "n": 190,
+            "p50": 0.052498,
+            "p95": 0.062043,
+            "min": 0.041444,
+            "max": 1.591557
+          },
+          "kick_to_exit": {
+            "n": 95,
+            "p50": 0.030835,
+            "p95": 0.044505,
+            "min": 0.019466,
+            "max": 5.217411
+          },
+          "source_control_part_1": {
+            "n": 95,
+            "p50": 0.035753,
+            "p95": 0.058403,
+            "min": 0.022508,
+            "max": 0.06246
+          },
+          "source_control_part_2": {
+            "n": 95,
+            "p50": 0.010135,
+            "p95": 0.022813,
+            "min": 0.006928,
+            "max": 0.034946
+          },
+          "source_control_part_0": {
+            "n": 95,
+            "p50": 0.034558,
+            "p95": 0.046799999999999994,
+            "min": 0.024048,
+            "max": 0.06172
+          },
+          "stop_ack": {
+            "n": 95,
+            "p50": 0.000317,
+            "p95": 0.000764,
+            "min": 0.00027100000000000003,
+            "max": 0.20364
+          },
+          "source_control_service": {
+            "n": 95,
+            "p50": 0.07976000000000001,
+            "p95": 0.107012,
+            "min": 0.056946,
+            "max": 0.160512
+          },
+          "destination_control_part_2": {
+            "n": 95,
+            "p50": 0.004044,
+            "p95": 0.034978,
+            "min": 0.0031,
+            "max": 0.056564
+          },
+          "destination_control_service": {
+            "n": 95,
+            "p50": 0.160335,
+            "p95": 0.241421,
+            "min": 0.08488,
+            "max": 7.656755
+          },
+          "wake_to_run": {
+            "n": 95,
+            "p50": 0.000332,
+            "p95": 0.000589,
+            "min": 0.000174,
+            "max": 0.001039
+          },
+          "executor_wake": {
+            "n": 95,
+            "p50": 0.094351,
+            "p95": 0.17344,
+            "min": 0.034362000000000004,
+            "max": 6.773938
+          },
+          "destination_control_part_0": {
+            "n": 95,
+            "p50": 0.08718000000000001,
+            "p95": 0.152804,
+            "min": 0.011881000000000001,
+            "max": 3.113971
+          },
+          "destination_control_part_1": {
+            "n": 95,
+            "p50": 0.058933,
+            "p95": 0.080072,
+            "min": 0.05065,
+            "max": 7.610634
+          }
+        },
+        "validation": {
+          "handoffs": 200,
+          "identical_object_offsets": [
+            8192,
+            76928,
+            118784
+          ],
+          "vm_creates": 1,
+          "vcpu_creates": 1,
+          "continuity_checks": "Linux heartbeat and retained 16MiB heap",
+          "kernel_taint": 0,
+          "snapshot_api_calls": 0,
+          "duplicate_attach_rejected": true,
+          "old_owner_vcpu_access_revoked": true,
+          "identical_ept_root_offset": 471040,
+          "ept_page_count": 58,
+          "boot_markers": 1,
+          "retained_heap_errors": 0,
+          "guest_clock_errors": 0,
+          "guest_tsc_errors": 0,
+          "raw_tsc_check_enabled": true,
+          "host_backwards_tsc_warnings": 0,
+          "firecracker_checks_scanned_full_log": true,
+          "changing_memory_mib": 32,
+          "periodic_pit_handoff": true,
+          "guest_clocksource": "kvm-clock"
+        },
+        "controller_cpu_ms": {
+          "A": 604.452,
+          "B": 639.119
+        },
+        "controller_wall_ms": {
+          "A": 12900.783139000001,
+          "B": 12701.991933
+        },
+        "options": [
+          "--control",
+          "local",
+          "--spin-us",
+          "500",
+          "--reuse-fds",
+          "--irqfd-batch",
+          "--resume-nokick",
+          "--guest-cpu",
+          "0",
+          "--executor-cpu",
+          "1",
+          "--channel-spin-us",
+          "100",
+          "--heartbeat-churn",
+          "--heartbeat-pit",
+          "--heartbeat",
+          "sleep"
+        ],
+        "controller_cpu_percent": {
+          "A": 4.685389975843387,
+          "B": 5.031643882087168
+        }
+      },
+      "release-pfn-negative": {
+        "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261016T024618Z-jtlbhtru/direct-linux-handoff-1792118780014348757/report.json",
+        "summary_ms": {},
+        "validation": {
+          "pfn_mismatch_rejected": true,
+          "errno": "EXDEV",
+          "rejected_before_rebinding": true,
+          "guest_remained_paused": true,
+          "vm_create_calls": 1,
+          "vcpu_create_calls": 1,
+          "kernel_taint": 0
+        },
+        "controller_cpu_ms": null,
+        "controller_wall_ms": null,
+        "options": [
+          "--control",
+          "local",
+          "--spin-us",
+          "500",
+          "--reuse-fds",
+          "--irqfd-batch",
+          "--resume-nokick",
+          "--guest-cpu",
+          "0",
+          "--executor-cpu",
+          "1",
+          "--channel-spin-us",
+          "100",
+          "--test-pfn-mismatch"
+        ]
+      },
+      "release-new-pfn-negative": {
+        "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261016T024622Z-wsoe9zfn/direct-handoff-1792118784874206919/report.json",
+        "summary_ms": {},
+        "validation": {
+          "new_non_dax_leaf_rejected": true,
+          "errno": "EXDEV",
+          "vm_create_calls": 1,
+          "vcpu_create_calls": 1,
+          "kernel_taint": 0,
+          "source_hlt_steps_before_handoff": 101
+        },
+        "controller_cpu_ms": null,
+        "controller_wall_ms": null,
+        "options": [
+          "--test-new-pfn"
+        ]
+      }
+    },
+    "started_utc": "2026-10-16T02:42:40.589742+00:00",
+    "finished_utc": "2026-10-16T02:46:25.969297+00:00"
+  },
+  "recommended_case": "release-balanced",
+  "recommendation_reason": "Poll5 saved only ~35us at the median, increased controller CPU from ~4-5% to ~40-41% of one CPU each and did not improve p95. Full busy spin did not improve latency enough to justify CPU use.",
+  "context_reference": {
+    "result": "passed",
+    "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/context-switch/1792117239535358805/report.json",
+    "summary_us": {
+      "thread-private": {
+        "median_trial_mean": 1.329258,
+        "p95_trial_mean": 1.358043,
+        "min_trial_mean": 1.141435,
+        "max_trial_mean": 1.358043,
+        "observed_switches": 1799994,
+        "expected_handoffs": 1800000
+      },
+      "thread-shared": {
+        "median_trial_mean": 1.311334,
+        "p95_trial_mean": 1.3137349999999999,
+        "min_trial_mean": 1.308268,
+        "max_trial_mean": 1.3137349999999999,
+        "observed_switches": 1799995,
+        "expected_handoffs": 1800000
+      },
+      "process-shared": {
+        "median_trial_mean": 1.43951,
+        "p95_trial_mean": 1.452151,
+        "min_trial_mean": 1.425915,
+        "max_trial_mean": 1.452151,
+        "observed_switches": 1799997,
+        "expected_handoffs": 1800000
+      }
+    }
+  },
+  "guest_context_reference": {
+    "result": "passed",
+    "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/context-switch/1792119066006306102/report.json",
+    "summary_us": {
+      "thread-private": {
+        "median_trial_mean": 0.8407190000000001,
+        "p95_trial_mean": 0.963683,
+        "min_trial_mean": 0.8340380000000001,
+        "max_trial_mean": 0.963683,
+        "observed_switches": 1800002,
+        "expected_handoffs": 1800000
+      },
+      "thread-shared": {
+        "median_trial_mean": 1.036499,
+        "p95_trial_mean": 1.039172,
+        "min_trial_mean": 1.029327,
+        "max_trial_mean": 1.039172,
+        "observed_switches": 1800000,
+        "expected_handoffs": 1800000
+      },
+      "process-shared": {
+        "median_trial_mean": 1.1838499999999998,
+        "p95_trial_mean": 1.197834,
+        "min_trial_mean": 1.042651,
+        "max_trial_mean": 1.197834,
+        "observed_switches": 1800002,
+        "expected_handoffs": 1800000
+      }
+    }
+  },
+  "matched_cpu_layout_speedup": 1.6924996202652371,
+  "matched_cpu_layout_reduction_fraction": 0.4091579176583291,
+  "original_control_speedup": 2.108912639810097,
+  "ratios_to_host_context": {
+    "release-http": {
+      "thread-private": 673.7032991338024,
+      "thread-shared": 682.9118287179315,
+      "process-shared": 622.1043966349661
+    },
+    "release-http-split": {
+      "thread-private": 540.6779571761087,
+      "thread-shared": 548.0682267065446,
+      "process-shared": 499.2674590659321
+    },
+    "release-balanced": {
+      "thread-private": 319.4552900941728,
+      "thread-shared": 323.82177233260177,
+      "process-shared": 294.9882251599503
+    },
+    "release-poll5": {
+      "thread-private": 293.00181003236395,
+      "thread-shared": 297.0067122487482,
+      "process-shared": 270.56081583316546
+    },
+    "release-native": {
+      "thread-private": 265.9431051007404,
+      "thread-shared": 269.5781547645375,
+      "process-shared": 245.5745357795361
+    },
+    "release-cpu-floor": {
+      "thread-private": 58.18133123893179,
+      "thread-shared": 58.97658415018599,
+      "process-shared": 53.72522594493959
+    },
+    "release-busy-pit": {
+      "thread-private": 283.0503935278178,
+      "thread-shared": 286.9192745707806,
+      "process-shared": 261.37157782856667
+    },
+    "release-sleep-pit": {
+      "thread-private": 528.4820554023372,
+      "thread-shared": 535.7056249590112,
+      "process-shared": 488.00564080833055
+    }
+  },
+  "paired_stage_breakdown": {
+    "release-http-split": {
+      "n": 490,
+      "mean_us": {
+        "source_control_stop_irqfd": 192.76283265306122,
+        "kernel_detach": 51.273732653061224,
+        "destination_control_dispatch": 192.63501836734693,
+        "kernel_attach": 48.77677551020408,
+        "guest_progress_wait": 295.575687755102,
+        "publication_and_ack_observation": 123.57182448979592
+      },
+      "median_us": {
+        "source_control_stop_irqfd": 136.897,
+        "kernel_detach": 41.928,
+        "destination_control_dispatch": 65.7735,
+        "kernel_attach": 47.980000000000004,
+        "guest_progress_wait": 209.54500000000002,
+        "publication_and_ack_observation": 98.50600000000003
+      },
+      "sum_of_means_us": 904.5958714285714
+    },
+    "release-balanced": {
+      "n": 490,
+      "mean_us": {
+        "source_control_stop_irqfd": 100.10178979591836,
+        "kernel_detach": 51.851467346938776,
+        "destination_control_dispatch": 118.95870612244897,
+        "kernel_attach": 48.06971836734694,
+        "guest_progress_wait": 238.26864081632652,
+        "publication_and_ack_observation": 6.723965306122447
+      },
+      "median_us": {
+        "source_control_stop_irqfd": 67.599,
+        "kernel_detach": 55.1105,
+        "destination_control_dispatch": 32.992999999999995,
+        "kernel_attach": 46.43,
+        "guest_progress_wait": 169.333,
+        "publication_and_ack_observation": 1.4420000000000357
+      },
+      "sum_of_means_us": 563.974287755102
+    },
+    "release-native": {
+      "n": 490,
+      "mean_us": {
+        "source_control_stop_irqfd": 68.89079183673469,
+        "kernel_detach": 47.28358163265306,
+        "destination_control_dispatch": 8.084879591836735,
+        "kernel_attach": 50.914851020408165,
+        "guest_progress_wait": 282.42286530612245,
+        "publication_and_ack_observation": 6.767275510204081
+      },
+      "median_us": {
+        "source_control_stop_irqfd": 46.519,
+        "kernel_detach": 40.429500000000004,
+        "destination_control_dispatch": 5.7105,
+        "kernel_attach": 47.3555,
+        "guest_progress_wait": 197.52800000000002,
+        "publication_and_ack_observation": 1.3684999999999974
+      },
+      "sum_of_means_us": 464.36424489795917
+    }
+  },
+  "stage_statistics_note": "Paired per-transition stages sum exactly to that transition. Means can be added; stage medians do not sum to overall p50. Guest-progress wait includes executor wake, nested VM entry, guest loop and observation; it is not pure polling.",
+  "soak": {
+    "result": "passed",
+    "started_utc": "2026-10-16T02:48:26.326191+00:00",
+    "target_handoffs": 1000,
+    "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261016T024826Z-eek_gj2_/direct-linux-handoff-1792118908415288099/report.json",
+    "validation": {
+      "handoffs": 1000,
+      "identical_object_offsets": [
+        8192,
+        76928,
+        118784
+      ],
+      "vm_creates": 1,
+      "vcpu_creates": 1,
+      "continuity_checks": "Linux heartbeat and retained 16MiB heap",
+      "kernel_taint": 0,
+      "snapshot_api_calls": 0,
+      "duplicate_attach_rejected": true,
+      "old_owner_vcpu_access_revoked": true,
+      "identical_ept_root_offset": 471040,
+      "ept_page_count": 58,
+      "boot_markers": 1,
+      "retained_heap_errors": 0,
+      "guest_clock_errors": 0,
+      "guest_tsc_errors": 0,
+      "raw_tsc_check_enabled": true,
+      "host_backwards_tsc_warnings": 0,
+      "firecracker_checks_scanned_full_log": true,
+      "changing_memory_mib": 32,
+      "periodic_pit_handoff": true,
+      "guest_clocksource": "kvm-clock"
+    },
+    "summary_ms": {
+      "binding": {
+        "n": 990,
+        "p50": 0.023605,
+        "p95": 0.03651,
+        "min": 0.006847000000000001,
+        "max": 5.265809
+      },
+      "detach_total": {
+        "n": 990,
+        "p50": 0.1246015,
+        "p95": 0.23372,
+        "min": 0.052468,
+        "max": 8.368556
+      },
+      "guest_observed": {
+        "n": 990,
+        "p50": 0.458271,
+        "p95": 1.455578,
+        "min": 0.236268,
+        "max": 9.920026
+      },
+      "handoff": {
+        "n": 990,
+        "p50": 0.45901749999999997,
+        "p95": 1.456692,
+        "min": 0.237083,
+        "max": 9.944265999999999
+      },
+      "kernel_detach": {
+        "n": 990,
+        "p50": 0.050891500000000006,
+        "p95": 0.075852,
+        "min": 0.020739,
+        "max": 5.2939110000000005
+      },
+      "mmu_drain": {
+        "n": 990,
+        "p50": 0.0014479999999999999,
+        "p95": 0.001994,
+        "min": 0.00039,
+        "max": 0.031077
+      },
+      "pause": {
+        "n": 990,
+        "p50": 0.0894835,
+        "p95": 0.22605699999999998,
+        "min": 0.022061,
+        "max": 8.178622
+      },
+      "quiesce": {
+        "n": 990,
+        "p50": 0.003363,
+        "p95": 0.004357000000000001,
+        "min": 0.000954,
+        "max": 0.033875
+      },
+      "attach_resume": {
+        "n": 990,
+        "p50": 0.097125,
+        "p95": 0.23223500000000002,
+        "min": 0.052176,
+        "max": 7.8753969999999995
+      },
+      "guest_ack": {
+        "n": 990,
+        "p50": 0.192546,
+        "p95": 0.48200299999999996,
+        "min": 0.031018,
+        "max": 8.769746
+      },
+      "kernel_attach": {
+        "n": 990,
+        "p50": 0.0574625,
+        "p95": 0.066298,
+        "min": 0.04962,
+        "max": 0.405225
+      },
+      "kick_to_exit": {
+        "n": 495,
+        "p50": 0.03404,
+        "p95": 0.046177,
+        "min": 0.021283,
+        "max": 7.767046000000001
+      },
+      "source_control_part_1": {
+        "n": 495,
+        "p50": 0.054432,
+        "p95": 0.107045,
+        "min": 0.023148,
+        "max": 5.300925
+      },
+      "source_control_part_2": {
+        "n": 495,
+        "p50": 0.02441,
+        "p95": 0.034656,
+        "min": 0.008958,
+        "max": 0.24128
+      },
+      "source_control_part_0": {
+        "n": 495,
+        "p50": 0.039670000000000004,
+        "p95": 0.05183,
+        "min": 0.027083,
+        "max": 2.217569
+      },
+      "stop_ack": {
+        "n": 495,
+        "p50": 0.000412,
+        "p95": 0.000691,
+        "min": 8.999999999999999e-05,
+        "max": 0.382974
+      },
+      "source_control_service": {
+        "n": 495,
+        "p50": 0.126215,
+        "p95": 0.187212,
+        "min": 0.062546,
+        "max": 5.369783
+      },
+      "destination_control_part_2": {
+        "n": 495,
+        "p50": 0.004215,
+        "p95": 0.031831,
+        "min": 0.002449,
+        "max": 0.07050400000000001
+      },
+      "destination_control_service": {
+        "n": 495,
+        "p50": 0.14099199999999998,
+        "p95": 0.235196,
+        "min": 0.07535299999999999,
+        "max": 7.853595
+      },
+      "wake_to_run": {
+        "n": 495,
+        "p50": 0.00032900000000000003,
+        "p95": 0.000434,
+        "min": 4.8e-05,
+        "max": 0.009377
+      },
+      "executor_wake": {
+        "n": 495,
+        "p50": 0.055963,
+        "p95": 0.181034,
+        "min": 0.013883,
+        "max": 7.786467
+      },
+      "destination_control_part_0": {
+        "n": 495,
+        "p50": 0.054615000000000004,
+        "p95": 0.152796,
+        "min": 0.012894000000000001,
+        "max": 7.793743999999999
+      },
+      "destination_control_part_1": {
+        "n": 495,
+        "p50": 0.06422,
+        "p95": 0.088609,
+        "min": 0.052088,
+        "max": 0.41606299999999996
+      }
+    },
+    "controller_cpu_ms": {
+      "A": 7730.526,
+      "B": 8261.074
+    },
+    "controller_wall_ms": {
+      "A": 155417.577051,
+      "B": 155242.713262
+    },
+    "guest_context_report": {
+      "result": "passed",
+      "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/context-switch/1792119066006306102/report.json",
+      "summary_us": {
+        "thread-private": {
+          "median_trial_mean": 0.8407190000000001,
+          "p95_trial_mean": 0.963683,
+          "min_trial_mean": 0.8340380000000001,
+          "max_trial_mean": 0.963683,
+          "observed_switches": 1800002,
+          "expected_handoffs": 1800000
+        },
+        "thread-shared": {
+          "median_trial_mean": 1.036499,
+          "p95_trial_mean": 1.039172,
+          "min_trial_mean": 1.029327,
+          "max_trial_mean": 1.039172,
+          "observed_switches": 1800000,
+          "expected_handoffs": 1800000
+        },
+        "process-shared": {
+          "median_trial_mean": 1.1838499999999998,
+          "p95_trial_mean": 1.197834,
+          "min_trial_mean": 1.042651,
+          "max_trial_mean": 1.197834,
+          "observed_switches": 1800002,
+          "expected_handoffs": 1800000
+        }
+      }
+    },
+    "finished_utc": "2026-10-16T02:51:12.266451+00:00"
+  },
+  "normal_kvm_regression": {
+    "result": "passed",
+    "run": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261016T025211Z-a1dx1u_v",
+    "CONFIG_KVM_DAX_POOL_TEST": false,
+    "roles": {
+      "A": {
+        "boot_and_memory": "passed",
+        "graceful_teardown": "passed",
+        "kernel_taint": 0
+      },
+      "B": {
+        "boot_and_memory": "passed",
+        "graceful_teardown": "passed",
+        "kernel_taint": 0
+      }
+    }
+  },
+  "final_kernel_and_runtime_handoffs": {
+    "linux_short": 2900,
+    "cpu_fpu_short": 500,
+    "linux_soak": 1000,
+    "total_successful_positive": 4400,
+    "negative_cases_excluded": true
+  },
+  "snapshot_api_calls_in_direct_tests": 0,
+  "bulk_ram_copy_bytes": 0,
+  "state_audit": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/handoff-state-audit.json",
+  "source_archive": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/latency-refinement-final-source",
+  "intermediate_experiments": [
+    "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/latency-refinement-matrix.json",
+    "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/latency-refinement-matrix2.json",
+    "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/latency-refinement-matrix3.json",
+    "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/latency-refinement-matrix4.json"
+  ],
+  "discarded_async_resume": {
+    "patch": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/latency-discarded-async-resume.patch",
+    "synchronous_channel_spin_p50_ms": 0.4143355,
+    "async_p50_ms": 0.4283095,
+    "reason": "Changed control ACK latency but did not improve actual guest-progress end-to-end latency; removed from final runtime."
+  },
+  "collection_notes": [
+    "First v2 control test completed all transitions; read-only recollection fixed aggregation of optional Firecracker-only timing fields. Original failed report retained.",
+    "Later offline aggregation excludes unavailable zero-valued metrics from the other execution path; raw timing samples and overall metrics unchanged."
+  ],
+  "limits": [
+    "CPU/FPU 77us case begins after a completed HLT, unlike the Linux source-stop-request boundary; it is a restricted diagnostic, not a 128MiB Linux VM context-switch result.",
+    "Context benchmark reports median of trial means; VM report shows per-transition p50/p95.",
+    "Controller CPU accounting excludes Firecracker and vCPU execution threads; percentages include dwell and verification time.",
+    "Guest working-set validation completes before the next switch, outside first-heartbeat downtime.",
+    "Existing Firecracker control/device runtime stays on A; no block/network/vsock transfer.",
+    "Fixed addresses/PFNs, compatible CPU/VMCS and cooperative single owner required; native lock waiters cannot transfer.",
+    "RCU/SRCU reader drains remain; shared arena blocks are not reclaimed until lab shutdown.",
+    "Physical multi-host CXL coherence, latency and crash recovery are not validated.",
+    "CPU/FPU HLT diagnostic includes FD/mmap and register/FPU continuity validation; it is not a hardware context-switch lower bound."
+  ],
+  "final_live_guest": {
+    "result": "passed",
+    "session": "latency-soak",
+    "source_sequence": 329703988,
+    "later_sequence": 609105578,
+    "epoch": 1000,
+    "verified": 1000,
+    "heap_errors": 0,
+    "clock_errors": 0,
+    "tsc_errors": 0,
+    "owner": 1,
+    "state": 1,
+    "generation": 1000
+  },
+  "post_collection_source_note": "Only host-side optional-metric aggregation and documentation changed after the final runtime tests; kernel, Firecracker and shared-probe source/binaries match the tested image."
+}

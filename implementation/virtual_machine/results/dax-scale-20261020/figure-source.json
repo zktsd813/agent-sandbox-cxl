@@ -1,0 +1,8 @@
+{
+  "input": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/dax-size-comparison.json",
+  "sha256": "e0f8d860288abede97adfe27129ef3b8dcc7b5d065b9da2163e3a7bcde7788cc",
+  "matplotlib": "3.10.9",
+  "statistics": "Means of20 measured handoffs; four warmups excluded.",
+  "labels": "Total pause-to-W-ready (total minus plotted page scan), milliseconds.",
+  "page_scan": "Source ACK-to-W-ready observation; includes workload reads and demand/cold effects, not isolated EPT time."
+}

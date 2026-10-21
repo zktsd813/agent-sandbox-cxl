@@ -1,0 +1,160 @@
+--- a/hw/mem/cxl_type3.c
++++ b/hw/mem/cxl_type3.c
+@@ -29,6 +29,7 @@
+ #include "system/hostmem.h"
+ #include "system/numa.h"
+ #include "hw/cxl/cxl.h"
++#include "hw/cxl/cxl_host.h"
+ #include "hw/pci/msix.h"
+ 
+ /* type3 device private */
+@@ -414,17 +415,81 @@
+                                PCIE_CXL3_FLEXBUS_PORT_DVSEC_REVID, dvsec);
+ }
+ 
++/* Lab-only direct access for one fixed volatile decoder, without interleave. */
++static bool cxl_direct_ram_commit(CXLType3Dev *ct3d, int which, uint32_t ctrl)
++{
++    uint32_t *regs = ct3d->cxl_cstate.crb.cache_mem_registers;
++    uint64_t base, size, skip;
++    CXLFixedWindow *window = NULL;
++    GSList *windows, *item;
++    MemoryRegion *ram;
++
++    if (!ct3d->direct_ram) {
++        return true;
++    }
++    if (which || FIELD_EX32(ctrl, CXL_HDM_DECODER0_CTRL, IW)) {
++        return false;
++    }
++    base = ((uint64_t)ldl_le_p(regs + R_CXL_HDM_DECODER0_BASE_HI) << 32) |
++           (ldl_le_p(regs + R_CXL_HDM_DECODER0_BASE_LO) & 0xf0000000);
++    size = ((uint64_t)ldl_le_p(regs + R_CXL_HDM_DECODER0_SIZE_HI) << 32) |
++           (ldl_le_p(regs + R_CXL_HDM_DECODER0_SIZE_LO) & 0xf0000000);
++    skip = ((uint64_t)ldl_le_p(regs + R_CXL_HDM_DECODER0_DPA_SKIP_HI) << 32) |
++           (ldl_le_p(regs + R_CXL_HDM_DECODER0_DPA_SKIP_LO) & 0xf0000000);
++    ram = host_memory_backend_get_memory(ct3d->hostvmem);
++    if (!size || skip || size > memory_region_size(ram) ||
++        ct3d->direct_ram_parent) {
++        return false;
++    }
++    windows = cxl_fmws_get_all_sorted();
++    for (item = windows; item; item = item->next) {
++        CXLFixedWindow *fw = item->data;
++
++        if (fw->num_targets == 1 && !fw->enc_int_ways && base >= fw->base &&
++            base - fw->base <= fw->size && size <= fw->size - (base - fw->base)) {
++            window = fw;
++            break;
++        }
++    }
++    g_slist_free(windows);
++    if (!window) {
++        return false;
++    }
++    if (!ct3d->direct_ram_initialized) {
++        memory_region_init_alias(&ct3d->direct_ram_alias, OBJECT(ct3d),
++                                 "cxl-direct-ram", ram, 0, size);
++        ct3d->direct_ram_initialized = true;
++    } else {
++        memory_region_set_size(&ct3d->direct_ram_alias, size);
++    }
++    ct3d->direct_ram_parent = &window->mr;
++    memory_region_add_subregion_overlap(&window->mr, base - window->base,
++                                       &ct3d->direct_ram_alias, 1);
++    return true;
++}
++
++static void cxl_direct_ram_unmap(CXLType3Dev *ct3d)
++{
++    if (ct3d->direct_ram_parent) {
++        memory_region_del_subregion(ct3d->direct_ram_parent,
++                                    &ct3d->direct_ram_alias);
++        ct3d->direct_ram_parent = NULL;
++    }
++}
++
+ static void hdm_decoder_commit(CXLType3Dev *ct3d, int which)
+ {
+     int hdm_inc = R_CXL_HDM_DECODER1_BASE_LO - R_CXL_HDM_DECODER0_BASE_LO;
+     ComponentRegisters *cregs = &ct3d->cxl_cstate.crb;
+     uint32_t *cache_mem = cregs->cache_mem_registers;
+     uint32_t ctrl;
++    bool valid;
+ 
+     ctrl = ldl_le_p(cache_mem + R_CXL_HDM_DECODER0_CTRL + which * hdm_inc);
+     /* TODO: Sanity checks that the decoder is possible */
+-    ctrl = FIELD_DP32(ctrl, CXL_HDM_DECODER0_CTRL, ERR, 0);
+-    ctrl = FIELD_DP32(ctrl, CXL_HDM_DECODER0_CTRL, COMMITTED, 1);
++    valid = cxl_direct_ram_commit(ct3d, which, ctrl);
++    ctrl = FIELD_DP32(ctrl, CXL_HDM_DECODER0_CTRL, ERR, !valid);
++    ctrl = FIELD_DP32(ctrl, CXL_HDM_DECODER0_CTRL, COMMITTED, valid);
+ 
+     stl_le_p(cache_mem + R_CXL_HDM_DECODER0_CTRL + which * hdm_inc, ctrl);
+ }
+@@ -437,6 +502,10 @@
+     uint32_t ctrl;
+ 
+     ctrl = ldl_le_p(cache_mem + R_CXL_HDM_DECODER0_CTRL + which * hdm_inc);
++
++    if (!which) {
++        cxl_direct_ram_unmap(ct3d);
++    }
+ 
+     ctrl = FIELD_DP32(ctrl, CXL_HDM_DECODER0_CTRL, ERR, 0);
+     ctrl = FIELD_DP32(ctrl, CXL_HDM_DECODER0_CTRL, COMMITTED, 0);
+@@ -729,6 +798,12 @@
+ {
+     DeviceState *ds = DEVICE(ct3d);
+ 
++    if (ct3d->direct_ram && (!ct3d->hostvmem || ct3d->hostpmem ||
++                             ct3d->hostmem || ct3d->dc.num_regions)) {
++        error_setg(errp, "x-direct-ram requires only volatile-memdev, without DC regions");
++        return false;
++    }
++
+     if (!ct3d->hostmem && !ct3d->hostvmem && !ct3d->hostpmem
+         && !ct3d->dc.num_regions) {
+         error_setg(errp, "at least one memdev property must be set");
+@@ -990,6 +1065,11 @@
+     CXLComponentState *cxl_cstate = &ct3d->cxl_cstate;
+     ComponentRegisters *regs = &cxl_cstate->crb;
+ 
++    cxl_direct_ram_unmap(ct3d);
++    if (ct3d->direct_ram_initialized) {
++        object_unparent(OBJECT(&ct3d->direct_ram_alias));
++    }
++
+     pcie_aer_exit(pci_dev);
+     cxl_doe_cdat_release(cxl_cstate);
+     msix_uninit_exclusive_bar(pci_dev);
+@@ -1245,6 +1325,8 @@
+     uint32_t *reg_state = ct3d->cxl_cstate.crb.cache_mem_registers;
+     uint32_t *write_msk = ct3d->cxl_cstate.crb.cache_mem_regs_write_mask;
+ 
++    cxl_direct_ram_unmap(ct3d);
++
+     pcie_cap_fill_link_ep_usp(PCI_DEVICE(dev), ct3d->width, ct3d->speed);
+     cxl_component_register_init_common(reg_state, write_msk, CXL2_TYPE3_DEVICE);
+     cxl_device_register_init_t3(ct3d, CXL_T3_MSIX_MBOX);
+@@ -1267,6 +1349,7 @@
+ }
+ 
+ static const Property ct3_props[] = {
++    DEFINE_PROP_BOOL("x-direct-ram", CXLType3Dev, direct_ram, false),
+     DEFINE_PROP_LINK("memdev", CXLType3Dev, hostmem, TYPE_MEMORY_BACKEND,
+                      HostMemoryBackend *), /* for backward compatibility */
+     DEFINE_PROP_LINK("persistent-memdev", CXLType3Dev, hostpmem,
+--- a/include/hw/cxl/cxl_device.h
++++ b/include/hw/cxl/cxl_device.h
+@@ -579,6 +579,10 @@
+     /* Properties */
+     HostMemoryBackend *hostmem; /* deprecated */
+     HostMemoryBackend *hostvmem;
++    bool direct_ram;
++    bool direct_ram_initialized;
++    MemoryRegion direct_ram_alias;
++    MemoryRegion *direct_ram_parent;
+     HostMemoryBackend *hostpmem;
+     HostMemoryBackend *lsa;
+     uint64_t sn;
