@@ -1,0 +1,908 @@
+{
+  "created_at": "2026-10-19T16:20:51.300551+09:00",
+  "question": "Decompose ~3.396ms snapshot ACK wait and directly observe EPT creation/fault costs",
+  "run": ".local/runs/20261019T065649Z-1uw5rhl5",
+  "cases": {
+    "untraced": {
+      "report": ".local/runs/20261019T065649Z-1uw5rhl5/handoff-128m-warm-1792393095897853080/report.json",
+      "warmup": 10,
+      "measured_iterations": 50,
+      "validation": {
+        "handoffs": 60,
+        "boot_markers": 1,
+        "retained_heap_errors": 0,
+        "paused_heartbeat_unchanged": true,
+        "guest_clock_errors": 0,
+        "guest_tsc_errors": 0,
+        "payload_integrity_verified": true,
+        "ram_hvas": [
+          70368744177664
+        ],
+        "state_bytes": [
+          13746,
+          13778
+        ],
+        "snapshot_payload_bytes_total": 826648,
+        "both_kernels_untainted_and_pool_disabled": true,
+        "guest_cr3_preserved_each_restore": true,
+        "msr_count_and_index_hash_preserved_each_restore": true,
+        "initial_msr_save_list_preserved_all_handoffs": true,
+        "restored_shared_dax_mapping": true
+      },
+      "summary_ms": {
+        "pause": {
+          "n": 50,
+          "p50": 0.14291199999999998,
+          "p95": 0.370996,
+          "min": 0.11831900000000001,
+          "max": 1.386896,
+          "mean": 0.22791712
+        },
+        "snapshot": {
+          "n": 50,
+          "p50": 0.569561,
+          "p95": 0.683673,
+          "min": 0.488805,
+          "max": 1.066965,
+          "mean": 0.58718538
+        },
+        "publish": {
+          "n": 50,
+          "p50": 0.024346,
+          "p95": 0.040389,
+          "min": 0.023562999999999997,
+          "max": 0.057959000000000004,
+          "mean": 0.02614648
+        },
+        "handoff": {
+          "n": 50,
+          "p50": 5.9597665,
+          "p95": 6.64837,
+          "min": 3.802906,
+          "max": 14.355161,
+          "mean": 6.11898706
+        },
+        "receive": {
+          "n": 50,
+          "p50": 0.0355725,
+          "p95": 0.044485,
+          "min": 0.030443,
+          "max": 0.048965,
+          "mean": 0.03635356
+        },
+        "startup": {
+          "n": 50,
+          "p50": 0.0,
+          "p95": 0.0,
+          "min": 0.0,
+          "max": 0.0,
+          "mean": 0.0
+        },
+        "restore": {
+          "n": 50,
+          "p50": 1.2886849999999999,
+          "p95": 1.424759,
+          "min": 1.145289,
+          "max": 1.457124,
+          "mean": 1.29283778
+        },
+        "resume": {
+          "n": 50,
+          "p50": 0.1765115,
+          "p95": 0.200077,
+          "min": 0.147482,
+          "max": 2.497338,
+          "mean": 0.2259214
+        },
+        "guest_ack_wait": {
+          "n": 50,
+          "p50": 3.5214345,
+          "p95": 3.845674,
+          "min": 1.3269570000000002,
+          "max": 9.865679,
+          "mean": 3.60783004
+        }
+      }
+    },
+    "all_probes": {
+      "report": ".local/runs/20261019T065649Z-1uw5rhl5/handoff-128m-warm-1792393121625973365/report.json",
+      "warmup": 2,
+      "measured_iterations": 10,
+      "validation": {
+        "handoffs": 12,
+        "boot_markers": 1,
+        "retained_heap_errors": 0,
+        "paused_heartbeat_unchanged": true,
+        "guest_clock_errors": 0,
+        "guest_tsc_errors": 0,
+        "payload_integrity_verified": true,
+        "ram_hvas": [
+          70368744177664
+        ],
+        "state_bytes": [
+          13746,
+          13778
+        ],
+        "snapshot_payload_bytes_total": 165304,
+        "ack_profile_timestamps_and_guest_epochs": true,
+        "both_kernels_untainted_and_pool_disabled": true,
+        "guest_cr3_preserved_each_restore": true,
+        "msr_count_and_index_hash_preserved_each_restore": true,
+        "initial_msr_save_list_preserved_all_handoffs": true,
+        "restored_shared_dax_mapping": true
+      },
+      "summary_ms": {
+        "pause": {
+          "n": 10,
+          "p50": 0.24856,
+          "p95": 0.354062,
+          "min": 0.126973,
+          "max": 0.354062,
+          "mean": 0.2336344
+        },
+        "snapshot": {
+          "n": 10,
+          "p50": 0.6021215,
+          "p95": 0.6735270000000001,
+          "min": 0.499336,
+          "max": 0.6735270000000001,
+          "mean": 0.5985599
+        },
+        "publish": {
+          "n": 10,
+          "p50": 0.0241645,
+          "p95": 0.031807,
+          "min": 0.023812,
+          "max": 0.031807,
+          "mean": 0.0250826
+        },
+        "handoff": {
+          "n": 10,
+          "p50": 6.7441215,
+          "p95": 9.674213,
+          "min": 6.375680999999999,
+          "max": 9.674213,
+          "mean": 7.058662
+        },
+        "receive": {
+          "n": 10,
+          "p50": 0.0365525,
+          "p95": 0.041033,
+          "min": 0.031713,
+          "max": 0.041033,
+          "mean": 0.0364675
+        },
+        "startup": {
+          "n": 10,
+          "p50": 0.0,
+          "p95": 0.0,
+          "min": 0.0,
+          "max": 0.0,
+          "mean": 0.0
+        },
+        "restore": {
+          "n": 10,
+          "p50": 1.352222,
+          "p95": 4.412043,
+          "min": 1.271916,
+          "max": 4.412043,
+          "mean": 1.6483034
+        },
+        "resume": {
+          "n": 10,
+          "p50": 0.18383149999999998,
+          "p95": 0.19323400000000002,
+          "min": 0.176132,
+          "max": 0.19323400000000002,
+          "mean": 0.1842823
+        },
+        "guest_ack_wait": {
+          "n": 10,
+          "p50": 4.1803444999999995,
+          "p95": 4.6531769999999995,
+          "min": 3.8944319999999997,
+          "max": 4.6531769999999995,
+          "mean": 4.2159431
+        }
+      },
+      "analysis": ".local/runs/20261019T065649Z-1uw5rhl5/handoff-128m-warm-1792393121625973365/analysis.json",
+      "trace_integrity": ".local/runs/20261019T065649Z-1uw5rhl5/handoff-128m-warm-1792393121625973365/trace-integrity.json"
+    },
+    "mmu_probes": {
+      "report": ".local/runs/20261019T065649Z-1uw5rhl5/handoff-128m-warm-1792393466059630069/report.json",
+      "warmup": 6,
+      "measured_iterations": 30,
+      "validation": {
+        "handoffs": 36,
+        "boot_markers": 1,
+        "retained_heap_errors": 0,
+        "paused_heartbeat_unchanged": true,
+        "guest_clock_errors": 0,
+        "guest_tsc_errors": 0,
+        "payload_integrity_verified": true,
+        "ram_hvas": [
+          70368744177664
+        ],
+        "state_bytes": [
+          13746,
+          13778
+        ],
+        "snapshot_payload_bytes_total": 495976,
+        "ack_profile_timestamps_and_guest_epochs": true,
+        "both_kernels_untainted_and_pool_disabled": true,
+        "guest_cr3_preserved_each_restore": true,
+        "msr_count_and_index_hash_preserved_each_restore": true,
+        "initial_msr_save_list_preserved_all_handoffs": true,
+        "restored_shared_dax_mapping": true
+      },
+      "summary_ms": {
+        "pause": {
+          "n": 30,
+          "p50": 0.1705565,
+          "p95": 0.39085000000000003,
+          "min": 0.121884,
+          "max": 4.39269,
+          "mean": 0.3506843333333333
+        },
+        "snapshot": {
+          "n": 30,
+          "p50": 0.5835515,
+          "p95": 0.889499,
+          "min": 0.5131720000000001,
+          "max": 0.897025,
+          "mean": 0.6105165666666666
+        },
+        "publish": {
+          "n": 30,
+          "p50": 0.024295999999999998,
+          "p95": 0.034799,
+          "min": 0.023594,
+          "max": 0.04253199999999999,
+          "mean": 0.025419666666666667
+        },
+        "handoff": {
+          "n": 30,
+          "p50": 6.2878755,
+          "p95": 8.052351,
+          "min": 5.763078,
+          "max": 10.419675999999999,
+          "mean": 6.4685211
+        },
+        "receive": {
+          "n": 30,
+          "p50": 0.035397,
+          "p95": 0.046688,
+          "min": 0.031045000000000003,
+          "max": 0.047324,
+          "mean": 0.0368722
+        },
+        "startup": {
+          "n": 30,
+          "p50": 0.0,
+          "p95": 0.0,
+          "min": 0.0,
+          "max": 0.0,
+          "mean": 0.0
+        },
+        "restore": {
+          "n": 30,
+          "p50": 1.3352565,
+          "p95": 1.667358,
+          "min": 1.225257,
+          "max": 1.69917,
+          "mean": 1.3627102666666666
+        },
+        "resume": {
+          "n": 30,
+          "p50": 0.18784050000000002,
+          "p95": 0.215052,
+          "min": 0.162696,
+          "max": 1.889033,
+          "mean": 0.24438776666666667
+        },
+        "guest_ack_wait": {
+          "n": 30,
+          "p50": 3.729191,
+          "p95": 3.947587,
+          "min": 3.5036329999999998,
+          "max": 4.009335,
+          "mean": 3.7185934333333335
+        }
+      },
+      "analysis": ".local/runs/20261019T065649Z-1uw5rhl5/handoff-128m-warm-1792393466059630069/analysis.json",
+      "trace_integrity": ".local/runs/20261019T065649Z-1uw5rhl5/handoff-128m-warm-1792393466059630069/trace-integrity.json"
+    },
+    "outer_exploratory": {
+      "report": ".local/runs/20261019T065649Z-1uw5rhl5/handoff-128m-warm-1792393787026225319/report.json",
+      "warmup": 2,
+      "measured_iterations": 10,
+      "validation": {
+        "handoffs": 12,
+        "boot_markers": 1,
+        "retained_heap_errors": 0,
+        "paused_heartbeat_unchanged": true,
+        "guest_clock_errors": 0,
+        "guest_tsc_errors": 0,
+        "payload_integrity_verified": true,
+        "ram_hvas": [
+          70368744177664
+        ],
+        "state_bytes": [
+          13746,
+          13778
+        ],
+        "snapshot_payload_bytes_total": 165304,
+        "ack_profile_timestamps_and_guest_epochs": true,
+        "both_kernels_untainted_and_pool_disabled": true,
+        "guest_cr3_preserved_each_restore": true,
+        "msr_count_and_index_hash_preserved_each_restore": true,
+        "initial_msr_save_list_preserved_all_handoffs": true,
+        "restored_shared_dax_mapping": true
+      },
+      "summary_ms": {
+        "pause": {
+          "n": 10,
+          "p50": 0.1708295,
+          "p95": 0.32796,
+          "min": 0.127192,
+          "max": 0.32796,
+          "mean": 0.2080755
+        },
+        "snapshot": {
+          "n": 10,
+          "p50": 0.6112145,
+          "p95": 0.881328,
+          "min": 0.50618,
+          "max": 0.881328,
+          "mean": 0.6331337
+        },
+        "publish": {
+          "n": 10,
+          "p50": 0.024117,
+          "p95": 0.032886000000000006,
+          "min": 0.023936,
+          "max": 0.032886000000000006,
+          "mean": 0.0252573
+        },
+        "handoff": {
+          "n": 10,
+          "p50": 7.0091435,
+          "p95": 7.510341,
+          "min": 6.386484,
+          "max": 7.510341,
+          "mean": 6.9529458
+        },
+        "receive": {
+          "n": 10,
+          "p50": 0.0338725,
+          "p95": 0.037836,
+          "min": 0.032307,
+          "max": 0.037836,
+          "mean": 0.0344869
+        },
+        "startup": {
+          "n": 10,
+          "p50": 0.0,
+          "p95": 0.0,
+          "min": 0.0,
+          "max": 0.0,
+          "mean": 0.0
+        },
+        "restore": {
+          "n": 10,
+          "p50": 1.3575825,
+          "p95": 1.565828,
+          "min": 1.288792,
+          "max": 1.565828,
+          "mean": 1.3816785999999999
+        },
+        "resume": {
+          "n": 10,
+          "p50": 0.1912405,
+          "p95": 0.22264599999999998,
+          "min": 0.186212,
+          "max": 0.22264599999999998,
+          "mean": 0.1965967
+        },
+        "guest_ack_wait": {
+          "n": 10,
+          "p50": 4.3735555,
+          "p95": 4.728041,
+          "min": 4.040306999999999,
+          "max": 4.728041,
+          "mean": 4.3390566
+        }
+      },
+      "analysis": ".local/runs/20261019T065649Z-1uw5rhl5/handoff-128m-warm-1792393787026225319/analysis.json",
+      "trace_integrity": ".local/runs/20261019T065649Z-1uw5rhl5/handoff-128m-warm-1792393787026225319/trace-integrity.json"
+    },
+    "outer_lossless": {
+      "report": ".local/runs/20261019T065649Z-1uw5rhl5/handoff-128m-warm-1792393946510800131/report.json",
+      "warmup": 2,
+      "measured_iterations": 8,
+      "validation": {
+        "handoffs": 10,
+        "boot_markers": 1,
+        "retained_heap_errors": 0,
+        "paused_heartbeat_unchanged": true,
+        "guest_clock_errors": 0,
+        "guest_tsc_errors": 0,
+        "payload_integrity_verified": true,
+        "ram_hvas": [
+          70368744177664
+        ],
+        "state_bytes": [
+          13746,
+          13778
+        ],
+        "snapshot_payload_bytes_total": 137748,
+        "ack_profile_timestamps_and_guest_epochs": true,
+        "both_kernels_untainted_and_pool_disabled": true,
+        "guest_cr3_preserved_each_restore": true,
+        "msr_count_and_index_hash_preserved_each_restore": true,
+        "initial_msr_save_list_preserved_all_handoffs": true,
+        "restored_shared_dax_mapping": true
+      },
+      "summary_ms": {
+        "pause": {
+          "n": 8,
+          "p50": 0.238902,
+          "p95": 0.36044400000000004,
+          "min": 0.126372,
+          "max": 0.36044400000000004,
+          "mean": 0.245733
+        },
+        "snapshot": {
+          "n": 8,
+          "p50": 0.600727,
+          "p95": 0.951547,
+          "min": 0.535284,
+          "max": 0.951547,
+          "mean": 0.63860775
+        },
+        "publish": {
+          "n": 8,
+          "p50": 0.0242605,
+          "p95": 0.032586,
+          "min": 0.023731000000000002,
+          "max": 0.032586,
+          "mean": 0.025274625
+        },
+        "handoff": {
+          "n": 8,
+          "p50": 6.1790255,
+          "p95": 7.003483,
+          "min": 3.9616,
+          "max": 7.003483,
+          "mean": 5.726205625
+        },
+        "receive": {
+          "n": 8,
+          "p50": 0.0341555,
+          "p95": 0.044414,
+          "min": 0.031389,
+          "max": 0.044414,
+          "mean": 0.03528125
+        },
+        "startup": {
+          "n": 8,
+          "p50": 0.0,
+          "p95": 0.0,
+          "min": 0.0,
+          "max": 0.0,
+          "mean": 0.0
+        },
+        "restore": {
+          "n": 8,
+          "p50": 1.3383639999999999,
+          "p95": 1.4445940000000002,
+          "min": 1.259056,
+          "max": 1.4445940000000002,
+          "mean": 1.338537
+        },
+        "resume": {
+          "n": 8,
+          "p50": 0.1886855,
+          "p95": 0.195147,
+          "min": 0.12192,
+          "max": 0.195147,
+          "mean": 0.17525725
+        },
+        "guest_ack_wait": {
+          "n": 8,
+          "p50": 3.475498,
+          "p95": 4.146026,
+          "min": 1.6037560000000002,
+          "max": 4.146026,
+          "mean": 3.14363125
+        }
+      },
+      "analysis": ".local/runs/20261019T065649Z-1uw5rhl5/handoff-128m-warm-1792393946510800131/analysis.json",
+      "trace_integrity": ".local/runs/20261019T065649Z-1uw5rhl5/handoff-128m-warm-1792393946510800131/trace-integrity.json"
+    }
+  },
+  "primary_l1_case": "mmu_probes",
+  "primary_l1_metrics_ns_or_counts": {
+    "tsc_reconstruction.resume_end_to_guest_ack_estimated_ns": {
+      "count": 30,
+      "mean": 3673296.902952067,
+      "p50": 3669825.11907959,
+      "p95": 3918659.835876465,
+      "min": 3482062.2365722656,
+      "max": 3951575.6024780273
+    },
+    "tsc_reconstruction.guest_ack_to_observed_estimated_ns": {
+      "count": 30,
+      "mean": 47130.69704793294,
+      "p50": 50125.091217041016,
+      "p95": 90546.85772705078,
+      "min": 1352.1591796875,
+      "max": 100772.5562133789
+    },
+    "load_to_estimated_guest_ack.root_fault_union_wall_ns": {
+      "count": 30,
+      "mean": 947600.0,
+      "p50": 947000.0,
+      "p95": 1035000,
+      "min": 822000,
+      "max": 1043000
+    },
+    "load_to_estimated_guest_ack.spans.root.union_wall_ns": {
+      "count": 30,
+      "mean": 149400.0,
+      "p50": 172000.0,
+      "p95": 226000,
+      "min": 63000,
+      "max": 235000
+    },
+    "load_to_estimated_guest_ack.spans.fault.union_wall_ns": {
+      "count": 30,
+      "mean": 798200.0,
+      "p50": 784500.0,
+      "p95": 882000,
+      "min": 739000,
+      "max": 893000
+    },
+    "load_to_estimated_guest_ack.spans.map.union_wall_ns": {
+      "count": 30,
+      "mean": 552633.3333333334,
+      "p50": 538000.0,
+      "p95": 622000,
+      "min": 504000,
+      "max": 650000
+    },
+    "load_to_estimated_guest_ack.spans.fault.span_count": {
+      "count": 30,
+      "mean": 23.0,
+      "p50": 23.0,
+      "p95": 23,
+      "min": 23,
+      "max": 23
+    },
+    "load_to_estimated_guest_ack.mmu_page_created_or_existing.new": {
+      "count": 30,
+      "mean": 6.0,
+      "p50": 6.0,
+      "p95": 6,
+      "min": 6,
+      "max": 6
+    },
+    "load_to_estimated_guest_ack.spte_levels.1": {
+      "count": 30,
+      "mean": 1.0,
+      "p50": 1.0,
+      "p95": 1,
+      "min": 1,
+      "max": 1
+    },
+    "load_to_estimated_guest_ack.spte_levels.2": {
+      "count": 30,
+      "mean": 22.0,
+      "p50": 22.0,
+      "p95": 22,
+      "min": 22,
+      "max": 22
+    },
+    "first_run_to_entry_trace_ns": {
+      "count": 30,
+      "mean": 263300.0,
+      "p50": 283000.0,
+      "p95": 337000,
+      "min": 175000,
+      "max": 351000
+    },
+    "vcpu_scheduler_after_first_run.off_cpu_wall_ns": {
+      "count": 30,
+      "mean": 366.6666666666667,
+      "p50": 0.0,
+      "p95": 0,
+      "min": 0,
+      "max": 11000
+    }
+  },
+  "primary_outer_case": "outer_lossless",
+  "outer_analysis": ".local/runs/20261019T065649Z-1uw5rhl5/outer-ack-trace-short/analysis.json",
+  "primary_outer_metrics_ns_or_counts": {
+    "launch_to_last_fault_return_ns": {
+      "count": 8,
+      "mean": 2835625,
+      "p50": 3128500.0,
+      "p95": 3771000,
+      "min": 1423000,
+      "max": 3771000
+    },
+    "ept_ending_entry_windows_ns": {
+      "count": 8,
+      "mean": 1812375,
+      "p50": 1976000.0,
+      "p95": 2422000,
+      "min": 990000,
+      "max": 2422000
+    },
+    "launch_exit_to_entry_L1_EPT_VIOLATION_handled_ns": {
+      "count": 8,
+      "mean": 258625,
+      "p50": 294000.0,
+      "p95": 390000,
+      "min": 115000,
+      "max": 390000
+    },
+    "entry_windows_exit_to_entry_L1_EPT_VIOLATION_handled_ns": {
+      "count": 8,
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0,
+      "min": 0,
+      "max": 0
+    },
+    "launch_exit_to_entry_L1_EXTERNAL_INTERRUPT_handled_ns": {
+      "count": 8,
+      "mean": 5000,
+      "p50": 0.0,
+      "p95": 20000,
+      "min": 0,
+      "max": 20000
+    },
+    "entry_windows_exit_to_entry_L1_EXTERNAL_INTERRUPT_handled_ns": {
+      "count": 8,
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0,
+      "min": 0,
+      "max": 0
+    },
+    "launch_exit_to_entry_L1_MSR_WRITE_handled_ns": {
+      "count": 8,
+      "mean": 5000,
+      "p50": 5500.0,
+      "p95": 8000,
+      "min": 2000,
+      "max": 8000
+    },
+    "entry_windows_exit_to_entry_L1_MSR_WRITE_handled_ns": {
+      "count": 8,
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0,
+      "min": 0,
+      "max": 0
+    },
+    "launch_exit_to_entry_L1_PREEMPTION_TIMER_handled_ns": {
+      "count": 8,
+      "mean": 3000,
+      "p50": 2000.0,
+      "p95": 9000,
+      "min": 0,
+      "max": 9000
+    },
+    "entry_windows_exit_to_entry_L1_PREEMPTION_TIMER_handled_ns": {
+      "count": 8,
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0,
+      "min": 0,
+      "max": 0
+    },
+    "launch_exit_to_entry_L1_VMCALL_handled_ns": {
+      "count": 8,
+      "mean": 4875,
+      "p50": 5000.0,
+      "p95": 9000,
+      "min": 0,
+      "max": 9000
+    },
+    "entry_windows_exit_to_entry_L1_VMCALL_handled_ns": {
+      "count": 8,
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0,
+      "min": 0,
+      "max": 0
+    },
+    "launch_exit_to_entry_L1_VMLAUNCH_handled_ns": {
+      "count": 8,
+      "mean": 26250,
+      "p50": 31500.0,
+      "p95": 35000,
+      "min": 15000,
+      "max": 35000
+    },
+    "entry_windows_exit_to_entry_L1_VMLAUNCH_handled_ns": {
+      "count": 8,
+      "mean": 21875,
+      "p50": 23000.0,
+      "p95": 33000,
+      "min": 0,
+      "max": 33000
+    },
+    "launch_exit_to_entry_L1_VMRESUME_handled_ns": {
+      "count": 8,
+      "mean": 213625,
+      "p50": 227000.0,
+      "p95": 323000,
+      "min": 95000,
+      "max": 323000
+    },
+    "entry_windows_exit_to_entry_L1_VMRESUME_handled_ns": {
+      "count": 8,
+      "mean": 198500,
+      "p50": 213000.0,
+      "p95": 286000,
+      "min": 95000,
+      "max": 286000
+    },
+    "launch_exit_to_entry_L2_EPT_VIOLATION_handled_ns": {
+      "count": 8,
+      "mean": 841000,
+      "p50": 919000.0,
+      "p95": 1099000,
+      "min": 428000,
+      "max": 1099000
+    },
+    "entry_windows_exit_to_entry_L2_EPT_VIOLATION_handled_ns": {
+      "count": 8,
+      "mean": 785125,
+      "p50": 846000.0,
+      "p95": 1061000,
+      "min": 424000,
+      "max": 1061000
+    },
+    "launch_exit_to_entry_L2_EPT_VIOLATION_reflected_ns": {
+      "count": 8,
+      "mean": 286875,
+      "p50": 304000.0,
+      "p95": 401000,
+      "min": 142000,
+      "max": 401000
+    },
+    "entry_windows_exit_to_entry_L2_EPT_VIOLATION_reflected_ns": {
+      "count": 8,
+      "mean": 286875,
+      "p50": 304000.0,
+      "p95": 401000,
+      "min": 142000,
+      "max": 401000
+    },
+    "launch_exit_to_entry_L2_PREEMPTION_TIMER_reflected_ns": {
+      "count": 8,
+      "mean": 27375,
+      "p50": 22000.0,
+      "p95": 59000,
+      "min": 0,
+      "max": 59000
+    },
+    "entry_windows_exit_to_entry_L2_PREEMPTION_TIMER_reflected_ns": {
+      "count": 8,
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0,
+      "min": 0,
+      "max": 0
+    },
+    "host_ept_exit_count": {
+      "count": 8,
+      "mean": 189.625,
+      "p50": 182.5,
+      "p95": 245,
+      "min": 166,
+      "max": 245
+    },
+    "host_new_mmu_pages": {
+      "count": 8,
+      "mean": 25,
+      "p50": 25.0,
+      "p95": 25,
+      "min": 25,
+      "max": 25
+    },
+    "host_4k_leaves": {
+      "count": 8,
+      "mean": 266.375,
+      "p50": 280.5,
+      "p95": 348,
+      "min": 159,
+      "max": 348
+    },
+    "host_new_direct_mmu_pages": {
+      "count": 8,
+      "mean": 19,
+      "p50": 19.0,
+      "p95": 19,
+      "min": 19,
+      "max": 19
+    },
+    "host_new_non_direct_mmu_pages": {
+      "count": 8,
+      "mean": 6,
+      "p50": 6.0,
+      "p95": 6,
+      "min": 6,
+      "max": 6
+    },
+    "host_4k_leaves_while_L1": {
+      "count": 8,
+      "mean": 7.25,
+      "p50": 0.0,
+      "p95": 49,
+      "min": 0,
+      "max": 49
+    },
+    "host_4k_leaves_while_L2": {
+      "count": 8,
+      "mean": 259.125,
+      "p50": 276.0,
+      "p95": 348,
+      "min": 159,
+      "max": 348
+    }
+  },
+  "outer_backing_smaps": ".local/runs/20261019T065649Z-1uw5rhl5/outer-cxl-smaps.json",
+  "findings": {
+    "polling": "Guest ACK timestamp to controller observation is ~50us p50 in reduced L1 trace, while the actual guest sample is ~3.670ms after resume API response. Most delay precedes guest acknowledgement.",
+    "ept": "ACK-before L1 trace shows exactly23 faults and6 new EPT pages,22 level2(2MiB) leaf SPTEs and1 level1 APIC-access leaf, every measured round. Root/fault union p50 947us in reduced trace. Map538us is a nested subset.",
+    "outer": "Lossless host trace shows166..245 outer EPT exits (p50182.5),25new MMU pages (direct and non-direct roles combined; role alone doesnot identify EPT root ownership) and only4KiB leaf mappings during launch-to-last-preACK-EPT-reflection window.",
+    "backing": "QEMU CXL shared file VMA has4KiB kernel/MMU pages, zero FilePmdMapped/ShmemPmdMapped/AnonHugePages, and HVA is not2MiB aligned. Large L1 SPTEs do not imply large L0 shadow SPTEs.",
+    "scheduling": "L1 vCPU off-CPU p50/p950; lossless outer critical windows have no target QEMU vCPU sched_switch. Initial API/wakeup preparation still exists outside these windows.",
+    "scope": "EPT setup was absent from prior API-only breakdown, not negligible. Current nested environment adds EPT02 refill costs. Bare-metal cross-node CXL does not have this L0/EPT02 layer."
+  },
+  "method": {
+    "l1": "trace_clock mono; kprobe/kretprobe root/fault/map spans plus KVM entry/exit/MMU/sched events; nonce+round trace markers gate LOAD_BEGIN through HEAP_VERIFIED",
+    "guest_ack": "guest raw TSC sampled immediately before ACK publication; decode public KVM TSC offset with invariant unit scaling, calibrated against bracketed local CLOCK_MONOTONIC/RDTSC anchors",
+    "ratio": "all-probe trace directly verifies guest\u2212host TSC equals offset for154+ paired reads per round; later traces use its hashed evidence plus explicit unit-ratio assumption. Cross-vCPU TSC synchronization remains an assumption.",
+    "outer": "independent host trace instance filtered to snapshot QEMU CPU1 TIDs540114/540113; join by per-role launch ordinal and exact ordered reflected exit qualification prefix; never subtract L0/L1 absolute clocks",
+    "outer_endpoint": "last pre-ACK reflected EPT return, not the complete guest ACK interval; lower bound to ACK. All10short-run rounds join exactly.",
+    "latencies": "inclusive wall durations, not pure allocator CPU cycles. Trace clocks have1us output resolution. All percentile summaries use nearest-rank p95.",
+    "overlap": "root/fault union avoids nesting; map is within fault. L1 MMU wall includes L0 handlers while L1 executes; do not add it to all L0 service time. Separate runs/medians are not additive.",
+    "mmu_page_role_interpretation": "mmu_pages counts all kvm_mmu_get_page events. Role.direct is read only from the raw printed direct flag and does NOT identify EPT01 versus EPT02 ownership. Nested shadow EPT02 can contain direct lower-level child pages when splitting a guest huge-page mapping: see implementation/linux/arch/x86/kvm/mmu/paging_tmpl.h FNAME(fetch), kvm_mmu_get_child_sp(..., true, direct_access), around line735. The 25 total newly created MMU pages comprise19 direct-role and6 non-direct-role pages in all measured rounds. This trace text does not expose root identity, so root ownership remains undefined. leaf_spte_levels aggregates all traced pages; leaf_spte_levels_by_nested_context follows inferred L1/L2 execution state and does not prove page-table ownership."
+  },
+  "measurement_effect": {
+    "baseline_ack_p50_ms": 3.5214345,
+    "reduced_trace_ack_p50_ms": 3.729191,
+    "all_probe_ack_p50_ms": 4.1803444999999995,
+    "interpretation": "tracing perturbs latency;947us is a directly measured instrumented interval, not an exact uninstrumented EPT cost"
+  },
+  "validation": {
+    "positive_handoffs_including_warmup": 130,
+    "all_single_boot_and_heap_clock_tsc_errors_zero": true,
+    "all_l1_trace_transport_sha256_and_no_buffer_loss": true,
+    "primary_outer_trace_zero_loss": true,
+    "exploratory_outer_trace": "first long host capture had overrun and is retained as exploratory evidence; all quoted primary host values use short zero-loss capture",
+    "preservation_checks": [
+      ".local/runs/20261019T065649Z-1uw5rhl5/final-live-check.json",
+      ".local/runs/20261019T065649Z-1uw5rhl5/final-preservation-check.json"
+    ]
+  },
+  "cleanup": {
+    "host": "both dedicated trace instances removed, no host dynamic probes installed, global tracing settings unchanged",
+    "l1": "trace recording and events disabled; final native microVM left running"
+  },
+  "changes": [
+    "shared_probe.c: opt-in ACK markers, guest timestamp and local TSC anchors",
+    "lab.py: --profile-ack and result validation",
+    "snapshot-ack-trace.py: isolated L1 setup/collection with compressed SHA256-checked transport",
+    "analyze-ack-trace.py: span/TSC/scheduler analysis"
+  ],
+  "source_scope": "No Linux or Firecracker source changes in this follow-up; existing direct benchmark functions preserved",
+  "archive_manifest": ".local/ack-ept-final-20261019T162640+0900/manifest.json",
+  "archive": ".local/ack-ept-final-20261019T162640+0900/source-and-evidence.tar.gz"
+}

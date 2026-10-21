@@ -1,0 +1,4222 @@
+{
+  "result": "passed",
+  "created_utc": "2026-10-20T03:27:03.979808+00:00",
+  "experiment": "Full RAM stop-and-copy snapshot migration with fresh KVM VM/vCPU and demand EPT population",
+  "topology": {
+    "physical_hosts": 1,
+    "l1_nodes": 2,
+    "l1_vcpus_each": 2,
+    "l1_memory_mib_each": 12288,
+    "l2_vcpus": 1,
+    "kernel": "6.6.0-rc6-dcd-v3",
+    "qemu": "QEMU emulator version 6.2.0 (Debian 1:6.2+dfsg-2ubuntu6.31)",
+    "transport": "virtio-net over QEMU point-to-point TCP socket",
+    "cxl_shared_guest_ram": false,
+    "kvm_dax_pool_enabled": false,
+    "l1_nx_huge_pages": "never",
+    "l1_rcu": "expedited",
+    "seccomp": false,
+    "guest_thp": "never",
+    "guest_headroom_mib": 16,
+    "controller_poll_us": 50,
+    "controller_l1_cpu": 0,
+    "guest_l1_cpu": 1,
+    "files": "tmpfs, no fsync, RAM uncompressed without sparse/zero omission"
+  },
+  "measurement": {
+    "measured_migrations": 100,
+    "warmup_migrations": 15,
+    "trace_migrations": 3,
+    "ram_bytes_measured": 123480309760,
+    "ram_bytes_including_warmup": 142002356224,
+    "new_destination_kvm_per_restore": true,
+    "retained_data_clock_tsc_errors": 0,
+    "ordered_msr_list_and_guest_cr3_preserved": true,
+    "initial_process_boot_and_working_set_allocation": "outside migration interval",
+    "empty_api_process_startup": "outside outage; no KVM VM/vCPU until restore",
+    "source_retirement": "outside outage after destination ready; measured separately",
+    "working_set": "MemAvailable minus 16MiB, nonzero64B per4KiB page; read/verify every page after restore then repeat warm scan",
+    "ram_backing": "initial anonymous RAM; subsequent MAP_PRIVATE mappings of each node local received snapshot file; no cross-node RAM sharing",
+    "statistics": "20 samples per size, first3 warmups excluded;10 per direction. Means add for the5source-clock components; medians do not generally add."
+  },
+  "primary": [
+    {
+      "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261020T030552Z-s1t4srp6/migration-512m-1792465712684133885/report.json",
+      "memory_mib": 512,
+      "trace_ept": false,
+      "profile_restore": true,
+      "cpu_restore": "normal semantic CPU snapshot with explicit FC_EXACT_TSC=1 public KVM TSC-offset restoration and retention of the incoming ordered MSR save list",
+      "iterations": 20,
+      "warmup": 3,
+      "measured_rounds": 20,
+      "direction_counts": {
+        "A->B": 10,
+        "B->A": 10
+      },
+      "state_bytes_distribution": {
+        "13659": 20
+      },
+      "distinct_destination_kvm_processes": 20,
+      "distinct_destination_ram_hvas": 20,
+      "empty_api_startup_nonzero_ms": {
+        "n": 19,
+        "mean": 0.7669255789473685,
+        "p50": 0.7621870000000001,
+        "p95": 0.975288,
+        "min": 0.685707,
+        "max": 0.975288
+      },
+      "profile_scopes_measured": {
+        "build": 20,
+        "create_snapshot": 20,
+        "restore": 20,
+        "save_state": 20,
+        "snapshot_memory": 20,
+        "vm_common": 20,
+        "vm_new": 20
+      },
+      "profile_scopes_all_rounds": {
+        "build": 23,
+        "create_snapshot": 23,
+        "restore": 23,
+        "save_state": 23,
+        "snapshot_memory": 23,
+        "vm_common": 23,
+        "vm_new": 23
+      },
+      "profile_records_per_measured_round": {
+        "7": 20
+      },
+      "duplicate_profile_scopes": [],
+      "by_direction": {
+        "A->B": {
+          "n": 10,
+          "metrics": {
+            "confirmed_transfer_ms": {
+              "n": 10,
+              "mean": 779.8627094,
+              "p50": 774.8515275,
+              "p95": 859.2268929999999,
+              "min": 689.342016,
+              "max": 859.2268929999999
+            },
+            "guest_first_scan_ms": {
+              "n": 10,
+              "mean": 1893.8458622,
+              "p50": 1937.5090405,
+              "p95": 1958.142676,
+              "min": 1693.930076,
+              "max": 1958.142676
+            },
+            "pause_to_first_ack_ms": {
+              "n": 10,
+              "mean": 988.1593277,
+              "p50": 993.256519,
+              "p95": 1067.45047,
+              "min": 873.079153,
+              "max": 1067.45047
+            },
+            "pause_to_working_set_ready_ms": {
+              "n": 10,
+              "mean": 2882.2080133,
+              "p50": 2915.8527715,
+              "p95": 3011.4584670000004,
+              "min": 2567.1865980000002,
+              "max": 3011.4584670000004
+            }
+          }
+        },
+        "B->A": {
+          "n": 10,
+          "metrics": {
+            "confirmed_transfer_ms": {
+              "n": 10,
+              "mean": 1866.0857328,
+              "p50": 1866.132705,
+              "p95": 1943.845151,
+              "min": 1766.989489,
+              "max": 1943.845151
+            },
+            "guest_first_scan_ms": {
+              "n": 10,
+              "mean": 1931.8748943,
+              "p50": 1937.8148995,
+              "p95": 1955.996622,
+              "min": 1882.259614,
+              "max": 1955.996622
+            },
+            "pause_to_first_ack_ms": {
+              "n": 10,
+              "mean": 2067.7138808,
+              "p50": 2069.1122855000003,
+              "p95": 2124.0728280000003,
+              "min": 1984.6825079999999,
+              "max": 2124.0728280000003
+            },
+            "pause_to_working_set_ready_ms": {
+              "n": 10,
+              "mean": 3966.1664186,
+              "p50": 3969.4668064999996,
+              "p95": 4033.6158769999997,
+              "min": 3901.1445070000004,
+              "max": 4033.6158769999997
+            }
+          }
+        }
+      },
+      "cpu_state_contract": {
+        "signature_records": 40,
+        "phases": {
+          "restore": 20,
+          "save": 20
+        },
+        "msr_count_distribution": {
+          "190": 40
+        },
+        "ordered_msr_indices_hash_distribution": {
+          "20655d3b1df6c641": 40
+        },
+        "cr3_distribution": {
+          "73998342": 40
+        }
+      },
+      "validation": {
+        "migrations": 23,
+        "full_ram_bytes_per_migration": 536870912,
+        "total_ram_bytes_transferred": 12348030976,
+        "semantic_state_bytes": [
+          13627,
+          13659
+        ],
+        "one_initial_boot": true,
+        "guest_instance_preserved": true,
+        "retained_data_errors": 0,
+        "working_set_bytes": 451084288,
+        "working_set_ratio": 0.84021,
+        "new_destination_kvm_per_restore": true,
+        "no_shared_guest_ram": true,
+        "guest_cr3_preserved_each_restore": true,
+        "ordered_msr_count_and_hash_preserved_each_restore": true,
+        "initial_ordered_msr_save_list_preserved_all_migrations": true
+      },
+      "metrics": {
+        "additivity_residual_ms": {
+          "n": 20,
+          "mean": 0.0,
+          "p50": 0.0,
+          "p95": 4.547473508864641e-13,
+          "min": -4.547473508864641e-13,
+          "max": 4.547473508864641e-13
+        },
+        "confirmed_transfer_ms": {
+          "n": 20,
+          "mean": 1322.9742211,
+          "p50": 1313.108191,
+          "p95": 1929.395349,
+          "min": 689.342016,
+          "max": 1943.845151
+        },
+        "destination_paused_validation_ms": {
+          "n": 20,
+          "mean": 0.05098825,
+          "p50": 0.048316,
+          "p95": 0.063173,
+          "min": 0.046017,
+          "max": 0.068611
+        },
+        "destination_restore_api_ms": {
+          "n": 20,
+          "mean": 2.03917675,
+          "p50": 1.8833715,
+          "p95": 2.601166,
+          "min": 1.709492,
+          "max": 4.204626
+        },
+        "destination_resume_api_ms": {
+          "n": 20,
+          "mean": 0.17742175,
+          "p50": 0.1759795,
+          "p95": 0.206073,
+          "min": 0.13304400000000002,
+          "max": 0.22784000000000001
+        },
+        "destination_resume_to_first_ack_ms": {
+          "n": 20,
+          "mean": 18.06519795,
+          "p50": 12.260766,
+          "p95": 30.561552,
+          "min": 8.360798,
+          "max": 31.472794999999998
+        },
+        "destination_resume_to_ready_ms": {
+          "n": 20,
+          "mean": 1930.8909619,
+          "p50": 1955.5083285,
+          "p95": 1985.9879979999998,
+          "min": 1707.3505619999999,
+          "max": 1988.180586
+        },
+        "empty_api_startup_ms": {
+          "n": 20,
+          "mean": 0.7285793,
+          "p50": 0.7575670000000001,
+          "p95": 0.834302,
+          "min": 0.0,
+          "max": 0.975288
+        },
+        "first_ack_to_working_set_ready_ms": {
+          "n": 20,
+          "mean": 1896.2506117,
+          "p50": 1916.7067984999999,
+          "p95": 1955.7259540000002,
+          "min": 1694.1074450000003,
+          "max": 1958.2615990000002
+        },
+        "full_snapshot_ms": {
+          "n": 20,
+          "mean": 179.27715135,
+          "p50": 175.4911015,
+          "p95": 200.512285,
+          "min": 163.644006,
+          "max": 223.35576500000002
+        },
+        "guest_first_minus_warm_ms": {
+          "n": 20,
+          "mean": 1885.06596755,
+          "p50": 1910.9720625,
+          "p95": 1929.581671,
+          "min": 1683.103305,
+          "max": 1936.319581
+        },
+        "guest_first_scan_ms": {
+          "n": 20,
+          "mean": 1912.86037825,
+          "p50": 1937.8148995,
+          "p95": 1955.996622,
+          "min": 1693.930076,
+          "max": 1958.142676
+        },
+        "guest_warm_scan_ms": {
+          "n": 20,
+          "mean": 27.7944107,
+          "p50": 21.333364500000002,
+          "p95": 70.979251,
+          "min": 10.188544,
+          "max": 79.152302
+        },
+        "memory_mib": {
+          "n": 20,
+          "mean": 512,
+          "p50": 512.0,
+          "p95": 512,
+          "min": 512,
+          "max": 512
+        },
+        "pause_ms": {
+          "n": 20,
+          "mean": 0.3615272,
+          "p50": 0.3530685,
+          "p95": 0.45999599999999996,
+          "min": 0.25620299999999996,
+          "max": 0.477007
+        },
+        "pause_to_first_ack_ms": {
+          "n": 20,
+          "mean": 1527.93660425,
+          "p50": 1526.0664889999998,
+          "p95": 2122.858152,
+          "min": 873.079153,
+          "max": 2124.0728280000003
+        },
+        "pause_to_working_set_ready_ms": {
+          "n": 20,
+          "mean": 3424.18721595,
+          "p50": 3456.3014870000006,
+          "p95": 4015.493439,
+          "min": 2567.1865980000002,
+          "max": 4033.6158769999997
+        },
+        "profile.build.devices_restore_ms": {
+          "n": 20,
+          "mean": 0.09539955,
+          "p50": 0.093525,
+          "p95": 0.107655,
+          "min": 0.088004,
+          "max": 0.11191899999999999
+        },
+        "profile.build.event_loop_registration_ms": {
+          "n": 20,
+          "mean": 0.00344775,
+          "p50": 0.0034615,
+          "p95": 0.003722,
+          "min": 0.0029000000000000002,
+          "max": 0.00458
+        },
+        "profile.build.kvm_open_capabilities_ms": {
+          "n": 20,
+          "mean": 0.1640226,
+          "p50": 0.12966899999999998,
+          "p95": 0.162433,
+          "min": 0.118296,
+          "max": 0.737575
+        },
+        "profile.build.register_memory_slots_ms": {
+          "n": 20,
+          "mean": 0.01196,
+          "p50": 0.011708000000000001,
+          "p95": 0.019833000000000003,
+          "min": 0.008226,
+          "max": 0.020129
+        },
+        "profile.build.total_ms": {
+          "n": 20,
+          "mean": 1.4152659,
+          "p50": 1.3195435,
+          "p95": 1.9775980000000002,
+          "min": 1.167136,
+          "max": 3.0104
+        },
+        "profile.build.tsc_scaling_ms": {
+          "n": 20,
+          "mean": 0.0041134,
+          "p50": 0.0034985000000000003,
+          "p95": 0.007154,
+          "min": 0.00294,
+          "max": 0.007186
+        },
+        "profile.build.vcpu_state_restore_ms": {
+          "n": 20,
+          "mean": 0.25652455,
+          "p50": 0.2263555,
+          "p95": 0.262472,
+          "min": 0.21303300000000003,
+          "max": 0.848241
+        },
+        "profile.build.vcpu_threads_start_ms": {
+          "n": 20,
+          "mean": 0.0682839,
+          "p50": 0.066327,
+          "p95": 0.07834999999999999,
+          "min": 0.059385999999999994,
+          "max": 0.084714
+        },
+        "profile.build.vcpus_create_ms": {
+          "n": 20,
+          "mean": 0.4179646,
+          "p50": 0.40935600000000005,
+          "p95": 0.466252,
+          "min": 0.373481,
+          "max": 0.4819
+        },
+        "profile.build.vm_create_ms": {
+          "n": 20,
+          "mean": 0.382409,
+          "p50": 0.33901400000000004,
+          "p95": 0.426262,
+          "min": 0.24571499999999996,
+          "max": 1.451829
+        },
+        "profile.build.vm_irq_clock_restore_ms": {
+          "n": 20,
+          "mean": 0.01105575,
+          "p50": 0.009665,
+          "p95": 0.016388,
+          "min": 0.0083,
+          "max": 0.019646999999999998
+        },
+        "profile.create_snapshot.backing_validation_ms": {
+          "n": 20,
+          "mean": 0.00117885,
+          "p50": 0.0011445,
+          "p95": 0.001553,
+          "min": 0.000687,
+          "max": 0.001728
+        },
+        "profile.create_snapshot.encode_and_write_ms": {
+          "n": 20,
+          "mean": 0.485661,
+          "p50": 0.45483699999999994,
+          "p95": 0.738137,
+          "min": 0.355067,
+          "max": 0.90339
+        },
+        "profile.create_snapshot.memory_and_queue_handling_ms": {
+          "n": 20,
+          "mean": 178.2750901,
+          "p50": 174.4727235,
+          "p95": 199.559714,
+          "min": 162.845454,
+          "max": 221.818994
+        },
+        "profile.create_snapshot.state_collection_ms": {
+          "n": 20,
+          "mean": 0.34556644999999997,
+          "p50": 0.3326645,
+          "p95": 0.405585,
+          "min": 0.262411,
+          "max": 0.48849699999999996
+        },
+        "profile.create_snapshot.total_ms": {
+          "n": 20,
+          "mean": 179.107606,
+          "p50": 175.310005,
+          "p95": 200.35548300000002,
+          "min": 163.505986,
+          "max": 223.211717
+        },
+        "profile.restore.build_microvm_ms": {
+          "n": 20,
+          "mean": 1.471563,
+          "p50": 1.3856005,
+          "p95": 2.033783,
+          "min": 1.218471,
+          "max": 3.065118
+        },
+        "profile.restore.config_and_validation_ms": {
+          "n": 20,
+          "mean": 0.024928099999999998,
+          "p50": 0.025444500000000002,
+          "p95": 0.027858,
+          "min": 0.020381999999999997,
+          "max": 0.029442999999999997
+        },
+        "profile.restore.guest_ram_mapping_ms": {
+          "n": 20,
+          "mean": 0.0531214,
+          "p50": 0.0204225,
+          "p95": 0.031195,
+          "min": 0.015507,
+          "max": 0.651938
+        },
+        "profile.restore.state_file_deserialize_ms": {
+          "n": 20,
+          "mean": 0.28230855,
+          "p50": 0.27914249999999996,
+          "p95": 0.29657799999999995,
+          "min": 0.26779899999999995,
+          "max": 0.305826
+        },
+        "profile.restore.total_ms": {
+          "n": 20,
+          "mean": 1.83201465,
+          "p50": 1.7119545,
+          "p95": 2.3615340000000002,
+          "min": 1.555991,
+          "max": 4.021405
+        },
+        "profile.save_state.device_state_ms": {
+          "n": 20,
+          "mean": 0.00177095,
+          "p50": 0.0017890000000000002,
+          "p95": 0.0023,
+          "min": 0.001314,
+          "max": 0.0024040000000000003
+        },
+        "profile.save_state.kvm_vm_state_ms": {
+          "n": 20,
+          "mean": 0.0160867,
+          "p50": 0.012495,
+          "p95": 0.026163,
+          "min": 0.009643,
+          "max": 0.062357
+        },
+        "profile.save_state.total_ms": {
+          "n": 20,
+          "mean": 0.31905885,
+          "p50": 0.3048875,
+          "p95": 0.37818599999999997,
+          "min": 0.239386,
+          "max": 0.440842
+        },
+        "profile.save_state.vcpu_state_ms": {
+          "n": 20,
+          "mean": 0.3009078,
+          "p50": 0.293246,
+          "p95": 0.36133299999999996,
+          "min": 0.22775399999999998,
+          "max": 0.37676499999999996
+        },
+        "profile.snapshot_memory.dump_ram_file_ms": {
+          "n": 20,
+          "mean": 178.2515013,
+          "p50": 174.45178249999998,
+          "p95": 199.536984,
+          "min": 162.82445800000002,
+          "max": 221.792968
+        },
+        "profile.snapshot_memory.total_ms": {
+          "n": 20,
+          "mean": 178.2522996,
+          "p50": 174.45245799999998,
+          "p95": 199.537948,
+          "min": 162.82515,
+          "max": 221.79394699999997
+        },
+        "profile.vm_common.eventfd_and_common_fields_ms": {
+          "n": 20,
+          "mean": 0.01010255,
+          "p50": 0.009696999999999999,
+          "p95": 0.012008,
+          "min": 0.00868,
+          "max": 0.014988
+        },
+        "profile.vm_common.kvm_create_vm_ioctl_ms": {
+          "n": 20,
+          "mean": 0.3253045,
+          "p50": 0.27744650000000004,
+          "p95": 0.36486599999999997,
+          "min": 0.193503,
+          "max": 1.38623
+        },
+        "profile.vm_common.total_ms": {
+          "n": 20,
+          "mean": 0.3355853,
+          "p50": 0.28869900000000004,
+          "p95": 0.37699199999999994,
+          "min": 0.20306799999999997,
+          "max": 1.40144
+        },
+        "profile.vm_new.arch_fields_ms": {
+          "n": 20,
+          "mean": 0.0001579,
+          "p50": 0.0001565,
+          "p95": 0.00016700000000000002,
+          "min": 0.00014600000000000003,
+          "max": 0.00017999999999999998
+        },
+        "profile.vm_new.create_common_ms": {
+          "n": 20,
+          "mean": 0.3490703,
+          "p50": 0.3018105,
+          "p95": 0.389805,
+          "min": 0.216015,
+          "max": 1.418538
+        },
+        "profile.vm_new.msr_save_list_ms": {
+          "n": 20,
+          "mean": 0.00854805,
+          "p50": 0.007424,
+          "p95": 0.008269,
+          "min": 0.006902,
+          "max": 0.028707
+        },
+        "profile.vm_new.set_tss_address_ms": {
+          "n": 20,
+          "mean": 0.0013899,
+          "p50": 0.0008929999999999999,
+          "p95": 0.004692999999999999,
+          "min": 0.000622,
+          "max": 0.004739
+        },
+        "profile.vm_new.total_ms": {
+          "n": 20,
+          "mean": 0.3709749,
+          "p50": 0.3285145,
+          "p95": 0.41595,
+          "min": 0.235166,
+          "max": 1.439758
+        },
+        "profile.vm_new.xsave_capability_ms": {
+          "n": 20,
+          "mean": 0.01151495,
+          "p50": 0.0098855,
+          "p95": 0.016501000000000002,
+          "min": 0.009499,
+          "max": 0.017263
+        },
+        "ram_anon_huge_mib": {
+          "n": 20,
+          "mean": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "ram_anonymous_mib": {
+          "n": 20,
+          "mean": 1.2759765625,
+          "p50": 1.275390625,
+          "p95": 1.32421875,
+          "min": 1.23828125,
+          "max": 1.328125
+        },
+        "ram_private_mib": {
+          "n": 20,
+          "mean": 438.024609375,
+          "p50": 437.427734375,
+          "p95": 439.07421875,
+          "min": 437.203125,
+          "max": 439.2734375
+        },
+        "ram_rss_mib": {
+          "n": 20,
+          "mean": 438.024609375,
+          "p50": 437.427734375,
+          "p95": 439.07421875,
+          "min": 437.203125,
+          "max": 439.2734375
+        },
+        "remote_received_to_first_ack_ms": {
+          "n": 20,
+          "mean": 25.323704599999974,
+          "p50": 30.67406699999998,
+          "p95": 43.079554,
+          "min": 0.006394999999785796,
+          "max": 44.113204000000145
+        },
+        "source_cleanup_ms": {
+          "n": 20,
+          "mean": 158.5140356,
+          "p50": 158.74115799999998,
+          "p95": 174.487052,
+          "min": 144.188721,
+          "max": 174.530095
+        },
+        "working_set_mib": {
+          "n": 20,
+          "mean": 430.1875,
+          "p50": 430.1875,
+          "p95": 430.1875,
+          "min": 430.1875,
+          "max": 430.1875
+        },
+        "working_set_ratio": {
+          "n": 20,
+          "mean": 0.84021,
+          "p50": 0.84021,
+          "p95": 0.84021,
+          "min": 0.84021,
+          "max": 0.84021
+        }
+      },
+      "additivity": {
+        "component_names": [
+          "pause_ms",
+          "full_snapshot_ms",
+          "confirmed_transfer_ms",
+          "remote_received_to_first_ack_ms",
+          "first_ack_to_working_set_ready_ms"
+        ],
+        "sum_component_means_ms": 3424.18721595,
+        "total_mean_ms": 3424.18721595,
+        "sum_component_medians_ms": 3436.3332265,
+        "total_median_ms": 3456.3014870000006,
+        "max_absolute_paired_round_residual_ms": 4.547473508864641e-13
+      },
+      "report_sha256": "6029f9157fbe98b331d60a6c8368eb2cc89051f527d75506bff45007b5b48bd3"
+    },
+    {
+      "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261020T030552Z-s1t4srp6/migration-768m-1792465801587511308/report.json",
+      "memory_mib": 768,
+      "trace_ept": false,
+      "profile_restore": true,
+      "cpu_restore": "normal semantic CPU snapshot with explicit FC_EXACT_TSC=1 public KVM TSC-offset restoration and retention of the incoming ordered MSR save list",
+      "iterations": 20,
+      "warmup": 3,
+      "measured_rounds": 20,
+      "direction_counts": {
+        "A->B": 10,
+        "B->A": 10
+      },
+      "state_bytes_distribution": {
+        "13659": 20
+      },
+      "distinct_destination_kvm_processes": 20,
+      "distinct_destination_ram_hvas": 20,
+      "empty_api_startup_nonzero_ms": {
+        "n": 19,
+        "mean": 0.7440371052631579,
+        "p50": 0.704348,
+        "p95": 1.341875,
+        "min": 0.6479360000000001,
+        "max": 1.341875
+      },
+      "profile_scopes_measured": {
+        "build": 20,
+        "create_snapshot": 20,
+        "restore": 20,
+        "save_state": 20,
+        "snapshot_memory": 20,
+        "vm_common": 20,
+        "vm_new": 20
+      },
+      "profile_scopes_all_rounds": {
+        "build": 23,
+        "create_snapshot": 23,
+        "restore": 23,
+        "save_state": 23,
+        "snapshot_memory": 23,
+        "vm_common": 23,
+        "vm_new": 23
+      },
+      "profile_records_per_measured_round": {
+        "7": 20
+      },
+      "duplicate_profile_scopes": [],
+      "by_direction": {
+        "A->B": {
+          "n": 10,
+          "metrics": {
+            "confirmed_transfer_ms": {
+              "n": 10,
+              "mean": 1038.0734647000002,
+              "p50": 1046.6408935000002,
+              "p95": 1114.9475889999999,
+              "min": 945.140798,
+              "max": 1114.9475889999999
+            },
+            "guest_first_scan_ms": {
+              "n": 10,
+              "mean": 3071.467436,
+              "p50": 3066.6800555,
+              "p95": 3104.424675,
+              "min": 3049.646117,
+              "max": 3104.424675
+            },
+            "pause_to_first_ack_ms": {
+              "n": 10,
+              "mean": 1324.2402410999998,
+              "p50": 1331.822692,
+              "p95": 1391.588096,
+              "min": 1234.3312139999998,
+              "max": 1391.588096
+            },
+            "pause_to_working_set_ready_ms": {
+              "n": 10,
+              "mean": 4396.1594407,
+              "p50": 4397.734027,
+              "p95": 4478.947978,
+              "min": 4296.3261600000005,
+              "max": 4478.947978
+            }
+          }
+        },
+        "B->A": {
+          "n": 10,
+          "metrics": {
+            "confirmed_transfer_ms": {
+              "n": 10,
+              "mean": 2705.2417228,
+              "p50": 2703.894047,
+              "p95": 2844.996351,
+              "min": 2639.94029,
+              "max": 2844.996351
+            },
+            "guest_first_scan_ms": {
+              "n": 10,
+              "mean": 2982.8293463,
+              "p50": 3000.4461844999996,
+              "p95": 3040.932883,
+              "min": 2887.610719,
+              "max": 3040.932883
+            },
+            "pause_to_first_ack_ms": {
+              "n": 10,
+              "mean": 3045.8899176,
+              "p50": 3039.8307265,
+              "p95": 3156.976184,
+              "min": 2973.4366019999998,
+              "max": 3156.976184
+            },
+            "pause_to_working_set_ready_ms": {
+              "n": 10,
+              "mean": 5994.7598701,
+              "p50": 6016.3242685000005,
+              "p95": 6094.239965,
+              "min": 5841.40413,
+              "max": 6094.239965
+            }
+          }
+        }
+      },
+      "cpu_state_contract": {
+        "signature_records": 40,
+        "phases": {
+          "restore": 20,
+          "save": 20
+        },
+        "msr_count_distribution": {
+          "190": 40
+        },
+        "ordered_msr_indices_hash_distribution": {
+          "20655d3b1df6c641": 40
+        },
+        "cr3_distribution": {
+          "75718662": 40
+        }
+      },
+      "validation": {
+        "migrations": 23,
+        "full_ram_bytes_per_migration": 805306368,
+        "total_ram_bytes_transferred": 18522046464,
+        "semantic_state_bytes": [
+          13627,
+          13659
+        ],
+        "one_initial_boot": true,
+        "guest_instance_preserved": true,
+        "retained_data_errors": 0,
+        "working_set_bytes": 714383360,
+        "working_set_ratio": 0.887095,
+        "new_destination_kvm_per_restore": true,
+        "no_shared_guest_ram": true,
+        "guest_cr3_preserved_each_restore": true,
+        "ordered_msr_count_and_hash_preserved_each_restore": true,
+        "initial_ordered_msr_save_list_preserved_all_migrations": true
+      },
+      "metrics": {
+        "additivity_residual_ms": {
+          "n": 20,
+          "mean": -9.094947017729283e-14,
+          "p50": 0.0,
+          "p95": 9.094947017729282e-13,
+          "min": -9.094947017729282e-13,
+          "max": 9.094947017729282e-13
+        },
+        "confirmed_transfer_ms": {
+          "n": 20,
+          "mean": 1871.65759375,
+          "p50": 1877.4439395,
+          "p95": 2723.1416499999996,
+          "min": 945.140798,
+          "max": 2844.996351
+        },
+        "destination_paused_validation_ms": {
+          "n": 20,
+          "mean": 0.08485335000000001,
+          "p50": 0.05449,
+          "p95": 0.068455,
+          "min": 0.046636000000000004,
+          "max": 0.661814
+        },
+        "destination_restore_api_ms": {
+          "n": 20,
+          "mean": 2.0632284,
+          "p50": 2.0316355,
+          "p95": 2.620413,
+          "min": 1.599914,
+          "max": 2.848895
+        },
+        "destination_resume_api_ms": {
+          "n": 20,
+          "mean": 0.178055,
+          "p50": 0.2036215,
+          "p95": 0.23090799999999997,
+          "min": 0.120117,
+          "max": 0.232117
+        },
+        "destination_resume_to_first_ack_ms": {
+          "n": 20,
+          "mean": 20.7857517,
+          "p50": 22.907556999999997,
+          "p95": 35.138898999999995,
+          "min": 8.24275,
+          "max": 36.609692
+        },
+        "destination_resume_to_ready_ms": {
+          "n": 20,
+          "mean": 3047.9063803999998,
+          "p50": 3063.0547335,
+          "p95": 3118.558573,
+          "min": 2906.387547,
+          "max": 3134.503205
+        },
+        "empty_api_startup_ms": {
+          "n": 20,
+          "mean": 0.70683525,
+          "p50": 0.702536,
+          "p95": 0.7744719999999999,
+          "min": 0.0,
+          "max": 1.341875
+        },
+        "first_ack_to_working_set_ready_ms": {
+          "n": 20,
+          "mean": 3010.39457605,
+          "p50": 3027.5313690000003,
+          "p95": 3087.359882,
+          "min": 2860.595723,
+          "max": 3104.6762089999997
+        },
+        "full_snapshot_ms": {
+          "n": 20,
+          "mean": 283.2583636,
+          "p50": 269.377938,
+          "p95": 341.34966399999996,
+          "min": 230.089256,
+          "max": 396.54650699999996
+        },
+        "guest_first_minus_warm_ms": {
+          "n": 20,
+          "mean": 2983.6131925,
+          "p50": 3001.148739,
+          "p95": 3054.722531,
+          "min": 2790.241206,
+          "max": 3065.857803
+        },
+        "guest_first_scan_ms": {
+          "n": 20,
+          "mean": 3027.14839115,
+          "p50": 3045.2895,
+          "p95": 3087.038444,
+          "min": 2887.610719,
+          "max": 3104.424675
+        },
+        "guest_warm_scan_ms": {
+          "n": 20,
+          "mean": 43.53519865,
+          "p50": 40.6092295,
+          "p95": 95.333196,
+          "min": 10.599648,
+          "max": 97.369513
+        },
+        "memory_mib": {
+          "n": 20,
+          "mean": 768,
+          "p50": 768.0,
+          "p95": 768,
+          "min": 768,
+          "max": 768
+        },
+        "pause_ms": {
+          "n": 20,
+          "mean": 0.48298105,
+          "p50": 0.4456645,
+          "p95": 0.741478,
+          "min": 0.291976,
+          "max": 1.2064849999999998
+        },
+        "pause_to_first_ack_ms": {
+          "n": 20,
+          "mean": 2185.06507935,
+          "p50": 2182.5123489999996,
+          "p95": 3137.622767,
+          "min": 1234.3312139999998,
+          "max": 3156.976184
+        },
+        "pause_to_working_set_ready_ms": {
+          "n": 20,
+          "mean": 5195.4596554,
+          "p50": 5160.176054,
+          "p95": 6057.817027,
+          "min": 4296.3261600000005,
+          "max": 6094.239965
+        },
+        "profile.build.devices_restore_ms": {
+          "n": 20,
+          "mean": 0.12585945,
+          "p50": 0.097283,
+          "p95": 0.103933,
+          "min": 0.086125,
+          "max": 0.710053
+        },
+        "profile.build.event_loop_registration_ms": {
+          "n": 20,
+          "mean": 0.0034505,
+          "p50": 0.0034035000000000003,
+          "p95": 0.004043,
+          "min": 0.002901,
+          "max": 0.004096
+        },
+        "profile.build.kvm_open_capabilities_ms": {
+          "n": 20,
+          "mean": 0.14027535,
+          "p50": 0.14307799999999998,
+          "p95": 0.160149,
+          "min": 0.116778,
+          "max": 0.17938900000000002
+        },
+        "profile.build.register_memory_slots_ms": {
+          "n": 20,
+          "mean": 0.011986750000000001,
+          "p50": 0.011945500000000001,
+          "p95": 0.017426999999999998,
+          "min": 0.008652,
+          "max": 0.017490000000000002
+        },
+        "profile.build.total_ms": {
+          "n": 20,
+          "mean": 1.3816408,
+          "p50": 1.3914185,
+          "p95": 1.908131,
+          "min": 1.088708,
+          "max": 2.094523
+        },
+        "profile.build.tsc_scaling_ms": {
+          "n": 20,
+          "mean": 0.00449035,
+          "p50": 0.003333,
+          "p95": 0.006549999999999999,
+          "min": 0.00293,
+          "max": 0.015545999999999999
+        },
+        "profile.build.vcpu_state_restore_ms": {
+          "n": 20,
+          "mean": 0.2233032,
+          "p50": 0.22367599999999999,
+          "p95": 0.234249,
+          "min": 0.213633,
+          "max": 0.237694
+        },
+        "profile.build.vcpu_threads_start_ms": {
+          "n": 20,
+          "mean": 0.06769115,
+          "p50": 0.0667725,
+          "p95": 0.081165,
+          "min": 0.056587,
+          "max": 0.091974
+        },
+        "profile.build.vcpus_create_ms": {
+          "n": 20,
+          "mean": 0.4262374,
+          "p50": 0.43472449999999996,
+          "p95": 0.514088,
+          "min": 0.340842,
+          "max": 0.519537
+        },
+        "profile.build.vm_create_ms": {
+          "n": 20,
+          "mean": 0.3669508,
+          "p50": 0.3750015,
+          "p95": 0.497237,
+          "min": 0.21972,
+          "max": 0.919509
+        },
+        "profile.build.vm_irq_clock_restore_ms": {
+          "n": 20,
+          "mean": 0.01131445,
+          "p50": 0.010121000000000002,
+          "p95": 0.015764999999999998,
+          "min": 0.008282999999999999,
+          "max": 0.016484000000000002
+        },
+        "profile.create_snapshot.backing_validation_ms": {
+          "n": 20,
+          "mean": 0.00152965,
+          "p50": 0.00143,
+          "p95": 0.002146,
+          "min": 0.001031,
+          "max": 0.0021720000000000003
+        },
+        "profile.create_snapshot.encode_and_write_ms": {
+          "n": 20,
+          "mean": 0.6164714,
+          "p50": 0.5603969999999999,
+          "p95": 0.910783,
+          "min": 0.372966,
+          "max": 0.950981
+        },
+        "profile.create_snapshot.memory_and_queue_handling_ms": {
+          "n": 20,
+          "mean": 282.0791698,
+          "p50": 268.36448700000005,
+          "p95": 339.71375300000005,
+          "min": 229.318092,
+          "max": 395.322916
+        },
+        "profile.create_snapshot.state_collection_ms": {
+          "n": 20,
+          "mean": 0.3562862,
+          "p50": 0.346535,
+          "p95": 0.42903800000000003,
+          "min": 0.252596,
+          "max": 0.480164
+        },
+        "profile.create_snapshot.total_ms": {
+          "n": 20,
+          "mean": 283.05359885,
+          "p50": 269.17856700000004,
+          "p95": 341.049571,
+          "min": 229.944972,
+          "max": 396.321796
+        },
+        "profile.restore.build_microvm_ms": {
+          "n": 20,
+          "mean": 1.43909375,
+          "p50": 1.4560244999999998,
+          "p95": 1.963598,
+          "min": 1.131197,
+          "max": 2.1775059999999997
+        },
+        "profile.restore.config_and_validation_ms": {
+          "n": 20,
+          "mean": 0.0263098,
+          "p50": 0.025659,
+          "p95": 0.033171,
+          "min": 0.019907,
+          "max": 0.047939999999999997
+        },
+        "profile.restore.guest_ram_mapping_ms": {
+          "n": 20,
+          "mean": 0.0202868,
+          "p50": 0.019319999999999997,
+          "p95": 0.023134000000000002,
+          "min": 0.017904999999999997,
+          "max": 0.029832
+        },
+        "profile.restore.state_file_deserialize_ms": {
+          "n": 20,
+          "mean": 0.2975947,
+          "p50": 0.29163249999999996,
+          "p95": 0.310388,
+          "min": 0.27358,
+          "max": 0.40128199999999997
+        },
+        "profile.restore.total_ms": {
+          "n": 20,
+          "mean": 1.7833714,
+          "p50": 1.7970739999999998,
+          "p95": 2.295359,
+          "min": 1.447952,
+          "max": 2.641089
+        },
+        "profile.save_state.device_state_ms": {
+          "n": 20,
+          "mean": 0.00237745,
+          "p50": 0.0022335,
+          "p95": 0.0032370000000000003,
+          "min": 0.0016040000000000002,
+          "max": 0.0032760000000000003
+        },
+        "profile.save_state.kvm_vm_state_ms": {
+          "n": 20,
+          "mean": 0.0193884,
+          "p50": 0.017897,
+          "p95": 0.030988999999999996,
+          "min": 0.009674,
+          "max": 0.0521
+        },
+        "profile.save_state.total_ms": {
+          "n": 20,
+          "mean": 0.32295965,
+          "p50": 0.31877900000000003,
+          "p95": 0.39809500000000003,
+          "min": 0.228873,
+          "max": 0.429348
+        },
+        "profile.save_state.vcpu_state_ms": {
+          "n": 20,
+          "mean": 0.30087165,
+          "p50": 0.30058749999999995,
+          "p95": 0.36454499999999995,
+          "min": 0.210555,
+          "max": 0.40629400000000004
+        },
+        "profile.snapshot_memory.dump_ram_file_ms": {
+          "n": 20,
+          "mean": 282.0542939,
+          "p50": 268.340562,
+          "p95": 339.687539,
+          "min": 229.29825,
+          "max": 395.29080300000004
+        },
+        "profile.snapshot_memory.total_ms": {
+          "n": 20,
+          "mean": 282.05512075,
+          "p50": 268.3413035,
+          "p95": 339.68850699999996,
+          "min": 229.298733,
+          "max": 395.29204699999997
+        },
+        "profile.vm_common.eventfd_and_common_fields_ms": {
+          "n": 20,
+          "mean": 0.0105866,
+          "p50": 0.009912,
+          "p95": 0.016392000000000004,
+          "min": 0.008638,
+          "max": 0.016561
+        },
+        "profile.vm_common.kvm_create_vm_ioctl_ms": {
+          "n": 20,
+          "mean": 0.31078825,
+          "p50": 0.32294900000000004,
+          "p95": 0.44106,
+          "min": 0.17025,
+          "max": 0.850209
+        },
+        "profile.vm_common.total_ms": {
+          "n": 20,
+          "mean": 0.3215723,
+          "p50": 0.332484,
+          "p95": 0.451778,
+          "min": 0.17904299999999998,
+          "max": 0.866725
+        },
+        "profile.vm_new.arch_fields_ms": {
+          "n": 20,
+          "mean": 0.00016625,
+          "p50": 0.00016399999999999997,
+          "p95": 0.000186,
+          "min": 0.00014399999999999998,
+          "max": 0.000216
+        },
+        "profile.vm_new.create_common_ms": {
+          "n": 20,
+          "mean": 0.3355185,
+          "p50": 0.3457125,
+          "p95": 0.468053,
+          "min": 0.19148099999999998,
+          "max": 0.883149
+        },
+        "profile.vm_new.msr_save_list_ms": {
+          "n": 20,
+          "mean": 0.0075514,
+          "p50": 0.0076100000000000004,
+          "p95": 0.007882,
+          "min": 0.006842,
+          "max": 0.008002
+        },
+        "profile.vm_new.set_tss_address_ms": {
+          "n": 20,
+          "mean": 0.00153765,
+          "p50": 0.00068,
+          "p95": 0.004038,
+          "min": 0.000542,
+          "max": 0.004517
+        },
+        "profile.vm_new.total_ms": {
+          "n": 20,
+          "mean": 0.35634085,
+          "p50": 0.364502,
+          "p95": 0.486799,
+          "min": 0.20919100000000002,
+          "max": 0.90876
+        },
+        "profile.vm_new.xsave_capability_ms": {
+          "n": 20,
+          "mean": 0.01125165,
+          "p50": 0.0098965,
+          "p95": 0.014277000000000001,
+          "min": 0.009461,
+          "max": 0.01509
+        },
+        "ram_anon_huge_mib": {
+          "n": 20,
+          "mean": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "ram_anonymous_mib": {
+          "n": 20,
+          "mean": 1.7732421875,
+          "p50": 1.771484375,
+          "p95": 1.81640625,
+          "min": 1.73828125,
+          "max": 1.828125
+        },
+        "ram_private_mib": {
+          "n": 20,
+          "mean": 689.58515625,
+          "p50": 689.11328125,
+          "p95": 690.70703125,
+          "min": 688.890625,
+          "max": 690.7734375
+        },
+        "ram_rss_mib": {
+          "n": 20,
+          "mean": 689.58515625,
+          "p50": 689.11328125,
+          "p95": 690.70703125,
+          "min": 688.890625,
+          "max": 690.7734375
+        },
+        "remote_received_to_first_ack_ms": {
+          "n": 20,
+          "mean": 29.66614094999995,
+          "p50": 33.51376449999993,
+          "p95": 43.79860300000012,
+          "min": 0.006351999999955296,
+          "max": 44.34700499999989
+        },
+        "source_cleanup_ms": {
+          "n": 20,
+          "mean": 200.95977655,
+          "p50": 204.8757175,
+          "p95": 214.913532,
+          "min": 163.638231,
+          "max": 257.126763
+        },
+        "working_set_mib": {
+          "n": 20,
+          "mean": 681.2890625,
+          "p50": 681.2890625,
+          "p95": 681.2890625,
+          "min": 681.2890625,
+          "max": 681.2890625
+        },
+        "working_set_ratio": {
+          "n": 20,
+          "mean": 0.887095,
+          "p50": 0.887095,
+          "p95": 0.887095,
+          "min": 0.887095,
+          "max": 0.887095
+        }
+      },
+      "additivity": {
+        "component_names": [
+          "pause_ms",
+          "full_snapshot_ms",
+          "confirmed_transfer_ms",
+          "remote_received_to_first_ack_ms",
+          "first_ack_to_working_set_ready_ms"
+        ],
+        "sum_component_means_ms": 5195.4596554,
+        "total_mean_ms": 5195.4596554,
+        "sum_component_medians_ms": 5208.3126755,
+        "total_median_ms": 5160.176054,
+        "max_absolute_paired_round_residual_ms": 9.094947017729282e-13
+      },
+      "report_sha256": "a87cd1a8032033fc4784263c2875dc435f43ea024e805703f59e8b30e9aa4aa2"
+    },
+    {
+      "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261020T030552Z-s1t4srp6/migration-1024m-1792465934594267489/report.json",
+      "memory_mib": 1024,
+      "trace_ept": false,
+      "profile_restore": true,
+      "cpu_restore": "normal semantic CPU snapshot with explicit FC_EXACT_TSC=1 public KVM TSC-offset restoration and retention of the incoming ordered MSR save list",
+      "iterations": 20,
+      "warmup": 3,
+      "measured_rounds": 20,
+      "direction_counts": {
+        "A->B": 10,
+        "B->A": 10
+      },
+      "state_bytes_distribution": {
+        "13659": 20
+      },
+      "distinct_destination_kvm_processes": 20,
+      "distinct_destination_ram_hvas": 20,
+      "empty_api_startup_nonzero_ms": {
+        "n": 19,
+        "mean": 0.8125443157894737,
+        "p50": 0.7251839999999999,
+        "p95": 1.659433,
+        "min": 0.655949,
+        "max": 1.659433
+      },
+      "profile_scopes_measured": {
+        "build": 20,
+        "create_snapshot": 20,
+        "restore": 20,
+        "save_state": 20,
+        "snapshot_memory": 20,
+        "vm_common": 20,
+        "vm_new": 20
+      },
+      "profile_scopes_all_rounds": {
+        "build": 23,
+        "create_snapshot": 23,
+        "restore": 23,
+        "save_state": 23,
+        "snapshot_memory": 23,
+        "vm_common": 23,
+        "vm_new": 23
+      },
+      "profile_records_per_measured_round": {
+        "7": 20
+      },
+      "duplicate_profile_scopes": [],
+      "by_direction": {
+        "A->B": {
+          "n": 10,
+          "metrics": {
+            "confirmed_transfer_ms": {
+              "n": 10,
+              "mean": 1356.5013966,
+              "p50": 1351.877877,
+              "p95": 1478.362336,
+              "min": 1298.587199,
+              "max": 1478.362336
+            },
+            "guest_first_scan_ms": {
+              "n": 10,
+              "mean": 4141.9488592,
+              "p50": 4172.604991,
+              "p95": 4196.813206,
+              "min": 3992.876564,
+              "max": 4196.813206
+            },
+            "pause_to_first_ack_ms": {
+              "n": 10,
+              "mean": 1747.3574124,
+              "p50": 1735.1287040000002,
+              "p95": 1859.275398,
+              "min": 1681.524035,
+              "max": 1859.275398
+            },
+            "pause_to_working_set_ready_ms": {
+              "n": 10,
+              "mean": 5890.0375422,
+              "p50": 5887.460229,
+              "p95": 6053.304937,
+              "min": 5731.76095,
+              "max": 6053.304937
+            }
+          }
+        },
+        "B->A": {
+          "n": 10,
+          "metrics": {
+            "confirmed_transfer_ms": {
+              "n": 10,
+              "mean": 3473.7836533,
+              "p50": 3494.507556,
+              "p95": 3562.3103229999997,
+              "min": 3372.784683,
+              "max": 3562.3103229999997
+            },
+            "guest_first_scan_ms": {
+              "n": 10,
+              "mean": 3978.3996449,
+              "p50": 4047.2475495,
+              "p95": 4139.285888,
+              "min": 3643.001789,
+              "max": 4139.285888
+            },
+            "pause_to_first_ack_ms": {
+              "n": 10,
+              "mean": 3878.7765595,
+              "p50": 3884.0353305,
+              "p95": 3994.666906,
+              "min": 3779.584279,
+              "max": 3994.666906
+            },
+            "pause_to_working_set_ready_ms": {
+              "n": 10,
+              "mean": 7823.3969483,
+              "p50": 7841.5994695,
+              "p95": 7998.121586,
+              "min": 7600.2233080000005,
+              "max": 7998.121586
+            }
+          }
+        }
+      },
+      "cpu_state_contract": {
+        "signature_records": 40,
+        "phases": {
+          "restore": 20,
+          "save": 20
+        },
+        "msr_count_distribution": {
+          "190": 40
+        },
+        "ordered_msr_indices_hash_distribution": {
+          "20655d3b1df6c641": 40
+        },
+        "cr3_distribution": {
+          "74383366": 40
+        }
+      },
+      "validation": {
+        "migrations": 23,
+        "full_ram_bytes_per_migration": 1073741824,
+        "total_ram_bytes_transferred": 24696061952,
+        "semantic_state_bytes": [
+          13627,
+          13659
+        ],
+        "one_initial_boot": true,
+        "guest_instance_preserved": true,
+        "retained_data_errors": 0,
+        "working_set_bytes": 973209600,
+        "working_set_ratio": 0.906372,
+        "new_destination_kvm_per_restore": true,
+        "no_shared_guest_ram": true,
+        "guest_cr3_preserved_each_restore": true,
+        "ordered_msr_count_and_hash_preserved_each_restore": true,
+        "initial_ordered_msr_save_list_preserved_all_migrations": true
+      },
+      "metrics": {
+        "additivity_residual_ms": {
+          "n": 20,
+          "mean": 4.5474735088646414e-14,
+          "p50": 0.0,
+          "p95": 9.094947017729282e-13,
+          "min": -9.094947017729282e-13,
+          "max": 9.094947017729282e-13
+        },
+        "confirmed_transfer_ms": {
+          "n": 20,
+          "mean": 2415.14252495,
+          "p50": 2425.5735095,
+          "p95": 3541.2303540000003,
+          "min": 1298.587199,
+          "max": 3562.3103229999997
+        },
+        "destination_paused_validation_ms": {
+          "n": 20,
+          "mean": 0.0834907,
+          "p50": 0.0526495,
+          "p95": 0.07363,
+          "min": 0.045439,
+          "max": 0.654325
+        },
+        "destination_restore_api_ms": {
+          "n": 20,
+          "mean": 2.06044455,
+          "p50": 1.9409285,
+          "p95": 2.762187,
+          "min": 1.5881610000000002,
+          "max": 3.2236089999999997
+        },
+        "destination_resume_api_ms": {
+          "n": 20,
+          "mean": 0.22147655,
+          "p50": 0.13818,
+          "p95": 0.255596,
+          "min": 0.124622,
+          "max": 1.2065789999999998
+        },
+        "destination_resume_to_first_ack_ms": {
+          "n": 20,
+          "mean": 19.15165825,
+          "p50": 11.925941,
+          "p95": 32.805833,
+          "min": 7.901954,
+          "max": 34.847713000000006
+        },
+        "destination_resume_to_ready_ms": {
+          "n": 20,
+          "mean": 4079.7704504499998,
+          "p50": 4117.7112925,
+          "p95": 4226.094480000001,
+          "min": 3650.985117,
+          "max": 4229.684155
+        },
+        "empty_api_startup_ms": {
+          "n": 20,
+          "mean": 0.7719171,
+          "p50": 0.724371,
+          "p95": 1.418578,
+          "min": 0.0,
+          "max": 1.659433
+        },
+        "first_ack_to_working_set_ready_ms": {
+          "n": 20,
+          "mean": 4043.6502593,
+          "p50": 4074.5773179999997,
+          "p95": 4191.307852,
+          "min": 3605.556402,
+          "max": 4197.082038
+        },
+        "full_snapshot_ms": {
+          "n": 20,
+          "mean": 361.8557259,
+          "p50": 351.3847955,
+          "p95": 409.87882,
+          "min": 332.82049,
+          "max": 434.309597
+        },
+        "guest_first_minus_warm_ms": {
+          "n": 20,
+          "mean": 4004.42136225,
+          "p50": 4048.98024,
+          "p95": 4137.083879,
+          "min": 3562.025227,
+          "max": 4146.699191
+        },
+        "guest_first_scan_ms": {
+          "n": 20,
+          "mean": 4060.17425205,
+          "p50": 4109.2264815,
+          "p95": 4191.209213,
+          "min": 3643.001789,
+          "max": 4196.813206
+        },
+        "guest_warm_scan_ms": {
+          "n": 20,
+          "mean": 55.7528898,
+          "p50": 51.925606,
+          "p95": 99.917426,
+          "min": 17.154426,
+          "max": 112.693985
+        },
+        "memory_mib": {
+          "n": 20,
+          "mean": 1024,
+          "p50": 1024.0,
+          "p95": 1024,
+          "min": 1024,
+          "max": 1024
+        },
+        "pause_ms": {
+          "n": 20,
+          "mean": 0.5101413,
+          "p50": 0.4927975,
+          "p95": 0.599911,
+          "min": 0.26005900000000004,
+          "max": 1.425762
+        },
+        "pause_to_first_ack_ms": {
+          "n": 20,
+          "mean": 2813.06698595,
+          "p50": 2819.4298385,
+          "p95": 3969.205034,
+          "min": 1681.524035,
+          "max": 3994.666906
+        },
+        "pause_to_working_set_ready_ms": {
+          "n": 20,
+          "mean": 6856.71724525,
+          "p50": 6826.764122500001,
+          "p95": 7929.50158,
+          "min": 5731.76095,
+          "max": 7998.121586
+        },
+        "profile.build.devices_restore_ms": {
+          "n": 20,
+          "mean": 0.12631475,
+          "p50": 0.09393599999999999,
+          "p95": 0.112018,
+          "min": 0.085485,
+          "max": 0.723723
+        },
+        "profile.build.event_loop_registration_ms": {
+          "n": 20,
+          "mean": 0.00372445,
+          "p50": 0.003597,
+          "p95": 0.004495,
+          "min": 0.003193,
+          "max": 0.0045320000000000004
+        },
+        "profile.build.kvm_open_capabilities_ms": {
+          "n": 20,
+          "mean": 0.14187929999999999,
+          "p50": 0.13899049999999996,
+          "p95": 0.16556700000000002,
+          "min": 0.118022,
+          "max": 0.174083
+        },
+        "profile.build.register_memory_slots_ms": {
+          "n": 20,
+          "mean": 0.01251035,
+          "p50": 0.0118035,
+          "p95": 0.017169,
+          "min": 0.00923,
+          "max": 0.01771
+        },
+        "profile.build.total_ms": {
+          "n": 20,
+          "mean": 1.42620375,
+          "p50": 1.274423,
+          "p95": 2.068924,
+          "min": 1.0809900000000001,
+          "max": 2.605722
+        },
+        "profile.build.tsc_scaling_ms": {
+          "n": 20,
+          "mean": 0.0041326,
+          "p50": 0.003499,
+          "p95": 0.0062380000000000005,
+          "min": 0.002797,
+          "max": 0.006278
+        },
+        "profile.build.vcpu_state_restore_ms": {
+          "n": 20,
+          "mean": 0.2821381,
+          "p50": 0.2256765,
+          "p95": 0.762548,
+          "min": 0.200369,
+          "max": 0.853367
+        },
+        "profile.build.vcpu_threads_start_ms": {
+          "n": 20,
+          "mean": 0.06859315,
+          "p50": 0.0667705,
+          "p95": 0.088766,
+          "min": 0.057582999999999995,
+          "max": 0.09201599999999999
+        },
+        "profile.build.vcpus_create_ms": {
+          "n": 20,
+          "mean": 0.42930875,
+          "p50": 0.41516600000000004,
+          "p95": 0.5745399999999999,
+          "min": 0.34908999999999996,
+          "max": 0.615423
+        },
+        "profile.build.vm_create_ms": {
+          "n": 20,
+          "mean": 0.344878,
+          "p50": 0.29730350000000005,
+          "p95": 0.45248,
+          "min": 0.231676,
+          "max": 0.471412
+        },
+        "profile.build.vm_irq_clock_restore_ms": {
+          "n": 20,
+          "mean": 0.0126414,
+          "p50": 0.012903000000000001,
+          "p95": 0.015512,
+          "min": 0.008717,
+          "max": 0.017013
+        },
+        "profile.create_snapshot.backing_validation_ms": {
+          "n": 20,
+          "mean": 0.00176445,
+          "p50": 0.001801,
+          "p95": 0.0022010000000000003,
+          "min": 0.0012020000000000002,
+          "max": 0.0022299999999999998
+        },
+        "profile.create_snapshot.encode_and_write_ms": {
+          "n": 20,
+          "mean": 0.7844247,
+          "p50": 0.836932,
+          "p95": 0.9427129999999999,
+          "min": 0.454163,
+          "max": 0.944273
+        },
+        "profile.create_snapshot.memory_and_queue_handling_ms": {
+          "n": 20,
+          "mean": 360.46987755000004,
+          "p50": 350.17528200000004,
+          "p95": 408.327972,
+          "min": 331.72456700000004,
+          "max": 432.847511
+        },
+        "profile.create_snapshot.state_collection_ms": {
+          "n": 20,
+          "mean": 0.3696522,
+          "p50": 0.3708285,
+          "p95": 0.458281,
+          "min": 0.27484299999999995,
+          "max": 0.45856
+        },
+        "profile.create_snapshot.total_ms": {
+          "n": 20,
+          "mean": 361.62589015000003,
+          "p50": 351.1744135,
+          "p95": 409.607887,
+          "min": 332.63891099999995,
+          "max": 434.12134000000003
+        },
+        "profile.restore.build_microvm_ms": {
+          "n": 20,
+          "mean": 1.48124065,
+          "p50": 1.319842,
+          "p95": 2.135589,
+          "min": 1.127954,
+          "max": 2.6839429999999997
+        },
+        "profile.restore.config_and_validation_ms": {
+          "n": 20,
+          "mean": 0.0252898,
+          "p50": 0.023321500000000002,
+          "p95": 0.038418,
+          "min": 0.018286999999999998,
+          "max": 0.039598999999999995
+        },
+        "profile.restore.guest_ram_mapping_ms": {
+          "n": 20,
+          "mean": 0.02245295,
+          "p50": 0.020962,
+          "p95": 0.03223,
+          "min": 0.015401999999999999,
+          "max": 0.040957
+        },
+        "profile.restore.state_file_deserialize_ms": {
+          "n": 20,
+          "mean": 0.2867091,
+          "p50": 0.2855455,
+          "p95": 0.314509,
+          "min": 0.25921,
+          "max": 0.31537099999999996
+        },
+        "profile.restore.total_ms": {
+          "n": 20,
+          "mean": 1.8157888,
+          "p50": 1.6554895000000003,
+          "p95": 2.456019,
+          "min": 1.4298170000000001,
+          "max": 3.0282139999999997
+        },
+        "profile.save_state.device_state_ms": {
+          "n": 20,
+          "mean": 0.00269685,
+          "p50": 0.0027774999999999996,
+          "p95": 0.003403,
+          "min": 0.00202,
+          "max": 0.003434
+        },
+        "profile.save_state.kvm_vm_state_ms": {
+          "n": 20,
+          "mean": 0.02266845,
+          "p50": 0.019264999999999997,
+          "p95": 0.045847,
+          "min": 0.011814,
+          "max": 0.061435
+        },
+        "profile.save_state.total_ms": {
+          "n": 20,
+          "mean": 0.32420725,
+          "p50": 0.32702149999999996,
+          "p95": 0.40621999999999997,
+          "min": 0.24937700000000002,
+          "max": 0.4107
+        },
+        "profile.save_state.vcpu_state_ms": {
+          "n": 20,
+          "mean": 0.29840085,
+          "p50": 0.29103599999999996,
+          "p95": 0.382988,
+          "min": 0.224521,
+          "max": 0.386743
+        },
+        "profile.snapshot_memory.dump_ram_file_ms": {
+          "n": 20,
+          "mean": 360.44387575,
+          "p50": 350.14897649999995,
+          "p95": 408.29828499999996,
+          "min": 331.70244,
+          "max": 432.817178
+        },
+        "profile.snapshot_memory.total_ms": {
+          "n": 20,
+          "mean": 360.4448163,
+          "p50": 350.1500645,
+          "p95": 408.299077,
+          "min": 331.70300299999997,
+          "max": 432.818505
+        },
+        "profile.vm_common.eventfd_and_common_fields_ms": {
+          "n": 20,
+          "mean": 0.0104936,
+          "p50": 0.0103065,
+          "p95": 0.011696999999999999,
+          "min": 0.008258,
+          "max": 0.01622
+        },
+        "profile.vm_common.kvm_create_vm_ioctl_ms": {
+          "n": 20,
+          "mean": 0.2860228,
+          "p50": 0.241908,
+          "p95": 0.387513,
+          "min": 0.184018,
+          "max": 0.405966
+        },
+        "profile.vm_common.total_ms": {
+          "n": 20,
+          "mean": 0.29676885,
+          "p50": 0.251254,
+          "p95": 0.398322,
+          "min": 0.19266399999999997,
+          "max": 0.416495
+        },
+        "profile.vm_new.arch_fields_ms": {
+          "n": 20,
+          "mean": 0.00018025,
+          "p50": 0.000161,
+          "p95": 0.00027899999999999995,
+          "min": 0.000129,
+          "max": 0.000442
+        },
+        "profile.vm_new.create_common_ms": {
+          "n": 20,
+          "mean": 0.3114887,
+          "p50": 0.2634845,
+          "p95": 0.41215799999999997,
+          "min": 0.205086,
+          "max": 0.430816
+        },
+        "profile.vm_new.msr_save_list_ms": {
+          "n": 20,
+          "mean": 0.00755565,
+          "p50": 0.0076035,
+          "p95": 0.008289,
+          "min": 0.006593,
+          "max": 0.008515
+        },
+        "profile.vm_new.set_tss_address_ms": {
+          "n": 20,
+          "mean": 0.00187385,
+          "p50": 0.000839,
+          "p95": 0.004807,
+          "min": 0.000587,
+          "max": 0.005078999999999999
+        },
+        "profile.vm_new.total_ms": {
+          "n": 20,
+          "mean": 0.33444115,
+          "p50": 0.287783,
+          "p95": 0.441679,
+          "min": 0.222271,
+          "max": 0.460679
+        },
+        "profile.vm_new.xsave_capability_ms": {
+          "n": 20,
+          "mean": 0.01300045,
+          "p50": 0.012822,
+          "p95": 0.017495,
+          "min": 0.008688000000000001,
+          "max": 0.022802999999999997
+        },
+        "ram_anon_huge_mib": {
+          "n": 20,
+          "mean": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "ram_anonymous_mib": {
+          "n": 20,
+          "mean": 2.2533203125,
+          "p50": 2.240234375,
+          "p95": 2.31640625,
+          "min": 2.22265625,
+          "max": 2.421875
+        },
+        "ram_private_mib": {
+          "n": 20,
+          "mean": 936.7826171875,
+          "p50": 936.3671875,
+          "p95": 938.2109375,
+          "min": 936.2421875,
+          "max": 938.3984375
+        },
+        "ram_rss_mib": {
+          "n": 20,
+          "mean": 936.7826171875,
+          "p50": 936.3671875,
+          "p95": 938.2109375,
+          "min": 936.2421875,
+          "max": 938.3984375
+        },
+        "remote_received_to_first_ack_ms": {
+          "n": 20,
+          "mean": 35.55859380000005,
+          "p50": 37.40423250000004,
+          "p95": 43.49947800000012,
+          "min": 0.14249500000011175,
+          "max": 43.99069800000032
+        },
+        "source_cleanup_ms": {
+          "n": 20,
+          "mean": 230.79225675,
+          "p50": 236.8328425,
+          "p95": 265.126554,
+          "min": 176.816216,
+          "max": 285.703756
+        },
+        "working_set_mib": {
+          "n": 20,
+          "mean": 928.125,
+          "p50": 928.125,
+          "p95": 928.125,
+          "min": 928.125,
+          "max": 928.125
+        },
+        "working_set_ratio": {
+          "n": 20,
+          "mean": 0.906372,
+          "p50": 0.906372,
+          "p95": 0.906372,
+          "min": 0.906372,
+          "max": 0.906372
+        }
+      },
+      "additivity": {
+        "component_names": [
+          "pause_ms",
+          "full_snapshot_ms",
+          "confirmed_transfer_ms",
+          "remote_received_to_first_ack_ms",
+          "first_ack_to_working_set_ready_ms"
+        ],
+        "sum_component_means_ms": 6856.71724525,
+        "total_mean_ms": 6856.71724525,
+        "sum_component_medians_ms": 6889.432653,
+        "total_median_ms": 6826.764122500001,
+        "max_absolute_paired_round_residual_ms": 9.094947017729282e-13
+      },
+      "report_sha256": "0c51ee9f237c072e3e7b875e3dc04cd9ca4a779fcd6c2618f737ce3b4913e7e1"
+    },
+    {
+      "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261020T030552Z-s1t4srp6/migration-1536m-1792466107691430222/report.json",
+      "memory_mib": 1536,
+      "trace_ept": false,
+      "profile_restore": true,
+      "cpu_restore": "normal semantic CPU snapshot with explicit FC_EXACT_TSC=1 public KVM TSC-offset restoration and retention of the incoming ordered MSR save list",
+      "iterations": 20,
+      "warmup": 3,
+      "measured_rounds": 20,
+      "direction_counts": {
+        "A->B": 10,
+        "B->A": 10
+      },
+      "state_bytes_distribution": {
+        "13659": 20
+      },
+      "distinct_destination_kvm_processes": 20,
+      "distinct_destination_ram_hvas": 20,
+      "empty_api_startup_nonzero_ms": {
+        "n": 19,
+        "mean": 0.7601403684210526,
+        "p50": 0.733939,
+        "p95": 1.067488,
+        "min": 0.660571,
+        "max": 1.067488
+      },
+      "profile_scopes_measured": {
+        "build": 20,
+        "create_snapshot": 20,
+        "restore": 20,
+        "save_state": 20,
+        "snapshot_memory": 20,
+        "vm_common": 20,
+        "vm_new": 20
+      },
+      "profile_scopes_all_rounds": {
+        "build": 23,
+        "create_snapshot": 23,
+        "restore": 23,
+        "save_state": 23,
+        "snapshot_memory": 23,
+        "vm_common": 23,
+        "vm_new": 23
+      },
+      "profile_records_per_measured_round": {
+        "7": 20
+      },
+      "duplicate_profile_scopes": [],
+      "by_direction": {
+        "A->B": {
+          "n": 10,
+          "metrics": {
+            "confirmed_transfer_ms": {
+              "n": 10,
+              "mean": 1958.8296633,
+              "p50": 1938.1978104999998,
+              "p95": 2046.678852,
+              "min": 1899.2613769999998,
+              "max": 2046.678852
+            },
+            "guest_first_scan_ms": {
+              "n": 10,
+              "mean": 6166.2838039,
+              "p50": 6232.008943000001,
+              "p95": 6309.849659,
+              "min": 5860.099095,
+              "max": 6309.849659
+            },
+            "pause_to_first_ack_ms": {
+              "n": 10,
+              "mean": 2511.9893168,
+              "p50": 2508.2688285000004,
+              "p95": 2588.871453,
+              "min": 2457.280468,
+              "max": 2588.871453
+            },
+            "pause_to_working_set_ready_ms": {
+              "n": 10,
+              "mean": 8678.844046,
+              "p50": 8740.977048,
+              "p95": 8863.378417,
+              "min": 8400.989048000001,
+              "max": 8863.378417
+            }
+          }
+        },
+        "B->A": {
+          "n": 10,
+          "metrics": {
+            "confirmed_transfer_ms": {
+              "n": 10,
+              "mean": 5209.7531989,
+              "p50": 5202.138596000001,
+              "p95": 5343.812929000001,
+              "min": 5062.730569,
+              "max": 5343.812929000001
+            },
+            "guest_first_scan_ms": {
+              "n": 10,
+              "mean": 5948.8290449999995,
+              "p50": 6016.052204,
+              "p95": 6109.843951,
+              "min": 5530.315215,
+              "max": 6109.843951
+            },
+            "pause_to_first_ack_ms": {
+              "n": 10,
+              "mean": 5802.4207619,
+              "p50": 5818.6320005,
+              "p95": 5896.2701449999995,
+              "min": 5669.261232,
+              "max": 5896.2701449999995
+            },
+            "pause_to_working_set_ready_ms": {
+              "n": 10,
+              "mean": 11715.6474244,
+              "p50": 11717.1193095,
+              "p95": 11968.267483,
+              "min": 11197.155176999999,
+              "max": 11968.267483
+            }
+          }
+        }
+      },
+      "cpu_state_contract": {
+        "signature_records": 40,
+        "phases": {
+          "restore": 20,
+          "save": 20
+        },
+        "msr_count_distribution": {
+          "190": 40
+        },
+        "ordered_msr_indices_hash_distribution": {
+          "20655d3b1df6c641": 40
+        },
+        "cr3_distribution": {
+          "74031110": 40
+        }
+      },
+      "validation": {
+        "migrations": 23,
+        "full_ram_bytes_per_migration": 1610612736,
+        "total_ram_bytes_transferred": 37044092928,
+        "semantic_state_bytes": [
+          13627,
+          13659
+        ],
+        "one_initial_boot": true,
+        "guest_instance_preserved": true,
+        "retained_data_errors": 0,
+        "working_set_bytes": 1492631552,
+        "working_set_ratio": 0.926748,
+        "new_destination_kvm_per_restore": true,
+        "no_shared_guest_ram": true,
+        "guest_cr3_preserved_each_restore": true,
+        "ordered_msr_count_and_hash_preserved_each_restore": true,
+        "initial_ordered_msr_save_list_preserved_all_migrations": true
+      },
+      "metrics": {
+        "additivity_residual_ms": {
+          "n": 20,
+          "mean": 2.7284841053187846e-13,
+          "p50": 0.0,
+          "p95": 1.8189894035458565e-12,
+          "min": -1.8189894035458565e-12,
+          "max": 1.8189894035458565e-12
+        },
+        "confirmed_transfer_ms": {
+          "n": 20,
+          "mean": 3584.2914311,
+          "p50": 3554.7047105,
+          "p95": 5310.503599,
+          "min": 1899.2613769999998,
+          "max": 5343.812929000001
+        },
+        "destination_paused_validation_ms": {
+          "n": 20,
+          "mean": 0.0545793,
+          "p50": 0.0526075,
+          "p95": 0.066719,
+          "min": 0.046353,
+          "max": 0.075394
+        },
+        "destination_restore_api_ms": {
+          "n": 20,
+          "mean": 2.01617705,
+          "p50": 1.9775105000000002,
+          "p95": 2.27862,
+          "min": 1.71677,
+          "max": 2.646149
+        },
+        "destination_resume_api_ms": {
+          "n": 20,
+          "mean": 0.1708214,
+          "p50": 0.16589700000000002,
+          "p95": 0.230926,
+          "min": 0.12229000000000001,
+          "max": 0.237264
+        },
+        "destination_resume_to_first_ack_ms": {
+          "n": 20,
+          "mean": 20.51283725,
+          "p50": 18.598391,
+          "p95": 40.423614,
+          "min": 7.519983,
+          "max": 42.403785000000006
+        },
+        "destination_resume_to_ready_ms": {
+          "n": 20,
+          "mean": 6078.19368885,
+          "p50": 6077.5040385,
+          "p95": 6324.980416,
+          "min": 5537.825057,
+          "max": 6339.967228
+        },
+        "empty_api_startup_ms": {
+          "n": 20,
+          "mean": 0.72213335,
+          "p50": 0.732635,
+          "p95": 0.885885,
+          "min": 0.0,
+          "max": 1.067488
+        },
+        "first_ack_to_working_set_ready_ms": {
+          "n": 20,
+          "mean": 6040.04069585,
+          "p50": 6034.185718499999,
+          "p95": 6293.859302999999,
+          "min": 5499.626504999999,
+          "max": 6310.004253999999
+        },
+        "full_snapshot_ms": {
+          "n": 20,
+          "mean": 536.40445025,
+          "p50": 525.13314,
+          "p95": 616.089735,
+          "min": 493.732204,
+          "max": 627.3166239999999
+        },
+        "guest_first_minus_warm_ms": {
+          "n": 20,
+          "mean": 5941.17679135,
+          "p50": 5966.9148405,
+          "p95": 6198.241138,
+          "min": 5455.771823,
+          "max": 6205.068534
+        },
+        "guest_first_scan_ms": {
+          "n": 20,
+          "mean": 6057.55642445,
+          "p50": 6068.8275615,
+          "p95": 6292.770642,
+          "min": 5530.315215,
+          "max": 6309.849659
+        },
+        "guest_warm_scan_ms": {
+          "n": 20,
+          "mean": 116.3796331,
+          "p50": 93.386634,
+          "p95": 203.615514,
+          "min": 23.474313,
+          "max": 285.01493
+        },
+        "memory_mib": {
+          "n": 20,
+          "mean": 1536,
+          "p50": 1536.0,
+          "p95": 1536,
+          "min": 1536,
+          "max": 1536
+        },
+        "pause_ms": {
+          "n": 20,
+          "mean": 2.0470472,
+          "p50": 0.5867065,
+          "p95": 2.5897550000000003,
+          "min": 0.239352,
+          "max": 26.063713
+        },
+        "pause_to_first_ack_ms": {
+          "n": 20,
+          "mean": 4157.20503935,
+          "p50": 4129.0663425,
+          "p95": 5892.032346,
+          "min": 2457.280468,
+          "max": 5896.2701449999995
+        },
+        "pause_to_working_set_ready_ms": {
+          "n": 20,
+          "mean": 10197.2457352,
+          "p50": 10030.266797,
+          "p95": 11925.400119999998,
+          "min": 8400.989048000001,
+          "max": 11968.267483
+        },
+        "profile.build.devices_restore_ms": {
+          "n": 20,
+          "mean": 0.0980374,
+          "p50": 0.097748,
+          "p95": 0.111022,
+          "min": 0.09058100000000001,
+          "max": 0.11574499999999999
+        },
+        "profile.build.event_loop_registration_ms": {
+          "n": 20,
+          "mean": 0.0034979,
+          "p50": 0.0034385,
+          "p95": 0.004089000000000001,
+          "min": 0.00302,
+          "max": 0.004115000000000001
+        },
+        "profile.build.kvm_open_capabilities_ms": {
+          "n": 20,
+          "mean": 0.15297195,
+          "p50": 0.1553115,
+          "p95": 0.182461,
+          "min": 0.129156,
+          "max": 0.18384
+        },
+        "profile.build.register_memory_slots_ms": {
+          "n": 20,
+          "mean": 0.01277885,
+          "p50": 0.012362,
+          "p95": 0.019233999999999998,
+          "min": 0.008442999999999999,
+          "max": 0.023604999999999998
+        },
+        "profile.build.total_ms": {
+          "n": 20,
+          "mean": 1.3803884499999999,
+          "p50": 1.375664,
+          "p95": 1.5669819999999999,
+          "min": 1.185901,
+          "max": 1.5707010000000001
+        },
+        "profile.build.tsc_scaling_ms": {
+          "n": 20,
+          "mean": 0.00457025,
+          "p50": 0.0036795,
+          "p95": 0.006291000000000001,
+          "min": 0.003078,
+          "max": 0.006479
+        },
+        "profile.build.vcpu_state_restore_ms": {
+          "n": 20,
+          "mean": 0.23056145,
+          "p50": 0.22905999999999999,
+          "p95": 0.24346700000000002,
+          "min": 0.218347,
+          "max": 0.252075
+        },
+        "profile.build.vcpu_threads_start_ms": {
+          "n": 20,
+          "mean": 0.0683488,
+          "p50": 0.06752150000000001,
+          "p95": 0.076223,
+          "min": 0.05973,
+          "max": 0.085636
+        },
+        "profile.build.vcpus_create_ms": {
+          "n": 20,
+          "mean": 0.43863005,
+          "p50": 0.45210300000000003,
+          "p95": 0.5161319999999999,
+          "min": 0.34798,
+          "max": 0.520829
+        },
+        "profile.build.vm_create_ms": {
+          "n": 20,
+          "mean": 0.35640435,
+          "p50": 0.35772099999999996,
+          "p95": 0.435958,
+          "min": 0.252924,
+          "max": 0.45176
+        },
+        "profile.build.vm_irq_clock_restore_ms": {
+          "n": 20,
+          "mean": 0.01450765,
+          "p50": 0.014634999999999999,
+          "p95": 0.018638000000000002,
+          "min": 0.008811999999999999,
+          "max": 0.022730999999999998
+        },
+        "profile.create_snapshot.backing_validation_ms": {
+          "n": 20,
+          "mean": 0.00205735,
+          "p50": 0.0021215,
+          "p95": 0.002308,
+          "min": 0.000638,
+          "max": 0.00244
+        },
+        "profile.create_snapshot.encode_and_write_ms": {
+          "n": 20,
+          "mean": 0.9067026499999999,
+          "p50": 0.900705,
+          "p95": 0.94494,
+          "min": 0.8624109999999999,
+          "max": 0.967943
+        },
+        "profile.create_snapshot.memory_and_queue_handling_ms": {
+          "n": 20,
+          "mean": 534.81182955,
+          "p50": 523.6274615,
+          "p95": 614.401281,
+          "min": 492.116667,
+          "max": 625.613827
+        },
+        "profile.create_snapshot.state_collection_ms": {
+          "n": 20,
+          "mean": 0.43057145,
+          "p50": 0.43354349999999997,
+          "p95": 0.49150299999999997,
+          "min": 0.337834,
+          "max": 0.49440599999999996
+        },
+        "profile.create_snapshot.total_ms": {
+          "n": 20,
+          "mean": 536.1512714,
+          "p50": 524.940308,
+          "p95": 615.8324329999999,
+          "min": 493.485467,
+          "max": 627.047161
+        },
+        "profile.restore.build_microvm_ms": {
+          "n": 20,
+          "mean": 1.4401607,
+          "p50": 1.43001,
+          "p95": 1.6328230000000001,
+          "min": 1.228432,
+          "max": 1.655587
+        },
+        "profile.restore.config_and_validation_ms": {
+          "n": 20,
+          "mean": 0.026472,
+          "p50": 0.024890999999999996,
+          "p95": 0.032403999999999995,
+          "min": 0.01892,
+          "max": 0.052341
+        },
+        "profile.restore.guest_ram_mapping_ms": {
+          "n": 20,
+          "mean": 0.0242362,
+          "p50": 0.023386,
+          "p95": 0.03237399999999999,
+          "min": 0.017606999999999998,
+          "max": 0.035375
+        },
+        "profile.restore.state_file_deserialize_ms": {
+          "n": 20,
+          "mean": 0.2896167,
+          "p50": 0.28836300000000004,
+          "p95": 0.30321900000000007,
+          "min": 0.276817,
+          "max": 0.313873
+        },
+        "profile.restore.total_ms": {
+          "n": 20,
+          "mean": 1.78057895,
+          "p50": 1.7725430000000002,
+          "p95": 1.9856,
+          "min": 1.5692150000000002,
+          "max": 2.00346
+        },
+        "profile.save_state.device_state_ms": {
+          "n": 20,
+          "mean": 0.0028339,
+          "p50": 0.00281,
+          "p95": 0.003247,
+          "min": 0.001702,
+          "max": 0.004174000000000001
+        },
+        "profile.save_state.kvm_vm_state_ms": {
+          "n": 20,
+          "mean": 0.0362633,
+          "p50": 0.038929000000000005,
+          "p95": 0.06235400000000001,
+          "min": 0.016696000000000003,
+          "max": 0.062463
+        },
+        "profile.save_state.total_ms": {
+          "n": 20,
+          "mean": 0.38177445,
+          "p50": 0.38690199999999997,
+          "p95": 0.43797200000000003,
+          "min": 0.29434899999999997,
+          "max": 0.4435
+        },
+        "profile.save_state.vcpu_state_ms": {
+          "n": 20,
+          "mean": 0.34225515,
+          "p50": 0.3432005,
+          "p95": 0.392046,
+          "min": 0.253924,
+          "max": 0.405738
+        },
+        "profile.snapshot_memory.dump_ram_file_ms": {
+          "n": 20,
+          "mean": 534.784548,
+          "p50": 523.6019489999999,
+          "p95": 614.376448,
+          "min": 492.088041,
+          "max": 625.584505
+        },
+        "profile.snapshot_memory.total_ms": {
+          "n": 20,
+          "mean": 534.7854269000001,
+          "p50": 523.6028060000001,
+          "p95": 614.377287,
+          "min": 492.089082,
+          "max": 625.585434
+        },
+        "profile.vm_common.eventfd_and_common_fields_ms": {
+          "n": 20,
+          "mean": 0.010590800000000001,
+          "p50": 0.010213,
+          "p95": 0.012228,
+          "min": 0.009272,
+          "max": 0.012841
+        },
+        "profile.vm_common.kvm_create_vm_ioctl_ms": {
+          "n": 20,
+          "mean": 0.29457964999999997,
+          "p50": 0.298781,
+          "p95": 0.373563,
+          "min": 0.19780799999999998,
+          "max": 0.383993
+        },
+        "profile.vm_common.total_ms": {
+          "n": 20,
+          "mean": 0.3053662,
+          "p50": 0.309197,
+          "p95": 0.383651,
+          "min": 0.207248,
+          "max": 0.39702599999999993
+        },
+        "profile.vm_new.arch_fields_ms": {
+          "n": 20,
+          "mean": 0.0001673,
+          "p50": 0.00016,
+          "p95": 0.000184,
+          "min": 0.00014000000000000001,
+          "max": 0.0003
+        },
+        "profile.vm_new.create_common_ms": {
+          "n": 20,
+          "mean": 0.31930885,
+          "p50": 0.3218255,
+          "p95": 0.39805799999999997,
+          "min": 0.220035,
+          "max": 0.412025
+        },
+        "profile.vm_new.msr_save_list_ms": {
+          "n": 20,
+          "mean": 0.0077169,
+          "p50": 0.0075935,
+          "p95": 0.008598,
+          "min": 0.007058,
+          "max": 0.008790999999999998
+        },
+        "profile.vm_new.set_tss_address_ms": {
+          "n": 20,
+          "mean": 0.0021771,
+          "p50": 0.001243,
+          "p95": 0.004577,
+          "min": 0.0008150000000000001,
+          "max": 0.004721
+        },
+        "profile.vm_new.total_ms": {
+          "n": 20,
+          "mean": 0.34576455,
+          "p50": 0.3474475,
+          "p95": 0.42518900000000004,
+          "min": 0.242101,
+          "max": 0.441195
+        },
+        "profile.vm_new.xsave_capability_ms": {
+          "n": 20,
+          "mean": 0.0160466,
+          "p50": 0.0162605,
+          "p95": 0.017541,
+          "min": 0.010114000000000001,
+          "max": 0.03154
+        },
+        "ram_anon_huge_mib": {
+          "n": 20,
+          "mean": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "ram_anonymous_mib": {
+          "n": 20,
+          "mean": 3.21953125,
+          "p50": 3.20703125,
+          "p95": 3.25,
+          "min": 3.1953125,
+          "max": 3.296875
+        },
+        "ram_private_mib": {
+          "n": 20,
+          "mean": 1432.846484375,
+          "p50": 1432.587890625,
+          "p95": 1433.70703125,
+          "min": 1432.453125,
+          "max": 1434.59375
+        },
+        "ram_rss_mib": {
+          "n": 20,
+          "mean": 1432.846484375,
+          "p50": 1432.587890625,
+          "p95": 1433.70703125,
+          "min": 1432.453125,
+          "max": 1434.59375
+        },
+        "remote_received_to_first_ack_ms": {
+          "n": 20,
+          "mean": 34.46211080000007,
+          "p50": 37.107169,
+          "p95": 44.584596000000836,
+          "min": 0.005311999999918044,
+          "max": 44.75648600000003
+        },
+        "source_cleanup_ms": {
+          "n": 20,
+          "mean": 274.70157605,
+          "p50": 287.7259345,
+          "p95": 308.98041600000005,
+          "min": 238.98518299999998,
+          "max": 311.215794
+        },
+        "working_set_mib": {
+          "n": 20,
+          "mean": 1423.484375,
+          "p50": 1423.484375,
+          "p95": 1423.484375,
+          "min": 1423.484375,
+          "max": 1423.484375
+        },
+        "working_set_ratio": {
+          "n": 20,
+          "mean": 0.926748,
+          "p50": 0.926748,
+          "p95": 0.926748,
+          "min": 0.926748,
+          "max": 0.926748
+        }
+      },
+      "additivity": {
+        "component_names": [
+          "pause_ms",
+          "full_snapshot_ms",
+          "confirmed_transfer_ms",
+          "remote_received_to_first_ack_ms",
+          "first_ack_to_working_set_ready_ms"
+        ],
+        "sum_component_means_ms": 10197.2457352,
+        "total_mean_ms": 10197.2457352,
+        "sum_component_medians_ms": 10151.717444499998,
+        "total_median_ms": 10030.266797,
+        "max_absolute_paired_round_residual_ms": 1.8189894035458565e-12
+      },
+      "report_sha256": "05e9662465f4f5b2d55b4f4756e10d01299f73997dca46c73d2fd87f3f568882"
+    },
+    {
+      "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261020T030552Z-s1t4srp6/migration-2048m-1792466362737248508/report.json",
+      "memory_mib": 2048,
+      "trace_ept": false,
+      "profile_restore": true,
+      "cpu_restore": "normal semantic CPU snapshot with explicit FC_EXACT_TSC=1 public KVM TSC-offset restoration and retention of the incoming ordered MSR save list",
+      "iterations": 20,
+      "warmup": 3,
+      "measured_rounds": 20,
+      "direction_counts": {
+        "A->B": 10,
+        "B->A": 10
+      },
+      "state_bytes_distribution": {
+        "13659": 20
+      },
+      "distinct_destination_kvm_processes": 20,
+      "distinct_destination_ram_hvas": 20,
+      "empty_api_startup_nonzero_ms": {
+        "n": 19,
+        "mean": 0.8082406842105263,
+        "p50": 0.7271839999999999,
+        "p95": 1.466164,
+        "min": 0.620381,
+        "max": 1.466164
+      },
+      "profile_scopes_measured": {
+        "build": 20,
+        "create_snapshot": 20,
+        "restore": 20,
+        "save_state": 20,
+        "snapshot_memory": 20,
+        "vm_common": 20,
+        "vm_new": 20
+      },
+      "profile_scopes_all_rounds": {
+        "build": 23,
+        "create_snapshot": 23,
+        "restore": 23,
+        "save_state": 23,
+        "snapshot_memory": 23,
+        "vm_common": 23,
+        "vm_new": 23
+      },
+      "profile_records_per_measured_round": {
+        "7": 20
+      },
+      "duplicate_profile_scopes": [],
+      "by_direction": {
+        "A->B": {
+          "n": 10,
+          "metrics": {
+            "confirmed_transfer_ms": {
+              "n": 10,
+              "mean": 2530.5277439,
+              "p50": 2514.5907125,
+              "p95": 2712.983708,
+              "min": 2367.794625,
+              "max": 2712.983708
+            },
+            "guest_first_scan_ms": {
+              "n": 10,
+              "mean": 8163.1406035,
+              "p50": 8179.020576499999,
+              "p95": 8344.852322,
+              "min": 7960.890878,
+              "max": 8344.852322
+            },
+            "pause_to_first_ack_ms": {
+              "n": 10,
+              "mean": 3221.8892174000002,
+              "p50": 3211.188625,
+              "p95": 3409.685121,
+              "min": 3019.509064,
+              "max": 3409.685121
+            },
+            "pause_to_working_set_ready_ms": {
+              "n": 10,
+              "mean": 11385.4804217,
+              "p50": 11446.638079,
+              "p95": 11681.506539,
+              "min": 10980.72982,
+              "max": 11681.506539
+            }
+          }
+        },
+        "B->A": {
+          "n": 10,
+          "metrics": {
+            "confirmed_transfer_ms": {
+              "n": 10,
+              "mean": 6761.932346099999,
+              "p50": 6708.237301499999,
+              "p95": 7107.098922,
+              "min": 6468.583892,
+              "max": 7107.098922
+            },
+            "guest_first_scan_ms": {
+              "n": 10,
+              "mean": 7928.3497808,
+              "p50": 7936.9761805,
+              "p95": 8076.54306,
+              "min": 7741.540393,
+              "max": 8076.54306
+            },
+            "pause_to_first_ack_ms": {
+              "n": 10,
+              "mean": 7553.3890105,
+              "p50": 7478.535184,
+              "p95": 8004.161517,
+              "min": 7129.975349,
+              "max": 8004.161517
+            },
+            "pause_to_working_set_ready_ms": {
+              "n": 10,
+              "mean": 15445.606893099999,
+              "p50": 15426.446283,
+              "p95": 15907.906348999999,
+              "min": 15040.463266,
+              "max": 15907.906348999999
+            }
+          }
+        }
+      },
+      "cpu_state_contract": {
+        "signature_records": 40,
+        "phases": {
+          "restore": 20,
+          "save": 20
+        },
+        "msr_count_distribution": {
+          "190": 40
+        },
+        "ordered_msr_indices_hash_distribution": {
+          "20655d3b1df6c641": 40
+        },
+        "cr3_distribution": {
+          "74055686": 40
+        }
+      },
+      "validation": {
+        "migrations": 23,
+        "full_ram_bytes_per_migration": 2147483648,
+        "total_ram_bytes_transferred": 49392123904,
+        "semantic_state_bytes": [
+          13627,
+          13659
+        ],
+        "one_initial_boot": true,
+        "guest_instance_preserved": true,
+        "retained_data_errors": 0,
+        "working_set_bytes": 2016411648,
+        "working_set_ratio": 0.938965,
+        "new_destination_kvm_per_restore": true,
+        "no_shared_guest_ram": true,
+        "guest_cr3_preserved_each_restore": true,
+        "ordered_msr_count_and_hash_preserved_each_restore": true,
+        "initial_ordered_msr_save_list_preserved_all_migrations": true
+      },
+      "metrics": {
+        "additivity_residual_ms": {
+          "n": 20,
+          "mean": 9.094947017729283e-14,
+          "p50": 0.0,
+          "p95": 1.8189894035458565e-12,
+          "min": -1.8189894035458565e-12,
+          "max": 1.8189894035458565e-12
+        },
+        "confirmed_transfer_ms": {
+          "n": 20,
+          "mean": 4646.230045,
+          "p50": 4590.7838,
+          "p95": 7041.9290839999985,
+          "min": 2367.794625,
+          "max": 7107.098922
+        },
+        "destination_paused_validation_ms": {
+          "n": 20,
+          "mean": 0.05544155,
+          "p50": 0.053964000000000005,
+          "p95": 0.070063,
+          "min": 0.045213,
+          "max": 0.07015
+        },
+        "destination_restore_api_ms": {
+          "n": 20,
+          "mean": 2.0248037,
+          "p50": 1.8493645,
+          "p95": 3.902943,
+          "min": 1.573701,
+          "max": 3.9408879999999997
+        },
+        "destination_resume_api_ms": {
+          "n": 20,
+          "mean": 0.164459,
+          "p50": 0.14236300000000002,
+          "p95": 0.23266599999999998,
+          "min": 0.11631699999999999,
+          "max": 0.23969
+        },
+        "destination_resume_to_first_ack_ms": {
+          "n": 20,
+          "mean": 19.0821839,
+          "p50": 9.875048,
+          "p95": 33.916038,
+          "min": 8.365797,
+          "max": 39.238498
+        },
+        "destination_resume_to_ready_ms": {
+          "n": 20,
+          "mean": 8064.8930126,
+          "p50": 8008.1406815,
+          "p95": 8371.967045,
+          "min": 7750.233216,
+          "max": 8381.922551
+        },
+        "empty_api_startup_ms": {
+          "n": 20,
+          "mean": 0.76782865,
+          "p50": 0.7195689999999999,
+          "p95": 1.442983,
+          "min": 0.0,
+          "max": 1.466164
+        },
+        "first_ack_to_working_set_ready_ms": {
+          "n": 20,
+          "mean": 8027.90454345,
+          "p50": 7972.1061955000005,
+          "p95": 8342.87315,
+          "min": 7704.702033,
+          "max": 8345.292687000001
+        },
+        "full_snapshot_ms": {
+          "n": 20,
+          "mean": 705.76477965,
+          "p50": 688.4119115,
+          "p95": 810.395215,
+          "min": 618.622894,
+          "max": 852.4221679999999
+        },
+        "guest_first_minus_warm_ms": {
+          "n": 20,
+          "mean": 7887.21850525,
+          "p50": 7881.9167065,
+          "p95": 8242.687242,
+          "min": 7636.028903,
+          "max": 8284.596261
+        },
+        "guest_first_scan_ms": {
+          "n": 20,
+          "mean": 8045.74519215,
+          "p50": 7987.889425,
+          "p95": 8342.650972,
+          "min": 7741.540393,
+          "max": 8344.852322
+        },
+        "guest_warm_scan_ms": {
+          "n": 20,
+          "mean": 158.5266869,
+          "p50": 146.425452,
+          "p95": 316.369271,
+          "min": 37.412329,
+          "max": 344.816512
+        },
+        "memory_mib": {
+          "n": 20,
+          "mean": 2048,
+          "p50": 2048.0,
+          "p95": 2048,
+          "min": 2048,
+          "max": 2048
+        },
+        "pause_ms": {
+          "n": 20,
+          "mean": 0.6242331,
+          "p50": 0.578788,
+          "p95": 0.7843049999999999,
+          "min": 0.260798,
+          "max": 1.619181
+        },
+        "pause_to_first_ack_ms": {
+          "n": 20,
+          "mean": 5387.63911395,
+          "p50": 5269.830235,
+          "p95": 7818.952832999999,
+          "min": 3019.509064,
+          "max": 8004.161517
+        },
+        "pause_to_working_set_ready_ms": {
+          "n": 20,
+          "mean": 13415.5436574,
+          "p50": 13360.9849025,
+          "p95": 15743.270896,
+          "min": 10980.72982,
+          "max": 15907.906348999999
+        },
+        "profile.build.devices_restore_ms": {
+          "n": 20,
+          "mean": 0.12242675,
+          "p50": 0.08961150000000001,
+          "p95": 0.11678100000000001,
+          "min": 0.081834,
+          "max": 0.710082
+        },
+        "profile.build.event_loop_registration_ms": {
+          "n": 20,
+          "mean": 0.0034639,
+          "p50": 0.003364,
+          "p95": 0.004261,
+          "min": 0.0028270000000000005,
+          "max": 0.005354
+        },
+        "profile.build.kvm_open_capabilities_ms": {
+          "n": 20,
+          "mean": 0.13528395000000001,
+          "p50": 0.13080599999999998,
+          "p95": 0.152564,
+          "min": 0.109858,
+          "max": 0.190339
+        },
+        "profile.build.register_memory_slots_ms": {
+          "n": 20,
+          "mean": 0.0125402,
+          "p50": 0.011896,
+          "p95": 0.017507,
+          "min": 0.008324,
+          "max": 0.021585999999999998
+        },
+        "profile.build.total_ms": {
+          "n": 20,
+          "mean": 1.3703393,
+          "p50": 1.276679,
+          "p95": 2.039154,
+          "min": 1.0641610000000001,
+          "max": 2.65672
+        },
+        "profile.build.tsc_scaling_ms": {
+          "n": 20,
+          "mean": 0.0043397,
+          "p50": 0.0034435000000000004,
+          "p95": 0.0067540000000000005,
+          "min": 0.002755,
+          "max": 0.006764
+        },
+        "profile.build.vcpu_state_restore_ms": {
+          "n": 20,
+          "mean": 0.2444395,
+          "p50": 0.21248250000000002,
+          "p95": 0.237688,
+          "min": 0.19586599999999998,
+          "max": 0.8469070000000001
+        },
+        "profile.build.vcpu_threads_start_ms": {
+          "n": 20,
+          "mean": 0.0646415,
+          "p50": 0.0629265,
+          "p95": 0.076997,
+          "min": 0.052253999999999995,
+          "max": 0.084839
+        },
+        "profile.build.vcpus_create_ms": {
+          "n": 20,
+          "mean": 0.43384725,
+          "p50": 0.39612,
+          "p95": 0.50573,
+          "min": 0.329385,
+          "max": 1.117416
+        },
+        "profile.build.vm_create_ms": {
+          "n": 20,
+          "mean": 0.3366756,
+          "p50": 0.32150350000000005,
+          "p95": 0.424329,
+          "min": 0.24264999999999998,
+          "max": 0.45064299999999996
+        },
+        "profile.build.vm_irq_clock_restore_ms": {
+          "n": 20,
+          "mean": 0.01260605,
+          "p50": 0.011959500000000001,
+          "p95": 0.018841999999999998,
+          "min": 0.007971,
+          "max": 0.025936
+        },
+        "profile.create_snapshot.backing_validation_ms": {
+          "n": 20,
+          "mean": 0.00209765,
+          "p50": 0.0021925,
+          "p95": 0.0023920000000000005,
+          "min": 0.00066,
+          "max": 0.0028480000000000003
+        },
+        "profile.create_snapshot.encode_and_write_ms": {
+          "n": 20,
+          "mean": 0.890119,
+          "p50": 0.883467,
+          "p95": 0.942332,
+          "min": 0.732634,
+          "max": 0.995931
+        },
+        "profile.create_snapshot.memory_and_queue_handling_ms": {
+          "n": 20,
+          "mean": 704.15015285,
+          "p50": 686.6719189999999,
+          "p95": 808.774722,
+          "min": 617.0749650000001,
+          "max": 850.654258
+        },
+        "profile.create_snapshot.state_collection_ms": {
+          "n": 20,
+          "mean": 0.45889105,
+          "p50": 0.440759,
+          "p95": 0.587918,
+          "min": 0.35068600000000005,
+          "max": 0.7164510000000001
+        },
+        "profile.create_snapshot.total_ms": {
+          "n": 20,
+          "mean": 705.5014214,
+          "p50": 688.1375925,
+          "p95": 810.1450110000001,
+          "min": 618.3839370000001,
+          "max": 852.153857
+        },
+        "profile.restore.build_microvm_ms": {
+          "n": 20,
+          "mean": 1.42506045,
+          "p50": 1.335577,
+          "p95": 2.131545,
+          "min": 1.1181290000000002,
+          "max": 2.740862
+        },
+        "profile.restore.config_and_validation_ms": {
+          "n": 20,
+          "mean": 0.0221715,
+          "p50": 0.021866999999999998,
+          "p95": 0.028466,
+          "min": 0.015607000000000001,
+          "max": 0.028629
+        },
+        "profile.restore.guest_ram_mapping_ms": {
+          "n": 20,
+          "mean": 0.02204215,
+          "p50": 0.021761999999999997,
+          "p95": 0.026658,
+          "min": 0.017266,
+          "max": 0.030592
+        },
+        "profile.restore.state_file_deserialize_ms": {
+          "n": 20,
+          "mean": 0.27180845,
+          "p50": 0.2665285,
+          "p95": 0.30824599999999996,
+          "min": 0.241183,
+          "max": 0.312255
+        },
+        "profile.restore.total_ms": {
+          "n": 20,
+          "mean": 1.7411581,
+          "p50": 1.6527159999999999,
+          "p95": 2.480798,
+          "min": 1.4118979999999999,
+          "max": 3.1028409999999997
+        },
+        "profile.save_state.device_state_ms": {
+          "n": 20,
+          "mean": 0.0027899,
+          "p50": 0.0027155,
+          "p95": 0.0032949999999999998,
+          "min": 0.001339,
+          "max": 0.003515
+        },
+        "profile.save_state.kvm_vm_state_ms": {
+          "n": 20,
+          "mean": 0.0406384,
+          "p50": 0.042790499999999995,
+          "p95": 0.06541999999999999,
+          "min": 0.019093,
+          "max": 0.099524
+        },
+        "profile.save_state.total_ms": {
+          "n": 20,
+          "mean": 0.40727675,
+          "p50": 0.39558899999999997,
+          "p95": 0.532383,
+          "min": 0.30557,
+          "max": 0.671352
+        },
+        "profile.save_state.vcpu_state_ms": {
+          "n": 20,
+          "mean": 0.36347605,
+          "p50": 0.34689250000000005,
+          "p95": 0.503897,
+          "min": 0.28228,
+          "max": 0.6246799999999999
+        },
+        "profile.snapshot_memory.dump_ram_file_ms": {
+          "n": 20,
+          "mean": 704.1256863,
+          "p50": 686.648502,
+          "p95": 808.7479229999999,
+          "min": 617.0536460000001,
+          "max": 850.6124870000001
+        },
+        "profile.snapshot_memory.total_ms": {
+          "n": 20,
+          "mean": 704.1265125,
+          "p50": 686.6493330000001,
+          "p95": 808.749098,
+          "min": 617.0542399999999,
+          "max": 850.6131509999999
+        },
+        "profile.vm_common.eventfd_and_common_fields_ms": {
+          "n": 20,
+          "mean": 0.0097692,
+          "p50": 0.0098745,
+          "p95": 0.011460000000000001,
+          "min": 0.00824,
+          "max": 0.011914
+        },
+        "profile.vm_common.kvm_create_vm_ioctl_ms": {
+          "n": 20,
+          "mean": 0.28496635,
+          "p50": 0.26635049999999993,
+          "p95": 0.37439599999999995,
+          "min": 0.195689,
+          "max": 0.396727
+        },
+        "profile.vm_common.total_ms": {
+          "n": 20,
+          "mean": 0.2949196,
+          "p50": 0.2776025,
+          "p95": 0.384204,
+          "min": 0.205273,
+          "max": 0.40631800000000007
+        },
+        "profile.vm_new.arch_fields_ms": {
+          "n": 20,
+          "mean": 0.00015035,
+          "p50": 0.0001515,
+          "p95": 0.000175,
+          "min": 0.000126,
+          "max": 0.00018099999999999998
+        },
+        "profile.vm_new.create_common_ms": {
+          "n": 20,
+          "mean": 0.30733045,
+          "p50": 0.2914285,
+          "p95": 0.397846,
+          "min": 0.216499,
+          "max": 0.420911
+        },
+        "profile.vm_new.msr_save_list_ms": {
+          "n": 20,
+          "mean": 0.00708885,
+          "p50": 0.007216,
+          "p95": 0.007681,
+          "min": 0.006144999999999999,
+          "max": 0.008302
+        },
+        "profile.vm_new.set_tss_address_ms": {
+          "n": 20,
+          "mean": 0.00122755,
+          "p50": 0.000808,
+          "p95": 0.003529,
+          "min": 0.0005949999999999999,
+          "max": 0.0036179999999999997
+        },
+        "profile.vm_new.total_ms": {
+          "n": 20,
+          "mean": 0.32686360000000003,
+          "p50": 0.3117155,
+          "p95": 0.414918,
+          "min": 0.233128,
+          "max": 0.439663
+        },
+        "profile.vm_new.xsave_capability_ms": {
+          "n": 20,
+          "mean": 0.0107647,
+          "p50": 0.010063,
+          "p95": 0.01346,
+          "min": 0.008704,
+          "max": 0.013488
+        },
+        "ram_anon_huge_mib": {
+          "n": 20,
+          "mean": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "ram_anonymous_mib": {
+          "n": 20,
+          "mean": 4.1923828125,
+          "p50": 4.1875,
+          "p95": 4.2265625,
+          "min": 4.17578125,
+          "max": 4.234375
+        },
+        "ram_private_mib": {
+          "n": 20,
+          "mean": 1933.2427734375,
+          "p50": 1933.015625,
+          "p95": 1933.953125,
+          "min": 1933.00390625,
+          "max": 1934.375
+        },
+        "ram_rss_mib": {
+          "n": 20,
+          "mean": 1933.2427734375,
+          "p50": 1933.015625,
+          "p95": 1933.953125,
+          "min": 1933.00390625,
+          "max": 1934.375
+        },
+        "remote_received_to_first_ack_ms": {
+          "n": 20,
+          "mean": 35.02005620000001,
+          "p50": 39.21513600000017,
+          "p95": 43.714493999999945,
+          "min": 0.005456000000238419,
+          "max": 44.01673199999984
+        },
+        "source_cleanup_ms": {
+          "n": 20,
+          "mean": 317.5743149,
+          "p50": 300.0378365,
+          "p95": 382.54045299999996,
+          "min": 285.67093,
+          "max": 407.87969699999996
+        },
+        "working_set_mib": {
+          "n": 20,
+          "mean": 1923.0,
+          "p50": 1923.0,
+          "p95": 1923.0,
+          "min": 1923.0,
+          "max": 1923.0
+        },
+        "working_set_ratio": {
+          "n": 20,
+          "mean": 0.938965,
+          "p50": 0.938965,
+          "p95": 0.938965,
+          "min": 0.938965,
+          "max": 0.938965
+        }
+      },
+      "additivity": {
+        "component_names": [
+          "pause_ms",
+          "full_snapshot_ms",
+          "confirmed_transfer_ms",
+          "remote_received_to_first_ack_ms",
+          "first_ack_to_working_set_ready_ms"
+        ],
+        "sum_component_means_ms": 13415.543657400001,
+        "total_mean_ms": 13415.5436574,
+        "sum_component_medians_ms": 13291.095831,
+        "total_median_ms": 13360.9849025,
+        "max_absolute_paired_round_residual_ms": 1.8189894035458565e-12
+      },
+      "report_sha256": "11de98c3de9d20fbdcf7f2d10d479c06e60d125288af6e782a78579574617245"
+    }
+  ],
+  "ept_diagnostics": [
+    {
+      "memory_mib": 512,
+      "working_set_bytes": 453988352,
+      "working_set_pages": 110837,
+      "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261020T030552Z-s1t4srp6/migration-512m-1792466695693823208/report.json",
+      "report_sha256": "beba5e510bac8a769c180f525f4fd13463033d4f3a1caaa56d9f8ff5dc92262a",
+      "valid": true,
+      "losses": [],
+      "probe_stats": {
+        "pf_begin": {
+          "nhit": 111587,
+          "nmissed": 0
+        },
+        "pf_end": {
+          "nhit": 111587,
+          "nmissed": 0
+        },
+        "root_begin": {
+          "nhit": 1,
+          "nmissed": 0
+        },
+        "root_end": {
+          "nhit": 1,
+          "nmissed": 0
+        }
+      },
+      "windows": {
+        "resume_to_ack": {
+          "wall_us": 29287.0,
+          "events": {
+            "root_begin": 1,
+            "kvm_mmu_get_page": 29,
+            "pf_begin": 349,
+            "kvm_mmu_set_spte": 303
+          },
+          "leaf_installs_by_level": {
+            "1": 303
+          },
+          "unique_leaf_gfns_by_level": {
+            "1": 265
+          },
+          "new_mmu_pages_by_level": {
+            "5": 1,
+            "4": 1,
+            "3": 1,
+            "2": 2,
+            "1": 24
+          },
+          "paths": {
+            "pf": {
+              "completed_intervals": 349,
+              "inclusive_path_sum_us": 6239.0,
+              "wall_union_us": 6239.0,
+              "median_path_us": 16.0,
+              "max_path_us": 90.0
+            },
+            "root": {
+              "completed_intervals": 1,
+              "inclusive_path_sum_us": 93.0,
+              "wall_union_us": 93.0,
+              "median_path_us": 93.0,
+              "max_path_us": 93.0
+            }
+          },
+          "pids": [
+            1601
+          ],
+          "cpus": [
+            1
+          ]
+        },
+        "ack_to_scan1": {
+          "wall_us": 2070431.0,
+          "events": {
+            "pf_begin": 111238,
+            "kvm_mmu_set_spte": 111209,
+            "kvm_mmu_get_page": 219
+          },
+          "leaf_installs_by_level": {
+            "1": 111209
+          },
+          "unique_leaf_gfns_by_level": {
+            "1": 111191
+          },
+          "new_mmu_pages_by_level": {
+            "1": 219
+          },
+          "paths": {
+            "pf": {
+              "completed_intervals": 111238,
+              "inclusive_path_sum_us": 231162.0,
+              "wall_union_us": 231162.0,
+              "median_path_us": 2.0,
+              "max_path_us": 131.0
+            },
+            "root": {
+              "completed_intervals": 0,
+              "inclusive_path_sum_us": 0,
+              "wall_union_us": 0.0,
+              "median_path_us": null,
+              "max_path_us": null
+            }
+          },
+          "pids": [
+            1601
+          ],
+          "cpus": [
+            1
+          ]
+        },
+        "scan1_to_scan2": {
+          "wall_us": 26541.0,
+          "events": {},
+          "leaf_installs_by_level": {},
+          "unique_leaf_gfns_by_level": {},
+          "new_mmu_pages_by_level": {},
+          "paths": {
+            "pf": {
+              "completed_intervals": 0,
+              "inclusive_path_sum_us": 0,
+              "wall_union_us": 0.0,
+              "median_path_us": null,
+              "max_path_us": null
+            },
+            "root": {
+              "completed_intervals": 0,
+              "inclusive_path_sum_us": 0,
+              "wall_union_us": 0.0,
+              "median_path_us": null,
+              "max_path_us": null
+            }
+          },
+          "pids": [],
+          "cpus": []
+        },
+        "resume_to_scan1": {
+          "wall_us": 2099718.0,
+          "events": {
+            "root_begin": 1,
+            "kvm_mmu_get_page": 248,
+            "pf_begin": 111587,
+            "kvm_mmu_set_spte": 111512
+          },
+          "leaf_installs_by_level": {
+            "1": 111512
+          },
+          "unique_leaf_gfns_by_level": {
+            "1": 111454
+          },
+          "new_mmu_pages_by_level": {
+            "5": 1,
+            "4": 1,
+            "3": 1,
+            "2": 2,
+            "1": 243
+          },
+          "paths": {
+            "pf": {
+              "completed_intervals": 111587,
+              "inclusive_path_sum_us": 237401.0,
+              "wall_union_us": 237401.0,
+              "median_path_us": 2.0,
+              "max_path_us": 131.0
+            },
+            "root": {
+              "completed_intervals": 1,
+              "inclusive_path_sum_us": 93.0,
+              "wall_union_us": 93.0,
+              "median_path_us": 93.0,
+              "max_path_us": 93.0
+            }
+          },
+          "pids": [
+            1601
+          ],
+          "cpus": [
+            1
+          ]
+        },
+        "resume_to_scan2": {
+          "wall_us": 2126259.0,
+          "events": {
+            "root_begin": 1,
+            "kvm_mmu_get_page": 248,
+            "pf_begin": 111587,
+            "kvm_mmu_set_spte": 111512
+          },
+          "leaf_installs_by_level": {
+            "1": 111512
+          },
+          "unique_leaf_gfns_by_level": {
+            "1": 111454
+          },
+          "new_mmu_pages_by_level": {
+            "5": 1,
+            "4": 1,
+            "3": 1,
+            "2": 2,
+            "1": 243
+          },
+          "paths": {
+            "pf": {
+              "completed_intervals": 111587,
+              "inclusive_path_sum_us": 237401.0,
+              "wall_union_us": 237401.0,
+              "median_path_us": 2.0,
+              "max_path_us": 131.0
+            },
+            "root": {
+              "completed_intervals": 1,
+              "inclusive_path_sum_us": 93.0,
+              "wall_union_us": 93.0,
+              "median_path_us": 93.0,
+              "max_path_us": 93.0
+            }
+          },
+          "pids": [
+            1601
+          ],
+          "cpus": [
+            1
+          ]
+        }
+      },
+      "guest_first_scan_ms": 2070.360882,
+      "guest_warm_scan_ms": 26.584932
+    },
+    {
+      "memory_mib": 1024,
+      "working_set_bytes": 976732160,
+      "working_set_pages": 238460,
+      "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261020T030552Z-s1t4srp6/migration-1024m-1792466716488368799/report.json",
+      "report_sha256": "4a345748719f575902a6c26a1ef7ae8087903f280e924f696650cfa2175eada3",
+      "valid": true,
+      "losses": [],
+      "probe_stats": {
+        "pf_begin": {
+          "nhit": 239462,
+          "nmissed": 0
+        },
+        "pf_end": {
+          "nhit": 239462,
+          "nmissed": 0
+        },
+        "root_begin": {
+          "nhit": 1,
+          "nmissed": 0
+        },
+        "root_end": {
+          "nhit": 1,
+          "nmissed": 0
+        }
+      },
+      "windows": {
+        "resume_to_ack": {
+          "wall_us": 34153.0,
+          "events": {
+            "root_begin": 1,
+            "kvm_mmu_get_page": 30,
+            "pf_begin": 351,
+            "kvm_mmu_set_spte": 303
+          },
+          "leaf_installs_by_level": {
+            "1": 303
+          },
+          "unique_leaf_gfns_by_level": {
+            "1": 266
+          },
+          "new_mmu_pages_by_level": {
+            "5": 1,
+            "4": 1,
+            "3": 1,
+            "2": 2,
+            "1": 25
+          },
+          "paths": {
+            "pf": {
+              "completed_intervals": 351,
+              "inclusive_path_sum_us": 6689.0,
+              "wall_union_us": 6689.0,
+              "median_path_us": 14.0,
+              "max_path_us": 1005.0
+            },
+            "root": {
+              "completed_intervals": 1,
+              "inclusive_path_sum_us": 114.0,
+              "wall_union_us": 114.0,
+              "median_path_us": 114.0,
+              "max_path_us": 114.0
+            }
+          },
+          "pids": [
+            1671
+          ],
+          "cpus": [
+            1
+          ]
+        },
+        "ack_to_scan1": {
+          "wall_us": 4404249.0,
+          "events": {
+            "pf_begin": 239111,
+            "kvm_mmu_set_spte": 239085,
+            "kvm_mmu_get_page": 468
+          },
+          "leaf_installs_by_level": {
+            "1": 239085
+          },
+          "unique_leaf_gfns_by_level": {
+            "1": 239067
+          },
+          "new_mmu_pages_by_level": {
+            "1": 468
+          },
+          "paths": {
+            "pf": {
+              "completed_intervals": 239111,
+              "inclusive_path_sum_us": 494538.0,
+              "wall_union_us": 494538.0,
+              "median_path_us": 2.0,
+              "max_path_us": 616.0
+            },
+            "root": {
+              "completed_intervals": 0,
+              "inclusive_path_sum_us": 0,
+              "wall_union_us": 0.0,
+              "median_path_us": null,
+              "max_path_us": null
+            }
+          },
+          "pids": [
+            1671
+          ],
+          "cpus": [
+            1
+          ]
+        },
+        "scan1_to_scan2": {
+          "wall_us": 32777.0,
+          "events": {},
+          "leaf_installs_by_level": {},
+          "unique_leaf_gfns_by_level": {},
+          "new_mmu_pages_by_level": {},
+          "paths": {
+            "pf": {
+              "completed_intervals": 0,
+              "inclusive_path_sum_us": 0,
+              "wall_union_us": 0.0,
+              "median_path_us": null,
+              "max_path_us": null
+            },
+            "root": {
+              "completed_intervals": 0,
+              "inclusive_path_sum_us": 0,
+              "wall_union_us": 0.0,
+              "median_path_us": null,
+              "max_path_us": null
+            }
+          },
+          "pids": [],
+          "cpus": []
+        },
+        "resume_to_scan1": {
+          "wall_us": 4438402.0,
+          "events": {
+            "root_begin": 1,
+            "kvm_mmu_get_page": 498,
+            "pf_begin": 239462,
+            "kvm_mmu_set_spte": 239388
+          },
+          "leaf_installs_by_level": {
+            "1": 239388
+          },
+          "unique_leaf_gfns_by_level": {
+            "1": 239330
+          },
+          "new_mmu_pages_by_level": {
+            "5": 1,
+            "4": 1,
+            "3": 1,
+            "2": 2,
+            "1": 493
+          },
+          "paths": {
+            "pf": {
+              "completed_intervals": 239462,
+              "inclusive_path_sum_us": 501227.0,
+              "wall_union_us": 501227.0,
+              "median_path_us": 2.0,
+              "max_path_us": 1005.0
+            },
+            "root": {
+              "completed_intervals": 1,
+              "inclusive_path_sum_us": 114.0,
+              "wall_union_us": 114.0,
+              "median_path_us": 114.0,
+              "max_path_us": 114.0
+            }
+          },
+          "pids": [
+            1671
+          ],
+          "cpus": [
+            1
+          ]
+        },
+        "resume_to_scan2": {
+          "wall_us": 4471179.0,
+          "events": {
+            "root_begin": 1,
+            "kvm_mmu_get_page": 498,
+            "pf_begin": 239462,
+            "kvm_mmu_set_spte": 239388
+          },
+          "leaf_installs_by_level": {
+            "1": 239388
+          },
+          "unique_leaf_gfns_by_level": {
+            "1": 239330
+          },
+          "new_mmu_pages_by_level": {
+            "5": 1,
+            "4": 1,
+            "3": 1,
+            "2": 2,
+            "1": 493
+          },
+          "paths": {
+            "pf": {
+              "completed_intervals": 239462,
+              "inclusive_path_sum_us": 501227.0,
+              "wall_union_us": 501227.0,
+              "median_path_us": 2.0,
+              "max_path_us": 1005.0
+            },
+            "root": {
+              "completed_intervals": 1,
+              "inclusive_path_sum_us": 114.0,
+              "wall_union_us": 114.0,
+              "median_path_us": 114.0,
+              "max_path_us": 114.0
+            }
+          },
+          "pids": [
+            1671
+          ],
+          "cpus": [
+            1
+          ]
+        }
+      },
+      "guest_first_scan_ms": 4404.222403,
+      "guest_warm_scan_ms": 32.748449
+    },
+    {
+      "memory_mib": 2048,
+      "working_set_bytes": 2016411648,
+      "working_set_pages": 492288,
+      "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261020T030552Z-s1t4srp6/migration-2048m-1792466752282146684/report.json",
+      "report_sha256": "8bee4d68affc06234fa80648fe4ffc626f9853865f1719d41a840b942e10e038",
+      "valid": true,
+      "losses": [],
+      "probe_stats": {
+        "pf_begin": {
+          "nhit": 493837,
+          "nmissed": 0
+        },
+        "pf_end": {
+          "nhit": 493837,
+          "nmissed": 0
+        },
+        "root_begin": {
+          "nhit": 1,
+          "nmissed": 0
+        },
+        "root_end": {
+          "nhit": 1,
+          "nmissed": 0
+        }
+      },
+      "windows": {
+        "resume_to_ack": {
+          "wall_us": 28334.0,
+          "events": {
+            "root_begin": 1,
+            "kvm_mmu_get_page": 31,
+            "pf_begin": 349,
+            "kvm_mmu_set_spte": 302
+          },
+          "leaf_installs_by_level": {
+            "1": 302
+          },
+          "unique_leaf_gfns_by_level": {
+            "1": 264
+          },
+          "new_mmu_pages_by_level": {
+            "5": 1,
+            "4": 1,
+            "3": 1,
+            "2": 3,
+            "1": 25
+          },
+          "paths": {
+            "pf": {
+              "completed_intervals": 349,
+              "inclusive_path_sum_us": 5977.0,
+              "wall_union_us": 5977.0,
+              "median_path_us": 16.0,
+              "max_path_us": 72.0
+            },
+            "root": {
+              "completed_intervals": 1,
+              "inclusive_path_sum_us": 81.0,
+              "wall_union_us": 81.0,
+              "median_path_us": 81.0,
+              "max_path_us": 81.0
+            }
+          },
+          "pids": [
+            1749
+          ],
+          "cpus": [
+            1
+          ]
+        },
+        "ack_to_scan1": {
+          "wall_us": 8656686.0,
+          "events": {
+            "pf_begin": 493488,
+            "kvm_mmu_set_spte": 493445,
+            "kvm_mmu_get_page": 965
+          },
+          "leaf_installs_by_level": {
+            "1": 493445
+          },
+          "unique_leaf_gfns_by_level": {
+            "1": 493421
+          },
+          "new_mmu_pages_by_level": {
+            "1": 965
+          },
+          "paths": {
+            "pf": {
+              "completed_intervals": 493488,
+              "inclusive_path_sum_us": 954367.0,
+              "wall_union_us": 954367.0,
+              "median_path_us": 2.0,
+              "max_path_us": 1601.0
+            },
+            "root": {
+              "completed_intervals": 0,
+              "inclusive_path_sum_us": 0,
+              "wall_union_us": 0.0,
+              "median_path_us": null,
+              "max_path_us": null
+            }
+          },
+          "pids": [
+            1749
+          ],
+          "cpus": [
+            1
+          ]
+        },
+        "scan1_to_scan2": {
+          "wall_us": 117375.0,
+          "events": {},
+          "leaf_installs_by_level": {},
+          "unique_leaf_gfns_by_level": {},
+          "new_mmu_pages_by_level": {},
+          "paths": {
+            "pf": {
+              "completed_intervals": 0,
+              "inclusive_path_sum_us": 0,
+              "wall_union_us": 0.0,
+              "median_path_us": null,
+              "max_path_us": null
+            },
+            "root": {
+              "completed_intervals": 0,
+              "inclusive_path_sum_us": 0,
+              "wall_union_us": 0.0,
+              "median_path_us": null,
+              "max_path_us": null
+            }
+          },
+          "pids": [],
+          "cpus": []
+        },
+        "resume_to_scan1": {
+          "wall_us": 8685020.0,
+          "events": {
+            "root_begin": 1,
+            "kvm_mmu_get_page": 996,
+            "pf_begin": 493837,
+            "kvm_mmu_set_spte": 493747
+          },
+          "leaf_installs_by_level": {
+            "1": 493747
+          },
+          "unique_leaf_gfns_by_level": {
+            "1": 493680
+          },
+          "new_mmu_pages_by_level": {
+            "5": 1,
+            "4": 1,
+            "3": 1,
+            "2": 3,
+            "1": 990
+          },
+          "paths": {
+            "pf": {
+              "completed_intervals": 493837,
+              "inclusive_path_sum_us": 960344.0,
+              "wall_union_us": 960344.0,
+              "median_path_us": 2.0,
+              "max_path_us": 1601.0
+            },
+            "root": {
+              "completed_intervals": 1,
+              "inclusive_path_sum_us": 81.0,
+              "wall_union_us": 81.0,
+              "median_path_us": 81.0,
+              "max_path_us": 81.0
+            }
+          },
+          "pids": [
+            1749
+          ],
+          "cpus": [
+            1
+          ]
+        },
+        "resume_to_scan2": {
+          "wall_us": 8802395.0,
+          "events": {
+            "root_begin": 1,
+            "kvm_mmu_get_page": 996,
+            "pf_begin": 493837,
+            "kvm_mmu_set_spte": 493747
+          },
+          "leaf_installs_by_level": {
+            "1": 493747
+          },
+          "unique_leaf_gfns_by_level": {
+            "1": 493680
+          },
+          "new_mmu_pages_by_level": {
+            "5": 1,
+            "4": 1,
+            "3": 1,
+            "2": 3,
+            "1": 990
+          },
+          "paths": {
+            "pf": {
+              "completed_intervals": 493837,
+              "inclusive_path_sum_us": 960344.0,
+              "wall_union_us": 960344.0,
+              "median_path_us": 2.0,
+              "max_path_us": 1601.0
+            },
+            "root": {
+              "completed_intervals": 1,
+              "inclusive_path_sum_us": 81.0,
+              "wall_union_us": 81.0,
+              "median_path_us": 81.0,
+              "max_path_us": 81.0
+            }
+          },
+          "pids": [
+            1749
+          ],
+          "cpus": [
+            1
+          ]
+        }
+      },
+      "guest_first_scan_ms": 8656.628286,
+      "guest_warm_scan_ms": 117.347357
+    }
+  ],
+  "fault_count_fit_vs_working_set_pages": {
+    "slope": 1.002103182053771,
+    "intercept": 510.33117709244834,
+    "r_squared": 0.9999999980055756
+  },
+  "limits": [
+    "Nested KVM on one physical host; latency is not physical two-host migration latency.",
+    "Virtio-net/QEMU socket has strong direction asymmetry; do not interpret as physical NIC bandwidth.",
+    "First scan includes EPT population, backing-file faults, nested exit/entry, cold caches and scheduling. First-minus-warm is not isolated EPT time.",
+    "Diagnostic L1 fault helper durations include tracing and nested callees; exclude helper-outside exit/entry. They are not baseline pure EPT costs and must not be added to parent wall time.",
+    "One diskless vCPU; block/network/vsock state and disk migration not covered.",
+    "Workload reads after restore; later write-COW costs are excluded.",
+    "Semantic state bytes vary slightly with serialized variable-length fields."
+  ],
+  "artifacts": {
+    "primary_index": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/full-migration-20261020T023132Z/primary-dense-index.json",
+    "trace_index": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/full-migration-20261020T023132Z/trace-dense-index.json",
+    "measured_rounds_csv": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/full-migration-20261020T023132Z/measured-samples.csv",
+    "provenance": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/full-migration-20261020T023132Z/dense-provenance.json",
+    "patch_validation": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/full-migration-20261020T023132Z/patch-validation.json",
+    "run": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261020T030552Z-s1t4srp6",
+    "baseline_backup": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/full-migration-20261020T023132Z/before-experiment.tar.gz",
+    "cleanup": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/full-migration-20261020T023132Z/final-cleanup.json"
+  },
+  "provenance": {
+    "created_utc": "2026-10-20T03:17:15.711465+00:00",
+    "run": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261020T030552Z-s1t4srp6",
+    "sources": {
+      "lab.py": "fd136c15e6745c8cd786d8bb36ad8880c402d7a162dd11d9f0162a6dd026f15b",
+      "shared_probe.c": "fbda64a977ab4df5388ed5d6016a1f0e1ee6a2b2eca4f9d650aa3c0aedb0be81",
+      "l2-init.sh": "7f9f525b4b8d358715594c8934563e4005412bd133b203d59c2d23921fc1b23b",
+      "guest-init.sh": "bacac93e4d8b3f37ad97478ba2d84ba23e6cb9fdc166406445d8ecf095b1021f",
+      "firecracker.patch": "66c3c8c126d4e5f116986374bf584378565aaeeff38a185a038d8b689f3bbfd7",
+      "kvm-dax-state.patch": "61809e10100a0b7368bb008dc9e1a6967188f8d5ecb0ef490c5066aa4762a958",
+      "kernel.config": "5c53820292dbacb123711c8ff654befc704f38266749dec0ce39f85cd6187885"
+    },
+    "assets_manifest": {
+      "vendor": "intel",
+      "l1_kernel_release": "6.6.0-rc6-dcd-v3",
+      "modules": [
+        "irqbypass.ko",
+        "kvm.ko",
+        "kvm-intel.ko"
+      ],
+      "qemu": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/qemu/root/usr/bin/qemu-system-x86_64",
+      "qemu_version": "QEMU emulator version 6.2.0 (Debian 1:6.2+dfsg-2ubuntu6.31)",
+      "firecracker_version": "Firecracker v1.17.0\n\n2026-10-20T03:05:52.307300983 [anonymous-instance:main] Firecracker exiting successfully. exit_code=0",
+      "inputs": {
+        "l1_kernel": {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/kernel-build/arch/x86/boot/bzImage",
+          "sha256": "5be31e2be485847410a1d96eca643cefcbe441abf7d3b75e61ff3c7007b0dbaf"
+        },
+        "firecracker": {
+          "path": "/home/ijkim/agent-sandbox-cxl/firecracker/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker",
+          "sha256": "9aa1b69b99018c141ce7a94b49afc4feecb9ba7d9c8144b95b319960c4e9f8c8"
+        },
+        "l2_kernel": {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/kernel-build/vmlinux",
+          "sha256": "c1f50943d53428849aea3ba4d6109a83bbfcda52946b04814be7d3be034d7a7f"
+        },
+        "busybox": {
+          "path": "/usr/bin/busybox",
+          "sha256": "b3c1009e1b5c927e537487c80639cdf404f69e3eb49371d9be5d841672be3ff9"
+        },
+        "probe_source": {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/shared_probe.c",
+          "sha256": "fbda64a977ab4df5388ed5d6016a1f0e1ee6a2b2eca4f9d650aa3c0aedb0be81"
+        },
+        "l1_init": {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/guest-init.sh",
+          "sha256": "bacac93e4d8b3f37ad97478ba2d84ba23e6cb9fdc166406445d8ecf095b1021f"
+        },
+        "l2_init": {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/l2-init.sh",
+          "sha256": "7f9f525b4b8d358715594c8934563e4005412bd133b203d59c2d23921fc1b23b"
+        },
+        "cxl_init": {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/guest-cxl.sh",
+          "sha256": "a80b7d0b1c8edb4adc613dec7a140d0723a3388eca96cdda1eccd713ff0c7136"
+        },
+        "kernel_config": {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/kernel-build/.config",
+          "sha256": "5c53820292dbacb123711c8ff654befc704f38266749dec0ce39f85cd6187885"
+        },
+        "kernel_source_metadata": {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/kernel-source.json",
+          "sha256": "84b8887e8304883b105b247333ee14fc1eac94bd84df5ba6402482fb076db121"
+        },
+        "kernel_local_patch": {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/cxl-static-capacity.patch",
+          "sha256": "86e1aaef0b7892ffccc0e37cea1bcd1e9d6e2565f3c5ed6a973b07e7b95c29f6"
+        },
+        "kernel_cxl_hdm": {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/drivers/cxl/core/hdm.c",
+          "sha256": "fade64577a222eaa8065b94e4fbe228512a345d17416160dee31d79760e45545"
+        },
+        "kernel_cxl_mbox": {
+          "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/drivers/cxl/core/mbox.c",
+          "sha256": "ec6afb4fe14fdbcad73558df7e4eabf49f35391211732c6b4856aee31e70d559"
+        }
+      },
+      "artifacts": {
+        "l1-initramfs.cpio": "46076a44c5bd4ac3cbccdb3719e97492bdbd19d9343d73827f40e976e5c9aac3",
+        "l1-kernel": "5be31e2be485847410a1d96eca643cefcbe441abf7d3b75e61ff3c7007b0dbaf",
+        "shared-probe": "162ad4f9c6b97f1f23437306b23b31c35c3ef25e8b58f9a3aa5ab3ba3a5dadf6",
+        "l2-initramfs.cpio": "cb580c5efcb008eb19a03e471dc21c8651922b500f6aa798881374a83cc2d817"
+      }
+    },
+    "host_settings": {
+      "rcu_expedited": "0",
+      "rcu_normal": "0",
+      "kvm_nx_huge_pages": "N"
+    },
+    "guest_boot_args_addition": "transparent_hugepage=never",
+    "primary_index": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/full-migration-20261020T023132Z/primary-dense-index.json",
+    "final_sources": {
+      "lab.py": "fd136c15e6745c8cd786d8bb36ad8880c402d7a162dd11d9f0162a6dd026f15b",
+      "shared_probe.c": "fbda64a977ab4df5388ed5d6016a1f0e1ee6a2b2eca4f9d650aa3c0aedb0be81",
+      "guest-init.sh": "bacac93e4d8b3f37ad97478ba2d84ba23e6cb9fdc166406445d8ecf095b1021f",
+      "l2-init.sh": "7f9f525b4b8d358715594c8934563e4005412bd133b203d59c2d23921fc1b23b",
+      "README.md": "3df7b495c26577223c3b6daae21d44c7ca7571a18bc7f710807672c10d3478ec",
+      "firecracker.patch": "66c3c8c126d4e5f116986374bf584378565aaeeff38a185a038d8b689f3bbfd7"
+    }
+  },
+  "cleanup": {
+    "utc": "2026-10-20T03:27:39.468762+00:00",
+    "live_recorded_project_vms": [],
+    "host_settings": {
+      "rcu_expedited": "0",
+      "rcu_normal": "0",
+      "kvm_nx_huge_pages": "N"
+    },
+    "unrelated_vms_preserved": {
+      "737375": {
+        "starttime_ticks": 13723575,
+        "state": "S",
+        "command": "/home/ijkim/Trenv-openwhisk/labs/niagara-vm/host/state/qemu-install/bin/qemu-system-x86_64"
+      },
+      "737614": {
+        "starttime_ticks": 13725540,
+        "state": "S",
+        "command": "/home/ijkim/Trenv-openwhisk/labs/niagara-vm/host/state/qemu-install/bin/qemu-system-x86_64"
+      }
+    }
+  },
+  "independent_trace_audit": {
+    "all_entry_return_balanced": true,
+    "all_fault_return_codes": 1,
+    "all_mmu_page_roles_direct": true,
+    "all_leaf_levels": 1,
+    "kprobe_missed": 0,
+    "ring_overruns": 0,
+    "warm_scan_faults": [
+      0,
+      0,
+      0
+    ],
+    "note": "Independent streaming inspection of raw destination B traces; one vCPU thread on CPU1 per trace. Source A has no destination window in one-way diagnostic."
+  },
+  "checks": {
+    "python_compile": true,
+    "shell_syntax": true,
+    "gcc_wall_wextra_werror": true,
+    "report_hashes_verified": 8,
+    "cumulative_firecracker_patch_clean_base_byte_identical": true,
+    "primary_migrations_with_warmup": 115,
+    "measured_migrations": 100,
+    "separate_ept_migrations": 3,
+    "final_project_vms_alive": 0
+  }
+}

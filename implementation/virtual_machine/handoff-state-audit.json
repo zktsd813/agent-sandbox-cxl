@@ -1,0 +1,179 @@
+{
+  "scope": "Single-vCPU nested-KVM shared-DAX direct handoff; cooperative no concurrent VM ioctl, VMA mutation, IRQFD mutation or eventfd close during transition.",
+  "status": "passed: source audit, final positive/negative tests, 1000-transfer PIT/churn soak and ordinary KVM regression",
+  "residency_review": {
+    "reviewed_on": "2026-10-19",
+    "inventory": "implementation/virtual_machine/host-cxl-residency.json",
+    "live_evidence": "implementation/virtual_machine/.local/residency-live-review.json",
+    "vmcs_backing": "Confirmed in shared arena at offset 0x1d000 after generation 1000; VMCS host fields still refer to native host targets",
+    "qualification": "Source/live read-only review only; no new handoff timing or runtime code changes. Physical L0 nested-KVM VMCS02 and native execution resources are outside the CXL placement scope."
+  },
+  "network_state_payload_required_by_current_protocol": false,
+  "zero_transfer_meaning": "No bulk RAM copy or serialized CPU snapshot is sent. Shared-memory writes, CPU cache coherence and VMCS writeback still occur; their traffic is not measured as zero.",
+  "entries": [
+    {
+      "id": "guest_execution",
+      "source_value_needed_on_destination": true,
+      "data": [
+        "general registers, RIP/RSP/RFLAGS and control/MSR state",
+        "FPU/XSAVE backing",
+        "VMCS guest state",
+        "guest RAM and guest page tables",
+        "EPT and MMU headers",
+        "virtual interrupt pending state"
+      ],
+      "handling": "Normal KVM exit/put and VMCLEAR commit processor-resident state into the existing shared objects. Destination resumes those objects. No userspace GET/SET_REGS snapshot roundtrip.",
+      "source": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/vmx/vmx.c"
+    },
+    {
+      "id": "clock_and_timer_anchor",
+      "source_value_needed_on_destination": true,
+      "fields": {
+        "host_clock_ns": 8,
+        "guest_clock_ns": 8,
+        "guest_tsc": 8,
+        "host_tsc_khz": 8,
+        "apic_remaining": 8,
+        "pit_remaining": 8,
+        "apic_active": 4,
+        "pit_active": 4
+      },
+      "auxiliary_scalar_bytes": 56,
+      "handling": "Source writes these values into the shared header. Destination derives its own TSC offset/generation and shifts native timer timestamps from the source anchor to the destination anchor. Values travel through shared memory, not a network serialization format.",
+      "note": "56 bytes describes auxiliary fields only, not all execution state or measured CXL traffic.",
+      "source": "/home/ijkim/agent-sandbox-cxl/implementation/linux/include/linux/kvm_dax.h"
+    },
+    {
+      "id": "ownership_and_dispatch",
+      "source_value_needed_on_destination": true,
+      "data": [
+        "owner, state, generation",
+        "published/preparing/acknowledged epochs",
+        "VM identity offsets, RAM HVA/length and creation counters"
+      ],
+      "handling": "Release/acquire publication plus compare-exchange; 136-byte ioctl metadata record is currently copied to the shared control mailbox. Many record fields are identity checks or timing diagnostics, rather than essential CPU state.",
+      "source": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/shared_probe.c"
+    },
+    {
+      "id": "native_vmcs_host_state",
+      "source_value_needed_on_destination": false,
+      "data": [
+        "host CR3/RSP/GDT/TSS/MSR settings",
+        "VPID namespace",
+        "per-CPU loaded/current VMCS lists"
+      ],
+      "handling": "Source releases hardware ownership; destination installs its own host fields and VPID. Source host values must not be interpreted as destination resources.",
+      "source": "/home/ijkim/agent-sandbox-cxl/implementation/linux/arch/x86/kvm/vmx/vmx.c"
+    },
+    {
+      "id": "native_address_space",
+      "source_value_needed_on_destination": false,
+      "data": [
+        "mm_struct",
+        "host page tables for userspace HVA",
+        "MMU notifier membership",
+        "native struct page.private reverse mapping"
+      ],
+      "handling": "Destination mm is local. The same fixed HVA must resolve to the same contiguous DAX PFNs; checked before rebinding. Local page metadata is reconnected to shared EPT headers.",
+      "source": "/home/ijkim/agent-sandbox-cxl/implementation/linux/virt/kvm/kvm_main.c"
+    },
+    {
+      "id": "native_runtime",
+      "source_value_needed_on_destination": false,
+      "data": [
+        "SRCU per-CPU arrays/update-side allocations",
+        "xarray nodes",
+        "PID/task identities",
+        "FD/file/eventfd and epoll objects",
+        "native PIT worker and hrtimer base",
+        "slab/cache and module-global anchors"
+      ],
+      "handling": "Drain active source observers; reconstruct/reconnect destination-native resources. Existing VM/vCPU FD wrappers can be reused on later visits, but the FD numbers are not transferred.",
+      "source": "/home/ijkim/agent-sandbox-cxl/implementation/linux/virt/kvm/kvm_main.c"
+    },
+    {
+      "id": "locks_and_waiters",
+      "source_value_needed_on_destination": false,
+      "data": [
+        "mutex owner and waiters",
+        "spinlock ownership",
+        "futex wait queues"
+      ],
+      "handling": "Handoff is only allowed at a cooperative quiescent boundary. A foreign kernel cannot inherit a native waiter queue. Shared locks must be released before publishing DETACHED.",
+      "source": "/home/ijkim/agent-sandbox-cxl/implementation/linux/virt/kvm/kvm_main.c"
+    },
+    {
+      "id": "full_device_runtime",
+      "source_value_needed_on_destination": "future_required_semantic_state",
+      "data": [
+        "block I/O completion and queue ownership",
+        "network packets/connections and backend state",
+        "vsock connections",
+        "DMA/IOMMU/device assignment ownership"
+      ],
+      "handling": "Not implemented by this prototype. Firecracker control/device runtime stays on A; B uses the existing native executor and limited UART emulation. Shared Rust heap does not transfer epoll, task stacks, or device backend ownership.",
+      "source": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/README.md"
+    }
+  ],
+  "new_native_resources": [
+    "persistent local Firecracker control socket (A only)",
+    "destination-local cached VM/vCPU FD wrappers"
+  ],
+  "new_profiling": "Optional 128-byte per-stage timing record at arena offset 512; diagnostic data, not VM execution state.",
+  "kernel_profile_stages": {
+    "detach": [
+      "arch clock/timer/EPT/VMCS quiesce",
+      "PM/debugfs/global VM list removal",
+      "MMU notifier unregister and reader grace period",
+      "native xarray retirement",
+      "SRCU cleanup",
+      "PID RCU reader grace period and put_pid",
+      "mm reference release and publication preparation",
+      "reserved"
+    ],
+    "attach": [
+      "identity/PFN checks and optional FD reservation",
+      "native hardware/module preparation and mmgrab",
+      "SRCU initialization",
+      "MMU notifier registration",
+      "native vCPU index and preempt notifier",
+      "EPT metadata/clock/VMCS/PIT/LAPIC rebinding",
+      "VM list/PM notifier and optional FD creation",
+      "owner publication and metadata result"
+    ]
+  },
+  "control_profile_parts": [
+    "vCPU stop/resume channel including scheduling",
+    "DAX ioctl + metadata/logging excluding IRQFD time",
+    "source IRQFD removal or destination re-registration"
+  ],
+  "native_wakeup_measurement": "Same-kernel CLOCK_MONOTONIC_RAW: go publication to executor observing go; run_begin is a userspace KVM_RUN attempt, not a hardware first-instruction timestamp.",
+  "constraints": [
+    "Fast control uses one local persistent client and freezes VMM device dispatch during its pause loop; do not mix HTTP commands while that loop is paused.",
+    "IRQFD batch supports at most 8 simple IRQFDs; rejects resampling and active IRQ bypass; no concurrent eventfd close or IRQFD modification.",
+    "No transfer of active native lock waiters; one VM/vCPU per arena and fixed mappings.",
+    "Hardware VMCS compatibility and coherent shared physical addresses are assumptions for future physical multi-host testing."
+  ],
+  "evidence": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/latency-refinement-summary.json",
+  "resume_latency_attribution": {
+    "status": "passed: 9 fresh pairs, 4500 handoffs, 3920 profiled measured samples; CONFIG_KVM_DAX_POOL_TEST=n module build passed",
+    "flag": "--resume-profile (disabled by default)",
+    "kernel_record": {
+      "offset": 640,
+      "bytes": 104,
+      "fields": "enabled, generation, KVM_RUN and pre-VMX MONOTONIC times, guest-domain TSC/frequency, pair span, diagnostic guest RIP and first VM exit information"
+    },
+    "guest_record": "16 appended heartbeat bytes: ACK TSC and epoch; timestamp before release ACK store",
+    "clock_method": "destination-local MONOTONIC paired with guest-domain virtual TSC; no cross-node or MONOTONIC_RAW subtraction",
+    "pair_uncertainty": "half the bracketing host MONOTONIC sample span; raw negative point estimates retained and verified inside their uncertainty bounds",
+    "semantic_limit": "pre-VMX timestamp is an entry attempt, not first guest instruction; post-marker interval includes nested entry and guest execution/exits",
+    "new_host_pointer_state": "none; resume profile pointer is destination-local transient kernel stack data pointing into the existing reserved shared arena page",
+    "evidence": "implementation/virtual_machine/.local/heartbeat-attribution-summary.json",
+    "matrix": "implementation/virtual_machine/.local/heartbeat-matrix.json"
+  },
+  "necessity_review": {
+    "reviewed_on": "2026-10-19",
+    "inventory": "implementation/virtual_machine/host-reference-audit.json",
+    "scope": "Fresh source purpose/reference audit; native identity vs physical storage; reverse references/tagged IDs; conditional MSR/PMU-filter gaps. No new runtime changes or VM execution tests."
+  }
+}

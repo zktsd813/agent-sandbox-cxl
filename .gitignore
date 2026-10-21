@@ -1,4 +1,5 @@
 # Machine-local configuration and credentials
+/.local/
 /.agents/
 /.aws/
 /.codex/
@@ -15,6 +16,8 @@ __pycache__/
 .matplotlib/
 
 # Downloaded upstream repositories and archived experiments
+/firecracker/
+/implementation/linux/
 /harness/mini-swe-agent/
 /harness/SWE-agent/
 /docs/archive/

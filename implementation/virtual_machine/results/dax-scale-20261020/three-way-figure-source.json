@@ -1,0 +1,24 @@
+{
+  "input": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/dax-size-comparison.json",
+  "sha256": "e0f8d860288abede97adfe27129ef3b8dcc7b5d065b9da2163e3a7bcde7788cc",
+  "matplotlib": "3.10.9",
+  "statistics": "Source-clock means, 20 measured per size and model.",
+  "axis_limit_seconds": 1,
+  "overflow": "Full migration exceeds 1s; double wavy bar end marks omitted height. Labels retain actual total (total minus page scan).",
+  "small_bars": "Actual heights, without a minimum display height; labels in ms with leaders.",
+  "baseline": {
+    "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/network-fairness-comparison.json",
+    "bytes": 935032,
+    "sha256": "8b410194fac5b77abd5805200264bcf791d465651ca8faad5ad74e7cedf57437"
+  },
+  "limits": [
+    "Nested KVM and emulated shared CXL on one physical host; not a physical multi-host CXL result.",
+    "First page scan includes EPT faults, guest execution, backing faults, cold caches and observation delays; it is not isolated EPT construction.",
+    "Guest scan checks 64 bytes per 4KiB page, not every byte of W.",
+    "Only source-local elapsed observations form the additive total; destination stage durations and profiles are diagnostic and must not be added across nodes.",
+    "Preparation is outside pause-to-ACK and reported separately, rather than treated as free.",
+    "The full-RAM TCP baseline used a different CPU profile and RAM backend. Its comparison is descriptive, not an isolated causal backend test.",
+    "Raw rounds 0..3 are retained separately; initial EPT validation/metadata binding differs from repeated handoffs.",
+    "Semantic B boots a disposable same-configuration guest on the same backing before A boots; direct B has no such guest seed. Initial visit scans therefore have different backing/translation warmness and are not a one-factor cold comparison."
+  ]
+}

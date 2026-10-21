@@ -1,6 +1,8 @@
 # agent-sandbox-cxl
 
-mini-swe-agent의 기록된 명령을 Docker에서 재실행하고 CPU·메모리·동시성·LLC MPKI를 측정한다. CPU는 NUMA node 0을 사용하며, 대기 없는 DRAM(node 0) / CXL(node 2) 메모리 비교를 지원한다. GPU, 모델 가중치, LLM API key는 사용하지 않는다. 원격 worker와 노드 간 실행 상태 이동은 후속 단계다.
+mini-swe-agent의 기록된 명령을 Docker에서 재실행하고 CPU·메모리·동시성·LLC MPKI를 측정한다. Trace replay는 CPU NUMA node 0과 DRAM(node 0) / CXL(node 2) 메모리 비교를 지원한다. 별도 microVM 실험은 공유 DAX RAM 위의 상태 복원·KVM worker 재사용·direct handoff와 PML/cache 처리 비용을 검증한다. GPU, 모델 가중치, LLM API key는 사용하지 않는다.
+
+2026-10-21 microVM 구현·측정·EMR/DSA 조사 현황은 [실행 문서](implementation/virtual_machine/README.md)에 모았다. 현재 전환 실험은 한 물리 호스트의 두 Linux VM 사이이며 실제 비일관 CXL 다중 호스트 검증은 남아 있다. DSA와 주기적 preflush는 조사·설계 단계로, 해당 성능을 측정한 결과는 없다.
 
 ## 완료한 DRAM / CXL 실험
 
@@ -28,8 +30,11 @@ python harness/trace-replay/analyze.py --cdf docs/results/numa-immediate-2026101
 | `harness/trace-replay/data/inventory.json` | 원본 제출의 고정 commit, trace 경로·크기·SHA-256 |
 | `harness/trace-replay/data/sample16.json` | 기존 pilot에 사용한 16개 파일 이름 |
 | [기존 실험 보고서](docs/replay-report.md) | 완료한 pilot과 전체 실행 계획 |
+| [CXL microVM 구현·사용법](implementation/virtual_machine/README.md) | DAX RAM, snapshot, KVM worker 재사용, direct handoff 실험 |
+| [microVM handoff 문서](docs/microvm-handoff.md) | 상태 분류, NUMA 실행 실험, Firecracker 소스 빌드 방법 |
+| [microVM CPU scheduling 분석](docs/microvm-scheduling.md) | Preact trace의 1·2 vCPU 비교, guest interrupt·선점·CPU 이동, host vCPU 스케줄링 |
 
-Python 실행 파일은 두 개로 유지한다. 함수와 설정을 재사용하고, 새 framework나 여러 wrapper 파일을 추가하지 않는다. 원본 trace, Docker 이미지, 원시 계측 결과와 upstream 저장소 사본은 각 머신에서 준비한다.
+Trace replay의 Python 실행 파일은 두 개로 유지한다. microVM 운영은 `implementation/virtual_machine/lab.py`, 빌드는 같은 디렉토리의 `build.sh`로 모았다. 원본 trace, Docker 이미지, 원시 실행 로그와 upstream 저장소 사본은 각 머신에서 준비한다. 커널·Firecracker·QEMU 변경은 원본 버전 정보와 패치로 배포한다.
 
 ## 다른 머신에서 준비
 

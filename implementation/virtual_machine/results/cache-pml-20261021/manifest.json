@@ -1,0 +1,1190 @@
+{
+  "schema": 1,
+  "created_utc": "2026-10-21T07:52:17.810582+00:00",
+  "status": "validated",
+  "scope": "Portable cache/PML component results only; no DSA measurements or Firecracker migration timing",
+  "required_input": {
+    "path": "../../cache-maintenance-comparison.json",
+    "bytes": 2397596,
+    "sha256": "98065da426c23099c902e5c1811d4c152406efc0a3f425b800a1ff150d0e0cd3"
+  },
+  "validation": {
+    "all_60_latest_passed_index_cases_present": true,
+    "raw_log_and_report_record_sets_identical": true,
+    "raw_records_original_objects_preserved": true,
+    "source_and_destination_epoch_pairs_validated": true,
+    "all_published_case_stage_statistics_recomputed_from_epoch_durations": true,
+    "measured_epochs": 1200,
+    "warmup_epochs": 240,
+    "raw_records": 3120,
+    "original_input_unchanged": true,
+    "portable_plot": {
+      "syntax": "passed",
+      "default_input_resolves_to_published_comparison": true,
+      "matplotlib_version": "3.10.9",
+      "plotted_points": 16,
+      "full_range_references": 4,
+      "png_identical_to_original_final": true,
+      "test_output": "temporary directory; copied final PNG/PDF unchanged"
+    }
+  },
+  "original_machine_provenance": {
+    "note": "Absolute paths below identify original local evidence, not portable file dependencies. The complete original CACHE_BENCH_JSON records are exported in raw-epochs.jsonl. Original reports, logs, binaries, build directories, and trace files remain local.",
+    "files": [
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-pml-20261021/host-index.json",
+        "bytes": 26816,
+        "sha256": "4a0778e94c0115cd1b985d90754e84b0d6fe6d16e2ea08835763914d622eb1c7",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d0-w64-1792555982831844599/report.json",
+        "bytes": 37007,
+        "sha256": "37f127e1ef489cfea87a2678b7b294f7c91dd02d884666d2628f3f9efecc06bd",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d0-w64-1792555982831844599/A.log",
+        "bytes": 12038,
+        "sha256": "004cb7e5216d40071e30e2a4c6dca28a768db55c90205f4126e5f80c83fb7c9a",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d0-w64-1792555982831844599/B.log",
+        "bytes": 12048,
+        "sha256": "4c0660d6ac162e332d11067dd56762adde8486856f977b278594acfa8b7d0c22",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/assets-cache-pml-20261021/manifest.json",
+        "bytes": 3791,
+        "sha256": "35e9b78b4f23b9d75ec01d3871849d454f72e7eb3c11579530bb6c8d52b55125",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d10-w64-1792555986051768014/report.json",
+        "bytes": 37451,
+        "sha256": "4c69b50ba7a7c3d052ee540b82bb9bdf9139e2aa3d892c35360b4344364e6240",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d10-w64-1792555986051768014/A.log",
+        "bytes": 12249,
+        "sha256": "8d95d56a986d1caabffc315e855ce4d71f7376881afa7a55307da62ba1a314bb",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d10-w64-1792555986051768014/B.log",
+        "bytes": 12248,
+        "sha256": "81335596be1c676d39718dbe3d6868a16f0717797eac1cd7cb70248ac2dc182e",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d100-w64-1792555989288720425/report.json",
+        "bytes": 37660,
+        "sha256": "41304f4a3ab1d94353138adb24828954395017da81936008045651fc38346753",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d100-w64-1792555989288720425/A.log",
+        "bytes": 12360,
+        "sha256": "6394acd424dcc4b5af767be49cc082d7e86164ef4ae69b40398ae14f1275491b",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d100-w64-1792555989288720425/B.log",
+        "bytes": 12360,
+        "sha256": "8e9832883da4e446c39a0c7107f38ed36e401fbf3683abc1ba79a29c4d9ea43d",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d1000-w64-1792555992508968625/report.json",
+        "bytes": 38004,
+        "sha256": "faee1b4a56edb8e490d494e3d29ce87494dd0fa0af8988b2eb4188c347600f4e",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d1000-w64-1792555992508968625/A.log",
+        "bytes": 12512,
+        "sha256": "2f72a1d0bfe961b902a385f95031cb6d0ad47ab453ab6da2c297d2bef71c8382",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d1000-w64-1792555992508968625/B.log",
+        "bytes": 12514,
+        "sha256": "8b663ae934a8753eace35abbc466de55b62907af6cf5e5231e8187085270c39a",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d10000-w64-1792555996766069689/report.json",
+        "bytes": 38344,
+        "sha256": "bc53ddc2f658ad5b37f495a9ba282ecc6e89d5ea68b5558a96d27e4a66cb9356",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d10000-w64-1792555996766069689/A.log",
+        "bytes": 12672,
+        "sha256": "14810626b1cff7fbe1b405337b9f65ff8523a06443193fbe044e84339120bfac",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d10000-w64-1792555996766069689/B.log",
+        "bytes": 12669,
+        "sha256": "8123959d24f3a5f4ac950c245a0d2734a4ce879b661d59bf2a29121a68cb1ef1",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-1024m-d100-w64-1792556005038495023/report.json",
+        "bytes": 37960,
+        "sha256": "7e8247d98038a7c8152cca4c7e9b954405d4cc2a15e27203996f958c241e54f6",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-1024m-d100-w64-1792556005038495023/A.log",
+        "bytes": 12480,
+        "sha256": "5e1271b4dd5a6fc5c7b2c791d957d7b9a40ccf6685a6c020794547d02761a1e0",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-1024m-d100-w64-1792556005038495023/B.log",
+        "bytes": 12470,
+        "sha256": "f5a2206e623977372b7248c69100a32edde2024a63f9e59cb19d810eeec9c186",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-1024m-d100-w64-1792556010296680567/report.json",
+        "bytes": 37153,
+        "sha256": "efdd9e73767b84a5f5aeff1f52a2274bc08dc1ee743bd44418e30c15dc0282bc",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-1024m-d100-w64-1792556010296680567/A.log",
+        "bytes": 12142,
+        "sha256": "332b72f30acc30d090dc5ed8704f35abb4680f31ea365e52c6eb80298346c260",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-1024m-d100-w64-1792556010296680567/B.log",
+        "bytes": 12134,
+        "sha256": "df447cf5c098c487599a0920202af70eebd35e06c1fa737bbac22b447e60387d",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-1024m-d100-w64-1792556014543878271/report.json",
+        "bytes": 36956,
+        "sha256": "2156f0151fc2dcf3c0c0a3c2c1ff8de3dead5675148ebf4e98e05257938ca4db",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-1024m-d100-w64-1792556014543878271/A.log",
+        "bytes": 12062,
+        "sha256": "8ece64f46f01220a6dc332fc769949c63add23fa4c82a19147637ccae9c819cd",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-1024m-d100-w64-1792556014543878271/B.log",
+        "bytes": 12063,
+        "sha256": "7f74f29fac6078683864434babb07f5060727ef1431d72b8f89cdbb82444dd14",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-1024m-d10000-w64-1792556017773422856/report.json",
+        "bytes": 38269,
+        "sha256": "13ce30e778a9fab21acbac8205192bd0bea79b2082d3138efc610ed406e3ae78",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-1024m-d10000-w64-1792556017773422856/A.log",
+        "bytes": 12641,
+        "sha256": "25c49ae47cdbd41c264d88b963b288d05a8ef62fac2c257e8a24b31a390b3c7a",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-1024m-d10000-w64-1792556017773422856/B.log",
+        "bytes": 12644,
+        "sha256": "85186cc15a1cbc03dda5cadffc574e128025f2bb8cdfb99eadd77730b8afaafe",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-1024m-d10000-w64-1792556026052242415/report.json",
+        "bytes": 37536,
+        "sha256": "a39406d55030f0822e6888ab3cca1022aae9e1af509b7338fd65bd201f2ca35b",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-1024m-d10000-w64-1792556026052242415/A.log",
+        "bytes": 12315,
+        "sha256": "dbb3f96353513b8a8b4df5fdb96d773b31811010a5b4fef0e4244f7daf90e971",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-1024m-d10000-w64-1792556026052242415/B.log",
+        "bytes": 12306,
+        "sha256": "9cb7eaeaaa650c836ac844d3c1952089ce7162b00f89e809fa7b44f8ed6bdfc4",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-1024m-d10000-w64-1792556031316507106/report.json",
+        "bytes": 37241,
+        "sha256": "77de716f7903be0bdd6bb2b0e2fb7afe326b1347055a315bc82d530b84933101",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-1024m-d10000-w64-1792556031316507106/A.log",
+        "bytes": 12191,
+        "sha256": "ddc5789c82e619a4658da5ab70c9f7974e20cd42c7b010f355f4f17237f5d14e",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-1024m-d10000-w64-1792556031316507106/B.log",
+        "bytes": 12190,
+        "sha256": "acb713a62a4047d6c3d31377b99d601aa5ac8e20fb997a53637019bb2882acca",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d100-w4096-1792556034556754664/report.json",
+        "bytes": 37840,
+        "sha256": "dcf4114af4a406b27fb142640ef4ca344c2e47aafca1d2ecd1517e87e12f7c63",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d100-w4096-1792556034556754664/A.log",
+        "bytes": 12414,
+        "sha256": "cb6299779c2f45033807be123a4ce34ecd9c1674949ac1c5066f0505e79b3627",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d100-w4096-1792556034556754664/B.log",
+        "bytes": 12417,
+        "sha256": "71b2cbc22056474ffd9bec206579c9ecd2c7666d10134843cc912b69125bb130",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-1024m-d100-w4096-1792556039815889896/report.json",
+        "bytes": 37258,
+        "sha256": "e16db5107d5d306d014a49011f86ff6fcc12e493d531a5d4bf45a4d5f3f28090",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-1024m-d100-w4096-1792556039815889896/A.log",
+        "bytes": 12181,
+        "sha256": "efb0f73e8825a20dda73b01eb17da0f1e34f8b02b9fb3dde9e7ae9042a5bfc72",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-1024m-d100-w4096-1792556039815889896/B.log",
+        "bytes": 12184,
+        "sha256": "de9f6a53cd46d105d98996acff522a77d43c1335b9b863922e91793d9ac6f470",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-1024m-d100-w4096-1792556045072613814/report.json",
+        "bytes": 37071,
+        "sha256": "69dbb5cd66340a5d0beeddec91360cdc4e41b94167303bcc9ca1a2ada9e846f5",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-1024m-d100-w4096-1792556045072613814/A.log",
+        "bytes": 12105,
+        "sha256": "30286f550918347758e7fa582eecd5703aab3f8527080cc20e50406592f7c175",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-1024m-d100-w4096-1792556045072613814/B.log",
+        "bytes": 12112,
+        "sha256": "55ee70ec224a1f5a94662e71c3afedea0e877f1a82bc8c79e7829e4e3e8fc230",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-1024m-d100-w64-1792556050332137352/report.json",
+        "bytes": 37753,
+        "sha256": "cb982996180b3f4c6bc1d62f878eb5ea0e885887c4ee918517687a4e5dcd80fc",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-1024m-d100-w64-1792556050332137352/A.log",
+        "bytes": 12419,
+        "sha256": "eda9987402fff50b80a4fa1b28a22be0469951d3a76aa9c699a73fd3c8c3c56d",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-1024m-d100-w64-1792556050332137352/B.log",
+        "bytes": 12405,
+        "sha256": "c567f1c1251cf5def3b53e2d418239a79a15ffb2239f6804e11b041ff5a271dc",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d0-w64-1792556054575959800/report.json",
+        "bytes": 37092,
+        "sha256": "f1ba90e4571b1ecd79b425342f2d6e9be23c66b034c7d6bfebb98b70b8e0b258",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d0-w64-1792556054575959800/A.log",
+        "bytes": 12082,
+        "sha256": "8abf53ba6c04e99ee0cb827ee595cf3a5e60df074378aaa75a6ab2608d90c35a",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d0-w64-1792556054575959800/B.log",
+        "bytes": 12079,
+        "sha256": "18096bdc83f05fdb6e69302faa7f0db27d9bd6281b312f4b22e49b8fa99dc482",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d10-w64-1792556061962318858/report.json",
+        "bytes": 37542,
+        "sha256": "06522fc3c11e929a658425b2985117e3946acde8c6673f80d3a9abaad545188a",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d10-w64-1792556061962318858/A.log",
+        "bytes": 12294,
+        "sha256": "556d565dd4aadd097b6cdab8dcded601c9928a6bb79f6d7d7d22c6014ad626d5",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d10-w64-1792556061962318858/B.log",
+        "bytes": 12280,
+        "sha256": "212b5b4c0ea7a6f592573eefa057d495701e8fe26cb0b3cee828dfe90ad666dd",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d100-w64-1792556069332752998/report.json",
+        "bytes": 37794,
+        "sha256": "e38e8efaeff66101347e9f8d77db2d53cc0bbc50e12d6ed39298206b8cf7c6c1",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d100-w64-1792556069332752998/A.log",
+        "bytes": 12412,
+        "sha256": "8d3f4962bbfd85c32ad612c532c86a4280cb2b17172ca665fd17bc17cb30eb97",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d100-w64-1792556069332752998/B.log",
+        "bytes": 12416,
+        "sha256": "af26110a6c851f9ea4e2aed7f5b500968d2aefa1d795422da7883ec7fe2bcb9a",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d1000-w64-1792556075712403925/report.json",
+        "bytes": 38058,
+        "sha256": "230630b7000f569c43e69e6b4e2b13824c6a0c0380f4b65cd40752dc2908eaab",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d1000-w64-1792556075712403925/A.log",
+        "bytes": 12531,
+        "sha256": "194095d578a7d5f64175a3ed2f44f9e2e90e27e9a9a2e74b2bed292d3f01315f",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d1000-w64-1792556075712403925/B.log",
+        "bytes": 12522,
+        "sha256": "feb5012457942fe854d1d59f768cb5a2340b40b72094e176b74f07ed3886f662",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d10000-w64-1792556083085821504/report.json",
+        "bytes": 38407,
+        "sha256": "683068c691652c2ba2f5bcd0441518ac93b0293c8d2489232f97373731a95f1f",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d10000-w64-1792556083085821504/A.log",
+        "bytes": 12697,
+        "sha256": "5649df759822e00bc4d7ac98d6315f09b87c3de15b76df51f1200c619add234f",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d10000-w64-1792556083085821504/B.log",
+        "bytes": 12694,
+        "sha256": "20a3a9ba71794f6929edc5333d1c6672541ea8fe312c99fbb58ea00c5d662976",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-2048m-d100-w64-1792556097449049307/report.json",
+        "bytes": 38061,
+        "sha256": "96f6db38c566e7576b7085fe612638b52c7600e85e4d19e49675cf8b3b649678",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-2048m-d100-w64-1792556097449049307/A.log",
+        "bytes": 12529,
+        "sha256": "6b9cb477bbb89ed4dee191779ed69d4d4efa5017381e8c14d52e0e6f21ca1ad8",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-2048m-d100-w64-1792556097449049307/B.log",
+        "bytes": 12525,
+        "sha256": "fc833293586c112eb40e13c518215bcf0136b18a2f20d1ba3a4f8033e69d0a8c",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-2048m-d100-w64-1792556105810215210/report.json",
+        "bytes": 37264,
+        "sha256": "7da8981ef81dc05ba4ffa849f4684c63098eb65496ff1ab938bbad4dd87edd68",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-2048m-d100-w64-1792556105810215210/A.log",
+        "bytes": 12186,
+        "sha256": "bbd052a21a9caec6ddce2bbc4bca669a2c62f4d12b4602ad59732b8a5509201c",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-2048m-d100-w64-1792556105810215210/B.log",
+        "bytes": 12187,
+        "sha256": "bbd1402398c0fdf31b80d364a5da07f493fecd2a48170bc0823b522dfcf6bf51",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-2048m-d100-w64-1792556112168817334/report.json",
+        "bytes": 37063,
+        "sha256": "9bf6f31702b229962cf7f0cafec40710160821a77b234b8e961d3320b952558e",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-2048m-d100-w64-1792556112168817334/A.log",
+        "bytes": 12109,
+        "sha256": "b245249c3f5ada2fda71deb74e17caeffeb8f1059c9310d3e65dbb8644317b97",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-2048m-d100-w64-1792556112168817334/B.log",
+        "bytes": 12109,
+        "sha256": "45417273d4f8cf03250497126a0eafd1199d7f093401452e6e1a6051977cdbbc",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-2048m-d10000-w64-1792556117457810175/report.json",
+        "bytes": 38342,
+        "sha256": "b64084e078947716790d94a93558b4969169a65f1fb699878dc711886a73955d",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-2048m-d10000-w64-1792556117457810175/A.log",
+        "bytes": 12671,
+        "sha256": "7ab31a61d9d38d4d399cc634dba4876c3639b4485869792e22af249304fcc768",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-2048m-d10000-w64-1792556117457810175/B.log",
+        "bytes": 12672,
+        "sha256": "c13ea562337b7d33e0087c6486e47693699162dfbc5dd387ba4f53861f88b00d",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-2048m-d10000-w64-1792556131823652899/report.json",
+        "bytes": 37564,
+        "sha256": "c7743f6d4c7ec76981748677fe48cc792adbf4f0dfd02eb51a042002b66a61ba",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-2048m-d10000-w64-1792556131823652899/A.log",
+        "bytes": 12337,
+        "sha256": "2ca4f1027cbd160b4dec17522de1a31e2b7580d784f077912f2008051c200204",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-2048m-d10000-w64-1792556131823652899/B.log",
+        "bytes": 12341,
+        "sha256": "e55f0b0bc183dea4724f1bd98ff73600332e79ab8f6ee2321d2628965cf2605b",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-2048m-d10000-w64-1792556142157695229/report.json",
+        "bytes": 37299,
+        "sha256": "8da9772a6dfabfa1d5208126089af0c8727663c2bb7e9b083c597bc696b07b81",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-2048m-d10000-w64-1792556142157695229/A.log",
+        "bytes": 12224,
+        "sha256": "3d2d4b45ee99e8163a48c9e63c3ed484666600b7a738b4cd6b5a478dc9ac4bde",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-2048m-d10000-w64-1792556142157695229/B.log",
+        "bytes": 12222,
+        "sha256": "27a02a0102dca88bac7a9f8df1d7ca068d2edc722710bf2218dca9b8629356ba",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d100-w4096-1792556147504359935/report.json",
+        "bytes": 37863,
+        "sha256": "58705118f9b554f666bad7a005ce9e61e6df538bd150facaf8d7eda7fec60f55",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d100-w4096-1792556147504359935/A.log",
+        "bytes": 12428,
+        "sha256": "4c6d42797eac570a05ce24036400c926ca9a50aadd6b12e9a63ff4b8d67ccd9d",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d100-w4096-1792556147504359935/B.log",
+        "bytes": 12435,
+        "sha256": "3faa5214e0b72f172f3fcb7630e458e9908e9839deb62c7f1fe401bab3b5be6b",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-2048m-d100-w4096-1792556158890513369/report.json",
+        "bytes": 37320,
+        "sha256": "b97a44b892e8c8aa79a80e2299c961abc08901a03bff167f304396b5475ee3d9",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-2048m-d100-w4096-1792556158890513369/A.log",
+        "bytes": 12210,
+        "sha256": "7896dbb036279c03980827a637289a79e27f4a086b45b363cb254026331158cf",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-2048m-d100-w4096-1792556158890513369/B.log",
+        "bytes": 12209,
+        "sha256": "edb3add6eff03c45e8c8975ba52a068a779a62018acea2d7c209ffca087ab4c1",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-2048m-d100-w4096-1792556169202877832/report.json",
+        "bytes": 37117,
+        "sha256": "8ed8f1121c54db61521e347fd4552a5f4bd427fb2aca1a45e44e536e0e27657a",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-2048m-d100-w4096-1792556169202877832/A.log",
+        "bytes": 12144,
+        "sha256": "d717ffeae7ec413a287319f59567a77d4dd60dd008df05ddb75356ff7b0f35db",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-none-2048m-d100-w4096-1792556169202877832/B.log",
+        "bytes": 12142,
+        "sha256": "31a7fc888aa1db04f67c40d1e925a5fd47c6f440b5f6136d6b849ba364f46bc2",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-2048m-d100-w64-1792556178577333010/report.json",
+        "bytes": 37849,
+        "sha256": "f73af91a153ef34281239d7c23c5ac22ab4ea37c424262ec58ff7b529d29880d",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-2048m-d100-w64-1792556178577333010/A.log",
+        "bytes": 12464,
+        "sha256": "0a1d834eaad7b184f897f51c83e51f0e03ab4f9cc90beac21e993d5cf821f3f4",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-2048m-d100-w64-1792556178577333010/B.log",
+        "bytes": 12464,
+        "sha256": "9013a239f50a53e0e51a56b02952fef683b5c1ae060b33971b230a48986c1224",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-pml-20261021/guest-index.json",
+        "bytes": 27490,
+        "sha256": "1be8d5568af16af30e8c91d75d716c11d35987ab8939b908452f862e90bd34c8",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d0-w64-1792556370766391322/report.json",
+        "bytes": 46753,
+        "sha256": "f55903fb680011c435a1da5b9e067e49acd62ef9308fdf70c8300cf7fb52ed32",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d0-w64-1792556370766391322/A.log",
+        "bytes": 12050,
+        "sha256": "c1a77be27f8b698350406603eaa611a5ffc2ad74ed96db5328f107e796c8f71a",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d0-w64-1792556370766391322/B.log",
+        "bytes": 12049,
+        "sha256": "84151c2ac26ccf2a358df59c84d07a5bc49580d03a3d61e6c9d3b57f95b247e4",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/run.json",
+        "bytes": 19966,
+        "sha256": "55c6c1983384046501c70f4d734d102fbae9f895a35d858e7367581168b38783",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/configuration-1792556241836869792.json",
+        "bytes": 7582,
+        "sha256": "1ee15067da634714346cb9cdce5f232772912bbd916a776d3acf76b797a6713f",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d10-w64-1792556383794102545/report.json",
+        "bytes": 47219,
+        "sha256": "299e7cec8c8df8e41dd2d2f76b18f7752ccd60c75ef7ed7bfdd8987b10153314",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d10-w64-1792556383794102545/A.log",
+        "bytes": 12291,
+        "sha256": "722b77dd280fab4533a04c0095c332652bc4689d490671a8de676b3ee059d3ab",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d10-w64-1792556383794102545/B.log",
+        "bytes": 12281,
+        "sha256": "35cc8fc65581cd88617f8709bfa8646a08a8ecaf85cf09572c0ab84acc2dbb76",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d100-w64-1792556396239591264/report.json",
+        "bytes": 47431,
+        "sha256": "6f8a2128a3bfefe371c3a4cfc446ae5a0394ae33862861aab0af301b6bbaf6fb",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d100-w64-1792556396239591264/A.log",
+        "bytes": 12380,
+        "sha256": "61b213ada89845221c91308f9f855373baf9f3f4fbf220c6f8e76f8c9a974ed7",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d100-w64-1792556396239591264/B.log",
+        "bytes": 12383,
+        "sha256": "ce91e51018602400e1e30009bdb23e9e2158bf286b395e295a6db3ad9535e7ff",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d1000-w64-1792556408801658543/report.json",
+        "bytes": 47731,
+        "sha256": "ad2feb2793d4181e2fcf616a91587e780e13647fabad68c0f8a62dbb45de5ad5",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d1000-w64-1792556408801658543/A.log",
+        "bytes": 12508,
+        "sha256": "cbbf156e5291e034a64daa21236d42ce82e954e362b36808c5fc6ea553cf32f5",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d1000-w64-1792556408801658543/B.log",
+        "bytes": 12509,
+        "sha256": "b901281a2b2711f3f1e5f5eb4eaad0b9993a64d86951f827c26f880017ecc452",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d10000-w64-1792556424994910100/report.json",
+        "bytes": 47995,
+        "sha256": "f2f00734f91c668dde33810639f17fd8fb63beb53262b11653e78b85be351ef8",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d10000-w64-1792556424994910100/A.log",
+        "bytes": 12652,
+        "sha256": "e583651dcfb9597f7723862a9e6cf96af8ef126859797031537dc4ef4c5e54b0",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d10000-w64-1792556424994910100/B.log",
+        "bytes": 12651,
+        "sha256": "a7ceb4820d15c9f80822934bcfbeba64d4ff886f51488ee1a7c247d658c6ce67",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-1024m-d100-w64-1792556457678006946/report.json",
+        "bytes": 47691,
+        "sha256": "c52c7a60186b9e27b76a1f15e25784d7c685e5f9e27e78d70e73521664984a13",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-1024m-d100-w64-1792556457678006946/A.log",
+        "bytes": 12509,
+        "sha256": "d88bae0cf9dcbcd0c56f8288642bad814c441202795397ca56cb51bb744fb9ce",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-1024m-d100-w64-1792556457678006946/B.log",
+        "bytes": 12507,
+        "sha256": "f6508aaca000ed6f97f25b3804f6999ce01a8c5498352690166edb78f296d2d8",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-1024m-d100-w64-1792556472687159578/report.json",
+        "bytes": 46924,
+        "sha256": "374c05cc845081af77fd9d7268a5835799a11f883b869ae44761833aafe9296e",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-1024m-d100-w64-1792556472687159578/A.log",
+        "bytes": 12167,
+        "sha256": "de60d298b5c630c0cc7d8ec353e42e95ec0a4af2f603d6fde8f18e9442038b43",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-1024m-d100-w64-1792556472687159578/B.log",
+        "bytes": 12159,
+        "sha256": "c87e92f2e988f7c9a6ae3139c29a24d97208490414c050100f0e1457f45b4e57",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-1024m-d100-w64-1792556485502326829/report.json",
+        "bytes": 46715,
+        "sha256": "a3a887a64ae1ca7112b62bb524f1f92ffe3d56675c5dea7ca390755c4ad1f5d4",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-1024m-d100-w64-1792556485502326829/A.log",
+        "bytes": 12086,
+        "sha256": "86f3d289e1fc55f5c7dc95e49d60a75d8d44d58c3fe9fec3cf5fcfe37fec923d",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-1024m-d100-w64-1792556485502326829/B.log",
+        "bytes": 12088,
+        "sha256": "3ab8deb679db6ea8b827963fbcf7f1ebbf20bf6dcf660b2b3376fbce7916861d",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-1024m-d10000-w64-1792556498160884345/report.json",
+        "bytes": 47943,
+        "sha256": "ab0a5b50c39c3e8ae622aed7450cf031451101650c84d5a306fa883035b261cf",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-1024m-d10000-w64-1792556498160884345/A.log",
+        "bytes": 12622,
+        "sha256": "64a3a033f1c5c84bdfac96310b7dee6da8c59d6fda5346672f84076646a8b12b",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-1024m-d10000-w64-1792556498160884345/B.log",
+        "bytes": 12618,
+        "sha256": "c984d726da1897724ae418ba493821c63ce6a4daf64ecf51e5e4b6521e28f3ce",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-1024m-d10000-w64-1792556530712407567/report.json",
+        "bytes": 47203,
+        "sha256": "e480ea74f48992f0c7b4a0063856421c3fd8fe2a13b5b6461efc439aa371b518",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-1024m-d10000-w64-1792556530712407567/A.log",
+        "bytes": 12293,
+        "sha256": "b0fd61f1c093a56c33732402089c62e656312ad85da916a8309dc1b1fa701087",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-1024m-d10000-w64-1792556530712407567/B.log",
+        "bytes": 12295,
+        "sha256": "808cdb6a8e5d6ec2b72f525ceac84057e71fa562df9be1321da7ad022a305d72",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-1024m-d10000-w64-1792556562119352872/report.json",
+        "bytes": 46944,
+        "sha256": "f21f32605f5af9800e7cfdfb3c9c7d0fc4eda716e579a4a0dd58352f9f537e93",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-1024m-d10000-w64-1792556562119352872/A.log",
+        "bytes": 12203,
+        "sha256": "e8316e32028184e3b65f831d8ebe4b9100cf27cd1a29a31fc2330a87c0910c4f",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-1024m-d10000-w64-1792556562119352872/B.log",
+        "bytes": 12207,
+        "sha256": "06ffba5a8df5811a31f1d316a1a03a893b9cc0064d144b16de3fd02462102bbb",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d100-w4096-1792556574626989120/report.json",
+        "bytes": 47511,
+        "sha256": "01adbd637783f7e9194e49e2fb8f6880d86fd59b862a763714f8da831942ea38",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d100-w4096-1792556574626989120/A.log",
+        "bytes": 12411,
+        "sha256": "7d456220a913b03b23eb6e8920c8eb87ffd2694cfd0a81ad314210f7fdaf02f6",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d100-w4096-1792556574626989120/B.log",
+        "bytes": 12415,
+        "sha256": "d438854d4f5a8cc2f3bdacbce5d47f72f47bae6463413305d7f4c512eeee59b6",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-1024m-d100-w4096-1792556592317046455/report.json",
+        "bytes": 46978,
+        "sha256": "30e229c51af8c0289e30335c989217a05b615f2d52b31c777a39af2409b5ca42",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-1024m-d100-w4096-1792556592317046455/A.log",
+        "bytes": 12177,
+        "sha256": "e3e510046ba02c29859b840454179260424917bf8e745324a03336a5d8815c63",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-1024m-d100-w4096-1792556592317046455/B.log",
+        "bytes": 12186,
+        "sha256": "3dd44ce73f7248e7109843d3fa21073cb4a03ce30736c733e40ae8a2a12d8782",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-1024m-d100-w4096-1792556609834129088/report.json",
+        "bytes": 46797,
+        "sha256": "9e6aa4d1d4a758ab17f56015e00c35beaf5448ae4c2a0db326681bd2547420a6",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-1024m-d100-w4096-1792556609834129088/A.log",
+        "bytes": 12120,
+        "sha256": "ac6570e476e28211594c4de95ac0603ec943b737ca94f215baffc38f57acdd8a",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-1024m-d100-w4096-1792556609834129088/B.log",
+        "bytes": 12123,
+        "sha256": "a98617b9dc6e195e23377c182d452d069d321c5269b957db27ebdd1dc6dddfc9",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-1024m-d100-w64-1792556625793967588/report.json",
+        "bytes": 47514,
+        "sha256": "ef20b7a1c96a47c7fd722ecab865d2c95be491dca6e90494704beb29e994e5ac",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-1024m-d100-w64-1792556625793967588/A.log",
+        "bytes": 12437,
+        "sha256": "0f4bd756c2125a76e350fb40ed67c82b62152571c1dca7825eb20909db41e618",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-1024m-d100-w64-1792556625793967588/B.log",
+        "bytes": 12435,
+        "sha256": "6067823c997434be59efd600fcf8e3810ddc79bc4e582ba7101ebd366d242786",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d0-w64-1792556640923076403/report.json",
+        "bytes": 46838,
+        "sha256": "dd89682fd1fb1cff520873a1eb4f7d1740afc5d3cda95f150a9aac6fb8c19f10",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d0-w64-1792556640923076403/A.log",
+        "bytes": 12119,
+        "sha256": "7ed4df9ea4f795a0ec875a84c0e25670d5fdbcaf711df7bca5686aafdff2d0a9",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d0-w64-1792556640923076403/B.log",
+        "bytes": 12109,
+        "sha256": "147c5f7317f8e0683170fb891a58ad3a75af1d2ac828cf7f2e7d42895a67b227",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d10-w64-1792556664859075894/report.json",
+        "bytes": 47248,
+        "sha256": "a0bcbfd26c83bf51607ae7ab0cf069f2d1df808bbe9855f4501bdbf205d9ba0e",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d10-w64-1792556664859075894/A.log",
+        "bytes": 12315,
+        "sha256": "e699dc4caa021154f4bd13f1de4e9c73616f4678dd9850961c9aa43cb24521c9",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d10-w64-1792556664859075894/B.log",
+        "bytes": 12300,
+        "sha256": "2ba00f963dd35bc2fa23b58a7ac8164751d8c05323f8e10969a8ce113f3d4823",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d100-w64-1792556686588791497/report.json",
+        "bytes": 47516,
+        "sha256": "9cbc88600c4254acfb78f70d26beab1f6ce825bde7ab181215e190c77158f217",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d100-w64-1792556686588791497/A.log",
+        "bytes": 12422,
+        "sha256": "6e5c9d8ab75cfe7f9ba0e0732be1f20a4cc70b15ce5cc842adaa55adec03fbc7",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d100-w64-1792556686588791497/B.log",
+        "bytes": 12422,
+        "sha256": "69aa2a4c6972eabc355c96b87fea84079f60b1d35048bbf73ff3285c00c479bf",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d1000-w64-1792556709307406699/report.json",
+        "bytes": 47834,
+        "sha256": "2d2563bd5fe94c31e3757386d0e71462c7ff9c950509eca24e3ba078034a7c8f",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d1000-w64-1792556709307406699/A.log",
+        "bytes": 12559,
+        "sha256": "fb567334c21a6aa6f0e92ca5f58304d9c899d3b21b2e4c237e7e88b8ae02df54",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d1000-w64-1792556709307406699/B.log",
+        "bytes": 12562,
+        "sha256": "90939989d72830e8b3daf247d6eeaec6f235e0713c4f0ee775bc7521ce6f9c7e",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d10000-w64-1792556735336245400/report.json",
+        "bytes": 48140,
+        "sha256": "42c6613b85ebffdd5e9950cd11038ea7adbf4aacdbbcfaf47dcab303315b152d",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d10000-w64-1792556735336245400/A.log",
+        "bytes": 12703,
+        "sha256": "19a9a279ef70bfa6e706d6eedb3b8ccf938ae21e5594176e784cc302468483c3",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d10000-w64-1792556735336245400/B.log",
+        "bytes": 12708,
+        "sha256": "0daf542a999f3a2cad78fb8e7c10a01ff9a5cba879403d9a7ea99dbca0b4e5e6",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-2048m-d100-w64-1792556793463243829/report.json",
+        "bytes": 47838,
+        "sha256": "11d6d72e52f6b758511b08e166297930ca231715658f45574b4ca445156bfb14",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-2048m-d100-w64-1792556793463243829/A.log",
+        "bytes": 12550,
+        "sha256": "c1846ea7614e7c398bfb76d1deade2356aa5b1f491a913c0c3d0f27b708e8b13",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-2048m-d100-w64-1792556793463243829/B.log",
+        "bytes": 12547,
+        "sha256": "b7ba2f52653b2172c8f9d0b598d9a6f7a9deae33411036fa085ce6983844cc22",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-2048m-d100-w64-1792556818398380103/report.json",
+        "bytes": 46961,
+        "sha256": "188412f85b5ae967e2dcd2cc3b1044f91d5598492e251b5f79159f0e36c37515",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-2048m-d100-w64-1792556818398380103/A.log",
+        "bytes": 12191,
+        "sha256": "d365bdb59ca54ef1e3ccd507f989a06a55d6361ab1b857aca7fbce7219113d1b",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-2048m-d100-w64-1792556818398380103/B.log",
+        "bytes": 12191,
+        "sha256": "8422b544794f9688b2796834f26ccdd562094d293d5f5500303a1c8332cf92c9",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-2048m-d100-w64-1792556841307309188/report.json",
+        "bytes": 46722,
+        "sha256": "0bc0a7e463183443fe1a946360d84ae16c543525bb52c004b895d0407ca6c718",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-2048m-d100-w64-1792556841307309188/A.log",
+        "bytes": 12095,
+        "sha256": "04dcd9b0eb569e88d98a59d7e27a26c5d0095dd3a4a6e92d7bb62a8c84fc4739",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-2048m-d100-w64-1792556841307309188/B.log",
+        "bytes": 12090,
+        "sha256": "7d34817437e25eca7829aaedba1cae83a1ae87226b4f9d09ee2daa514c3177df",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-2048m-d10000-w64-1792556862943353694/report.json",
+        "bytes": 48080,
+        "sha256": "82dff2faacc573f6e9274119790f72d72061e78da391cb109772f33506cf26e3",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-2048m-d10000-w64-1792556862943353694/A.log",
+        "bytes": 12677,
+        "sha256": "029c429d90f78af7ef7e5de5ec2c03ca42aae979a84d216436831854455f39e0",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-2048m-d10000-w64-1792556862943353694/B.log",
+        "bytes": 12677,
+        "sha256": "635903ba219bd4db26308652d51b14c7f13867a368a77318721e5d7035f38aec",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-2048m-d10000-w64-1792556920351440265/report.json",
+        "bytes": 47304,
+        "sha256": "bc9844b7afe1145909e14e8c6847a895aac2306404b97b37cf0643075914c7fa",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-2048m-d10000-w64-1792556920351440265/A.log",
+        "bytes": 12339,
+        "sha256": "006378150714c68c57af2c27f0d5b40dccceba9480b96f8fd5eebf8d02673177",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-2048m-d10000-w64-1792556920351440265/B.log",
+        "bytes": 12340,
+        "sha256": "5a04de0b15426e64b4b3618428a324b95184cb8966a4f07db8aae8002b2a7dac",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-2048m-d10000-w64-1792556978833716225/report.json",
+        "bytes": 47002,
+        "sha256": "31a6e437c060bdc89ed122e3771effa9803592727efe2d2128344f733b738d78",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-2048m-d10000-w64-1792556978833716225/A.log",
+        "bytes": 12227,
+        "sha256": "74be138e40fec24f133fe30a53a855bd29fb517dcf0e6a0b4efa2c68ecd43d64",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-2048m-d10000-w64-1792556978833716225/B.log",
+        "bytes": 12227,
+        "sha256": "6cf9567100c0d34c5fab4e9d22cf8df82b07d78d6c8993d31fbe416dc742fe2b",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d100-w4096-1792557000542678595/report.json",
+        "bytes": 47619,
+        "sha256": "6b066ad3095a2ffe6c6a5ef4164b73a457739293666aaa781954704e9274681f",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d100-w4096-1792557000542678595/A.log",
+        "bytes": 12467,
+        "sha256": "c89e5a9ce62ca07a0bb35ddfdc3a8e43927320fb14f5b65111ea3d75f9339554",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d100-w4096-1792557000542678595/B.log",
+        "bytes": 12472,
+        "sha256": "af273c71dd5637c906ed26741746eda42cbbe8b3d6532efd07fd3a0c122382bc",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-2048m-d100-w4096-1792557028949436860/report.json",
+        "bytes": 47063,
+        "sha256": "e9baa05e6fd7f548c39a2ec0d511766806b22d604f585be370751980e89652cd",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-2048m-d100-w4096-1792557028949436860/A.log",
+        "bytes": 12232,
+        "sha256": "9b0935c5131d74eef8f4291bdbf656f79b22f7d853eff235908ac6c50235a839",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-2048m-d100-w4096-1792557028949436860/B.log",
+        "bytes": 12240,
+        "sha256": "abb2c5b3365ea3f597d8df7d20ec5e880a4e2af73d359d5edf25f7bd7e92f7ea",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-2048m-d100-w4096-1792557057297549669/report.json",
+        "bytes": 46840,
+        "sha256": "c9a3f5f98e813ad42ebe729cc7d75cad3353e1de7051f66b25326654d835eba7",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-2048m-d100-w4096-1792557057297549669/A.log",
+        "bytes": 12140,
+        "sha256": "b6c4579a20c0e3280d8302d906d32b91327e95e2e45bf189e99783edac57a819",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-none-2048m-d100-w4096-1792557057297549669/B.log",
+        "bytes": 12152,
+        "sha256": "2c5810fc4b99266cc69e63c9ca00183c085d54789b40f4db4301c8dd5498717e",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-2048m-d100-w64-1792557083414652883/report.json",
+        "bytes": 47584,
+        "sha256": "a0616af0b3a37a6e810bc23162e4e763bb360ded818f741960c58f2e0700b90b",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-2048m-d100-w64-1792557083414652883/A.log",
+        "bytes": 12465,
+        "sha256": "d29435f892fcedfb7356ed0a94b219d5efeac086ca740eac85401fa33acf2aeb",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-2048m-d100-w64-1792557083414652883/B.log",
+        "bytes": 12470,
+        "sha256": "820eb4a4e1d92a0fd98205497a742a6b83e0d5ac6c6b1b3b202205ee5d62dde0",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-pml-20261021/diagnostic-nonempty-v2/report.json",
+        "bytes": 4237,
+        "sha256": "ca0e17166bf549d6e1f9713b6d576b5cfe6c8541ce43ce1994510e613f7900ac",
+        "required_for_portable_analysis": false
+      },
+      {
+        "original_machine_path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-pml-20261021/final-cleanup.json",
+        "bytes": 1379,
+        "sha256": "966aa050fb278c6637392521389f106739ad192ce209a493a943555e54926f7b",
+        "required_for_portable_analysis": false
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "path": "cache-maintenance-data.json",
+      "bytes": 15351,
+      "sha256": "f813de8cd2d8c78d2ff90cf1f80474a28a7bd3f27f77b8b691830e6820c442da"
+    },
+    {
+      "path": "cache-maintenance.pdf",
+      "bytes": 14151,
+      "sha256": "bd5612a8801bd03a64c2c01235fcd45a441b72b9e2309fe1f65f7b835bd62bbd"
+    },
+    {
+      "path": "cache-maintenance.png",
+      "bytes": 95483,
+      "sha256": "f1e3e5948ab5b481e708d72c2a8371c071bf26e77580709cfbec10556c52ed29"
+    },
+    {
+      "path": "plot.py",
+      "bytes": 7804,
+      "sha256": "e0e5cc58491c2c10107de6837fc2fc833b05762eb246b05607350a6e1933c938"
+    },
+    {
+      "path": "raw-epochs.jsonl",
+      "bytes": 1700116,
+      "sha256": "6a018d9955b3d94af893737751fdf8ad0ed3cd7c8636b7f0a4d1ba25b9656194"
+    },
+    {
+      "path": "summary.json",
+      "bytes": 357103,
+      "sha256": "32d84c2c8ef1773dc50aba367d9d6a30991e3dbaadc22a779edd9d746fa3e087"
+    }
+  ]
+}

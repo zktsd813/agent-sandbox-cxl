@@ -1,0 +1,444 @@
+{
+  "source": {
+    "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/cache-maintenance-comparison.json",
+    "sha256": "98065da426c23099c902e5c1811d4c152406efc0a3f425b800a1ff150d0e0cd3"
+  },
+  "plot_script": {
+    "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-pml-20261021/figures/sourceplot.py",
+    "sha256": "e60c62b693ab91a552e585e801cf577c3e9ac5026d5a263ba0589e15bf2a06d9"
+  },
+  "matplotlib_version": "3.10.9",
+  "status": "complete",
+  "metric": "cache_maintenance",
+  "statistic": "p50 of per-epoch writer_flush + reader_invalidate",
+  "unit": "milliseconds",
+  "panels_memory_mib": [
+    1024,
+    2048
+  ],
+  "write_bytes_per_dirty_page": 64,
+  "memory_size_scope": "shared data memslot only; separate 4MiB private guest code/commands excluded",
+  "caption": "Measured cache-maintenance component only: writer CLWB+SFENCE and reader CLFLUSHOPT+MFENCE. Curves select dirty 4KiB pages; dashed references process full RAM, measured at 1% dirty. Both use KVM dirty logging. Median of 20 balanced measured epochs after 4 warmups per case.",
+  "excluded_from_plotted_latency": [
+    "KVM guest execution",
+    "PML harvest",
+    "EPT dirty-bit rearm and translation invalidation",
+    "bitmap scanning",
+    "manifest hash",
+    "TCP control/ACK",
+    "post-ACK data verification",
+    "Firecracker snapshot or direct detach/attach"
+  ],
+  "limits": [
+    "Native: native KVM and shared memfd RAM. Nested DAX: two nested-KVM L1s and emulated shared device-DAX on one coherent physical host.",
+    "Scope differences include kernel, nested virtualization, mapping and backing; curve differences are not an isolated measurement of CXL device latency.",
+    "These results do not reproduce noncoherent hardware stale caches. None mode correctness and PML tracking costs are reported separately in the source JSON.",
+    "Dashed horizontal values are a fixed 1%-dirty full-range reference, not a separate full-policy measurement at every plotted density.",
+    "Every selected 4KiB page issues maintenance for all 64 cachelines; address-range bytes are not actual writeback traffic.",
+    "0% dirty cases remain in the source data and are omitted from logarithmic X axes."
+  ],
+  "points": [
+    {
+      "scope": "host",
+      "memory_mib": 1024,
+      "dirty_percent": 0.1,
+      "p50_ms": 0.06434999999999999,
+      "stats_ms": {
+        "n": 20,
+        "mean": 0.06445085,
+        "p50": 0.06434999999999999,
+        "p95": 0.064856,
+        "min": 0.06411,
+        "max": 0.065202
+      },
+      "case": "host-1024m-d10-w64-dirty-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d10-w64-1792555986051768014/report.json",
+        "bytes": 37451,
+        "sha256": "4c69b50ba7a7c3d052ee540b82bb9bdf9139e2aa3d892c35360b4344364e6240"
+      }
+    },
+    {
+      "scope": "host",
+      "memory_mib": 1024,
+      "dirty_percent": 1.0,
+      "p50_ms": 0.639113,
+      "stats_ms": {
+        "n": 20,
+        "mean": 0.6396905,
+        "p50": 0.639113,
+        "p95": 0.643129,
+        "min": 0.637509,
+        "max": 0.643901
+      },
+      "case": "host-1024m-d100-w64-dirty-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d100-w64-1792555989288720425/report.json",
+        "bytes": 37660,
+        "sha256": "41304f4a3ab1d94353138adb24828954395017da81936008045651fc38346753"
+      }
+    },
+    {
+      "scope": "host",
+      "memory_mib": 1024,
+      "dirty_percent": 10.0,
+      "p50_ms": 9.404154,
+      "stats_ms": {
+        "n": 20,
+        "mean": 10.27839695,
+        "p50": 9.404154,
+        "p95": 15.212915,
+        "min": 6.977772,
+        "max": 16.201237
+      },
+      "case": "host-1024m-d1000-w64-dirty-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d1000-w64-1792555992508968625/report.json",
+        "bytes": 38004,
+        "sha256": "faee1b4a56edb8e490d494e3d29ce87494dd0fa0af8988b2eb4188c347600f4e"
+      }
+    },
+    {
+      "scope": "host",
+      "memory_mib": 1024,
+      "dirty_percent": 100.0,
+      "p50_ms": 71.125043,
+      "stats_ms": {
+        "n": 20,
+        "mean": 69.2536953,
+        "p50": 71.125043,
+        "p95": 75.983391,
+        "min": 62.742054,
+        "max": 77.973895
+      },
+      "case": "host-1024m-d10000-w64-dirty-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-1024m-d10000-w64-1792555996766069689/report.json",
+        "bytes": 38344,
+        "sha256": "bc53ddc2f658ad5b37f495a9ba282ecc6e89d5ea68b5558a96d27e4a66cb9356"
+      }
+    },
+    {
+      "scope": "guest",
+      "memory_mib": 1024,
+      "dirty_percent": 0.1,
+      "p50_ms": 0.130851,
+      "stats_ms": {
+        "n": 20,
+        "mean": 0.13354575,
+        "p50": 0.130851,
+        "p95": 0.147986,
+        "min": 0.121076,
+        "max": 0.152101
+      },
+      "case": "guest-1024m-d10-w64-dirty-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d10-w64-1792556383794102545/report.json",
+        "bytes": 47219,
+        "sha256": "299e7cec8c8df8e41dd2d2f76b18f7752ccd60c75ef7ed7bfdd8987b10153314"
+      }
+    },
+    {
+      "scope": "guest",
+      "memory_mib": 1024,
+      "dirty_percent": 1.0,
+      "p50_ms": 0.9108620000000001,
+      "stats_ms": {
+        "n": 20,
+        "mean": 0.9215804,
+        "p50": 0.9108620000000001,
+        "p95": 1.052297,
+        "min": 0.805006,
+        "max": 1.113643
+      },
+      "case": "guest-1024m-d100-w64-dirty-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d100-w64-1792556396239591264/report.json",
+        "bytes": 47431,
+        "sha256": "6f8a2128a3bfefe371c3a4cfc446ae5a0394ae33862861aab0af301b6bbaf6fb"
+      }
+    },
+    {
+      "scope": "guest",
+      "memory_mib": 1024,
+      "dirty_percent": 10.0,
+      "p50_ms": 10.476768499999999,
+      "stats_ms": {
+        "n": 20,
+        "mean": 10.46773895,
+        "p50": 10.476768499999999,
+        "p95": 11.051299,
+        "min": 9.002442,
+        "max": 11.808988
+      },
+      "case": "guest-1024m-d1000-w64-dirty-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d1000-w64-1792556408801658543/report.json",
+        "bytes": 47731,
+        "sha256": "ad2feb2793d4181e2fcf616a91587e780e13647fabad68c0f8a62dbb45de5ad5"
+      }
+    },
+    {
+      "scope": "guest",
+      "memory_mib": 1024,
+      "dirty_percent": 100.0,
+      "p50_ms": 98.039015,
+      "stats_ms": {
+        "n": 20,
+        "mean": 97.7071412,
+        "p50": 98.039015,
+        "p95": 101.14243,
+        "min": 88.839989,
+        "max": 103.758926
+      },
+      "case": "guest-1024m-d10000-w64-dirty-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-1024m-d10000-w64-1792556424994910100/report.json",
+        "bytes": 47995,
+        "sha256": "f2f00734f91c668dde33810639f17fd8fb63beb53262b11653e78b85be351ef8"
+      }
+    },
+    {
+      "scope": "host",
+      "memory_mib": 2048,
+      "dirty_percent": 0.1,
+      "p50_ms": 0.154706,
+      "stats_ms": {
+        "n": 20,
+        "mean": 0.16114875,
+        "p50": 0.154706,
+        "p95": 0.207935,
+        "min": 0.135323,
+        "max": 0.21296
+      },
+      "case": "host-2048m-d10-w64-dirty-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d10-w64-1792556061962318858/report.json",
+        "bytes": 37542,
+        "sha256": "06522fc3c11e929a658425b2985117e3946acde8c6673f80d3a9abaad545188a"
+      }
+    },
+    {
+      "scope": "host",
+      "memory_mib": 2048,
+      "dirty_percent": 1.0,
+      "p50_ms": 1.5929085,
+      "stats_ms": {
+        "n": 20,
+        "mean": 1.63626915,
+        "p50": 1.5929085,
+        "p95": 2.016684,
+        "min": 1.385023,
+        "max": 2.069306
+      },
+      "case": "host-2048m-d100-w64-dirty-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d100-w64-1792556069332752998/report.json",
+        "bytes": 37794,
+        "sha256": "e38e8efaeff66101347e9f8d77db2d53cc0bbc50e12d6ed39298206b8cf7c6c1"
+      }
+    },
+    {
+      "scope": "host",
+      "memory_mib": 2048,
+      "dirty_percent": 10.0,
+      "p50_ms": 14.965930499999999,
+      "stats_ms": {
+        "n": 20,
+        "mean": 14.97294825,
+        "p50": 14.965930499999999,
+        "p95": 16.19646,
+        "min": 13.323415,
+        "max": 16.496823
+      },
+      "case": "host-2048m-d1000-w64-dirty-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d1000-w64-1792556075712403925/report.json",
+        "bytes": 38058,
+        "sha256": "230630b7000f569c43e69e6b4e2b13824c6a0c0380f4b65cd40752dc2908eaab"
+      }
+    },
+    {
+      "scope": "host",
+      "memory_mib": 2048,
+      "dirty_percent": 100.0,
+      "p50_ms": 127.64370149999999,
+      "stats_ms": {
+        "n": 20,
+        "mean": 127.74945775,
+        "p50": 127.64370149999999,
+        "p95": 128.166412,
+        "min": 127.572965,
+        "max": 128.578548
+      },
+      "case": "host-2048m-d10000-w64-dirty-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-dirty-2048m-d10000-w64-1792556083085821504/report.json",
+        "bytes": 38407,
+        "sha256": "683068c691652c2ba2f5bcd0441518ac93b0293c8d2489232f97373731a95f1f"
+      }
+    },
+    {
+      "scope": "guest",
+      "memory_mib": 2048,
+      "dirty_percent": 0.1,
+      "p50_ms": 0.2140385,
+      "stats_ms": {
+        "n": 20,
+        "mean": 0.2162845,
+        "p50": 0.2140385,
+        "p95": 0.275769,
+        "min": 0.165595,
+        "max": 0.3237
+      },
+      "case": "guest-2048m-d10-w64-dirty-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d10-w64-1792556664859075894/report.json",
+        "bytes": 47248,
+        "sha256": "a0bcbfd26c83bf51607ae7ab0cf069f2d1df808bbe9855f4501bdbf205d9ba0e"
+      }
+    },
+    {
+      "scope": "guest",
+      "memory_mib": 2048,
+      "dirty_percent": 1.0,
+      "p50_ms": 1.784126,
+      "stats_ms": {
+        "n": 20,
+        "mean": 1.8229196,
+        "p50": 1.784126,
+        "p95": 2.289194,
+        "min": 1.50952,
+        "max": 2.319626
+      },
+      "case": "guest-2048m-d100-w64-dirty-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d100-w64-1792556686588791497/report.json",
+        "bytes": 47516,
+        "sha256": "9cbc88600c4254acfb78f70d26beab1f6ce825bde7ab181215e190c77158f217"
+      }
+    },
+    {
+      "scope": "guest",
+      "memory_mib": 2048,
+      "dirty_percent": 10.0,
+      "p50_ms": 20.464959999999998,
+      "stats_ms": {
+        "n": 20,
+        "mean": 20.25269655,
+        "p50": 20.464959999999998,
+        "p95": 21.121774,
+        "min": 18.46058,
+        "max": 21.143854
+      },
+      "case": "guest-2048m-d1000-w64-dirty-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d1000-w64-1792556709307406699/report.json",
+        "bytes": 47834,
+        "sha256": "2d2563bd5fe94c31e3757386d0e71462c7ff9c950509eca24e3ba078034a7c8f"
+      }
+    },
+    {
+      "scope": "guest",
+      "memory_mib": 2048,
+      "dirty_percent": 100.0,
+      "p50_ms": 172.6369085,
+      "stats_ms": {
+        "n": 20,
+        "mean": 173.9543037,
+        "p50": 172.6369085,
+        "p95": 179.105868,
+        "min": 170.716555,
+        "max": 183.313213
+      },
+      "case": "guest-2048m-d10000-w64-dirty-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-dirty-2048m-d10000-w64-1792556735336245400/report.json",
+        "bytes": 48140,
+        "sha256": "42c6613b85ebffdd5e9950cd11038ea7adbf4aacdbbcfaf47dcab303315b152d"
+      }
+    }
+  ],
+  "full_references": [
+    {
+      "scope": "host",
+      "memory_mib": 1024,
+      "dirty_percent_measured": 1,
+      "p50_ms": 72.5367905,
+      "stats_ms": {
+        "n": 20,
+        "mean": 72.0573004,
+        "p50": 72.5367905,
+        "p95": 75.162905,
+        "min": 67.43151,
+        "max": 75.622682
+      },
+      "case": "host-1024m-d100-w64-full-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-1024m-d100-w64-1792556005038495023/report.json",
+        "bytes": 37960,
+        "sha256": "7e8247d98038a7c8152cca4c7e9b954405d4cc2a15e27203996f958c241e54f6"
+      }
+    },
+    {
+      "scope": "guest",
+      "memory_mib": 1024,
+      "dirty_percent_measured": 1,
+      "p50_ms": 99.7807525,
+      "stats_ms": {
+        "n": 20,
+        "mean": 98.305421,
+        "p50": 99.7807525,
+        "p95": 102.265951,
+        "min": 81.401585,
+        "max": 102.928263
+      },
+      "case": "guest-1024m-d100-w64-full-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-1024m-d100-w64-1792556457678006946/report.json",
+        "bytes": 47691,
+        "sha256": "c52c7a60186b9e27b76a1f15e25784d7c685e5f9e27e78d70e73521664984a13"
+      }
+    },
+    {
+      "scope": "host",
+      "memory_mib": 2048,
+      "dirty_percent_measured": 1,
+      "p50_ms": 130.3226995,
+      "stats_ms": {
+        "n": 20,
+        "mean": 131.64664105,
+        "p50": 130.3226995,
+        "p95": 131.399543,
+        "min": 129.317965,
+        "max": 159.407958
+      },
+      "case": "host-2048m-d100-w64-full-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/cache-host/cache-full-2048m-d100-w64-1792556097449049307/report.json",
+        "bytes": 38061,
+        "sha256": "96f6db38c566e7576b7085fe612638b52c7600e85e4d19e49675cf8b3b649678"
+      }
+    },
+    {
+      "scope": "guest",
+      "memory_mib": 2048,
+      "dirty_percent_measured": 1,
+      "p50_ms": 172.442106,
+      "stats_ms": {
+        "n": 20,
+        "mean": 169.86734945,
+        "p50": 172.442106,
+        "p95": 175.524275,
+        "min": 139.049844,
+        "max": 177.068761
+      },
+      "case": "guest-2048m-d100-w64-full-logon",
+      "report": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261021T041644Z-jpct4dsg/cache-full-2048m-d100-w64-1792556793463243829/report.json",
+        "bytes": 47838,
+        "sha256": "11d6d72e52f6b758511b08e166297930ca231715658f45574b4ca445156bfb14"
+      }
+    }
+  ]
+}

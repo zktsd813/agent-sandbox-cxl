@@ -1,0 +1,271 @@
+{
+  "reviewed_on": "2026-10-19",
+  "scope": "Current single-vCPU retained-EPT direct handoff. Host means the L1 Linux kernel A or B running the microVM; physical L0 nested-KVM resources are outside the patch scope.",
+  "method": "Rechecked current allocation/rebinding code and read the still-running generation-1000 soak VM without pausing or modifying its execution state. Re-read pointer fields at allocation-log offsets; did not decode opaque VMCS bytes.",
+  "live_evidence": "implementation/virtual_machine/.local/residency-live-review.json",
+  "interpretation": [
+    "Object storage, pointer target storage, and the kernel/CPU identity represented by a value are separate properties.",
+    "Outside the shared kernel arena is a range classification, not proof that an arbitrary address is outside every possible CXL mapping. Source allocation paths identify the native resources listed here.",
+    "Native identity does not mean the bytes must physically be in DRAM: placing them on CXL NUMA RAM would not make scheduler, mm, FD, SRCU or per-CPU state usable by a different kernel.",
+    "Live pointers can change while a VM executes. This read-only review checked stable ownership/generation, not an atomic snapshot of the entire VM.",
+    "The initial IRQFD allocation-log fields refer to retired objects after the first detach. They are retained as historical evidence and excluded from current active-pointer claims.",
+    "Inactive optional allocation paths are distinguished from resources actually required by this configuration."
+  ],
+  "objects": [
+    {
+      "id": "guest_ram",
+      "data": "128MiB advertised guest RAM, including guest page tables and guest kernel objects",
+      "storage": "shared DAX [2MiB,130MiB)",
+      "external_dependency": "Host VMA/PTEs map these bytes; EPT maps the same physical backing",
+      "handoff": "Retain bytes and guest address space; destination maps the same HVA/PFNs",
+      "evidence": [
+        "firecracker/src/vmm/src/vstate/memory.rs:931",
+        "implementation/virtual_machine/shared_probe.c:1125"
+      ]
+    },
+    {
+      "id": "vm_vcpu_core",
+      "data": "struct kvm_vmx/struct kvm and struct vcpu_vmx/struct kvm_vcpu; embedded memslot roots, locks, notifier and SRCU wrappers",
+      "storage": "shared kernel DAX arena [256MiB,384MiB)",
+      "external_dependency": "Mixed: pool-internal pointers plus native mm/PID/per-CPU/code references",
+      "handoff": "Retain the object graph; replace only destination-native bindings. An embedded wrapper being shared does not imply its targets are shared.",
+      "evidence": [
+        "implementation/linux/arch/x86/include/asm/kvm_host.h:1810",
+        "implementation/linux/virt/kvm/kvm_main.c:4036",
+        "implementation/linux/virt/kvm/kvm_main.c:5448"
+      ]
+    },
+    {
+      "id": "guest_cpu_backing",
+      "data": "Guest register/control state backing, FPU/XSAVE image, CPUID/MCE arrays and emulator context",
+      "storage": "shared vCPU or separate DAX allocations",
+      "external_dependency": "Latest live state can reside in CPU registers or VMCS caches; emulator callbacks are kernel code",
+      "handoff": "Normal KVM exit/put and VMCS release complete the quiescent handoff boundary. Function references require matching code addresses.",
+      "evidence": [
+        "implementation/linux/arch/x86/kvm/x86.c:11907",
+        "implementation/linux/arch/x86/kvm/x86.c:11931",
+        "implementation/linux/arch/x86/kvm/cpuid.c:515"
+      ]
+    },
+    {
+      "id": "kvm_run_pio_coalesced_mmio",
+      "data": "Kernel/userspace run page, PIO data page and configured coalesced-MMIO ring",
+      "storage": "DAX pages",
+      "external_dependency": "vCPU FD, VMA/PTEs and userspace mappings are native to each process/kernel",
+      "handoff": "Keep the backing pages; destination gets/reuses its own FD and mapping. kvm_run is an execution/exit interface, not the whole CPU state.",
+      "evidence": [
+        "implementation/linux/virt/kvm/kvm_main.c:4043",
+        "implementation/linux/arch/x86/kvm/x86.c:11907",
+        "implementation/linux/virt/kvm/coalesced_mmio.c:114"
+      ]
+    },
+    {
+      "id": "memslots",
+      "data": "kvm_memslots, kvm_memory_slot, GFN/HVA indexes and current architecture-specific slot arrays",
+      "storage": "shared VM storage and DAX allocations",
+      "external_dependency": "userspace_addr denotes an address in the owner's native mm",
+      "handoff": "Preserve slot contents under the fixed-HVA contract; check first/last destination PFN before installing native observers",
+      "evidence": [
+        "implementation/linux/virt/kvm/kvm_main.c:1262",
+        "implementation/linux/virt/kvm/kvm_main.c:2100",
+        "implementation/linux/virt/kvm/kvm_main.c:5414"
+      ]
+    },
+    {
+      "id": "ept",
+      "data": "EPT root/leaves and kvm_mmu_page headers/registry",
+      "storage": "shared DAX; live root arena offset 0x73000",
+      "external_dependency": "Native struct page.private, slab/cache anchors, RCU machinery and CPU TLB",
+      "handoff": "Retain EPT pages with identical PFNs; bind local page.private for new headers and request TLB flush. Local slab anchors are reselected.",
+      "evidence": [
+        "implementation/linux/arch/x86/kvm/mmu/mmu.c:6050",
+        "implementation/linux/arch/x86/kvm/mmu/mmu.c:6059"
+      ]
+    },
+    {
+      "id": "vmcs_backing",
+      "data": "MicroVM VMCS region allocated by the patched L1 KVM",
+      "storage": "one PAGE_SIZE-aligned DAX allocation; live arena offset 0x1d000, L1 physical address 0x3a001d000",
+      "external_dependency": "CPU VMCS ownership/cache and host-state field semantics",
+      "handoff": "Source loaded_vmcs_clear; destination loads the same region and prepares native host state/VPID. Opaque VMCS bytes are not interpreted as a portable C structure.",
+      "evidence": [
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:2889",
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:1505"
+      ]
+    },
+    {
+      "id": "vmcs_software_and_side_buffers",
+      "data": "vmcs01/loaded_vmcs, host-state cache, MSR bitmap and embedded MSR autoload arrays",
+      "storage": "loaded_vmcs and autoload arrays inside shared vcpu_vmx; MSR bitmap in a separate DAX page",
+      "external_dependency": "cpu/VPID values and list links refer to native CPU/per-CPU namespaces; host values in shared buffers still describe the current host",
+      "handoff": "Clear source CPU membership, allocate destination VPID, invalidate host-state caches and let destination load/entry paths prepare host values",
+      "evidence": [
+        "implementation/linux/arch/x86/kvm/vmx/vmx.h:290",
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:2938",
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:4804"
+      ]
+    },
+    {
+      "id": "vmcs_host_fields",
+      "data": "HOST_CR3, HOST_RSP, HOST_RIP, host GDT/IDT/TSS and FS/GS references",
+      "storage": "Field storage is in the DAX VMCS; cache storage is in the DAX loaded_vmcs",
+      "external_dependency": "Targets are the destination host's page tables, kernel stack, code and per-CPU descriptors",
+      "reason": "VM-exit must return into the currently executing kernel/task; sharing the numeric value cannot substitute for preparing that kernel's return context",
+      "handoff": "vmx_set_constant_host_state plus normal vCPU load and VM-entry host-state refresh; HOST_RSP is refreshed in the entry assembly path",
+      "evidence": [
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:4334",
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:7214",
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:7415"
+      ]
+    },
+    {
+      "id": "host_mm",
+      "data": "mm_struct, VMA tree, host HVA-to-PFN page tables and MMU notifier registry",
+      "storage": "native host kernel allocations; pointers/notifier wrapper inside shared kvm",
+      "reason": "They describe the current process address space and are registered with its kernel memory manager. Identical HVA numbers do not make the two mm objects identical.",
+      "handoff": "Unregister/drain source notifier and mmdrop source mm; mmgrab current->mm and register destination notifier",
+      "evidence": [
+        "implementation/linux/virt/kvm/kvm_main.c:5331",
+        "implementation/linux/virt/kvm/kvm_main.c:5448"
+      ]
+    },
+    {
+      "id": "host_task",
+      "data": "task_struct, PID, native kernel/user stack, scheduler runqueue, thread/TLS and preemption machinery",
+      "storage": "native host runtime; vCPU pid/cpu/preempt-notifier fields are shared",
+      "reason": "Execution belongs to a task managed by one kernel's scheduler. Native saved stack/current-task state cannot be inherited by another kernel through a pointer copy.",
+      "handoff": "Drain source PID readers, clear old PID/cpu and initialize destination preempt notifier; destination executor thread enters KVM_RUN",
+      "evidence": [
+        "implementation/linux/include/linux/kvm_host.h:323",
+        "implementation/linux/virt/kvm/kvm_main.c:5359",
+        "implementation/linux/virt/kvm/kvm_main.c:5479"
+      ]
+    },
+    {
+      "id": "srcu_rcu_and_indexes",
+      "data": "SRCU per-CPU reader/update allocations, kernel RCU queues and conditional xarray radix nodes",
+      "storage": "native allocations; SRCU/xarray wrappers and embedded RCU heads can be shared",
+      "reason": "Reader counts, callbacks and reclamation are coordinated by a particular kernel. Generic allocation paths have not been turned into a shared distributed runtime.",
+      "handoff": "Retain required reader drains; cleanup and reinitialize destination SRCU/index. Never-reused retired allocations permit selected callback-completion waits to remain off the critical path.",
+      "qualification": "A single index-0 xarray entry can be stored directly in the shared root; dynamic radix nodes are conditional, not an assertion that this run always allocated them.",
+      "evidence": [
+        "implementation/linux/virt/kvm/kvm_main.c:5340",
+        "implementation/linux/virt/kvm/kvm_main.c:5452",
+        "implementation/linux/virt/kvm/kvm_main.c:5475"
+      ]
+    },
+    {
+      "id": "native_fd_io",
+      "data": "FD table, struct file/anon inode, eventfd_ctx, epoll registration and native socket/file state",
+      "storage": "native host kernel. kvm_kernel_irqfd wrapper is DAX-allocated; Rust FD wrappers can be in the DAX heap.",
+      "reason": "FD numbers and wait queues identify resources in a particular process/kernel. Moving wrapper bytes does not transfer those resources.",
+      "handoff": "Get/reuse destination VM/vCPU FD wrappers. Remove source IRQFD native observers and re-register A IRQFDs on return. Full ioeventfd/block/network/vsock handoff is not implemented.",
+      "evidence": [
+        "implementation/linux/virt/kvm/eventfd.c:376",
+        "implementation/linux/virt/kvm/eventfd.c:178",
+        "implementation/linux/virt/kvm/kvm_main.c:5491",
+        "firecracker/src/vmm/src/vstate/vm.rs:584"
+      ]
+    },
+    {
+      "id": "interrupts_and_time",
+      "data": "PIC/IOAPIC/LAPIC/PIT registers, pending state, clock/TSC values, timer/work wrappers and remaining-time anchors",
+      "storage": "shared DAX logical state and wrappers; native timer bases/queues, clock sources and PIT worker task",
+      "reason": "The host kernel dispatches timer interrupts/work on its CPUs and time domain. A source timer-base pointer is not a destination timer registration.",
+      "handoff": "Cancel/drain source work, retain logical state, reconnect a destination-local cached PIT worker, reinitialize hrtimers and rebase clock/TSC",
+      "evidence": [
+        "implementation/linux/arch/x86/kvm/lapic.c:2806",
+        "implementation/linux/arch/x86/kvm/i8254.c:663",
+        "implementation/linux/arch/x86/kvm/x86.c:12421"
+      ]
+    },
+    {
+      "id": "code_and_global_registries",
+      "data": "Kernel/module code, callback/ops tables, global VM list, PM registration, per-CPU current VMCS/list, VPID bitmap and VMXON regions",
+      "storage": "host code/global/per-CPU storage; pointers and list nodes can be embedded in DAX objects",
+      "reason": "These service all VMs/tasks of a kernel/CPU and are not private portable microVM state. Code is already installed on both nodes.",
+      "handoff": "Re-register native lists/notifiers and CPU bindings. Some callbacks are explicitly reinitialized; other raw callbacks remain valid only under the identical code-address contract.",
+      "qualification": "VMXON areas are allocated at module initialization before this lab enables the DAX pool. They differ from the later per-microVM VMCS allocation.",
+      "evidence": [
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:475",
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:2980",
+        "implementation/linux/virt/kvm/kvm_main.c:5486"
+      ]
+    },
+    {
+      "id": "debugfs",
+      "data": "Debugfs dentry/VFS registry and optional statistics presentation",
+      "storage": "Initially native dentry with some DAX statistics payloads; current live debugfs_dentry is ERR_PTR(-ENOENT)",
+      "reason": "Optional host diagnostics rather than guest execution state; no requirement to carry them with the VM",
+      "handoff": "Destroy source debugfs and clear its fields; current attach does not recreate debugfs",
+      "evidence": [
+        "implementation/linux/virt/kvm/kvm_main.c:5331"
+      ]
+    },
+    {
+      "id": "page_metadata_and_allocators",
+      "data": "struct page/dev_pagemap identity, page.private, slab descriptors, local gen_pool/control anchors",
+      "storage": "kernel-local metadata; EPT/page bytes, shared bump/header and Rust free-list are DAX",
+      "reason": "Each kernel maintains its own page/allocator namespace and lifetimes. This is separate from the physical data page being shared.",
+      "handoff": "Rebind local EPT page.private and slab anchors. Shared bump allocation is preserved and not reclaimed until lab shutdown; local gen_pool available count does not describe shared bump usage.",
+      "evidence": [
+        "implementation/linux/virt/kvm/dax_pool.c:87",
+        "implementation/linux/virt/kvm/dax_pool.c:215",
+        "implementation/linux/arch/x86/kvm/mmu/mmu.c:6050"
+      ]
+    },
+    {
+      "id": "locks_waiters",
+      "data": "VM mutex/spinlock/refcount storage versus task owners, native waiters and futex queues",
+      "storage": "Lock/refcount bytes can be in DAX; contention identities/queues belong to native kernels",
+      "reason": "A kernel cannot wake or schedule a foreign kernel's task by interpreting a shared waiter pointer",
+      "handoff": "Use cooperative quiescent single-owner handoff with no foreign lock waiters. Do not transfer a contended lock or blindly reset all locks/refcounts.",
+      "evidence": [
+        "implementation/linux/virt/kvm/kvm_main.c:5307",
+        "implementation/linux/virt/kvm/kvm_main.c:5373"
+      ]
+    },
+    {
+      "id": "firecracker_process",
+      "data": "Vmm/VmCommon, Box<Vcpu>, Rust containers and device wrappers versus ELF text, stacks, TLS, early System allocations and native FDs",
+      "storage": "Post-activation global Rust heap allocations in DAX [512MiB,576MiB); native process mappings remain local",
+      "reason": "Replacing GlobalAlloc does not relocate the whole process or every mmap/libc/kernel allocation. Rust vtables and FD values still describe A's runtime.",
+      "handoff": "Firecracker remains on A; B uses the existing native executor. A new process does not attach to and resume the old Rust heap.",
+      "evidence": [
+        "firecracker/src/firecracker/src/dax_heap.rs:93",
+        "firecracker/src/firecracker/src/dax_heap.rs:227",
+        "firecracker/src/vmm/src/vstate/vcpu.rs:190"
+      ]
+    },
+    {
+      "id": "conditional_helpers_and_features",
+      "data": "APIC-access/real-mode TSS/identity-map helper pages, APICv/IPIv/PML, APF, steal time, PMU, NX recovery and nested guest-hypervisor resources",
+      "storage": "Conditional unmodified helper mappings may use native anonymous RAM; other feature objects vary by allocation path",
+      "current_status": "Live unrestricted_guest=Y, enable_apicv=N, flexpriority=N; current boot disables PML/preemption timer. TSS/identity/APIC-access helper paths are not active in the supported configuration. APF/steal/PMU are excluded and a live NX recovery worker is rejected.",
+      "reason": "These are unsupported/conditional paths, not proof that the current 128MiB RAM contains native anonymous pages",
+      "handoff": "Do not extend current claims to those features. Supporting them requires separate placement and native-binding work.",
+      "evidence": [
+        "implementation/virtual_machine/guest-init.sh:44",
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:5104",
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:7636",
+        "implementation/linux/arch/x86/kvm/x86.c:12559"
+      ]
+    },
+    {
+      "id": "hardware_and_outer_host",
+      "data": "Live CPU registers, internal VMCS/TLB caches, plus physical L0 KVM's VMCS02/nested-EPT/runtime",
+      "storage": "CPU hardware and unmodified L0 host resources, outside the shared-object placement work",
+      "reason": "Running state must be quiesced before another owner uses the shared backing. Nested virtualization adds an outer execution layer beyond the patched L1 kernel.",
+      "handoff": "The DAX VMCS claim is about the region allocated by patched L1 KVM. Bare-metal multi-host VMCS compatibility/coherence and relocation of L0 resources are not validated.",
+      "evidence": [
+        "implementation/linux/arch/x86/kvm/vmx/vmx.c:1505",
+        "implementation/linux/arch/x86/kvm/vmx/nested.c:336"
+      ]
+    }
+  ],
+  "necessity_review": {
+    "reviewed_on": "2026-10-19",
+    "inventory": "implementation/virtual_machine/host-reference-audit.json",
+    "scope": "Fresh source purpose/reference audit; native identity vs physical storage; reverse references/tagged IDs; conditional MSR/PMU-filter gaps. No new runtime changes or VM execution tests."
+  }
+}

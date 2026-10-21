@@ -1,0 +1,202 @@
+{
+  "date_utc": "2026-10-19",
+  "scope": "Read-only inspection of the actual CXL mailbox semantic snapshot; no VM, kernel, Firecracker source or executable changed.",
+  "experiment": {
+    "vcpus": 1,
+    "guest_ram_bytes": 134217728,
+    "ram_transfer_bytes": 0,
+    "backend": "Existing shared device-DAX RAM at offset 2MiB",
+    "environment": "Nested KVM in two independent L1 kernels; emulated shared CXL"
+  },
+  "actual_file": {
+    "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/snapshot-state-inspection-20261019T073521Z/microvm.state",
+    "bytes": 13778,
+    "kib": 13.455078125,
+    "sha256": "da953256e772ee1e91b254b4770d07a37a6c5d8be11e58e4763474a697bd1233",
+    "snapshot_version": "12.0.0",
+    "mailbox_round": 10,
+    "validation": [
+      "stable mailbox header before/after read",
+      "FNV-1a64 transport checksum matched",
+      "existing snapshot-editor successfully loaded and validated snapshot magic/version/CRC64"
+    ],
+    "decoded_debug": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/snapshot-state-inspection-20261019T073521Z/decoded-debug.txt",
+    "provenance": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/snapshot-state-inspection-20261019T073521Z/provenance.json",
+    "caution": "For inventory only: running guest RAM is mutable; extracting this past state file alone does not capture a consistent rollback checkpoint."
+  },
+  "observed_sizes": {
+    "primary_100_measured_rounds": [
+      13723,
+      13755
+    ],
+    "latest_ack_cases": [
+      13746,
+      13778
+    ],
+    "latest_boot_argument_difference_bytes": 23,
+    "size_changes": "Observed sizes are actual format/runtime-state-dependent bytes, not a RAM dump. Per-field encoded sizes were not separately measured."
+  },
+  "format": {
+    "encoding": "serde via bitcode over the whole Snapshot<MicrovmState>, then raw CRC64",
+    "crc_trailer_bytes": 8,
+    "architecture_header_and_encoded_state_bytes": 13770,
+    "memory_dump_bytes": 0,
+    "mailbox_header_bytes": 112,
+    "mailbox_payload_capacity_bytes": 262144,
+    "mailbox_reserved_bytes": 1048576,
+    "mailbox_note": "The mailbox header, payload capacity and reservation are not part of the state file. Transfer copies only the actual state bytes and updates protocol fields."
+  },
+  "serialized": [
+    {
+      "field": "vm_info",
+      "contents": [
+        "RAM size 128MiB",
+        "SMT false",
+        "CPU template None",
+        "huge-page policy None",
+        "kernel and initrd path strings",
+        "251-byte boot argument string"
+      ],
+      "excluded": "Kernel/initrd image file contents"
+    },
+    {
+      "field": "kvm_state",
+      "contents": [
+        "KVM capability modifiers"
+      ],
+      "actual_modifiers": [],
+      "note": "Not a serialized native struct kvm"
+    },
+    {
+      "field": "vm_state",
+      "contents": [
+        "Guest RAM region GPA/size/type/plugged metadata",
+        "ResourceAllocatorState address-allocation metadata",
+        "PIT channels",
+        "KVM clock",
+        "PIC master and slave",
+        "IOAPIC"
+      ],
+      "note": "Custom Debug omits RAM/resource allocator details and opaque IRQ-chip buffers; source schema establishes these fields."
+    },
+    {
+      "field": "vcpu_states",
+      "count": 1,
+      "contents": [
+        "CPUID",
+        "MSRs",
+        "general registers, RIP/RSP/RFLAGS",
+        "special registers including CR3 and segments",
+        "debug registers",
+        "LAPIC",
+        "MP state",
+        "pending interrupt/exception/NMI events",
+        "XCRS",
+        "XSAVE",
+        "TSC frequency"
+      ],
+      "cpuid_entries": 51,
+      "msr_entries": 190,
+      "msr_indices_hash": "20655d3b1df6c641",
+      "msr_evidence": "Save/restore diagnostics in the matching report; VcpuState custom Debug is not a reliable MSR-count listing.",
+      "xsave_fixed_region_words_u32": 1024,
+      "xsave_fixed_region_unencoded_bytes": 4096,
+      "xsave_extra_entries": 0,
+      "lapic_register_array_unencoded_bytes": 1024,
+      "tsc_khz": 2999998,
+      "size_note": "These raw array lengths are semantic/UAPI sizes, not separately measured encoded file contributions."
+    },
+    {
+      "field": "device_states",
+      "contents": [
+        "MMIO virtio manager with empty device collections",
+        "ACPI VMGenID guest address/GSI",
+        "ACPI VMClock guest address/GSI/ABI state",
+        "Serial UART register state with empty input buffer"
+      ],
+      "absent": [
+        "block",
+        "network",
+        "vsock",
+        "balloon",
+        "MMDS",
+        "entropy",
+        "pmem",
+        "virtio-mem"
+      ],
+      "vmgenid": {
+        "guest_address": 917488,
+        "gsi": 5
+      },
+      "vmclock": {
+        "guest_address": 909312,
+        "gsi": 6
+      }
+    }
+  ],
+  "retained_in_cxl_ram": [
+    "Guest kernel and application memory",
+    "Heap and stack",
+    "Guest GVA-to-GPA page-table bytes; CR3 itself is in vCPU state"
+  ],
+  "not_serialized": [
+    "Native struct kvm / struct kvm_vcpu identity or bytes",
+    "Raw hardware VMCS region",
+    "EPT root, EPT leaf tables, MMU reverse mappings and native metadata",
+    "Source host kernel pointers",
+    "Host mm/task/FD/eventfd identity",
+    "Kernel locks/waitqueues/RCU identity",
+    "Firecracker heap graph, thread/channel/event-loop identity",
+    "Source host HVA/HPA/PFN mapping identity"
+  ],
+  "destination_native_preparation": [
+    "Open /dev/kvm and inspect capabilities",
+    "Create fresh KVM VM/vCPU and IRQ/PIT objects",
+    "Allocate native VMCS, LAPIC, FPU/MSR/MMU state and kvm_run mapping",
+    "Map the existing DAX guest RAM without populating or copying it",
+    "Register memslots",
+    "Apply guest CPUID/register/MSR/XSAVE/TSC/IRQ/clock via public KVM SET interfaces",
+    "Create local eventfd/device wrappers/channels/vCPU thread/event-loop subscriptions",
+    "Leave vCPU paused until resume; EPT root load and demand leaf faults occur on KVM_RUN and accesses"
+  ],
+  "timings": {
+    "basis": ".local/runs/20261019T062042Z-i26hjpoe/handoff-128m-warm-1792390871838753251/report.json",
+    "measured_rounds": 100,
+    "metric": "p50 microseconds; nested scopes and separate medians must not be added",
+    "source_snapshot_api_us": 558.0255000000001,
+    "source_snapshot_scope": "Device/vCPU/VM state collection, GET ioctls, inter-thread exchange, bitcode encode, tmpfs write and API handling; pure codec time not isolated.",
+    "cxl_publish_us": 24.474000000000004,
+    "destination_validate_and_write_tmpfs_us": 33.751,
+    "destination_load_api_us": 1316.1765,
+    "destination_file_read_validate_decode_us": 265.14700000000005,
+    "destination_configuration_validation_us": 20.0995,
+    "destination_dax_mapping_us": 51.51500000000001,
+    "destination_build_outer_us": 860.1215,
+    "destination_build_internal_us": {
+      "total": 814.2274999999998,
+      "devices_restore": 88.68900000000002,
+      "event_loop_registration": 2.2725000000000004,
+      "kvm_open_capabilities": 73.83449999999999,
+      "register_memory_slots": 11.175500000000001,
+      "tsc_scaling": 2.2735,
+      "vcpu_state_restore": 147.4475,
+      "vcpu_threads_start": 55.966,
+      "vcpus_create": 283.966,
+      "vm_create": 119.8445,
+      "vm_irq_clock_restore": 5.396
+    },
+    "resume_to_ack_us": 3395.759,
+    "transition_excluding_ack_us_p50": 2410.407,
+    "pure_codec_time_isolated": false
+  },
+  "ept_scope": "EPT/nested fault service is a major contributor to post-resume ACK wait, not a synonym for whole-transition overhead. Reduced L1 traces observed 23 faults before ACK; excluding faults after ACK does not make the transition fault-free.",
+  "evidence": {
+    "latest_report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261019T065649Z-1uw5rhl5/handoff-128m-warm-1792393946510800131/report.json",
+    "primary_report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261019T062042Z-i26hjpoe/handoff-128m-warm-1792390871838753251/report.json",
+    "ept_analysis": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/ack-ept-breakdown.json",
+    "source_struct": "firecracker/src/vmm/src/persist.rs:96",
+    "source_codec": "firecracker/src/vmm/src/snapshot/mod.rs:216",
+    "source_vcpu": "firecracker/src/vmm/src/arch/x86_64/vcpu.rs:891",
+    "source_restore": "firecracker/src/vmm/src/builder.rs:436"
+  }
+}
