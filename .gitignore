@@ -32,3 +32,6 @@ __pycache__/
 *.qcow2
 *.tar
 *.tar.gz
+
+# Contention experiment images, runs and copied binaries
+/experiments/contention/.local/
