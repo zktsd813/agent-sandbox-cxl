@@ -5,7 +5,7 @@
 **결론**
 
 - **Q1 (DSec 규모 node에도 node별 contention이 있는가): 독립 rollout은 사용률 80% 이하에서 없다. RL rollout(4 vCPU)은 80%에서 1% 남짓으로 경계에 있다.**
-  192코어 node, 사용률 80%에서 독립 rollout의 잃은 CPU는 1 vCPU 0.001%, 4 vCPU 0.21~0.45%다. 실측 보정(×1.5)을 해도 1% 미만이다. node가 크면 sandbox 수백 개의 burst가 서로 상쇄된다. 4 vCPU RL rollout은 같은 사용률에서 1.06%(GRPO B8 G8), 2.34%(B64)로 PLAN의 1% 선을 조금 넘고, LLM 대기가 2배면 독립 rollout도 0.95%가 된다. 그 밖에는 사용률 85~90% 이상이거나 node가 48코어 이하일 때만 생긴다.
+  192코어 node, 사용률 80%에서 독립 rollout의 잃은 CPU는 1 vCPU 0.001%, 4 vCPU 0.21~0.45%다. 실측 보정(×1.5)을 해도 1% 미만이다. node가 크면 sandbox 수백 개의 burst가 서로 상쇄된다. 4 vCPU RL rollout은 같은 사용률에서 1.06%(GRPO B8 G8), 2.34%(B64)로 PLAN의 1% 선을 조금 넘고, LLM 대기가 2배면 독립 rollout도 0.95%가 된다. 그 밖에는 사용률 85~90% 이상이거나 node가 48코어 이하일 때만 생긴다. trace 수를 15~120개로 줄여도 contention은 같거나 커지므로, trace가 부족해서 작게 나온 것은 아니다(6절).
 - **Q2 (migration은 못 따라가고 hand-off는 따라가는가): 성립한다.**
   contention이 있는 모든 독립 rollout 조건에서 10ms hand-off는 잃은 CPU의 79~96%를 되찾아 즉시 이동과 거의 같다. RL에서는 cluster 전체가 함께 바쁜 몫이 있어 되찾을 수 있는 몫 자체가 작지만(이상적 공유 20~93%), hand-off는 그중 85~90%를 낸다. full VM migration은 100Gb/s에 가장 유리한 정책을 골라도 −44~+44%다. PLAN의 "Q2 부정" 기준(migration이 hand-off 감소분의 절반 이상)에 걸리는 조건이 하나도 없다.
 - **재구성 (PLAN의 대안): node를 더 뜨겁게 돌릴 수 있다.** 잃은 CPU 1% 이내라는 같은 목표에서 4 vCPU sandbox node를 85% → 92%까지 돌릴 수 있다. 필요한 node 수가 약 7~8% 줄어든다(LLM 대기 ×0.5~×2, 보정 ×1.5에서도 7~9%). migration은 +2%(pre-copy) 또는 −2%(stop-and-copy)다. 1 vCPU sandbox는 이동 없이도 94%까지 가능해서 이득이 2% 남짓이다.
@@ -180,6 +180,20 @@ step 지연 p50(평균)은 모든 조건에서 1.0006~1.006(1.011) 사이다.
 
 **배치 (S5, 192코어).** 무작위 배치(k=1)는 power-of-2(k=2)보다 contention이 약 2배다(1 vCPU 사용률 91%에서 0.33 → 0.62%, 4 vCPU 82%에서 0.45 → 1.00%). k=4는 k=2와 거의 같다(0.36%, 0.45%). DSec식 배치가 이미 대부분의 이득을 낸다.
 
+**trace 수 (`trace_count.py`, 192코어).** "trace가 264개뿐이라 contention이 작게 나온 것 아닌가"를 확인했다. 큰 규모 실험은 trace 264개를 종류로 쓰고, 슬롯(node당 sandbox 300~1,200개, RL은 최대 2,300개)마다 그중 하나를 무작위로 골라 무작위 시점부터 연속 재생한다. 그래서 같은 trace가 동시에 수십 개 돌지만 시점은 서로 다르다. 여기서 trace를 15·30·60·120개로 무작위로 줄인 집합을 크기마다 3개씩 만들고, 집합마다 자기 평균 수요로 밀도를 잡아 같은 사용률(1 vCPU 약 92%, 4 vCPU 약 85%)에서 돌렸다(seed 2개). 값은 잃은 CPU, 분리 node, 이동 없음을 같은 사용률의 전체 trace 결과(S6 곡선 보간)로 나눈 비다.
+
+| trace 수 | 1 vCPU (집합 3개) | 4 vCPU (집합 3개) |
+|---:|---|---|
+| 15 | 16, 9.6, (사용률 99%로 포화) | 0.81, 2.7, 2.9 |
+| 30 | 1.7, 6.3, 2.0 | 1.6, 1.8, 1.6 |
+| 60 | 1.7, 1.3, (96%로 범위 밖) | 1.3, 1.0, 0.94 |
+| 120 | 1.5, 1.3, 1.2 | 1.2, 0.91, 1.2 |
+| 전체 (244 / 250) | 1.2 | 1.1 |
+
+- trace를 줄이면 contention이 같거나 커진다. 작아지는 쪽으로 치우치지 않는다. 적은 집합은 무거운 trace 몇 개가 node 수요를 좌우해서 집합마다 크게 흔들린다.
+- 120개 이상에서는 전체 결과와 ±30% 안으로 모인다. 전체 trace도 이 실험에서 1.1~1.2배가 나와, seed와 밀도 반올림만으로 생기는 차이가 그 정도다.
+- 따라서 Q1의 "80% 이하에서 거의 없음"은 trace 수가 부족해서 생긴 결과가 아니다. 192코어 node에 sandbox 수백 개가 들어가면 burst가 서로 상쇄되는 효과가 주된 원인이다. 결과를 바꿀 수 있는 것은 trace 수보다 sandbox끼리의 상관(RL, 5절), sandbox당 부하와 밀도(LLM 대기, 위 표), 그리고 SWE trace에 없는 무거운 workload다.
+
 ## 판정 (PLAN 기준)
 
 | 질문 | PLAN 기준 | 결과 | 판정 |
@@ -221,6 +235,7 @@ taskset -c 12-23,36-47 nice -n 19 $PY fleet.py --solo .local/runs/20261021T07050
 taskset -c 12-23,36-47 $PY validate.py $(cut -d' ' -f2 .local/validate/runs.txt) \
   --solo 1=.local/runs/20261021T070508Z-solo-7vxk272h --solo 4=.local/runs/20261021T075141Z-solo-8exx1l39 \
   --carry --output .local/report/validate-v-carry.json
+taskset -c 12-23,36-47 nice -n 19 $PY trace_count.py .local/report/trace-count.json   # trace 수 검사
 $PY plot_fleet.py                                                          # figures/fleet-*.png
 ```
 
