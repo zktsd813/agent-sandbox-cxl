@@ -20,7 +20,7 @@ MOVE = {"none": "none", "instant": "instant", "hand-off": "hand-off 10ms", "stop
         "pre-copy": "migration pre-copy"}
 
 
-def fleet_config(run, sched="share", carry=False):
+def fleet_config(run, sched="share", carry=False, kernel_wait="none"):
     config = json.loads((run / "run.json").read_text())
     nodes = config["nodes"]
     cores = {len(n["cores"]) for n in nodes}
@@ -32,7 +32,7 @@ def fleet_config(run, sched="share", carry=False):
         "mechanism": MOVE[config.get("move", "none")], "detect_ms": config.get("move_detect_ms", 50),
         "threshold": config.get("move_threshold", 0.1), "hold_s": config.get("move_hold_s", 1.0),
         "rl": bool(group), "batch": 1, "group": group or 8, "train_s": 0.0, "jitter_s": config.get("group_jitter_s", 2.0),
-        "gap_scale": config.get("gap_scale", 1.0), "sched": sched, "carry": carry}
+        "gap_scale": config.get("gap_scale", 1.0), "sched": sched, "carry": carry, "kernel_wait": kernel_wait}
 
 
 def check(measured, modeled):
@@ -56,11 +56,13 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--sched", choices=("share", "cfs", "bernoulli"), default="share", help="Model CPU allocation")
     parser.add_argument("--carry", action="store_true", help="Pure fluid slot progress (lower bound on contention)")
+    parser.add_argument("--kernel-wait", choices=("none", "slope", "floor"), default="none",
+                        help="Add the fitted kernel scheduling wait (fleet.KERNEL_WAIT)")
     args = parser.parse_args()
     solos = {int(k): Path(v) for k, v in (s.split("=", 1) for s in args.solo)}
     cache, report = {}, []
     for run in sorted(args.runs):
-        config, sim_config = fleet_config(run, args.sched, args.carry)
+        config, sim_config = fleet_config(run, args.sched, args.carry, args.kernel_wait)
         vcpus, candidates = config["vcpus"], Path(config.get("candidates", HERE / "candidates.json"))
         key = (vcpus, str(candidates))
         if key not in cache:

@@ -44,6 +44,46 @@ MECHANISMS = {
 }
 
 
+# Kernel scheduling wait the fluid share leaves out (RESULTS-fleet.md 7절): wait/run = a(P) * exp(b * util) for a
+# pool of P cores, fitted per mode to the 1 vCPU pilot runs at P = 5, 10, 20 that did not diverge from their solo
+# runs, at matched utilization (pilot_audit.py, kernel_wait_fit.py). Beyond the measured sizes "slope" extends the
+# log-log fit of a over P, "floor" keeps a at its 20-core value.
+KERNEL_WAIT = {"capacity": {"b": 6.0, "a": {5: 5.129e-05, 10: 6.313e-05, 20: 8.215e-05}, "slope": 0.340},
+               "latency": {"b": 6.0, "a": {5: 7.827e-05, 10: 8.620e-05, 20: 1.042e-04}, "slope": 0.207}}
+
+
+def kernel_wait_a(config, pool_cores):
+    """Per-pool coefficient a for config["kernel_wait"]: none, fit (config["kernel_wait_a"]: {P: a} or one a),
+    slope or floor."""
+    variant = config.get("kernel_wait", "none")
+    out = np.zeros(len(pool_cores))
+    if variant == "none":
+        return out
+    if variant == "fit":
+        given = config["kernel_wait_a"]
+        for i, size in enumerate(pool_cores):
+            out[i] = given[str(int(size))] if isinstance(given, dict) else float(given)
+        return out
+    fit = KERNEL_WAIT[config.get("kernel_wait_mode", "capacity")]
+    known = sorted(fit["a"])
+    for i, size in enumerate(pool_cores):
+        size = float(size)
+        if size in known:
+            out[i] = fit["a"][int(size)]
+        elif size > known[-1]:
+            top = fit["a"][known[-1]]
+            out[i] = top if variant == "floor" else top * (size / known[-1]) ** fit["slope"]
+        else:
+            lo = max(k for k in known if k < size) if size > known[0] else known[0]
+            hi = min(k for k in known if k > size) if size < known[-1] else known[-1]
+            if lo == hi:
+                out[i] = fit["a"][lo] * (size / lo) ** fit["slope"]
+            else:
+                f = math.log(size / lo) / math.log(hi / lo)
+                out[i] = math.exp((1 - f) * math.log(fit["a"][lo]) + f * math.log(fit["a"][hi]))
+    return out
+
+
 def usable(summary, max_mismatch=0.10):
     """A solo replay the model may use: it finished and few commands diverged from the recorded trace."""
     checked = summary.get("returncode_checked") or 0
@@ -264,7 +304,7 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
               place_k, floating, steps, begin_step, gap_steps, timeout_steps,
               mech_kind, pause, latency_steps, handoff_cpu_s, dump_s_per_gib, xfer_s_per_gib,
               detect_steps, threshold, hold_steps, max_batch, job_size, train_steps, jitter, gap_scale,
-              cfs, sleeper_credit_s, inflation, carry, bernoulli):
+              cfs, sleeper_credit_s, inflation, carry, bernoulli, kw_a, kw_b, kw_latency):
     n_slots = slot_home.shape[0]
     vrun = np.zeros(n_slots)      # CFS virtual runtime per sandbox (seconds of CPU per thread)
     was_runnable = np.zeros(n_slots, np.bool_)
@@ -460,6 +500,27 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                     got[j] = units[j] * threads[j] * eta
             else:
                 got = _water_fill(units, threads, pool_cap[p])
+            if kw_a[p] > 0.0 and m > 0:
+                # measured kernel scheduling wait on top of the fluid share: every entry is served 1/(1+e) of its
+                # fluid share, e = a(pool size) * exp(b * util). capacity mode: the freed core-time is lost.
+                # latency mode (work-conserving): the freed core-time goes to entries the fluid share left short
+                busy = 0.0
+                for j in range(m):
+                    busy += got[j]
+                util = busy / pool_cap[p]
+                if util > 1.0:
+                    util = 1.0
+                keep = 1.0 / (1.0 + kw_a[p] * math.exp(kw_b * util))
+                short = np.empty(m)
+                left = pool_cap[p]
+                for j in range(m):
+                    short[j] = (units[j] * threads[j] - got[j]) / threads[j]
+                    got[j] *= keep
+                    left -= got[j]
+                if kw_latency and left > 1e-12:
+                    more = _water_fill(short, threads, left)
+                    for j in range(m):
+                        got[j] += more[j]
             total = 0.0
             for j in range(m):
                 total += units[j] * threads[j]
@@ -514,9 +575,9 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                     prog[s] += 1.0 if w <= 0.0 else served[s] / (w * inflation)
                     if prog[s] >= 1.0 - 1e-9:
                         pos[s] += 1
-                        # carry=True: pure fluid progress (lower bound on contention). carry=False (default, validated):
-                        # a partly served slot rounds up to a whole extra step, approximating the dispatch delay of a
-                        # time-sliced scheduler; it matches the measured wait (see RESULTS-fleet.md, validation)
+                        # carry=True: pure fluid progress (used for the fleet results). carry=False: a partly served
+                        # slot rounds up to a whole extra step; it fits small nodes but overstates contention on large
+                        # ones (RESULTS-fleet.md 1절). Scheduler wait is added separately (kernel_wait, 7절)
                         prog[s] = prog[s] - 1.0 if carry and prog[s] > 1.0 else 0.0
                         if pos[s] >= seg_len[g]:
                             prog[s] = 0.0
@@ -678,7 +739,12 @@ def simulate(job):
         float(config["threshold"]), int(round(config["hold_s"] / DT)), int(config["max_batch"]), int(job_size),
         int(round(config["train_s"] / DT)), jitter, float(config["gap_scale"]), config["sched"] == "cfs",
         float(config["sleeper_credit_ms"]) / 1000, float(config["cpu_inflation"]),
-        bool(config["carry"] if config["sched"] != "bernoulli" else True), config["sched"] == "bernoulli")
+        bool(config["carry"] if config["sched"] != "bernoulli" else True), config["sched"] == "bernoulli",
+        kernel_wait_a(config, cores * (np.bincount(pool_of_node) if config["kernel_wait_size"] == "pool"
+                                       else np.ones(n_pools))),
+        float(config["kernel_wait_b"] if config["kernel_wait_b"] is not None
+              else KERNEL_WAIT[config["kernel_wait_mode"]]["b"]),
+        config["kernel_wait_mode"] == "latency")
     q = lambda x: float(np.percentile(finished, x)) if len(finished) else None
     return {**{k: v for k, v in config.items()}, "wait_over_run": wait / run if run else None,
             "run_cores_per_node": run / config["duration_s"] / nodes, "move_cpu_over_run": overhead / run if run else None,
@@ -697,7 +763,9 @@ def simulate(job):
 DEFAULTS = dict(nodes=4, cores=5, pool="none", per_node=14, seed="1", ramp_s=60, duration_s=600, mechanism="none",
                 floating=False, place_k=2, detect_ms=50, threshold=0.1, hold_s=1.0, max_batch=1,
                 rl=False, batch=8, group=8, train_s=30.0, jitter_s=2.0, gap_scale=1.0,
-                sched="share", sleeper_credit_ms=12.0, cpu_inflation=1.0, carry=False)
+                sched="share", sleeper_credit_ms=12.0, cpu_inflation=1.0, carry=False,
+                kernel_wait="none", kernel_wait_a=0.0, kernel_wait_b=None, kernel_wait_mode="capacity",
+                kernel_wait_size="pool")
 
 
 def main():
@@ -746,7 +814,7 @@ def self_test():
     assert np.allclose(got, [0.007, 0.003]), got  # level L: (L - 0) + (L - 0.004) = 0.01
 
     def go(programs, nodes, cores, per_node, mechanism="none", steps=None, detect=1, hold=0, homes=None, job=0, train=0,
-           cfs=False, choice=None):
+           cfs=False, choice=None, kw=(0.0, 0.0), latency=False):
         names = list(programs)
         arrays = flatten(programs, names)
         homes = np.repeat(np.arange(nodes), per_node) if homes is None else np.array(homes)
@@ -761,11 +829,27 @@ def self_test():
                          10**9, int(TIMEOUT_S / DT), mech["kind"], bool(mech.get("pause", False)),
                          int(round(mech.get("latency_s", 0) / DT)), float(mech.get("cpu_s", 0)),
                          float(mech.get("dump_s_per_gib", 0)), float(mech.get("xfer_s_per_gib", 0)), detect, 0.1, hold, 1,
-                         job, train, np.zeros((n_slots, 4), np.int64), 1.0, cfs, 0.012, 1.0, True, False)
+                         job, train, np.zeros((n_slots, 4), np.int64), 1.0, cfs, 0.012, 1.0, True, False,
+                         np.full(nodes, kw[0]), kw[1], latency)
 
     # two 1-core sandboxes of 1 s each on one core: both run at 0.5 for 2 s -> 2 s of wait in total
     wait, run, *_ = go({"a": program(("cpu", 100, 1.0))}, nodes=1, cores=1, per_node=2, steps=200)
     assert abs(wait - 2.0) < 0.02 and abs(run - 2.0) < 0.02, (wait, run)
+    # kernel wait term: one 1 s sandbox alone on 2 cores (util 0.5), a = 0.05, b = 2 ln 2 -> wait/run = 0.05 * 2 = 0.1
+    wait, run, *_ = go({"a": program(("cpu", 100, 1.0))}, nodes=1, cores=2, per_node=1, steps=300,
+                       kw=(0.05, 2 * math.log(2.0)))
+    assert abs(wait / run - 0.1) < 1e-6 and abs(run - 1.0) < 0.02, (wait, run)
+    # latency mode, same case: nobody is short of cores, so nothing is handed back and the result is the same
+    wait, run, *_ = go({"a": program(("cpu", 100, 1.0))}, nodes=1, cores=2, per_node=1, steps=300,
+                       kw=(0.05, 2 * math.log(2.0)), latency=True)
+    assert abs(wait / run - 0.1) < 1e-6 and abs(run - 1.0) < 0.02, (wait, run)
+    # latency mode, three 1 s sandboxes on 2 cores (util 1, a = 0.05, b = ln 2 -> e = 0.1): the freed core-time goes
+    # back to the short sandboxes, so the pool stays fully busy (capacity mode would keep only 2/1.1 cores busy)
+    three = {"a": program(("cpu", 100, 1.0))}
+    wait, run, *_ = go(three, nodes=1, cores=2, per_node=3, steps=10, kw=(0.05, math.log(2.0)), latency=True)
+    assert abs(run - 0.2) < 1e-9, (wait, run)
+    wait, run, *_ = go(three, nodes=1, cores=2, per_node=3, steps=10, kw=(0.05, math.log(2.0)))
+    assert abs(run - 0.2 / 1.1) < 1e-9, (wait, run)
     # timeout: boot 10 ms, 1 s gap, then a 70 s command cut at 60 s
     finished = go({"a": program(("cpu", 1, 1.0), ("gap", 1.0, 0), ("cpu", 7000, 1.0))}, nodes=1, cores=1,
                   per_node=1, steps=7000)[6]

@@ -4,11 +4,11 @@
 
 **결론**
 
-- **Q1 (DSec 규모 node에도 node별 contention이 있는가): 독립 rollout은 사용률 80% 이하에서 없다. RL rollout(4 vCPU)은 80%에서 1% 남짓으로 경계에 있다.**
-  192코어 node, 사용률 80%에서 독립 rollout의 잃은 CPU는 1 vCPU 0.001%, 4 vCPU 0.21~0.45%다. 실측 보정(×1.5)을 해도 1% 미만이다. node가 크면 sandbox 수백 개의 burst가 서로 상쇄된다. 4 vCPU RL rollout은 같은 사용률에서 1.06%(GRPO B8 G8), 2.34%(B64)로 PLAN의 1% 선을 조금 넘고, LLM 대기가 2배면 독립 rollout도 0.95%가 된다. 그 밖에는 사용률 85~90% 이상이거나 node가 48코어 이하일 때만 생긴다. trace 수를 15~120개로 줄여도 contention은 같거나 커지므로, trace가 부족해서 작게 나온 것은 아니다(6절).
+- **Q1 (DSec 규모 node에도 node별 contention이 있는가): 있다. 다만 대부분은 node 안의 scheduler 대기이고, node 사이로 옮겨서 없앨 수 있는 몫은 그 일부다(7절).**
+  처음 결과(2~6절)는 이상적인 유체 모델로 계산해서, 192코어·사용률 80%에서 잃은 CPU가 1 vCPU 0.001%, 4 vCPU 0.21~0.45%로 거의 없었다. 작은 node 실측을 다시 분해해 보니 같은 사용률에서 유체 모델이 설명하지 못하는 scheduler 대기가 있고, 이 대기는 pool이 5→20코어로 커져도 줄지 않았다. 이를 넣어 192코어로 외삽하면 사용률 80%에서 잃은 CPU가 4 vCPU 1.7~3.7%, 1 vCPU 1.2~2.8%다. DSec가 contention을 말하는 것과 맞는다. node 사이 이상적 공유로 없앨 수 있는 몫은 사용률 80% 이하에서 4 vCPU 20~35%, 1 vCPU 6~8%이고, 85~90%에서 4 vCPU 40~60%다. trace 수를 15~120개로 줄여도 contention은 같거나 커지므로, trace가 부족해서 작게 나온 것은 아니다(6절).
 - **Q2 (migration은 못 따라가고 hand-off는 따라가는가): 성립한다.**
   contention이 있는 모든 독립 rollout 조건에서 10ms hand-off는 잃은 CPU의 79~96%를 되찾아 즉시 이동과 거의 같다. RL에서는 cluster 전체가 함께 바쁜 몫이 있어 되찾을 수 있는 몫 자체가 작지만(이상적 공유 20~93%), hand-off는 그중 85~90%를 낸다. full VM migration은 100Gb/s에 가장 유리한 정책을 골라도 −44~+44%다. PLAN의 "Q2 부정" 기준(migration이 hand-off 감소분의 절반 이상)에 걸리는 조건이 하나도 없다.
-- **재구성 (PLAN의 대안): node를 더 뜨겁게 돌릴 수 있다.** 잃은 CPU 1% 이내라는 같은 목표에서 4 vCPU sandbox node를 85% → 92%까지 돌릴 수 있다. 필요한 node 수가 약 7~8% 줄어든다(LLM 대기 ×0.5~×2, 보정 ×1.5에서도 7~9%). migration은 +2%(pre-copy) 또는 −2%(stop-and-copy)다. 1 vCPU sandbox는 이동 없이도 94%까지 가능해서 이득이 2% 남짓이다.
+- **재구성 (PLAN의 대안): node를 더 뜨겁게 돌릴 수 있다. 다만 이득은 scheduler 대기를 넣으면 작아진다.** 유체 모델만으로는 잃은 CPU 1% 목표에서 4 vCPU node를 85% → 92%까지 돌려 node가 7~8% 줄었다. scheduler 대기를 넣으면 1% 목표는 이동 없이도 사용률 62~74%에서 이미 넘고, 2~3% 목표에서 hand-off의 node 절감은 4 vCPU 1.6~5.7%, 1 vCPU 0~2.4%다. migration(pre-copy)은 0.3~1.2%다.
 - **Q3 (RL step 시간): 차이가 작다.** step 시간은 가장 늦은 rollout이 정하고, 그 rollout은 LLM 대기가 대부분이라 CPU 대기에 둔감하다. 모든 조건에서 step 지연 평균이 1.1% 이하다(PLAN 기준 5% 미만, end-to-end 동기로는 약함). RL에서도 hand-off는 즉시 이동과 같고 migration은 그 1/4 이하다.
 
 모든 수치는 실측 burst를 넣은 simulator(`fleet.py`) 결과다. simulator는 작은 node 실측으로 검증했고, 실측보다 contention을 작게, 이동 효과를 크게 본다(1절). 두 치우침 모두 "migration으로 충분하다"는 반론 쪽이므로 Q2 판정은 보수적이다. 반대로 Q1의 "없다"는 모델이 contention을 작게 보는 쪽이라 보정 민감도를 함께 적었다.
@@ -45,13 +45,15 @@ socket 1에 bare-metal node 2개 × 5코어를 만들어 같은 trace로 실제 
 
 **PLAN에서 벗어난 점.** PLAN은 V 단계를 통과하지 못하면 S 단계를 결론에 쓰지 않기로 했다. 어떤 모델도 대기 합계 기준을 통과하지 못했다. 원인을 나눠 보면 다음과 같다.
 
-- **실제 커널에는 공유 범위와 관계없이 남는 대기가 있다.** 2 node가 10코어를 다 공유해도(`all`) 실측 대기는 1 vCPU에서 CPU 사용의 1~33%다. 모델은 같은 조건에서 0.1~12%다. 공유 pool이 클수록 실측/모델 비가 커진다(그림 오른쪽). wakeup 지연, CFS 시간 조각(min granularity 3ms), 다른 소켓 코어로의 이동 비용처럼 scheduler 안에서 생기는 대기로 본다. node 사이 이동으로는 없앨 수 없는 몫이라 motivation에서 분리한다.
+- **실제 커널에는 공유 범위와 관계없이 남는 대기가 있다.** 2 node가 10코어를 다 공유해도(`all`) 실측 대기는 1 vCPU에서 CPU 사용의 1~33%다. 모델은 같은 조건에서 0.1~12%다. 공유 pool이 클수록 실측/모델 비가 커진다(그림 오른쪽). 처음에는 이를 scheduler 안에서 생기는 대기로 보고 motivation에서 분리했다. 7.1절에서 다시 나눠 보면 이 차이는 모델에 없는 CPU 수요, contention으로 생긴 timeout 뒤 갈라진 replay 경로, 그리고 실제 scheduler 대기가 섞인 것이다. scheduler 대기만 따로 맞춰 192코어에 넣은 결과가 7절이다.
 - **이동으로 없앨 수 있는 몫(분리 − 공유)은 모델이 실측의 0.85배(V1), 0.67배(V2)로 맞힌다.** 그림 왼쪽이 이 비교다. 그래서 큰 규모 결과의 contention은 하한으로 읽고, 실측 보정 ×1.5를 민감도로 함께 적는다.
 - **칸 올림 모델을 버린 이유.** 이 모델은 공유 몫이 1보다 조금 작을 때(예: 0.98) 다음 칸으로 넘어가며 남은 몫을 버려 진행이 절반이 된다. 작은 node에서는 이 손실이 우연히 커널의 잔여 대기와 비슷해 실측에 맞았지만, 192코어 node처럼 몫이 1에 가까운 경우가 흔하면 가짜 contention을 만든다.
 - **이동 효과는 모델이 크게 본다.** 1 vCPU, node당 12개에서 hand-off 10ms 감소율이 실측 32% 대 모델 74%다. 실측의 이동 흉내(SIGSTOP + affinity 변경)가 조잡한 탓도 있다. migration pre-copy가 오히려 대기를 늘리는 효과는 실측이 더 크다(−105% 대 −71%). 메커니즘 순위는 3조건 중 2조건에서 같고, 나머지 하나는 hand-off와 stop-and-copy 차이가 실측 1%p인 경우다.
 - **RL step 지연(V5)은 두 조건 모두 합격했다.**
 
-## 2. node 크기: 크면 contention이 사라진다 (S1)
+## 2. node 크기: 유체 모델에서는 크면 contention이 사라진다 (S1)
+
+2~6절은 이상적 유체 모델 결과다. 실측 scheduler 대기를 넣으면 192코어에서도 contention이 남는다(7절).
 
 ![node size](figures/fleet-2-node-size.png)
 
@@ -194,23 +196,96 @@ step 지연 p50(평균)은 모든 조건에서 1.0006~1.006(1.011) 사이다.
 - 120개 이상에서는 전체 결과와 ±30% 안으로 모인다. 전체 trace도 이 실험에서 1.1~1.2배가 나와, seed와 밀도 반올림만으로 생기는 차이가 그 정도다.
 - 따라서 Q1의 "80% 이하에서 거의 없음"은 trace 수가 부족해서 생긴 결과가 아니다. 192코어 node에 sandbox 수백 개가 들어가면 burst가 서로 상쇄되는 효과가 주된 원인이다. 결과를 바꿀 수 있는 것은 trace 수보다 sandbox끼리의 상관(RL, 5절), sandbox당 부하와 밀도(LLM 대기, 위 표), 그리고 SWE trace에 없는 무거운 workload다.
 
+## 7. 실측 scheduler 대기를 넣은 재계산 (S7)
+
+2~6절의 "192코어에서는 contention이 거의 없다"는 유체 모델의 가정에서 나왔다. 유체 모델은 node 하나를 완벽한 192코어 pool로 본다. 그래서 작은 node에서 본 구조가 큰 node에서도 남는지, 작은 node 실측으로 다시 확인했다.
+
+DSec가 직접 잰 contention은 §8.5 하나다. latency-sensitive workload 옆에 node 용량 50%의 best-effort 부하를 두면 step 지연이 45% 늘었다. SCHED_IDLE과 core scheduling을 써도 17%가 남았다. DSec는 원인으로 SMT 공유, turbo 주파수 하락, 메모리 대역폭, LLC를 든다. runqueue 대기와 다른 간섭이라 이 모델에는 없다.
+
+### 7.1 실측과 모델의 차이 나누기 (`pilot_audit.py`)
+
+pilot 실행마다 sandbox를 같은 trace의 단독 실행과 명령 단위로 맞대어 봤다.
+
+- **같은 경로의 명령은 CPU를 거의 같게 쓴다.** 전체 trace 실측은 ×0.90~1.01, 짧은 trace 분리 node는 ×1.04~1.07이다. 소켓 두 개에 걸친 20코어 pool만 ×1.09~1.15로 높다. 다른 소켓 메모리 접근 비용으로 보인다.
+- **contention이 timeout을 부르고, timeout이 일을 늘린다.** 사용률 85~97%에서 sandbox의 5~18%가 60초 timeout에 걸려 단독 실행과 다른 경로로 갈라졌다. 갈라진 뒤 쓴 vCPU 시간이 전체의 10~36%다. 사용률 70% 이하에서는 0~4%다.
+- **모델에 없는 수요가 더 있다.** boot와 LLM 대기 중 CPU 등이다. 같은 사용률을 맞추려면 모델 수요를 ×1.15~1.26 해야 한다.
+- 이 셋을 걷어내면(경로 이탈 5% 미만인 실행 25개, 모델 사용률을 실측에 맞춤) 유체 모델은 실측 대기를 5코어 pool에서 0.83~0.88배, 10코어에서 0.80~0.85배, 20코어에서 0.3~0.86배로 맞힌다. 20코어 pool에 남는 대기는 사용률 72%에서 약 1.3%p, 81~84%에서 2.5~2.8%p, 91%에서 약 3%p다.
+
+처음 V 단계 비교에서 "커널 잔여 대기"로 본 것은 이 셋이 섞인 값이었다.
+
+### 7.2 scheduler 대기 맞추기 (`kernel_wait_fit.py`)
+
+`fleet.py`는 10ms마다 각 pool의 유체 몫에 wait/run = a(P) · exp(b · 사용률)를 더할 수 있다(`kernel_wait`). 두 방식을 둔다.
+
+- **capacity**: 기다린 시간만큼 코어가 논다(대기가 CPU 용량을 깎는다).
+- **latency**: 놀게 된 코어를 모자란 sandbox에 다시 나눠 준다(work-conserving).
+
+7.1의 깨끗한 실행 25개에 맞춘 결과는 다음과 같다.
+
+| 방식 | b | a(5코어) | a(10코어) | a(20코어) | P에 대한 기울기 | log RMS 오차 |
+|---|---:|---:|---:|---:|---:|---:|
+| capacity | 6 | 5.1e-5 | 6.3e-5 | 8.2e-5 | +0.34 | 0.12 |
+| latency | 6 | 7.8e-5 | 8.6e-5 | 1.0e-4 | +0.21 | 0.13 |
+
+- **같은 사용률에서 scheduler 대기는 pool이 커져도 줄지 않는다.** a는 오히려 조금 커진다. 20코어 pool은 소켓 두 개에 걸쳐 있어서다. 작은 node에서 본 구조가 큰 node에서 사라진다는 2절의 결과는 이 대기를 뺀 유체 모델에서만 성립한다.
+- 192코어로는 두 방식으로 외삽했다. **floor**는 a를 20코어 값으로 고정하고, **slope**는 log-log 기울기로 늘린다. 192코어 사용률 80%에서 이 항만으로 1.0~1.3%(floor), 2.0~2.2%(slope)다.
+- 경로 이탈과 수요 차이를 걷어내지 않고 처음 맞춘 값은 b=9, log RMS 0.24였다. 그 값으로 192코어를 계산하면 사용률이 85%에서 막히는 계산 artifact가 생겨서 버렸다(실측 20코어 pool은 97%까지 갔다).
+
+### 7.3 192코어 결과
+
+![kernel wait](figures/fleet-5-kernel-wait.png)
+
+4 vCPU, node 16개, seed 2개, capacity 방식. 잃은 CPU(%)와 이동 없음 대비 되찾은 비율(%). floor / slope.
+
+| 사용률 | 이동 없음 | 이상적 공유 | hand-off 10ms | migration pre-copy 100Gb/s | stop-and-copy 100Gb/s |
+|---|---|---|---|---|---|
+| 72% | 0.87 / 1.91 | +24 / +23 | +7 / +6 | +2 / +1 | 0 이하 |
+| 76% | 1.12 / 2.52 | +23 / +24 | +10 / +10 | +2 / +3 | 0 이하 |
+| 80% | 1.70 / 3.66 | +35 / +32 | +25 / +22 | +9 / +8 | 0 이하 |
+| 83% | 2.53 / 5.08 | +46 / +39 | +39 / +31 | +12 / +10 | 0 이하 |
+| 85% | 3.76 / 7.13 | +57 / +46 | +50 / +40 | +15 / +12 | 0 이하 |
+| 88% | 5.27 / 9.61 | +61 / +47 | +52 / +40 | +10 / +9 | 0 이하 |
+
+1 vCPU는 사용률 80%에서 1.2 / 2.8%다. 그중 이상적 공유로 8%, hand-off로 0~1%를 되찾는다. 90%에서는 2.9 / 7.5%이고 이상적 공유 26 / 24%, hand-off 21 / 19%다. latency 방식도 같은 모양이고, 85% 이상에서 되찾는 비율이 조금 작다(4 vCPU hand-off 31~45 / 20~33%).
+
+잃은 CPU 목표별로 쓸 수 있는 사용률(보간)과, 이동 없음 대비 node 절감. capacity floor / slope.
+
+| 목표 | 이동 없음 | hand-off 10ms | migration pre-copy | 이상적 공유 |
+|---|---|---|---|---|
+| 4 vCPU, 2% | 81.1 / 72.4% | 86.0 / 73.6% (5.7 / 1.6% 절감) | 1.1 / 0.3% 절감 | 7.5 / 5.1% 절감 |
+| 4 vCPU, 3% | 84.1 / 77.4% | 89.1 / 80.1% (5.7 / 3.3%) | 1.2 / 0.8% | 6.7 / 5.4% |
+| 1 vCPU, 2% | 87.6 / 75.9% | 1.0 / 0.0% 절감 | 0.1 / 0.0% | 1.9 / 1.4% |
+| 1 vCPU, 3% | 90.4 / 81.4% | 2.4 / 0.3% 절감 | 0.6 / 0.1% | 3.2 / 1.4% |
+
+- **contention은 192코어 node에도 있다.** 사용률 70~80%에서 1~4%이고 85~90%에서 4~14%다.
+- **그러나 사용률 80% 이하에서는 대부분이 node 안의 대기다.** node 사이로 옮겨서 없앨 수 있는 몫(이상적 공유)이 4 vCPU 20~35%, 1 vCPU 6~8%다. node 안 대기를 줄이는 것은 node 안 scheduling(SCHED_IDLE, core scheduling, CPU 예약)의 몫이다.
+- **사용률 83% 이상의 4 vCPU node에서는 node 사이 몫이 40~60%가 된다.** 여기서 hand-off는 이상적 공유 이득의 80~90%를 내고(80%에서는 약 70%), migration은 그 1/3 이하다. Q2 결론은 그대로다.
+- node 절감은 유체 모델(7~8%)보다 작은 2~6%(4 vCPU)다.
+
+### 7.4 이 결과의 한계
+
+- 192코어 값은 20코어까지의 측정을 외삽한 것이다. floor와 slope가 2배쯤 다르다. DSec node(AMD EPYC 2×96코어, SMT)와 이 서버(Xeon Gold 5317, 소켓당 12코어)는 scheduler domain 구조도 다르다.
+- scheduler 대기는 pool 전체의 사용률 하나로만 정해지게 넣었다. 실제로는 어떤 sandbox가 어떤 코어에 몰리는지에 따라 다르다.
+- 결론을 확정하려면 192코어급 서버에서 node 하나를 사용률별로 직접 재야 한다.
+
 ## 판정 (PLAN 기준)
 
 | 질문 | PLAN 기준 | 결과 | 판정 |
 |---|---|---|---|
-| Q1 | S1~S3 모두에서 192코어·사용률 80% 이하의 잃은 CPU가 1% 미만이면 부정 | 독립 rollout: 1 vCPU 0.001%, 4 vCPU 0.21~0.45%(보정 ×1.5: 0.67%). RL 4 vCPU: 1.06%(B8 G8), 2.34%(B64). 그중 hand-off로 되찾는 몫은 0.8~0.9%p | **기준상 부정은 아니지만 경계.** 넘는 경우는 RL 4 vCPU뿐이고 폭이 1~2%p다. 주장의 중심은 대안(필요 node 수)으로 옮긴다: hand-off로 4 vCPU node 7~8% 절감 |
+| Q1 | S1~S3 모두에서 192코어·사용률 80% 이하의 잃은 CPU가 1% 미만이면 부정 | 유체 모델만: 독립 rollout 1 vCPU 0.001%, 4 vCPU 0.21~0.45%, RL 4 vCPU 1.06~2.34%. 실측 scheduler 대기를 넣으면(7절): 4 vCPU 1.7~3.7%, 1 vCPU 1.2~2.8% | **성립(수정).** contention은 있다. 그러나 node 사이 이동으로 줄일 수 있는 몫은 80% 이하에서 4 vCPU 20~35%, 1 vCPU 6~8%뿐이고, 나머지는 node 안의 대기다 |
 | Q2 | 2GiB 이상 migration이 hand-off 감소분의 절반 이상을 되찾으면 부정 | migration 최선 44% 대 hand-off 92%(1 vCPU 20코어). 나머지 독립·RL 조건은 모두 더 큰 차이(RL: 4~20% 대 17~82%) | **성립** |
 | Q3 | RL step 지연 차이 5% 미만이면 end-to-end 동기로 약함 | 이동 없음 step 지연 평균 1.0006~1.011, hand-off로 최대 0.7%p 감소 | **약함** |
 
 motivation에 쓸 수 있는 문장:
 
-> DSec 규모 node(192코어)에서도 사용률을 85% 이상으로 올리면 node 사이 불균형으로 CPU를 잃는다. 이 불균형은 1초 안팎이 걸리는 full VM migration이 도착하기 전에 상당 부분 바뀌어서 migration은 따라가지 못하고(되찾는 몫 −44~+44%), 10ms hand-off는 즉시 이동과 거의 같게 따라간다(79~96%). 그 결과 같은 지연 목표에서 4 vCPU sandbox node를 85%가 아니라 92%까지 돌릴 수 있어 node가 7~8% 덜 필요하다. GRPO rollout처럼 같은 task가 함께 도는 경우에는 사용률 80%에서도 불균형 손실이 1%를 넘고, hand-off가 그 대부분(82%)을 되찾는다.
+> DSec 규모 node(192코어)에서도 sandbox CPU contention은 사용률 70~80%부터 1~4%로 나타난다. 그중 node 사이 불균형에서 오는 몫은 1초 안팎이 걸리는 full VM migration이 도착하기 전에 바뀌어서 migration은 거의 따라가지 못하고(이상적 공유 이득의 1/3 이하), 10ms hand-off는 이상적 공유 이득의 70~90%를 낸다. 사용률 85~90%의 4 vCPU node에서는 이 몫이 잃은 CPU의 45~60%다.
 
-쓰면 안 되는 문장: "DSec 운영 사용률(≤ 80%)에서도 node별 contention이 크다", "RL step 시간이 크게 줄어든다", "RL의 동시 burst를 이동으로 해결한다"(B64처럼 cluster 전체가 함께 바쁜 손실은 옮겨도 남는다).
+쓰면 안 되는 문장: "DSec 운영 사용률(≤ 80%)의 contention을 hand-off로 대부분 없앤다"(그 구간의 대기는 대부분 node 안에서 생긴다), "RL step 시간이 크게 줄어든다", "RL의 동시 burst를 이동으로 해결한다"(B64처럼 cluster 전체가 함께 바쁜 손실은 옮겨도 남는다).
 
 ## 해석의 범위
 
-- 큰 규모 결과는 모두 simulation이다. 모델은 작은 node 실측 기준으로 이동 가능한 contention을 0.67~0.85배로 작게 보고, 이동 효과를 크게 본다. 커널의 잔여 대기는 모델에 없다.
+- 큰 규모 결과는 모두 simulation이다. 2~6절은 이상적 유체 모델이라 scheduler 대기가 없다. 7절은 그 대기를 20코어까지의 실측으로 맞춰 192코어로 외삽했으며, 외삽 방식(floor, slope)에 따라 2배쯤 다르다.
+- 실측에서는 contention이 60초 timeout을 부르고, timeout은 replay 경로를 바꿔 CPU를 더 쓰게 한다(7.1절). 모델에는 이 되먹임이 없다.
 - 모델에 없는 비용은 모두 migration에 유리한 쪽이다: 이동 후 cache·TLB warm-up, EPT 재구축, 목적지 수신 CPU, pre-copy의 dirty page 재전송과 throttle.
 - burst 모양은 한 서버(optane)에서 sandbox 하나를 단독으로 돌린 10ms 기록이다. 다른 sandbox와 함께 돌 때의 CPU 증가(memory·cache 간섭)는 넣지 않았다.
 - LLM 대기는 trace에 기록된 간격(LLM 추론 + agent 처리)을 그대로 썼다.
@@ -236,6 +311,11 @@ taskset -c 12-23,36-47 $PY validate.py $(cut -d' ' -f2 .local/validate/runs.txt)
   --solo 1=.local/runs/20261021T070508Z-solo-7vxk272h --solo 4=.local/runs/20261021T075141Z-solo-8exx1l39 \
   --carry --output .local/report/validate-v-carry.json
 taskset -c 12-23,36-47 nice -n 19 $PY trace_count.py .local/report/trace-count.json   # trace 수 검사
+taskset -c 12-23,36-47 nice -n 19 $PY pilot_audit.py .local/report/pilot-audit.json     # 7.1 실측 분해
+taskset -c 12-23,36-47 nice -n 19 $PY kernel_wait_fit.py .local/report/kernel-wait-fit-clean-capacity.json \
+  capacity .local/report/pilot-audit.json                                  # 7.2 (latency도 같은 방식)
+taskset -c 12-23,36-47 nice -n 19 $PY fleet.py --solo .local/runs/20261021T075141Z-solo-8exx1l39 \
+  --candidates candidates-all.json --grid grids/S7-v4.json --jobs 12 --output .local/report/S7-v4.json   # 7.3
 $PY plot_fleet.py                                                          # figures/fleet-*.png
 ```
 

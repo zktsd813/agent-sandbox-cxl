@@ -64,6 +64,8 @@ python3 experiments/contention/sandbox.py solo            # 코어 13-23에 micr
 |---|---|
 | `fleet.py` | numba simulator. power-of-k 배치, 여러 vCPU, trace별 메모리에 비례하는 migration, NIC 직렬화, RL job 모드. `--test`는 손계산 검사 |
 | `validate.py` | pilot 실측을 같은 구성의 `fleet.py`와 비교([PLAN-fleet.md](PLAN-fleet.md) 검증 사다리) |
+| `pilot_audit.py` | pilot 실행을 단독 실행과 명령 단위로 비교: 경로 이탈(timeout), 같은 경로의 CPU, 사용률을 맞추는 수요 배율 |
+| `kernel_wait_fit.py` | 유체 모델이 놓치는 scheduler 대기 a(P)·exp(b·사용률)를 5/10/20코어 실측에 맞춤 (`fleet.KERNEL_WAIT`) |
 | `trace_count.py` | trace 수를 15~120개로 줄여도 같은 사용률의 contention이 같은지 확인 |
 | `plot_fleet.py` | `figures/fleet-*.png` |
 | `grids/` | 큰 규모 실험의 조건 목록 (`fleet.py --grid`) |
