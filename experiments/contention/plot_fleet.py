@@ -162,12 +162,54 @@ def mechanisms():
     fig.savefig(OUT / "fleet-4-mechanisms.png", dpi=160)
 
 
+def kernel_wait():
+    """192-core nodes with the measured scheduler wait (S7, capacity mode): floor solid, slope dashed."""
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4.6), sharey=True)
+    lines = [(("none", "none"), INK2, "no moves"), (("hand-off 10ms", "none"), BLUE, "hand-off 10 ms"),
+             (("migration pre-copy", "none"), AQUA, "migration pre-copy, 100 Gb/s"),
+             (("none", "all"), YELLOW, "ideal: all nodes share cores")]
+    for ax, vcpus in zip(axes, (4, 1)):
+        rows = [r for r in results(f"S7-v{vcpus}.json") if r["kernel_wait_mode"] == "capacity"]
+        for variant, style in (("floor", "-"), ("slope", "--")):
+            part = [r for r in rows if r["kernel_wait"] == variant]
+            ks = sorted({r["per_node"] for r in part})
+            util = {k: mean([r for r in part if r["per_node"] == k and r["mechanism"] == "none" and r["pool"] == "none"],
+                            "run_cores_per_node") / 192 * 100 for k in ks}
+            for (mechanism, pool), color, label in lines:
+                ys = [mean([r for r in part if r["per_node"] == k and r["mechanism"] == mechanism and r["pool"] == pool],
+                           "lost_over_run") * 100 for k in ks]
+                ax.plot([util[k] for k in ks], ys, style, marker="o", ms=4, color=color, lw=2,
+                        label=f"{label}" if variant == "floor" else None)
+        old = results(f"S6-v{vcpus}.json")
+        utils = sorted({r["target_util"] for r in old})
+        ax.plot([mean([r for r in old if r["target_util"] == u and r["mechanism"] == "none" and r["pool"] == "none"],
+                      "run_cores_per_node") / 192 * 100 for u in utils],
+                [max(mean([r for r in old if r["target_util"] == u and r["mechanism"] == "none" and r["pool"] == "none"],
+                          "lost_over_run") * 100, 1e-3) for u in utils], ":", color=INK2, lw=1.5,
+                label="no moves, fluid model only (S6)")
+        ax.axhline(1, color=INK2, lw=1, ls=":")
+        ax.axvline(80, color=INK2, lw=1, ls="--")
+        ax.text(80.3, 20, "DSec: cloud bursting above 80%", color=INK2, fontsize=8)
+        ax.set(xlim=(58, 97), yscale="log", ylim=(0.01, 30), xlabel="node utilization (%)",
+               title=f"{vcpus} vCPU sandboxes, 16 x 192-core nodes")
+    axes[0].set_ylabel("lost CPU (% of CPU used)")
+    axes[0].legend(fontsize=8, loc="upper left")
+    fig.text(.01, .01, "Measured scheduler wait fitted at 5/10/20-core pools (clean runs, matched utilization) and "
+             "extended to 192 cores: solid = kept at the 20-core value, dashed = log-log trend over pool size.",
+             fontsize=7.5, color=INK2)
+    fig.suptitle("With the measured scheduler wait, contention appears at 70-80% utilization, mostly inside nodes",
+                 x=.01, ha="left", fontsize=12, weight="bold", color=INK)
+    fig.tight_layout(rect=(0, .04, 1, .94))
+    fig.savefig(OUT / "fleet-5-kernel-wait.png", dpi=160)
+
+
 def main():
     OUT.mkdir(exist_ok=True)
     validation()
     node_size()
     capacity()
     mechanisms()
+    kernel_wait()
     print(sorted(p.name for p in OUT.glob("fleet-*.png")))
 
 
