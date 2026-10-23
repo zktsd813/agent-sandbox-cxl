@@ -2136,6 +2136,7 @@ static void tcp_bench(char role, const char *peer, unsigned port, uint64_t bytes
 }
 
 #include "cache_probe.h"
+#include "mptcp_probe.h"
 
 /* Blocking futex ping-pong on one CPU: two handoffs per round trip.
  * The time includes futex wait/wake, scheduler and userspace loop overhead;
@@ -2815,6 +2816,8 @@ int main(int argc, char **argv)
         return 2;
     }
     char role = argv[2][0];
+    if (!strcmp(argv[1], "mptcp-stream") || !strcmp(argv[1], "mptcp-pm"))
+        return mptcp_probe_dispatch(argc, argv, role);
     if (!strcmp(argv[1], "kvm")) check_kvm(role);
     else if (!strcmp(argv[1], "kvm-api")) check_kvm_api(role);
     else if (!strcmp(argv[1], "memory")) check_memory(role);

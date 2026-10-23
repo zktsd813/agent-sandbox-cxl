@@ -26,11 +26,13 @@ build_firecracker() {
 
 build_kernel() (
     kernel_source="$(cd -- "$lab_dir/../linux" && pwd)"
-    kernel_build="$lab_dir/.local/kernel-build"
-    kernel_modules="$lab_dir/.local/kernel-modules"
+    kernel_build="${CXL_LAB_KERNEL_BUILD:-$lab_dir/.local/kernel-build}"
+    kernel_modules="${CXL_LAB_KERNEL_MODULES:-$lab_dir/.local/kernel-modules}"
+    kernel_config="${CXL_LAB_KERNEL_CONFIG:-$lab_dir/kernel.config}"
     build_jobs="${JOBS:-24}"
     cxl_emulation_test="${CXL_EMULATION_TEST:-1}"
     kvm_dax_test="${KVM_DAX_TEST:-1}"
+    mptcp_test="${MPTCP_TEST:-0}"
     mkdir -p "$kernel_build" "$kernel_modules"
     # The supplied DCD archive needs the static-capacity fixes before the KVM
     # experiment patch. Accept an already patched source tree on later builds.
@@ -48,8 +50,8 @@ build_kernel() (
     fi
 
     if [[ ! -f "$kernel_build/.config" ]]; then
-        if [[ -f "$lab_dir/kernel.config" ]]; then
-            cp "$lab_dir/kernel.config" "$kernel_build/.config"
+        if [[ -f "$kernel_config" ]]; then
+            cp "$kernel_config" "$kernel_build/.config"
         else
             make -C "$kernel_source" O="$kernel_build" x86_64_defconfig
         fi
@@ -72,6 +74,11 @@ build_kernel() (
         --enable CHECKPOINT_RESTORE --disable DEBUG_INFO --enable DEBUG_INFO_NONE \
         --disable DEBUG_INFO_BTF --disable MODULE_SIG \
         --set-str SYSTEM_TRUSTED_KEYS '' --set-str SYSTEM_REVOCATION_KEYS ''
+    if [[ "$mptcp_test" == 1 ]]; then
+        "$kernel_source/scripts/config" --file "$kernel_build/.config" \
+            --enable MPTCP --enable INET_DIAG --enable INET_MPTCP_DIAG \
+            --enable TUN --enable IP_ADVANCED_ROUTER --enable IP_MULTIPLE_TABLES
+    fi
     # The CXL driver rejects region commit under a hypervisor without this lab-only
     # switch. Real hardware builds must use CXL_EMULATION_TEST=0.
     if [[ "$cxl_emulation_test" == 1 ]]; then
@@ -93,12 +100,19 @@ build_kernel() (
     done
     grep -qx 'CONFIG_KVM=m' "$kernel_build/.config"
     grep -qx 'CONFIG_KVM_INTEL=m' "$kernel_build/.config"
+    if [[ "$mptcp_test" == 1 ]]; then
+        for symbol in MPTCP INET_DIAG INET_MPTCP_DIAG TUN IP_ADVANCED_ROUTER IP_MULTIPLE_TABLES; do
+            grep -qx "CONFIG_${symbol}=y" "$kernel_build/.config" || {
+                echo "Missing required MPTCP built-in option: $symbol" >&2; exit 1;
+            }
+        done
+    fi
     make -C "$kernel_source" O="$kernel_build" LOCALVERSION= -j"$build_jobs" bzImage modules
     make -C "$kernel_source" O="$kernel_build" LOCALVERSION= \
         INSTALL_MOD_PATH="$kernel_modules" INSTALL_MOD_STRIP=1 modules_install
     kernel_release="$(cat "$kernel_build/include/config/kernel.release")"
     depmod -b "$kernel_modules" "$kernel_release"
-    cp "$kernel_build/.config" "$lab_dir/kernel.config"
+    cp "$kernel_build/.config" "$kernel_config"
     printf 'Kernel: %s\nL1 image: %s\nL2 image: %s\nModules: %s\n' \
         "$kernel_release" "$kernel_build/arch/x86/boot/bzImage" \
         "$kernel_build/vmlinux" "$kernel_modules/lib/modules/$kernel_release"
@@ -151,7 +165,9 @@ qemu         Build an isolated QEMU copy (optionally from SOURCE).
 all          Build kernel, QEMU and Firecracker.
 test         Check Python/C and the related Firecracker unit tests.
 
-Optional environment: JOBS=24, CXL_EMULATION_TEST=1, KVM_DAX_TEST=1.
+Optional environment: JOBS=24, CXL_EMULATION_TEST=1, KVM_DAX_TEST=1, MPTCP_TEST=0.
+Isolated kernel paths: CXL_LAB_KERNEL_BUILD, CXL_LAB_KERNEL_MODULES,
+                      CXL_LAB_KERNEL_CONFIG (defaults preserve the lab paths).
 USAGE
 }
 
