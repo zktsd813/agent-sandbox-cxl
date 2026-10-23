@@ -40,8 +40,8 @@ if SESSION and not re.fullmatch(r"[a-z0-9_-]{1,32}", SESSION):
     raise RuntimeError("CXL_LAB_SESSION must contain 1..32 lowercase letters, digits, _ or -")
 CURRENT = LOCAL / (f"current-{SESSION}.json" if SESSION else "current.json")
 QEMU_ROOT = LOCAL / "qemu/root"
-KERNEL_BUILD = LOCAL / "kernel-build"
-KERNEL_MODULES = LOCAL / "kernel-modules/lib/modules"
+KERNEL_BUILD = Path(os.environ.get("CXL_LAB_KERNEL_BUILD", str(LOCAL / "kernel-build"))).resolve()
+KERNEL_MODULES = Path(os.environ.get("CXL_LAB_KERNEL_MODULES", str(LOCAL / "kernel-modules"))).resolve() / "lib/modules"
 PACKAGES = ["qemu-system-x86", "qemu-system-common", "qemu-system-data", "seabios",
             "librdmacm1", "libibverbs1", "liburing2", "libnl-3-200", "libnl-route-3-200"]
 HANDOFF_PRESET_DEFAULTS = {
@@ -254,6 +254,8 @@ def prepare(args):
               "l2_init": HERE / "l2-init.sh", "cxl_init": HERE / "guest-cxl.sh"}
     if (HERE / "cache_probe.h").exists():
         inputs["cache_probe_source"] = HERE / "cache_probe.h"
+    if (HERE / "mptcp_probe.h").exists():
+        inputs["mptcp_probe_source"] = HERE / "mptcp_probe.h"
     if l1_kernel.resolve() == (KERNEL_BUILD / "arch/x86/boot/bzImage").resolve():
         inputs["kernel_config"] = KERNEL_BUILD / ".config"
         inputs["kernel_source_metadata"] = HERE / "kernel-source.json"
@@ -2797,6 +2799,306 @@ def console(args):
             termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
 
+def mptcp_test(args):
+    """Exercise DAX-backed L2 sockets and optional semantic snapshot handoff."""
+    run, config = current_run()
+    if (not config.get("dax_guest") or not config.get("migration_network") or
+            config.get("dax_kvm_state") or config.get("dax_handoff") or
+            set(config["vms"]) != {"A", "B"} or not all(alive(vm) for vm in config["vms"].values())):
+        raise RuntimeError("mptcp-test requires two running --dax-guest --migration-network native-KVM lab VMs")
+    if not 100 <= args.rounds <= 100000 or not 1 <= args.interval_us <= 1000000:
+        raise RuntimeError("Require 100..100000 exchanges and 1..1000000us interval")
+    if args.switch_path and (args.protocol != "mptcp" or args.rounds * args.interval_us < 4000000):
+        raise RuntimeError("Path switching requires MPTCP and at least four seconds of exchanges")
+    if not 0 <= args.pause_ms <= 10000:
+        raise RuntimeError("Require 0..10000ms pause")
+    if args.snapshot_handoff and (not args.switch_path or args.protocol != "mptcp" or args.pause_ms):
+        raise RuntimeError("Snapshot handoff requires --protocol mptcp --switch-path and no --pause-ms")
+    # The normal boot proves nested KVM and DAX RAM before replacing only its recorded Firecracker.
+    verify(argparse.Namespace(timeout=180))
+    source, peer_vm = config["vms"]["A"], config["vms"]["B"]
+    if config["migration_network"]["ips"] != {"A": "172.30.0.1", "B": "172.30.0.2"}:
+        raise RuntimeError("Unexpected private lab network")
+    for vm in (source, peer_vm):
+        guest_command(vm, "test -c /dev/kvm\ngrep -q '^enabled=0 ' /sys/module/kvm/parameters/dax_pool")
+    guest_command(source, "test ! -d /sys/class/net/cxlmpt0\ntest -c \"$(cat /run/cxl-dax-device)\"")
+    guest_command(peer_vm, "test -z \"$(ip route show 10.88.0.0/24)\"\ntest -z \"$(ip route show 10.89.0.0/24)\"")
+    if args.snapshot_handoff:
+        guest_command(peer_vm, "test ! -d /sys/class/net/cxlmpt0\ntest -z \"$(ip route show 10.88.0.2/32)\"")
+        for vm in (source, peer_vm):
+            guest_command(vm, "test \"$(cat /run/cxl-dax-device)\" = /dev/dax0.0\ntest -c /dev/dax0.0")
+    nonce = secrets.token_hex(8)
+    transaction = f"/run/mptcp-{nonce}"
+    port = 19000 + secrets.randbelow(20000)
+    out = run / f"mptcp-{args.protocol}-{time.time_ns()}"
+    out.mkdir()
+    boot_args = ("console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init lab.role=A "
+                 f"lab.net_test={args.protocol} lab.net_peer=172.30.0.2 lab.net_port={port} "
+                 f"lab.net_rounds={args.rounds} lab.net_interval_us={args.interval_us} "
+                 f"lab.net_nonce={nonce} lab.net_switch={int(args.switch_path)}")
+    if args.snapshot_handoff:
+        boot_args += " lab.net_gate=1 memmap=2M$64M"
+    components = {"/machine-config": {"vcpu_count": 1, "mem_size_mib": 128},
+                  "/boot-source": {"kernel_image_path": "/lab/l2-vmlinux", "initrd_path": "/lab/l2-initramfs.cpio", "boot_args": boot_args},
+                  "/network-interfaces/eth0": {"iface_id": "eth0", "host_dev_name": "cxlmpt0", "guest_mac": "02:ca:00:00:88:02"}}
+    report = {"result": "running", "protocol": args.protocol, "switch_path": args.switch_path,
+              "snapshot_handoff": args.snapshot_handoff,
+              "rounds": args.rounds, "interval_us": args.interval_us, "pause_ms": args.pause_ms,
+              "run": str(run), "nonce": nonce, "port": port, "guest_directory": transaction,
+              "guest_configuration": components, "guest_ram": {"backing": "shared CXL device-DAX", "offset": 2097152, "bytes": 128 * 1024 * 1024},
+              "topology": "L2 on A -> virtio-net/TAP cxlmpt0 -> A IPv4 forwarding -> private L1 link -> L1 B peer",
+              "limitations": ["No VM migration, KVM detach/attach or CXL packet staging queue is exercised",
+                              "Both guest addresses use one virtio-net interface and the same A forwarding host",
+                              "Nested KVM and emulated networking on one coherent physical host; no noncoherent-CXL proof",
+                              "Per-exchange latency includes the echo application; this is not a bulk-throughput benchmark"],
+              "events": {}, "artifact_integrity": {}, "cleanup_errors": []}
+    if args.snapshot_handoff:
+        report["topology"] = "L2 on A -> shared-DAX state-only snapshot -> L2 restored on B; MPTCP peer remains L1 B"
+        report["limitations"][:2] = [
+            "Ordinary semantic snapshot with fresh destination KVM/vCPU/EPT; no direct shared-object detach/attach",
+            "Guest RAM remains shared DAX; serialized state crosses the controller's serial channels, not a CXL mailbox",
+            "Old source IP is blackholed and source TAP disabled before pause; 50ms quiet period is a controlled lab quiescence assumption",
+            "Host monotonic stage durations include serial API/control/file transport; they are diagnostic, not optimized handoff latency",
+            "The destination network and its peer run on L1 B; no CXL packet staging buffer or physical-fabric routing cutover"]
+        report["handoff"] = {"stages_ns": {}, "processes": {}}
+    save_json(out / "report.json", report)
+
+    active_vm = source
+    active_log = "firecracker"
+
+    def api(path, method, body):
+        return guest_command(active_vm, f"/lab/shared-probe api {transaction}/api.sock {method} {path} {shlex.quote(json.dumps(body))}", timeout=30)
+
+    def record_process(name):
+        return (f"recorded_pid=$!\nprocess_stat=$(cat /proc/$recorded_pid/stat)\n"
+                "process_fields=${process_stat##*) }\nset -- $process_fields\nshift 19\n"
+                f"printf '%s %s\\n' \"$recorded_pid\" \"$1\" > {transaction}/{name}.pid\n")
+
+    def stop_recorded(name):
+        # Include the existing incarnation-checked primitive, without matching any global processes.
+        return snapshot_cleanup_script("/run/snapshot-bench-" + nonce) + (
+            f"if [ -f {transaction}/{name}.pid ]; then\n"
+            f"read target_pid expected_start < {transaction}/{name}.pid\n"
+            "case \"$target_pid:$expected_start\" in *[!0-9:]*|:|*:) exit 1 ;; esac\n"
+            "[ \"$target_pid\" -gt 1 ]\nstop_snapshot_process\nfi\n")
+
+    initialized = set()
+    try:
+        for role, vm in config["vms"].items():
+            guest_command(vm, f"mkdir -m 700 {transaction}")
+            initialized.add(role)
+        guest_command(source, snapshot_cleanup_script(include_boot_vm=True) +
+                      f"cat /proc/sys/net/ipv4/ip_forward > {transaction}/ip_forward\n"
+                      "echo 1 > /proc/sys/net/ipv4/ip_forward\n")
+        peer_setup = (f"ip route add 10.88.0.0/24 via 172.30.0.1 dev eth0\n"
+                      f"touch {transaction}/route88\nip route add 10.89.0.0/24 via 172.30.0.1 dev eth0\n"
+                      f"touch {transaction}/route89\n")
+        if args.protocol == "mptcp":
+            peer_setup += ("test -r /proc/sys/net/mptcp/enabled\n"
+                           f"cat /proc/sys/net/mptcp/enabled > {transaction}/mptcp_enabled\n"
+                           "echo 1 > /proc/sys/net/mptcp/enabled\n/lab/shared-probe mptcp-pm B limits 2 2\n")
+        peer_setup += (f"MPTCP_PROTOCOL={args.protocol} /lab/shared-probe mptcp-stream B server 172.30.0.2 {port} "
+                       f"{args.rounds} {args.interval_us} {nonce} > {transaction}/server.log 2>&1 </dev/null &\n" + record_process("server"))
+        guest_command(peer_vm, peer_setup)
+        guest_command(peer_vm, f"attempt=0\nwhile ! grep -q '\"event\":\"listening\"' {transaction}/server.log; do\n"
+                      f"read server_pid unused < {transaction}/server.pid\nkill -0 \"$server_pid\"\n"
+                      "attempt=$((attempt + 1))\n[ \"$attempt\" -lt 250 ]\nsleep .02\ndone", timeout=10)
+        if args.snapshot_handoff:
+            guest_command(source, "/lab/shared-probe dax-word A /dev/dax0.0 69206016 0")
+        guest_command(source, f"FC_DAX_RAM=\"$(cat /run/cxl-dax-device)\" FC_DAX_OFFSET=2097152 FC_DAX_SNAPSHOT=1 "
+                      f"/lab/firecracker --api-sock {transaction}/api.sock > {transaction}/firecracker.log 2>&1 </dev/null &\n" + record_process("firecracker"))
+        guest_command(source, f"attempt=0\nwhile [ ! -S {transaction}/api.sock ]; do\n"
+                      f"read fc_pid unused < {transaction}/firecracker.pid\nkill -0 \"$fc_pid\"\n"
+                      "attempt=$((attempt + 1))\n[ \"$attempt\" -lt 250 ]\nsleep .02\ndone", timeout=10)
+        for path, body in components.items():
+            api(path, "PUT", body)
+        guest_command(source, "ifconfig cxlmpt0 10.88.0.1 netmask 255.255.255.0 up\n"
+                      "ifconfig cxlmpt0:1 10.89.0.1 netmask 255.255.255.0 up\n")
+        api("/actions", "PUT", {"action_type": "InstanceStart"})
+        if args.snapshot_handoff:
+            stages = report["handoff"]["stages_ns"]
+            guest_command(source, f"attempt=0\nwhile ! grep -q '^L2_NETWORK_CONNECTED' {transaction}/firecracker.log; do\n"
+                          f"read fc_pid unused < {transaction}/firecracker.pid\nkill -0 \"$fc_pid\"\n"
+                          f"! grep -q '^L2_NETWORK_RESULT=failed' {transaction}/firecracker.log\n"
+                          "attempt=$((attempt + 1))\n[ \"$attempt\" -lt 1000 ]\nsleep .02\ndone", timeout=30)
+            text = guest_command(source, f"printf 'TAP_MAC='; cat /sys/class/net/cxlmpt0/address\n"
+                                 f"printf 'SOURCE_FC='; cat {transaction}/firecracker.pid")
+            mac = re.search(r"^TAP_MAC=([0-9a-f]{2}(?::[0-9a-f]{2}){5})\s*$", text, re.MULTILINE)
+            source_pid = re.search(r"^SOURCE_FC=(\d+) (\d+)\s*$", text, re.MULTILINE)
+            if not mac or not source_pid:
+                raise RuntimeError("Missing source TAP/process identity")
+            report["handoff"]["source_tap_mac"] = mac[1]
+            report["handoff"]["processes"]["source"] = {"role": "A", "pid": int(source_pid[1]), "starttime": source_pid[2]}
+            start = time.monotonic_ns()
+            guest_command(peer_vm, f"ip route add blackhole 10.88.0.2/32\ntouch {transaction}/old_path_blackhole")
+            guest_command(source, "ifconfig cxlmpt0 down\nsleep .05")
+            stages["old_path_block_and_quiet"] = time.monotonic_ns() - start
+            start = time.monotonic_ns()
+            api("/vm", "PATCH", {"state": "Paused"})
+            stages["source_pause_api"] = time.monotonic_ns() - start
+            start = time.monotonic_ns()
+            api("/snapshot/create", "PUT", {"snapshot_type": "Full", "snapshot_path": transaction + "/state",
+                                            "mem_file_path": "/dev/dax0.0"})
+            stages["source_snapshot_api"] = time.monotonic_ns() - start
+            start = time.monotonic_ns()
+            guest_command(source, stop_recorded("firecracker"), timeout=15)
+            stages["source_fence"] = time.monotonic_ns() - start
+            start = time.monotonic_ns()
+            state, integrity = guest_fetch_file(source, transaction + "/state")
+            (out / "snapshot-state.bin").write_bytes(state)
+            report["handoff"]["state"] = integrity
+            encoded = base64.b64encode(state).decode()
+            guest_command(peer_vm, f"printf 'begin-base64 600 state\\n' > {transaction}/state.b64")
+            # BusyBox's interactive shell silently truncates long input lines,
+            # including their redirection. Keep the whole command below 1KiB.
+            for index in range(0, len(encoded), 512):
+                guest_command(peer_vm, f"printf '%s\\n' {shlex.quote(encoded[index:index + 512])} >> {transaction}/state.b64")
+            digest = hashlib.sha256(state).hexdigest()
+            guest_command(peer_vm, f"printf '====\\n' >> {transaction}/state.b64\n"
+                          f"uudecode -o {transaction}/state {transaction}/state.b64\n"
+                          f"printf '%s  %s\\n' {digest} {transaction}/state | sha256sum -c -")
+            stages["state_transfer_via_controller"] = time.monotonic_ns() - start
+            start = time.monotonic_ns()
+            guest_command(peer_vm, f"FC_DAX_RAM=/dev/dax0.0 FC_DAX_OFFSET=2097152 FC_DAX_SNAPSHOT=1 "
+                          f"/lab/firecracker --api-sock {transaction}/api.sock > {transaction}/firecracker-destination.log 2>&1 </dev/null &\n" + record_process("firecracker"))
+            guest_command(peer_vm, f"attempt=0\nwhile [ ! -S {transaction}/api.sock ]; do\n"
+                          f"read fc_pid unused < {transaction}/firecracker.pid\nkill -0 \"$fc_pid\"\n"
+                          "attempt=$((attempt + 1))\n[ \"$attempt\" -lt 250 ]\nsleep .02\ndone", timeout=10)
+            active_vm, active_log = peer_vm, "firecracker-destination"
+            stages["destination_process_start"] = time.monotonic_ns() - start
+            start = time.monotonic_ns()
+            api("/snapshot/load", "PUT", {"snapshot_path": transaction + "/state",
+                                          "mem_backend": {"backend_type": "File", "backend_path": "/dev/dax0.0"},
+                                          "network_overrides": [{"iface_id": "eth0", "host_dev_name": "cxlmpt0"}],
+                                          "resume_vm": False})
+            stages["destination_load_api"] = time.monotonic_ns() - start
+            guest_command(peer_vm, f"ip route del 10.88.0.0/24 via 172.30.0.1 dev eth0\nrm {transaction}/route88\n"
+                          f"ip route del 10.89.0.0/24 via 172.30.0.1 dev eth0\nrm {transaction}/route89\n"
+                          f"ifconfig cxlmpt0 hw ether {mac[1]}\n"
+                          "ifconfig cxlmpt0 10.88.0.1 netmask 255.255.255.0 up\n"
+                          "ifconfig cxlmpt0:1 10.89.0.1 netmask 255.255.255.0 up\n")
+            text = guest_command(peer_vm, f"printf 'DESTINATION_FC='; cat {transaction}/firecracker.pid")
+            destination_pid = re.search(r"^DESTINATION_FC=(\d+) (\d+)\s*$", text, re.MULTILINE)
+            if not destination_pid:
+                raise RuntimeError("Missing destination process identity")
+            report["handoff"]["processes"]["destination"] = {"role": "B", "pid": int(destination_pid[1]), "starttime": destination_pid[2]}
+            start = time.monotonic_ns()
+            api("/vm", "PATCH", {"state": "Resumed"})
+            guest_command(peer_vm, "/lab/shared-probe dax-word B /dev/dax0.0 69206016 1")
+            stages["destination_resume_and_gate"] = time.monotonic_ns() - start
+        deadline = time.monotonic() + 60 + args.rounds * args.interval_us / 250000
+        pause_done = not args.pause_ms
+        while time.monotonic() < deadline:
+            text = guest_command(active_vm, f"tail -n 4 {transaction}/{active_log}.log")
+            if "L2_NETWORK_RESULT=failed" in text:
+                raise RuntimeError("Guest network test failed")
+            if "L2_NETWORK_RESULT=passed" in text:
+                break
+            if not pause_done:
+                # Pause only after the peer has observed verified application traffic.
+                ready = guest_command(peer_vm, f"grep '\"event\":\"ready\"' {transaction}/server.log || true")
+                if re.search(r'^MPTCP_JSON .*"event":"ready"', ready, re.MULTILINE):
+                    api("/vm", "PATCH", {"state": "Paused"})
+                    time.sleep(args.pause_ms / 1000)
+                    api("/vm", "PATCH", {"state": "Resumed"})
+                    pause_done = True
+            time.sleep(.1)
+        else:
+            raise RuntimeError("Guest network test timed out")
+        if not pause_done:
+            raise RuntimeError("Test completed before requested pause")
+        logs = [("A", source, "firecracker"), ("B", peer_vm, "server")]
+        if args.snapshot_handoff:
+            logs.append(("A", peer_vm, "firecracker-destination"))
+        for role, vm, name in logs:
+            data, integrity = guest_fetch_file(vm, f"{transaction}/{name}.log")
+            (out / f"{role}-{name}.log").write_bytes(data)
+            report["artifact_integrity"][name] = integrity
+            report["events"].setdefault(role, []).extend(
+                json.loads(line[len("MPTCP_JSON "):]) for line in data.decode(errors="replace").splitlines()
+                if line.startswith("MPTCP_JSON "))
+        for role in ("A", "B"):
+            complete = [event for event in report["events"][role] if event.get("event") == "complete"]
+            if (len(complete) != 1 or complete[0].get("errors") != 0 or
+                    complete[0].get("rounds") != args.rounds or complete[0].get("nonce") != nonce):
+                raise RuntimeError(f"Peer {role} did not complete verified exchanges")
+            if args.protocol == "mptcp" and not any(event.get("event") == "ready" and event.get("fallback") is False
+                                                    for event in report["events"][role]):
+                raise RuntimeError(f"Peer {role} did not confirm native MPTCP")
+            if args.protocol == "mptcp":
+                ready = next(event for event in report["events"][role] if event.get("event") == "ready")
+                if (complete[0].get("token") != ready.get("token") or
+                        complete[0].get("socket_cookie") != ready.get("socket_cookie") or
+                        complete[0].get("connect_attempts") != (1 if role == "A" else 0)):
+                    raise RuntimeError(f"Peer {role} did not preserve its original MPTCP connection")
+        if args.switch_path:
+            switched = [event for event in report["events"]["A"] if event.get("paths") and
+                        {path.get("local_ip") for path in event["paths"]
+                         if path.get("tcp_state") == 1} == {"10.89.0.2"}]
+            if not switched:
+                raise RuntimeError("No MPTCP state observed with only the new source-address subflow established")
+            final = next(event for event in report["events"]["A"] if event.get("event") == "final_paths")
+            old = [path for path in final["paths"] if path.get("local_ip") == "10.88.0.2"]
+            new = [path for path in final["paths"]
+                   if path.get("local_ip") == "10.89.0.2" and path.get("tcp_state") == 1]
+            if (any(path.get("tcp_state") == 1 for path in old) or not new or
+                    not all(path.get("bytes_sent", 0) > 0 and path.get("bytes_received", 0) > 0 for path in new)):
+                raise RuntimeError("Final new MPTCP subflow did not carry bidirectional data with the old subflow retired")
+        report["result"] = "passed"
+    except BaseException as exc:
+        report.update(result="failed", error=str(exc))
+        raise
+    finally:
+        cleanup_actions = [("A", source, "stop_source_firecracker", stop_recorded("firecracker"))]
+        if args.snapshot_handoff:
+            cleanup_actions.append(("B", peer_vm, "stop_destination_firecracker", stop_recorded("firecracker")))
+        cleanup_actions.extend([
+            ("B", peer_vm, "stop_server", stop_recorded("server")),
+            ("A", source, "restore_ip_forward", f"if [ -f {transaction}/ip_forward ]; then cat {transaction}/ip_forward > /proc/sys/net/ipv4/ip_forward; fi"),
+            ("A", source, "delete_source_tap", "if [ -d /sys/class/net/cxlmpt0 ]; then ip link delete cxlmpt0; fi"),
+            ("B", peer_vm, "delete_route88", f"if [ -f {transaction}/route88 ]; then ip route del 10.88.0.0/24 via 172.30.0.1 dev eth0; fi"),
+            ("B", peer_vm, "delete_route89", f"if [ -f {transaction}/route89 ]; then ip route del 10.89.0.0/24 via 172.30.0.1 dev eth0; fi"),
+            ("B", peer_vm, "delete_old_path_blackhole", f"if [ -f {transaction}/old_path_blackhole ]; then ip route del blackhole 10.88.0.2/32; fi"),
+            ("B", peer_vm, "restore_mptcp_enabled", f"if [ -f {transaction}/mptcp_enabled ]; then cat {transaction}/mptcp_enabled > /proc/sys/net/mptcp/enabled; fi"),
+        ])
+        if args.snapshot_handoff:
+            cleanup_actions.append(("B", peer_vm, "delete_destination_tap", "if [ -d /sys/class/net/cxlmpt0 ]; then ip link delete cxlmpt0; fi"))
+        for role, vm, action, script in cleanup_actions:
+            if role not in initialized:
+                continue
+            try:
+                guest_command(vm, script, timeout=15)
+            except Exception as exc:
+                report["cleanup_errors"].append({"role": role, "action": action, "error": str(exc)})
+        if report["cleanup_errors"]:
+            report["result"] = "failed"
+            report.setdefault("error", "MPTCP test cleanup failed")
+        if report["result"] == "failed":
+            # Processes have been stopped before collecting partial logs, including a failed restore.
+            diagnostic_logs = [("A", source, "firecracker"), ("B", peer_vm, "server")]
+            if args.snapshot_handoff:
+                diagnostic_logs.append(("B", peer_vm, "firecracker-destination"))
+            for role, vm, name in diagnostic_logs:
+                if role not in initialized:
+                    continue
+                try:
+                    path = f"{transaction}/{name}.log"
+                    present = guest_command(vm, f"if [ -f {path} ]; then echo MPTCP_LOG_PRESENT; fi")
+                    if not re.search(r"^MPTCP_LOG_PRESENT\s*$", present, re.MULTILINE):
+                        continue
+                    data, integrity = guest_fetch_file(vm, path)
+                    (out / f"diagnostic-{role}-{name}.log").write_bytes(data)
+                    report["artifact_integrity"][f"diagnostic-{role}-{name}"] = integrity
+                except Exception as exc:
+                    report.setdefault("diagnostic_errors", []).append({"role": role, "log": name, "error": str(exc)})
+        save_json(out / "report.json", report)
+    if report["cleanup_errors"]:
+        raise RuntimeError(f"MPTCP test cleanup failed; inspect {out / 'report.json'}")
+    print(json.dumps({"result": report["result"], "report": str(out / "report.json"),
+                      "protocol": args.protocol, "switch_path": args.switch_path,
+                      "snapshot_handoff": args.snapshot_handoff}, indent=2))
+
+
 def dax_test(_):
     """Use only device-DAX mmap in guests; test both directions near start and end."""
     run, config = current_run()
@@ -3037,6 +3339,14 @@ def main():
     subs.add_parser("dax-test", help="Live A↔B mmap through CXL device-DAX at start/end offsets").set_defaults(func=dax_test)
     subs.add_parser("ram-test", help="Verify all guest RAM is DAX-backed and VM B sees guest CPU writes").set_defaults(func=ram_test)
     subs.add_parser("kvm-state-test", help="Verify native KVM DAX objects, VMM heap and pointer fields observed by B").set_defaults(func=kvm_state_test)
+    p = subs.add_parser("mptcp-test", help="Verify DAX-backed guest TCP/MPTCP, with optional A-to-B state-only snapshot handoff")
+    p.add_argument("--protocol", choices=["tcp", "mptcp"], default="mptcp")
+    p.add_argument("--switch-path", action="store_true", help="Add a guest source address and retire the original MPTCP subflow")
+    p.add_argument("--snapshot-handoff", action="store_true", help="Move the paused guest from A to B through a state-only shared-DAX snapshot; requires --switch-path")
+    p.add_argument("--rounds", type=int, default=8000)
+    p.add_argument("--interval-us", type=int, default=1000)
+    p.add_argument("--pause-ms", type=int, default=0, help="Pause/resume the source microVM after traffic starts; no migration")
+    p.set_defaults(func=mptcp_test)
     p = subs.add_parser("context-bench", help="Measure blocking futex context switches on one CPU")
     p.add_argument("--scope", choices=["host", "guest"], default="host")
     p.add_argument("--role", choices=["A", "B"], default="B")

@@ -1,0 +1,1736 @@
+{
+  "recorded_at_utc": "2026-10-22T07:53:41.976335+00:00",
+  "result": "passed",
+  "purpose": "Functional MPTCP continuity on existing shared-DAX Firecracker guest, including actual L1 A-to-B state-only snapshot handoff",
+  "configuration": {
+    "l1_count": 2,
+    "l1_vcpus": 2,
+    "l1_ram_mib_each": 2048,
+    "l2_vcpus": 1,
+    "l2_ram_mib": 128,
+    "shared_dax_mib": 2048,
+    "kernel": "6.6.0-rc6-dcd-v3",
+    "qemu": "QEMU emulator version 10.2.2 (v10.2.2-dirty)",
+    "qemu_sha256": "418b49d7f8dbb3eb2ccecbec11f2095b1b2a77ff7f80f2cce272d7b939df9c74",
+    "network": {
+      "backend": "tap",
+      "ips": {
+        "A": "172.30.0.1",
+        "B": "172.30.0.2"
+      },
+      "transport": "virtio-net single-queue TAP/vhost-net over an isolated host Linux bridge",
+      "vhost": true,
+      "queues": 1
+    },
+    "moving_endpoint": "MPTCP client in L2; fixed peer/listener in L1 B",
+    "prepared_inputs": {
+      "l1_kernel": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/kernel-build-mptcp-20261022/arch/x86/boot/bzImage",
+        "sha256": "b92398ac0f4ecaa095eb06e372e469ff84c5dc9a7f9f29f40b9d9898d226ed7d"
+      },
+      "firecracker": {
+        "path": "/home/ijkim/agent-sandbox-cxl/firecracker/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker",
+        "sha256": "9aa1b69b99018c141ce7a94b49afc4feecb9ba7d9c8144b95b319960c4e9f8c8"
+      },
+      "l2_kernel": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/kernel-build-mptcp-20261022/vmlinux",
+        "sha256": "dc17886567bf321935ec93441d1f0cd7710e593570cd2682f6ef5e09e52ebe79"
+      },
+      "busybox": {
+        "path": "/usr/bin/busybox",
+        "sha256": "b3c1009e1b5c927e537487c80639cdf404f69e3eb49371d9be5d841672be3ff9"
+      },
+      "probe_source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/shared_probe.c",
+        "sha256": "77897dcefacb1a7aedbc90e67027b137e401fb2c29e3fa10b4ed1149d2f67c7b"
+      },
+      "l1_init": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/guest-init.sh",
+        "sha256": "c6bca182cbc1665d632f29e93663c2a0fc620dbfdcb027ab3acac7195fb1894e"
+      },
+      "l2_init": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/l2-init.sh",
+        "sha256": "3c6a703dfb8b9768f29a3f8032fd437ea321f1da4eb256b2d504ac03e1223746"
+      },
+      "cxl_init": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/guest-cxl.sh",
+        "sha256": "a80b7d0b1c8edb4adc613dec7a140d0723a3388eca96cdda1eccd713ff0c7136"
+      },
+      "cache_probe_source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/cache_probe.h",
+        "sha256": "4bb8615c1251d297be0b5ccd1569cb442a59c13713b964afba92c4f3567978a0"
+      },
+      "mptcp_probe_source": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/mptcp_probe.h",
+        "sha256": "cb8a241eca1a4ff6cbd109965508c38ca82e1b589105142a779cd9694fbaf091"
+      },
+      "kernel_config": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/kernel-build-mptcp-20261022/.config",
+        "sha256": "93cfac458421771f92ca4d65b766e5c80317c606bc29c45490039dac2aeb4853"
+      },
+      "kernel_source_metadata": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/kernel-source.json",
+        "sha256": "fc8f0898843496dbd724969fc06bcd4766075cac5218fd19763b9156901000de"
+      },
+      "kernel_local_patch": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/cxl-static-capacity.patch",
+        "sha256": "86e1aaef0b7892ffccc0e37cea1bcd1e9d6e2565f3c5ed6a973b07e7b95c29f6"
+      },
+      "kernel_cxl_hdm": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/drivers/cxl/core/hdm.c",
+        "sha256": "fade64577a222eaa8065b94e4fbe228512a345d17416160dee31d79760e45545"
+      },
+      "kernel_cxl_mbox": {
+        "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/drivers/cxl/core/mbox.c",
+        "sha256": "ec6afb4fe14fdbcad73558df7e4eabf49f35391211732c6b4856aee31e70d559"
+      }
+    },
+    "prepared_artifacts": {
+      "l1-initramfs.cpio": "c3b568c4b8c08a1d30e0f936387246eab16ba1f89aa8d1a6ba5b89ace3dbb659",
+      "l1-kernel": "b92398ac0f4ecaa095eb06e372e469ff84c5dc9a7f9f29f40b9d9898d226ed7d",
+      "shared-probe": "586942f5873f22ab52327caa8468e6a95a03ba1b5a1552c8feacd89bfb3cc0c1",
+      "l2-initramfs.cpio": "620b1d967d6bc69d6f16f8f952868966f18f9134f7519a1af8182b07e69294c2"
+    }
+  },
+  "kernel_build_validation": {
+    "result": "passed",
+    "release": "6.6.0-rc6-dcd-v3",
+    "flags": {
+      "CONFIG_MPTCP": "y",
+      "CONFIG_MPTCP_IPV6": "y",
+      "CONFIG_INET_DIAG": "y",
+      "CONFIG_INET_MPTCP_DIAG": "y",
+      "CONFIG_TUN": "y",
+      "CONFIG_IP_ADVANCED_ROUTER": "y",
+      "CONFIG_IP_MULTIPLE_TABLES": "y"
+    },
+    "baseline_unchanged": {
+      "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/kernel.config": true,
+      "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/kernel-build/.config": true,
+      "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/kernel-build/arch/x86/boot/bzImage": true,
+      "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/kernel-build/vmlinux": true
+    },
+    "files": {
+      "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/kernel-build-mptcp-20261022/arch/x86/boot/bzImage": {
+        "bytes": 13217632,
+        "sha256": "b92398ac0f4ecaa095eb06e372e469ff84c5dc9a7f9f29f40b9d9898d226ed7d"
+      },
+      "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/kernel-build-mptcp-20261022/vmlinux": {
+        "bytes": 51289616,
+        "sha256": "dc17886567bf321935ec93441d1f0cd7710e593570cd2682f6ef5e09e52ebe79"
+      },
+      "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/kernel-modules-mptcp-20261022/lib/modules/6.6.0-rc6-dcd-v3/kernel/arch/x86/kvm/kvm.ko": {
+        "bytes": 2458208,
+        "sha256": "d2273f1bfb24acd4d406a745c67fbfd9d91a5f8cdc4be5f697d4aa77da3dfc0f"
+      },
+      "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/kernel-modules-mptcp-20261022/lib/modules/6.6.0-rc6-dcd-v3/kernel/arch/x86/kvm/kvm-intel.ko": {
+        "bytes": 636120,
+        "sha256": "ab570dcd1eacd7202cc8d1f3d4423a8414a868ee3730abb5cdbd8034e536c7be"
+      },
+      "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/mptcp-20261022/kernel.config": {
+        "bytes": 141821,
+        "sha256": "93cfac458421771f92ca4d65b766e5c80317c606bc29c45490039dac2aeb4853"
+      }
+    }
+  },
+  "findings": {
+    "all_cases_no_payload_errors": true,
+    "single_client_connect_no_reconnect": true,
+    "mptcp_fallback_to_tcp": false,
+    "snapshot_state_bytes": 13904,
+    "guest_ram_copied_for_snapshot": false,
+    "same_client_guest_pid_cookie_token_after_restore": {
+      "pid": 58,
+      "cookie": 1,
+      "token": 768696248
+    },
+    "external_peer_max_completion_gap_ms": 5770.385506,
+    "controller_state_transfer_ms": 4547.617544,
+    "timing_interpretation": "Single functional handoff uses serial control and 512-character state-transfer chunks, includes a 50ms ingress quiet period. The peer clock observes wall-clock blackout; the paused guest clock can exclude suspension time. These values are not optimized CXL mailbox/direct-handoff or MPTCP steady-state performance.",
+    "destination_dax_ram_log": "2026-10-22T07:49:13.259805500 [anonymous-instance:main] DAX_RAM path=/dev/dax0.0 offset=2097152 gpa=0 bytes=134217728 initialize=false hva=0x7f4623000000"
+  },
+  "limitations": [
+    "One coherent physical host with QEMU-emulated shared CXL; no physical multi-host or noncoherent/DMA/flush correctness proof.",
+    "Snapshot restores fresh destination KVM/vCPU/EPT. Direct and reuse paths still reject network devices and require additional device/backend handoff implementation.",
+    "Moving endpoint is client. Moving server/inbound connections need ADD_ADDR delivery and remote path-manager participation; current block-old-path-first procedure does not cover them.",
+    "No shared host CXL packet staging queue; pending old-path packets may be lost and recovered by MPTCP/TCP.",
+    "50ms source-ingress quiet is controlled lab quiescence, not a general NIC/backend drain guarantee.",
+    "Echo records are not a bulk-throughput benchmark; no steady-state CPU or throughput percentage is inferred.",
+    "Destination guest and fixed peer share L1 B after handoff, so pre/post RTT paths differ."
+  ],
+  "final_source_sha256": {
+    "implementation/virtual_machine/lab.py": "bf837d49a986f4ac771cfc7a4d9b19dadd8f493747f5f005c6e35c78e982fbc7",
+    "implementation/virtual_machine/build.sh": "c5a613f98e28105d012207763be06d574bbd8d7ecdd73563571086dc4df5e9ad",
+    "implementation/virtual_machine/shared_probe.c": "77897dcefacb1a7aedbc90e67027b137e401fb2c29e3fa10b4ed1149d2f67c7b",
+    "implementation/virtual_machine/mptcp_probe.h": "cb8a241eca1a4ff6cbd109965508c38ca82e1b589105142a779cd9694fbaf091",
+    "implementation/virtual_machine/l2-init.sh": "3c6a703dfb8b9768f29a3f8032fd437ea321f1da4eb256b2d504ac03e1223746"
+  },
+  "cases": {
+    "tcp_control": {
+      "source_report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261022T074310Z-gy5rdly3/mptcp-tcp-1792655425448984129/report.json",
+      "source_report_sha256": "48487a91ceaa33a74c1f668bb9568abb6e259bef8f1ea0a2ffdd844932870d90",
+      "report": {
+        "result": "passed",
+        "protocol": "tcp",
+        "switch_path": false,
+        "snapshot_handoff": false,
+        "rounds": 1000,
+        "interval_us": 1000,
+        "pause_ms": 0,
+        "run": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261022T074310Z-gy5rdly3",
+        "nonce": "73613ec80c98e4f4",
+        "port": 31629,
+        "guest_directory": "/run/mptcp-73613ec80c98e4f4",
+        "guest_configuration": {
+          "/machine-config": {
+            "vcpu_count": 1,
+            "mem_size_mib": 128
+          },
+          "/boot-source": {
+            "kernel_image_path": "/lab/l2-vmlinux",
+            "initrd_path": "/lab/l2-initramfs.cpio",
+            "boot_args": "console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init lab.role=A lab.net_test=tcp lab.net_peer=172.30.0.2 lab.net_port=31629 lab.net_rounds=1000 lab.net_interval_us=1000 lab.net_nonce=73613ec80c98e4f4 lab.net_switch=0"
+          },
+          "/network-interfaces/eth0": {
+            "iface_id": "eth0",
+            "host_dev_name": "cxlmpt0",
+            "guest_mac": "02:ca:00:00:88:02"
+          }
+        },
+        "guest_ram": {
+          "backing": "shared CXL device-DAX",
+          "offset": 2097152,
+          "bytes": 134217728
+        },
+        "topology": "L2 on A -> virtio-net/TAP cxlmpt0 -> A IPv4 forwarding -> private L1 link -> L1 B peer",
+        "limitations": [
+          "No VM migration, KVM detach/attach or CXL packet staging queue is exercised",
+          "Both guest addresses use one virtio-net interface and the same A forwarding host",
+          "Nested KVM and emulated networking on one coherent physical host; no noncoherent-CXL proof",
+          "Per-exchange latency includes the echo application; this is not a bulk-throughput benchmark"
+        ],
+        "events": {
+          "A": [
+            {
+              "event": "ready",
+              "role": "A",
+              "side": "client",
+              "transport": "tcp",
+              "round": 0,
+              "monotonic_ns": 284137995,
+              "fd": 3,
+              "socket_cookie": 1,
+              "pid": 56,
+              "token": 0,
+              "fallback": false,
+              "mptcp_flags": 0,
+              "additional_subflows": 0,
+              "total_subflows": 0,
+              "established_subflows": 0,
+              "bytes_sent": 0,
+              "bytes_received": 0,
+              "bytes_retrans": 0,
+              "paths": [],
+              "errors": 0
+            },
+            {
+              "event": "final_paths",
+              "role": "A",
+              "side": "client",
+              "transport": "tcp",
+              "round": 1000,
+              "monotonic_ns": 3403329818,
+              "fd": 3,
+              "socket_cookie": 1,
+              "pid": 56,
+              "token": 0,
+              "fallback": false,
+              "mptcp_flags": 0,
+              "additional_subflows": 0,
+              "total_subflows": 0,
+              "established_subflows": 0,
+              "bytes_sent": 0,
+              "bytes_received": 0,
+              "bytes_retrans": 0,
+              "paths": [],
+              "errors": 0
+            },
+            {
+              "event": "complete",
+              "role": "A",
+              "side": "client",
+              "transport": "tcp",
+              "nonce": "73613ec80c98e4f4",
+              "rounds": 1000,
+              "payload_bytes_per_round": 1024,
+              "application_payload_bytes_each_direction": 1024000,
+              "interval_us": 1000,
+              "elapsed_ns": 3119900040,
+              "mean_exchange_ns": 1644910.615,
+              "p50_exchange_ns": 1379121,
+              "p99_exchange_ns": 10261066,
+              "max_exchange_ns": 19082188,
+              "max_completion_gap_ns": 21590140,
+              "user_cpu_ns": 63833000,
+              "system_cpu_ns": 359954000,
+              "socket_cookie": 1,
+              "token": 0,
+              "connect_attempts": 1,
+              "errors": 0
+            }
+          ],
+          "B": [
+            {
+              "event": "listening",
+              "role": "B",
+              "transport": "tcp",
+              "port": 31629
+            },
+            {
+              "event": "ready",
+              "role": "B",
+              "side": "server",
+              "transport": "tcp",
+              "round": 0,
+              "monotonic_ns": 436400499022,
+              "fd": 4,
+              "socket_cookie": 2,
+              "pid": 499,
+              "token": 0,
+              "fallback": false,
+              "mptcp_flags": 0,
+              "additional_subflows": 0,
+              "total_subflows": 0,
+              "established_subflows": 0,
+              "bytes_sent": 0,
+              "bytes_received": 0,
+              "bytes_retrans": 0,
+              "paths": [],
+              "errors": 0
+            },
+            {
+              "event": "final_paths",
+              "role": "B",
+              "side": "server",
+              "transport": "tcp",
+              "round": 1000,
+              "monotonic_ns": 439519120407,
+              "fd": 4,
+              "socket_cookie": 2,
+              "pid": 499,
+              "token": 0,
+              "fallback": false,
+              "mptcp_flags": 0,
+              "additional_subflows": 0,
+              "total_subflows": 0,
+              "established_subflows": 0,
+              "bytes_sent": 0,
+              "bytes_received": 0,
+              "bytes_retrans": 0,
+              "paths": [],
+              "errors": 0
+            },
+            {
+              "event": "complete",
+              "role": "B",
+              "side": "server",
+              "transport": "tcp",
+              "nonce": "73613ec80c98e4f4",
+              "rounds": 1000,
+              "payload_bytes_per_round": 1024,
+              "application_payload_bytes_each_direction": 1024000,
+              "interval_us": 1000,
+              "elapsed_ns": 3118666180,
+              "mean_exchange_ns": 3118094.299,
+              "p50_exchange_ns": 2742014,
+              "p99_exchange_ns": 12166950,
+              "max_exchange_ns": 21333711,
+              "max_completion_gap_ns": 21336164,
+              "user_cpu_ns": 21717000,
+              "system_cpu_ns": 68093000,
+              "socket_cookie": 2,
+              "token": 0,
+              "connect_attempts": 0,
+              "errors": 0
+            }
+          ]
+        },
+        "artifact_integrity": {
+          "firecracker": {
+            "path": "/run/mptcp-73613ec80c98e4f4/firecracker.log",
+            "bytes": 13257,
+            "sha256": "d2be051038679ae116ac16e175d588c893eb7938fb2fb562083a616ca7237ba2",
+            "gzip_bytes": 2893,
+            "chunks": 1,
+            "chunk_retries": 0,
+            "read_command_retries": 0,
+            "source_unchanged_during_fetch": true
+          },
+          "server": {
+            "path": "/run/mptcp-73613ec80c98e4f4/server.log",
+            "bytes": 1243,
+            "sha256": "da4df30a803b5881fd606b49d49e579e3f12377ef434b9f6ac418540a7696666",
+            "gzip_bytes": 475,
+            "chunks": 1,
+            "chunk_retries": 0,
+            "read_command_retries": 0,
+            "source_unchanged_during_fetch": true
+          }
+        },
+        "cleanup_errors": []
+      }
+    },
+    "mptcp_path_switch": {
+      "source_report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261022T074310Z-gy5rdly3/mptcp-mptcp-1792655001177878551/report.json",
+      "source_report_sha256": "f912e1e680ab8634fe09ffa0530a9ae9842b2f846174a4ed44d6e7e96b896215",
+      "report": {
+        "result": "passed",
+        "protocol": "mptcp",
+        "switch_path": true,
+        "snapshot_handoff": false,
+        "rounds": 4000,
+        "interval_us": 1000,
+        "pause_ms": 0,
+        "run": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261022T074310Z-gy5rdly3",
+        "nonce": "0506eec5992c99d7",
+        "port": 26901,
+        "guest_directory": "/run/mptcp-0506eec5992c99d7",
+        "guest_configuration": {
+          "/machine-config": {
+            "vcpu_count": 1,
+            "mem_size_mib": 128
+          },
+          "/boot-source": {
+            "kernel_image_path": "/lab/l2-vmlinux",
+            "initrd_path": "/lab/l2-initramfs.cpio",
+            "boot_args": "console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init lab.role=A lab.net_test=mptcp lab.net_peer=172.30.0.2 lab.net_port=26901 lab.net_rounds=4000 lab.net_interval_us=1000 lab.net_nonce=0506eec5992c99d7 lab.net_switch=1"
+          },
+          "/network-interfaces/eth0": {
+            "iface_id": "eth0",
+            "host_dev_name": "cxlmpt0",
+            "guest_mac": "02:ca:00:00:88:02"
+          }
+        },
+        "guest_ram": {
+          "backing": "shared CXL device-DAX",
+          "offset": 2097152,
+          "bytes": 134217728
+        },
+        "topology": "L2 on A -> virtio-net/TAP cxlmpt0 -> A IPv4 forwarding -> private L1 link -> L1 B peer",
+        "limitations": [
+          "No VM migration, KVM detach/attach or CXL packet staging queue is exercised",
+          "Both guest addresses use one virtio-net interface and the same A forwarding host",
+          "Nested KVM and emulated networking on one coherent physical host; no noncoherent-CXL proof",
+          "Per-exchange latency includes the echo application; this is not a bulk-throughput benchmark"
+        ],
+        "events": {
+          "A": [
+            {
+              "event": "pm",
+              "role": "A",
+              "operation": "limits",
+              "argument1": "2",
+              "argument2": "2",
+              "started_ns": 275639314,
+              "elapsed_ns": 32434,
+              "errors": 0
+            },
+            {
+              "event": "pm",
+              "role": "A",
+              "operation": "add",
+              "argument1": "10.89.0.2",
+              "argument2": "1",
+              "started_ns": 1313580924,
+              "elapsed_ns": 213112,
+              "errors": 0
+            },
+            {
+              "event": "pm",
+              "role": "A",
+              "operation": "delete",
+              "argument1": "10.88.0.2",
+              "argument2": "0",
+              "started_ns": 2341878548,
+              "elapsed_ns": 679872,
+              "errors": 0
+            },
+            {
+              "event": "ready",
+              "role": "A",
+              "side": "client",
+              "transport": "mptcp",
+              "round": 0,
+              "monotonic_ns": 285640732,
+              "fd": 3,
+              "socket_cookie": 1,
+              "pid": 57,
+              "token": 161771253,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 0,
+              "total_subflows": 1,
+              "established_subflows": 1,
+              "bytes_sent": 1064,
+              "bytes_received": 1064,
+              "bytes_retrans": 0,
+              "paths": [
+                {
+                  "local_ip": "10.88.0.2",
+                  "local_port": 44005,
+                  "remote_ip": "172.30.0.2",
+                  "remote_port": 26901,
+                  "subflow_id": 1,
+                  "tcp_state": 1,
+                  "bytes_sent": 1064,
+                  "bytes_received": 1064,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "paths",
+              "role": "A",
+              "side": "client",
+              "transport": "mptcp",
+              "round": 340,
+              "monotonic_ns": 1341627444,
+              "fd": 3,
+              "socket_cookie": 1,
+              "pid": 57,
+              "token": 161771253,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 1,
+              "total_subflows": 2,
+              "established_subflows": 2,
+              "bytes_sent": 362824,
+              "bytes_received": 362824,
+              "bytes_retrans": 0,
+              "paths": [
+                {
+                  "local_ip": "10.88.0.2",
+                  "local_port": 44005,
+                  "remote_ip": "172.30.0.2",
+                  "remote_port": 26901,
+                  "subflow_id": 1,
+                  "tcp_state": 1,
+                  "bytes_sent": 362824,
+                  "bytes_received": 362824,
+                  "bytes_retrans": 0
+                },
+                {
+                  "local_ip": "10.89.0.2",
+                  "local_port": 54933,
+                  "remote_ip": "172.30.0.2",
+                  "remote_port": 26901,
+                  "subflow_id": 2,
+                  "tcp_state": 1,
+                  "bytes_sent": 0,
+                  "bytes_received": 0,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "paths",
+              "role": "A",
+              "side": "client",
+              "transport": "mptcp",
+              "round": 659,
+              "monotonic_ns": 2365511794,
+              "fd": 3,
+              "socket_cookie": 1,
+              "pid": 57,
+              "token": 161771253,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 1,
+              "total_subflows": 2,
+              "established_subflows": 1,
+              "bytes_sent": 702240,
+              "bytes_received": 702240,
+              "bytes_retrans": 0,
+              "paths": [
+                {
+                  "local_ip": "10.88.0.2",
+                  "local_port": 44005,
+                  "remote_ip": "172.30.0.2",
+                  "remote_port": 0,
+                  "subflow_id": 0,
+                  "tcp_state": 7,
+                  "bytes_sent": 0,
+                  "bytes_received": 0,
+                  "bytes_retrans": 0
+                },
+                {
+                  "local_ip": "10.89.0.2",
+                  "local_port": 54933,
+                  "remote_ip": "172.30.0.2",
+                  "remote_port": 26901,
+                  "subflow_id": 2,
+                  "tcp_state": 1,
+                  "bytes_sent": 7448,
+                  "bytes_received": 6384,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "final_paths",
+              "role": "A",
+              "side": "client",
+              "transport": "mptcp",
+              "round": 4000,
+              "monotonic_ns": 13438359891,
+              "fd": 3,
+              "socket_cookie": 1,
+              "pid": 57,
+              "token": 161771253,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 1,
+              "total_subflows": 2,
+              "established_subflows": 1,
+              "bytes_sent": 4256000,
+              "bytes_received": 4256000,
+              "bytes_retrans": 0,
+              "paths": [
+                {
+                  "local_ip": "10.88.0.2",
+                  "local_port": 44005,
+                  "remote_ip": "172.30.0.2",
+                  "remote_port": 0,
+                  "subflow_id": 0,
+                  "tcp_state": 7,
+                  "bytes_sent": 0,
+                  "bytes_received": 0,
+                  "bytes_retrans": 0
+                },
+                {
+                  "local_ip": "10.89.0.2",
+                  "local_port": 54933,
+                  "remote_ip": "172.30.0.2",
+                  "remote_port": 26901,
+                  "subflow_id": 2,
+                  "tcp_state": 1,
+                  "bytes_sent": 3561208,
+                  "bytes_received": 3560144,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "complete",
+              "role": "A",
+              "side": "client",
+              "transport": "mptcp",
+              "nonce": "0506eec5992c99d7",
+              "rounds": 4000,
+              "payload_bytes_per_round": 1024,
+              "application_payload_bytes_each_direction": 4096000,
+              "interval_us": 1000,
+              "elapsed_ns": 13153492499,
+              "mean_exchange_ns": 1721748.438,
+              "p50_exchange_ns": 1464229,
+              "p99_exchange_ns": 10057947,
+              "max_exchange_ns": 30864994,
+              "max_completion_gap_ns": 32263267,
+              "user_cpu_ns": 226669000,
+              "system_cpu_ns": 1637950000,
+              "socket_cookie": 1,
+              "token": 161771253,
+              "connect_attempts": 1,
+              "errors": 0
+            }
+          ],
+          "B": [
+            {
+              "event": "listening",
+              "role": "B",
+              "transport": "mptcp",
+              "port": 26901
+            },
+            {
+              "event": "ready",
+              "role": "B",
+              "side": "server",
+              "transport": "mptcp",
+              "round": 0,
+              "monotonic_ns": 12158085613,
+              "fd": 4,
+              "socket_cookie": 1,
+              "pid": 116,
+              "token": 1729165737,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 0,
+              "total_subflows": 1,
+              "established_subflows": 1,
+              "bytes_sent": 1064,
+              "bytes_received": 1064,
+              "bytes_retrans": 0,
+              "paths": [
+                {
+                  "local_ip": "172.30.0.2",
+                  "local_port": 26901,
+                  "remote_ip": "10.88.0.2",
+                  "remote_port": 44005,
+                  "subflow_id": 1,
+                  "tcp_state": 1,
+                  "bytes_sent": 1064,
+                  "bytes_received": 1064,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "paths",
+              "role": "B",
+              "side": "server",
+              "transport": "mptcp",
+              "round": 335,
+              "monotonic_ns": 13202088277,
+              "fd": 4,
+              "socket_cookie": 1,
+              "pid": 116,
+              "token": 1729165737,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 1,
+              "total_subflows": 2,
+              "established_subflows": 2,
+              "bytes_sent": 357504,
+              "bytes_received": 357504,
+              "bytes_retrans": 0,
+              "paths": [
+                {
+                  "local_ip": "172.30.0.2",
+                  "local_port": 26901,
+                  "remote_ip": "10.88.0.2",
+                  "remote_port": 44005,
+                  "subflow_id": 1,
+                  "tcp_state": 1,
+                  "bytes_sent": 357504,
+                  "bytes_received": 357504,
+                  "bytes_retrans": 0
+                },
+                {
+                  "local_ip": "172.30.0.2",
+                  "local_port": 26901,
+                  "remote_ip": "10.89.0.2",
+                  "remote_port": 54933,
+                  "subflow_id": 2,
+                  "tcp_state": 1,
+                  "bytes_sent": 0,
+                  "bytes_received": 0,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "paths",
+              "role": "B",
+              "side": "server",
+              "transport": "mptcp",
+              "round": 658,
+              "monotonic_ns": 14234869428,
+              "fd": 4,
+              "socket_cookie": 1,
+              "pid": 116,
+              "token": 1729165737,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 1,
+              "total_subflows": 2,
+              "established_subflows": 1,
+              "bytes_sent": 701176,
+              "bytes_received": 701176,
+              "bytes_retrans": 0,
+              "paths": [
+                {
+                  "local_ip": "0.0.0.0",
+                  "local_port": 26901,
+                  "remote_ip": "10.88.0.2",
+                  "remote_port": 0,
+                  "subflow_id": 0,
+                  "tcp_state": 7,
+                  "bytes_sent": 0,
+                  "bytes_received": 0,
+                  "bytes_retrans": 0
+                },
+                {
+                  "local_ip": "172.30.0.2",
+                  "local_port": 26901,
+                  "remote_ip": "10.89.0.2",
+                  "remote_port": 54933,
+                  "subflow_id": 2,
+                  "tcp_state": 1,
+                  "bytes_sent": 5320,
+                  "bytes_received": 6384,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "final_paths",
+              "role": "B",
+              "side": "server",
+              "transport": "mptcp",
+              "round": 4000,
+              "monotonic_ns": 25310098747,
+              "fd": 4,
+              "socket_cookie": 1,
+              "pid": 116,
+              "token": 1729165737,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 1,
+              "total_subflows": 2,
+              "established_subflows": 1,
+              "bytes_sent": 4256000,
+              "bytes_received": 4256000,
+              "bytes_retrans": 0,
+              "paths": [
+                {
+                  "local_ip": "0.0.0.0",
+                  "local_port": 26901,
+                  "remote_ip": "10.88.0.2",
+                  "remote_port": 0,
+                  "subflow_id": 0,
+                  "tcp_state": 7,
+                  "bytes_sent": 0,
+                  "bytes_received": 0,
+                  "bytes_retrans": 0
+                },
+                {
+                  "local_ip": "172.30.0.2",
+                  "local_port": 26901,
+                  "remote_ip": "10.89.0.2",
+                  "remote_port": 54933,
+                  "subflow_id": 2,
+                  "tcp_state": 1,
+                  "bytes_sent": 3560144,
+                  "bytes_received": 3561208,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "complete",
+              "role": "B",
+              "side": "server",
+              "transport": "mptcp",
+              "nonce": "0506eec5992c99d7",
+              "rounds": 4000,
+              "payload_bytes_per_round": 1024,
+              "application_payload_bytes_each_direction": 4096000,
+              "interval_us": 1000,
+              "elapsed_ns": 13152062032,
+              "mean_exchange_ns": 3287046.589,
+              "p50_exchange_ns": 2840154,
+              "p99_exchange_ns": 15568754,
+              "max_exchange_ns": 32483585,
+              "max_completion_gap_ns": 32483957,
+              "user_cpu_ns": 118134000,
+              "system_cpu_ns": 268396000,
+              "socket_cookie": 1,
+              "token": 1729165737,
+              "connect_attempts": 0,
+              "errors": 0
+            }
+          ]
+        },
+        "artifact_integrity": {
+          "firecracker": {
+            "path": "/run/mptcp-0506eec5992c99d7/firecracker.log",
+            "bytes": 15740,
+            "sha256": "fe46ff224025d6812798d755e03b06e0da66bc1570bbd80efedfc5dd38703248",
+            "gzip_bytes": 3270,
+            "chunks": 1,
+            "chunk_retries": 0,
+            "read_command_retries": 0,
+            "source_unchanged_during_fetch": true
+          },
+          "server": {
+            "path": "/run/mptcp-0506eec5992c99d7/server.log",
+            "bytes": 3211,
+            "sha256": "038e83dd082551decde6077f974bec2b06412542e46b0cacab3576d8b78a4d36",
+            "gzip_bytes": 710,
+            "chunks": 1,
+            "chunk_retries": 0,
+            "read_command_retries": 0,
+            "source_unchanged_during_fetch": true
+          }
+        },
+        "cleanup_errors": []
+      }
+    },
+    "mptcp_snapshot_handoff": {
+      "source_report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261022T074310Z-gy5rdly3/mptcp-mptcp-1792655346029038564/report.json",
+      "source_report_sha256": "2c02fb89ca5e13a13e3e41819f1eb3e457f2eb3da7bb38a6ad968bb3b178bc26",
+      "report": {
+        "result": "passed",
+        "protocol": "mptcp",
+        "switch_path": true,
+        "snapshot_handoff": true,
+        "rounds": 4000,
+        "interval_us": 1000,
+        "pause_ms": 0,
+        "run": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261022T074310Z-gy5rdly3",
+        "nonce": "e3d3f2c9b3897ab0",
+        "port": 32512,
+        "guest_directory": "/run/mptcp-e3d3f2c9b3897ab0",
+        "guest_configuration": {
+          "/machine-config": {
+            "vcpu_count": 1,
+            "mem_size_mib": 128
+          },
+          "/boot-source": {
+            "kernel_image_path": "/lab/l2-vmlinux",
+            "initrd_path": "/lab/l2-initramfs.cpio",
+            "boot_args": "console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init lab.role=A lab.net_test=mptcp lab.net_peer=172.30.0.2 lab.net_port=32512 lab.net_rounds=4000 lab.net_interval_us=1000 lab.net_nonce=e3d3f2c9b3897ab0 lab.net_switch=1 lab.net_gate=1 memmap=2M$64M"
+          },
+          "/network-interfaces/eth0": {
+            "iface_id": "eth0",
+            "host_dev_name": "cxlmpt0",
+            "guest_mac": "02:ca:00:00:88:02"
+          }
+        },
+        "guest_ram": {
+          "backing": "shared CXL device-DAX",
+          "offset": 2097152,
+          "bytes": 134217728
+        },
+        "topology": "L2 on A -> shared-DAX state-only snapshot -> L2 restored on B; MPTCP peer remains L1 B",
+        "limitations": [
+          "Ordinary semantic snapshot with fresh destination KVM/vCPU/EPT; no direct shared-object detach/attach",
+          "Guest RAM remains shared DAX; serialized state crosses the controller's serial channels, not a CXL mailbox",
+          "Old source IP is blackholed and source TAP disabled before pause; 50ms quiet period is a controlled lab quiescence assumption",
+          "Host monotonic stage durations include serial API/control/file transport; they are diagnostic, not optimized handoff latency",
+          "The destination network and its peer run on L1 B; no CXL packet staging buffer or physical-fabric routing cutover",
+          "Nested KVM and emulated networking on one coherent physical host; no noncoherent-CXL proof",
+          "Per-exchange latency includes the echo application; this is not a bulk-throughput benchmark"
+        ],
+        "events": {
+          "A": [
+            {
+              "event": "pm",
+              "role": "A",
+              "operation": "limits",
+              "argument1": "2",
+              "argument2": "2",
+              "started_ns": 247861204,
+              "elapsed_ns": 32557,
+              "errors": 0
+            },
+            {
+              "event": "pm",
+              "role": "A",
+              "operation": "add",
+              "argument1": "10.89.0.2",
+              "argument2": "1",
+              "started_ns": 969888535,
+              "elapsed_ns": 2481583,
+              "errors": 0
+            },
+            {
+              "event": "pm",
+              "role": "A",
+              "operation": "delete",
+              "argument1": "10.88.0.2",
+              "argument2": "0",
+              "started_ns": 1988359715,
+              "elapsed_ns": 998583,
+              "errors": 0
+            },
+            {
+              "event": "ready",
+              "role": "A",
+              "side": "client",
+              "transport": "mptcp",
+              "round": 0,
+              "monotonic_ns": 257288433,
+              "fd": 3,
+              "socket_cookie": 1,
+              "pid": 58,
+              "token": 768696248,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 0,
+              "total_subflows": 1,
+              "established_subflows": 1,
+              "bytes_sent": 1064,
+              "bytes_received": 1064,
+              "bytes_retrans": 0,
+              "paths": [
+                {
+                  "local_ip": "10.88.0.2",
+                  "local_port": 40965,
+                  "remote_ip": "172.30.0.2",
+                  "remote_port": 32512,
+                  "subflow_id": 1,
+                  "tcp_state": 1,
+                  "bytes_sent": 1064,
+                  "bytes_received": 1064,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "paths",
+              "role": "A",
+              "side": "client",
+              "transport": "mptcp",
+              "round": 45,
+              "monotonic_ns": 1122845514,
+              "fd": 3,
+              "socket_cookie": 1,
+              "pid": 58,
+              "token": 768696248,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 1,
+              "total_subflows": 2,
+              "established_subflows": 2,
+              "bytes_sent": 48944,
+              "bytes_received": 48944,
+              "bytes_retrans": 0,
+              "paths": [
+                {
+                  "local_ip": "10.88.0.2",
+                  "local_port": 40965,
+                  "remote_ip": "172.30.0.2",
+                  "remote_port": 32512,
+                  "subflow_id": 1,
+                  "tcp_state": 1,
+                  "bytes_sent": 51072,
+                  "bytes_received": 47880,
+                  "bytes_retrans": 2128
+                },
+                {
+                  "local_ip": "10.89.0.2",
+                  "local_port": 35807,
+                  "remote_ip": "172.30.0.2",
+                  "remote_port": 32512,
+                  "subflow_id": 2,
+                  "tcp_state": 1,
+                  "bytes_sent": 0,
+                  "bytes_received": 1064,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "paths",
+              "role": "A",
+              "side": "client",
+              "transport": "mptcp",
+              "round": 391,
+              "monotonic_ns": 1989272287,
+              "fd": 3,
+              "socket_cookie": 1,
+              "pid": 58,
+              "token": 768696248,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 1,
+              "total_subflows": 2,
+              "established_subflows": 1,
+              "bytes_sent": 417088,
+              "bytes_received": 417088,
+              "bytes_retrans": 0,
+              "paths": [
+                {
+                  "local_ip": "10.88.0.2",
+                  "local_port": 40965,
+                  "remote_ip": "172.30.0.2",
+                  "remote_port": 32512,
+                  "subflow_id": 1,
+                  "tcp_state": 4,
+                  "bytes_sent": 52136,
+                  "bytes_received": 47880,
+                  "bytes_retrans": 3192
+                },
+                {
+                  "local_ip": "10.89.0.2",
+                  "local_port": 35807,
+                  "remote_ip": "172.30.0.2",
+                  "remote_port": 32512,
+                  "subflow_id": 2,
+                  "tcp_state": 1,
+                  "bytes_sent": 368144,
+                  "bytes_received": 369208,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "final_paths",
+              "role": "A",
+              "side": "client",
+              "transport": "mptcp",
+              "round": 4000,
+              "monotonic_ns": 11521314165,
+              "fd": 3,
+              "socket_cookie": 1,
+              "pid": 58,
+              "token": 768696248,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 1,
+              "total_subflows": 2,
+              "established_subflows": 1,
+              "bytes_sent": 4256000,
+              "bytes_received": 4256000,
+              "bytes_retrans": 0,
+              "paths": [
+                {
+                  "local_ip": "10.88.0.2",
+                  "local_port": 40965,
+                  "remote_ip": "172.30.0.2",
+                  "remote_port": 32512,
+                  "subflow_id": 1,
+                  "tcp_state": 4,
+                  "bytes_sent": 55328,
+                  "bytes_received": 47880,
+                  "bytes_retrans": 6384
+                },
+                {
+                  "local_ip": "10.89.0.2",
+                  "local_port": 35807,
+                  "remote_ip": "172.30.0.2",
+                  "remote_port": 32512,
+                  "subflow_id": 2,
+                  "tcp_state": 1,
+                  "bytes_sent": 4207056,
+                  "bytes_received": 4208120,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "complete",
+              "role": "A",
+              "side": "client",
+              "transport": "mptcp",
+              "nonce": "e3d3f2c9b3897ab0",
+              "rounds": 4000,
+              "payload_bytes_per_round": 1024,
+              "application_payload_bytes_each_direction": 4096000,
+              "interval_us": 1000,
+              "elapsed_ns": 11264416216,
+              "mean_exchange_ns": 1272550.124,
+              "p50_exchange_ns": 843924,
+              "p99_exchange_ns": 10651850,
+              "max_exchange_ns": 731581153,
+              "max_completion_gap_ns": 732733899,
+              "user_cpu_ns": 248273000,
+              "system_cpu_ns": 1840078000,
+              "socket_cookie": 1,
+              "token": 768696248,
+              "connect_attempts": 1,
+              "errors": 0
+            }
+          ],
+          "B": [
+            {
+              "event": "listening",
+              "role": "B",
+              "transport": "mptcp",
+              "port": 32512
+            },
+            {
+              "event": "ready",
+              "role": "B",
+              "side": "server",
+              "transport": "mptcp",
+              "round": 0,
+              "monotonic_ns": 357048510994,
+              "fd": 4,
+              "socket_cookie": 4099,
+              "pid": 315,
+              "token": 3528769045,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 0,
+              "total_subflows": 1,
+              "established_subflows": 1,
+              "bytes_sent": 1064,
+              "bytes_received": 1064,
+              "bytes_retrans": 0,
+              "paths": [
+                {
+                  "local_ip": "172.30.0.2",
+                  "local_port": 32512,
+                  "remote_ip": "10.88.0.2",
+                  "remote_port": 40965,
+                  "subflow_id": 1,
+                  "tcp_state": 1,
+                  "bytes_sent": 1064,
+                  "bytes_received": 1064,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "paths",
+              "role": "B",
+              "side": "server",
+              "transport": "mptcp",
+              "round": 46,
+              "monotonic_ns": 362953374892,
+              "fd": 4,
+              "socket_cookie": 4099,
+              "pid": 315,
+              "token": 3528769045,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 1,
+              "total_subflows": 2,
+              "established_subflows": 2,
+              "bytes_sent": 50008,
+              "bytes_received": 50008,
+              "bytes_retrans": 1064,
+              "paths": [
+                {
+                  "local_ip": "172.30.0.2",
+                  "local_port": 32512,
+                  "remote_ip": "10.88.0.2",
+                  "remote_port": 40965,
+                  "subflow_id": 1,
+                  "tcp_state": 1,
+                  "bytes_sent": 56392,
+                  "bytes_received": 48944,
+                  "bytes_retrans": 0
+                },
+                {
+                  "local_ip": "172.30.0.2",
+                  "local_port": 32512,
+                  "remote_ip": "10.89.0.2",
+                  "remote_port": 35807,
+                  "subflow_id": 2,
+                  "tcp_state": 1,
+                  "bytes_sent": 2128,
+                  "bytes_received": 1064,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "paths",
+              "role": "B",
+              "side": "server",
+              "transport": "mptcp",
+              "round": 392,
+              "monotonic_ns": 363829344504,
+              "fd": 4,
+              "socket_cookie": 4099,
+              "pid": 315,
+              "token": 3528769045,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 1,
+              "total_subflows": 2,
+              "established_subflows": 1,
+              "bytes_sent": 418152,
+              "bytes_received": 418152,
+              "bytes_retrans": 1064,
+              "paths": [
+                {
+                  "local_ip": "172.30.0.2",
+                  "local_port": 32512,
+                  "remote_ip": "10.88.0.2",
+                  "remote_port": 40965,
+                  "subflow_id": 1,
+                  "tcp_state": 11,
+                  "bytes_sent": 63840,
+                  "bytes_received": 48945,
+                  "bytes_retrans": 0
+                },
+                {
+                  "local_ip": "172.30.0.2",
+                  "local_port": 32512,
+                  "remote_ip": "10.89.0.2",
+                  "remote_port": 35807,
+                  "subflow_id": 2,
+                  "tcp_state": 1,
+                  "bytes_sent": 370272,
+                  "bytes_received": 369208,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "final_paths",
+              "role": "B",
+              "side": "server",
+              "transport": "mptcp",
+              "round": 4000,
+              "monotonic_ns": 373348391864,
+              "fd": 4,
+              "socket_cookie": 4099,
+              "pid": 315,
+              "token": 3528769045,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 1,
+              "total_subflows": 2,
+              "established_subflows": 1,
+              "bytes_sent": 4256000,
+              "bytes_received": 4256000,
+              "bytes_retrans": 1064,
+              "paths": [
+                {
+                  "local_ip": "172.30.0.2",
+                  "local_port": 32512,
+                  "remote_ip": "10.88.0.2",
+                  "remote_port": 40965,
+                  "subflow_id": 1,
+                  "tcp_state": 11,
+                  "bytes_sent": 79800,
+                  "bytes_received": 48945,
+                  "bytes_retrans": 0
+                },
+                {
+                  "local_ip": "172.30.0.2",
+                  "local_port": 32512,
+                  "remote_ip": "10.89.0.2",
+                  "remote_port": 35807,
+                  "subflow_id": 2,
+                  "tcp_state": 1,
+                  "bytes_sent": 4208120,
+                  "bytes_received": 4207056,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "complete",
+              "role": "B",
+              "side": "server",
+              "transport": "mptcp",
+              "nonce": "e3d3f2c9b3897ab0",
+              "rounds": 4000,
+              "payload_bytes_per_round": 1024,
+              "application_payload_bytes_each_direction": 4096000,
+              "interval_us": 1000,
+              "elapsed_ns": 16299964720,
+              "mean_exchange_ns": 4073944.437,
+              "p50_exchange_ns": 2210278,
+              "p99_exchange_ns": 15995177,
+              "max_exchange_ns": 5770385150,
+              "max_completion_gap_ns": 5770385506,
+              "user_cpu_ns": 72637000,
+              "system_cpu_ns": 216395000,
+              "socket_cookie": 4099,
+              "token": 3528769045,
+              "connect_attempts": 0,
+              "errors": 0
+            }
+          ]
+        },
+        "artifact_integrity": {
+          "firecracker": {
+            "path": "/run/mptcp-e3d3f2c9b3897ab0/firecracker.log",
+            "bytes": 6276,
+            "sha256": "5d2267c75c8c18073a5f083c989facda5c59f4b5334af1a5190a0e938a545a06",
+            "gzip_bytes": 1538,
+            "chunks": 1,
+            "chunk_retries": 0,
+            "read_command_retries": 0,
+            "source_unchanged_during_fetch": true
+          },
+          "server": {
+            "path": "/run/mptcp-e3d3f2c9b3897ab0/server.log",
+            "bytes": 3279,
+            "sha256": "a47f216a918d9ab2e68c5b4fcc917ce0830f07624829a2466d07faca0bff6043",
+            "gzip_bytes": 725,
+            "chunks": 1,
+            "chunk_retries": 0,
+            "read_command_retries": 0,
+            "source_unchanged_during_fetch": true
+          },
+          "firecracker-destination": {
+            "path": "/run/mptcp-e3d3f2c9b3897ab0/firecracker-destination.log",
+            "bytes": 12836,
+            "sha256": "02d2c86cfa11cec415da0824ff8677088cca9c1df038e9b720dc4290303c084f",
+            "gzip_bytes": 2921,
+            "chunks": 1,
+            "chunk_retries": 0,
+            "read_command_retries": 0,
+            "source_unchanged_during_fetch": true
+          }
+        },
+        "cleanup_errors": [],
+        "handoff": {
+          "stages_ns": {
+            "old_path_block_and_quiet": 140310309,
+            "source_pause_api": 52021474,
+            "source_snapshot_api": 61606835,
+            "source_fence": 219083023,
+            "state_transfer_via_controller": 4547617544,
+            "destination_process_start": 172061668,
+            "destination_load_api": 101018163,
+            "destination_resume_and_gate": 101673278
+          },
+          "processes": {
+            "source": {
+              "role": "A",
+              "pid": 546,
+              "starttime": "35597"
+            },
+            "destination": {
+              "role": "B",
+              "pid": 364,
+              "starttime": "36225"
+            }
+          },
+          "source_tap_mac": "0e:06:54:77:81:3f",
+          "state": {
+            "path": "/run/mptcp-e3d3f2c9b3897ab0/state",
+            "bytes": 13904,
+            "sha256": "313f8e163aaea5d2d6e3f3b8852bb55714269cafb25267819c6f8a35f544f036",
+            "gzip_bytes": 1916,
+            "chunks": 1,
+            "chunk_retries": 0,
+            "read_command_retries": 0,
+            "source_unchanged_during_fetch": true
+          }
+        }
+      }
+    },
+    "mptcp_pause_100ms": {
+      "source_report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261022T074310Z-gy5rdly3/mptcp-mptcp-1792655504599103049/report.json",
+      "source_report_sha256": "c18f87f0b460c0dff95bc58e5d6a0f3c0b3f41cba05cc1985766c23632399274",
+      "report": {
+        "result": "passed",
+        "protocol": "mptcp",
+        "switch_path": false,
+        "snapshot_handoff": false,
+        "rounds": 1000,
+        "interval_us": 1000,
+        "pause_ms": 100,
+        "run": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261022T074310Z-gy5rdly3",
+        "nonce": "f267a0dfc1feca25",
+        "port": 28627,
+        "guest_directory": "/run/mptcp-f267a0dfc1feca25",
+        "guest_configuration": {
+          "/machine-config": {
+            "vcpu_count": 1,
+            "mem_size_mib": 128
+          },
+          "/boot-source": {
+            "kernel_image_path": "/lab/l2-vmlinux",
+            "initrd_path": "/lab/l2-initramfs.cpio",
+            "boot_args": "console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init lab.role=A lab.net_test=mptcp lab.net_peer=172.30.0.2 lab.net_port=28627 lab.net_rounds=1000 lab.net_interval_us=1000 lab.net_nonce=f267a0dfc1feca25 lab.net_switch=0"
+          },
+          "/network-interfaces/eth0": {
+            "iface_id": "eth0",
+            "host_dev_name": "cxlmpt0",
+            "guest_mac": "02:ca:00:00:88:02"
+          }
+        },
+        "guest_ram": {
+          "backing": "shared CXL device-DAX",
+          "offset": 2097152,
+          "bytes": 134217728
+        },
+        "topology": "L2 on A -> virtio-net/TAP cxlmpt0 -> A IPv4 forwarding -> private L1 link -> L1 B peer",
+        "limitations": [
+          "No VM migration, KVM detach/attach or CXL packet staging queue is exercised",
+          "Both guest addresses use one virtio-net interface and the same A forwarding host",
+          "Nested KVM and emulated networking on one coherent physical host; no noncoherent-CXL proof",
+          "Per-exchange latency includes the echo application; this is not a bulk-throughput benchmark"
+        ],
+        "events": {
+          "A": [
+            {
+              "event": "pm",
+              "role": "A",
+              "operation": "limits",
+              "argument1": "2",
+              "argument2": "2",
+              "started_ns": 254476218,
+              "elapsed_ns": 32321,
+              "errors": 0
+            },
+            {
+              "event": "ready",
+              "role": "A",
+              "side": "client",
+              "transport": "mptcp",
+              "round": 0,
+              "monotonic_ns": 264001143,
+              "fd": 3,
+              "socket_cookie": 1,
+              "pid": 58,
+              "token": 1426397417,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 0,
+              "total_subflows": 1,
+              "established_subflows": 1,
+              "bytes_sent": 1064,
+              "bytes_received": 1064,
+              "bytes_retrans": 0,
+              "paths": [
+                {
+                  "local_ip": "10.88.0.2",
+                  "local_port": 38757,
+                  "remote_ip": "172.30.0.2",
+                  "remote_port": 28627,
+                  "subflow_id": 1,
+                  "tcp_state": 1,
+                  "bytes_sent": 1064,
+                  "bytes_received": 1064,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "final_paths",
+              "role": "A",
+              "side": "client",
+              "transport": "mptcp",
+              "round": 1000,
+              "monotonic_ns": 3802252471,
+              "fd": 3,
+              "socket_cookie": 1,
+              "pid": 58,
+              "token": 1426397417,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 0,
+              "total_subflows": 1,
+              "established_subflows": 1,
+              "bytes_sent": 1064000,
+              "bytes_received": 1064000,
+              "bytes_retrans": 0,
+              "paths": [
+                {
+                  "local_ip": "10.88.0.2",
+                  "local_port": 38757,
+                  "remote_ip": "172.30.0.2",
+                  "remote_port": 28627,
+                  "subflow_id": 1,
+                  "tcp_state": 1,
+                  "bytes_sent": 1064000,
+                  "bytes_received": 1064000,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "complete",
+              "role": "A",
+              "side": "client",
+              "transport": "mptcp",
+              "nonce": "f267a0dfc1feca25",
+              "rounds": 1000,
+              "payload_bytes_per_round": 1024,
+              "application_payload_bytes_each_direction": 1024000,
+              "interval_us": 1000,
+              "elapsed_ns": 3538995292,
+              "mean_exchange_ns": 2010205.039,
+              "p50_exchange_ns": 1598701,
+              "p99_exchange_ns": 13035666,
+              "max_exchange_ns": 171657269,
+              "max_completion_gap_ns": 178278982,
+              "user_cpu_ns": 46569000,
+              "system_cpu_ns": 422295000,
+              "socket_cookie": 1,
+              "token": 1426397417,
+              "connect_attempts": 1,
+              "errors": 0
+            }
+          ],
+          "B": [
+            {
+              "event": "listening",
+              "role": "B",
+              "transport": "mptcp",
+              "port": 28627
+            },
+            {
+              "event": "ready",
+              "role": "B",
+              "side": "server",
+              "transport": "mptcp",
+              "round": 0,
+              "monotonic_ns": 515612137703,
+              "fd": 4,
+              "socket_cookie": 3,
+              "pid": 529,
+              "token": 822072539,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 0,
+              "total_subflows": 1,
+              "established_subflows": 1,
+              "bytes_sent": 1064,
+              "bytes_received": 1064,
+              "bytes_retrans": 0,
+              "paths": [
+                {
+                  "local_ip": "172.30.0.2",
+                  "local_port": 28627,
+                  "remote_ip": "10.88.0.2",
+                  "remote_port": 38757,
+                  "subflow_id": 1,
+                  "tcp_state": 1,
+                  "bytes_sent": 1064,
+                  "bytes_received": 1064,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "final_paths",
+              "role": "B",
+              "side": "server",
+              "transport": "mptcp",
+              "round": 1000,
+              "monotonic_ns": 519149852468,
+              "fd": 4,
+              "socket_cookie": 3,
+              "pid": 529,
+              "token": 822072539,
+              "fallback": false,
+              "mptcp_flags": 2,
+              "additional_subflows": 0,
+              "total_subflows": 1,
+              "established_subflows": 1,
+              "bytes_sent": 1064000,
+              "bytes_received": 1064000,
+              "bytes_retrans": 0,
+              "paths": [
+                {
+                  "local_ip": "172.30.0.2",
+                  "local_port": 28627,
+                  "remote_ip": "10.88.0.2",
+                  "remote_port": 38757,
+                  "subflow_id": 1,
+                  "tcp_state": 1,
+                  "bytes_sent": 1064000,
+                  "bytes_received": 1064000,
+                  "bytes_retrans": 0
+                }
+              ],
+              "errors": 0
+            },
+            {
+              "event": "complete",
+              "role": "B",
+              "side": "server",
+              "transport": "mptcp",
+              "nonce": "f267a0dfc1feca25",
+              "rounds": 1000,
+              "payload_bytes_per_round": 1024,
+              "application_payload_bytes_each_direction": 1024000,
+              "interval_us": 1000,
+              "elapsed_ns": 3537760340,
+              "mean_exchange_ns": 3536796.852,
+              "p50_exchange_ns": 2971109,
+              "p99_exchange_ns": 17287295,
+              "max_exchange_ns": 172859026,
+              "max_completion_gap_ns": 172859426,
+              "user_cpu_ns": 26170000,
+              "system_cpu_ns": 68229000,
+              "socket_cookie": 3,
+              "token": 822072539,
+              "connect_attempts": 0,
+              "errors": 0
+            }
+          ]
+        },
+        "artifact_integrity": {
+          "firecracker": {
+            "path": "/run/mptcp-f267a0dfc1feca25/firecracker.log",
+            "bytes": 15162,
+            "sha256": "9d8d91a763f33a8007a689d9e9b421fcab8825693304127543cc5ebaad00ea35",
+            "gzip_bytes": 3273,
+            "chunks": 1,
+            "chunk_retries": 0,
+            "read_command_retries": 0,
+            "source_unchanged_during_fetch": true
+          },
+          "server": {
+            "path": "/run/mptcp-f267a0dfc1feca25/server.log",
+            "bytes": 1651,
+            "sha256": "fd69656232237e4c914f407e50f51c26ca0de5ef91d99a8af0270bb9c2ac1f79",
+            "gzip_bytes": 566,
+            "chunks": 1,
+            "chunk_retries": 0,
+            "read_command_retries": 0,
+            "source_unchanged_during_fetch": true
+          }
+        },
+        "cleanup_errors": []
+      }
+    }
+  },
+  "failed_attempts_retained": [
+    {
+      "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261022T074310Z-gy5rdly3/mptcp-mptcp-1792655044777369114/report.json",
+      "error": "Guest command failed:\n\r\n/ # (\r\n> set -e\r\n> base64 -d /run/mptcp-3273677f7ee6e7ad/state.b64 > /run/mptcp-3273677f7ee6e7ad/\r\r\nstate\r\n> printf '%s  %s\\n' 33d0e345ce9cc59732777ed3b94992b1bd81a28c2142c375fe7290d2d4e7\r\r\n8669 /run/mptcp-3273677f7ee6e7ad/state | sha256sum -c -\r\n> )\r\nsh: base64: not found\r\n/ # printf '\\nLAB_COMMAND_DONE_7ba02318971febe9:%s\\n' \"$?\"\r\n\r\nLAB_COMMAND_DONE_7ba02318971febe9:1",
+      "cleanup_errors": []
+    },
+    {
+      "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261022T074310Z-gy5rdly3/mptcp-mptcp-1792655211023265008/report.json",
+      "error": "Guest command failed:\n\r\n/ # (\r\n> set -e\r\n> printf '====\\n' >> /run/mptcp-bde8082997adc614/state.b64\r\n> uudecode -o /run/mptcp-bde8082997adc614/state /run/mptcp-bde8082997adc614/stat\r\r\ne.b64\r\n> printf '%s  %s\\n' c68b43e3f1add70f1ab53e125de6260b6da2782f0a26fada34927fd45c72\r\r\n320d /run/mptcp-bde8082997adc614/state | sha256sum -c -\r\n> )\r\n/run/mptcp-bde8082997adc614/state: FAILED\r\nsha256sum: WARNING: 1 of 1 computed checksums did NOT match\r\n/ # printf '\\nLAB_COMMAND_DONE_b2a4279485881032:%s\\n' \"$?\"\r\n\r\nLAB_COMMAND_DONE_b2a4279485881032:1",
+      "cleanup_errors": []
+    }
+  ],
+  "cleanup": {
+    "test_processes_routes_taps_restored": true,
+    "l1_vms_stopped": true,
+    "l1_pids": [
+      2091340,
+      2091341
+    ],
+    "owned_host_interfaces_removed": [
+      "cxb999e96bb",
+      "cxt999e96bba",
+      "cxt999e96bbb"
+    ],
+    "checked_at_utc": "2026-10-22T07:56:13.098084+00:00"
+  },
+  "raw_logs": {
+    "file": "raw-logs.json.gz",
+    "bytes": 7492,
+    "sha256": "1c3baf46e9130b32df8fe3c6e45815ffeaea9bac547bd5f1cce1b75cbd71e62d"
+  },
+  "final_baseline_unchanged": {
+    "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/kernel.config": true,
+    "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/kernel-build/.config": true,
+    "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/kernel-build/arch/x86/boot/bzImage": true,
+    "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/kernel-build/vmlinux": true
+  },
+  "validation": {
+    "strict_static_c_build": "passed in lab.py prepare (-std=c11 -O2 -Wall -Wextra -Werror -static -pthread)",
+    "python_compile": "passed",
+    "shell_syntax": "passed for build.sh and l2-init.sh",
+    "git_diff_check": "passed",
+    "actual_runtime_cases_passed": 4
+  }
+}

@@ -324,5 +324,82 @@
       "bytes": 626485,
       "sha256": "78cdb2996069d96340934b72ce818b6431738757df77072cde18b9a8c7d77bef"
     }
+  ],
+  "updates": [
+    {
+      "prepared_at_utc": "2026-10-23T02:16:47.626892+00:00",
+      "target_branch": "main",
+      "base_commit": "71d42030cb5e821bc65da24dce6fa731fa6ca03d",
+      "scope": "MPTCP guest-client continuity with shared-DAX state-only snapshot migration; implementation and session handoff documentation",
+      "historical_results": "Original 2026-10-22 cases and their source hashes are preserved. This publication did not rerun nested VM migration.",
+      "raw_log_repair": "Repacked all 9 source logs as exact UTF-8 bytes, preserving CRLF instead of normalizing line endings; deterministic gzip mtime=0. All stored byte counts and SHA-256 values now match artifact_integrity.",
+      "checks": {
+        "python_shell_c": "Passed Python syntax (4 files), shell syntax (4 files), and gcc -O2 -Wall -Wextra -Werror -static -pthread shared_probe.c.",
+        "build_sh_test": "Passed 4 VMM reuse contract tests and the Firecracker actions parser test in library and binary (2 executions). Existing unused_mut compiler warnings remain.",
+        "firecracker_patch": "Applied to pinned 95f868c8e345b1cc8faccd1a3c910b4989dc3f58 in an isolated temporary tree; all 20 changed/new files match the actual working sources byte-for-byte.",
+        "tcp_loopback": "Passed 100 exchanges; verified payload, sequence, checksum, stable socket cookie and one client connect.",
+        "host_mptcp_loopback": "Unavailable on host Linux 5.15.0-191-generic: setting the socket timeout returns Operation not supported. Kept separate from the recorded successful lab Linux 6.6 tests.",
+        "recorded_mptcp_results": "All 4 historical cases passed; 9 archived logs match recorded bytes/SHA-256 and 43 events match the reports. All 5 implementation source hashes match final_source_sha256.",
+        "relative_document_links": "35 relative file links checked; no missing targets.",
+        "git_diff_check": "passed"
+      },
+      "known_limitations": [
+        "Peer B MPTCP path-manager limits are set to subflows=2, accepted ADD_ADDR=2 and are not restored by mptcp-test cleanup; use dedicated lab VMs and stop the session afterward.",
+        "Client-side semantic snapshot only; network devices for direct/reuse and inbound/server migration remain future work.",
+        "No physical noncoherent CXL correctness, DSA preflush, NFS continuity or steady-state MPTCP throughput claim."
+      ],
+      "artifacts": [
+        {
+          "path": "README.md",
+          "bytes": 14960,
+          "sha256": "b6d7a02a655a87d1c11762a4d3d2060b8f6507592021a9ce8d2679395d9f79bb"
+        },
+        {
+          "path": "docs/microvm-handoff.md",
+          "bytes": 24124,
+          "sha256": "c99c6a02e314b98eaa0857f5f203a914c96cd97106f502b349b2015f6d7f1092"
+        },
+        {
+          "path": "implementation/virtual_machine/README.md",
+          "bytes": 65310,
+          "sha256": "2a09dba5f2f5055c07ffa3b1730eec2f535ea213284f8248a5b1926dccd49f55"
+        },
+        {
+          "path": "implementation/virtual_machine/build.sh",
+          "bytes": 9175,
+          "sha256": "c5a613f98e28105d012207763be06d574bbd8d7ecdd73563571086dc4df5e9ad"
+        },
+        {
+          "path": "implementation/virtual_machine/l2-init.sh",
+          "bytes": 5569,
+          "sha256": "3c6a703dfb8b9768f29a3f8032fd437ea321f1da4eb256b2d504ac03e1223746"
+        },
+        {
+          "path": "implementation/virtual_machine/lab.py",
+          "bytes": 229991,
+          "sha256": "bf837d49a986f4ac771cfc7a4d9b19dadd8f493747f5f005c6e35c78e982fbc7"
+        },
+        {
+          "path": "implementation/virtual_machine/shared_probe.c",
+          "bytes": 149601,
+          "sha256": "77897dcefacb1a7aedbc90e67027b137e401fb2c29e3fa10b4ed1149d2f67c7b"
+        },
+        {
+          "path": "implementation/virtual_machine/mptcp_probe.h",
+          "bytes": 23354,
+          "sha256": "cb8a241eca1a4ff6cbd109965508c38ca82e1b589105142a779cd9694fbaf091"
+        },
+        {
+          "path": "implementation/virtual_machine/results/mptcp-20261022/summary.json",
+          "bytes": 65245,
+          "sha256": "01bc45bb29b9b7942b526fc58e01f4d6d2c44826ce74cad6a61fbd39a1cfc8f4"
+        },
+        {
+          "path": "implementation/virtual_machine/results/mptcp-20261022/raw-logs.json.gz",
+          "bytes": 7492,
+          "sha256": "1c3baf46e9130b32df8fe3c6e45815ffeaea9bac547bd5f1cce1b75cbd71e62d"
+        }
+      ]
+    }
   ]
 }

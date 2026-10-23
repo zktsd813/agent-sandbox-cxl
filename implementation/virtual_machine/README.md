@@ -17,6 +17,46 @@ QEMU가 같은 파일을 공유 CXL 메모리로 노출한다. A/B의 일반 Lin
 DAX 공유 영역은 기본 2GiB다. 기본 microVM은 1 vCPU·128MiB이고 RAM 전체를 DAX에 매핑한다.
 게스트의 page table도 guest RAM에 포함된다.
 
+<a id="session-handoff"></a>
+
+## 다음 세션 인계: 2026-10-23
+
+목표는 **microVM의 상태를 CXL에 유지하면서 실행 노드를 바꾸고, 기존 application 연결과
+파일 접근까지 이어가는 것**이다. CPU/RAM 전환과 실제 서비스 I/O 전환을 함께 완성하는 중이다.
+이 README를 운영·인계 문서로 유지하며, 측정 근거는 연결된 JSON과 원시 로그를 읽는다.
+
+| 영역 | 확인한 상태 | 남은 작업 |
+|---|---|---|
+| CPU/RAM | 공유 DAX snapshot, KVM worker reuse/prepared, 동일 객체 direct handoff 및 크기별 측정 | 다중 vCPU·실제 물리 노드·장치가 있는 direct/reuse |
+| Network | MPTCP를 쓰는 guest **client**를 A→B snapshot 복원해 같은 연결로 전송 지속 | 빠른 제어 경로 연결, inbound/server 이동, direct/reuse의 net 장치 승계 |
+| Cache | PML dirty-page 기반 CPU cache 관리 비용 측정; EMR/DSA 조사 | DSA 하드웨어에서 preflush·최종 flush·reader invalidate 구현과 검증 |
+| Filesystem | tmpfs는 guest RAM에 포함; guest NFS와 host disk backend의 설계 차이 조사 | 실제 NFS 연결·lease·I/O 및 block backend 승계 검증 |
+
+최근 MPTCP 검증은 [아래 실행 절차](#mptcp-session)와
+[결과 JSON](results/mptcp-20261022/summary.json), [원시 로그](results/mptcp-20261022/raw-logs.json.gz)에 있다.
+기존 CPU/RAM 측정은 아래의 snapshot/reuse/direct 비교를 그대로 보존했다.
+**MPTCP 기능 시험의 5.77초 응답 간격을 기존 µs/ms handoff 결과와 직접 비교하지 않는다.**
+Serial 제어 전달이 포함되고, KVM/EPT를 새로 만드는 별도 시험이다.
+
+다음 작업의 순서는 다음과 같다. 아직 구현·측정하지 않은 항목이다.
+
+1. 검증된 guest-client MPTCP 시험을 기준으로, 작은 state의 serial 전달을 기존 DAX mailbox
+   경로에 연결하고 guest 재개·MP_JOIN·첫 application 응답을 peer의 시계로 나누어 측정한다.
+2. Direct/reuse에 virtio-net의 논리 상태와 TAP·eventfd·IRQFD 연결 승계를 추가한다.
+   vCPU pause만으로 host RX가 멈추지 않으므로 source ingress/queue writer를 차단하고 단일 owner를 보장한다.
+3. Guest가 server인 이동과 새 client의 진입 경로를 검증한다. 새 주소 알림을 전달할 기존 경로,
+   remote path-manager, listener 및 NAT/LB 처리를 정한다.
+4. 같은 토폴로지의 TCP/MPTCP 정상 실행 throughput·CPU와 전환 p50/p99를 비교한다.
+   CXL host packet queue는 필요성이 확인되면 추가한다. DSA preflush와 NFS는 별도 후속 과제다.
+
+작업은 기존 `lab.py`·`build.sh`·`shared-probe`에 모으고 별도 실행 파일/운영 문서를 늘리지 않는다.
+CPU 방식의 주기적 preflush를 다시 추진하지 않으며, 후속 preflush는 DSA 하드웨어를 전제로 한다.
+`experiments/`, `CLAUDE.md`, `docs/HANDOFF.md`는 다른 작업 영역이므로 이 microVM 인계에 사용하지 않는다.
+Git 배포 대상은 microVM 코드·패치·측정 결과와 관련 문서다. `main` 기준의 별도 작업 트리에서
+반영하며, 공유 workspace의 `contention-fleet-sim` 작업과 로컬 VM·이미지·빌드 cache는 보존한다.
+배포 검증은 [publication.json](results/publication.json)에 기록한다. 2026-10-21 최초 배포 기록과
+2026-10-23 MPTCP 추가분의 검증을 구분하고, 기존 측정 결과의 날짜·소스 hash는 유지한다.
+
 ## 구현한 세 경로
 
 | 경로 | 전환할 때 하는 일 | 목적지에 유지되는 것 |
@@ -455,7 +495,8 @@ PEBS `MEM_TRANS_RETIRED.STORE_SAMPLE`은 write 주소의 표본, CHA PMU는 look
 
 ### DSA Cache Flush와 주기적 preflush: 조사·후속 설계
 
-**DSA와 background preflush는 아직 구현하거나 측정하지 않았다.** EMR용 후보는 DSA Gen1의
+**주기적 preflush는 DSA 기반으로 설계하며 아직 구현하거나 측정하지 않았다.**
+CPU cache 명령은 기존 전환 시 처리 baseline으로 유지한다. EMR용 후보는 DSA Gen1의
 Cache Flush(opcode `0x20`)다. 주소·길이 범위를 제출하고 completion을 확인하는 작업이며,
 dirty/resident line의 주소 목록을 반환하는 기능은 아니다. 실제 서버의 DSA 활성화,
 `OPCAP[32]`, work queue·DAX 주소 변환·완료 순서를 먼저 확인해야 한다.
@@ -486,8 +527,295 @@ dirty-log 동기화와 모든 writer를 함께 검증해야 한다.
 
 Writer에서 이미 writeback된 line도 reader에는 stale 복사본이 남을 수 있다. 따라서 reader에는
 최종 잔여 집합뿐 아니라 마지막 동기화 이후의 **전체 변경 집합 U**가 필요하다. 전환 지연 감소와
-전체 실행 비용 감소를 구분하여 CPU/DSA 각각 전환 시 처리와 주기적 처리를 비교할 계획이다.
+전체 실행 비용 감소를 구분하여 CPU 전환 시 처리, DSA 전환 시 처리, DSA 주기적 preflush를 비교할 계획이다.
 측정 지표는 전환 p50/p99, guest 실행 성능 저하, background CPU·queue 비용과 재쓰기량이다.
+
+## 실제 microVM handoff의 남은 문제: 2026-10-21 코드 재조사
+
+이번 항목은 소스·공식 문서를 조사한 설계 검토이며 새 handoff 구현이나 성능 측정 결과가 아니다.
+현재 direct Linux 경로는 A의 Firecracker로 부팅한 뒤 B의 `shared-probe`가 동일 KVM 객체를
+실행한다. Source VMM은 A에 남는다(`lab.py:direct_handoff_bench`).
+`reuse.rs:diskless()`는 block/net/vsock 등을 거부하고 `vmx.c:vmx_dax_handoff()`는
+**PML 활성화를 거부**한다. Export도 dirty bitmap/ring과 남은 IRQFD/IOEVENTFD를 거부한다.
+따라서 별도 PML cache benchmark, CPU/RAM handoff, 서비스 I/O 승계는 각각의 검증 범위다.
+
+DSA flush 최적화에서 먼저 해결해야 할 사항은 다음과 같다.
+
+- **주소 접근:** CPU가 DAX를 mmap했다고 DSA도 접근할 수 있는 것은 아니다. Node별 WQ와
+  PASID/SVA·IOMMU 변환 및 device-DAX 접근을 확인한다. KVM DAX pool의 kernel alias도
+  Firecracker guest RAM HVA와 별도의 주소·권한 경로가 필요하다. Queue/portal/PASID와
+  completion buffer는 각 host에서 준비하고, raw runtime을 다른 host에 넘기지 않는다.
+  [Linux SVA/ENQCMD](https://docs.kernel.org/arch/x86/sva.html)
+- **범위와 batching:** 연속 dirty page를 run으로 합쳐 descriptor를 줄이고 여러 run을 batch로
+  제출한다. Clean gap 병합은 추가 처리량과 descriptor 비용의 교환이며 VM allocation 경계를
+  넘지 않는다. 서로 다른 owner의 metadata는 cache line을 공유하지 않도록 배치해야 한다.
+- **추적 범위:** Guest PML 외에 VMM RX/block-read completion/virtqueue 쓰기, KVM 객체,
+  VMCS backing, EPT table의 software/hardware 갱신과 control metadata를 포함해야 한다.
+  Guest page table의 A/D 변경은 guest RAM에 속하지만 EPT table 자체의 A/D 변경은 별도다.
+  기존 Firecracker software bitmap도 raw queue pointer를 얻을 때 표시하는 경로가 있으므로
+  매 epoch bitmap을 지운 뒤 모든 후속 쓰기가 다시 표시되는지 검증해야 한다.
+- **완료 세대:** `GET → U 합치기 → CLEAR → DSA 제출 → 해당 세대 성공 완료` 순서를 유지한다.
+  이전 completion이 이후 재쓰기 기록을 지우면 안 된다. Timeout은 완료 또는 abort/drain이
+  확인되기 전까지 ownership 게시를 막는다. Enqueue 수락과 작업 완료를 구분하고 batch의
+  child 오류·부분 완료도 확인한다. CPU fence는 DSA 완료를 대신하지 않는다.
+- **Reader:** 마지막 동기화 이후 전체 변경 집합 U를 invalidate한다. Writer의 잔여 집합만
+  보내면 안 된다. CLFLUSHOPT와 DSA invalidate는 dirty line을 writeback할 수 있으므로
+  reader에는 stale clean copy만 남을 수 있도록 이전 owner의 쓰기를 먼저 drain해야 한다.
+- **정책:** 반복 쓰기와 queue backlog를 보고 background budget을 제한할 수 있다. Hot page의
+  preflush를 늦추더라도 최종 flush에서는 제외하지 않는다. Reader invalidate와 bitmap/rearm,
+  descriptor·enqueue·completion 비용이 각각 남으므로 DSA 속도 향상을 미리 수치로 단정하지 않는다.
+
+PML을 실제 direct 경로에 결합하려면 PML buffer·index·dirty bitmap의 수명, 마지막 drain과
+destination 재연결부터 설계해야 한다. Guest CPU dirty만으로 공유 KVM graph 전체의 cache
+일관성을 검증할 수는 없다. Gen1 cache 동작·capability는 위 DSA 명세를 기준으로 확인한다.
+현재 `kvm_dax_vm_ioctl()`의 detach는 바로 `DETACHED`를 게시하므로, DSA 완료 전 attach를
+막는 ready generation이나 게시 지연도 필요하다. 기존 detach 뒤에 flush만 덧붙여서는 안 된다.
+
+Guest 메모리에 포함되는 상태와 host의 I/O 연결은 다음과 같이 나뉜다.
+
+| 대상 | Guest RAM에 보존되는 것 | 각 host에서 준비·차단·승계할 것 |
+|---|---|---|
+| TCP 서비스 | Guest socket/seq/ack/retransmit, guest에서 종단한 TLS·application 상태 | TAP, routing/FDB/ARP, NAT/conntrack, proxy/NIC queue와 ingress 경로 |
+| Virtio 장치 | Descriptor/avail/used ring bytes | Queue cursor·파싱한 HVA pointer·pending request, eventfd/epoll/IRQFD/IOEVENTFD |
+| Vsock | Guest socket/driver/ring | Host UDS·connection map·credit/buffer 상태; 현재 snapshot은 reset/reconnect 의미 |
+| Guest 파일 | Guest FD/offset, inode/dentry/mount와 page cache, tmpfs 데이터 | Disk image FD·host page cache·io_uring·storage lease/visibility |
+
+일반 TCP를 유지하려면 외부 peer가 보는 endpoint와 패킷 경로를 유지해야 한다. 같은 guest IP/MAC과
+새 TAP만으로 host NAT/conntrack이 이전되지는 않는다. 초기 설계 후보는 고정 gateway에서
+한 owner의 TAP으로만 전달하는 방식이다. Ingress 전환 중 buffer/drop/forward 정책과 TCP
+재전송에 따른 서비스 공백을 측정해야 한다. 기존 L1 migration TCP 대역폭 측정은 L2 서비스
+연결 승계의 검증이 아니다. Firecracker 공식 snapshot도 packet loss와 연결 유지를 보장하지
+않으며 vsock 연결은 reset한다.
+[Firecracker snapshot 제한](https://github.com/firecracker-microvm/firecracker/blob/main/docs/snapshotting/snapshot-support.md#limitations),
+[Vsock reset](https://github.com/firecracker-microvm/firecracker/blob/main/docs/snapshotting/snapshot-support.md#vsock-device-reset)
+아래 MPTCP 시험에서는 기존 연결에 다른 주소의 subflow를 추가하므로 node별 주소를 사용할 수 있다.
+각 node까지의 도달 가능성과 virtio/backend 전환은 별도로 준비한다.
+
+Filesystem은 세 경우를 구분한다. Initramfs/tmpfs 데이터는 guest RAM에 있다. 하나의 guest
+filesystem을 유지하면서 shared virtual disk의 backend owner만 바꾸는 경우에는 동일 disk
+blocks와 단일 writer를 보장해야 한다. 반면 host 둘이 image를 저장하는 filesystem 자체를
+공유하려면 host cache/locking/lease 일관성이 필요하다. 일반 ext4/XFS의 raw volume을 두
+kernel에서 동시에 mount하는 방식으로 해결하면 안 된다. DAX는 이런 조정을 제공하지 않는다.
+[Linux DAX](https://docs.kernel.org/filesystems/dax.html),
+[GFS2의 inter-node locking](https://www.kernel.org/doc/html/latest/filesystems/gfs2/index.html)
+
+현재 block snapshot은 image bytes를 저장하지 않고 path/config와 장치 상태를 저장한다.
+Async engine의 정상 경로는 outstanding I/O를 drain하고 host `sync_all()`을 수행한 뒤 completion을 guest에
+반영한다(`block/virtio/device.rs:prepare_save`, `io/async_io.rs:drain_and_flush`).
+이 과정이 interrupt를 만들 수 있어 `Vmm::save_state()`는 장치 상태를 KVM 상태보다 먼저 저장한다.
+직접 handoff에도 같은 논리적 일관성 경계가 필요하다. Drain 실패와 storage flush 실패는 구분해
+소유권 이전·오류 보고 정책을 정해야 한다. 현재 block wrapper는 실패를 log로 남기고 진행하므로
+drain 성공을 별도로 확인하고, quiesce를 입증하지 못하면 ownership commit을 중단해야 한다.
+Cache writeback 완료, 다른 host에서의 visibility,
+전원 장애 후 storage durability도 각각의 보장이다.
+
+제안하는 정상 전환의 순서는 다음과 같다. Destination의 mapping·backend·DSA queue는
+미리 준비할 수 있지만 새 owner가 되기 전에는 guest ring을 처리하거나 disk를 쓰면 안 된다.
+
+```text
+새 I/O 접수 차단 → 모든 vCPU 정지 → device/kernel/DMA writer drain
+→ completion·queue·interrupt 상태 확정 → CPU 상태 저장 또는 detach/VMCLEAR
+→ 최종 dirty 수집 + 공유 metadata flush + DSA 성공 완료·visibility 확인
+→ source 실행/쓰기 권한 차단 확인 + ownership commit
+→ destination invalidate(guest U + 공유 metadata) → graph 검사·attach/host 연결 재설정
+→ I/O 경로 전환 → vCPU 실행
+→ 외부 client의 첫 정상 응답
+```
+
+비일관 host 사이에서는 현재 WB DAX control word의 acquire/release와 cmpxchg만으로 전역
+가시성·원자성을 보장할 수 없다. 플랫폼이 지원하는 control/atomic 방식이나 외부 authority와
+fencing이 필요하다. B 실행 뒤 ACK만 유실됐을 때 A를 다시 실행하면 중복 write가 생길 수 있다.
+Commit 전 취소와 commit 후 복구를 구분하고 request ID·중복 제거 등 application 계약을 정한다.
+Source cache/CPU에만 있던 상태는 source crash 시 읽을 수 없으므로 정상 handoff와 crash 복구의
+보장도 구분한다. [QEMU 장치 migration 설계](https://www.qemu.org/docs/master/devel/migration/main.html#general-advice-for-device-developers)
+
+물리 노드에서 EPT를 그대로 쓰려면 모든 leaf의 GPA→HPA뿐 아니라 root/non-leaf table의
+HPA도 같은 backing을 의미해야 한다. 같은 DPA/HVA로는 충분하지 않다. VMCS revision·VMX
+controls·CPU feature/XSAVE·clock 호환성과 destination의 host fields/VPID/TLB 처리도 필요하다.
+[Linux CXL 주소 domain 설명](https://www.kernel.org/doc/html/latest/driver-api/cxl/conventions/cxl-atl.html)
+현재 고정 주소 검사와 첫/끝 PFN 검사는 전체 pointer graph와 모든 중간 PFN의 불변성을 보장하는
+완전한 검사로 보지 않는다. 다중 vCPU barrier, DAX arena 회수·재할당도 아직 미검증이다.
+
+설계 후보는 CPU/KVM graph의 direct 승계를 유지하면서 장치의 작은 논리 상태만 전달하고,
+TAP·file·eventfd 같은 backend는 목적지의 것으로 재연결하는 방식이다. 전체 guest RAM을
+snapshot/copy해야 한다는 뜻은 아니다. 고정 I/O gateway를 쓰면 연결·storage 소유권 전환을
+줄일 여지가 있지만 평상시 원격 I/O 경로와 gateway 장애 처리가 새 비용이 된다.
+
+### Capybara·공유 packet buffer·NFS·DSec 비교
+
+[Capybara(SIGCOMM '26) §4.1](https://www.comp.nus.edu.sg/~lijl/papers/capybara_sigcomm26.pdf)는
+목적지 buffer 준비 → switch forwarding 변경 → TCP RX/TX 대기 데이터와 상위 session 상태
+전달 → buffered packet 처리를 사용한다. Kernel-bypass TCP와 programmable switch의 공동
+설계다. 논문의 TCP 전환 시간은 전체 microVM handoff 시간이 아니다.
+
+우리 normal virtio-net 구성에서는 guest TCP 상태·재전송 buffer·application 상태가 이미 CXL
+guest RAM에 있다. 현재 Firecracker RX도 `read_tap()`에서 guest RX descriptor에 직접 readv한다.
+추가 공유의 주 대상은 전환 중 NIC/TAP 쪽에 남아 아직 guest에 전달되지 않은 packet이다.
+Guest TCP export/import보다 virtio/backend ownership과 packet cutover에 집중할 수 있다.
+아래는 논문의 CXL 구현 결과가 아니라 우리 환경에 적용하는 설계 후보다.
+
+| 후보 | 전환 방식 | 남는 조건 |
+|---|---|---|
+| 고정 network backend + CXL RX/TX ring | Backend가 계속 수신, A/B의 consumer ownership만 변경 | Backend 분리·병목·장애 의존성, guest 전달 copy 비용 |
+| Capybara식 forwarding 전환 + CXL buffer | B 준비 후 경로 변경, A에 남은 packet까지 B가 처리 | Old NIC/TAP queue drain·재정렬·late DMA·queue cursor/IRQ 처리 |
+
+CXL에는 payload와 `offset/length/epoch/packet_id` descriptor를 두고 host pointer를 공유하지
+않는 방향을 검토한다. NIC/TAP FD·DMA/IOMMU mapping은 node별로 준비한다. Linux `sk_buff`
+전체 graph를 그대로 넘기는 것과는 다르다. 공유 staging ring은 추가 copy/traffic을 만들 수 있어
+현재 direct-to-guest 경로와 비교해야 한다. TCP 연결 유지와 응답 지연 0도 구분한다.
+[Linux sk_buff](https://docs.kernel.org/networking/skbuff.html),
+[DMA 주소 체계](https://docs.kernel.org/core-api/dma-api-howto.html)
+
+NFS는 mount 위치에 따라 다르다. 다음은 NFS over TCP로 같은 server와 export를 유지하는 가정이다.
+
+| 구성 | CXL handoff와의 관계 |
+|---|---|
+| Guest가 직접 NFS mount | Guest의 FD/offset/page cache/NFS client·lock 상태가 함께 유지된다. Network와 lease/timer를 유지하면 같은 client의 실행 위치만 바꾸는 설계가 가능하다. |
+| Host A/B가 각각 NFS mount 후 같은 disk image 제공 | 별도 NFS client/cache/FD이므로 backend drain, 쓰기 visibility, B cache 검증과 단일 writer fencing이 필요하다. |
+
+첫 구성에서는 정상 handoff마다 모든 파일 close/reopen이나 guest cache 전체 fsync를 강제할
+필요가 있다고 가정하지 않는다. 같은 guest의 dirty cache와 진행 중 RPC 상태를 유지하기
+때문이다. 이는 설계 추론이며 network device 승계까지 검증한 결과는 아니다. NFSv4의 client
+identity·lease를 유지하고, 장시간 중단이나 server recovery는 별도 처리한다.
+[NFS client identity](https://www.kernel.org/doc/html/latest/admin-guide/nfs/nfs-client.html#the-nfs4-unique-id-parameter),
+[NFSv4.1 session/retry](https://www.rfc-editor.org/rfc/rfc8881.html#section-2.10.6)
+현재 `kernel.config`는 NFSv4.1이 꺼져 있으므로 4.1 session 실험에는 해당 설정이 필요하다.
+
+[DSec 공개 논문 §3.3·5.3·6.3](https://arxiv.org/pdf/2609.22978)은 microVM의 memory/execution
+snapshot 후 Firecracker를 종료하고 새 process로 복원한다. SDK의 다음 요청 전에 자동 resume하는
+의미이며 기존 외부 TCP의 cross-node 무중단 승계를 보고한 것은 아니다. Image는 3FS에서
+공유·on-demand load하지만 runtime writes는 node-local이다. VM 제어 경로에는 vsock proxy를 쓴다.
+이는 우리 NFS writable-data 공유 가정과 구분한다. 다음 비교의 우리 항목은 목표 설계다.
+
+| 항목 | Capybara | DSec | 우리 목표 |
+|---|---|---|---|
+| 전환 단위 | TCP connection + 상위 session | Sandbox lifecycle의 snapshot/resume | Guest 실행 주체와 device/backend ownership |
+| 메모리 | Connection state 전달 | Memory/execution snapshot | 동일 CXL guest RAM 유지 |
+| 외부 연결 | Planned migration의 TCP 연속성 | SDK 요청 관점의 재개 | Guest TCP·NFS 연결을 함께 유지 |
+| Storage | 서비스 backend 이용 | 3FS image + local writable layer | Guest NFS mount를 첫 공유 storage 후보로 검토 |
+
+초기 조합 후보는 initramfs/tmpfs root, guest NFS workspace, 고정 guest endpoint와 CXL packet
+queue다. Guest의 HTTP 연결뿐 아니라 NFS 등 모든 flow의 수신 경로를 함께 전환해야 한다.
+이 구성은 block backend 승계 범위를 줄이지만 virtio-net 상태·IRQ·packet 순서·단일 owner 검증은
+남는다. Application 요청 ID·TCP reset/retransmit·NFS read/write/fsync/lock 결과를 함께 확인한다.
+
+E2E 검증은 아래의 실제 Linux `TCP/MPTCP + tmpfs` 시험을 시작으로 read-only disk,
+단일 writer writable disk와 `write→fsync→response`, async I/O, 다중 vCPU 순으로 확장한다.
+전환 단계별 장애·ACK 유실·late I/O·DSA timeout을 주입하고, request ID·파일 내용·lost IRQ·
+동시 owner를 검사한다. 최종 지표는 heartbeat뿐 아니라 **외부 client의 application blackout**,
+정상 실행 throughput, 요청 중복/누락, drain·DSA·invalidate·host rebind·routing·첫 응답의
+단계별 시간이다. Direct/reuse의 디바이스 승계와 이 전체 범위의 성능 검증은 남아 있다.
+
+<a id="mptcp-session"></a>
+
+## MPTCP 설계와 실행 검증
+
+MPTCP는 **guest Linux의 transport 구현**이다. Application은 하나의 stream socket을 사용하고,
+guest kernel이 subflow·sequence·재전송을 관리한다. Firecracker는 virtio-net/TAP을 통해 packet을
+전달한다. Guest의 MPTCP socket·key/token·송수신 buffer는 이미 CXL guest RAM에 포함되며,
+host TAP/NIC queue와 eventfd 같은 연결은 각 host의 자원이다.
+
+커널의 `CONFIG_MPTCP=y`, `net.mptcp.enabled=1`만으로 기존 TCP socket이 자동 변환되지는 않는다.
+양 끝에서 MPTCP socket을 선택해야 한다. 이번에는 `mptcp_probe.h`의 `socket()`에서
+`IPPROTO_TCP` 대신 `IPPROTO_MPTCP`를 지정했으며 일반 `connect/accept/read/write`를 사용했다.
+
+| 적용 방법 | Application 소스 수정 | 이번 검증 |
+|---|---|---|
+| `socket(..., IPPROTO_MPTCP)` 또는 runtime의 MPTCP 옵션 | 직접 지원 또는 설정 필요 | Probe에서 직접 선택 |
+| `mptcpize`의 `LD_PRELOAD` wrapper | 지원되는 동적 링크 프로그램은 불필요 | 미검증; 현재 static probe에는 적용하지 않음 |
+| eBPF로 생성할 socket의 protocol 선택 | 불필요; kernel 기능·정책 필요 | 현재 DCD 6.6-rc6 빌드에서 미검증 |
+
+[Linux socket API](https://docs.kernel.org/networking/mptcp.html#sockets-api),
+[MPTCP 적용 방법](https://www.mptcp.dev/setup.html).
+일반 application마다 migration 코드를 넣는 대신 guest 관리 hook이 새 주소와 경로를 설정할 수 있다.
+이번에는 `l2-init.sh`가 복원 gate를 기다린 뒤 주소를 추가하고 generic netlink로 path manager를
+호출한다. Host가 바뀌어도 guest vNIC가 그대로이므로 이 hook이 자동으로 생기는 것은 아니다.
+
+기존 MPTCP 연결은 A 주소의 경로에서 B 주소의 경로로 전환할 수 있다. B 주소가 일반 IP routing으로
+도달 가능하면 전환 후 A를 경유할 필요가 없고, 이동마다 programmable switch를 조작할 필요도 없다.
+다만 새 경로의 route·firewall/NAT·listener와 양 끝의 MPTCP 협상이 필요하다. 일반 TCP fallback,
+UDP traffic 및 신규 client의 service discovery/LB/DNS 진입 경로는 이 연결 승계에 포함되지 않는다.
+MP_JOIN·재전송·application timeout도 남으므로 연결 유지가 무지연을 의미하지 않는다.
+[경로 관리](https://www.mptcp.dev/#path-manager), [NAT/listener 조건](https://www.mptcp.dev/faq.html#my-server-app-rejects-the-creation-of-new-subflows)
+
+MPTCP와 TUN을 켠 별도 커널·이미지로 실행한다. 기본 커널 설정과 기존 이미지는 보존한다.
+새 실행 파일 대신 기존 `shared-probe`에 socket/경로 검증을 추가했다. 아래는 **현재 서버에 남아
+있는 검증된 image를 재사용**하는 명령이다. 2026-10-23에 경로 존재와 init/probe source hash의
+manifest 일치를 확인했다. 기존 `mptcp-20261022` 세션의 두 VM·전용 host network는 10월 22일
+시험 종료 때 모두 정리했고, selector와 결과는 보존했다. 새 session 이름으로 새 run을 만든다.
+
+```bash
+cd /home/ijkim/agent-sandbox-cxl
+export CXL_LAB_SESSION=mptcp-next
+export CXL_LAB_ASSETS="$PWD/implementation/virtual_machine/.local/assets-mptcp-20261022"
+export CXL_LAB_KERNEL_BUILD="$PWD/implementation/virtual_machine/.local/kernel-build-mptcp-20261022"
+export CXL_LAB_KERNEL_MODULES="$PWD/implementation/virtual_machine/.local/kernel-modules-mptcp-20261022"
+export CXL_LAB_KERNEL_CONFIG="$PWD/implementation/virtual_machine/.local/mptcp-20261022/kernel.config"
+taskset -c 0-5 python3 implementation/virtual_machine/lab.py start \
+  --vcpus 2 --memory-mib 2048 --cxl-mib 2048 --dax-guest --dax-4k \
+  --migration-network --network-backend tap \
+  --qemu "$PWD/implementation/virtual_machine/.local/qemu-cxl/build/qemu-system-x86_64"
+python3 implementation/virtual_machine/lab.py mptcp-test --protocol tcp --rounds 1000
+python3 implementation/virtual_machine/lab.py mptcp-test --protocol mptcp --switch-path --rounds 4000
+python3 implementation/virtual_machine/lab.py mptcp-test --protocol mptcp --switch-path --snapshot-handoff --rounds 4000
+python3 implementation/virtual_machine/lab.py mptcp-test --protocol mptcp --pause-ms 100 --rounds 1000
+python3 implementation/virtual_machine/lab.py stop
+```
+
+CPU 0–5는 직전 시험의 범위이므로 실행 전 현재 자원 사용을 확인한다. 실제 CXL QEMU는 10.2.2다.
+Manifest의 준비 도구 QEMU 6.2와 혼동하지 말고 `start --qemu`를 명시한다.
+Init/probe 수정 시 같은 환경변수에서 `lab.py prepare`를 다시 실행한다. 해당 assets를 사용하는 VM은
+먼저 종료한다. Kernel 수정 시 `MPTCP_TEST=1 bash implementation/virtual_machine/build.sh kernel`
+다음 `prepare` 순서다. 새 cache를 만들 때는 위 build/modules/config/assets를 별도 경로로 지정하고
+기준 `kernel.config`를 새 config 경로에 복사한 뒤 빌드한다. 이 경로들의 기본값은 기존 baseline이다.
+
+128MiB DAX-backed L2 guest와 L1 B의 peer 사이에서 1KiB record를 양방향 검증한다.
+`--switch-path`는 guest 주소 `10.88.0.2`로 연결한 뒤 `10.89.0.2` subflow를 추가하고
+기존 subflow를 닫는다. Token·socket cookie·sequence·payload와 subflow별 TCP 상태·전송량을
+확인한다. 닫힌 subflow가 조회 목록에 남을 수 있으므로 주소 개수만으로 성공을 판단하지 않는다.
+`--pause-ms 100`으로 실행 중 일시 정지도 시험할 수 있다.
+
+`--snapshot-handoff`는 source ingress를 차단하고 pause·state-only snapshot·source 종료 후
+B에서 네트워크 장치까지 복원한다. B 복원 후 guest hook이 새 subflow를 만든다. 기존 주소는
+blackhole로 차단하며 peer의 socket은 계속 유지한다. RAM은 복사하지 않지만 KVM/EPT는 새로
+만든다. 작은 state 파일은 이 시험에서 serial controller로 전달하므로 전체 소요 시간을 기존
+DAX mailbox나 최적화한 handoff의 성능으로 해석하지 않는다. 50ms ingress quiet는 통제된
+실험 조건이며 일반 NIC/backend drain 보장이 아니다.
+
+실제 적용에는 양 끝의 MPTCP 지원, MPTCP socket 사용, 목적지의 새 주소·route/TAP 준비와
+guest path-manager hook이 필요하다. Direct/reuse의 네트워크 장치 승계와 CXL packet staging
+queue는 구현하지 않았다. 기존 guest TCP/MPTCP 상태와 송수신 buffer는 guest RAM에 포함된다.
+현재 검증은 **이전하는 guest가 client이고 peer의 listen socket이 유지되는 연결**이다.
+Guest가 server인 inbound 연결에서 새 주소를 동적으로 알리는 설계는 `ADD_ADDR`와 remote client의
+path-manager 참여가 필요하다. 미리 알린 주소 등 다른 도달 방법도 가능하다. 기존 경로로 알림을
+전달해야 하는 구성에서는 그 전에 경로를 차단하면 안 되므로, 현재의 차단 순서를 그대로 적용할 수 없다.
+Client/server 양방향의 자동 이전은 추가 구현 대상이다.
+이 시험은 한 물리 호스트의 coherent QEMU 환경이며 비일관 CXL의 flush·DMA correctness나
+평상시 bulk throughput overhead를 검증하지 않는다. 결과는 각 run의 `mptcp-*/report.json`에 남긴다.
+Peer는 고정된 L1 B이고 이동 후 guest도 B에 있으므로 이전 전후 RTT의 경로 길이가 다르다.
+
+2026-10-22 실행에서 TCP 대조군 1,000회, MPTCP 경로 교체 4,000회, 실제 A→B snapshot
+이전 4,000회, 100ms pause 요청 대조군 1,000회가 모두 오류 없이 완료됐다.
+이전 시 상태 파일은 13,904바이트였다. Peer가 관측한 최대 응답 간격은 5.770초였으며
+serial state 전달 4.548초가 포함된다. 기능 확인용 제어 경로의 수치다.
+Pause 중 guest clock은 정지 시간을 제외할 수 있으므로 blackout은 고정 peer의 시계로 평가한다.
+전체 event·artifact hash·단계별 시간은 [저장 결과](results/mptcp-20261022/summary.json)에 보존했다.
+
+재현할 때 주의할 구현 사항은 다음과 같다.
+
+- Peer의 listen socket을 첫 `accept` 뒤에도 유지한다. 새 MP_JOIN SYN 처리에 필요하다.
+- `MPTCP_FULL_INFO`의 TCP 상태와 경로별 bytes로 검증한다. 닫히는 subflow가 목록에 남을 수 있다.
+  양쪽 token/cookie 불변, client connect 1회·server connect 0회, payload/sequence 오류 0도 확인한다.
+- Source vCPU pause만으로 Firecracker RX의 guest RAM 쓰기는 멈추지 않는다. 현재 ingress 차단과
+  50ms quiet는 통제된 실험 조건이며, 실제 handoff에는 backend/DMA writer의 종료 확인이 필요하다.
+- 현재 BusyBox에는 `base64` applet이 없고 긴 shell 입력 줄도 잘린다. State 전달은 기존 `uudecode`와
+  512자 chunk를 쓰고 destination SHA-256을 확인한다. 빠른 전환 측정에는 이 serial 전달을 교체한다.
+- 실패 시에도 source/destination FC·peer 종료와 route/TAP/변경한 sysctl 정리를 독립 실행한다.
+  `cleanup_errors`가 있으면 실패로 보고 diagnostic log를 보존한다. 다른 session의 VM을 일괄 종료하지 않는다.
+- 현재 peer B의 MPTCP path-manager 한도는 `subflows=2`, `accepted ADD_ADDR=2`로 설정하며
+  시험 종료 시 원래 값으로 복원하지 않는다. 전용 lab VM에서 실행하고 세션 종료 후 `lab.py stop`으로
+  정리한다. 같은 B에서 다른 MPTCP 실험을 이어갈 때는 이 설정을 고려한다. 원래 한도 조회·복원은
+  후속 구현 대상이며, `cleanup_errors=[]`가 모든 network namespace 설정의 원복을 뜻하지는 않는다.
 
 ## 코드 위치와 범위
 
@@ -495,6 +823,7 @@ Writer에서 이미 writeback된 line도 reader에는 stale 복사본이 남을 
 - `build.sh`: kernel/QEMU/Firecracker 빌드 및 관련 테스트의 단일 진입점.
 - `shared_probe.c`: 기존 `shared-probe` 안에 공유 메모리 protocol, 전환 controller, 계측을 유지한다.
 - `cache_probe.h`: `shared_probe.c`에 포함되는 cache/PML 계측 코드이며 실행 파일은 추가하지 않는다.
+- `mptcp_probe.h`: 같은 실행 파일의 TCP/MPTCP stream·generic-netlink path-manager 검증 코드다.
 - `guest-init.sh`, `guest-cxl.sh`, `l2-init.sh`: initramfs 안에서 실행되는 부팅·DAX 설정 코드다.
 - `firecracker/src/vmm/src/persist.rs`, `vstate/memory.rs`: DAX RAM 유지 snapshot과 restore.
 - `firecracker/src/vmm/src/reuse.rs`: 이미 사용한 worker의 호환성 검사·준비·의미적 복원.
