@@ -2,7 +2,7 @@
 
 목적: RL policy로 rollout 행동 trace를 **한 번** 모은다. 그 trace를 motivation(Phase A, C)과 이후 evaluation(D, E, F)에 계속 쓴다. A6000 × 2 서버(CUDA와 Docker만 설치된 상태)에서 계측과 경로를 시험하고, 본 수집은 H100 cloud에서 한다. 조사 근거는 [rl-trace-survey.md](rl-trace-survey.md)에 있다.
 
-v2(2026-10-23)에서 바뀐 것: 규모를 production job과 DSec 규모 fleet에 맞춰 키웠다(6절). W5(SWE-rebench)를 넣었다. image 단위로 batch를 묶는다(8절). LLM 지연은 수집한 요청을 다시 보내는 profiling으로 잰다(2절 M7, 10절).
+v2(2026-10-23)에서 바뀐 것: 규모를 production job과 DSec 규모 fleet에 맞춰 키웠다(6절). W5(SWE-rebench)를 넣었다. image 단위로 batch를 묶는다(8절). LLM 지연은 수집한 요청을 다시 보내는 profiling으로 잰다(2절 M7, 10절). rollout 제한(step 수, token 한도, temperature)을 각 policy의 RL 학습 스크립트에 맞췄다(6.2절).
 
 ## 0. 요약
 
@@ -15,6 +15,7 @@ v2(2026-10-23)에서 바뀐 것: 규모를 production job과 DSec 규모 fleet�
 | LLM 지연 | 수집한 요청을 H100에서 동시 요청 수 N을 바꿔 다시 보내 지연 모델을 만들고, 수집 중 실측으로 검증한다. ×0.25~×4 sweep은 민감도 확인용 |
 | 학습 구간 | 재지 않음. 공개 보고값이나 sweep으로 대신 |
 | 규모 | task 2,137개, rollout 19,144개(6절). 기준은 "동시에 정렬되는 범위 안의 rollout이 모두 서로 다름" |
+| rollout 제한 | 각 policy의 RL **학습** 설정을 따른다. SWE agent는 50 step, prompt 4K + response 32K. DeepCoder는 response 32K, temperature 0.6 (6.2절) |
 | disk 제약 | task마다 image가 하나다. image 단위로 받고, 그 image를 쓰는 rollout을 모두 돌리고, 지운다. digest를 기록해 나중에 같은 image를 다시 받는다 |
 
 workload는 다음과 같다(6절 표 참고).
@@ -97,7 +98,7 @@ MPKI, 메모리 대역폭, dirty page, working set은 수집 단계에서 재지
 | H100 (본 수집) | Qwen3-Coder-30B-A3B, DeepCoder-14B | BF16 | TP1 또는 TP2 | 수십 개 |
 
 - 본 수집은 BF16으로 한다. 양자화가 행동을 바꾸는지 따질 필요가 없어진다. A6000의 FP8 pilot 데이터는 본 데이터에 섞지 않고 경로 확인용으로만 쓴다.
-- 예시 인자(버전별 확인 필요): `--tensor-parallel-size 2 --max-model-len 65536 --enable-prefix-caching --gpu-memory-utilization 0.92`. A6000에서는 `--quantization fp8`을 더한다.
+- 예시 인자(버전별 확인 필요): `--tensor-parallel-size 2 --max-model-len 36864 --enable-prefix-caching --gpu-memory-utilization 0.92`. `--max-model-len`은 workload의 prompt + response 한도에 맞춘다(W1·W2·W5 36,864, W4 34,816). A6000에서는 `--quantization fp8`을 더한다.
 
 ## 6. 규모와 workload (2026-10-25 확정)
 
@@ -106,7 +107,7 @@ MPKI, 메모리 대역폭, dirty page, working set은 수집 단계에서 재지
 규모는 통계량이 아니라 **합성할 때 rollout을 복제하지 않아도 되는지**로 정한다.
 
 - **복제는 동시에 정렬될 때만 문제가 된다.** 지금 fleet simulation(`experiments/contention/RESULTS-fleet.md`)은 trace 약 250개로 192코어 node 16개(동시 sandbox 약 5,600~9,800개)를 채운다. trace 하나가 20~40개씩 복제되지만, 시작 시각이 무작위라 trace를 15~120개로 줄여도 contention이 같거나 커졌다. 반면 동기 RL step은 모든 rollout을 t=0에 시작한다. 같은 trace 두 개가 같은 step에 들어가면 burst가 ms 단위로 완전히 겹쳐서, 실제 G group보다 강한 가짜 상관이 생긴다.
-- **기준 1: job 하나의 step 안에서는 rollout이 모두 달라야 한다.** production job 크기는 DeepSWE·Nemotron step당 512 rollout, DeepCoder iteration당 문제 1,024개, rStar2 512 prompt × 32다. 주력 workload(W1)는 task 512개 × 8로 B = 512 step 하나를 복제 없이 만든다.
+- **기준 1: job 하나의 step 안에서는 rollout이 모두 달라야 한다.** production job 크기는 DeepSWE step당 512 rollout(64 × 8), Nemotron 512~1,024 rollout(16 × 32, 64 × 16), DeepCoder step당 rollout 1,024개(학습 스크립트 128 문제 × 8. 블로그는 "iteration당 1,024 문제"라고 적었는데 스크립트와 다르다), rStar2 512 prompt × 32다. 주력 workload(W1)는 task 512개 × 8로 B = 512 step 하나를 복제 없이 만든다. W4는 1,024 문제 × 8이라 B = 128 step 8개를 문제 중복 없이 만든다.
 - **기준 2: fleet 한 시점의 동시 sandbox를 복제 없이 채운다.** sandbox를 쓰는 agent rollout(W1, W2, W3, W5)이 10,952개로, 1 vCPU fleet(약 9,800개)까지 채운다. 여러 job을 섞을 때 job 사이에는 시작 시각이 어긋나므로 이 기준은 느슨해도 된다.
 - **기준 3: repo 다양성.** burst 모양은 repo의 build·test 구성이 좌우한다. R2E-Gym은 repo가 10개뿐이라 512개를 뽑으면 pandas에서만 약 160개가 나온다. W5는 SWE-rebench에서 repo가 모두 다른 512개를 고른다.
 - step 사이에는 같은 task를 다시 써도 된다. 실제 학습도 epoch마다 task를 다시 본다. 다만 같은 rollout trace를 여러 step에서 반복하면 step 사이 변동이 작게 나오므로, 여러 step을 합성할 때는 rollout을 돌려 쓰고 그 사실을 적는다.
@@ -115,11 +116,11 @@ MPKI, 메모리 대역폭, dirty page, working set은 수집 단계에서 재지
 
 | ID | 문제 set | image | 모델, scaffold | 규모 | 설정 |
 |---|---|---|---|---|---|
-| **W1** | **R2E-Gym-Subset** ([HF](https://huggingface.co/datasets/R2E-Gym/R2E-Gym-Subset)) 4,578개, 10개 repo | `docker_image` 열에 task마다 하나. 무작위 20개 모두 Docker Hub에 있음, 압축 0.3~1.4GB(평균 0.69GB), 풀면 1.5~1.9GB | **DeepSWE-Preview** (R2E-Gym으로 RL 학습) + **Qwen3-32B** (학습 초기), R2E-Gym scaffold (`r2egym.agenthub.run.edit`, backend docker) | repo별 비율로 512 task. DeepSWE 512 × 8 = 4,096. Qwen3-32B는 그중 128 task × 8 = 1,024 | temperature 1.0, 최대 step 100, 최대 token 64K, 보상 계산 제한 300초 |
-| **W2** | W1의 Qwen3-32B와 **같은 128 task** | W1과 공유 | **Qwen3-Coder-30B-A3B**, mini-swe-agent (docker environment, image는 dataset의 `docker_image`) | 128 × 8 = 1,024 | temperature 1.0, step 제한은 mini-swe-agent 기본값을 기록 |
+| **W1** | **R2E-Gym-Subset** ([HF](https://huggingface.co/datasets/R2E-Gym/R2E-Gym-Subset)) 4,578개, 10개 repo | `docker_image` 열에 task마다 하나. 무작위 20개 모두 Docker Hub에 있음, 압축 0.3~1.4GB(평균 0.69GB), 풀면 1.5~1.9GB | **DeepSWE-Preview** (R2E-Gym으로 RL 학습) + **Qwen3-32B** (학습 초기), R2E-Gym scaffold (`r2egym.agenthub.run.edit`, backend docker) | repo별 비율로 512 task. DeepSWE 512 × 8 = 4,096. Qwen3-32B는 그중 128 task × 8 = 1,024 | **DeepSWE 학습 설정**: temperature 1.0, 최대 50 step, prompt 4K + response 32K(넘으면 잘라서 표시), 생성 timeout 20분, 보상 계산 제한 5분. Qwen3-32B도 같은 제한 |
+| **W2** | W1의 Qwen3-32B와 **같은 128 task** | W1과 공유 | **Qwen3-Coder-30B-A3B**, mini-swe-agent (docker environment, image는 dataset의 `docker_image`) | 128 × 8 = 1,024 | W1과 같은 제한(50 step, 36K, timeout). mini-swe-agent 기본값은 RL 학습 설정이 아니므로 쓰지 않는다 |
 | **W3** | **Terminal-Bench 2.0** ([GitHub](https://github.com/harbor-framework/terminal-bench-2)) **89개 전부** | task마다 `task.toml`의 `docker_image` (예: `alexgshaw/adaptive-rejection-sampler:20251031`), `cpus = 1`, `memory_mb = 2048` | Qwen3-Coder-30B-A3B, Harbor 기본 agent | 89 × 8 = 712 | task 설정 그대로 (agent 900초) |
-| **W4** | **DeepCoder-Preview-Dataset** ([HF](https://huggingface.co/datasets/agentica-org/DeepCoder-Preview-Dataset)): primeintellect, taco, lcbv5 | 실행기 하나: `python:3.11-slim` 기반 작은 실행기(직접 작성). 문제마다 테스트를 subprocess로 돌리고 rusage로 CPU를 잼 | **DeepCoder-14B-Preview**, vLLM으로 생성(n=8) | 1,024 × 8 = 8,192 | temperature 1.0(RL 설정 기준, 확인 필요), 테스트 timeout은 데이터셋 기준 |
-| **W5** | **SWE-rebench** ([HF](https://huggingface.co/datasets/nebius/SWE-rebench)) 21.3K개, Python repo 3,400개. 공개 image가 있는 약 7,500개 중에서 고름 | task마다 `swerebench/sweb.eval.x86_64.<owner>_1776_<repo>-<PR>`, 약 1.3GB | **DeepSWE-Preview**, R2E-Gym scaffold. SWE-bench 형식 image를 못 돌리면 mini-swe-agent로 바꿈(S2에서 확인) | **repo가 모두 다른** 512 task × 8 = 4,096 | W1과 같음. 보상은 FAIL_TO_PASS, PASS_TO_PASS |
+| **W4** | **DeepCoder-Preview-Dataset** ([HF](https://huggingface.co/datasets/agentica-org/DeepCoder-Preview-Dataset)): primeintellect, taco, lcbv5 | 실행기 하나: `python:3.11-slim` 기반 작은 실행기(직접 작성). 문제마다 테스트를 subprocess로 돌리고 rusage로 CPU를 잼 | **DeepCoder-14B-Preview**, vLLM으로 생성(n=8) | 1,024 × 8 = 8,192 | **DeepCoder 학습 설정**(32K 단계): temperature 0.6, prompt 2K + response 32K. 평균 출력은 학습 중 8K → 17.5K token. 테스트 timeout은 데이터셋 기준 |
+| **W5** | **SWE-rebench** ([HF](https://huggingface.co/datasets/nebius/SWE-rebench)) 21.3K개, Python repo 3,400개. 공개 image가 있는 약 7,500개 중에서 고름 | task마다 `swerebench/sweb.eval.x86_64.<owner>_1776_<repo>-<PR>`, 약 1.3GB | **DeepSWE-Preview**, R2E-Gym scaffold. SWE-bench 형식 image를 못 돌리면 mini-swe-agent로 바꿈(S2에서 확인) | **repo가 모두 다른** 512 task × 8 = 4,096 | W1과 같은 제한. 보상은 FAIL_TO_PASS, PASS_TO_PASS |
 
 | 합계 | task | rollout | 그중 agent rollout (W1, W2, W3, W5) | image |
 |---|---|---|---|---|
@@ -127,6 +128,8 @@ MPKI, 메모리 대역폭, dirty page, working set은 수집 단계에서 재지
 
 - W5의 policy는 R2E-Gym으로 학습된 DeepSWE라 SWE-rebench에서는 분포 밖이다. 이 점을 논문에 적는다. SWE-rebench로 RL 학습된 공개 policy를 찾으면 바꾼다.
 - G는 8로 모은다. G = 4는 부분집합으로 만든다. G = 16 이상을 보려면 일부 task에서 더 모은다.
+- 제한 출처: DeepSWE는 rLLM v0.1 `examples/swe/train_deepswe_32b.sh`(`agent.max_steps=50`, `max_prompt_length=4096`, `max_response_length=32768`, `rollout.n=8`, temperature 1.0)와 [DeepSWE 블로그](https://www.together.ai/blog/deepswe)(생성 timeout 20분, 보상 5분). DeepSWE 블로그의 "64K, 100 step"은 평가 설정이다. DeepCoder는 rLLM v0.1 `examples/deepcoder/train_deepcoder_32k.sh`(`max_response_length=32768`, `rollout.n=8`, temperature 0.6)와 [DeepCoder 블로그](https://www.together.ai/blog/deepcoder)(16K → 32K, 평균 출력 8K → 17.5K).
+- 50 step 제한을 우리 264 trace에 걸면 42%가 잘리고 평균 turn 수가 51.5에서 43.1이 된다. RL 학습에서도 잘린 rollout이 생기므로 잘린 rollout을 버리지 않고 표시만 한다.
 
 **task 고르기** (seed를 고정하고 목록을 `experiments/rollout-trace/`에 저장한다)
 - W1: repo 비율을 맞춘다(pandas 1,444, numpy 781, pillow 620, orange3 482, aiohttp 299, tornado 261, scrapy 215, pyramid 189, datalad 179, coveragepy 108). 512개를 비율대로 고르고, 그중 128개(W1 Qwen3-32B·W2 공용)도 비율대로 고른다.
@@ -194,7 +197,7 @@ profile/<model>/<hw>/N<n>/   M7 결과
 | S0 준비 | A6000 | 3절 확인, 4절 설치 | GPU container 동작, cgroup 경로 확인 |
 | S1 계측 | A6000 | 7절 도구 작성. R2E-Gym 1 task × 1회로 끝까지 시험 | llm/exec/cgroup 기록과 요청 본문이 한 rollout에 모두 연결됨 |
 | S2 smoke | A6000 | W1~W5 각 scaffold를 1 task × 2회씩. W5는 R2E-Gym scaffold가 SWE-rebench image를 돌리는지 확인 | 형식, 보상, 정리 동작 |
-| S3 pilot | A6000 | W1 8 task × 8, image 단위 batch 포함 전체 경로 | batch 처리, 오염 표시, 처리량 |
+| S3 pilot | A6000 | W1 8 task × 8, image 단위 batch 포함 전체 경로 | batch 처리, 오염 표시, 처리량, turn 수와 turn당 출력 token(계산기 가정 대체) |
 | S4 재생 확인 | 우리 서버 | S3 rollout을 같은 digest image에서 재생해 return code 일치율 확인, Firecracker rootfs 변환 | 일치율이 낮으면 원인(network, 시각 의존)을 고치고 나서 본 수집 |
 | S5 본 수집 | H100 | 8절 P1~P5 | batch마다 disk, 오염 rollout 비율, 실패율 기록 |
 | S6 지연 profiling | H100 | P6. 모델마다 N sweep | S5 수집 중 실측 지연(같은 부하)과 모델 예측이 맞는지 |
@@ -249,10 +252,10 @@ profile/<model>/<hw>/N<n>/   M7 결과
 - **R2E-Gym 도구 호출.** file editor 같은 도구도 container 안에서 exec로 실행되는지 S1에서 확인한다. exec가 아닌 방식(예: `put_archive`로 파일 복사)이 있으면 그 내용도 기록해야 재생된다.
 - **Harbor.** exec 방식인지, container label을 붙일 수 있는지 S2에서 확인한다.
 - **W5 scaffold.** R2E-Gym scaffold가 SWE-rebench image(SWE-bench 형식)를 돌리는지 S2에서 확인한다. 안 되면 W5만 mini-swe-agent로 바꾸고, 그 경우 W1과 scaffold가 달라진다는 점을 적는다.
-- **W4 sampling 온도.** DeepCoder 학습 설정의 temperature를 확인한다.
 - **disk.** 실제 풀린 image 크기는 S3 pilot과 P1 첫 batch에서 재서 batch 크기를 다시 정한다. W3 image 크기는 아직 모른다.
 - **Docker Hub pull 제한.** image 약 1,100개를 받는다. login한 계정의 제한을 확인하고, 필요하면 cloud 안에 registry mirror를 둔다.
 - **A6000 FP8과 H100 BF16의 차이.** pilot은 FP8이라 본 데이터와 행동이 다를 수 있다. pilot은 경로 확인용으로만 쓴다.
 - **Terminal-Bench 2.0은 benchmark다.** CPU 성격의 다양성을 얻는 용도로만 쓴다.
+- **budget이 긴 학습은 다루지 않는다.** DeepSWE의 학습 설정(50 step, 약 36K)은 production 중 짧은 편이다. NVIDIA Nemotron 3 Super의 SWE RL은 최대 200 turn, sequence 131K~196K, agent timeout 3,600초다([문서](https://docs.nvidia.com/nemotron/latest/nemotron/super3/rl/swe.html)). 50 step에서 잘린 꼬리가 결론에 영향을 주는지는 따로 확인해야 하고, 필요하면 공용 128 task를 100 step·64K로 더 모은다.
 
 출처: [vLLM FP8 문서](https://docs.vllm.ai/en/latest/features/quantization/fp8/), [R2E-Gym runtime](https://github.com/R2E-Gym/R2E-Gym/blob/main/src/r2egym/agenthub/runtime/docker.py), [R2E-Gym runner](https://github.com/R2E-Gym/R2E-Gym/blob/main/src/r2egym/agenthub/run/edit.py)

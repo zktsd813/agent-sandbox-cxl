@@ -11,7 +11,10 @@ Model (stated so it can be checked):
   + 4 * tokens * context * attention width * layers.
 - With R replicas, rollouts are spread evenly. Wall time = max(latency bound, GPU-throughput bound).
 All inputs are guesses or measured from the 264 SWE traces (turns 51.5, context mean 30.6K, new input 862/turn,
-tool 1.35 s/command); output tokens per turn are swept because the reasoning length of the target models is unknown.
+tool 1.35 s/command). Limits follow each policy's RL training script (plan section 6.2): SWE agents stop at 50 steps,
+which leaves 43.1 turns on average on the 264 traces (42% of them are cut) and lowers the mean context by 18%, to about
+25K. Output tokens per turn are swept at three levels because the reasoning length of the target models is unknown;
+DeepCoder is one turn whose mean response grew from 8K to 17.5K tokens during training (DeepCoder blog).
 """
 
 import itertools
@@ -30,18 +33,19 @@ MODELS = {  # params (B), active params (B), layers, KV heads, head dim, attenti
 }
 BW_EFF, MFU = 0.65, 0.40  # achieved fraction of HBM bandwidth in decode, of peak FLOPs in prefill
 
-# workload: model, rollouts, turns, new input tokens per turn, mean context, tool seconds per turn (plan section 6.2)
+# workload: model, rollouts, turns, new input tokens per turn, mean context (None: prompt + half the output),
+# tool seconds per turn, output tokens per turn at the low/mid/high sweep level (plan section 6.2).
 # DeepSWE-Preview is a Qwen3-32B fine-tune, so it uses the Qwen3-32B shape.
+SWE = dict(turns=43.1, new_in=862, ctx=25000, tool_s=1.35, out=(300, 500, 900))
 WORKLOADS = {
-    "W1-a DeepSWE (512x8)": dict(model="Qwen3-32B", rollouts=4096, turns=51.5, new_in=862, ctx=28000, tool_s=1.35),
-    "W1-b Qwen3-32B (128x8)": dict(model="Qwen3-32B", rollouts=1024, turns=51.5, new_in=862, ctx=28000, tool_s=1.35),
-    "W2 mini-swe 30B-A3B (128x8)": dict(model="Qwen3-Coder-30B-A3B", rollouts=1024, turns=51.5, new_in=862, ctx=28000,
-                                        tool_s=1.35),
+    "W1-a DeepSWE (512x8)": dict(SWE, model="Qwen3-32B", rollouts=4096),
+    "W1-b Qwen3-32B (128x8)": dict(SWE, model="Qwen3-32B", rollouts=1024),
+    "W2 mini-swe 30B-A3B (128x8)": dict(SWE, model="Qwen3-Coder-30B-A3B", rollouts=1024),
     "W3 terminal 30B-A3B (89x8)": dict(model="Qwen3-Coder-30B-A3B", rollouts=712, turns=40, new_in=1000, ctx=24000,
-                                       tool_s=4.0),
-    "W4 DeepCoder (1024x8)": dict(model="DeepCoder-14B", rollouts=8192, turns=1, new_in=1000, ctx=6000, tool_s=10.0),
-    "W5 SWE-rebench DeepSWE (512x8)": dict(model="Qwen3-32B", rollouts=4096, turns=51.5, new_in=862, ctx=28000,
-                                           tool_s=1.35),
+                                       tool_s=4.0, out=(300, 500, 900)),
+    "W4 DeepCoder (1024x8)": dict(model="DeepCoder-14B", rollouts=8192, turns=1, new_in=1000, ctx=None, tool_s=10.0,
+                                  out=(8000, 12000, 17500)),
+    "W5 SWE-rebench DeepSWE (512x8)": dict(SWE, model="Qwen3-32B", rollouts=4096),
 }
 
 
@@ -61,8 +65,10 @@ def best_layout(hw, gpus, m, wbytes):
     return tp, 1, tp * (hw["mem"] * 0.92 - hw["reserve"]) - m["params"] * wbytes
 
 
-def estimate(hw_name, gpus, wl, out_tok, slots, wbytes, kvb):
+def estimate(hw_name, gpus, wl, level, slots, wbytes, kvb):
     hw, m = HARDWARE[hw_name], MODELS[wl["model"]]
+    out_tok = wl["out"][level]
+    wl = dict(wl, ctx=wl["ctx"] or wl["new_in"] + out_tok / 2)
     tp, replicas, kv_free = best_layout(hw, gpus, m, wbytes)
     if kv_free <= 0:
         return None
@@ -111,14 +117,14 @@ def family(model):
 def main():
     configs = [("A6000", 2), ("H100-SXM", 2), ("H100-SXM", 4), ("H100-SXM", 8)]
     for slots in (32, 64, 128):
-        for out_tok in (300, 500, 900):
-            print(f"\n## sandbox slots {slots}, output tokens per turn {out_tok}")
+        for level, level_name in enumerate(("low", "mid", "high")):
+            print(f"\n## sandbox slots {slots}, output level {level_name} (SWE 300/500/900, DeepCoder 8K/12K/17.5K per turn)")
             for hw, g in configs:
                 cells, best_total = [], 0.0
                 for name, wl in WORKLOADS.items():
                     opts = []
                     for label, wb, kb in PRECISION[hw][family(wl["model"])]:
-                        r = estimate(hw, g, wl, out_tok, slots, wb, kb)
+                        r = estimate(hw, g, wl, level, slots, wb, kb)
                         if r:
                             opts.append((r["hours"], label, r))
                     h, label, r = min(opts)
