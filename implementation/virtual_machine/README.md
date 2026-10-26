@@ -1,5 +1,8 @@
 # CXL microVM 실행·전환 실험
 
+처음부터의 배경·구현 과정·최근 파일 공유 논의와 PML/MPTCP 후속 계획은
+[전체 정리](../../docs/cxl-microvm-overview.md)에 있다. 이 README는 실행·계측의 운영 문서다.
+
 독립된 두 Linux 사이에서 microVM의 RAM은 공유 DAX에 유지하고 실행 주체를 바꾸는 실험이다.
 현재 검증 환경은 **한 물리 호스트의 QEMU VM A/B + 각 VM 내부의 nested KVM/Firecracker**다.
 실제 다중 물리 노드 CXL 연결의 성능을 측정한 결과는 아니다.
@@ -30,7 +33,12 @@ DAX 공유 영역은 기본 2GiB다. 기본 microVM은 1 vCPU·128MiB이고 RAM 
 | CPU/RAM | 공유 DAX snapshot, KVM worker reuse/prepared, 동일 객체 direct handoff 및 크기별 측정 | 다중 vCPU·실제 물리 노드·장치가 있는 direct/reuse |
 | Network | MPTCP를 쓰는 guest **client**를 A→B snapshot 복원해 같은 연결로 전송 지속 | 빠른 제어 경로 연결, inbound/server 이동, direct/reuse의 net 장치 승계 |
 | Cache | PML dirty-page 기반 CPU cache 관리 비용 측정; EMR/DSA 조사 | DSA 하드웨어에서 preflush·최종 flush·reader invalidate 구현과 검증 |
-| Filesystem | tmpfs는 guest RAM에 포함; guest NFS와 host disk backend의 설계 차이 조사 | 실제 NFS 연결·lease·I/O 및 block backend 승계 검증 |
+| Filesystem | tmpfs는 guest RAM에 포함; guest/host cache와 disk backend의 차이 조사 | read-only/writable disk 승계와 공통 이미지 DAX 공유 검증; NFS 선택은 보류 |
+
+2026-10-26 설계 업데이트: 파일 접근은 일반 snapshot의 작은 disk부터 검증하고, 공통 read-only
+이미지의 DAX 매핑과 VM별 writable layer를 별도 실험한다. MPTCP 제어 경로 단축은 병렬로
+진행할 수 있다. NFS를 확정 backend로 선택하지 않았으며 아래의 과거 NFS 조합은 후보 기록이다.
+PML/cache·CPU/RAM·MPTCP는 각각 검증한 상태이며 통합 서비스 전환의 실측값은 아직 없다.
 
 최근 MPTCP 검증은 [아래 실행 절차](#mptcp-session)와
 [결과 JSON](results/mptcp-20261022/summary.json), [원시 로그](results/mptcp-20261022/raw-logs.json.gz)에 있다.
@@ -47,7 +55,8 @@ Serial 제어 전달이 포함되고, KVM/EPT를 새로 만드는 별도 시험�
 3. Guest가 server인 이동과 새 client의 진입 경로를 검증한다. 새 주소 알림을 전달할 기존 경로,
    remote path-manager, listener 및 NAT/LB 처리를 정한다.
 4. 같은 토폴로지의 TCP/MPTCP 정상 실행 throughput·CPU와 전환 p50/p99를 비교한다.
-   CXL host packet queue는 필요성이 확인되면 추가한다. DSA preflush와 NFS는 별도 후속 과제다.
+   CXL host packet queue는 필요성이 확인되면 추가한다. DSA preflush는 별도 후속 과제이며
+   NFS 선택은 보류한다. 파일·PML을 포함한 통합 순서는 [전체 계획](../../docs/cxl-microvm-overview.md#후속-구현-계획)을 따른다.
 
 작업은 기존 `lab.py`·`build.sh`·`shared-probe`에 모으고 별도 실행 파일/운영 문서를 늘리지 않는다.
 CPU 방식의 주기적 preflush를 다시 추진하지 않으며, 후속 preflush는 DSA 하드웨어를 전제로 한다.
