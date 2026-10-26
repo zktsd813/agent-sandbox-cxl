@@ -1,0 +1,38 @@
+{
+  "analysis_code_sha256": "59b038102007188ff6f0149ac0deafe427c3230ae321e555dea20e361437e8ea",
+  "definition": "100 * observed write pages * 4096 / maximum fresh memory.current sample inside the command window",
+  "window": "command_end.started_s through started_s + duration_s; host monotonic seconds",
+  "memory_sampling": "Fresh reads reconstructed from sample_cycle_s and configured memory interval; cached CPU-only rows excluded",
+  "scope": "Per-tool-call distribution, valid write observations only; timeouts included unless stated otherwise",
+  "limitations": "Not RSS or an instantaneous dirty-page fraction. Denominator includes charged file cache and kernel memory. Sampling can miss transient peaks; numerator includes freed pages, so ratios can exceed 100%.",
+  "calls": 13600,
+  "valid_write_calls": 13565,
+  "invalid_write_calls": 35,
+  "calls_with_ratio": 13468,
+  "valid_calls_without_positive_memory_sample": 97,
+  "above_100_percent_calls": 2162,
+  "write_percent": {
+    "max": 1524.375,
+    "p50": 27.082824656104147,
+    "p95": 199.5664535826734,
+    "p99": 303.3169273602741
+  },
+  "without_timeout_percent": {
+    "max": 1524.375,
+    "p50": 26.7246061922868,
+    "p95": 199.609375,
+    "p99": 303.72983870967744
+  },
+  "over_trace_lifetime_peak_percent": {
+    "max": 393.1184039323406,
+    "p50": 0.5825984135586539,
+    "p95": 50.23912002096421,
+    "p99": 96.0738089366155
+  },
+  "over_trace_lifetime_peak_same_calls_percent": {
+    "max": 393.1184039323406,
+    "p50": 0.5841166225350316,
+    "p95": 50.3681469056237,
+    "p99": 96.11003596759831
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "definition": "Per-container cgroup memory.peak / 1e6 (MB; charged memory, including file cache)",
+  "scope": "DRAM containers only; command timeouts included; not simultaneous memory demand",
+  "conditions": {
+    "node0": {
+      "containers": 264,
+      "min_mb": 27.119616,
+      "mean_mb": 1872.3796557575756,
+      "percentiles_mb": {
+        "max": 19417.706496,
+        "p50": 672.9113600000001,
+        "p95": 6571.2658432,
+        "p99": 12517.924577279999
+      },
+      "containers_with_timeouts": 39,
+      "infrastructure_failed": 0
+    }
+  }
+}
