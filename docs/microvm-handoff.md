@@ -2,6 +2,8 @@
 
 2026년 10월 14일
 
+처음부터의 진행 과정과 2026년 10월 26일 기준 후속 계획은 [전체 정리](cxl-microvm-overview.md)에 있다.
+
 이 문서는 **2026년 10월 14일의 초기 설계·NUMA 실험 기록**이다. 아래의 구현 계획과
 미구현 표시는 당시 기준이며, 이후 구현의 현재 상태를 나타내지 않는다. 2026년 10월 23일
 기준 공유 DAX RAM, state snapshot·worker 재사용, KVM 객체 direct handoff, 크기별 migration
