@@ -33,6 +33,9 @@ python harness/trace-replay/analyze.py --cdf docs/results/numa-immediate-2026101
 | [CXL microVM 구현·사용법](implementation/virtual_machine/README.md) | DAX RAM, snapshot, KVM worker 재사용, direct handoff 실험 |
 | [microVM handoff 문서](docs/microvm-handoff.md) | 상태 분류, NUMA 실행 실험, Firecracker 소스 빌드 방법 |
 | [microVM CPU scheduling 분석](docs/microvm-scheduling.md) | Preact trace의 1·2 vCPU 비교, guest interrupt·선점·CPU 이동, host vCPU 스케줄링 |
+| [RL rollout trace 수집 계획](docs/trace-collection-plan.md) · [조사](docs/rl-trace-survey.md) | RL policy로 rollout 행동 trace를 모으는 설계, 규모와 workload |
+| [trace 수집 runbook](docs/trace-collection-runbook.md) | 새 GPU 서버(H100 cloud 등)에서 설치부터 수집까지의 순서와 A6000 시험 결과 |
+| [`experiments/rollout-trace/`](experiments/rollout-trace/README.md) | 수집 계측 도구: LLM proxy, Docker exec·cgroup 기록, driver, 공용 서버용 Docker 안전 장치 |
 
 Trace replay의 Python 실행 파일은 두 개로 유지한다. microVM 운영은 `implementation/virtual_machine/lab.py`, 빌드는 같은 디렉토리의 `build.sh`로 모았다. 원본 trace, Docker 이미지, 원시 실행 로그와 upstream 저장소 사본은 각 머신에서 준비한다. 커널·Firecracker·QEMU 변경은 원본 버전 정보와 패치로 배포한다.
 
