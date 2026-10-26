@@ -2,6 +2,7 @@
 
 import argparse
 import csv
+import hashlib
 import json
 import math
 import os
@@ -388,7 +389,7 @@ def summarize_suite(root):
              f"상태: **{suite['state']}**. 선택 {summary['selected']}개 / 분석 {summary['analyzed']}개 / 기반 검증 통과 {summary['passed']}개 / 실행 오류 {summary['failed']}개.",
              f"분석한 명령 {summary['command_count']}개, 원본 종료 코드와 불일치 {summary['returncode_mismatches']}개. 실행 중 trace: {summary['running_trace']}.", "",
              "각 trace를 한 번씩 독립 컨테이너에서 실행한다. 컨테이너 제거와 계측 종료가 끝난 뒤 다음 trace를 시작한다. 집계는 종료된 실행만 포함하고, 아래 분포는 기반 검증을 통과한 trace를 대상으로 한다.",
-             f"CPU node 0, memory node {suite['config']['memory_nodes']}, workload CPU {suite['config']['workload_cpus']}, controller CPU {suite['config']['controller_cpus']}, 컨테이너 메모리 상한 {suite['config']['memory_limit_bytes']/2**30:g}GiB, swap 0. 각 trace의 시계를 초기화하고 `{suite['schedule']}` 시간 정책과 {suite['scale']}배율을 적용한다.",
+             f"CPU node {suite['config']['numa_node']}, memory node {suite['config']['memory_nodes']}, workload CPU {suite['config']['workload_cpus']}, controller CPU {suite['config']['controller_cpus']}, 컨테이너 메모리 상한 {suite['config']['memory_limit_bytes']/2**30:g}GiB, swap 0. 각 trace의 시계를 초기화하고 `{suite['schedule']}` 시간 정책과 {suite['scale']}배율을 적용한다.",
              "CPU 20ms, 메모리 100ms, PMU 1초 주기로 기록한다. CPU 최대는 1초 구간 샘플 평균, 메모리 최대는 kernel memory.peak이다. anon/file 최대는 별도 샘플 최대이므로 두 값을 더해 전체 최대와 비교하지 않는다.", "",
              "## 분포", "", "| 지표 | p50 | p95 | p99 | 최대 |", "|---|---:|---:|---:|---:|"]
     for key, stats in summary["distributions"].items():
@@ -399,7 +400,7 @@ def summarize_suite(root):
               "[Intel 이벤트 정의](https://perfmon-events.intel.com/platforms/emeraldrapids/core-events/core/). 같은 event group으로 컨테이너 cgroup의 user+kernel 실행만 측정한다. 카운터 실행 비율 99% 미만이거나 카운터가 누락되면 유효한 값으로 취급하지 않는다. instructions가 0인 구간은 MPKI를 계산하지 않는다.",
               "이 결과는 이 서버에서 재실행한 명령의 특성이다. 원본 LLM 추론의 CPU·메모리는 포함하지 않는다. 한 번씩 측정하므로 반복 간 변동이나 신뢰구간은 추정하지 않는다.",
               "다른 서버 작업과 CPU/cache를 독점하지 않는다. cgroup 필터는 다른 작업의 카운터 합산을 막지만 다른 작업이 유발하는 cache 경합까지 없애지는 않는다. 전역 cache를 비우지 않았으므로 이미지·파일 cache의 초기 상태는 실행 순서에 영향을 받을 수 있다.",
-             "지정 NUMA node의 사용자 메모리 배치를 검증했다. numa-bind 모드는 각 payload에 MPOL_BIND를 적용하고 cpuset은 0,2를 허용해 movable-only CXL에서 사용할 수 없는 파이프 등 커널 메모리를 node 0에 할당한다. 실행 중 runc 초기화의 일시적 node 0 익명 메모리는 별도 최대값으로 기록하고 시작/종료 배치를 확인한다. 공유 파일 cache 통계는 해당 cgroup에 과금된 페이지 기준이다.", "",
+             "지정 NUMA node의 사용자 메모리 배치를 검증했다. write-page DRAM 실행은 컨테이너 cpuset을 선택한 단일 node로 제한한다. 기존 CXL 비교 실행은 cpuset 0,2와 payload MPOL_BIND를 사용해 비이동 커널 메모리를 node 0에 할당한다. 공유 파일 cache 통계는 해당 cgroup에 과금된 페이지 기준이다.", "",
               "## trace별 결과", "", "| trace | CPU초 | 평균 core | 최대 메모리 GiB | LLC MPKI | retired load L3 MPKI | 기반 검증 |", "|---|---:|---:|---:|---:|---:|---|"]
     for row in rows:
         lines.append(f"| {row['trace']} | {row['cpu_time_s']} | {row['mean_cpu_cores']} | {row['peak_memory_gib']:.3f} | {row['llc_mpki']} | {row['retired_load_l3_mpki']} | {row['infrastructure_passed']} |")
@@ -422,6 +423,8 @@ def summarize_suite(root):
         plt.close(figure)
         lines += ["![trace별 특성 분포](distributions.png)", ""]
     (root / "report.md").write_text("\n".join(lines))
+    if suite["config"].get("write_tracking"):
+        summarize_writes(root)
     return summary
 
 
@@ -450,7 +453,7 @@ def slowdown_cdf(root):
                                           for limit in (0, 10, 20, 30, 50)}}
     (root / "slowdown-cdf.json").write_text(json.dumps(summary, indent=2) + "\n")
     with (root / "slowdown-cdf.csv").open("w", newline="") as stream:
-        writer = csv.writer(stream)
+        writer = csv.writer(stream, lineterminator="\n")
         writer.writerow(("slowdown_percent", "cumulative_fraction"))
         writer.writerows((value, (index + 1) / len(changes)) for index, value in enumerate(changes))
 
@@ -459,33 +462,80 @@ def slowdown_cdf(root):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from matplotlib.ticker import PercentFormatter
-    figure, axis = plt.subplots(figsize=(10, 6.3))
+    figure, axis = plt.subplots(figsize=(7, 4.8))
     left, right = min(-5, math.floor(changes[0] / 10) * 10), math.ceil(changes[-1] / 10) * 10 + 5
     axis.step([left] + changes + [right], [0] + [100 * (i + 1) / len(changes)
               for i in range(len(changes))] + [100], where="post", linewidth=2.3,
-              color="#2563eb", label=f"Comparable trace pairs (n = {len(valid)})")
-    axis.axvline(0, color="#64748b", linestyle="--", label="Equal elapsed time (0%)")
-    axis.axvline(geomean, color="#d97706", linestyle=":", label=f"Geometric mean: +{geomean:.1f}%")
-    for key in ("p95", "p99"):
-        axis.scatter([stats[key]], [int(key[1:])], color="#2563eb", zorder=3)
-        axis.annotate(f"{key}: {stats[key]:+.1f}%", (stats[key], int(key[1:])),
-                      xytext=(8, -15 if key == "p95" else 8), textcoords="offset points", color="#1e3a8a")
-    axis.text(.035, .67, f"Median: {stats['p50']:+.1f}%\nTotal elapsed time: {total:+.1f}%\n"
-              f"20%+ slower: {summary['above_threshold_counts']['20']}/{len(valid)} traces\n"
-              f"Maximum: {stats['max']:+.1f}%", transform=axis.transAxes, va="top",
-              bbox={"boxstyle": "round,pad=0.6", "facecolor": "#f8fafc", "edgecolor": "#cbd5e1"})
-    axis.set(xlim=(left, right), ylim=(0, 104), xlabel="Increase in trace elapsed time: 100 × (CXL / DRAM − 1)",
-             ylabel="Cumulative share of comparable traces", title="CXL vs DRAM: distribution of trace slowdown")
+              color="#2563eb", label="CXL vs DRAM")
+    median = stats["p50"]
+    axis.hlines(50, left, median, colors="#64748b", linestyles="--", linewidth=1)
+    axis.vlines(median, 0, 50, colors="#64748b", linestyles="--", linewidth=1)
+    axis.scatter([median], [50], color="#dc2626", s=32, zorder=4)
+    axis.annotate(f"50%: {median:+.2f}%", (median, 50), xytext=(12, -22),
+                  textcoords="offset points", color="#b91c1c")
+    axis.set(xlim=(left, right), ylim=(0, 104), xlabel="Latency increase (%)",
+             ylabel="CDF")
     axis.xaxis.set_major_formatter(PercentFormatter(100, decimals=0))
     axis.yaxis.set_major_formatter(PercentFormatter(100, decimals=0))
     axis.grid(alpha=.22)
     axis.legend(loc="lower right", fontsize=9)
-    figure.text(.11, .055, f"Excluded: {summary['excluded_pairs']}/{len(paired)} pairs with timeouts or different outcomes.\n"
-                "One run per condition; fixed DRAM → CXL order, without clearing shared caches.", fontsize=9)
-    figure.subplots_adjust(left=.11, right=.96, top=.91, bottom=.21)
+    figure.tight_layout()
     for extension in ("png", "pdf"):
         figure.savefig(root / f"slowdown-cdf.{extension}", dpi=200, facecolor="white")
     plt.close(figure)
+    return summary
+
+
+def memory_cdf(root):
+    """Plot observed per-container peaks, including traces with command timeouts."""
+    os.environ.setdefault("MPLCONFIGDIR", str(root.resolve() / ".matplotlib"))
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import PercentFormatter
+
+    figure, axis = plt.subplots(figsize=(7, 4.8))
+    summary = {"definition": "Per-container cgroup memory.peak / 1e6 (MB; charged memory, including file cache)",
+               "scope": "DRAM containers only; command timeouts included; not simultaneous memory demand",
+               "conditions": {}}
+    points = []
+    node, label, color = 0, "DRAM", "#2563eb"
+    with (root / f"node{node}" / "traces.csv").open() as stream:
+        rows = sorted(csv.DictReader(stream), key=lambda row: float(row["peak_memory_gib"]))
+    values = [float(row["peak_memory_gib"]) * 2**30 / 1e6 for row in rows]
+    if not values or any(not math.isfinite(value) or value <= 0 for value in values):
+        raise ValueError(f"node{node}: memory peaks must be finite and positive")
+    summary["conditions"][f"node{node}"] = {
+        "containers": len(rows), "min_mb": values[0], "mean_mb": sum(values) / len(values),
+        "percentiles_mb": quantiles(values),
+        "containers_with_timeouts": sum(int(row["timeouts"]) > 0 for row in rows),
+        "infrastructure_failed": sum(row["infrastructure_passed"] != "True" for row in rows)}
+    fractions = [(index + 1) / len(values) for index in range(len(values))]
+    points.extend((node, row["trace"], value, fraction, row["timeouts"])
+                  for row, value, fraction in zip(rows, values, fractions))
+    axis.step([0] + values, [0] + fractions, where="post", linewidth=2,
+              color=color, label=label)
+
+    median = quantiles(values)["p50"]
+    axis.hlines(.5, 0, median, colors="#64748b", linestyles="--", linewidth=1)
+    axis.vlines(median, 0, .5, colors="#64748b", linestyles="--", linewidth=1)
+    axis.scatter([median], [.5], color="#dc2626", s=32, zorder=4)
+    axis.annotate(f"50%: {median:,.1f} MB", (median, .5), xytext=(14, -22),
+                  textcoords="offset points", color="#b91c1c")
+    axis.set(xlabel="Peak container memory (MB)", ylabel="CDF", xlim=(0, None), ylim=(0, 1.02))
+    axis.yaxis.set_major_formatter(PercentFormatter(1))
+    axis.ticklabel_format(axis="x", style="plain", useOffset=False)
+    axis.grid(alpha=.25)
+    axis.legend(loc="lower right", fontsize=9)
+    figure.tight_layout()
+    for extension in ("png", "pdf"):
+        figure.savefig(root / f"memory-cdf.{extension}", dpi=200, facecolor="white")
+    plt.close(figure)
+    with (root / "memory-cdf.csv").open("w", newline="") as stream:
+        writer = csv.writer(stream, lineterminator="\n")
+        writer.writerow(("memory_node", "trace", "peak_memory_mb", "cumulative_fraction", "timeouts"))
+        writer.writerows(points)
+    (root / "memory-cdf.json").write_text(json.dumps(summary, indent=2) + "\n")
     return summary
 
 
@@ -601,20 +651,330 @@ def compare_runs(root):
     return summary
 
 
+def summarize_writes(root):
+    """Export observed physical write pages per tool call, without summing them as a trace-wide unique set."""
+    config = json.loads((root / "config.json").read_text()) if (root / "config.json").exists() else {}
+    rows = []
+    for path in sorted(root.glob("*/events.jsonl")):
+        events = [json.loads(line) for line in path.read_text().splitlines()]
+        trace = next(event["sessions"][0]["trace"] for event in events if event["event"] == "replay_clock_start")
+        commands = {(event["batch"], event["action"]): event for event in events if event["event"] == "command_end"}
+        for event in events:
+            if event["event"] != "write_pages":
+                continue
+            command = commands.get((event["batch"], event["action"]))
+            if command is None:
+                continue
+            rows.append({"trace": trace, "batch": event["batch"], "action": event["action"],
+                "observed_pages": event["unique_observed_pages"], "observed_mb": event["unique_observed_bytes"] / 1e6,
+                "write_fault_pages": event["write_fault_pages"], "buffered_write_pages": event["buffered_write_pages"],
+                "valid": event["valid"], "timed_out": command["timed_out"], "duration_s": command["duration_s"],
+                "collection_s": event["collection_s"],
+                **{key: event.get(key, 0) for key in ("map_update_failures", "unresolved_faults", "unsupported_large_pages", "missed_return_probes")}})
+    valid = [row for row in rows if row["valid"]]
+    by_trace = defaultdict(list)
+    for row in rows:
+        by_trace[row["trace"]].append(row)
+    traces = []
+    for trace, calls in by_trace.items():
+        measured = [call for call in calls if call["valid"]]
+        stats = quantiles([call["observed_mb"] for call in measured])
+        traces.append({"trace": trace, "measured_calls": len(calls), "valid_calls": len(measured),
+                       "timeouts": sum(call["timed_out"] for call in calls),
+                       **{f"{key}_tool_call_mb": value for key, value in stats.items()}})
+    summary = {"traces": len(traces), "measured_calls": len(rows), "valid_calls": len(valid),
+               "placement": {key: config[key] for key in ("numa_node", "controller_cpus", "workload_cpus", "memory_nodes", "memory_limit_bytes") if key in config},
+               "invalid_calls": len(rows) - len(valid), "calls_with_timeouts": sum(row["timed_out"] for row in rows),
+               "valid_tool_call_mb": quantiles([row["observed_mb"] for row in valid]),
+               "valid_without_timeout_mb": quantiles([row["observed_mb"] for row in valid if not row["timed_out"]]),
+               "all_observed_tool_call_mb": quantiles([row["observed_mb"] for row in rows]),
+               "valid_tool_call_pages": quantiles([row["observed_pages"] for row in valid]),
+               "definition": "Unique observed physical page addresses per tool-call window; 4096 bytes/page; repeated writes deduplicated",
+               "scope": "Write faults after resetting existing mappings plus supported buffered write_end copied pages. Not all kernel writes, DMA, coherence traffic or dirty cache lines.",
+               "limitations": "Write permission faults are write-triggered observations; coverage is incomplete. Freed/reused physical addresses count once within a call. THP disabled. No LLM wait replay. Timeout windows may include background tasks.",
+               "errors": {key: sum(row[key] for row in rows) for key in (
+                   "map_update_failures", "unresolved_faults", "unsupported_large_pages", "missed_return_probes")}}
+    for filename, data in (("write-pages.csv", rows), ("write-traces.csv", traces)):
+        if data:
+            with (root / filename).open("w", newline="") as stream:
+                writer = csv.DictWriter(stream, fieldnames=list(data[0]), lineterminator="\n")
+                writer.writeheader()
+                writer.writerows(data)
+    (root / "write-summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+    stats = summary["valid_tool_call_mb"]
+    lines = ["# DRAM tool call write-page observations", "",
+             f"측정 trace {len(traces)}개, tool call {len(rows)}개, 계측 검증 통과 {len(valid)}개, timeout {summary['calls_with_timeouts']}개.", "",
+             f"배치: CPU node {config.get('numa_node')}, workload CPU {config.get('workload_cpus')}, memory node {config.get('memory_nodes')}. 유효하지 않은 call {summary['invalid_calls']}개는 아래 분포에서 제외하며 CSV에는 관측값과 오류를 보존한다.", "",
+             "4 KiB 물리 페이지 주소를 tool call마다 중복 제거한다. 새 read-only 매핑은 write fault로 세지 않는다. 종료된 프로세스의 관측 페이지도 포함한다.", "",
+             "| Tool call당 관측 write 범위 | MB |", "|---|---:|",
+             *[f"| {key} | {value:,.3f} |" for key, value in stats.items()], "",
+             f"계측 오류 합계: `{json.dumps(summary['errors'])}`. 전체 관측값 분포(불완전 call 포함)와 페이지 수 분포는 `write-summary.json`에 별도로 저장한다.", "",
+             "이 값은 지원 경로에서 관측한 write 페이지 수다. 커널 내부의 모든 store, DMA, 실제 cache coherence 트래픽이나 경계 시점의 dirty cache line 수를 의미하지 않는다.",
+             "write fault는 쓰기 권한을 얻으려는 접근이며, fault 이후 실제 명령의 retire까지 확인하는 방식은 아니다. raw 물리 주소는 결과에 내보내지 않는다.",
+             "THP를 이 실행의 컨테이너 프로세스에서 비활성화했고 첫 write fault를 유도하므로 기존 latency 실험과 직접 비교하지 않는다. model wait 길이는 재현하지 않고 call 경계에서 수집한다.",
+             "`write-pages.csv`는 call별 값, `write-traces.csv`는 trace별 call 분포다. 서로 다른 call의 페이지 수를 더한 값은 trace 전체의 고유 페이지 수가 아니다.", ""]
+    (root / "write-report.md").write_text("\n".join(lines))
+    return summary
+
+
+def write_memory_ratios(root):
+    """Normalize interval write observations by sampled container memory, not RSS."""
+    from bisect import bisect_left, bisect_right
+
+    rows = []
+    for path in sorted(root.glob("*/events.jsonl")):
+        directory = path.parent
+        manifest = json.loads((directory / "manifest.json").read_text())
+        period = manifest["config"]["sampling"]["memory_interval_ms"] / 1000
+        events = [json.loads(line) for line in path.read_text().splitlines()]
+        trace = next(e["sessions"][0]["trace"] for e in events if e["event"] == "replay_clock_start")
+        commands = {(e["batch"], e["action"]): e for e in events if e["event"] == "command_end"}
+        peak = next(iter(json.loads((directory / "summary.json").read_text())["sessions"].values()))["recorded_peak_memory_bytes"]
+        times, memory = [], []
+        last_read, previous = -math.inf, None
+        with (directory / "metrics.csv").open() as stream:
+            for sample in csv.DictReader(stream):
+                cycle = float(sample["sample_cycle_s"])
+                signature = tuple(int(sample[k]) for k in ("memory_bytes", "peak_bytes", "anon_bytes", "file_bytes"))
+                # CPU-only rows reuse the preceding 100 ms memory snapshot.
+                if cycle - last_read >= period - 1e-8:
+                    times.append(float(sample["elapsed_s"]))
+                    memory.append(signature[0])
+                    last_read = cycle
+                elif signature != previous:
+                    raise ValueError(f"Could not reconstruct memory sampling clock: {directory}")
+                previous = signature
+        for event in events:
+            if event["event"] != "write_pages":
+                continue
+            command = commands[(event["batch"], event["action"])]
+            start, end = command["started_s"], command["started_s"] + command["duration_s"]
+            left, right = bisect_left(times, start), bisect_right(times, end)
+            maximum = max(memory[left:right], default=0)
+            observed = event["unique_observed_bytes"]
+            rows.append({"trace": trace, "batch": event["batch"], "action": event["action"],
+                "valid": event["valid"], "timed_out": command["timed_out"], "started_s": start, "end_s": end,
+                "observed_pages": event["unique_observed_pages"], "observed_bytes": observed,
+                "memory_samples": right - left, "sampled_peak_memory_bytes": maximum,
+                "first_memory_sample_s": times[left] if right > left else None,
+                "last_memory_sample_s": times[right - 1] if right > left else None,
+                "write_percent": 100 * observed / maximum if maximum else None,
+                "trace_peak_memory_bytes": peak, "write_over_trace_peak_percent": 100 * observed / peak})
+    valid = [row for row in rows if row["valid"]]
+    available = [row for row in valid if row["write_percent"] is not None]
+    if not available:
+        raise ValueError("No valid write windows with positive memory samples")
+    summary = {
+        "analysis_code_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "definition": "100 * observed write pages * 4096 / maximum fresh memory.current sample inside the command window",
+        "window": "command_end.started_s through started_s + duration_s; host monotonic seconds",
+        "memory_sampling": "Fresh reads reconstructed from sample_cycle_s and configured memory interval; cached CPU-only rows excluded",
+        "scope": "Per-tool-call distribution, valid write observations only; timeouts included unless stated otherwise",
+        "limitations": "Not RSS or an instantaneous dirty-page fraction. Denominator includes charged file cache and kernel memory. Sampling can miss transient peaks; numerator includes freed pages, so ratios can exceed 100%.",
+        "calls": len(rows), "valid_write_calls": len(valid), "invalid_write_calls": len(rows) - len(valid),
+        "calls_with_ratio": len(available), "valid_calls_without_positive_memory_sample": len(valid) - len(available),
+        "above_100_percent_calls": sum(row["write_percent"] > 100 for row in available),
+        "write_percent": quantiles([row["write_percent"] for row in available]),
+        "without_timeout_percent": quantiles([row["write_percent"] for row in available if not row["timed_out"]]),
+        "over_trace_lifetime_peak_percent": quantiles([row["write_over_trace_peak_percent"] for row in valid]),
+        "over_trace_lifetime_peak_same_calls_percent": quantiles([row["write_over_trace_peak_percent"] for row in available])}
+    with (root / "write-memory-ratio.csv").open("w", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(rows[0]), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+    (root / "write-memory-ratio.json").write_text(json.dumps(summary, indent=2) + "\n")
+    write_cdfs(root, include_pages=False)
+    return summary
+
+
+def write_cdfs(root, include_pages=True):
+    """Replot portable call-level CSVs without raw logs or a workload replay."""
+    os.environ.setdefault("MPLCONFIGDIR", str(root.resolve() / ".matplotlib"))
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import PercentFormatter
+
+    specs = [("write-memory-ratio.csv", "write_percent", "write-memory-ratio",
+              "Observed write / sampled call memory peak (%)", "%")]
+    if include_pages:
+        specs.insert(0, ("write-pages.csv", "observed_mb", "write-pages-cdf",
+                         "Observed write footprint per tool call (MB)", " MB"))
+    summary = {"analysis_code_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+               "scope": "Valid tool calls; timeouts included; each call has equal weight",
+               "display": "Linear axes, full observed range, interpolated median marked; not RSS or a resident dirty fraction",
+               "plots": {}}
+    for filename, column, output, label, unit in specs:
+        source = root / filename
+        with source.open() as stream:
+            rows = list(csv.DictReader(stream))
+        keys = {(row["trace"], row["batch"], row["action"]) for row in rows}
+        if len(keys) != len(rows):
+            raise ValueError(f"Duplicate tool calls in {filename}")
+        valid = [row for row in rows if row["valid"] == "True"]
+        values = sorted(float(row[column]) for row in valid if row[column] != "")
+        if not values or any(not math.isfinite(value) or value < 0 for value in values):
+            raise ValueError(f"Expected finite, nonnegative observations in {filename}")
+        stats = quantiles(values)
+        summary["plots"][output] = {
+            "source": filename, "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+            "column": column, "calls": len(values), "invalid_calls": len(rows) - len(valid),
+            "valid_calls_without_value": len(valid) - len(values), "quantiles": stats}
+        fractions = [(i + 1) / len(values) for i in range(len(values))]
+        figure, axis = plt.subplots(figsize=(7, 4.8))
+        axis.step([0] + values, [0] + fractions, where="post", color="#2563eb",
+                  linewidth=2, label="DRAM")
+        median = stats["p50"]
+        axis.hlines(.5, 0, median, colors="#64748b", linestyles="--", linewidth=1)
+        axis.vlines(median, 0, .5, colors="#64748b", linestyles="--", linewidth=1)
+        axis.scatter([median], [.5], color="#dc2626", s=32, zorder=4)
+        axis.annotate(f"50%: {median:,.2f}{unit}", (median, .5), xytext=(14, -22),
+                      textcoords="offset points", color="#b91c1c")
+        axis.set(xlabel=label, ylabel="CDF", xlim=(0, None), ylim=(0, 1.02))
+        if unit == "%":
+            axis.xaxis.set_major_formatter(PercentFormatter(100))
+        else:
+            axis.ticklabel_format(axis="x", style="plain", useOffset=False)
+        axis.yaxis.set_major_formatter(PercentFormatter(1))
+        axis.grid(alpha=.25)
+        axis.legend(loc="lower right", fontsize=9)
+        figure.tight_layout()
+        for extension in ("png", "pdf"):
+            figure.savefig(root / f"{output}.{extension}", dpi=200, facecolor="white")
+        plt.close(figure)
+    (root / "write-cdf.json").write_text(json.dumps(summary, indent=2) + "\n")
+    return summary
+
+
+def mpki_audit(root):
+    """Check whether idle intervals or a few traces hide memory-intensive phases."""
+    from bisect import bisect_right
+
+    with (root / "paired-traces.csv").open() as stream:
+        eligible = {row["trace"] for row in csv.DictReader(stream) if row["eligible"] == "True"}
+    groups, checks = defaultdict(Counter), {}
+    for node in (0, 2):
+        directory = root / f"node{node}"
+        with (directory / "traces.csv").open() as stream:
+            traces = list(csv.DictReader(stream))
+        expected = {key: sum(int(row[key]) for row in traces)
+                    for key in ("instructions", "cycles", "cache_misses", "retired_l3_misses")}
+        observed, lags = Counter(), []
+        for path in sorted(directory.glob("*/*.perf.csv")):
+            child = path.parent
+            events = [json.loads(line) for line in (child / "events.jsonl").read_text().splitlines()]
+            trace = next(event["sessions"][0]["trace"] for event in events if event["event"] == "replay_clock_start")
+            start = next(event for event in events if event["event"] == "perf_start")
+            lag = start["elapsed_s"] - start["origin_s"]
+            lags.append(lag)
+            with (child / "metrics.csv").open() as stream:
+                samples = [(float(row["elapsed_s"]), int(row["cpu_usec"]) / 1e6)
+                           for row in csv.DictReader(stream)]
+            times = [sample[0] for sample in samples]
+
+            def cpu_at(at):
+                if at < times[0] or at > times[-1]:
+                    return None
+                index = min(bisect_right(times, at) - 1, len(samples) - 2)
+                left, right = samples[index:index + 2]
+                return left[1] + (right[1] - left[1]) * (at - left[0]) / (right[0] - left[0])
+
+            with path.open() as stream:
+                for row in csv.DictReader(stream):
+                    counts = {key: float(row[column]) for key, column in (
+                        ("instructions", "instructions"), ("cycles", "cycles"),
+                        ("cache_misses", "llc_misses"), ("retired_l3_misses", "retired_load_l3_misses"))}
+                    observed.update(counts)
+                    if float(row["min_running_percent"]) < 99:
+                        raise ValueError(f"Invalid PMU coverage: {path}")
+                    end, duration = float(row["elapsed_s"]), float(row["interval_s"])
+                    assert duration > 0
+                    cpu_start, cpu_end = cpu_at(end - duration), cpu_at(end)
+                    cores = (cpu_end - cpu_start) / duration if cpu_start is not None and cpu_end is not None else None
+                    names = ["all_intervals"]
+                    if counts["instructions"] / duration >= 1e8:
+                        names.append("instructions_per_second_ge_100M")
+                    if cores is not None:
+                        names += [f"cpu_cores_ge_{cutoff:g}" for cutoff in (.05, .5, 1, 4) if cores >= cutoff]
+                    # Perf's exact clock origin is uncertain within its startup/enable handshake.
+                    shifted_start, shifted_end = cpu_at(end - duration + lag), cpu_at(end + lag)
+                    if shifted_start is not None and shifted_end is not None and (shifted_end - shifted_start) / duration >= .5:
+                        names.append("cpu_cores_ge_0.5_shifted")
+                    for cohort in (["all", "latency_eligible"] if trace in eligible else ["all"]):
+                        for name in names:
+                            group = groups[f"node{node}/{cohort}/{name}"]
+                            group.update(counts)
+                            group.update(intervals=1, seconds=duration,
+                                         cpu_unaligned_intervals=int(cores is None))
+                            if counts["instructions"] > 0:
+                                mpki = 1000 * counts["cache_misses"] / counts["instructions"]
+                                for cutoff in (5, 10):
+                                    if mpki >= cutoff:
+                                        group.update({f"mpki_ge_{cutoff}_seconds": duration,
+                                                      f"mpki_ge_{cutoff}_instructions": counts["instructions"],
+                                                      f"mpki_ge_{cutoff}_intervals": 1})
+        assert all(math.isclose(observed[key], expected[key], rel_tol=1e-10) for key in expected)
+        checks[f"node{node}"] = {"traces": len(traces), "interval_counts_match_trace_totals": True,
+            "perf_clock_uncertainty_s": quantiles(lags),
+            "command_wall_fraction": sum(float(row["duration_s"]) * float(row["command_wall_fraction"]) for row in traces)
+                / sum(float(row["duration_s"]) for row in traces),
+            "waiting_cpu_time_s": sum(float(row["waiting_cpu_time_s"]) for row in traces)}
+    rows = []
+    for name, counts in sorted(groups.items()):
+        instructions = counts["instructions"]
+        rows.append({"group": name, **counts,
+                     "llc_mpki": 1000 * counts["cache_misses"] / instructions if instructions else None,
+                     "retired_load_l3_mpki": 1000 * counts["retired_l3_misses"] / instructions if instructions else None,
+                     "ipc": instructions / counts["cycles"] if counts["cycles"] else None})
+        baseline = groups[name.rsplit("/", 1)[0] + "/all_intervals"]
+        rows[-1].update(instruction_fraction=instructions / baseline["instructions"],
+                        elapsed_fraction=counts["seconds"] / baseline["seconds"])
+        for cutoff in (5, 10):
+            rows[-1][f"mpki_ge_{cutoff}_elapsed_fraction"] = counts[f"mpki_ge_{cutoff}_seconds"] / counts["seconds"]
+            rows[-1][f"mpki_ge_{cutoff}_instruction_fraction"] = counts[f"mpki_ge_{cutoff}_instructions"] / instructions if instructions else None
+    summary = {"definition": "MPKI is a ratio of summed counters, never a time average with idle zeros",
+        "cpu_alignment": "20 ms cumulative CPU samples interpolated onto ~1 s PMU windows; shifted column tests startup clock uncertainty",
+        "scope": "all includes command timeouts; latency_eligible uses the same 211 paired traces as latency analysis",
+        "checks": checks, "groups": rows}
+    (root / "mpki-audit.json").write_text(json.dumps(summary, indent=2) + "\n")
+    with (root / "mpki-audit.csv").open("w", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(dict.fromkeys(key for row in rows for key in row)), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+    return summary
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("results", type=Path)
-    parser.add_argument("--cdf", action="store_true", help="Replot paired-traces.csv without raw replay logs")
+    plots = parser.add_mutually_exclusive_group()
+    plots.add_argument("--cdf", action="store_true", help="Replot paired-traces.csv without raw replay logs")
+    plots.add_argument("--memory-cdf", action="store_true", help="Plot per-container peaks from node*/traces.csv")
+    plots.add_argument("--mpki-audit", action="store_true", help="Audit active vs idle PMU intervals using raw samples")
+    plots.add_argument("--write-summary", action="store_true", help="Summarize per-tool-call write-page events")
+    plots.add_argument("--write-memory-ratio", action="store_true", help="Normalize write pages by sampled per-call container memory")
+    plots.add_argument("--write-cdf", action="store_true", help="Plot write footprint and memory ratios from portable CSVs")
     arguments = parser.parse_args()
     root = arguments.results
-    if arguments.cdf:
+    if arguments.write_cdf:
+        summary = write_cdfs(root)
+    elif arguments.write_memory_ratio:
+        summary = write_memory_ratios(root)
+    elif arguments.write_summary:
+        summary = summarize_writes(root)
+    elif arguments.mpki_audit:
+        summary = mpki_audit(root)
+    elif arguments.memory_cdf:
+        summary = memory_cdf(root)
+    elif arguments.cdf:
         summary = slowdown_cdf(root)
     elif (root / "comparison.json").exists():
         summary = compare_runs(root)
     else:
         summary = summarize_suite(root) if (root / "suite.json").exists() else summarize(root)
     print(json.dumps({key: value for key, value in summary.items() if isinstance(value, (bool, int, float, str))}, indent=2))
-    print(f"Output: {root / ('slowdown-cdf.png' if arguments.cdf else 'report.md')}")
+    output = "write-cdf.json" if arguments.write_cdf else "write-memory-ratio.png" if arguments.write_memory_ratio else "write-report.md" if arguments.write_summary else "mpki-audit.json" if arguments.mpki_audit else "memory-cdf.png" if arguments.memory_cdf else "slowdown-cdf.png" if arguments.cdf else "report.md"
+    print(f"Output: {root / output}")
 
 
 if __name__ == "__main__":

@@ -4,6 +4,8 @@ mini-swe-agent의 기록된 명령을 Docker에서 재실행하고 CPU·메모�
 
 2026-10-23 기준 microVM 구현·측정·EMR/DSA 조사와 MPTCP 연결을 유지한 snapshot 이전 결과는 [실행 문서와 다음 세션 인계](implementation/virtual_machine/README.md#session-handoff)에 모았다. 현재 전환 실험은 한 물리 호스트의 두 Linux VM 사이이며 실제 비일관 CXL 다중 호스트 검증은 남아 있다. DSA와 주기적 preflush는 조사·설계 단계로, 해당 성능을 측정한 결과는 없다.
 
+2026-10-26 정리: 아래 Docker replay의 메모리·MPKI·write 관측 결과를 추가했다. 다른 머신에서 진행한 [microVM contention 실측](experiments/contention/RESULTS-20261021.md), [fleet 시뮬레이션](experiments/contention/RESULTS-fleet.md), [RL rollout trace 수집 계획](docs/trace-collection-plan.md)도 같은 저장소에서 이어간다. Docker의 write 관측 결과를 microVM의 PML/cache 처리 비용이나 실제 다중 호스트 coherence 비용으로 바로 환산하지 않는다.
+
 ## 완료한 DRAM / CXL 실험
 
 264개 trace를 DRAM과 CXL에서 한 번씩, 총 528회 재생했다. MPKI는 전부 유효했고 OOM·PID 제한·payload 시작/종료 NUMA 배치 오류는 없었다. 비교 가능한 211개 쌍에서 CXL latency는 기하평균 13.15%, 시간 합계 기준 17.38% 증가했다. p95 증가율은 42.79%, 최대는 79.85%다.
@@ -18,6 +20,20 @@ timeout 50개 쌍과 명령 결과가 다른 3개 쌍은 제외했다. CXL에서
 
 ```bash
 python harness/trace-replay/analyze.py --cdf docs/results/numa-immediate-20261014
+```
+
+## DRAM tool call별 write 관측 결과
+
+264개 trace / 13,600개 tool call을 CPU·메모리 **NUMA node 1**, 컨테이너당 **24 GiB**, 순차·model wait 없이 재생했다. write 관측이 유효한 13,565개 call의 중앙값은 **2.02 MB**, p95는 **315.22 MB**다. 새 메모리 샘플까지 있는 13,468개 call에서 `관측 write bytes / call 구간 최대 memory.current`의 중앙값은 **27.08%**, p95는 **199.57%**다.
+
+이 비율은 RSS나 현재 상주 메모리의 dirty 비율이 아니다. 분자는 구간 중 해제된 페이지도 포함하는 누적 관측 집합이고 분모는 100ms 간격 cgroup 총메모리 샘플이므로 100%를 넘을 수 있다. write fault 유도와 THP 비활성화가 성능에 영향을 주므로 이 실행의 latency·MPKI는 기존 무계측 결과와 직접 비교하지 않는다.
+
+[측정 정의·검증·CDF 두 개·재실행 방법](docs/results/write-pages-node1-20261021/write-report.md) · [최대 메모리 CDF와 MPKI 대기 시간 검증](docs/results/numa-immediate-20261014/README.md)
+
+원시 로그나 Docker 없이 저장소의 CSV로 write 용량·비율 CDF를 다시 그린다. 선형 축, DRAM 범례, 50% 표시를 사용한다.
+
+```bash
+python harness/trace-replay/analyze.py --write-cdf docs/results/write-pages-node1-20261021
 ```
 
 ## 저장소 구성
@@ -48,7 +64,7 @@ python3 -m venv .venv
 python -m pip install matplotlib
 ```
 
-재생 프로그램은 Python 표준 라이브러리만 사용한다. `matplotlib`은 분석 그래프용이다. mini-swe-agent와 SWE-agent 패키지를 설치하거나 별도 checkout할 필요는 없다.
+기본 재생 프로그램은 Python 표준 라이브러리만 사용한다. `matplotlib`은 분석 그래프용이다. `--write-pages` 계측에는 BCC Python binding, 실행 중인 커널과 일치하는 build headers, gcc·정적 libc와 root 권한이 추가로 필요하다. mini-swe-agent와 SWE-agent 패키지를 설치하거나 별도 checkout할 필요는 없다.
 
 먼저 새 머신의 NUMA topology와 실행 권한을 확인한다.
 
@@ -61,7 +77,7 @@ sudo -n true
 
 `configs/node0.json`의 `node_cpu_pool`, `controller_cpus`, `workload_cpus`를 새 머신의 NUMA node 0 CPU 번호에 맞춘다. controller와 workload CPU는 겹치지 않아야 한다. 현재 기본값은 controller `0-1`, workload `2-31`, 최대 1개 작업이다. 아래 전체 실행 예제의 `2-31`도 새 머신에 맞게 바꾼다.
 
-작업당 메모리 상한은 32GiB, PID 상한은 16384다. 이전 16GiB/4096 조건에서 발생한 Babel OOM과 Preact PID 제한을 고려해 두 비교 조건 모두 같은 상한으로 높였다. 별도 부모 cgroup이 전체 합계를 최대 33GiB 및 실행 준비 시 대상 memory node 가용량 추정치의 80% 이하로 제한한다. 추정치는 MemFree + clean inactive file cache + SReclaimable의 절반이며 shmem·dirty·writeback을 보수적으로 제외한다. kernel MemAvailable과 같은 값은 아니다. 전체 예산이 작업 하나의 상한보다 작으면 실행을 거부한다.
+기본 node 0 설정의 작업당 메모리 상한은 32GiB, PID 상한은 16384다. 이전 16GiB/4096 조건에서 발생한 Babel OOM과 Preact PID 제한을 고려해 두 비교 조건 모두 같은 상한으로 높였다. 별도 부모 cgroup이 전체 합계를 최대 33GiB 및 실행 준비 시 대상 memory node 가용량 추정치의 80% 이하로 제한한다. 현재 추정치는 MemFree + max(0, inactive file cache + active file cache의 절반 − shmem − dirty − writeback) + SReclaimable의 절반이다. kernel MemAvailable과 같은 값은 아니다. 전체 예산이 작업 하나의 상한보다 작으면 실행을 거부한다. node 1 write 계측은 별도 보관 설정의 24GiB/25GiB 상한과 90% 추정 비율을 썼다.
 
 ## trace 준비와 실행 계획 확인
 

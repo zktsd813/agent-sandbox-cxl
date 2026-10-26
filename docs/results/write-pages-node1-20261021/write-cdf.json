@@ -1,0 +1,35 @@
+{
+  "analysis_code_sha256": "34603f0aab9a5100cbbb5f72fe992addb124296e6c325b89b360f75ae1fb63ff",
+  "scope": "Valid tool calls; timeouts included; each call has equal weight",
+  "display": "Linear axes, full observed range, interpolated median marked; not RSS or a resident dirty fraction",
+  "plots": {
+    "write-pages-cdf": {
+      "source": "write-pages.csv",
+      "source_sha256": "b3efb4ebf20ca47596d8d1f20e530fb8e9a0484a07f501efff06f561f3ee3a9a",
+      "column": "observed_mb",
+      "calls": 13565,
+      "invalid_calls": 35,
+      "valid_calls_without_value": 0,
+      "quantiles": {
+        "max": 18030.235648,
+        "p50": 2.015232,
+        "p95": 315.21587199999937,
+        "p99": 1982.8267417600011
+      }
+    },
+    "write-memory-ratio": {
+      "source": "write-memory-ratio.csv",
+      "source_sha256": "9ea3c45076e2bc6d5cc2791d54f40dffdfdc6573e5f79a4ec041065e1e4d21e6",
+      "column": "write_percent",
+      "calls": 13468,
+      "invalid_calls": 35,
+      "valid_calls_without_value": 97,
+      "quantiles": {
+        "max": 1524.375,
+        "p50": 27.082824656104147,
+        "p95": 199.5664535826734,
+        "p99": 303.3169273602741
+      }
+    }
+  }
+}

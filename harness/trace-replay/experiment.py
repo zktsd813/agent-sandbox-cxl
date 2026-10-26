@@ -19,9 +19,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 PERF_EVENTS = "{instructions,cycles,cache-references,cache-misses,cpu/event=0xd1,umask=0x20,name=retired_l3_misses/}"
+WRITE_PAGE_CAPACITY = 16 * 1024 * 1024
 
 
-def build_numa_helper(root):
+def build_numa_helper(root, disable_thp=False):
     """Bind the payload after runc setup; movable-only CXL cannot hold kernel buffers."""
     source = root / "numa-bind.c"
     source.write_text(r'''#include <linux/mempolicy.h>
@@ -29,10 +30,12 @@ def build_numa_helper(root):
 #include <stdlib.h>
 #include <string.h>
 #include <sys/syscall.h>
+#include <sys/prctl.h>
 #include <unistd.h>
 
 int main(int argc, char **argv) {
-    if (argc < 3 || (strcmp(argv[1], "0") && strcmp(argv[1], "2"))) return 125;
+    if (argc < 3 || (strcmp(argv[1], "0") && strcmp(argv[1], "1") && strcmp(argv[1], "2"))) return 125;
+    if (DISABLE_THP && prctl(PR_SET_THP_DISABLE, 1, 0, 0, 0)) return 125;
     unsigned long mask = 1UL << atoi(argv[1]), actual = 0;
     int policy = 0;
     if (syscall(SYS_set_mempolicy, MPOL_BIND, &mask, 8 * sizeof(mask)) ||
@@ -45,10 +48,201 @@ int main(int argc, char **argv) {
     perror("mini-numa-bind: exec failed");
     return 127;
 }
-''')
+'''.replace("DISABLE_THP", "1" if disable_thp else "0"))
     binary = root / "numa-bind"
     subprocess.run(["gcc", "-O2", "-static", str(source), "-o", str(binary)], check=True)
     return str(binary)
+
+
+def write_tracker():
+    """Privileged, cgroup-filtered observer; speak JSON over stdin/stdout."""
+    from bcc import BPF
+    import ctypes
+
+    symbols = {}
+    for line in Path("/proc/kallsyms").read_text().splitlines():
+        address, _, name, *_ = line.split()
+        if name in ("page_offset_base", "pgdir_shift", "vmemmap_base"):
+            symbols[name] = int(address, 16)
+    if len(symbols) != 3 or not all(symbols.values()):
+        raise RuntimeError("Kernel address symbols are required for physical-page tracking")
+    program = r'''
+#include <uapi/linux/ptrace.h>
+#include <linux/mm.h>
+#include <linux/sched.h>
+struct control { u64 cgroup; u64 pid; u64 start; u64 end; u64 epoch; };
+struct pending { u64 address; u64 epoch; u64 mm; };
+BPF_ARRAY(control, struct control, 1);
+BPF_HASH(faults, u64, struct pending, 32768);
+BPF_HASH(pages, u64, u64, WRITE_PAGE_CAPACITY);
+BPF_ARRAY(errors, u64, 4);
+BPF_ARRAY(counts, u64, 3);
+static inline void error(int index) { u64 *v = errors.lookup(&index); if (v) __sync_fetch_and_add(v, 1); }
+static inline int enabled(void) {
+    int zero = 0;
+    struct control *c = control.lookup(&zero);
+    return c && c->cgroup && c->cgroup == bpf_get_current_cgroup_id()
+        && (!c->pid || c->pid == (bpf_get_current_pid_tgid() >> 32));
+}
+static inline void save(u64 pfn, u64 kind) {
+    int zero = 0;
+    struct control *c = control.lookup(&zero);
+    if (!c || !c->epoch) return;
+    u64 empty = 0;
+    u64 *old = pages.lookup_or_try_init(&pfn, &empty);
+    if (!old) { error(0); return; }
+    for (int retry = 0; retry < 16; retry++) {
+        u64 previous = *old;
+        u64 flags = (previous >> 2) == c->epoch ? previous & 3 : 0;
+        u64 next = (c->epoch << 2) | flags | kind;
+        if (__sync_val_compare_and_swap(old, previous, next) != previous) continue;
+        if (!flags) { int index = 0; u64 *v = counts.lookup(&index); if (v) __sync_fetch_and_add(v, 1); }
+        if (!(flags & kind)) { int index = kind == 1 ? 1 : 2; u64 *v = counts.lookup(&index); if (v) __sync_fetch_and_add(v, 1); }
+        return;
+    }
+    error(0);
+}
+static inline u64 table_entry(u64 table, u64 address, int shift) {
+    u64 entry = 0;
+    bpf_probe_read_kernel(&entry, 8, (void *)(table + ((address >> shift) & 511) * 8));
+    return entry;
+}
+int fault_start(struct pt_regs *ctx, struct vm_area_struct *vma, unsigned long address, unsigned int flags) {
+    if (!enabled() || !(flags & FAULT_FLAG_WRITE)) return 0;
+    int zero = 0;
+    struct control *c = control.lookup(&zero);
+    if (c && c->end && (address < c->start || address >= c->end)) return 0;
+    u64 id = bpf_get_current_pid_tgid();
+    struct pending value = {.address = address, .epoch = c ? c->epoch : 0};
+    bpf_probe_read_kernel(&value.mm, 8, &vma->vm_mm);
+    if (faults.update(&id, &value)) error(1);
+    return 0;
+}
+int fault_end(struct pt_regs *ctx) {
+    u64 id = bpf_get_current_pid_tgid();
+    struct pending *saved = faults.lookup(&id);
+    if (!saved) return 0;
+    u64 address = saved->address, epoch = saved->epoch;
+    struct mm_struct *mm = (void *)saved->mm;
+    faults.delete(&id);
+    if (!enabled() || (PT_REGS_RC(ctx) & (VM_FAULT_ERROR | VM_FAULT_RETRY))) return 0;
+    int zero = 0;
+    struct control *c = control.lookup(&zero);
+    if (!c || c->epoch != epoch) return 0;
+    u64 table = 0, base = 0;
+    unsigned int shift = 0;
+    if (!mm) { error(2); return 0; }
+    bpf_probe_read_kernel(&table, 8, &mm->pgd);
+    bpf_probe_read_kernel(&base, 8, (void *)PAGE_OFFSET_SYMBOL);
+    bpf_probe_read_kernel(&shift, 4, (void *)PGDIR_SHIFT_SYMBOL);
+    const u64 mask = 0x000ffffffffff000ULL;
+    u64 entry;
+    if (shift == 48) {
+        entry = table_entry(table, address, 48);
+        if (!(entry & 1)) { error(2); return 0; }
+        table = (entry & mask) + base;
+    }
+    entry = table_entry(table, address, 39);
+    if (!(entry & 1)) { error(2); return 0; }
+    table = (entry & mask) + base;
+    entry = table_entry(table, address, 30);
+    if (!(entry & 1)) { error(2); return 0; }
+    if (entry & 128) { error(3); return 0; }
+    table = (entry & mask) + base;
+    entry = table_entry(table, address, 21);
+    if (!(entry & 1)) { error(2); return 0; }
+    if (entry & 128) { error(3); return 0; }
+    table = (entry & mask) + base;
+    entry = table_entry(table, address, 12);
+    if (!(entry & 1) || !(entry & 2)) { error(2); return 0; }
+    save((entry & mask) >> 12, 1);
+    return 0;
+}
+int copy_start(struct pt_regs *ctx, struct file *file, struct address_space *mapping, loff_t pos, unsigned len, unsigned copied) {
+    if (!enabled()) return 0;
+    if (!copied) return 0;
+    struct page *page = (void *)ctx->r9;
+    u64 offset = pos & 4095;
+    u64 page_array_base = 0;
+    bpf_probe_read_kernel(&page_array_base, 8, (void *)VMEMMAP_SYMBOL);
+    u64 address = (((u64)page - page_array_base) / sizeof(struct page)) * 4096 + offset;
+    u64 first = address >> 12, last = (address + copied - 1) >> 12;
+    if (last - first >= 2) { error(3); return 0; }
+    for (int i = 0; i < 2; i++) {
+        if (first + i > last) break;
+        save(first + i, 2);
+    }
+    return 0;
+}
+'''
+    for placeholder, name in (("PAGE_OFFSET_SYMBOL", "page_offset_base"),
+                              ("PGDIR_SHIFT_SYMBOL", "pgdir_shift"), ("VMEMMAP_SYMBOL", "vmemmap_base")):
+        program = program.replace(placeholder, hex(symbols[name]) + "ULL")
+    bpf = BPF(text=program.replace("WRITE_PAGE_CAPACITY", str(WRITE_PAGE_CAPACITY)))
+    bpf.attach_kprobe(event="handle_mm_fault", fn_name="fault_start")
+    bpf.attach_kretprobe(event="handle_mm_fault", fn_name="fault_end", maxactive=4096)
+    for name in ("block_write_end", "generic_write_end", "ext4_write_end", "ext4_da_write_end", "ext4_journalled_write_end", "simple_write_end", "shmem_write_end"):
+        bpf.attach_kprobe(event=name, fn_name="copy_start")
+    control, pages, errors = bpf["control"], bpf["pages"], bpf["errors"]
+    group, epoch = None, 0
+
+    def missed_probes():
+        rows = [line.split() for line in Path("/sys/kernel/tracing/kprobe_profile").read_text().splitlines()]
+        own = [row for row in rows if row[0].endswith(f"_bcc_{os.getpid()}") and row[0].startswith("r_")]
+        if len(own) != 1:
+            raise RuntimeError("Could not verify the write-fault return-probe miss counter")
+        return sum(int(row[-1]) for row in own)
+
+    missed_at_start = missed_probes()
+    print(json.dumps({"ready": True, "method": "write-fault PFNs plus supported buffered write_end destination PFNs"}), flush=True)
+    try:
+        for line in sys.stdin:
+            request = json.loads(line)
+            if request["op"] == "close":
+                break
+            group = Path(request["cgroup"]).resolve()
+            if not str(group).startswith("/sys/fs/cgroup/") or "minireplay" not in str(group):
+                raise ValueError("Only this experiment's minireplay cgroups may be tracked")
+            (group / "cgroup.freeze").write_text("1")
+            deadline = time.monotonic() + 10
+            while "frozen 1" not in (group / "cgroup.events").read_text():
+                if time.monotonic() > deadline:
+                    raise RuntimeError("Timed out freezing the workload for a measurement boundary")
+                time.sleep(.001)
+            control[ctypes.c_int(0)] = control.Leaf()
+            if request["op"] == "begin":
+                missed_at_start = missed_probes()
+                epoch += 1
+                for index in range(3):
+                    bpf["counts"][ctypes.c_int(index)] = ctypes.c_ulonglong(0)
+                bpf["faults"].clear()
+                for index in range(4):
+                    errors[ctypes.c_int(index)] = ctypes.c_ulonglong(0)
+                for filename in [group / "cgroup.procs", *group.glob("**/cgroup.procs")]:
+                    for pid in set(filename.read_text().split()):
+                        try:
+                            Path(f"/proc/{pid}/clear_refs").write_text("4")
+                        except ProcessLookupError:
+                            pass
+                control[ctypes.c_int(0)] = control.Leaf(group.stat().st_ino, request.get("pid", 0),
+                                                       request.get("start", 0), request.get("end", 0), epoch)
+                result = {"begun": True}
+            else:
+                observed = [bpf["counts"][ctypes.c_int(index)].value for index in range(3)]
+                counts = [errors[ctypes.c_int(index)].value for index in range(4)]
+                missed = missed_probes() - missed_at_start
+                result = {"write_fault_pages": observed[1],
+                          "buffered_write_pages": observed[2],
+                          "unique_observed_pages": observed[0], "unique_observed_bytes": observed[0] * 4096,
+                          "map_update_failures": counts[0] + counts[1], "unresolved_faults": counts[2],
+                          "unsupported_large_pages": counts[3], "missed_return_probes": missed,
+                          "valid": not any(counts) and missed == 0}
+            (group / "cgroup.freeze").write_text("0")
+            print(json.dumps(result), flush=True)
+    finally:
+        if group is not None and group.exists():
+            (group / "cgroup.freeze").write_text("0")
+        bpf.cleanup()
 
 
 def read_perf(path):
@@ -228,9 +422,9 @@ def container_group(name):
 
 
 def create_budget(config, name, image_id):
-    allowed_mems = "0,2" if config.get("numa_bind_helper") else ",".join(str(n) for n in sorted({0, int(config["memory_nodes"])}))
+    allowed_mems = "0,2" if config.get("numa_bind_helper") and not config.get("write_tracking") else ",".join(str(n) for n in sorted({config["numa_node"], int(config["memory_nodes"])}))
     docker("run", "-d", "--name", name, "--cgroup-parent", config["budget_unit"],
-           "--cpuset-cpus", config["controller_cpus"], "--cpuset-mems", "0", "--memory", "64m",
+           "--cpuset-cpus", config["controller_cpus"], "--cpuset-mems", str(config["numa_node"]), "--memory", "64m",
            "--memory-swap", "64m", "--pids-limit", "64", "--network", "none", image_id, "sleep", "infinity")
     systemd("set-property", "--runtime", config["budget_unit"],
             f"MemoryMax={config['aggregate_memory_limit_bytes']}", "MemorySwapMax=0",
@@ -271,6 +465,8 @@ def resources(cgroup, memory=True, target_node=0):
             "minor_and_major_faults": int(memory_stat.get("pgfault", 0)),
             "major_faults": int(memory_stat.get("pgmajfault", 0)),
             "memory_bytes": int((cgroup / "memory.current").read_text()),
+            "file_dirty_bytes": int(memory_stat.get("file_dirty", 0)),
+            "file_writeback_bytes": int(memory_stat.get("file_writeback", 0)),
             "peak_bytes": int(peak.read_text()) if peak.exists() else None,
             "anon_bytes": int(memory_stat["anon"]), "file_bytes": int(memory_stat["file"]),
             "anon_node0_bytes": int(numa["anon"].get("N0", 0)),
@@ -288,7 +484,7 @@ def prepare(trace, config, name, pull, image_id=None):
     if pull:
         docker("pull", image, timeout=1800)
     image_id = image_id or docker("image", "inspect", "--format", "{{.Id}}", image)
-    memory_mask = "0,2" if config.get("numa_bind_helper") else config["memory_nodes"]
+    memory_mask = "0,2" if config.get("numa_bind_helper") and not config.get("write_tracking") else config["memory_nodes"]
     extra, init = [], ["sleep", "infinity"]
     if config.get("numa_bind_helper"):
         extra = ["--mount", f"type=bind,src={config['numa_bind_helper']},dst=/opt/mini-numa-bind,readonly", "--cap-add", "SYS_NICE"]
@@ -398,7 +594,25 @@ def replay(session, origin, clock, arguments, record, stop, output):
     if session["numa_bind_helper"]:
         command.extend(["/opt/mini-numa-bind", str(session["memory_node"])])
     command.extend(environment["interpreter"])
+    tracker = None
+
+    def track(operation):
+        tracker.stdin.write(json.dumps({"op": operation, "cgroup": str(session["cgroup"])}) + "\n")
+        tracker.stdin.flush()
+        if not select.select([tracker.stdout], [], [], 120)[0]:
+            raise RuntimeError("Write tracker response timed out")
+        line = tracker.stdout.readline()
+        if not line:
+            raise RuntimeError("Write tracker exited; inspect write-tracker.log")
+        return json.loads(line)
+
     try:
+        if arguments.write_pages:
+            with (output / "write-tracker.log").open("w") as errors:
+                tracker = subprocess.Popen(["sudo", "-n", sys.executable, str(Path(__file__).resolve()), "--write-tracker"],
+                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=errors, text=True, bufsize=1)
+            if not select.select([tracker.stdout], [], [], 120)[0] or not tracker.stdout.readline():
+                raise RuntimeError("Write tracker failed to initialize; inspect write-tracker.log")
         if arguments.perf:
             start_perf(session, arguments, clock, record, output)
         with (output / f"{session['name']}.log").open("w") as log:
@@ -424,6 +638,8 @@ def replay(session, origin, clock, arguments, record, stop, output):
                 for action_index, action in enumerate(batch["actions"]):
                     if stop.is_set():
                         return
+                    if tracker:
+                        track("begin")
                     started = time.monotonic()
                     log.write(f"\n--- batch {index}, action {action_index} ---\n{action['command']}\n")
                     log.flush()
@@ -435,8 +651,13 @@ def replay(session, origin, clock, arguments, record, stop, output):
                     if timed_out:
                         log.write("\n[Docker CLI timeout; preserving mini's command semantics]\n")
                     expected = batch["observations"][action_index]["returncode"] if batch["observations"] else None
+                    duration = time.monotonic() - started
+                    if tracker:
+                        measured = time.monotonic()
+                        record("write_pages", session=session["name"], batch=index, action=action_index,
+                               **track("end"), collection_s=time.monotonic() - measured)
                     record("command_end", session=session["name"], batch=index, action=action_index,
-                           started_s=started - clock, duration_s=time.monotonic() - started,
+                           started_s=started - clock, duration_s=duration,
                            returncode=returncode, expected_returncode=expected, timed_out=timed_out)
                 record("batch_end", session=session["name"], batch=index)
             final = resources(session["cgroup"], target_node=session["memory_node"])
@@ -453,13 +674,23 @@ def replay(session, origin, clock, arguments, record, stop, output):
             stop.set()
             raise
     finally:
-        session["phase"] = "done"
         try:
-            stop_perf(session, record)
+            if tracker:
+                try:
+                    tracker.stdin.write(json.dumps({"op": "close"}) + "\n")
+                    tracker.stdin.flush()
+                except BrokenPipeError:
+                    pass
+                tracker.stdin.close()
+                tracker.wait(timeout=30)
         finally:
-            if not remove_container(session["name"], record):
-                stop.set()
-                raise RuntimeError(f"Could not clean up {session['name']}")
+            session["phase"] = "done"
+            try:
+                stop_perf(session, record)
+            finally:
+                if not remove_container(session["name"], record):
+                    stop.set()
+                    raise RuntimeError(f"Could not clean up {session['name']}")
 
 
 def replay_command(arguments, sources, output, memory_node, sequential=False):
@@ -472,6 +703,8 @@ def replay_command(arguments, sources, output, memory_node, sequential=False):
                     "--perf-interval-ms", str(arguments.perf_interval_ms)]
     if arguments.pull:
         command.append("--pull")
+    if arguments.write_pages:
+        command.append("--write-pages")
     if sequential:
         command.append("--sequential")
         if arguments.keep_going:
@@ -546,6 +779,21 @@ def sequential(arguments, traces, config):
     config["max_concurrent_sessions"] = 1
     root = arguments.output.resolve()
     root.mkdir(parents=True, exist_ok=False)
+    if arguments.write_pages:
+        config["write_tracking"] = {
+            "method": "cgroup-filtered successful write faults and supported buffered write_end PFNs",
+            "page_size": 4096, "page_capacity": WRITE_PAGE_CAPACITY, "thp_disabled": True,
+            "scope": "Observed write-triggered physical addresses; excludes unprobed kernel stores, DMA and unsupported I/O paths",
+            "wait": "Boundary snapshot only; no LLM or model wait replay", "counts_freed_pages": True}
+        config["numa_bind_helper"] = build_numa_helper(root, disable_thp=True)
+        config["numa_bind_sha256"] = hashlib.sha256(Path(config["numa_bind_helper"]).read_bytes()).hexdigest()
+        references = sorted({task_image(trace, config) for trace in traces})
+        image_ids = docker("image", "inspect", "--format", "{{.Id}}", *references).splitlines()
+        if len(image_ids) != len(references):
+            raise RuntimeError("Incomplete local image inventory")
+        config["image_ids"] = dict(zip(references, image_ids))
+        arguments.config = root / "config.json"
+        arguments.config.write_text(json.dumps(config, indent=2) + "\n")
     suite = {"state": "running", "started_unix": time.time(), "mode": "sequential",
              "schedule": arguments.schedule, "scale": arguments.scale, "perf": arguments.perf,
              "source_span_sum_s": sum(t["last"] - t["first"] for t in traces),
@@ -611,6 +859,9 @@ def sequential(arguments, traces, config):
 
 
 def main():
+    if sys.argv[1:] == ["--write-tracker"]:
+        write_tracker()
+        return
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("traces", nargs="*", help="Native .traj.json paths or HTTPS URLs")
     parser.add_argument("--download-traces", action="store_true", help="Download and verify the pinned trace inventory, then exit")
@@ -621,12 +872,13 @@ def main():
     parser.add_argument("--scale", type=float, default=1.0)
     parser.add_argument("--setup", choices=("precreate", "on-arrival"), default="precreate")
     parser.add_argument("--max-active", type=int, help="Maximum resident containers; still subject to the memory budget")
-    parser.add_argument("--workload-cpus", help="Shared workload CPU pool, restricted to node 0")
+    parser.add_argument("--workload-cpus", help="Shared workload CPU pool, restricted to the configured CPU NUMA node")
     parser.add_argument("--keep-going", action="store_true", help="Continue other sessions after an individual workload failure")
     parser.add_argument("--sequential", action="store_true", help="Execute each trace once, with one workload container at a time")
-    parser.add_argument("--memory-node", type=int, choices=(0, 2), help="Workload memory NUMA node; controller remains on node 0")
+    parser.add_argument("--memory-node", type=int, choices=(0, 1, 2), help="Workload memory NUMA node; controller stays on the configured CPU node")
     parser.add_argument("--compare-memory", action="store_true", help="Run all traces on memory node 0, then node 2; requires immediate schedule")
     parser.add_argument("--perf", action="store_true", help="Measure cgroup LLC MPKI using Intel Sapphire/Emerald Rapids PMU events")
+    parser.add_argument("--write-pages", action="store_true", help="Observe write-fault and buffered-write pages per tool call; DRAM only")
     parser.add_argument("--perf-bin", type=Path, default=Path("/usr/lib/linux-tools-6.8.0-146/perf"))
     parser.add_argument("--perf-interval-ms", type=int, default=1000)
     parser.add_argument("--pull", action="store_true", help="Download missing task images before measurement")
@@ -647,7 +899,14 @@ def main():
         parser.error("NUMA binding helper changed during the experiment")
     if arguments.memory_node is not None:
         config["memory_nodes"] = str(arguments.memory_node)
+    if arguments.write_pages:
+        if arguments.compare_memory or config["memory_nodes"] != str(config["numa_node"]) or config["numa_node"] not in (0, 1) or arguments.schedule != "immediate":
+            parser.error("--write-pages requires local DRAM on CPU node 0 or 1 and --schedule immediate")
+        if not arguments.sequential and not config.get("write_tracking"):
+            parser.error("Start --write-pages with --sequential to prepare a pinned tracking configuration")
     if arguments.compare_memory:
+        if config["numa_node"] != 0:
+            parser.error("--compare-memory requires CPU node 0")
         if arguments.schedule != "immediate":
             parser.error("--compare-memory requires --schedule immediate")
         arguments.sequential = True
@@ -710,28 +969,34 @@ def main():
     if not arguments.sequential and arguments.setup == "precreate" and len(traces) > config["max_concurrent_sessions"]:
         parser.error("Too many resident sessions for the configured budget")
     available = cpu_ids(Path(f"/sys/devices/system/node/node{config['numa_node']}/cpulist").read_text().strip())
-    if config["numa_node"] != 0 or config["memory_nodes"] not in ("0", "2") or not cpu_ids(config["workload_cpus"]) <= available:
-        parser.error("This experiment requires node 0 CPUs and memory node 0 or 2")
+    if config["numa_node"] not in (0, 1) or config["memory_nodes"] not in (str(config["numa_node"]), "2") or not cpu_ids(config["workload_cpus"]) <= available:
+        parser.error("Workload CPUs must belong to CPU node 0 or 1; memory must be local DRAM or node 2")
+    if not cpu_ids(config["node_cpu_pool"]) <= available:
+        parser.error("The CPU pool must belong to the configured CPU node")
     if not cpu_ids(config["controller_cpus"]) <= available:
-        parser.error("Controller CPUs must also belong to node 0")
+        parser.error("Controller CPUs must belong to the configured CPU node")
     if cpu_ids(config["controller_cpus"]) & cpu_ids(config["workload_cpus"]):
         parser.error("Controller and workload CPUs must be disjoint")
     meminfo = Path(f"/sys/devices/system/node/node{config['memory_nodes']}/meminfo").read_text().splitlines()
     node_memory = {line.split()[-3].rstrip(":"): int(line.split()[-2]) * 1024 for line in meminfo if line.endswith(" kB")}
     free_bytes = node_memory["MemFree"]
-    # Keep 20% headroom; clean inactive file cache is reclaimable, slab only partly so.
-    reclaimable = max(0, node_memory["Inactive(file)"] - node_memory["Shmem"] - node_memory["Dirty"] - node_memory["Writeback"])
+    # Reserve headroom; include clean inactive cache and half of active cache/slab.
+    reclaimable = max(0, node_memory["Inactive(file)"] + node_memory["Active(file)"] // 2
+                      - node_memory["Shmem"] - node_memory["Dirty"] - node_memory["Writeback"])
     safe_available = free_bytes + reclaimable + node_memory.get("SReclaimable", 0) // 2
     budget_sessions = min(len(traces), config["max_concurrent_sessions"])
-    config["aggregate_memory_limit_bytes"] = min(config["aggregate_memory_limit_bytes"], int(safe_available * .8) // 4096 * 4096)
+    budget_fraction = config.get("memory_budget_fraction", .8)
+    if not 0 < budget_fraction <= .9:
+        parser.error("memory_budget_fraction must be positive and at most 0.9")
+    config["aggregate_memory_limit_bytes"] = min(config["aggregate_memory_limit_bytes"], int(safe_available * budget_fraction) // 4096 * 4096)
     if config["memory_limit_bytes"] > config["aggregate_memory_limit_bytes"]:
         parser.error("Shared budget is smaller than one session's limit")
     plan["memory_node_free_bytes_at_check"] = free_bytes
     plan["memory_node_available_budget_estimate_bytes"] = safe_available
-    plan["memory_budget_method"] = "80% of (MemFree + clean inactive file pages minus shmem + half SReclaimable); estimate, not kernel MemAvailable"
+    plan["memory_budget_method"] = f"{budget_fraction:.0%} of (MemFree + inactive file + half active file - shmem/dirty/writeback + half SReclaimable); estimate, not kernel MemAvailable"
     plan["host_pressure_at_start"] = {kind: Path(f"/proc/pressure/{kind}").read_text() for kind in ("cpu", "memory", "io")}
     if not os.environ.get("MINI_REPLAY_BOUND"):
-        os.execvpe("numactl", ["numactl", f"--physcpubind={config['controller_cpus']}", "--membind=0",
+        os.execvpe("numactl", ["numactl", f"--physcpubind={config['controller_cpus']}", f"--membind={config['numa_node']}",
                               sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]],
                    {**os.environ, "MINI_REPLAY_BOUND": "1"})
     if arguments.compare_memory:

@@ -1,0 +1,47 @@
+{
+  "traces": 264,
+  "measured_calls": 13600,
+  "valid_calls": 13565,
+  "placement": {
+    "numa_node": 1,
+    "controller_cpus": "32-33",
+    "workload_cpus": "34-63",
+    "memory_nodes": "1",
+    "memory_limit_bytes": 25769803776
+  },
+  "invalid_calls": 35,
+  "calls_with_timeouts": 70,
+  "valid_tool_call_mb": {
+    "max": 18030.235648,
+    "p50": 2.015232,
+    "p95": 315.21587199999937,
+    "p99": 1982.8267417600011
+  },
+  "valid_without_timeout_mb": {
+    "max": 18030.235648,
+    "p50": 2.015232,
+    "p95": 264.35973119999966,
+    "p99": 1828.5349273600011
+  },
+  "all_observed_tool_call_mb": {
+    "max": 18030.235648,
+    "p50": 2.019328,
+    "p95": 341.6338431999991,
+    "p99": 2019.345776640001
+  },
+  "valid_tool_call_pages": {
+    "max": 4401913,
+    "p50": 492.0,
+    "p95": 76956.99999999985,
+    "p99": 484088.5600000003
+  },
+  "definition": "Unique observed physical page addresses per tool-call window; 4096 bytes/page; repeated writes deduplicated",
+  "scope": "Write faults after resetting existing mappings plus supported buffered write_end copied pages. Not all kernel writes, DMA, coherence traffic or dirty cache lines.",
+  "limitations": "Write permission faults are write-triggered observations; coverage is incomplete. Freed/reused physical addresses count once within a call. THP disabled. No LLM wait replay. Timeout windows may include background tasks.",
+  "errors": {
+    "map_update_failures": 0,
+    "unresolved_faults": 84,
+    "unsupported_large_pages": 0,
+    "missed_return_probes": 0
+  }
+}
