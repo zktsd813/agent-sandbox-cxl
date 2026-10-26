@@ -107,7 +107,7 @@
 ### 2.3 DSec에서 확인한 사실 (arXiv 2609.22978)
 
 - node: 2 × 96코어 EPYC 9655, 1.5TB. 약 160 node, 30K 코어.
-- 동시 sandbox 380K, node당 약 2,400개. node당 microVM 800개 또는 container 3,200개까지 허용하고, 관측된 최대는 524 / 1,048이다.
+- 동시 sandbox 380K, node당 약 2,400개. 논문은 "stable operation with at least 3,200 containers or 800 microVMs per node"라고 썼고(§4.3), 운영 중 관측된 최대는 microVM 524 / container 1,048이다.
 - sandbox의 90%가 요청 CPU의 5% 이하를 쓴다.
 - QoS: LS/BE 두 등급, SCHED_IDLE + core scheduling. 사용률이 80%를 넘으면 cloud로 넘긴다.
 - §8.5: 성능 저하 +45.2% → +17.3%. 원인은 turbo, 메모리 대역폭, LLC 간섭이라고 했다(runqueue 대기만이 아님).
@@ -169,7 +169,7 @@
 - **sandbox 쪽**
   - 시작 속도: GKE, Kimi, RollArt, DSec.
   - 상한 설정: T1, Nebius, Amazon.
-  - 정적 CPU: Nebius는 cpuset으로 591.8초 중 29.1초를 줄였다(→ 196.1초). DSec는 정적 LS/BE.
+  - 정적 CPU: DSec는 정적 LS/BE. (처음 적은 "Nebius cpuset으로 591.8초 중 29.1초 단축"은 [sandbox-placement-survey.md](sandbox-placement-survey.md) 조사에서 출처를 찾지 못해 철회한다.)
   - OOM 때 이동: VenusRL(RDMA, 2.7초).
   - 자원을 늘려 재시도: Orchard.
 - **빈 곳: tool call 시간 단위에서 꼬리를 알고 CPU나 배치를 동적으로 관리하는 시스템은 없다.**
@@ -280,7 +280,7 @@
 - 50 step 제한에서 잘린 꼬리가 결론에 영향을 주는가(Nemotron 3 Super는 최대 200 turn).
 - image locality를 쓰면 hand-off에 image·rootfs 이동이 필요해지는가.
 
-**다음 단계 후보**
+**다음 단계 후보** (7절 후반 논의 뒤 사용자 결정: 먼저 실측한다. 후보는 7.9절)
 1. **G의 simulator 시험**: `fleet.py` RL 모드에 critical-path·꼬리 우선순위, VenusRL 수준의 밀도(14배 oversubscription), CXL 예산을 넣는다. 비교 대상은 정적 cpuset, 정적 LS/BE, oversample하고 버리기, OOM 때만 이동. (제안했고 아직 승인 전)
 2. trace 수집 S0~S4(A6000): 계측 도구 작성, smoke, pilot, 우리 서버 재생 확인.
 3. S8 결과를 RESULTS-fleet.md에 넣고 grid를 commit한다.
@@ -305,3 +305,124 @@
 | `CLAUDE.md` | 응답 언어(한국어), 작업 범위 규칙 |
 
 관련 commit: 4dcabd06d(fleet simulation), aac9fbd84(trace 수 검사), 8be33ae66(scheduler 대기), 33424ed37(수집 계획·조사), bbce04584(rollout 제한).
+
+---
+
+## 7. 후반 논의 (2026-10-26)
+
+### 7.1 메모리 절감과 image
+
+- **CoW 공유(초기 메모리 상태를 group끼리 공유)는 다루지 않기로 했다.** 기존 연구(VenusRL, TrEnv 등)가 많이 다뤘다.
+- stateful sandbox에도 read-only 부분이 있다. image의 page cache(overlay lower layer)와 guest kernel이다. 쟁점은 rollout이 image에서 실제로 읽는 양 W다.
+- DSec 사실(논문 재확인)
+  - image 데이터는 원격 3FS에서 on-demand로 읽고, node에는 metadata와 local cache만 있다.
+  - 배치할 때 image 위치는 보지 않는다.
+  - virtio-pmem DAX −40.2%는 **guest와 host의 이중 caching을 없앤 효과**이고, sandbox 사이 공유에서 나온 값이 아니다. 대신 최대 CPU가 26.5% → 41.4%로 올랐다.
+  - 실제로 읽는 양은 image의 4.2~13.3%(Python 6.0GB 중 약 0.36GB, Java 12.1GB 중 약 1.1GB).
+  - task 안 fanout: container 중앙값 3, p90 28. microVM 중앙값 1, p90 3.
+- 세 방식 비교 (T: 활성 task 수, G: group 크기, H: host 수)
+
+| | A. node마다 cache + 분산 배치 (DSec) | B. node별로 나눠 보관 + 모아 배치 | C. CXL에 한 벌 |
+|---|---|---|---|
+| image 메모리 | T × min(G,H) × W, 로컬 | T × W, 로컬 | T × W, CXL |
+| 배치 | 자유 | group이 묶임 | 자유 |
+| 읽기 속도 | 로컬 | 로컬 | CXL tax |
+| hand-off | 목적지에서 image를 다시 받음 | 사실상 불가 | 바로 가능 |
+
+- 사본 한 벌, 배치 자유, 로컬 속도 중 둘만 가질 수 있다.
+- **B와 C는 메모리 총량이 같다.** 그래서 C의 이득은 CPU와 이동성뿐이다.
+  - C의 이득: group을 흩을 수 있다(group 안 상관 ρ가 높으면 흔들림이 √(1+(G−1)ρ)배). hand-off가 가능하다. 부하 분산 단위가 sandbox 하나다.
+  - C의 손해: CXL 용량(테스트베드 2대에 활성 task 75개면 27~83GB로, pool 64GB와 맞먹음), image 읽기 tax, 장치 대역폭 집중, 채우기·회수 프로토콜, 장애 영역.
+- 혼합안: 여러 host에 걸친 task workspace만 CXL에 둔다. base layer는 node마다 복제한다. 이동성 예산을 group 단위로 정한다.
+- 추측 단계의 아이디어: image 영역의 EPT 하위 트리를 host 사이에서 공유한다(A/D bit 문제가 있다).
+
+### 7.2 simulator의 밀도 문제
+
+- 붙여 넣은 외부 분석(S7 밀도가 DSec보다 낮다)의 수치는 맞다.
+  - S7: 1 vCPU는 node당 460~743개, 4 vCPU는 260~412개.
+  - 우리 sandbox는 DSec보다 훨씬 바쁘다. 요청 CPU의 5% 이하를 쓰는 sandbox 비율이 DSec 약 90%, 우리 1 vCPU 13%, 4 vCPU 37%다.
+- S8(node당 2,400개, LLM 대기를 늘림)의 결과는 같은 사용률에서 S7과 거의 같았다.
+- **유체 모델은 구조상 밀도에 반응하지 않는다.** node 수요의 분산이 U·C·A로, sandbox 개수 n이 빠진다. S8이 보여 준 것은 "밀도가 상관없다"가 아니라 "모델이 밀도에 반응하지 않는다"이다.
+- 밀도가 영향을 주는 경로는 모두 모델 밖에 있다: 밀도에 따른 scheduler 대기, 동시 wakeup, sandbox마다의 차이, 놀고 있는 VM의 CPU, runqueue 바깥 간섭.
+- **사용자 지적: 이것들을 고쳐도 큰 코어가 burst를 흡수하는 것은 같고, 오히려 이동으로 되찾을 몫(room)이 줄어든다.** 맞다.
+  - room을 만들 수 있는 것은 상관뿐이고, 그것도 node에만 있는 상관일 때뿐이다. 분산이 대략 U·C·A × [1+(k−1)ρ]이고, k는 같은 node 안에서 함께 움직이는 sandbox 수다.
+  - cluster 전체가 함께 움직이면 옮길 곳이 없다.
+  - 역설: CXL image로 group을 흩으면 node에만 있는 상관이 생성 시점에 사라져서, hand-off가 할 일도 줄어든다.
+
+### 7.3 DSec가 CPU contention을 중요하게 본 이유
+
+- DSec의 문제는 대기열 불균형이 아니라 **LS/BE를 함께 둘 때의 간섭**이다.
+  - BE 부하 10~50%에서 LS의 step 지연이 +45.2%였다.
+  - SCHED_IDLE만으로는 개선이 3.4% 이하였다. SMT 형제 thread가 실행 자원을 공유하기 때문이다.
+  - core scheduling을 더하면 +17.3%다. 남은 원인은 turbo 저하, 메모리 대역폭, LLC다.
+- 이 간섭은 바쁜 코어 수에 따라 커지므로 큰 node가 흡수하지 못한다. LS/BE 분류는 정적이다.
+- 의미
+  - 우리 모델에는 이 메커니즘이 없다.
+  - HANDOFF 6장의 실험 환경 규칙대로 turbo를 끄면, 남은 간섭의 가장 큰 원인을 실험에서 스스로 지운다.
+  - 이 간섭은 함께 도는 부하를 줄여야만 줄어든다. 그래서 조용한 node 묶음으로 critical 꼬리를 옮기는 설계가 G의 2단계가 된다.
+
+### 7.4 sandbox 밖에서 CPU를 쓰는 곳
+
+- sandbox node(VMM thread, network, 저장소 client, image 받기·풀기, 생성·삭제, DAX fault), rollout 제어(agent loop, tokenize), inference node(scheduler, tokenize; CPU가 모자라면 GPU가 논다), reward verifier, 학습(data 준비, Ray 직렬화, weight 동기화, checkpoint).
+- 우리 실측: Firecracker VMM thread의 CPU는 vCPU의 1.3~2.3%다(trace별 p90 4~5%, 최대 17~28%).
+- 상당수가 step 경계에 몰린다(생성, image fetch, reward, weight 동기화).
+- `fleet.py`는 생성을 CPU 0인 0.5초 공백(`SANDBOX_GAP_S`)으로 넣는다. M6 측정으로 바꿔야 한다.
+
+### 7.5 사용자 가설: "배치 시점의 결정만으로는 최적을 정할 수 없다"
+
+- **반증되지 않았다.** 지금 simulation은 sandbox 개수 기준 power-of-2로 배치하고, SWE 한 종류를 무작위로 섞었다. 그래서 불균형이 작게 나왔을 뿐이다.
+  - 우리 trace의 sandbox마다 평균 사용량의 변동계수는 1 vCPU 0.69, 4 vCPU 0.91이다.
+  - node 부하의 상대 편차는 2.8% / 4.9%이고, 사용률 80%에서 ±2.2 / ±3.9%p다.
+- 성립 조건: workload 종류가 node와 상관을 가져야 한다.
+  - 예: node당 1,000개, 수학 sandbox 0.02코어, SWE sandbox 0.3코어. SWE 비율이 60%인 node는 사용률 98%, 40%인 node는 69%다.
+  - 쏠리는 경로: group을 함께 두는 배치(Java 빌드 task의 8개가 함께 들어가면 편차가 √8배, 4 vCPU 사용률 80%에서 ±11%p), backend나 quota로 node 묶음이 나뉨, 배치 때 미래 수요를 모름, 수명 차이.
+- 예상 반론: 오래가는 불균형이면 느린 재배치로 충분하다.
+  - 답: 오래가는 불균형은 일부 node를 사용률 85~95%로 밀어 올린다. 그 구간에서는 S7에서 node 사이 몫이 40~60%였다.
+  - 아직 simulation으로 확인하지 않았다.
+- 시험안: `fleet.py`에 두 종류의 workload(SWE + 합성 수학형)를 넣고, 배치 방식(개수, group 함께, 종류별 묶음, 부하 기준)을 바꾸며, 불균형이 얼마나 오래가는지와 이동 메커니즘을 비교한다.
+
+### 7.6 production 배치 조사
+
+전체는 [sandbox-placement-survey.md](sandbox-placement-survey.md)에 있다.
+
+- 배치는 생성 때 한 번만 한다. CPU 때문에 실행 중 재배치하는 곳은 없다. 실행 중 이동은 VenusRL의 OOM 이동뿐이다.
+- 신호는 sandbox 개수, request, 예약 메모리, 또는 수 초~수 분 늦은 측정 CPU다.
+- node와 workload를 묶는 조건이 실제로 있다: SkyRL-v0의 image hash 배치, CubeSandbox의 template locality, Daytona의 snapshot locality, VenusRL group CoW, DSec 사용자 격리.
+- 개수로 배치하는 이유: 보장, 미래 peak를 모름, metric 지연과 herding, 속도, 예측의 어려움, "migration은 비싸니 잘 놓고 두자"(Resource Central, Coach).
+- 개수가 같은 node 사이의 실제 CPU 불균형을 잰 공개 수치는 없다.
+
+### 7.7 virtual node의 다른 쓰임
+
+1. **GPU node의 남는 CPU를 안전하게 빌려 쓰기** (가장 유망)
+   - Nebius, NeMo-Gym, PipelineRL, ROLL은 GPU node에 sandbox를 둔다. RollArt와 SkyRL은 경합 때문에 분리했다.
+   - inference·학습이 CPU를 필요로 할 때 ms hand-off로 비킨다. kill(rollout 손실), cgroup(간섭 지속), migration(초 단위, 지키려는 node의 CPU를 씀)보다 낫다.
+   - 빌려 쓰는 층의 규모가 CXL pool과 맞는다.
+   - 가정: GPU node와 CPU node가 같은 CXL 장치에 붙어 있어야 한다.
+2. **tool call 단위 scheduling**
+   - 상태는 CXL에 두고, tool call마다 코어가 남는 host에서 실행한다.
+   - 배치 불균형이 구조상 생기지 않는다. ARL-Tangram은 node를 고정하는데, 이것을 일반화한다.
+   - 한계: CXL 용량 때문에 일부 sandbox에만 쓸 수 있다.
+3. **장애·유지보수·축소 때 rollout 살리기**
+   - 계획된 비우기(유지보수, spot 회수, 축소)를 ms 단위로 한다.
+   - LLM 대기에 들어갈 때 flush해 두면, host kernel panic에도 다른 host가 상태를 이어받는다.
+   - 동기 RL의 학습 구간에 sandbox를 적은 host로 몰아 둔다.
+   - 몇 시간짜리 rollout에서 가치가 크다.
+4. 이미 논의한 것: G(조용한 node 묶음), 메모리 여유분 공유, OOM 때 이동, image 한 벌.
+5. 약한 후보: group fork, 중간 상태 분기, GPU tool call만 옮기기.
+
+판단: 1과 3이 대안의 비용이 분명하고 실제 운영 문제와 맞는다.
+
+### 7.8 정정
+
+- DSec 밀도: 처음 붙여 넣은 분석의 "800 microVM 또는 3,200 container **이상**"이 맞았다. 내가 "최대"로 고친 것이 틀렸다.
+- 2.8절의 Nebius cpuset 수치는 출처를 찾지 못해 철회했다.
+
+### 7.9 다음: 실측 (사용자 결정)
+
+후보는 다음과 같다. 어느 것부터 할지는 정하지 않았다.
+
+- turbo를 켠 상태에서 바쁜 코어 수에 따른 tool call 느려짐(주파수, LLC, 대역폭). DSec 간섭의 실체를 잰다.
+- 놀고 있는 microVM의 CPU 비용.
+- 같은 사용률에서 코어당 sandbox 수에 따른 scheduler 대기. node 1의 메모리 여유가 약 53GB라는 제약이 있다.
+- rollout별 image working set W(`fincore`, socket 1).
+- GPU node에 sandbox를 함께 둘 때 inference 쪽의 피해(1번 시나리오의 근거).
