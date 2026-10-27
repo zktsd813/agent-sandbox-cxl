@@ -2,6 +2,8 @@
 
 측정일: 2026년 10월 27일. Read-only 파일 접근의 첫 구현·검증이다.
 
+후속 리뷰에서 당시 backend 전환 시 bind mount가 누적된 결함을 확인했다. 아래 수치는 **당시 실행의 기록**으로 보존하며, 수정된 구현의 성능으로 사용하지 않는다. NFS counter와 B cache의 원자료 대조 결과는 아래에 남겼다. Mount 교체를 수정하고 매번 단일 mount를 확인하는 후속 실험은 [실제 trace 검증](../trace-nfs-20261027/README.md)에 정리한다.
+
 ## 검증하려는 구조
 
 A의 로컬 image에서 실행한 microVM을 B로 옮긴다. Guest RAM은 같은 CXL device-DAX 영역에 유지하고, B의 Firecracker는 NFS로 접근하는 **동일한 image**를 연다. Guest는 계속 같은 ext4·virtio-blk·열린 파일 FD를 사용한다.
@@ -62,6 +64,10 @@ State는 serial controller로 옮겼다. 이 전달만 평균 약 3.96초였으�
 
 [독립 검증기](../../verify_nfs_results.py)는 376개 raw event와 192개 측정, snapshot binary SHA256, PID/cookie 연속성, cache 상주량, I/O 조건, paired random seed, 독립적으로 계산한 데이터 checksum, 요약 수치를 대조했다. 원래의 7개 build artifact hash도 확인했다. [검증 결과](audit.json), [자원 정리 확인](cleanup.json)
 
+후속 소스 리뷰에서 검증 범위를 더 명확히 했다. 이 최초 결과의 **guest 관측은 raw log와 대조되지만, host cache·NFS counter는 report에 저장된 수치만 검사**한다. 따라서 갱신된 audit는 `host_observations=report_only_legacy`로 표시한다. 새 실행부터는 host 관측 원문도 별도로 보존하고 delta를 다시 계산한다. 기존 측정값이나 guest 데이터 검증 결과를 바꾼 것은 아니다.
+
+이어 [별도 소급 검증기](audit-host-serial.py)로 원래 archive의 L1 serial 로그를 분석했다. **192개 측정의 NFS/network delta 6필드와 B host cache 관측 128개가 모두 원문과 일치**했다. 각 읽기 바로 앞·뒤의 완료된 counter 명령을 유일하게 연결했고, counter 1,000배 변조 등 5개 음성 테스트도 거부했다. A host cache 관측 120개는 다른 VM 로그에 sample 식별자가 없어 개별 대응을 추정하지 않았다. [소급 audit](host-serial-audit.json), [음성 테스트](host-serial-negative-tests.json)
+
 192개 중 1개(`s79_cold_host_random`)에서 global NFS READ 시작 counter 차이는 1,699, mountstats의 완료 operation 차이는 1,700이었다. 두 counter는 서로 다른 시점에 갱신되고 순차 수집되며, aggregate 자료만으로 이 차이의 정확한 원인은 확정하지 않았다. 이 1건은 audit에 보존했다. 모든 warm 조건은 두 counter가 모두 0, 실제 remote 읽기 조건은 둘 다 양수였다. 데이터 오류는 없었다.
 
 [Raw evidence archive](raw-evidence.tar.gz)에 각 trial의 A/B 로그·state binary, L1 serial 로그, host 환경과 **측정 당시의 정확한 소스**를 넣었다. 측정 뒤 최종 코드에는 기존 asset/dependency 덮어쓰기 방지와 cleanup 실패 전파를 보강했다. 측정 경로는 바꾸지 않았으며 차이는 archive의 `post-measurement-*.patch`에 기록했다.
@@ -72,6 +78,9 @@ tar -xzf implementation/virtual_machine/results/nfs-20261027/raw-evidence.tar.gz
 python3 implementation/virtual_machine/verify_nfs_results.py \
   implementation/virtual_machine/results/nfs-20261027/report.json \
   --formal --evidence-dir /tmp/nfs-evidence
+python3 implementation/virtual_machine/results/nfs-20261027/audit-host-serial.py \
+  implementation/virtual_machine/results/nfs-20261027/report.json \
+  --evidence-dir /tmp/nfs-evidence
 # 그래프 재생성에는 matplotlib가 필요하다.
 python3 implementation/virtual_machine/plot_nfs_results.py \
   implementation/virtual_machine/results/nfs-20261027/report.json \
@@ -92,7 +101,7 @@ python3 implementation/virtual_machine/plot_nfs_results.py \
 | Disk | 256 MiB deterministic payload를 담은 320 MiB ext4 image; read-only |
 | 외부 disk 연결 | L1 A/B에 동일한 384 MiB ext4 raw disk를 read-only로 연결, QEMU `cache=none` |
 | Firecracker block | `Sync` I/O engine, buffered host FD, `Writeback` cache type; host O_DIRECT 아님 |
-| NFS | A의 kernel NFSD, v3/TCP, B client `ro,hard,nolock`, rsize 1 MiB |
+| NFS | A의 kernel NFSD, v3/TCP, B client `ro,hard,nolock`, 요청 rsize 1 MiB·실제 협상값 256 KiB |
 | 순차 읽기 | 64 MiB 범위, 64 KiB 단위, QD1 |
 | 무작위 읽기 | 8 MiB 범위의 모든 4 KiB block을 한 번씩 방문하는 permutation, QD1 |
 | 반복 | 4 cycles × local/NFS = 8회의 독립 A→B handoff; 정상 상태 조건마다 12회 |

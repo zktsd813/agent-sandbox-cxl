@@ -1,6 +1,6 @@
 # CXL microVM 실행 이전 연구와 구현 정리
 
-정리 기준: 2026년 10월 27일. Host NFS 읽기 검증을 추가했다. 측정 날짜와 환경은 각 결과에 따로 표시한다.
+정리 기준: 2026년 10월 27일. Host NFS의 실제 개발 trace 재생과 A→B→A 검증을 추가했다. 측정 날짜와 환경은 각 결과에 따로 표시한다.
 
 목표는 **sandbox의 메모리를 CXL에 유지하면서 실행을 담당하는 노드를 바꾸는 것**이다. RAM 전체를 옮기는 비용을 줄여, 이미 실행 중인 sandbox도 다른 노드의 여유 CPU를 사용할 수 있게 하려는 연구다.
 
@@ -27,12 +27,12 @@
 |---|---|---|
 | Workload | Docker trace 재생, DRAM/CXL 비교, microVM 실행과 scheduling 관측 | 반복·순서 랜덤화, 실제 RL rollout으로 확대 |
 | 배치 효과 | 작은 CPU pool의 contention 실측, 큰 fleet의 시뮬레이션 | 실제 다중 노드에서 서비스 성능과 비용 이득 검증 |
-| Guest RAM과 CPU | 공유 DAX snapshot, worker reuse/prepared, 제한된 KVM 객체 direct handoff | 다중 vCPU, 일반 장치 구성, 실제 CXL 다중 host |
+| Guest RAM과 CPU | 공유 DAX snapshot(2 vCPU trace 포함), worker reuse/prepared, 제한된 KVM 객체 direct handoff | Direct의 다중 vCPU·일반 장치 구성, 실제 CXL 다중 host |
 | PML과 cache | Dirty-page 기반 CPU flush/invalidate의 독립 계측 | 모든 writer 추적, 실제 handoff 통합, 비일관 환경 correctness |
 | DSA | Cache Flush capability와 preflush 순서 조사 | 실제 DSA 접근·완료 처리·성능 검증 |
 | MPTCP | Guest client가 A→B snapshot 복원 뒤 같은 연결로 통신 | 빠른 제어 경로, 반복 이동, server 이동, direct/reuse 장치 승계 |
-| Filesystem | Read-only virtio-blk disk의 FD/cache 보존과 host NFS 접근 검증 | Writable disk의 상태·flush·단일 writer 승계, 공통 이미지 CXL 매핑 |
-| NFS | Host NFS backend로 8회 독립 A→B handoff·192개 읽기 측정 통과 | Writable·반복 전환·실제 다중 host 검증 |
+| Filesystem | Read-only virtio-blk lower + guest tmpfs upper로 수정·빌드·테스트·열린 FD를 A→B→A에서 유지 | Persistent writable disk의 flush·단일 writer 승계, 공통 이미지 CXL 매핑 |
+| NFS | Local/NFS 비교 24 trials·840개 명령·48 handoffs, 원본 trace 결과와 독립 검증 일치 | 실제 다중 host·물리 network, 초기 DRAM→CXL promotion, 장기 반복 |
 
 **환경을 구분해야 한다.** DRAM/CXL workload 실험과 microVM handoff 실험은 같은 종류의 측정이 아니다. 현재 handoff는 한 coherent 물리 host 위의 QEMU A/B와 nested KVM 환경이다. 독립된 Linux 사이의 실행 이전을 확인했지만, 실제 비일관 CXL에서 stale cache가 발생하는 상황을 검증한 것은 아니다.
 
@@ -272,7 +272,11 @@ Initramfs/tmpfs 데이터는 guest RAM에 포함되므로 지금까지의 diskle
 
 논의한 구상은 디스크 이미지를 고향 노드 A에 두고, CPU가 B로 이동해도 CXL의 guest page cache를 재사용하는 것이다. 캐시된 데이터는 storage에서 다시 읽지 않고 사용하지만 readahead·metadata·writeback I/O는 별도로 발생할 수 있다. Guest에는 계속 같은 virtio-blk 장치를 보이고 host backend의 접근 경로를 바꾸는 설계가 자연스럽다.
 
-2026년 10월 27일 **host NFS 위 read-only disk image**로 이 구상을 구현·검증했다. 8회 독립 A→B snapshot과 192개 읽기 측정에서 데이터 오류가 없었고, 보존된 guest cache의 읽기는 block/NFS READ 모두 0이었다. 복원 직후 첫 접근 비용은 별도로 남았다. Guest NFS mount와는 다른 설계이며, writable·반복 전환 검증은 후속이다. [성능 결과와 재현 절차](../implementation/virtual_machine/results/nfs-20261027/README.md)
+2026년 10월 27일 **host NFS 위 read-only disk image + guest tmpfs upper**로 확장해 검증했다. Gin·PHP-CS-Fixer·MicroPython의 기록된 trace를 local/NFS 조건으로 실행한 **24 trials·840개 명령·48회 handoff**에서 A→B→A 이후 명령 결과·최종 patch·열린 FD가 이어졌다. 원본에 있던 nonzero 종료 48건도 기대값으로 재현했다. 수정·빌드 결과는 RAM의 upper에 남으므로 persistent writable disk의 내구성을 검증한 것은 아니다.
+
+Guest cache를 유지한 조건의 명령 시간 중앙값은 local/NFS 각각 Gin **17.99/17.93초**, PHP **8.14/8.03초**, MicroPython **14.67/15.05초**였다. 조건별 3회이며 제어·state 전달 시간은 제외한다. NFS READ 중앙값은 각각 **16·158·383회**였고, 각 이전 뒤 reclaim 가능한 guest cache를 비운 1회 대조에서는 **3,377·2,071·3,444회**였다. 이 실험은 실제 network 비용보다 cache 재사용의 작동 여부를 먼저 보여준다. A server와 B replica의 cache 배치 차이, 한 물리 host의 가상 network라는 한계가 있다. [최종 성능 결과·원시 자료·재현 절차](../implementation/virtual_machine/results/trace-nfs-20261027/README.md)
+
+초기 synthetic 실험은 cache에 남은 페이지의 block/NFS READ 0을 확인했다. 재검토 중 기존 backend 전환의 mount 누적을 발견해 수정했고, 초기 수치는 역사적 기록으로 보존했다. 최종 trace 표는 수정 후 새 VM pair에서 전체 matrix를 다시 측정한 값이다. 수정 후 synthetic 회귀 20 samples와 mount 전환 검사도 통과했다. [초기 결과와 소급 audit의 범위](../implementation/virtual_machine/results/nfs-20261027/README.md)
 
 ### Host cache를 생략하는 방법과 공통 페이지 공유는 다르다
 
@@ -342,7 +346,7 @@ DSec이 CXL을 사용하지 않은 이유는 논문에 명시되지 않았다. �
 
 | 작업 | 구체적인 다음 단계 | 완료 판단 |
 |---|---|---|
-| 파일 연속성 확장 | Host NFS read-only A→B baseline은 완료. 같은 guest의 A→B→A 반복과 단일 writer writable disk 추가 | 열린 FD/offset, 파일 내용, `write→fsync→response`가 이동 전후 일치 |
+| 파일 연속성 확장 | RO lower + tmpfs upper의 A→B→A는 완료. 초기 DRAM→CXL promotion, 명령 실행 중 이전, 장기 왕복·단일 writer persistent disk 추가 | Promotion 및 진행 중 작업의 상태 연속성, 열린 FD/offset, `write→fsync→response` 내구성 |
 | MPTCP 제어 경로 단축 | Serial state 전달을 DAX mailbox로 교체하고 반복 이동 계측 | 연결 identity 유지, record 누락·중복·오류 0, 단계별 blackout 기록 |
 | 공통 이미지 공유 | 두 VM에 동일 RO backing을 pmem/DAX로 연결하고 VM별 upper 구성 | 같은 backing offset 매핑, 한 VM의 변경이 다른 VM 원본에 영향 없음 |
 

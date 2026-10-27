@@ -1,0 +1,16 @@
+{
+  "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261027T071717Z-0fwyjcyo",
+  "owned_qemu_alive": {
+    "A": false,
+    "B": false
+  },
+  "network_objects_remaining": {
+    "bridge": false,
+    "A": false,
+    "B": false
+  },
+  "control_dir_exists": false,
+  "ephemeral_memory_dir_exists": false,
+  "cxl_backing_exists": false,
+  "result": "passed"
+}

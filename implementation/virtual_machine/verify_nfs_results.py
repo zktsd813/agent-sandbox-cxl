@@ -9,6 +9,10 @@ Keep the report, c*-A/B.log and c*-state.bin files together, or pass
 are taken from EVIDENCE_DIR/measured-sources when available; --source-dir can
 override this. --artifacts additionally checks original large build artifacts;
 it is intentionally optional when those files are not distributed.
+
+New runs also save per-sample host counter/cache observations and independently
+derive their report values. Older archives remain readable but their audit is
+explicitly marked host_observations=report_only_legacy.
 """
 import argparse
 import collections
@@ -64,6 +68,50 @@ def log_events(path):
 def same_num(actual, expected, what):
     require(math.isclose(actual, expected, rel_tol=1e-10, abs_tol=1e-06), f'{what}: {actual} != {expected}')
 
+def raw_host_counters(text):
+    """Parse the saved serial output without importing the benchmark parser."""
+    result = {}
+    for prefix, names in [
+        ('COUNTERS=', ('rx_bytes', 'tx_bytes', 'nfs_read_calls')),
+        ('MOUNT_READ=', ('mount_read_ops', 'mount_read_sent_bytes', 'mount_read_received_bytes')),
+    ]:
+        lines = [line[len(prefix):].strip() for line in text.splitlines() if line.startswith(prefix)]
+        require(len(lines) == 1, f'raw host counters: missing/duplicate {prefix}')
+        values = [int(value) for value in lines[0].split()]
+        require(len(values) == len(names) and all(value >= 0 for value in values), f'raw host counters: invalid {prefix}')
+        result.update(zip(names, values))
+    return result
+
+def audit_host_observation(sample, directory, image_bytes, image_name='sandbox.raw'):
+    label = sample['label']
+    filename = sample.get('host_observation_file')
+    require(filename == label + '-host.json' and pathlib.Path(filename).name == filename,
+            f'{label}: invalid/missing host observation filename')
+    observation = json.loads((directory / filename).read_text())
+    require(observation['schema_version'] == 1 and observation['label'] == label, f'{label}: host observation identity')
+    before = raw_host_counters(observation['before'])
+    after = raw_host_counters(observation['after'])
+    delta = {key: after[key] - value for key, value in before.items()}
+    require(all(value >= 0 for value in delta.values()), f'{label}: raw counter moved backwards')
+    require(delta == sample['network_delta'], f'{label}: raw host counter/report disagreement')
+    expected = sample.get('host_cache_state') or {}
+    expected_roles = {role for role in ('A', 'B') if f'{role}_image_resident_pages' in expected}
+    require(set(observation['cache']) == expected_roles, f'{label}: raw host cache roles')
+    for role, snapshots in observation['cache'].items():
+        require(len(snapshots) == 1, f'{label}/{role}: host cache snapshot count')
+        snap = snapshots[0]
+        image_path = ('/storage/' if role == 'A' else '/disk/') + image_name
+        require(snap['path'] == image_path and snap['size'] == image_bytes, f'{label}/{role}: host cache image/range')
+        rows = [json.loads(line) for line in snap['text'].splitlines() if line.startswith('{"event":"resident"')]
+        require(len(rows) == 1, f'{label}/{role}: raw host mincore record count')
+        row = rows[0]
+        require(row['event'] == 'resident' and row['label'] == 'host' and row['offset'] == 0 and
+                row['bytes'] == image_bytes and row['pages'] == image_bytes // 4096, f'{label}/{role}: raw host mincore range')
+        require(0 <= row['resident_after'] <= row['pages'] and
+                row['resident_after'] == expected[f'{role}_image_resident_pages'], f'{label}/{role}: raw host cache/report disagreement')
+    if 'image_pages' in expected:
+        require(expected['image_pages'] == image_bytes // 4096, f'{label}: host image page count')
+
 def audit(path, args):
     # The report and raw evidence must agree before aggregate claims are accepted.
     r = json.loads(path.read_text())
@@ -79,6 +127,12 @@ def audit(path, args):
     if args.formal:
         require((cycles, reps) == (4, 3), 'formal run must have cycles=4,repetitions=3')
     samples = r['samples']
+    host_schema = r.get('host_observation_schema')
+    require(host_schema in (None, 1), 'unsupported host observation schema')
+    if host_schema is None:
+        require(not any('host_observation_file' in s for s in samples) and not list(directory.glob('s*-host.json')),
+                'host observation schema missing despite raw host evidence')
+    image_bytes = (r['config']['prepared']['nfs']['images']['data_mib'] + 64) * MIB
     handoffs = r['handoffs']
     groups = collections.defaultdict(list)
     require(len(handoffs) == cycles * 2, 'handoff count')
@@ -127,6 +181,8 @@ def audit(path, args):
         all_logs += ae + be
     for s in samples:
         label = s['label']
+        if host_schema == 1:
+            audit_host_observation(s, directory, image_bytes)
         condition = s['condition']
         backend = s['backend']
         pattern = s['pattern']
@@ -236,7 +292,7 @@ def audit(path, args):
             artifact_path = (args.assets_dir or pathlib.Path(r['config']['assets'])) / name
             require(digest(artifact_path) == expected, f'prepared artifact drift: {artifact_path}')
             artifact_checks.append(name)
-    result = {'result': 'passed', 'report': str(path), 'samples': len(samples), 'handoffs': len(handoffs), 'groups': len(groups), 'raw_events': len(all_logs), 'rpc_counter_differences': rpc_counter_differences, 'rpc_counter_note': 'proc3 counts calls at start; mountstats counts completed tasks; snapshots are sequential. Exact cause of an observed difference is not identified by these aggregate counters.', 'independent_checksums': {str(k): v for (k, v) in expected_cs.items()}, 'steady_samples_per_group': cycles * reps, 'runtime_sources_checked': source_checks, 'measured_source_directory': str(source_dir), 'schema_version': 1, 'artifact_files_checked': artifact_checks, 'build_runtime_source_differences': build_runtime_differences}
+    result = {'result': 'passed', 'report': str(path), 'samples': len(samples), 'handoffs': len(handoffs), 'groups': len(groups), 'raw_events': len(all_logs), 'host_observations': 'raw_validated' if host_schema == 1 else 'report_only_legacy', 'host_observation_samples_checked': len(samples) if host_schema == 1 else 0, 'rpc_counter_differences': rpc_counter_differences, 'rpc_counter_note': 'proc3 counts calls at start; mountstats counts completed tasks; snapshots are sequential. Exact cause of an observed difference is not identified by these aggregate counters.', 'independent_checksums': {str(k): v for (k, v) in expected_cs.items()}, 'steady_samples_per_group': cycles * reps, 'runtime_sources_checked': source_checks, 'measured_source_directory': str(source_dir), 'schema_version': 2, 'artifact_files_checked': artifact_checks, 'build_runtime_source_differences': build_runtime_differences}
     serialized = json.dumps(result, indent=2, sort_keys=True) + '\n'
     if args.json_out:
         args.json_out.write_text(serialized)
