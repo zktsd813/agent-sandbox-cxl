@@ -22,7 +22,7 @@ DAX 공유 영역은 기본 2GiB다. 기본 microVM은 1 vCPU·128MiB이고 RAM 
 
 <a id="session-handoff"></a>
 
-## 다음 세션 인계: 2026-10-23
+## 다음 세션 인계: 2026-10-27
 
 목표는 **microVM의 상태를 CXL에 유지하면서 실행 노드를 바꾸고, 기존 application 연결과
 파일 접근까지 이어가는 것**이다. CPU/RAM 전환과 실제 서비스 I/O 전환을 함께 완성하는 중이다.
@@ -33,11 +33,13 @@ DAX 공유 영역은 기본 2GiB다. 기본 microVM은 1 vCPU·128MiB이고 RAM 
 | CPU/RAM | 공유 DAX snapshot, KVM worker reuse/prepared, 동일 객체 direct handoff 및 크기별 측정 | 다중 vCPU·실제 물리 노드·장치가 있는 direct/reuse |
 | Network | MPTCP를 쓰는 guest **client**를 A→B snapshot 복원해 같은 연결로 전송 지속 | 빠른 제어 경로 연결, inbound/server 이동, direct/reuse의 net 장치 승계 |
 | Cache | PML dirty-page 기반 CPU cache 관리 비용 측정; EMR/DSA 조사 | DSA 하드웨어에서 preflush·최종 flush·reader invalidate 구현과 검증 |
-| Filesystem | tmpfs는 guest RAM에 포함; guest/host cache와 disk backend의 차이 조사 | read-only/writable disk 승계와 공통 이미지 DAX 공유 검증; NFS 선택은 보류 |
+| Filesystem | Host NFS 위 read-only disk의 A→B snapshot, FD/cache 보존 및 로컬/NFS 읽기 성능 검증 | Writable disk의 flush·단일 writer·반복 전환, 공통 이미지 DAX 공유 |
 
 2026-10-26 설계 업데이트: 파일 접근은 일반 snapshot의 작은 disk부터 검증하고, 공통 read-only
 이미지의 DAX 매핑과 VM별 writable layer를 별도 실험한다. MPTCP 제어 경로 단축은 병렬로
-진행할 수 있다. NFS를 확정 backend로 선택하지 않았으며 아래의 과거 NFS 조합은 후보 기록이다.
+진행할 수 있다. 이후 10월 27일 host NFS를 첫 read-only storage 실험으로 구현·검증했다.
+[실행 절차·성능·원자료](results/nfs-20261027/README.md): 독립 handoff 8회, 측정 192개, 내용 불일치 0.
+Guest cache hit는 NFS READ 0회였으며 writable·direct/reuse 통합은 남아 있다.
 PML/cache·CPU/RAM·MPTCP는 각각 검증한 상태이며 통합 서비스 전환의 실측값은 아직 없다.
 
 최근 MPTCP 검증은 [아래 실행 절차](#mptcp-session)와
@@ -56,7 +58,7 @@ Serial 제어 전달이 포함되고, KVM/EPT를 새로 만드는 별도 시험�
    remote path-manager, listener 및 NAT/LB 처리를 정한다.
 4. 같은 토폴로지의 TCP/MPTCP 정상 실행 throughput·CPU와 전환 p50/p99를 비교한다.
    CXL host packet queue는 필요성이 확인되면 추가한다. DSA preflush는 별도 후속 과제이며
-   NFS 선택은 보류한다. 파일·PML을 포함한 통합 순서는 [전체 계획](../../docs/cxl-microvm-overview.md#후속-구현-계획)을 따른다.
+   Host NFS의 다음 단계는 writable image와 반복 전환이다. 파일·PML을 포함한 통합 순서는 [전체 계획](../../docs/cxl-microvm-overview.md#후속-구현-계획)을 따른다.
 
 작업은 기존 `lab.py`·`build.sh`·`shared-probe`에 모으고 별도 실행 파일/운영 문서를 늘리지 않는다.
 CPU 방식의 주기적 preflush를 다시 추진하지 않으며, 후속 preflush는 DSA 하드웨어를 전제로 한다.

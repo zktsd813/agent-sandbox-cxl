@@ -1,0 +1,13 @@
+{
+  "result": "passed",
+  "owned_qemu_alive": {
+    "A": false,
+    "B": false
+  },
+  "owned_network_links": {
+    "bridge": null,
+    "A": null,
+    "B": null
+  },
+  "shared_memory_directory_exists": false
+}

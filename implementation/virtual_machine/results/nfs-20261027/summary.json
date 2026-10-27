@@ -1,0 +1,716 @@
+{
+  "result": "passed",
+  "samples": 192,
+  "handoffs": 8,
+  "cache_conditions": {
+    "retained": "First read of A-warmed guest pages immediately after B restore",
+    "retouch": "Immediate second read of the retained range on B",
+    "warm": "Guest cache explicitly primed immediately before measurement",
+    "cold_guest": "Guest file-data cache empty; full B image cache warm",
+    "cold_host": "Guest and B image cache empty; full A image cache warm",
+    "cold_all": "Guest, B client and A server image caches empty; storage cache uncontrolled",
+    "first_miss": "First read of untouched guest range after B restore"
+  },
+  "summary": [
+    {
+      "backend": "local",
+      "pattern": "random",
+      "condition": "cold_guest",
+      "n": 12,
+      "read_ns": {
+        "median": 344750742.5,
+        "min": 322482320,
+        "max": 380823357
+      },
+      "wall_ns": {
+        "median": 349551406.0,
+        "min": 327205737,
+        "max": 386207518
+      },
+      "read_mib_s": {
+        "median": 23.2077335,
+        "min": 21.007115,
+        "max": 24.807562
+      },
+      "wall_mib_s": {
+        "median": 22.888962,
+        "min": 20.714252,
+        "max": 24.449449
+      },
+      "pread_p99_ns": {
+        "median": 595543.5,
+        "min": 480503,
+        "max": 752173
+      },
+      "guest_read_bytes_median": 8388608.0,
+      "nfs_read_calls_median": 0.0,
+      "network_rx_bytes_median": 0.0,
+      "nfs_read_received_bytes_median": 0.0
+    },
+    {
+      "backend": "local",
+      "pattern": "random",
+      "condition": "cold_host",
+      "n": 12,
+      "read_ns": {
+        "median": 523803599.0,
+        "min": 494029634,
+        "max": 580993552
+      },
+      "wall_ns": {
+        "median": 527707074.5,
+        "min": 497549469,
+        "max": 585305353
+      },
+      "read_mib_s": {
+        "median": 15.27291,
+        "min": 13.769516,
+        "max": 16.193361
+      },
+      "wall_mib_s": {
+        "median": 15.159941499999999,
+        "min": 13.668079,
+        "max": 16.078803
+      },
+      "pread_p99_ns": {
+        "median": 920455.0,
+        "min": 830655,
+        "max": 1003903
+      },
+      "guest_read_bytes_median": 8388608.0,
+      "nfs_read_calls_median": 0.0,
+      "network_rx_bytes_median": 0.0,
+      "nfs_read_received_bytes_median": 0.0
+    },
+    {
+      "backend": "local",
+      "pattern": "random",
+      "condition": "warm",
+      "n": 12,
+      "read_ns": {
+        "median": 3590063.0,
+        "min": 3348480,
+        "max": 4390448
+      },
+      "wall_ns": {
+        "median": 11783351.5,
+        "min": 8763386,
+        "max": 14441904
+      },
+      "read_mib_s": {
+        "median": 2228.4582185,
+        "min": 1822.137513,
+        "max": 2389.143731
+      },
+      "wall_mib_s": {
+        "median": 679.3579050000001,
+        "min": 553.94358,
+        "max": 912.88915
+      },
+      "pread_p99_ns": {
+        "median": 2913.5,
+        "min": 2328,
+        "max": 3620
+      },
+      "guest_read_bytes_median": 0.0,
+      "nfs_read_calls_median": 0.0,
+      "network_rx_bytes_median": 0.0,
+      "nfs_read_received_bytes_median": 0.0
+    },
+    {
+      "backend": "local",
+      "pattern": "seq",
+      "condition": "cold_guest",
+      "n": 12,
+      "read_ns": {
+        "median": 94574464.5,
+        "min": 76198323,
+        "max": 116151239
+      },
+      "wall_ns": {
+        "median": 140089530.0,
+        "min": 109332482,
+        "max": 157220716
+      },
+      "read_mib_s": {
+        "median": 676.7435585000001,
+        "min": 551.005745,
+        "max": 839.913498
+      },
+      "wall_mib_s": {
+        "median": 456.8827215,
+        "min": 407.071038,
+        "max": 585.370412
+      },
+      "pread_p99_ns": {
+        "median": 585960.0,
+        "min": 435782,
+        "max": 1027550
+      },
+      "guest_read_bytes_median": 67108864.0,
+      "nfs_read_calls_median": 0.0,
+      "network_rx_bytes_median": 0.0,
+      "nfs_read_received_bytes_median": 0.0
+    },
+    {
+      "backend": "local",
+      "pattern": "seq",
+      "condition": "cold_host",
+      "n": 12,
+      "read_ns": {
+        "median": 230809940.0,
+        "min": 220005375,
+        "max": 288290950
+      },
+      "wall_ns": {
+        "median": 279218921.5,
+        "min": 265635000,
+        "max": 333785384
+      },
+      "read_mib_s": {
+        "median": 277.287735,
+        "min": 221.99795,
+        "max": 290.901984
+      },
+      "wall_mib_s": {
+        "median": 229.210878,
+        "min": 191.739971,
+        "max": 240.932106
+      },
+      "pread_p99_ns": {
+        "median": 1494967.5,
+        "min": 1370445,
+        "max": 1680761
+      },
+      "guest_read_bytes_median": 67108864.0,
+      "nfs_read_calls_median": 0.0,
+      "network_rx_bytes_median": 0.0,
+      "nfs_read_received_bytes_median": 0.0
+    },
+    {
+      "backend": "local",
+      "pattern": "seq",
+      "condition": "first_miss",
+      "n": 4,
+      "read_ns": {
+        "median": 405611258.0,
+        "min": 381006875,
+        "max": 473972007
+      },
+      "wall_ns": {
+        "median": 425985533.0,
+        "min": 399712367,
+        "max": 497184295
+      },
+      "read_mib_s": {
+        "median": 157.94896,
+        "min": 135.029071,
+        "max": 167.975972
+      },
+      "wall_mib_s": {
+        "median": 150.3864345,
+        "min": 128.724903,
+        "max": 160.115136
+      },
+      "pread_p99_ns": {
+        "median": 1050038.0,
+        "min": 740097,
+        "max": 1439039
+      },
+      "guest_read_bytes_median": 67305472.0,
+      "nfs_read_calls_median": 0.0,
+      "network_rx_bytes_median": 0.0,
+      "nfs_read_received_bytes_median": 0.0
+    },
+    {
+      "backend": "local",
+      "pattern": "seq",
+      "condition": "retained",
+      "n": 4,
+      "read_ns": {
+        "median": 311015160.0,
+        "min": 310498846,
+        "max": 311527114
+      },
+      "wall_ns": {
+        "median": 327446235.5,
+        "min": 326961333,
+        "max": 330406887
+      },
+      "read_mib_s": {
+        "median": 205.7780845,
+        "min": 205.439582,
+        "max": 206.119929
+      },
+      "wall_mib_s": {
+        "median": 195.452045,
+        "min": 193.700563,
+        "max": 195.7418
+      },
+      "pread_p99_ns": {
+        "median": 482435.0,
+        "min": 467087,
+        "max": 489972
+      },
+      "guest_read_bytes_median": 0.0,
+      "nfs_read_calls_median": 0.0,
+      "network_rx_bytes_median": 0.0,
+      "nfs_read_received_bytes_median": 0.0
+    },
+    {
+      "backend": "local",
+      "pattern": "seq",
+      "condition": "retouch",
+      "n": 4,
+      "read_ns": {
+        "median": 14437040.5,
+        "min": 13993745,
+        "max": 14919626
+      },
+      "wall_ns": {
+        "median": 41987347.5,
+        "min": 36989589,
+        "max": 44694365
+      },
+      "read_mib_s": {
+        "median": 4436.9974615,
+        "min": 4289.651765,
+        "max": 4573.471933
+      },
+      "wall_mib_s": {
+        "median": 1525.6899215,
+        "min": 1431.947853,
+        "max": 1730.216575
+      },
+      "pread_p99_ns": {
+        "median": 66078.0,
+        "min": 61827,
+        "max": 70812
+      },
+      "guest_read_bytes_median": 0.0,
+      "nfs_read_calls_median": 0.0,
+      "network_rx_bytes_median": 0.0,
+      "nfs_read_received_bytes_median": 0.0
+    },
+    {
+      "backend": "local",
+      "pattern": "seq",
+      "condition": "warm",
+      "n": 12,
+      "read_ns": {
+        "median": 14612761.5,
+        "min": 12954939,
+        "max": 15880012
+      },
+      "wall_ns": {
+        "median": 45744323.5,
+        "min": 32099960,
+        "max": 54076857
+      },
+      "read_mib_s": {
+        "median": 4380.758655,
+        "min": 4030.223655,
+        "max": 4940.200799
+      },
+      "wall_mib_s": {
+        "median": 1400.2301505,
+        "min": 1183.500735,
+        "max": 1993.771955
+      },
+      "pread_p99_ns": {
+        "median": 68105.5,
+        "min": 52308,
+        "max": 76296
+      },
+      "guest_read_bytes_median": 0.0,
+      "nfs_read_calls_median": 0.0,
+      "network_rx_bytes_median": 0.0,
+      "nfs_read_received_bytes_median": 0.0
+    },
+    {
+      "backend": "nfs",
+      "pattern": "random",
+      "condition": "cold_all",
+      "n": 12,
+      "read_ns": {
+        "median": 1402423533.0,
+        "min": 1096068462,
+        "max": 1557596917
+      },
+      "wall_ns": {
+        "median": 1411287004.5,
+        "min": 1102307258,
+        "max": 1568959713
+      },
+      "read_mib_s": {
+        "median": 5.7044115,
+        "min": 5.136117,
+        "max": 7.298814
+      },
+      "wall_mib_s": {
+        "median": 5.668585,
+        "min": 5.09892,
+        "max": 7.257505
+      },
+      "pread_p99_ns": {
+        "median": 1521566.5,
+        "min": 1305807,
+        "max": 1615381
+      },
+      "guest_read_bytes_median": 8388608.0,
+      "nfs_read_calls_median": 1689.5,
+      "network_rx_bytes_median": 8908167.0,
+      "nfs_read_received_bytes_median": 8784960.0
+    },
+    {
+      "backend": "nfs",
+      "pattern": "random",
+      "condition": "cold_guest",
+      "n": 12,
+      "read_ns": {
+        "median": 306521235.0,
+        "min": 273759084,
+        "max": 352681874
+      },
+      "wall_ns": {
+        "median": 311171967.0,
+        "min": 278693517,
+        "max": 357736039
+      },
+      "read_mib_s": {
+        "median": 26.0993895,
+        "min": 22.683332,
+        "max": 29.222775
+      },
+      "wall_mib_s": {
+        "median": 25.7093405,
+        "min": 22.362857,
+        "max": 28.705368
+      },
+      "pread_p99_ns": {
+        "median": 388470.5,
+        "min": 352834,
+        "max": 568731
+      },
+      "guest_read_bytes_median": 8388608.0,
+      "nfs_read_calls_median": 0.0,
+      "network_rx_bytes_median": 0.0,
+      "nfs_read_received_bytes_median": 0.0
+    },
+    {
+      "backend": "nfs",
+      "pattern": "random",
+      "condition": "cold_host",
+      "n": 12,
+      "read_ns": {
+        "median": 583665002.5,
+        "min": 486628425,
+        "max": 781043498
+      },
+      "wall_ns": {
+        "median": 588272406.5,
+        "min": 490384818,
+        "max": 787048525
+      },
+      "read_mib_s": {
+        "median": 13.707571999999999,
+        "min": 10.242707,
+        "max": 16.439648
+      },
+      "wall_mib_s": {
+        "median": 13.600213,
+        "min": 10.164558,
+        "max": 16.313719
+      },
+      "pread_p99_ns": {
+        "median": 1030190.0,
+        "min": 925898,
+        "max": 1191307
+      },
+      "guest_read_bytes_median": 8388608.0,
+      "nfs_read_calls_median": 1690.0,
+      "network_rx_bytes_median": 8904372.0,
+      "nfs_read_received_bytes_median": 8784960.0
+    },
+    {
+      "backend": "nfs",
+      "pattern": "random",
+      "condition": "warm",
+      "n": 12,
+      "read_ns": {
+        "median": 3600504.5,
+        "min": 2474792,
+        "max": 4185615
+      },
+      "wall_ns": {
+        "median": 11073319.5,
+        "min": 5807102,
+        "max": 13506516
+      },
+      "read_mib_s": {
+        "median": 2221.9269645,
+        "min": 1911.308135,
+        "max": 3232.594901
+      },
+      "wall_mib_s": {
+        "median": 722.458267,
+        "min": 592.306706,
+        "max": 1377.623469
+      },
+      "pread_p99_ns": {
+        "median": 2209.5,
+        "min": 1562,
+        "max": 3232
+      },
+      "guest_read_bytes_median": 0.0,
+      "nfs_read_calls_median": 0.0,
+      "network_rx_bytes_median": 0.0,
+      "nfs_read_received_bytes_median": 0.0
+    },
+    {
+      "backend": "nfs",
+      "pattern": "seq",
+      "condition": "cold_all",
+      "n": 12,
+      "read_ns": {
+        "median": 256298615.0,
+        "min": 225214651,
+        "max": 310000548
+      },
+      "wall_ns": {
+        "median": 310224753.5,
+        "min": 261639018,
+        "max": 350336123
+      },
+      "read_mib_s": {
+        "median": 249.72867050000002,
+        "min": 206.451248,
+        "max": 284.173342
+      },
+      "wall_mib_s": {
+        "median": 206.3099505,
+        "min": 182.681704,
+        "max": 244.611834
+      },
+      "pread_p99_ns": {
+        "median": 1588224.5,
+        "min": 1387511,
+        "max": 1831978
+      },
+      "guest_read_bytes_median": 67108864.0,
+      "nfs_read_calls_median": 517.0,
+      "network_rx_bytes_median": 67535204.0,
+      "nfs_read_received_bytes_median": 67424896.0
+    },
+    {
+      "backend": "nfs",
+      "pattern": "seq",
+      "condition": "cold_guest",
+      "n": 12,
+      "read_ns": {
+        "median": 81611100.0,
+        "min": 71246223,
+        "max": 107335391
+      },
+      "wall_ns": {
+        "median": 110537944.0,
+        "min": 99968618,
+        "max": 166088227
+      },
+      "read_mib_s": {
+        "median": 784.257746,
+        "min": 596.261861,
+        "max": 898.293233
+      },
+      "wall_mib_s": {
+        "median": 579.1829680000001,
+        "min": 385.337367,
+        "max": 640.200908
+      },
+      "pread_p99_ns": {
+        "median": 451034.5,
+        "min": 368903,
+        "max": 761016
+      },
+      "guest_read_bytes_median": 67108864.0,
+      "nfs_read_calls_median": 0.0,
+      "network_rx_bytes_median": 0.0,
+      "nfs_read_received_bytes_median": 0.0
+    },
+    {
+      "backend": "nfs",
+      "pattern": "seq",
+      "condition": "cold_host",
+      "n": 12,
+      "read_ns": {
+        "median": 215670625.5,
+        "min": 157265910,
+        "max": 259535344
+      },
+      "wall_ns": {
+        "median": 267305327.0,
+        "min": 205558391,
+        "max": 311182097
+      },
+      "read_mib_s": {
+        "median": 296.81226649999996,
+        "min": 246.594545,
+        "max": 406.954056
+      },
+      "wall_mib_s": {
+        "median": 239.4323295,
+        "min": 205.667359,
+        "max": 311.347057
+      },
+      "pread_p99_ns": {
+        "median": 1363949.5,
+        "min": 1040982,
+        "max": 1540955
+      },
+      "guest_read_bytes_median": 67108864.0,
+      "nfs_read_calls_median": 517.0,
+      "network_rx_bytes_median": 67532564.0,
+      "nfs_read_received_bytes_median": 67424896.0
+    },
+    {
+      "backend": "nfs",
+      "pattern": "seq",
+      "condition": "first_miss",
+      "n": 4,
+      "read_ns": {
+        "median": 479066732.5,
+        "min": 456239546,
+        "max": 508432548
+      },
+      "wall_ns": {
+        "median": 505039181.5,
+        "min": 477765154,
+        "max": 533666485
+      },
+      "read_mib_s": {
+        "median": 133.5948565,
+        "min": 125.877071,
+        "max": 140.277187
+      },
+      "wall_mib_s": {
+        "median": 126.72364400000001,
+        "min": 119.925088,
+        "max": 133.957028
+      },
+      "pread_p99_ns": {
+        "median": 1548408.0,
+        "min": 1438196,
+        "max": 1925510
+      },
+      "guest_read_bytes_median": 67305472.0,
+      "nfs_read_calls_median": 515.0,
+      "network_rx_bytes_median": 67607253.0,
+      "nfs_read_received_bytes_median": 67502464.0
+    },
+    {
+      "backend": "nfs",
+      "pattern": "seq",
+      "condition": "retained",
+      "n": 4,
+      "read_ns": {
+        "median": 311830209.0,
+        "min": 310668677,
+        "max": 312649523
+      },
+      "wall_ns": {
+        "median": 328524756.0,
+        "min": 327529887,
+        "max": 331413957
+      },
+      "read_mib_s": {
+        "median": 205.2405245,
+        "min": 204.702055,
+        "max": 206.007251
+      },
+      "wall_mib_s": {
+        "median": 194.811123,
+        "min": 193.111964,
+        "max": 195.402015
+      },
+      "pread_p99_ns": {
+        "median": 474909.0,
+        "min": 464485,
+        "max": 500057
+      },
+      "guest_read_bytes_median": 0.0,
+      "nfs_read_calls_median": 0.0,
+      "network_rx_bytes_median": 0.0,
+      "nfs_read_received_bytes_median": 0.0
+    },
+    {
+      "backend": "nfs",
+      "pattern": "seq",
+      "condition": "retouch",
+      "n": 4,
+      "read_ns": {
+        "median": 14850773.5,
+        "min": 13829774,
+        "max": 19114828
+      },
+      "wall_ns": {
+        "median": 42581078.5,
+        "min": 36057333,
+        "max": 45260753
+      },
+      "read_mib_s": {
+        "median": 4313.654152499999,
+        "min": 3348.186026,
+        "max": 4627.696736
+      },
+      "wall_mib_s": {
+        "median": 1503.1143855,
+        "min": 1414.028618,
+        "max": 1774.95102
+      },
+      "pread_p99_ns": {
+        "median": 100246.5,
+        "min": 68621,
+        "max": 106522
+      },
+      "guest_read_bytes_median": 0.0,
+      "nfs_read_calls_median": 0.0,
+      "network_rx_bytes_median": 0.0,
+      "nfs_read_received_bytes_median": 0.0
+    },
+    {
+      "backend": "nfs",
+      "pattern": "seq",
+      "condition": "warm",
+      "n": 12,
+      "read_ns": {
+        "median": 14292791.0,
+        "min": 13556146,
+        "max": 16181402
+      },
+      "wall_ns": {
+        "median": 43214020.0,
+        "min": 34450681,
+        "max": 51356315
+      },
+      "read_mib_s": {
+        "median": 4477.7872375,
+        "min": 3955.157903,
+        "max": 4721.105836
+      },
+      "wall_mib_s": {
+        "median": 1481.0258985,
+        "min": 1246.195332,
+        "max": 1857.728153
+      },
+      "pread_p99_ns": {
+        "median": 96267.5,
+        "min": 29938,
+        "max": 118436
+      },
+      "guest_read_bytes_median": 0.0,
+      "nfs_read_calls_median": 0.0,
+      "network_rx_bytes_median": 0.0,
+      "nfs_read_received_bytes_median": 0.0
+    }
+  ]
+}
