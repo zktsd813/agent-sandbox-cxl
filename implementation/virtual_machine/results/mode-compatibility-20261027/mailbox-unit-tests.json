@@ -1,0 +1,111 @@
+{
+  "result": "passed",
+  "kind": "in-memory production-helper validation; no fake DAX CLI path",
+  "tests": [
+    "fresh_nonce_publish",
+    "valid_header_receive",
+    "duplicate_publish_rejected",
+    "premature_round2_rejected",
+    "schema_rejected",
+    "round_rejected",
+    "source_role_rejected",
+    "memory_rejected",
+    "zero_length_rejected",
+    "oversized_length_rejected",
+    "hash_rejected",
+    "payload_corruption_rejected",
+    "nonce_rejected",
+    "unpublished_rejected",
+    "inflight_consume_rejected",
+    "duplicate_receive_rejected",
+    "round2_after_ack_allowed",
+    "round2_wrong_nonce_rejected",
+    "round2_wrong_memory_rejected",
+    "valid_path",
+    "short_path_rejected",
+    "nonhex_path_rejected",
+    "wrong_prefix_rejected",
+    "traversal_rejected",
+    "trailing_slash_rejected"
+  ],
+  "stdout": "state mailbox unit checks passed\n{\"nonce\":1048576,\"published\":1048608,\"acknowledged\":1048616,\"schema\":1048624,\"state_round\":1048632,\"state_size\":1048640,\"state_hash\":1048648,\"memory_bytes\":1048656,\"sequence\":1048664,\"state\":1048688}\n",
+  "offsets": {
+    "nonce": 1048576,
+    "published": 1048608,
+    "acknowledged": 1048616,
+    "schema": 1048624,
+    "state_round": 1048632,
+    "state_size": 1048640,
+    "state_hash": 1048648,
+    "memory_bytes": 1048656,
+    "sequence": 1048664,
+    "state": 1048688
+  },
+  "fixture_source": {
+    "path": "/tmp/state-mailbox-unit.c",
+    "sha256": "3358e5faf49d1642826adb3f997ddace4be29142c980b4f90f5a379269263905"
+  },
+  "fixture_binary_sha256": "4c0967daf73f4e6986e25fb4f7684ce7427151d310ea61c9430c05270e592511",
+  "production_binary_sha256": "9db3d04725cdc1a783316b9003865a089cdeb418a76a21a578c71e7d3500a740",
+  "cli_negative": {
+    "result": "passed",
+    "cases": [
+      {
+        "case": "nonce_zero",
+        "exit_code": 2
+      },
+      {
+        "case": "nonce_sign",
+        "exit_code": 2
+      },
+      {
+        "case": "nonce_nonhex",
+        "exit_code": 2
+      },
+      {
+        "case": "round_zero",
+        "exit_code": 2
+      },
+      {
+        "case": "round_three",
+        "exit_code": 2
+      },
+      {
+        "case": "memory_sign",
+        "exit_code": 2
+      },
+      {
+        "case": "memory_overflow",
+        "exit_code": 2
+      },
+      {
+        "case": "memory_too_small",
+        "exit_code": 2
+      },
+      {
+        "case": "memory_too_large",
+        "exit_code": 2
+      },
+      {
+        "case": "wrong_role",
+        "exit_code": 2
+      },
+      {
+        "case": "wrong_device",
+        "exit_code": 2
+      },
+      {
+        "case": "path_traversal",
+        "exit_code": 2
+      },
+      {
+        "case": "path_nonhex",
+        "exit_code": 2
+      },
+      {
+        "case": "unknown_phase",
+        "exit_code": 2
+      }
+    ]
+  }
+}

@@ -89,6 +89,8 @@ def prepare(args):
         shutil.copy2(trace["source_trace"], destination / "traces" / f"{name}.traj.json")
     for name in ("l1-kernel", "l2-initramfs.cpio", "shared-probe", "nfs-probe"):
         shutil.copy2(baseline / name, destination / name)
+    if args.shared_probe:
+        shutil.copy2(args.shared_probe, destination / "shared-probe")
     if args.l1_kernel:
         shutil.copy2(args.l1_kernel, destination / "l1-kernel")
     with tempfile.TemporaryDirectory(prefix="trace-assets-", dir=destination) as tmp:
@@ -97,6 +99,8 @@ def prepare(args):
         l1.mkdir()
         with (baseline / "l1-initramfs.cpio").open("rb") as stream:
             checked(["cpio", "-id", "--quiet", "--no-absolute-filenames"], cwd=l1, stdin=stream)
+        if args.shared_probe:
+            shutil.copy2(args.shared_probe, l1 / "lab/shared-probe")
         if args.l2_kernel:
             shutil.copy2(args.l2_kernel, l1 / "lab/l2-vmlinux")
         if args.module_dir:
@@ -145,9 +149,14 @@ def prepare(args):
                  "-E", "lazy_itable_init=0,lazy_journal_init=0", "-d", images, outer])
     manifest = {key: baseline_manifest[key] for key in
                 ("vendor", "l1_kernel_release", "modules", "qemu", "qemu_version", "firecracker_version", "inputs")}
-    for name, path in (("l1_kernel", args.l1_kernel), ("l2_kernel", args.l2_kernel)):
+    for name, path in (("l1_kernel", args.l1_kernel), ("l2_kernel", args.l2_kernel),
+                       ("shared_probe", args.shared_probe)):
         if path:
             manifest["inputs"][name] = {"path": str(path.resolve()), "sha256": lab.sha256(path)}
+    if args.shared_probe:
+        for key, name in (("probe_source", "shared_probe.c"), ("cache_probe_source", "cache_probe.h"),
+                          ("mptcp_probe_source", "mptcp_probe.h")):
+            manifest["inputs"][key] = {"path": str(HERE / name), "sha256": lab.sha256(HERE / name)}
     if args.dependency_manifest:
         manifest["dependencies"] = json.loads(args.dependency_manifest.read_text())
         manifest["inputs"]["dependency_manifest"] = {"path": str(args.dependency_manifest.resolve()),
@@ -161,7 +170,7 @@ def prepare(args):
                 "storage": "read-only ext4 lower via virtio-blk; tmpfs overlay upper in guest RAM",
                 "timeout_policy": "TERM command process group after original timeout; KILL after 5 seconds; clean remaining group after completion",
                 "source_hashes": {name: lab.sha256(HERE / name) for name in
-                                  ("trace_prepare.py", "trace-l2-init.sh", "trace-guest-run.sh", "lab.py")},
+                                  ("trace_prepare.py", "trace-l2-init.sh", "trace-guest-run.sh", "lab.py", "shared_probe.c")},
                 "artifacts": {p.name: lab.sha256(p) for p in destination.iterdir() if p.is_file()}})
     lab.save_json(destination / "manifest.json", manifest)
     print(json.dumps({"assets": str(destination), "traces": list(traces), "storage": str(destination / "storage.raw")}))
@@ -172,6 +181,7 @@ if __name__ == "__main__":
     parser.add_argument("--source-repo", type=Path, required=True)
     parser.add_argument("--base-assets", type=Path, required=True)
     parser.add_argument("--assets", type=Path, required=True)
+    parser.add_argument("--shared-probe", type=Path, help="Replace the native helper in the prepared L1 image")
     parser.add_argument("--l1-kernel", type=Path)
     parser.add_argument("--l2-kernel", type=Path)
     parser.add_argument("--module-dir", type=Path)

@@ -1,0 +1,139 @@
+{
+  "result": "passed",
+  "runs": {
+    "formal": {
+      "owned_qemu_alive": {
+        "A": false,
+        "B": false
+      },
+      "network_objects_remaining": {
+        "bridge": false,
+        "A": false,
+        "B": false
+      },
+      "control_dir_exists": false,
+      "ephemeral_memory_dir_exists": false,
+      "cxl_backing_exists": false
+    },
+    "smoke": {
+      "owned_qemu_alive": {
+        "A": false,
+        "B": false
+      },
+      "network_objects_remaining": {
+        "bridge": false,
+        "A": false,
+        "B": false
+      },
+      "control_dir_exists": false,
+      "ephemeral_memory_dir_exists": false,
+      "cxl_backing_exists": false
+    },
+    "native-snapshot": {
+      "owned_qemu_alive": {
+        "A": false,
+        "B": false
+      },
+      "network_objects_remaining": {},
+      "control_dir_exists": false,
+      "ephemeral_memory_dir_exists": false,
+      "cxl_backing_exists": false
+    },
+    "native-reuse": {
+      "owned_qemu_alive": {
+        "A": false,
+        "B": false
+      },
+      "network_objects_remaining": {},
+      "control_dir_exists": false,
+      "ephemeral_memory_dir_exists": false,
+      "cxl_backing_exists": false
+    },
+    "native-reuse-prepared": {
+      "owned_qemu_alive": {
+        "A": false,
+        "B": false
+      },
+      "network_objects_remaining": {},
+      "control_dir_exists": false,
+      "ephemeral_memory_dir_exists": false,
+      "cxl_backing_exists": false
+    },
+    "compat-direct-baseline-20261027-final": {
+      "owned_qemu_alive": {
+        "A": false,
+        "B": false
+      },
+      "network_objects_remaining": {},
+      "control_dir_exists": false,
+      "ephemeral_memory_dir_exists": false,
+      "cxl_backing_exists": false
+    },
+    "compat-direct-baseline-mailbox-20261027": {
+      "owned_qemu_alive": {
+        "A": false,
+        "B": false
+      },
+      "network_objects_remaining": {},
+      "control_dir_exists": false,
+      "ephemeral_memory_dir_exists": false,
+      "cxl_backing_exists": false
+    },
+    "compat-direct-two-vcpu-20261027-v3": {
+      "owned_qemu_alive": {
+        "A": false,
+        "B": false
+      },
+      "network_objects_remaining": {
+        "bridge": false,
+        "A": false,
+        "B": false
+      },
+      "control_dir_exists": false,
+      "ephemeral_memory_dir_exists": false,
+      "cxl_backing_exists": false
+    },
+    "compat-direct-block-20261027": {
+      "owned_qemu_alive": {
+        "A": false,
+        "B": false
+      },
+      "network_objects_remaining": {
+        "bridge": false,
+        "A": false,
+        "B": false
+      },
+      "control_dir_exists": false,
+      "ephemeral_memory_dir_exists": false,
+      "cxl_backing_exists": false
+    },
+    "compat-reuse-block-20261027": {
+      "owned_qemu_alive": {
+        "A": false,
+        "B": false
+      },
+      "network_objects_remaining": {
+        "bridge": false,
+        "A": false,
+        "B": false
+      },
+      "control_dir_exists": false,
+      "ephemeral_memory_dir_exists": false,
+      "cxl_backing_exists": false
+    },
+    "compat-reuse-two-vcpu-20261027": {
+      "owned_qemu_alive": {
+        "A": false,
+        "B": false
+      },
+      "network_objects_remaining": {
+        "bridge": false,
+        "A": false,
+        "B": false
+      },
+      "control_dir_exists": false,
+      "ephemeral_memory_dir_exists": false,
+      "cxl_backing_exists": false
+    }
+  }
+}

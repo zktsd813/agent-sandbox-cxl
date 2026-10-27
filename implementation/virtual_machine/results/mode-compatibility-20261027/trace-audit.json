@@ -1,0 +1,3520 @@
+{
+  "artifact_files_checked": [
+    "l1-initramfs.cpio",
+    "l1-kernel",
+    "gin-gonic__gin-3741-initramfs.cpio",
+    "storage.raw",
+    "shared-probe",
+    "micropython__micropython-13039-initramfs.cpio",
+    "nfs-probe",
+    "php-cs-fixer__php-cs-fixer-8331-initramfs.cpio",
+    "l2-initramfs.cpio",
+    "l1-initramfs.cpio:lab/shared-probe",
+    "/home/ijkim/agent-sandbox-cxl/experiments/contention/.local/images/gin-gonic__gin-3741/rootfs.ext4",
+    "/home/ijkim/agent-sandbox-cxl/experiments/contention/.local/images/php-cs-fixer__php-cs-fixer-8331/rootfs.ext4",
+    "/home/ijkim/agent-sandbox-cxl/experiments/contention/.local/images/micropython__micropython-13039/rootfs.ext4"
+  ],
+  "commands": 840,
+  "fresh_guest_boot_ids": 24,
+  "handoffs": 48,
+  "mailbox_handoffs_checked": 48,
+  "native_api_phases_checked": 192,
+  "native_helper_sources_checked": [
+    "shared_probe.c",
+    "cache_probe.h",
+    "mptcp_probe.h"
+  ],
+  "native_mailbox_phases_checked": 96,
+  "native_timing_note": "Each native phase uses its own node's monotonic clock; phase sums are not end-to-end downtime.",
+  "prepared_executable_wrappers_checked": 105,
+  "recorded_exits_checked": 816,
+  "result": "passed",
+  "rpc_counter_differences": [],
+  "rpc_counter_note": "proc3 counts started RPCs, mountstats counts completed RPCs; snapshots are sequential.",
+  "runtime_sources_checked": [
+    "cache_probe.h",
+    "lab.py",
+    "mptcp_probe.h",
+    "nfs_bench.py",
+    "nfs_dependencies.sh",
+    "nfs_probe.c",
+    "shared_probe.c",
+    "trace-guest-run.sh",
+    "trace-l2-init.sh",
+    "trace_bench.py",
+    "trace_prepare.py"
+  ],
+  "schema_version": 1,
+  "source_patches_checked": [
+    "firecracker.patch",
+    "qemu-cxl-direct-ram.patch",
+    "ram-backend-source.json"
+  ],
+  "stable_test_summaries_checked": 72,
+  "state_transport": "dax-mailbox",
+  "submission_exits_checked": 24,
+  "submission_normalization": {
+    "raw_hash_difference_trials": [
+      "micropython__micropython-13039_retained_0_nfs",
+      "micropython__micropython-13039_retained_0_local",
+      "micropython__micropython-13039_retained_1_local",
+      "micropython__micropython-13039_retained_1_nfs",
+      "micropython__micropython-13039_retained_2_nfs",
+      "micropython__micropython-13039_retained_2_local",
+      "micropython__micropython-13039_evicted_0_nfs",
+      "micropython__micropython-13039_evicted_0_local"
+    ],
+    "removed_exact_line": "/root/.bashrc: line 1: /opt/miniconda3/etc/profile.d/conda.sh: No such file or directory\n",
+    "require_same_warning_count": true
+  },
+  "submissions_checked": 24,
+  "summary": [
+    {
+      "backend": "local",
+      "cache_mode": "evicted",
+      "guest_duration_s": {
+        "max": 19.25,
+        "median": 19.25,
+        "min": 19.25
+      },
+      "n": 1,
+      "trace": "gin-gonic__gin-3741"
+    },
+    {
+      "backend": "nfs",
+      "cache_mode": "evicted",
+      "guest_duration_s": {
+        "max": 18.830000000000005,
+        "median": 18.830000000000005,
+        "min": 18.830000000000005
+      },
+      "n": 1,
+      "trace": "gin-gonic__gin-3741"
+    },
+    {
+      "backend": "local",
+      "cache_mode": "retained",
+      "guest_duration_s": {
+        "max": 18.240000000000013,
+        "median": 17.95,
+        "min": 17.870000000000005
+      },
+      "n": 3,
+      "trace": "gin-gonic__gin-3741"
+    },
+    {
+      "backend": "nfs",
+      "cache_mode": "retained",
+      "guest_duration_s": {
+        "max": 18.119999999999997,
+        "median": 18.090000000000014,
+        "min": 17.85999999999999
+      },
+      "n": 3,
+      "trace": "gin-gonic__gin-3741"
+    },
+    {
+      "backend": "local",
+      "cache_mode": "evicted",
+      "guest_duration_s": {
+        "max": 16.67,
+        "median": 16.67,
+        "min": 16.67
+      },
+      "n": 1,
+      "trace": "micropython__micropython-13039"
+    },
+    {
+      "backend": "nfs",
+      "cache_mode": "evicted",
+      "guest_duration_s": {
+        "max": 16.230000000000018,
+        "median": 16.230000000000018,
+        "min": 16.230000000000018
+      },
+      "n": 1,
+      "trace": "micropython__micropython-13039"
+    },
+    {
+      "backend": "local",
+      "cache_mode": "retained",
+      "guest_duration_s": {
+        "max": 14.99999999999999,
+        "median": 14.650000000000006,
+        "min": 14.62999999999999
+      },
+      "n": 3,
+      "trace": "micropython__micropython-13039"
+    },
+    {
+      "backend": "nfs",
+      "cache_mode": "retained",
+      "guest_duration_s": {
+        "max": 14.939999999999994,
+        "median": 14.829999999999997,
+        "min": 14.670000000000023
+      },
+      "n": 3,
+      "trace": "micropython__micropython-13039"
+    },
+    {
+      "backend": "local",
+      "cache_mode": "evicted",
+      "guest_duration_s": {
+        "max": 9.019999999999996,
+        "median": 9.019999999999996,
+        "min": 9.019999999999996
+      },
+      "n": 1,
+      "trace": "php-cs-fixer__php-cs-fixer-8331"
+    },
+    {
+      "backend": "nfs",
+      "cache_mode": "evicted",
+      "guest_duration_s": {
+        "max": 8.960000000000004,
+        "median": 8.960000000000004,
+        "min": 8.960000000000004
+      },
+      "n": 1,
+      "trace": "php-cs-fixer__php-cs-fixer-8331"
+    },
+    {
+      "backend": "local",
+      "cache_mode": "retained",
+      "guest_duration_s": {
+        "max": 8.390000000000006,
+        "median": 7.909999999999994,
+        "min": 7.829999999999989
+      },
+      "n": 3,
+      "trace": "php-cs-fixer__php-cs-fixer-8331"
+    },
+    {
+      "backend": "nfs",
+      "cache_mode": "retained",
+      "guest_duration_s": {
+        "max": 7.989999999999997,
+        "median": 7.689999999999991,
+        "min": 7.6099999999999985
+      },
+      "n": 3,
+      "trace": "php-cs-fixer__php-cs-fixer-8331"
+    }
+  ],
+  "trial_audits": [
+    {
+      "boot_id": "fc30ffdc-0256-4858-abda-7e2d9cd96473",
+      "commands": 27,
+      "destination_duration_s": 8.829999999999998,
+      "final_exit_checked": 1,
+      "guest_duration_s": 18.119999999999997,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 20,
+        "mount_read_received_bytes": 670208,
+        "mount_read_sent_bytes": 2160,
+        "nfs_read_calls": 20,
+        "read_ios": 11366,
+        "read_sectors": 534912,
+        "rx_bytes": 674256,
+        "tx_bytes": 6656,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 18250.749,
+            "pause": 898.668,
+            "resume": 5093.899,
+            "snapshot": 2972.315
+          },
+          "mailbox_phases": {
+            "publish": 692732,
+            "receive": 838739
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 13307.202,
+            "pause": 1003.735,
+            "resume": 4665.605,
+            "snapshot": 2711.288
+          },
+          "mailbox_phases": {
+            "publish": 304992,
+            "receive": 724945
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 252,
+        "tx_bytes": 298
+      },
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_retained_0_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 20,
+        "mount_read_received_bytes": 670208,
+        "mount_read_sent_bytes": 2160,
+        "nfs_read_calls": 20,
+        "rx_bytes": 674508,
+        "tx_bytes": 6954
+      }
+    },
+    {
+      "boot_id": "320aee25-e263-4759-ad29-0d25d1ae1ac8",
+      "commands": 27,
+      "destination_duration_s": 8.84000000000001,
+      "final_exit_checked": 1,
+      "guest_duration_s": 18.240000000000013,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 10731,
+        "read_sectors": 535912,
+        "rx_bytes": 0,
+        "tx_bytes": 70,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 15020.271,
+            "pause": 1333.514,
+            "resume": 4723.227,
+            "snapshot": 2984.155
+          },
+          "mailbox_phases": {
+            "publish": 575483,
+            "receive": 748909
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 14874.328,
+            "pause": 826.42,
+            "resume": 4532.951,
+            "snapshot": 2696.491
+          },
+          "mailbox_phases": {
+            "publish": 572197,
+            "receive": 698669
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 70,
+        "tx_bytes": 0
+      },
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_retained_0_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 70,
+        "tx_bytes": 70
+      }
+    },
+    {
+      "boot_id": "0d6de9df-a444-425e-b63d-bae11a47a639",
+      "commands": 35,
+      "destination_duration_s": 2.749999999999993,
+      "final_exit_checked": 1,
+      "guest_duration_s": 7.989999999999997,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 157,
+        "mount_read_received_bytes": 17350272,
+        "mount_read_sent_bytes": 16956,
+        "nfs_read_calls": 157,
+        "read_ios": 8327,
+        "read_sectors": 155024,
+        "rx_bytes": 17379810,
+        "tx_bytes": 43998,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 18626.213,
+            "pause": 1033.825,
+            "resume": 4851.31,
+            "snapshot": 2914.048
+          },
+          "mailbox_phases": {
+            "publish": 577071,
+            "receive": 723940
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 17948.992,
+            "pause": 919.212,
+            "resume": 4626.741,
+            "snapshot": 2653.603
+          },
+          "mailbox_phases": {
+            "publish": 542871,
+            "receive": 714649
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_0_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 157,
+        "mount_read_received_bytes": 17350272,
+        "mount_read_sent_bytes": 16956,
+        "nfs_read_calls": 157,
+        "rx_bytes": 17379992,
+        "tx_bytes": 44226
+      }
+    },
+    {
+      "boot_id": "e842a1f0-43cd-4cb5-9945-89e62dbdde6a",
+      "commands": 35,
+      "destination_duration_s": 2.6899999999999906,
+      "final_exit_checked": 1,
+      "guest_duration_s": 7.829999999999989,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 8395,
+        "read_sectors": 155024,
+        "rx_bytes": 70,
+        "tx_bytes": 70,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 18860.263,
+            "pause": 955.218,
+            "resume": 5235.324,
+            "snapshot": 3182.49
+          },
+          "mailbox_phases": {
+            "publish": 272422,
+            "receive": 768452
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 13213.014,
+            "pause": 901.654,
+            "resume": 4583.442,
+            "snapshot": 2841.925
+          },
+          "mailbox_phases": {
+            "publish": 561895,
+            "receive": 746334
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_0_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 70,
+        "tx_bytes": 70
+      }
+    },
+    {
+      "boot_id": "6424685a-beb4-4d0f-adfc-13e643265c2e",
+      "commands": 43,
+      "destination_duration_s": 7.659999999999997,
+      "final_exit_checked": 1,
+      "guest_duration_s": 14.829999999999997,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 393,
+        "mount_read_received_bytes": 12489856,
+        "mount_read_sent_bytes": 42444,
+        "nfs_read_calls": 393,
+        "read_ios": 17222,
+        "read_sectors": 321632,
+        "rx_bytes": 12529882,
+        "tx_bytes": 98100,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 13703.949,
+            "pause": 881.397,
+            "resume": 4232.461,
+            "snapshot": 3023.701
+          },
+          "mailbox_phases": {
+            "publish": 438924,
+            "receive": 768438
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 13677.235,
+            "pause": 804.371,
+            "resume": 4935.404,
+            "snapshot": 2826.881
+          },
+          "mailbox_phases": {
+            "publish": 377632,
+            "receive": 722880
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 224,
+        "tx_bytes": 228
+      },
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_retained_0_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 393,
+        "mount_read_received_bytes": 12489856,
+        "mount_read_sent_bytes": 42444,
+        "nfs_read_calls": 393,
+        "rx_bytes": 12530106,
+        "tx_bytes": 98328
+      }
+    },
+    {
+      "boot_id": "2f9696b5-7dc5-416b-b059-849b423c5566",
+      "commands": 43,
+      "destination_duration_s": 7.490000000000016,
+      "final_exit_checked": 1,
+      "guest_duration_s": 14.650000000000006,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 16142,
+        "read_sectors": 320872,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 13592.674,
+            "pause": 1170.063,
+            "resume": 4946.066,
+            "snapshot": 2962.523
+          },
+          "mailbox_phases": {
+            "publish": 558075,
+            "receive": 776394
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 14882.628,
+            "pause": 1108.853,
+            "resume": 4770.176,
+            "snapshot": 2759.508
+          },
+          "mailbox_phases": {
+            "publish": 547100,
+            "receive": 716891
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 70
+      },
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_retained_0_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 70
+      }
+    },
+    {
+      "boot_id": "bf5f5d0a-abde-46d8-9d36-0051bd85495c",
+      "commands": 27,
+      "destination_duration_s": 9.07,
+      "final_exit_checked": 1,
+      "guest_duration_s": 17.95,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 11767,
+        "read_sectors": 535696,
+        "rx_bytes": 178,
+        "tx_bytes": 108,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 13511.88,
+            "pause": 984.195,
+            "resume": 6443.622,
+            "snapshot": 3019.074
+          },
+          "mailbox_phases": {
+            "publish": 547240,
+            "receive": 740400
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 13233.104,
+            "pause": 1031.485,
+            "resume": 4681.874,
+            "snapshot": 2864.674
+          },
+          "mailbox_phases": {
+            "publish": 390007,
+            "receive": 697728
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 42,
+        "tx_bytes": 42
+      },
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_retained_1_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 220,
+        "tx_bytes": 150
+      }
+    },
+    {
+      "boot_id": "3d1fedd4-f9d9-410a-a2b8-9f118e8ca8fa",
+      "commands": 27,
+      "destination_duration_s": 8.819999999999993,
+      "final_exit_checked": 1,
+      "guest_duration_s": 17.85999999999999,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 12,
+        "mount_read_received_bytes": 435712,
+        "mount_read_sent_bytes": 1296,
+        "nfs_read_calls": 12,
+        "read_ios": 11737,
+        "read_sectors": 535256,
+        "rx_bytes": 437988,
+        "tx_bytes": 3636,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 17716.895,
+            "pause": 1094.268,
+            "resume": 5105.239,
+            "snapshot": 3044.39
+          },
+          "mailbox_phases": {
+            "publish": 555614,
+            "receive": 770784
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 14486.032,
+            "pause": 787.153,
+            "resume": 4418.989,
+            "snapshot": 2907.489
+          },
+          "mailbox_phases": {
+            "publish": 546803,
+            "receive": 710785
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_retained_1_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 12,
+        "mount_read_received_bytes": 435712,
+        "mount_read_sent_bytes": 1296,
+        "nfs_read_calls": 12,
+        "rx_bytes": 438170,
+        "tx_bytes": 3864
+      }
+    },
+    {
+      "boot_id": "bd43c7b5-cc0a-4561-bd06-74fec4a04847",
+      "commands": 35,
+      "destination_duration_s": 2.7200000000000024,
+      "final_exit_checked": 1,
+      "guest_duration_s": 8.390000000000006,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 9875,
+        "read_sectors": 155024,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 17224.398,
+            "pause": 1009.626,
+            "resume": 2934.918,
+            "snapshot": 2849.079
+          },
+          "mailbox_phases": {
+            "publish": 436103,
+            "receive": 772589
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 13422.293,
+            "pause": 892.268,
+            "resume": 4164.436,
+            "snapshot": 2661.376
+          },
+          "mailbox_phases": {
+            "publish": 556911,
+            "receive": 721630
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_1_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      }
+    },
+    {
+      "boot_id": "db2eb03e-c3bb-4733-9360-bda7bea3f74f",
+      "commands": 35,
+      "destination_duration_s": 2.6900000000000013,
+      "final_exit_checked": 1,
+      "guest_duration_s": 7.6099999999999985,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 159,
+        "mount_read_received_bytes": 17379200,
+        "mount_read_sent_bytes": 17172,
+        "nfs_read_calls": 159,
+        "read_ios": 8844,
+        "read_sectors": 155024,
+        "rx_bytes": 17408662,
+        "tx_bytes": 46968,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 16799.592,
+            "pause": 838.595,
+            "resume": 4942.035,
+            "snapshot": 2628.798
+          },
+          "mailbox_phases": {
+            "publish": 270637,
+            "receive": 632440
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 17227.892,
+            "pause": 821.653,
+            "resume": 4359.798,
+            "snapshot": 2272.156
+          },
+          "mailbox_phases": {
+            "publish": 364710,
+            "receive": 724517
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_1_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 159,
+        "mount_read_received_bytes": 17379200,
+        "mount_read_sent_bytes": 17172,
+        "nfs_read_calls": 159,
+        "rx_bytes": 17408844,
+        "tx_bytes": 47196
+      }
+    },
+    {
+      "boot_id": "04ecf01b-78c0-46ff-b1f1-01ad48f61438",
+      "commands": 43,
+      "destination_duration_s": 7.689999999999991,
+      "final_exit_checked": 1,
+      "guest_duration_s": 14.99999999999999,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 16754,
+        "read_sectors": 321632,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 14930.181,
+            "pause": 1089.777,
+            "resume": 5031.427,
+            "snapshot": 2898.788
+          },
+          "mailbox_phases": {
+            "publish": 311390,
+            "receive": 696029
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 14135.192,
+            "pause": 1024.437,
+            "resume": 4385.373,
+            "snapshot": 2897.812
+          },
+          "mailbox_phases": {
+            "publish": 552053,
+            "receive": 719785
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_retained_1_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      }
+    },
+    {
+      "boot_id": "37e87fa9-f3df-46ae-ac75-473126227779",
+      "commands": 43,
+      "destination_duration_s": 7.700000000000017,
+      "final_exit_checked": 1,
+      "guest_duration_s": 14.670000000000023,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 384,
+        "mount_read_received_bytes": 12054528,
+        "mount_read_sent_bytes": 41472,
+        "nfs_read_calls": 384,
+        "read_ios": 16890,
+        "read_sectors": 321008,
+        "rx_bytes": 12093396,
+        "tx_bytes": 94050,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 18346.277,
+            "pause": 958.223,
+            "resume": 4147.441,
+            "snapshot": 2931.309
+          },
+          "mailbox_phases": {
+            "publish": 277941,
+            "receive": 819247
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 17717.513,
+            "pause": 958.22,
+            "resume": 4791.659,
+            "snapshot": 2807.864
+          },
+          "mailbox_phases": {
+            "publish": 548692,
+            "receive": 720646
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 298
+      },
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_retained_1_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 384,
+        "mount_read_received_bytes": 12054528,
+        "mount_read_sent_bytes": 41472,
+        "nfs_read_calls": 384,
+        "rx_bytes": 12093578,
+        "tx_bytes": 94348
+      }
+    },
+    {
+      "boot_id": "680b4319-11a8-4f4e-9ea1-058aa197d1a0",
+      "commands": 27,
+      "destination_duration_s": 8.750000000000007,
+      "final_exit_checked": 1,
+      "guest_duration_s": 18.090000000000014,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 14,
+        "mount_read_received_bytes": 550656,
+        "mount_read_sent_bytes": 1512,
+        "nfs_read_calls": 14,
+        "read_ios": 10603,
+        "read_sectors": 535864,
+        "rx_bytes": 553600,
+        "tx_bytes": 4512,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 15276.761,
+            "pause": 1096.518,
+            "resume": 2932.874,
+            "snapshot": 2996.539
+          },
+          "mailbox_phases": {
+            "publish": 372204,
+            "receive": 692389
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 14268.49,
+            "pause": 1128.409,
+            "resume": 4885.291,
+            "snapshot": 2890.629
+          },
+          "mailbox_phases": {
+            "publish": 598513,
+            "receive": 717283
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_retained_2_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 14,
+        "mount_read_received_bytes": 550656,
+        "mount_read_sent_bytes": 1512,
+        "nfs_read_calls": 14,
+        "rx_bytes": 553782,
+        "tx_bytes": 4740
+      }
+    },
+    {
+      "boot_id": "cba01dd9-534d-4919-b9c3-dc51c23b0f6a",
+      "commands": 27,
+      "destination_duration_s": 8.809999999999999,
+      "final_exit_checked": 1,
+      "guest_duration_s": 17.870000000000005,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 11600,
+        "read_sectors": 535328,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 13594.067,
+            "pause": 1541.415,
+            "resume": 4801.404,
+            "snapshot": 3133.676
+          },
+          "mailbox_phases": {
+            "publish": 261232,
+            "receive": 813763
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 10695.174,
+            "pause": 740.63,
+            "resume": 5205.293,
+            "snapshot": 2713.153
+          },
+          "mailbox_phases": {
+            "publish": 567157,
+            "receive": 693107
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 70,
+        "tx_bytes": 0
+      },
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_retained_2_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 70,
+        "tx_bytes": 0
+      }
+    },
+    {
+      "boot_id": "ae09e432-271c-41f6-954b-d63989dd0b51",
+      "commands": 35,
+      "destination_duration_s": 2.789999999999992,
+      "final_exit_checked": 1,
+      "guest_duration_s": 7.689999999999991,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 158,
+        "mount_read_received_bytes": 17276672,
+        "mount_read_sent_bytes": 17064,
+        "nfs_read_calls": 158,
+        "read_ios": 9418,
+        "read_sectors": 155024,
+        "rx_bytes": 17305866,
+        "tx_bytes": 47322,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 14690.487,
+            "pause": 933.217,
+            "resume": 3264.999,
+            "snapshot": 3325.794
+          },
+          "mailbox_phases": {
+            "publish": 626814,
+            "receive": 721032
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 12217.39,
+            "pause": 992.257,
+            "resume": 4543.379,
+            "snapshot": 2699.754
+          },
+          "mailbox_phases": {
+            "publish": 576667,
+            "receive": 747655
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_2_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 158,
+        "mount_read_received_bytes": 17276672,
+        "mount_read_sent_bytes": 17064,
+        "nfs_read_calls": 158,
+        "rx_bytes": 17306048,
+        "tx_bytes": 47550
+      }
+    },
+    {
+      "boot_id": "09b9dd7d-60f2-4d56-8580-d59aeb7bf9a0",
+      "commands": 35,
+      "destination_duration_s": 2.7799999999999976,
+      "final_exit_checked": 1,
+      "guest_duration_s": 7.909999999999994,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 8763,
+        "read_sectors": 155024,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 16800.473,
+            "pause": 831.975,
+            "resume": 4333.107,
+            "snapshot": 2826.399
+          },
+          "mailbox_phases": {
+            "publish": 366968,
+            "receive": 804663
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 12756.957,
+            "pause": 818.267,
+            "resume": 4684.622,
+            "snapshot": 2957.535
+          },
+          "mailbox_phases": {
+            "publish": 544003,
+            "receive": 692615
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_2_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      }
+    },
+    {
+      "boot_id": "9363fe17-f467-4416-ac1d-2c23e207a213",
+      "commands": 43,
+      "destination_duration_s": 7.599999999999991,
+      "final_exit_checked": 1,
+      "guest_duration_s": 14.939999999999994,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 374,
+        "mount_read_received_bytes": 11909888,
+        "mount_read_sent_bytes": 40392,
+        "nfs_read_calls": 374,
+        "read_ios": 17170,
+        "read_sectors": 321008,
+        "rx_bytes": 11947354,
+        "tx_bytes": 91212,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 14383.909,
+            "pause": 1071.084,
+            "resume": 4942.057,
+            "snapshot": 2893.605
+          },
+          "mailbox_phases": {
+            "publish": 412637,
+            "receive": 754440
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 18275.773,
+            "pause": 830.264,
+            "resume": 5085.942,
+            "snapshot": 2661.394
+          },
+          "mailbox_phases": {
+            "publish": 550885,
+            "receive": 779393
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_retained_2_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 374,
+        "mount_read_received_bytes": 11909888,
+        "mount_read_sent_bytes": 40392,
+        "nfs_read_calls": 374,
+        "rx_bytes": 11947536,
+        "tx_bytes": 91440
+      }
+    },
+    {
+      "boot_id": "41a4e6d8-5961-4b63-bd5d-d11aa1fb706e",
+      "commands": 43,
+      "destination_duration_s": 7.599999999999991,
+      "final_exit_checked": 1,
+      "guest_duration_s": 14.62999999999999,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 17200,
+        "read_sectors": 321632,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 16834.846,
+            "pause": 1046.178,
+            "resume": 4174.021,
+            "snapshot": 2943.585
+          },
+          "mailbox_phases": {
+            "publish": 395630,
+            "receive": 799324
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 15241.447,
+            "pause": 1046.208,
+            "resume": 4655.785,
+            "snapshot": 2818.261
+          },
+          "mailbox_phases": {
+            "publish": 526201,
+            "receive": 715498
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_retained_2_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      }
+    },
+    {
+      "boot_id": "f6c47333-dcf1-4076-85c3-d84247258576",
+      "commands": 27,
+      "destination_duration_s": 10.329999999999998,
+      "final_exit_checked": 1,
+      "guest_duration_s": 18.830000000000005,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 3281,
+        "mount_read_received_bytes": 123611264,
+        "mount_read_sent_bytes": 354348,
+        "nfs_read_calls": 3281,
+        "read_ios": 27128,
+        "read_sectors": 723528,
+        "rx_bytes": 123948012,
+        "tx_bytes": 809034,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 14923.405,
+            "pause": 1786.551,
+            "resume": 4712.726,
+            "snapshot": 3000.685
+          },
+          "mailbox_phases": {
+            "publish": 333816,
+            "receive": 720104
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 17037.3,
+            "pause": 871.786,
+            "resume": 2613.551,
+            "snapshot": 2639.461
+          },
+          "mailbox_phases": {
+            "publish": 530838,
+            "receive": 751026
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_evicted_0_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 3281,
+        "mount_read_received_bytes": 123611264,
+        "mount_read_sent_bytes": 354348,
+        "nfs_read_calls": 3281,
+        "rx_bytes": 123948194,
+        "tx_bytes": 809262
+      }
+    },
+    {
+      "boot_id": "157ad19f-bfe9-4891-86fd-3990f9c3ca1f",
+      "commands": 27,
+      "destination_duration_s": 10.089999999999996,
+      "final_exit_checked": 1,
+      "guest_duration_s": 19.25,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 26408,
+        "read_sectors": 723888,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 13696.413,
+            "pause": 838.623,
+            "resume": 4858.137,
+            "snapshot": 3075.233
+          },
+          "mailbox_phases": {
+            "publish": 388247,
+            "receive": 763209
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 13040.132,
+            "pause": 892.897,
+            "resume": 4436.687,
+            "snapshot": 2712.593
+          },
+          "mailbox_phases": {
+            "publish": 590125,
+            "receive": 715148
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_evicted_0_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      }
+    },
+    {
+      "boot_id": "2c12cc56-8706-4b7d-bc5c-2aacca15d56e",
+      "commands": 35,
+      "destination_duration_s": 3.7200000000000095,
+      "final_exit_checked": 1,
+      "guest_duration_s": 8.960000000000004,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 1885,
+        "mount_read_received_bytes": 85757568,
+        "mount_read_sent_bytes": 203580,
+        "nfs_read_calls": 1885,
+        "read_ios": 14851,
+        "read_sectors": 270296,
+        "rx_bytes": 85959982,
+        "tx_bytes": 470196,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 15345.512,
+            "pause": 1060.41,
+            "resume": 4204.944,
+            "snapshot": 2764.078
+          },
+          "mailbox_phases": {
+            "publish": 552400,
+            "receive": 697765
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 12631.956,
+            "pause": 958.464,
+            "resume": 4534.112,
+            "snapshot": 2685.404
+          },
+          "mailbox_phases": {
+            "publish": 602235,
+            "receive": 665393
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_evicted_0_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 1885,
+        "mount_read_received_bytes": 85757568,
+        "mount_read_sent_bytes": 203580,
+        "nfs_read_calls": 1885,
+        "rx_bytes": 85960164,
+        "tx_bytes": 470424
+      }
+    },
+    {
+      "boot_id": "640a0de8-1f6a-47e0-aca7-17e493958ede",
+      "commands": 35,
+      "destination_duration_s": 3.610000000000003,
+      "final_exit_checked": 1,
+      "guest_duration_s": 9.019999999999996,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 17557,
+        "read_sectors": 270296,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 13442.991,
+            "pause": 1036.909,
+            "resume": 4746.739,
+            "snapshot": 2979.421
+          },
+          "mailbox_phases": {
+            "publish": 543054,
+            "receive": 799606
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 13664.333,
+            "pause": 881.323,
+            "resume": 5007.707,
+            "snapshot": 2709.27
+          },
+          "mailbox_phases": {
+            "publish": 578035,
+            "receive": 765145
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 70
+      },
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_evicted_0_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 70
+      }
+    },
+    {
+      "boot_id": "78f06cfd-5a35-4086-a340-7c8440843d77",
+      "commands": 43,
+      "destination_duration_s": 9.590000000000014,
+      "final_exit_checked": 1,
+      "guest_duration_s": 16.230000000000018,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 3541,
+        "mount_read_received_bytes": 112085632,
+        "mount_read_sent_bytes": 382428,
+        "nfs_read_calls": 3541,
+        "read_ios": 28187,
+        "read_sectors": 490600,
+        "rx_bytes": 112420952,
+        "tx_bytes": 872940,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 15577.096,
+            "pause": 1094.714,
+            "resume": 5050.645,
+            "snapshot": 3060.804
+          },
+          "mailbox_phases": {
+            "publish": 282756,
+            "receive": 792333
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 13801.29,
+            "pause": 1053.135,
+            "resume": 4885.595,
+            "snapshot": 2942.609
+          },
+          "mailbox_phases": {
+            "publish": 529975,
+            "receive": 699225
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 266,
+        "tx_bytes": 312
+      },
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_evicted_0_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 3541,
+        "mount_read_received_bytes": 112085632,
+        "mount_read_sent_bytes": 382428,
+        "nfs_read_calls": 3541,
+        "rx_bytes": 112421218,
+        "tx_bytes": 873252
+      }
+    },
+    {
+      "boot_id": "cfd76000-a7f9-4959-a922-0592682364e0",
+      "commands": 43,
+      "destination_duration_s": 9.149999999999995,
+      "final_exit_checked": 1,
+      "guest_duration_s": 16.67,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 25409,
+        "read_sectors": 490600,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 13719.094,
+            "pause": 850.711,
+            "resume": 4590.376,
+            "snapshot": 2867.789
+          },
+          "mailbox_phases": {
+            "publish": 347412,
+            "receive": 789412
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 13841.888,
+            "pause": 852.48,
+            "resume": 4933.811,
+            "snapshot": 2654.409
+          },
+          "mailbox_phases": {
+            "publish": 557530,
+            "receive": 743095
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_evicted_0_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      }
+    }
+  ],
+  "trials": 24
+}

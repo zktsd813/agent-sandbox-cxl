@@ -1,0 +1,68 @@
+{
+  "source": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/mode_compatibility.py",
+  "source_sha256": "a1d37d35049dbf623998c880e06a22a7030c4989ce99d99b1172fb572b2bdef6",
+  "tests": [
+    {
+      "name": "echoed_timeout_literal_accepted",
+      "passed": true,
+      "exception": null
+    },
+    {
+      "name": "anchored_timeout_observed",
+      "passed": true,
+      "exception": null
+    },
+    {
+      "name": "missing_result_rejected",
+      "passed": true,
+      "exception": "RuntimeError"
+    },
+    {
+      "name": "truncated_result_rejected",
+      "passed": true,
+      "exception": "JSONDecodeError"
+    },
+    {
+      "name": "duplicate_result_rejected",
+      "passed": true,
+      "exception": "RuntimeError"
+    },
+    {
+      "name": "wrong_label_rejected",
+      "passed": true,
+      "exception": "RuntimeError"
+    },
+    {
+      "name": "corrupt_data_rejected",
+      "passed": true,
+      "exception": "RuntimeError"
+    },
+    {
+      "name": "guest_failure_rejected",
+      "passed": true,
+      "exception": "RuntimeError"
+    },
+    {
+      "name": "api_response_accepted_and_raw_saved",
+      "passed": true,
+      "exception": null
+    },
+    {
+      "name": "api_wrong_status_rejected",
+      "passed": true,
+      "exception": "RuntimeError"
+    },
+    {
+      "name": "api_duplicate_response_rejected",
+      "passed": true,
+      "exception": "RuntimeError"
+    },
+    {
+      "name": "api_echo_only_rejected",
+      "passed": true,
+      "exception": "RuntimeError"
+    }
+  ],
+  "passed": 12,
+  "total": 12
+}

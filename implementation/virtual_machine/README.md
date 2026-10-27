@@ -73,7 +73,7 @@ Git 배포 대상은 microVM 코드·패치·측정 결과와 관련 문서다. 
 배포 검증은 [publication.json](results/publication.json)에 기록한다. 2026-10-21 최초 배포 기록과
 2026-10-23 MPTCP 추가분의 검증을 구분하고, 기존 측정 결과의 날짜·소스 hash는 유지한다.
 
-## 구현한 세 경로
+## 두 계열과 네 가지 이전 모드
 
 | 경로 | 전환할 때 하는 일 | 목적지에 유지되는 것 |
 |---|---|---|
@@ -81,20 +81,25 @@ Git 배포 대상은 microVM 코드·패치·측정 결과와 관련 문서다. 
 | `reuse` | 같은 상태를 이미 실행 이력이 있는 목적지 worker에 복원 | 목적지의 KVM VM/vCPU FD, VMCS, thread, RAM mapping; 기존 IRQFD 정리는 복원 중 수행 |
 | `reuse-prepared` | 비어 있는 worker의 연결 정리를 먼저 끝내고, 상태 도착 후 복원 | `reuse`와 같으며 목적지 정리를 전환 경로 밖에서 수행 |
 
-별도로 **direct handoff** 구현도 보존했다. 수정 KVM이 `struct kvm`, vCPU, VMCS,
+위 세 모드는 상태 전달 계열이다. 별도로 **direct handoff** 구현도 보존했다. 수정 KVM이 `struct kvm`, vCPU, VMCS,
 EPT 등의 지정 객체를 DAX에 할당하고 A에서 detach한 객체를 B에 attach한다.
 일부 host 연결은 B의 것으로 다시 연결한다. snapshot이나 KVM VM 재생성이 없는,
 주소·CPU 모델·물리 메모리 배치 제약이 강한 Intel 실험 경로다. 아래 기본 사용법은 의미적 snapshot 경로다.
 
 의미적 snapshot은 raw `struct kvm`이나 VMCS 바이트를 직렬화하지 않는다.
 Firecracker의 `MicrovmState`에 CPU 레지스터·MSR·interrupt controller·clock·장치 상태를 담는다.
-현재 측정 구성의 상태 파일은 약 **13.7KB**다. 버전·길이·hash를 확인한 뒤 목적지가 읽는다.
+Diskless 1-vCPU 구성의 상태 파일은 약 **13.7KB**, 2-vCPU·block trace에서는 약 **25KB**다. 버전·길이·hash를 확인한 뒤 목적지가 읽는다.
 RAM은 복사하거나 파일로 dump하지 않는다. FD, eventfd, host thread, `mm` 등 host 연결은 각 Linux 소유다.
 
 동일한 HVA 매핑은 `0x400000000000`으로 고정할 수 있다. guest VA/GPA를 바꾸지 않아
 게스트 page table을 고칠 필요가 없지만, **서로 다른 KVM의 EPT를 그대로 공유하는 기능은 아니다.**
 `reuse`는 목적지 worker의 기존 mapping/EPT를 유지하고 RAM이나 EPT의 이동을 하지 않는다.
 복원에 필요한 translation flush는 수행한다.
+
+2026-10-27 [모드 호환성 검증](results/mode-compatibility-20261027/README.md)에서 기존 네 모드의
+지원 구성 회귀와 파일 구성을 구분했다. Host NFS·virtio-blk는 일반 `snapshot`에서 검증하며,
+`reuse/prepared`와 direct의 기존 device/vCPU 제한을 제거하지 않았다. 특히 direct block의
+전환 거부 뒤 Resume API가 성공해도 guest 요청이 복구되지 않는 실패 경로를 확인했다.
 
 ## 비어 있는 worker의 의미
 
@@ -228,7 +233,8 @@ CXL_LAB_ASSETS="$PWD/implementation/virtual_machine/.local/assets-trace-base-new
 python3 implementation/virtual_machine/trace_prepare.py \
   --source-repo /absolute/path/to/repository-with-traces-and-images \
   --base-assets "$PWD/implementation/virtual_machine/.local/assets-trace-base-new" \
-  --assets "$CXL_LAB_ASSETS" --dependency-manifest "$CXL_NFS_OUT/manifest.json"
+  --assets "$CXL_LAB_ASSETS" --dependency-manifest "$CXL_NFS_OUT/manifest.json" \
+  --shared-probe "$PWD/implementation/virtual_machine/.local/assets-trace-base-new/shared-probe"
 ```
 
 `nfs_dependencies.sh`는 NFSD/NFSv3뿐 아니라 `OVERLAY_FS`, `TMPFS`, `TMPFS_XATTR`를 켠 별도 kernel을 만든다.
@@ -243,7 +249,7 @@ taskset -c 0-5 python3 implementation/virtual_machine/lab.py start \
   --storage-image "$CXL_LAB_ASSETS/storage.raw" \
   --qemu /absolute/path/to/patched-qemu-system-x86_64
 taskset -c 0-5 python3 implementation/virtual_machine/trace_bench.py \
-  --cycles 3 --eviction-cycles 1 --memory-mib 2048 --vcpus 2 \
+  --state-transport dax-mailbox --cycles 3 --eviction-cycles 1 --memory-mib 2048 --vcpus 2 \
   --host-cpus-a 0-2 --host-cpus-b 3-5
 # 위 명령이 출력한 TRACE_REPORT의 실제 경로를 넣는다.
 python3 implementation/virtual_machine/verify_trace_results.py \
@@ -251,6 +257,13 @@ python3 implementation/virtual_machine/verify_trace_results.py \
   --assets-dir "$CXL_LAB_ASSETS" --json-out /absolute/path/to/trace-output/audit.json
 python3 implementation/virtual_machine/lab.py stop
 ```
+
+`--state-transport dax-mailbox`는 native helper로 상태 bytes만 기존 DAX mailbox에 게시한다.
+위 준비 명령의 `--shared-probe`로 새 helper를 L1 initramfs에 넣어야 한다. 목적지의 빈 API process를
+미리 시작하지만 KVM worker reuse는 아니다. Publish 전에 source를 종료·fence하고, receive에서
+session/round/length/hash를 검증한 뒤 restore한다. 두 노드의 state bytes를 사후 대조한다.
+`--state-transport serial`은 이전 전달 경로를 선택하며 CLI 기본값으로 유지한다.
+두 경로 모두 shell 제어는 serial이고, trace controller 시간은 기존 최적화된 native controller와 구분한다.
 
 NFS/trace 실험의 L1 pair는 **한 번만 사용**한다. 중단·실패·smoke 후에도 `lab.py stop`과 `start`로 새 pair를 만든다.
 재실행은 marker로 거부해 mount 중첩과 이전 NFS/Firecracker 상태 재사용을 막는다. Dependency와 asset은 새 pair에서도 재사용할 수 있다.

@@ -1,6 +1,6 @@
 # CXL microVM 실행 이전 연구와 구현 정리
 
-정리 기준: 2026년 10월 27일. Host NFS의 실제 개발 trace 재생과 A→B→A 검증을 추가했다. 측정 날짜와 환경은 각 결과에 따로 표시한다.
+정리 기준: 2026년 10월 27일. Host NFS trace 재생에 이어 기존 이전 모드와의 호환성을 검증했다. 측정 날짜와 환경은 각 결과에 따로 표시한다.
 
 목표는 **sandbox의 메모리를 CXL에 유지하면서 실행을 담당하는 노드를 바꾸는 것**이다. RAM 전체를 옮기는 비용을 줄여, 이미 실행 중인 sandbox도 다른 노드의 여유 CPU를 사용할 수 있게 하려는 연구다.
 
@@ -119,6 +119,12 @@ Guest page table과 EPT는 다른 계층이다. Guest VA/GPA를 유지한다고 
 Reuse-prepared는 노드마다 worker 하나를 교대로 사용하는 구현이다. 임의 구성의 N개 worker pool이나 일반 scheduler가 완성된 것은 아니다. 준비 비용도 없어진 것이 아니라 peer 실행 중에 지불한다.
 
 Direct는 지정 KVM 객체와 pointer graph를 DAX에 두고 일부 host 연결을 목적지의 것으로 다시 연결한다. 현재 지원 범위는 1 vCPU와 호환 CPU/VMCS, 맞춰 둔 kernel/module 주소와 DAX PFN 등 강한 조건을 전제로 한다. Linux guest direct 경로에서는 source Firecracker가 A에 남고 B의 executor가 동일 KVM 객체를 실행한다. 완전한 VMM·I/O 서비스 이전으로 해석하지 않는다. Block/net/vsock 등의 worker 재사용과 direct의 PML 활성화는 현재 제한 또는 거부 대상이다.
+
+상태 전달 계열의 `snapshot`·`reuse`·`reuse-prepared`와 direct를 별도로 재실행해 지원 구성의 회귀를 확인했다.
+파일 경로는 일반 snapshot의 DAX mailbox에 연결해 **24 trials·840명령·48 handoffs**를 검증했다. `PrepareReuse`는 block/다중 vCPU를 명시적으로 거부하고,
+direct도 같은 제약을 실제로 거부했다. 특히 direct + block에서는 거부 뒤 Resume 204에도 다음 guest 읽기에
+응답하지 않는 복구 문제가 나타났다. 기존 빠른 diskless direct 결과를 파일 장치가 있는 구성의 성공으로 확대할 수 없다.
+[모드별 실제 시험과 실패 경계](../implementation/virtual_machine/results/mode-compatibility-20261027/README.md)
 
 ### 진행 과정의 주요 시점
 
@@ -378,7 +384,7 @@ PML buffer·bitmap과 VMM의 software dirty 추적을 이 경계에 연결한다
 |---|---|---|
 | DSA 단독 검증 | Capability, DAX 주소, descriptor·completion·실패 처리 | 전 범위 처리와 오류 시 ownership 게시 차단 |
 | DSA preflush | Epoch reset, 누적 U, 재쓰기, queue budget | 반복 재쓰기·timeout에서도 데이터 일치; background 비용과 tail 지연 분리 |
-| 장치가 있는 reuse/direct | Net/block 논리 상태와 host backend 재연결 | Late I/O·lost IRQ·중복 owner 없이 반복 이전 |
+| 장치가 있는 reuse/direct | Direct 거부의 사전 검사·rollback부터 수정하고 net/block 논리 상태와 host backend 재연결 | 거부 후 source 정상 동작, late I/O·lost IRQ·중복 owner 없는 반복 이전 |
 | 실제 다중 host CXL | 주소 매핑, visibility, control atomic/authority, fencing | Source crash·ACK 유실·재시도에서도 중복 실행 방지 |
 | 범위 확대 | 다중 vCPU barrier, 여러 VM allocation과 회수 | 구성 불일치 거부, 영역 격리와 반복 수명 검증 |
 

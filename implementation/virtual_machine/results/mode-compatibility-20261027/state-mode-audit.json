@@ -1,0 +1,249 @@
+{
+  "result": "passed",
+  "reports": [
+    {
+      "mode": "snapshot",
+      "report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261027T080525Z-2f_54oik/handoff-128m-warm-1793088330444811802/report.json",
+      "handoffs": 24,
+      "measured": 20,
+      "warmup": 4,
+      "state_bytes": [
+        13746,
+        13778
+      ],
+      "state_payload_bytes_total": 330640,
+      "source_destination_fnv_matches": 24,
+      "archived_file_sha256": {
+        "A/bench.log": "b8b2210ea54f13f819ae59dd93293fec8ea2a8a0ac486d0d44f8de662cdad14b",
+        "A/bench-fc-0.log": "57b2c04c121cd02779208cd4d0fa89ec9ed6dbed13cb90e4d01a97326a65e349",
+        "A/bench-fc-10.log": "173698bd8a81526e78c40dd64618e334239dbd45d912166800fa0d5416ada3fd",
+        "A/bench-fc-12.log": "82a37f73d8c520aa3bc2abdf689a55ce2719cb6bb5fbb7be16ef4a7c1feea662",
+        "A/bench-fc-14.log": "01a326f8e3a42c74a67223d26bdf3983a923f74f8969f8113f17a935eda3c4a8",
+        "A/bench-fc-16.log": "541abf485abe158ed4a7c79a97ae4772309f23e1904e320ad2a9acf5317ff32d",
+        "A/bench-fc-18.log": "0e46f733cab975aa0e8de162cea50bbc191da6ba81aa9152ed50b4affa9f21c6",
+        "A/bench-fc-2.log": "e6f1bca9da817fead9c0a73e43f2c0ed2a4a56608ac94277a0d33ccd2c9caf01",
+        "A/bench-fc-20.log": "8b3fc99133fc1070bcdf4c5908f47e9b720b46f89e73de79ccfabc23c431eb4b",
+        "A/bench-fc-22.log": "3c5c88a8a08b5bbe5e7c34eeb9218cbcf30ac830ee072eda4109b67bcef3d783",
+        "A/bench-fc-24.log": "976746c9bcc02d25e30c2a62a6332f398365da3c67b4a335d81680b5e1ce476c",
+        "A/bench-fc-4.log": "fa040090cda6ce26aeed233edb24a72387f78474b123cec7cb7db0183eeba60e",
+        "A/bench-fc-6.log": "3e57a33240292fa3c4b628d6b21f9641196c7e9882ca33ba41b8e815e23ffaa7",
+        "A/bench-fc-8.log": "d68d5f30e9d96749faad1aa78f58a7666abf2ac0fe71560ab288181b301178be",
+        "A/bench-serial-0.log": "0bbc24c5b15f754331158d3f5a5b668b417644686394361ec1b2fceba9366fd5",
+        "A/bench-serial-10.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "A/bench-serial-12.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "A/bench-serial-14.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "A/bench-serial-16.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "A/bench-serial-18.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "A/bench-serial-2.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "A/bench-serial-20.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "A/bench-serial-22.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "A/bench-serial-24.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "A/bench-serial-4.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "A/bench-serial-6.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "A/bench-serial-8.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "B/bench.log": "bb213fc50289362648545238cea02b641e330b2625b4f2b8c5cc3387423c7359",
+        "B/bench-fc-1.log": "708c0e398be195c7d40e48472d5b58af084958266893edaf902760fe8e19592e",
+        "B/bench-fc-11.log": "42f9b8b90d8018f0421592c5facf41c310713f10e1a2624e6902e056290cba82",
+        "B/bench-fc-13.log": "d0107d5f90730e183d99ceefad61b02315cf1202069e4a68130acc9d5054371e",
+        "B/bench-fc-15.log": "25c7ece00029b2c23682ef3d8fcec5a64924ae722781d6f2e37db35a28a7c8bb",
+        "B/bench-fc-17.log": "093b37c02a73c68bbc83b158bab9b16a5f55dd036993a59c1a3e8f5f4ea993f5",
+        "B/bench-fc-19.log": "4d00cdaa23a4e67f416777818beae8051c7b2d857324ad3ac9b81d5aec65dc8b",
+        "B/bench-fc-21.log": "27c05b191c1d2110e27edcce46411bc2540747618bb83e4539ef54988529817e",
+        "B/bench-fc-23.log": "b3ca97c2336c46c222104b800016d9a1bd0f10d99e103760f98c5cd34ce4631a",
+        "B/bench-fc-3.log": "2c08d9f562306953bb0f8ceb45bff50cc14cf6824630d8a2bad0dab5399b3b66",
+        "B/bench-fc-5.log": "50cd36a0c33bc453c32ef35340edac57112fe0e20311fe39914b19813dec1eb9",
+        "B/bench-fc-7.log": "ecb834c70b507856dc05700d027d4c7a4e464caa0f51d72790f8383ab742d594",
+        "B/bench-fc-9.log": "8e26eb7c7e9f74a14dbe5d38eff245b43106f572c1270712eedcd88f290b4a7a",
+        "B/bench-serial-1.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "B/bench-serial-11.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "B/bench-serial-13.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "B/bench-serial-15.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "B/bench-serial-17.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "B/bench-serial-19.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "B/bench-serial-21.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "B/bench-serial-23.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "B/bench-serial-3.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "B/bench-serial-5.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "B/bench-serial-7.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "B/bench-serial-9.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_worker_signatures": {},
+      "shared_ram_bytes_transferred": 0,
+      "ram_evidence": "Every save/load names /dev/dax0.0; same HVA; fresh remaps initialize=false, or runtime reuse mapping retained; final rw-s DAX mapping"
+    },
+    {
+      "mode": "reuse",
+      "report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261027T080551Z-2hr65yzg/handoff-128m-warm-1793088356277139950/report.json",
+      "handoffs": 24,
+      "measured": 20,
+      "warmup": 4,
+      "state_bytes": [
+        13746
+      ],
+      "state_payload_bytes_total": 329904,
+      "source_destination_fnv_matches": 24,
+      "archived_file_sha256": {
+        "A/bench.log": "4d6a2b2db7588fb5a41ad1354da4aea7fa4d5968dff284839865fe64455ab9cf",
+        "A/bench-fc-0.log": "439f6cffa31d74c371a62f0edfdd771463e72e59c7a006087db6eade9b3afd41",
+        "A/bench-serial-0.log": "ffa7acf5af1809275d82af2cb9706a588b191004de1bdc199210bcbefecac099",
+        "B/bench.log": "ff38dd48789972acd298e2c59f621da59041abbd3849ce65ba0fb1350e4d41a7",
+        "B/bench-fc-0.log": "f7fd0e0676a0b3a8f18ef252e84a8db1ecb81cef75a97945e778498843f33d10",
+        "B/bench-serial-0.log": "bbac4f39f86f5f96531a63bfba483de5fdb4844bc74e3f7c01c9985f3784774f"
+      },
+      "native_worker_signatures": {
+        "A": [
+          192,
+          622,
+          16,
+          27,
+          196
+        ],
+        "B": [
+          113,
+          538,
+          16,
+          27,
+          118
+        ]
+      },
+      "shared_ram_bytes_transferred": 0,
+      "ram_evidence": "Every save/load names /dev/dax0.0; same HVA; fresh remaps initialize=false, or runtime reuse mapping retained; final rw-s DAX mapping"
+    },
+    {
+      "mode": "reuse-prepared",
+      "report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261027T080616Z-q5z8e6iy/handoff-128m-warm-1793088380987837995/report.json",
+      "handoffs": 24,
+      "measured": 20,
+      "warmup": 4,
+      "state_bytes": [
+        13746
+      ],
+      "state_payload_bytes_total": 329904,
+      "source_destination_fnv_matches": 24,
+      "archived_file_sha256": {
+        "A/bench.log": "c541be4b1004a69ccc44fc03d5216ca7e3328e3d35d5b4995c092e9630e2c46c",
+        "A/bench-fc-0.log": "c32094e06ea65d3706d4b1e18f189a6fdc9227ebe3f2726a898cd8a76c8ddc9f",
+        "A/bench-serial-0.log": "98f953e352e35bdfa0c57d9a627cc553497eafe97108a13d8c4b568c776c8a62",
+        "B/bench.log": "9e6effa512ab9aaaeff8389b6d6e2f27d147f7f39f0f09e4428b204dc9ce95f2",
+        "B/bench-fc-0.log": "546de476101fca62c575bc12d3bd4b6d56aa3817c306a50444ca7d4030c1f902",
+        "B/bench-serial-0.log": "12828c8cde94b696d83e74bbd2183fd603c09b73498e95122ba889081845b27b"
+      },
+      "native_worker_signatures": {
+        "A": [
+          189,
+          626,
+          16,
+          27,
+          193
+        ],
+        "B": [
+          113,
+          547,
+          16,
+          27,
+          118
+        ]
+      },
+      "shared_ram_bytes_transferred": 0,
+      "ram_evidence": "Every save/load names /dev/dax0.0; same HVA; fresh remaps initialize=false, or runtime reuse mapping retained; final rw-s DAX mapping"
+    }
+  ],
+  "negative_tests": [
+    {
+      "mode": "snapshot",
+      "mutation": "handoffs",
+      "rejected": true,
+      "error": "Derived count differs"
+    },
+    {
+      "mode": "snapshot",
+      "mutation": "payload_bytes",
+      "rejected": true,
+      "error": "Derived payload sizes differ"
+    },
+    {
+      "mode": "snapshot",
+      "mutation": "ram_transfer",
+      "rejected": true,
+      "error": "RAM transfer/layout claim"
+    },
+    {
+      "mode": "snapshot",
+      "mutation": "sample_hash",
+      "rejected": true,
+      "error": "Raw BENCH_JSON differs from report"
+    },
+    {
+      "mode": "snapshot",
+      "mutation": "archive_sha",
+      "rejected": true,
+      "error": "Archive SHA256"
+    },
+    {
+      "mode": "reuse",
+      "mutation": "handoffs",
+      "rejected": true,
+      "error": "Derived count differs"
+    },
+    {
+      "mode": "reuse",
+      "mutation": "payload_bytes",
+      "rejected": true,
+      "error": "Derived payload sizes differ"
+    },
+    {
+      "mode": "reuse",
+      "mutation": "ram_transfer",
+      "rejected": true,
+      "error": "RAM transfer/layout claim"
+    },
+    {
+      "mode": "reuse",
+      "mutation": "sample_hash",
+      "rejected": true,
+      "error": "Raw BENCH_JSON differs from report"
+    },
+    {
+      "mode": "reuse",
+      "mutation": "archive_sha",
+      "rejected": true,
+      "error": "Archive SHA256"
+    },
+    {
+      "mode": "reuse-prepared",
+      "mutation": "handoffs",
+      "rejected": true,
+      "error": "Derived count differs"
+    },
+    {
+      "mode": "reuse-prepared",
+      "mutation": "payload_bytes",
+      "rejected": true,
+      "error": "Derived payload sizes differ"
+    },
+    {
+      "mode": "reuse-prepared",
+      "mutation": "ram_transfer",
+      "rejected": true,
+      "error": "RAM transfer/layout claim"
+    },
+    {
+      "mode": "reuse-prepared",
+      "mutation": "sample_hash",
+      "rejected": true,
+      "error": "Raw BENCH_JSON differs from report"
+    },
+    {
+      "mode": "reuse-prepared",
+      "mutation": "archive_sha",
+      "rejected": true,
+      "error": "Archive SHA256"
+    }
+  ],
+  "limitations": [
+    "State payload checksum is FNV-1a64, not SHA256 or authentication",
+    "Per-round state payload bytes were not archived; their hashes cannot be independently recomputed after the run",
+    "Zero bulk RAM transfer is supported by runtime API/mapping evidence and implementation contract, not a general memory-write instrument"
+  ],
+  "script_sha256": "600d23cd9c9c1e292110bbe4a929e2d3f6ce6fdc8e360128a1eae90f25aa680a"
+}
