@@ -57,7 +57,8 @@ if [[ ! -f "$nfs_build/.nfs-cache-copy-complete" ]]; then
 fi
 "$nfs_source/scripts/config" --file "$nfs_build/.config" \
     --enable NFSD --disable NFSD_V2 --disable NFSD_V3_ACL --disable NFSD_V4 \
-    --enable NFS_FS --enable NFS_V3 --enable VIRTIO_BLK --enable EXT4_FS
+    --enable NFS_FS --enable NFS_V3 --enable VIRTIO_BLK --enable EXT4_FS \
+    --enable OVERLAY_FS --enable TMPFS --enable TMPFS_XATTR
 taskset -c "$nfs_cpus" make -C "$nfs_source" O="$nfs_build" LOCALVERSION= olddefconfig
 taskset -c "$nfs_cpus" make -C "$nfs_source" O="$nfs_build" LOCALVERSION= -j"$nfs_jobs" bzImage modules
 mkdir -p "$nfs_modules"

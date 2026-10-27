@@ -1,0 +1,16 @@
+{
+  "result": "passed",
+  "tests": [
+    "valid_raw_snapshot",
+    "derived_counter_forgery",
+    "derived_cache_forgery",
+    "duplicate_raw_counter_line",
+    "wrong_raw_range",
+    "missing_raw_evidence",
+    "invalid_evidence_filename",
+    "single_use_pair_guard",
+    "dynamic_image_setup",
+    "dead_vm_affinity_guard"
+  ],
+  "temporary_directory": "/tmp/nfs-host-observation-tests-urzkhoqy"
+}

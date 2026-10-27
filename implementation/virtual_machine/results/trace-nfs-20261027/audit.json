@@ -1,0 +1,2810 @@
+{
+  "artifact_files_checked": [
+    "l1-initramfs.cpio",
+    "l1-kernel",
+    "gin-gonic__gin-3741-initramfs.cpio",
+    "storage.raw",
+    "shared-probe",
+    "micropython__micropython-13039-initramfs.cpio",
+    "nfs-probe",
+    "php-cs-fixer__php-cs-fixer-8331-initramfs.cpio",
+    "l2-initramfs.cpio",
+    "/home/ijkim/agent-sandbox-cxl/experiments/contention/.local/images/gin-gonic__gin-3741/rootfs.ext4",
+    "/home/ijkim/agent-sandbox-cxl/experiments/contention/.local/images/php-cs-fixer__php-cs-fixer-8331/rootfs.ext4",
+    "/home/ijkim/agent-sandbox-cxl/experiments/contention/.local/images/micropython__micropython-13039/rootfs.ext4"
+  ],
+  "commands": 840,
+  "fresh_guest_boot_ids": 24,
+  "handoffs": 48,
+  "prepared_executable_wrappers_checked": 105,
+  "recorded_exits_checked": 816,
+  "result": "passed",
+  "rpc_counter_differences": [],
+  "rpc_counter_note": "proc3 counts started RPCs, mountstats counts completed RPCs; snapshots are sequential.",
+  "runtime_sources_checked": [
+    "lab.py",
+    "nfs_bench.py",
+    "nfs_dependencies.sh",
+    "nfs_probe.c",
+    "trace-guest-run.sh",
+    "trace-l2-init.sh",
+    "trace_bench.py",
+    "trace_prepare.py"
+  ],
+  "schema_version": 1,
+  "source_patches_checked": [
+    "firecracker.patch",
+    "qemu-cxl-direct-ram.patch",
+    "ram-backend-source.json"
+  ],
+  "stable_test_summaries_checked": 72,
+  "submission_exits_checked": 24,
+  "submission_normalization": {
+    "raw_hash_difference_trials": [
+      "micropython__micropython-13039_retained_0_nfs",
+      "micropython__micropython-13039_retained_0_local",
+      "micropython__micropython-13039_retained_1_local",
+      "micropython__micropython-13039_retained_1_nfs",
+      "micropython__micropython-13039_retained_2_nfs",
+      "micropython__micropython-13039_retained_2_local",
+      "micropython__micropython-13039_evicted_0_nfs",
+      "micropython__micropython-13039_evicted_0_local"
+    ],
+    "removed_exact_line": "/root/.bashrc: line 1: /opt/miniconda3/etc/profile.d/conda.sh: No such file or directory\n",
+    "require_same_warning_count": true
+  },
+  "submissions_checked": 24,
+  "summary": [
+    {
+      "backend": "local",
+      "cache_mode": "evicted",
+      "guest_duration_s": {
+        "max": 19.660000000000004,
+        "median": 19.660000000000004,
+        "min": 19.660000000000004
+      },
+      "n": 1,
+      "trace": "gin-gonic__gin-3741"
+    },
+    {
+      "backend": "nfs",
+      "cache_mode": "evicted",
+      "guest_duration_s": {
+        "max": 19.51,
+        "median": 19.51,
+        "min": 19.51
+      },
+      "n": 1,
+      "trace": "gin-gonic__gin-3741"
+    },
+    {
+      "backend": "local",
+      "cache_mode": "retained",
+      "guest_duration_s": {
+        "max": 18.119999999999994,
+        "median": 17.99,
+        "min": 17.840000000000003
+      },
+      "n": 3,
+      "trace": "gin-gonic__gin-3741"
+    },
+    {
+      "backend": "nfs",
+      "cache_mode": "retained",
+      "guest_duration_s": {
+        "max": 18.279999999999994,
+        "median": 17.929999999999993,
+        "min": 17.849999999999998
+      },
+      "n": 3,
+      "trace": "gin-gonic__gin-3741"
+    },
+    {
+      "backend": "local",
+      "cache_mode": "evicted",
+      "guest_duration_s": {
+        "max": 15.979999999999986,
+        "median": 15.979999999999986,
+        "min": 15.979999999999986
+      },
+      "n": 1,
+      "trace": "micropython__micropython-13039"
+    },
+    {
+      "backend": "nfs",
+      "cache_mode": "evicted",
+      "guest_duration_s": {
+        "max": 16.560000000000006,
+        "median": 16.560000000000006,
+        "min": 16.560000000000006
+      },
+      "n": 1,
+      "trace": "micropython__micropython-13039"
+    },
+    {
+      "backend": "local",
+      "cache_mode": "retained",
+      "guest_duration_s": {
+        "max": 15.059999999999988,
+        "median": 14.670000000000007,
+        "min": 14.65999999999999
+      },
+      "n": 3,
+      "trace": "micropython__micropython-13039"
+    },
+    {
+      "backend": "nfs",
+      "cache_mode": "retained",
+      "guest_duration_s": {
+        "max": 15.160000000000013,
+        "median": 15.050000000000006,
+        "min": 14.869999999999983
+      },
+      "n": 3,
+      "trace": "micropython__micropython-13039"
+    },
+    {
+      "backend": "local",
+      "cache_mode": "evicted",
+      "guest_duration_s": {
+        "max": 8.660000000000016,
+        "median": 8.660000000000016,
+        "min": 8.660000000000016
+      },
+      "n": 1,
+      "trace": "php-cs-fixer__php-cs-fixer-8331"
+    },
+    {
+      "backend": "nfs",
+      "cache_mode": "evicted",
+      "guest_duration_s": {
+        "max": 9.019999999999996,
+        "median": 9.019999999999996,
+        "min": 9.019999999999996
+      },
+      "n": 1,
+      "trace": "php-cs-fixer__php-cs-fixer-8331"
+    },
+    {
+      "backend": "local",
+      "cache_mode": "retained",
+      "guest_duration_s": {
+        "max": 8.169999999999998,
+        "median": 8.139999999999997,
+        "min": 7.739999999999984
+      },
+      "n": 3,
+      "trace": "php-cs-fixer__php-cs-fixer-8331"
+    },
+    {
+      "backend": "nfs",
+      "cache_mode": "retained",
+      "guest_duration_s": {
+        "max": 8.099999999999994,
+        "median": 8.029999999999994,
+        "min": 7.849999999999995
+      },
+      "n": 3,
+      "trace": "php-cs-fixer__php-cs-fixer-8331"
+    }
+  ],
+  "trial_audits": [
+    {
+      "boot_id": "6501e838-4e04-41a4-b6bc-1bfebf76a427",
+      "commands": 27,
+      "destination_duration_s": 8.799999999999994,
+      "final_exit_checked": 1,
+      "guest_duration_s": 18.279999999999994,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 16,
+        "mount_read_received_bytes": 575488,
+        "mount_read_sent_bytes": 1728,
+        "nfs_read_calls": 16,
+        "read_ios": 11676,
+        "read_sectors": 535480,
+        "rx_bytes": 579170,
+        "tx_bytes": 5986,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 252,
+        "tx_bytes": 368
+      },
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_retained_0_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 16,
+        "mount_read_received_bytes": 575488,
+        "mount_read_sent_bytes": 1728,
+        "nfs_read_calls": 16,
+        "rx_bytes": 579422,
+        "tx_bytes": 6354
+      }
+    },
+    {
+      "boot_id": "c3e4cf24-b142-4708-be35-b2a1e3f78c67",
+      "commands": 27,
+      "destination_duration_s": 8.819999999999997,
+      "final_exit_checked": 1,
+      "guest_duration_s": 17.99,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 11647,
+        "read_sectors": 535696,
+        "rx_bytes": 0,
+        "tx_bytes": 70,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 220,
+        "tx_bytes": 150
+      },
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_retained_0_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 220,
+        "tx_bytes": 220
+      }
+    },
+    {
+      "boot_id": "a634d207-309c-4a04-8258-53f541827474",
+      "commands": 35,
+      "destination_duration_s": 2.5899999999999963,
+      "final_exit_checked": 1,
+      "guest_duration_s": 8.029999999999994,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 158,
+        "mount_read_received_bytes": 17366784,
+        "mount_read_sent_bytes": 17064,
+        "nfs_read_calls": 158,
+        "read_ios": 8746,
+        "read_sectors": 155024,
+        "rx_bytes": 17397714,
+        "tx_bytes": 45444,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 298
+      },
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_0_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 158,
+        "mount_read_received_bytes": 17366784,
+        "mount_read_sent_bytes": 17064,
+        "nfs_read_calls": 158,
+        "rx_bytes": 17397896,
+        "tx_bytes": 45742
+      }
+    },
+    {
+      "boot_id": "c5bc0339-76c4-4a05-89cf-8834c0aff21e",
+      "commands": 35,
+      "destination_duration_s": 2.6599999999999966,
+      "final_exit_checked": 1,
+      "guest_duration_s": 8.169999999999998,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 8331,
+        "read_sectors": 155024,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 66,
+        "tx_bytes": 66
+      },
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_0_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 66,
+        "tx_bytes": 66
+      }
+    },
+    {
+      "boot_id": "e416dbc2-0bef-474d-85d8-d6e9d79516ff",
+      "commands": 43,
+      "destination_duration_s": 7.859999999999992,
+      "final_exit_checked": 1,
+      "guest_duration_s": 14.869999999999983,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 387,
+        "mount_read_received_bytes": 12206464,
+        "mount_read_sent_bytes": 41796,
+        "nfs_read_calls": 387,
+        "read_ios": 16672,
+        "read_sectors": 321184,
+        "rx_bytes": 12247412,
+        "tx_bytes": 95400,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 298
+      },
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_retained_0_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 387,
+        "mount_read_received_bytes": 12206464,
+        "mount_read_sent_bytes": 41796,
+        "nfs_read_calls": 387,
+        "rx_bytes": 12247594,
+        "tx_bytes": 95698
+      }
+    },
+    {
+      "boot_id": "30b5a192-65e5-44d9-893a-30436356f04d",
+      "commands": 43,
+      "destination_duration_s": 7.6699999999999875,
+      "final_exit_checked": 1,
+      "guest_duration_s": 15.059999999999988,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 17200,
+        "read_sectors": 321632,
+        "rx_bytes": 150,
+        "tx_bytes": 150,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_retained_0_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      }
+    },
+    {
+      "boot_id": "0f67b002-bd5e-408d-928d-f4bbb6f8af8d",
+      "commands": 27,
+      "destination_duration_s": 8.810000000000002,
+      "final_exit_checked": 1,
+      "guest_duration_s": 17.840000000000003,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 11168,
+        "read_sectors": 535560,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      },
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_retained_1_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      }
+    },
+    {
+      "boot_id": "38fea346-53d7-48ad-991a-608d89a4d719",
+      "commands": 27,
+      "destination_duration_s": 8.629999999999999,
+      "final_exit_checked": 1,
+      "guest_duration_s": 17.849999999999998,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 15,
+        "mount_read_received_bytes": 497536,
+        "mount_read_sent_bytes": 1620,
+        "nfs_read_calls": 15,
+        "read_ios": 11841,
+        "read_sectors": 535008,
+        "rx_bytes": 500352,
+        "tx_bytes": 4752,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_retained_1_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 15,
+        "mount_read_received_bytes": 497536,
+        "mount_read_sent_bytes": 1620,
+        "nfs_read_calls": 15,
+        "rx_bytes": 500534,
+        "tx_bytes": 4980
+      }
+    },
+    {
+      "boot_id": "5ebbd6e4-a69e-436d-b8db-8865f959f08f",
+      "commands": 35,
+      "destination_duration_s": 2.6299999999999955,
+      "final_exit_checked": 1,
+      "guest_duration_s": 8.139999999999997,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 7361,
+        "read_sectors": 155024,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 66,
+        "tx_bytes": 66
+      },
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_1_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 66,
+        "tx_bytes": 66
+      }
+    },
+    {
+      "boot_id": "08a5ec35-0ae9-4bad-a5b5-d80edf90e62c",
+      "commands": 35,
+      "destination_duration_s": 2.7799999999999976,
+      "final_exit_checked": 1,
+      "guest_duration_s": 8.099999999999994,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 159,
+        "mount_read_received_bytes": 17387392,
+        "mount_read_sent_bytes": 17172,
+        "nfs_read_calls": 159,
+        "read_ios": 9511,
+        "read_sectors": 155024,
+        "rx_bytes": 17416656,
+        "tx_bytes": 43932,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 252,
+        "tx_bytes": 228
+      },
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_1_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 159,
+        "mount_read_received_bytes": 17387392,
+        "mount_read_sent_bytes": 17172,
+        "nfs_read_calls": 159,
+        "rx_bytes": 17416908,
+        "tx_bytes": 44160
+      }
+    },
+    {
+      "boot_id": "7c619a7f-bb36-433e-ab48-0d955ee5bc90",
+      "commands": 43,
+      "destination_duration_s": 7.660000000000007,
+      "final_exit_checked": 1,
+      "guest_duration_s": 14.670000000000007,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 16574,
+        "read_sectors": 320872,
+        "rx_bytes": 66,
+        "tx_bytes": 66,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 84,
+        "tx_bytes": 154
+      },
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_retained_1_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 220
+      }
+    },
+    {
+      "boot_id": "a86875f9-585c-40ec-80bf-f7a405e93b5b",
+      "commands": 43,
+      "destination_duration_s": 7.530000000000001,
+      "final_exit_checked": 1,
+      "guest_duration_s": 15.160000000000013,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 377,
+        "mount_read_received_bytes": 11730048,
+        "mount_read_sent_bytes": 40716,
+        "nfs_read_calls": 377,
+        "read_ios": 17251,
+        "read_sectors": 320872,
+        "rx_bytes": 11768780,
+        "tx_bytes": 92592,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_retained_1_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 377,
+        "mount_read_received_bytes": 11730048,
+        "mount_read_sent_bytes": 40716,
+        "nfs_read_calls": 377,
+        "rx_bytes": 11768962,
+        "tx_bytes": 92820
+      }
+    },
+    {
+      "boot_id": "33052b5a-3888-4378-a425-6855be4ddeb9",
+      "commands": 27,
+      "destination_duration_s": 8.74999999999999,
+      "final_exit_checked": 1,
+      "guest_duration_s": 17.929999999999993,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 16,
+        "mount_read_received_bytes": 665600,
+        "mount_read_sent_bytes": 1728,
+        "nfs_read_calls": 16,
+        "read_ios": 11226,
+        "read_sectors": 535968,
+        "rx_bytes": 668948,
+        "tx_bytes": 5388,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_retained_2_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 16,
+        "mount_read_received_bytes": 665600,
+        "mount_read_sent_bytes": 1728,
+        "nfs_read_calls": 16,
+        "rx_bytes": 669130,
+        "tx_bytes": 5616
+      }
+    },
+    {
+      "boot_id": "6fba4f07-7387-46f1-9502-5a0437aa0d25",
+      "commands": 27,
+      "destination_duration_s": 8.799999999999994,
+      "final_exit_checked": 1,
+      "guest_duration_s": 18.119999999999994,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 12248,
+        "read_sectors": 535104,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      },
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_retained_2_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      }
+    },
+    {
+      "boot_id": "f0f0a568-9f22-44ed-8e8d-65f8ede36a94",
+      "commands": 35,
+      "destination_duration_s": 2.7499999999999964,
+      "final_exit_checked": 1,
+      "guest_duration_s": 7.849999999999995,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 157,
+        "mount_read_received_bytes": 17337984,
+        "mount_read_sent_bytes": 16956,
+        "nfs_read_calls": 157,
+        "read_ios": 7893,
+        "read_sectors": 155024,
+        "rx_bytes": 17367500,
+        "tx_bytes": 44190,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_2_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 157,
+        "mount_read_received_bytes": 17337984,
+        "mount_read_sent_bytes": 16956,
+        "nfs_read_calls": 157,
+        "rx_bytes": 17367682,
+        "tx_bytes": 44418
+      }
+    },
+    {
+      "boot_id": "4292d83d-2dea-4ba9-bfa1-4523a4348cfb",
+      "commands": 35,
+      "destination_duration_s": 2.7099999999999866,
+      "final_exit_checked": 1,
+      "guest_duration_s": 7.739999999999984,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 9045,
+        "read_sectors": 155024,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 66,
+        "tx_bytes": 66
+      },
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_2_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 66,
+        "tx_bytes": 66
+      }
+    },
+    {
+      "boot_id": "e414e7a3-af78-43a8-b42b-43f354b1a863",
+      "commands": 43,
+      "destination_duration_s": 7.579999999999991,
+      "final_exit_checked": 1,
+      "guest_duration_s": 15.050000000000006,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 383,
+        "mount_read_received_bytes": 12210048,
+        "mount_read_sent_bytes": 41364,
+        "nfs_read_calls": 383,
+        "read_ios": 16568,
+        "read_sectors": 321128,
+        "rx_bytes": 12248738,
+        "tx_bytes": 93900,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_retained_2_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 383,
+        "mount_read_received_bytes": 12210048,
+        "mount_read_sent_bytes": 41364,
+        "nfs_read_calls": 383,
+        "rx_bytes": 12248920,
+        "tx_bytes": 94128
+      }
+    },
+    {
+      "boot_id": "6d81294c-1882-4234-8412-56c7e1b065c3",
+      "commands": 43,
+      "destination_duration_s": 7.579999999999988,
+      "final_exit_checked": 1,
+      "guest_duration_s": 14.65999999999999,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 16029,
+        "read_sectors": 321128,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      },
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_retained_2_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      }
+    },
+    {
+      "boot_id": "096f0e06-2a84-41b4-9dd2-2692f0ef1199",
+      "commands": 27,
+      "destination_duration_s": 10.499999999999996,
+      "final_exit_checked": 1,
+      "guest_duration_s": 19.51,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 3377,
+        "mount_read_received_bytes": 124205184,
+        "mount_read_sent_bytes": 364716,
+        "nfs_read_calls": 3377,
+        "read_ios": 26268,
+        "read_sectors": 724216,
+        "rx_bytes": 124548016,
+        "tx_bytes": 831384,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 252,
+        "tx_bytes": 228
+      },
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_evicted_0_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 3377,
+        "mount_read_received_bytes": 124205184,
+        "mount_read_sent_bytes": 364716,
+        "nfs_read_calls": 3377,
+        "rx_bytes": 124548268,
+        "tx_bytes": 831612
+      }
+    },
+    {
+      "boot_id": "a52089bd-01e5-49aa-b985-b0be761ea995",
+      "commands": 27,
+      "destination_duration_s": 10.300000000000004,
+      "final_exit_checked": 1,
+      "guest_duration_s": 19.660000000000004,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 26674,
+        "read_sectors": 724376,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      },
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_evicted_0_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      }
+    },
+    {
+      "boot_id": "82ce300f-5155-47b8-b45f-f5a19553339a",
+      "commands": 35,
+      "destination_duration_s": 3.7199999999999953,
+      "final_exit_checked": 1,
+      "guest_duration_s": 9.019999999999996,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 2071,
+        "mount_read_received_bytes": 88869760,
+        "mount_read_sent_bytes": 223668,
+        "nfs_read_calls": 2071,
+        "read_ios": 17323,
+        "read_sectors": 270296,
+        "rx_bytes": 89090168,
+        "tx_bytes": 516642,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 298
+      },
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_evicted_0_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 2071,
+        "mount_read_received_bytes": 88869760,
+        "mount_read_sent_bytes": 223668,
+        "nfs_read_calls": 2071,
+        "rx_bytes": 89090350,
+        "tx_bytes": 516940
+      }
+    },
+    {
+      "boot_id": "3dad7928-7cd9-49bc-b57c-d0aa5cbc5b0c",
+      "commands": 35,
+      "destination_duration_s": 3.4000000000000092,
+      "final_exit_checked": 1,
+      "guest_duration_s": 8.660000000000016,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 15732,
+        "read_sectors": 270296,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 66,
+        "tx_bytes": 66
+      },
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_evicted_0_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 66,
+        "tx_bytes": 66
+      }
+    },
+    {
+      "boot_id": "85e66c83-f986-4b07-94c7-0c0e1c902a93",
+      "commands": 43,
+      "destination_duration_s": 9.490000000000013,
+      "final_exit_checked": 1,
+      "guest_duration_s": 16.560000000000006,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 3444,
+        "mount_read_received_bytes": 109627904,
+        "mount_read_sent_bytes": 371952,
+        "nfs_read_calls": 3444,
+        "read_ios": 25280,
+        "read_sectors": 490856,
+        "rx_bytes": 109955770,
+        "tx_bytes": 847428,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_evicted_0_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 3444,
+        "mount_read_received_bytes": 109627904,
+        "mount_read_sent_bytes": 371952,
+        "nfs_read_calls": 3444,
+        "rx_bytes": 109955952,
+        "tx_bytes": 847656
+      }
+    },
+    {
+      "boot_id": "6fee8bdc-19ce-4e68-8937-ff6fb347c828",
+      "commands": 43,
+      "destination_duration_s": 9.079999999999998,
+      "final_exit_checked": 1,
+      "guest_duration_s": 15.979999999999986,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 27175,
+        "read_sectors": 490856,
+        "rx_bytes": 66,
+        "tx_bytes": 66,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 84,
+        "tx_bytes": 84
+      },
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_evicted_0_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      }
+    }
+  ],
+  "trials": 24
+}

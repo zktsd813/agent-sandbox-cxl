@@ -16,14 +16,16 @@
   },
   "groups": 20,
   "handoffs": 8,
+  "host_observation_samples_checked": 0,
+  "host_observations": "report_only_legacy",
   "independent_checksums": {
     "(0, 67108864)": "29aa1064b3d00833",
     "(0, 8388608)": "7c39b2d9f62d526f",
     "(134217728, 67108864)": "1364d7d9977ee1e7"
   },
-  "measured_source_directory": "/tmp/nfs-measured-sources-1793078912062228047",
+  "measured_source_directory": "/tmp/cxl-nfs-published-evidence/measured-sources",
   "raw_events": 376,
-  "report": "implementation/virtual_machine/.local/runs/20261027T052826Z-099bkhye/nfs-1793078912062228047/report.json",
+  "report": "implementation/virtual_machine/results/nfs-20261027/report.json",
   "result": "passed",
   "rpc_counter_differences": [
     {
@@ -46,6 +48,6 @@
     "lab.py"
   ],
   "samples": 192,
-  "schema_version": 1,
+  "schema_version": 2,
   "steady_samples_per_group": 12
 }

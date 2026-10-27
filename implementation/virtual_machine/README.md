@@ -30,16 +30,20 @@ DAX 공유 영역은 기본 2GiB다. 기본 microVM은 1 vCPU·128MiB이고 RAM 
 
 | 영역 | 확인한 상태 | 남은 작업 |
 |---|---|---|
-| CPU/RAM | 공유 DAX snapshot, KVM worker reuse/prepared, 동일 객체 direct handoff 및 크기별 측정 | 다중 vCPU·실제 물리 노드·장치가 있는 direct/reuse |
+| CPU/RAM | 공유 DAX snapshot(2 vCPU trace 포함), KVM worker reuse/prepared, 동일 객체 direct handoff 및 크기별 측정 | 실제 물리 노드·다중 vCPU 및 장치가 있는 direct/reuse |
 | Network | MPTCP를 쓰는 guest **client**를 A→B snapshot 복원해 같은 연결로 전송 지속 | 빠른 제어 경로 연결, inbound/server 이동, direct/reuse의 net 장치 승계 |
 | Cache | PML dirty-page 기반 CPU cache 관리 비용 측정; EMR/DSA 조사 | DSA 하드웨어에서 preflush·최종 flush·reader invalidate 구현과 검증 |
-| Filesystem | Host NFS 위 read-only disk의 A→B snapshot, FD/cache 보존 및 로컬/NFS 읽기 성능 검증 | Writable disk의 flush·단일 writer·반복 전환, 공통 이미지 DAX 공유 |
+| Filesystem | Host NFS의 RO lower + guest tmpfs upper, 실제 trace 24 trials·840명령·48 handoffs에서 A→B→A 상태 유지 | Persistent disk의 flush·단일 writer, 명령 중 이전·장기 왕복, 공통 이미지 DAX 공유 |
 
 2026-10-26 설계 업데이트: 파일 접근은 일반 snapshot의 작은 disk부터 검증하고, 공통 read-only
 이미지의 DAX 매핑과 VM별 writable layer를 별도 실험한다. MPTCP 제어 경로 단축은 병렬로
 진행할 수 있다. 이후 10월 27일 host NFS를 첫 read-only storage 실험으로 구현·검증했다.
-[실행 절차·성능·원자료](results/nfs-20261027/README.md): 독립 handoff 8회, 측정 192개, 내용 불일치 0.
-Guest cache hit는 NFS READ 0회였으며 writable·direct/reuse 통합은 남아 있다.
+[초기 synthetic 기록](results/nfs-20261027/README.md)은 guest cache hit의 NFS READ 0을 확인했다.
+후속 리뷰에서 backend mount 누적을 고쳐 초기 성능 수치는 역사적 기록으로 구분했다.
+수정 후 실제 개발 trace **24 trials·840명령·48 handoffs**와 synthetic 회귀 20 samples를 통과했다.
+RO lower + tmpfs upper의 수정·빌드·FD 상태는 유지되며 persistent disk·direct/reuse 통합은 남아 있다.
+[실행 절차](#host-nfs와-실제-개발-trace-재생)와 [최종 trace 실험 기록](results/trace-nfs-20261027/README.md)에
+재현 명령, 독립 검증, 변조 시험과 원시 자료를 보관한다.
 PML/cache·CPU/RAM·MPTCP는 각각 검증한 상태이며 통합 서비스 전환의 실측값은 아직 없다.
 
 최근 MPTCP 검증은 [아래 실행 절차](#mptcp-session)와
@@ -58,9 +62,10 @@ Serial 제어 전달이 포함되고, KVM/EPT를 새로 만드는 별도 시험�
    remote path-manager, listener 및 NAT/LB 처리를 정한다.
 4. 같은 토폴로지의 TCP/MPTCP 정상 실행 throughput·CPU와 전환 p50/p99를 비교한다.
    CXL host packet queue는 필요성이 확인되면 추가한다. DSA preflush는 별도 후속 과제이며
-   Host NFS의 다음 단계는 writable image와 반복 전환이다. 파일·PML을 포함한 통합 순서는 [전체 계획](../../docs/cxl-microvm-overview.md#후속-구현-계획)을 따른다.
+   Host NFS의 다음 단계는 초기 DRAM→CXL promotion, 명령 실행 중 이전·장기 왕복, persistent writable image다. 파일·PML을 포함한 통합 순서는 [전체 계획](../../docs/cxl-microvm-overview.md#후속-구현-계획)을 따른다.
 
-작업은 기존 `lab.py`·`build.sh`·`shared-probe`에 모으고 별도 실행 파일/운영 문서를 늘리지 않는다.
+CPU/RAM 제어는 기존 `lab.py`·`build.sh`·`shared-probe`를 사용한다. 파일 실험은
+`nfs_bench.py`의 공통 NFS 설정·소유 프로세스 관리를 재사용하며, 실제 trace 준비·재생·독립 검증을 별도 script로 둔다.
 CPU 방식의 주기적 preflush를 다시 추진하지 않으며, 후속 preflush는 DSA 하드웨어를 전제로 한다.
 `experiments/`, `CLAUDE.md`, `docs/HANDOFF.md`는 다른 작업 영역이므로 이 microVM 인계에 사용하지 않는다.
 Git 배포 대상은 microVM 코드·패치·측정 결과와 관련 문서다. `main` 기준의 별도 작업 트리에서
@@ -191,6 +196,81 @@ run을 가리키며 PID와 시작 시각을 함께 확인하여 관리한다. �
 | KVM/Firecracker 객체의 DAX 배치·포인터 분류 | 별도 session에서 `start --cxl-mib 2048 --dax-guest --dax-kvm-state --qemu <CXL-QEMU>`, `verify`, `kvm-state-test` |
 | 같은 KVM 객체의 직접 detach/attach | 별도 session에서 `start --cxl-mib 2048 --dax-guest --dax-handoff --qemu <CXL-QEMU>`, `verify`, `direct-handoff-bench --help` |
 | CPU context switch 비교 | `context-bench --scope host` 또는 `--scope guest --role B` |
+
+## Host NFS와 실제 개발 trace 재생
+
+`trace_prepare.py`는 기록된 Gin·PHP-CS-Fixer·MicroPython 명령과 해당 rootfs image를 새 asset에 복사한다.
+`trace_bench.py`는 각 trace를 새 guest에서 시작하고 정해진 명령 경계에서 **A→B→A**로 이전한다.
+A의 Firecracker는 local image를, B는 비교 조건에 따라 local image 또는 A가 export한 host NFS image를 연다.
+Guest의 ext4 lower image는 read-only이고, 파일 수정·빌드 산출물은 OverlayFS의 **guest tmpfs upper**에 남아 RAM과 함께 유지된다.
+이는 shared writable disk의 writeback·durability 검증이 아니다.
+
+아래는 저장소 루트에서 실행한다. `--source-repo`에는 원본 `.traj.json`이 있는
+`harness/trace-replay/data/native/`와 준비된 `experiments/contention/.local/images/<trace>/rootfs.ext4`,
+`image.json`이 필요하다. Trace hash와 image hash를 기록하고, 원본 image에 쓰지 않는다.
+기존 kernel/QEMU/Firecracker 준비 요건은 [사용법](#사용법)을 따른다.
+
+```bash
+export CXL_LAB_SESSION=trace-nfs-new
+export CXL_LAB_ASSETS="$PWD/implementation/virtual_machine/.local/assets-trace-nfs-new"
+export CXL_NFS_OUT="$PWD/implementation/virtual_machine/.local/nfs-deps-trace-new"
+export CXL_NFS_KERNEL_SOURCE=/absolute/path/to/patched-linux-source
+export CXL_NFS_CPUS=0-5
+export JOBS=6
+# 선택: 호환되는 O= build를 복사해 재사용한다.
+export CXL_NFS_KERNEL_CACHE=/absolute/path/to/compatible-kernel-build
+bash implementation/virtual_machine/nfs_dependencies.sh
+
+# 새 NFS 기반 assets를 먼저 만든다. 두 asset 경로 모두 새 경로를 쓴다.
+CXL_LAB_ASSETS="$PWD/implementation/virtual_machine/.local/assets-trace-base-new" \
+  python3 implementation/virtual_machine/nfs_bench.py prepare \
+  --dependencies "$CXL_NFS_OUT" --firecracker /absolute/path/to/patched-firecracker
+python3 implementation/virtual_machine/trace_prepare.py \
+  --source-repo /absolute/path/to/repository-with-traces-and-images \
+  --base-assets "$PWD/implementation/virtual_machine/.local/assets-trace-base-new" \
+  --assets "$CXL_LAB_ASSETS" --dependency-manifest "$CXL_NFS_OUT/manifest.json"
+```
+
+`nfs_dependencies.sh`는 NFSD/NFSv3뿐 아니라 `OVERLAY_FS`, `TMPFS`, `TMPFS_XATTR`를 켠 별도 kernel을 만든다.
+이 설정은 trace guest의 writable RAM layer에 필요하다. 기존 base asset을 재사용할 때는
+`trace_prepare.py`의 `--l1-kernel`, `--l2-kernel`, `--module-dir`로 같은 새 kernel/build의 파일을 함께 지정한다.
+Host package 설치나 host NFS service 변경은 없다.
+
+```bash
+taskset -c 0-5 python3 implementation/virtual_machine/lab.py start \
+  --vcpus 2 --memory-mib 4096 --cxl-mib 4096 --dax-guest --dax-4k \
+  --migration-network --network-backend tap --memory-backing-dir /dev/shm \
+  --storage-image "$CXL_LAB_ASSETS/storage.raw" \
+  --qemu /absolute/path/to/patched-qemu-system-x86_64
+taskset -c 0-5 python3 implementation/virtual_machine/trace_bench.py \
+  --cycles 3 --eviction-cycles 1 --memory-mib 2048 --vcpus 2 \
+  --host-cpus-a 0-2 --host-cpus-b 3-5
+# 위 명령이 출력한 TRACE_REPORT의 실제 경로를 넣는다.
+python3 implementation/virtual_machine/verify_trace_results.py \
+  /absolute/path/to/trace-output/report.json --formal --artifacts \
+  --assets-dir "$CXL_LAB_ASSETS" --json-out /absolute/path/to/trace-output/audit.json
+python3 implementation/virtual_machine/lab.py stop
+```
+
+NFS/trace 실험의 L1 pair는 **한 번만 사용**한다. 중단·실패·smoke 후에도 `lab.py stop`과 `start`로 새 pair를 만든다.
+재실행은 marker로 거부해 mount 중첩과 이전 NFS/Firecracker 상태 재사용을 막는다. Dependency와 asset은 새 pair에서도 재사용할 수 있다.
+다른 checkout의 QEMU library/BIOS를 쓸 때는 `CXL_LAB_QEMU_ROOT`도 해당 extracted root로 지정한다.
+
+정식 matrix는 3 trace × 2 backend × (retained 3회 + evicted 1회)로 **24 trials·48 handoffs**다.
+이는 실행할 시험 수이며 완료 결과는 [trace 실험 기록](results/trace-nfs-20261027/README.md)에서 확인한다.
+Smoke는 새 pair에서 `--names gin-gonic__gin-3741 --cycles 1 --eviction-cycles 0`으로 실행하고 검증기의 `--formal`을 생략한다.
+Retained는 guest cache를 강제로 비우지 않는 조건이고, evicted는 각 이전 후 guest의 reclaim 가능한 cache를 `drop_caches=3`으로 비운다.
+Mapped page와 tmpfs upper가 모두 없어지는 조건은 아니다. Page-cache 보존의 직접적인 mincore/zero-I/O 증명은 별도 synthetic 시험으로 확인한다.
+
+원본 trace에서 실패한 명령은 **기록된 nonzero exit code가 기대값**이다. 검증기는 명령 byte/hash·순서·종료값,
+최종 제출물 fingerprint, 열린 뒤 unlink한 FD의 inode/offset, 수정된 파일 내용, source fencing, block/NFS 원시 counter를 대조한다.
+Timeout과 최종 제출 명령의 실패는 거부한다. 시간은 guest 명령 실행 구간 합계이며 기록된 think time과 serial 제어 대기를 제외한다.
+별도의 controller handoff 시간과 혼합해 application latency로 해석하지 않는다.
+
+기존 `nfs_bench.py` synthetic 시험도 새 실행부터 sample별 `*-host.json`에 host counter/cache 관측을 남긴다.
+`verify_nfs_results.py`는 raw 관측에서 delta를 재계산하며 성공 시 `host_observations=raw_validated`를 기록한다.
+이 파일이 없는 과거 archive는 `report_only_legacy`로 명시한다. 과거 guest raw event·checksum 검증과,
+host 수치를 report에서만 확인한 범위를 구분하기 위한 표시다.
 
 ## 기존 측정값 읽는 법
 
@@ -702,16 +782,18 @@ snapshot 후 Firecracker를 종료하고 새 process로 복원한다. SDK의 다
 |---|---|---|---|
 | 전환 단위 | TCP connection + 상위 session | Sandbox lifecycle의 snapshot/resume | Guest 실행 주체와 device/backend ownership |
 | 메모리 | Connection state 전달 | Memory/execution snapshot | 동일 CXL guest RAM 유지 |
-| 외부 연결 | Planned migration의 TCP 연속성 | SDK 요청 관점의 재개 | Guest TCP·NFS 연결을 함께 유지 |
-| Storage | 서비스 backend 이용 | 3FS image + local writable layer | Guest NFS mount를 첫 공유 storage 후보로 검토 |
+| 외부 연결 | Planned migration의 TCP 연속성 | SDK 요청 관점의 재개 | Guest application 연결을 유지하고 host storage 경로를 재연결 |
+| Storage | 서비스 backend 이용 | 3FS image + local writable layer | Host NFS의 RO lower + guest tmpfs upper를 먼저 검증; persistent 쓰기 후속 |
 
-초기 조합 후보는 initramfs/tmpfs root, guest NFS workspace, 고정 guest endpoint와 CXL packet
-queue다. Guest의 HTTP 연결뿐 아니라 NFS 등 모든 flow의 수신 경로를 함께 전환해야 한다.
+초기 설계에서는 initramfs/tmpfs root와 guest NFS workspace를 후보로 검토했다. 현재는
+host NFS로 image를 연결하는 경로를 먼저 구현했다. Guest NFS 후보를 추후 시험한다면
+HTTP뿐 아니라 NFS 등 guest flow의 수신 경로도 함께 전환해야 한다.
 이 구성은 block backend 승계 범위를 줄이지만 virtio-net 상태·IRQ·packet 순서·단일 owner 검증은
 남는다. Application 요청 ID·TCP reset/retransmit·NFS read/write/fsync/lock 결과를 함께 확인한다.
 
-E2E 검증은 아래의 실제 Linux `TCP/MPTCP + tmpfs` 시험을 시작으로 read-only disk,
-단일 writer writable disk와 `write→fsync→response`, async I/O, 다중 vCPU 순으로 확장한다.
+E2E 검증은 실제 Linux `TCP/MPTCP + tmpfs`와 2 vCPU의 `RO disk + tmpfs upper`를
+각각 통과했다. 이후 두 경로의 통합, 단일 writer persistent disk의 `write→fsync→response`,
+async I/O, direct/reuse의 다중 vCPU로 확장한다.
 전환 단계별 장애·ACK 유실·late I/O·DSA timeout을 주입하고, request ID·파일 내용·lost IRQ·
 동시 owner를 검사한다. 최종 지표는 heartbeat뿐 아니라 **외부 client의 application blackout**,
 정상 실행 throughput, 요청 중복/누락, drain·DSA·invalidate·host rebind·routing·첫 응답의
@@ -830,7 +912,9 @@ Pause 중 guest clock은 정지 시간을 제외할 수 있으므로 blackout은
 
 ## 코드 위치와 범위
 
-- `lab.py`: 이미지 준비, 두 VM 관리, 환경 설정, 검증·측정. 운영 진입점은 이 파일 하나다.
+- `lab.py`: 기본 이미지 준비, 두 VM 관리, CPU/RAM·MPTCP 검증·측정.
+- `nfs_bench.py`, `trace_prepare.py`, `trace_bench.py`: 공통 host NFS 설정, synthetic 검사와 실제 trace 준비·이전.
+- `verify_nfs_results.py`, `verify_trace_results.py`: 원시 로그·counter·state·출력의 독립 검증.
 - `build.sh`: kernel/QEMU/Firecracker 빌드 및 관련 테스트의 단일 진입점.
 - `shared_probe.c`: 기존 `shared-probe` 안에 공유 메모리 protocol, 전환 controller, 계측을 유지한다.
 - `cache_probe.h`: `shared_probe.c`에 포함되는 cache/PML 계측 코드이며 실행 파일은 추가하지 않는다.
@@ -841,8 +925,8 @@ Pause 중 guest clock은 정지 시간을 제외할 수 있으므로 blackout은
 - `firecracker/src/vmm/src/lib.rs`, `vstate/vcpu.rs`: API/VMM/vCPU 연동 및 direct 실행 제어.
 - `implementation/linux/virt/kvm/`, `arch/x86/kvm/`: direct 경로의 DAX allocator·detach/attach·EPT 처리.
 
-기본 검증은 diskless 1 vCPU, 동일 구성·동일 DAX allocation이다. block/net/vsock/PCI 장치를
-포함한 worker 재사용은 구현하지 않았다. 다중 vCPU, 다른 물리 호스트의 TSC/캐시 일관성,
+Reuse/direct의 기본 검증은 diskless 1 vCPU, 동일 구성·동일 DAX allocation이다. block/net/vsock/PCI 장치를
+포함한 worker 재사용은 구현하지 않았다. 이 경로의 다중 vCPU, 다른 물리 호스트의 TSC/캐시 일관성,
 임의 이미지 간 pool 재할당도 추가 검증이 필요하다. 이 실험을 일반 CPU context switch와
 동일한 보장이나 비용을 가진 구현으로 보지 않는다.
 

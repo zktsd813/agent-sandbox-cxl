@@ -1,0 +1,38 @@
+{
+  "result": "passed",
+  "archive_sha256": "4f81dfcd3404f0039e793388c53166d19b22f8d508bd70e792cb839b872691a4",
+  "archive_files_sha256_checked": 7290,
+  "offline_trace_audit": {
+    "result": "passed",
+    "trials": 24,
+    "commands": 840,
+    "handoffs": 48,
+    "recorded_exits_checked": 816,
+    "submission_exits_checked": 24,
+    "submissions_checked": 24,
+    "stable_test_summaries_checked": 72,
+    "runtime_sources_checked": [
+      "lab.py",
+      "nfs_bench.py",
+      "nfs_dependencies.sh",
+      "nfs_probe.c",
+      "trace-guest-run.sh",
+      "trace-l2-init.sh",
+      "trace_bench.py",
+      "trace_prepare.py"
+    ],
+    "source_patches_checked": [
+      "firecracker.patch",
+      "qemu-cxl-direct-ram.patch",
+      "ram-backend-source.json"
+    ],
+    "artifact_files_checked": []
+  },
+  "offline_synthetic_audit": {
+    "result": "passed",
+    "samples": 20,
+    "host_observations": "raw_validated",
+    "host_observation_samples_checked": 20
+  },
+  "note": "Extracted the published archive into a fresh directory; checked all member hashes and reran both verifiers without build assets or VM privileges. Full build-artifact validation is recorded in audit.json."
+}

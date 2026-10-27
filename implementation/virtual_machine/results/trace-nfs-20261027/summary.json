@@ -1,0 +1,314 @@
+[
+  {
+    "trace": "gin-gonic__gin-3741",
+    "backend": "local",
+    "cache_mode": "evicted",
+    "n": 1,
+    "guest_duration_s": {
+      "median": 19.66,
+      "min": 19.66,
+      "max": 19.66
+    },
+    "destination_duration_s": {
+      "median": 10.3,
+      "min": 10.3,
+      "max": 10.3
+    },
+    "nfs_read_calls": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "nfs_received_bytes": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    }
+  },
+  {
+    "trace": "gin-gonic__gin-3741",
+    "backend": "local",
+    "cache_mode": "retained",
+    "n": 3,
+    "guest_duration_s": {
+      "median": 17.99,
+      "min": 17.84,
+      "max": 18.12
+    },
+    "destination_duration_s": {
+      "median": 8.81,
+      "min": 8.8,
+      "max": 8.82
+    },
+    "nfs_read_calls": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "nfs_received_bytes": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    }
+  },
+  {
+    "trace": "gin-gonic__gin-3741",
+    "backend": "nfs",
+    "cache_mode": "evicted",
+    "n": 1,
+    "guest_duration_s": {
+      "median": 19.51,
+      "min": 19.51,
+      "max": 19.51
+    },
+    "destination_duration_s": {
+      "median": 10.5,
+      "min": 10.5,
+      "max": 10.5
+    },
+    "nfs_read_calls": {
+      "median": 3377,
+      "min": 3377,
+      "max": 3377
+    },
+    "nfs_received_bytes": {
+      "median": 124205184,
+      "min": 124205184,
+      "max": 124205184
+    }
+  },
+  {
+    "trace": "gin-gonic__gin-3741",
+    "backend": "nfs",
+    "cache_mode": "retained",
+    "n": 3,
+    "guest_duration_s": {
+      "median": 17.93,
+      "min": 17.85,
+      "max": 18.28
+    },
+    "destination_duration_s": {
+      "median": 8.75,
+      "min": 8.63,
+      "max": 8.8
+    },
+    "nfs_read_calls": {
+      "median": 16,
+      "min": 15,
+      "max": 16
+    },
+    "nfs_received_bytes": {
+      "median": 575488,
+      "min": 497536,
+      "max": 665600
+    }
+  },
+  {
+    "trace": "micropython__micropython-13039",
+    "backend": "local",
+    "cache_mode": "evicted",
+    "n": 1,
+    "guest_duration_s": {
+      "median": 15.98,
+      "min": 15.98,
+      "max": 15.98
+    },
+    "destination_duration_s": {
+      "median": 9.08,
+      "min": 9.08,
+      "max": 9.08
+    },
+    "nfs_read_calls": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "nfs_received_bytes": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    }
+  },
+  {
+    "trace": "micropython__micropython-13039",
+    "backend": "local",
+    "cache_mode": "retained",
+    "n": 3,
+    "guest_duration_s": {
+      "median": 14.67,
+      "min": 14.66,
+      "max": 15.06
+    },
+    "destination_duration_s": {
+      "median": 7.66,
+      "min": 7.58,
+      "max": 7.67
+    },
+    "nfs_read_calls": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "nfs_received_bytes": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    }
+  },
+  {
+    "trace": "micropython__micropython-13039",
+    "backend": "nfs",
+    "cache_mode": "evicted",
+    "n": 1,
+    "guest_duration_s": {
+      "median": 16.56,
+      "min": 16.56,
+      "max": 16.56
+    },
+    "destination_duration_s": {
+      "median": 9.49,
+      "min": 9.49,
+      "max": 9.49
+    },
+    "nfs_read_calls": {
+      "median": 3444,
+      "min": 3444,
+      "max": 3444
+    },
+    "nfs_received_bytes": {
+      "median": 109627904,
+      "min": 109627904,
+      "max": 109627904
+    }
+  },
+  {
+    "trace": "micropython__micropython-13039",
+    "backend": "nfs",
+    "cache_mode": "retained",
+    "n": 3,
+    "guest_duration_s": {
+      "median": 15.05,
+      "min": 14.87,
+      "max": 15.16
+    },
+    "destination_duration_s": {
+      "median": 7.58,
+      "min": 7.53,
+      "max": 7.86
+    },
+    "nfs_read_calls": {
+      "median": 383,
+      "min": 377,
+      "max": 387
+    },
+    "nfs_received_bytes": {
+      "median": 12206464,
+      "min": 11730048,
+      "max": 12210048
+    }
+  },
+  {
+    "trace": "php-cs-fixer__php-cs-fixer-8331",
+    "backend": "local",
+    "cache_mode": "evicted",
+    "n": 1,
+    "guest_duration_s": {
+      "median": 8.66,
+      "min": 8.66,
+      "max": 8.66
+    },
+    "destination_duration_s": {
+      "median": 3.4,
+      "min": 3.4,
+      "max": 3.4
+    },
+    "nfs_read_calls": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "nfs_received_bytes": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    }
+  },
+  {
+    "trace": "php-cs-fixer__php-cs-fixer-8331",
+    "backend": "local",
+    "cache_mode": "retained",
+    "n": 3,
+    "guest_duration_s": {
+      "median": 8.14,
+      "min": 7.74,
+      "max": 8.17
+    },
+    "destination_duration_s": {
+      "median": 2.66,
+      "min": 2.63,
+      "max": 2.71
+    },
+    "nfs_read_calls": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "nfs_received_bytes": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    }
+  },
+  {
+    "trace": "php-cs-fixer__php-cs-fixer-8331",
+    "backend": "nfs",
+    "cache_mode": "evicted",
+    "n": 1,
+    "guest_duration_s": {
+      "median": 9.02,
+      "min": 9.02,
+      "max": 9.02
+    },
+    "destination_duration_s": {
+      "median": 3.72,
+      "min": 3.72,
+      "max": 3.72
+    },
+    "nfs_read_calls": {
+      "median": 2071,
+      "min": 2071,
+      "max": 2071
+    },
+    "nfs_received_bytes": {
+      "median": 88869760,
+      "min": 88869760,
+      "max": 88869760
+    }
+  },
+  {
+    "trace": "php-cs-fixer__php-cs-fixer-8331",
+    "backend": "nfs",
+    "cache_mode": "retained",
+    "n": 3,
+    "guest_duration_s": {
+      "median": 8.03,
+      "min": 7.85,
+      "max": 8.1
+    },
+    "destination_duration_s": {
+      "median": 2.75,
+      "min": 2.59,
+      "max": 2.78
+    },
+    "nfs_read_calls": {
+      "median": 158,
+      "min": 157,
+      "max": 159
+    },
+    "nfs_received_bytes": {
+      "median": 17366784,
+      "min": 17337984,
+      "max": 17387392
+    }
+  }
+]

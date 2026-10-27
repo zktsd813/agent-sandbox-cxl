@@ -1,0 +1,465 @@
+{
+  "result": "failed",
+  "report_sha256": "6135a173e8403e052b3cd3cc2d003fffa2d73820996a7ee9f70755d8a1cc3f9b",
+  "failure": "Formal independent audit requires exactly one readonly B /disk backing mount; second trial already has two layers. No formal audit acceptance was issued.",
+  "first_error": "gin-gonic__gin-3741_retained_0_local: B backing mount is not uniquely readonly",
+  "observations": [
+    {
+      "trial": "gin-gonic__gin-3741_retained_0_nfs",
+      "backend": "nfs",
+      "mount_layers": 1,
+      "last_mount": [
+        "172.30.0.1:/storage",
+        "/disk",
+        "nfs",
+        "ro,relatime,vers=3,rsize=524288,wsize=524288,namlen=255,hard,nolock,proto=tcp,port=2049,timeo=50,retrans=2,sec=sys,mountaddr=172.30.0.1,mountvers=3,mountport=20048,mountproto=tcp,local_lock=all,addr=172.30.0.1",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 13,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "gin-gonic__gin-3741_retained_0_nfs-B-mounts.txt"
+    },
+    {
+      "trial": "gin-gonic__gin-3741_retained_0_local",
+      "backend": "local",
+      "mount_layers": 2,
+      "last_mount": [
+        "/dev/vda",
+        "/disk",
+        "ext4",
+        "ro,noatime,norecovery",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 0,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "gin-gonic__gin-3741_retained_0_local-B-mounts.txt"
+    },
+    {
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_0_nfs",
+      "backend": "nfs",
+      "mount_layers": 3,
+      "last_mount": [
+        "172.30.0.1:/storage",
+        "/disk",
+        "nfs",
+        "ro,relatime,vers=3,rsize=524288,wsize=524288,namlen=255,hard,nolock,proto=tcp,port=2049,timeo=50,retrans=2,sec=sys,mountaddr=172.30.0.1,mountvers=3,mountport=20048,mountproto=tcp,local_lock=all,addr=172.30.0.1",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 157,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "php-cs-fixer__php-cs-fixer-8331_retained_0_nfs-B-mounts.txt"
+    },
+    {
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_0_local",
+      "backend": "local",
+      "mount_layers": 4,
+      "last_mount": [
+        "/dev/vda",
+        "/disk",
+        "ext4",
+        "ro,noatime,norecovery",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 0,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "php-cs-fixer__php-cs-fixer-8331_retained_0_local-B-mounts.txt"
+    },
+    {
+      "trial": "micropython__micropython-13039_retained_0_nfs",
+      "backend": "nfs",
+      "mount_layers": 5,
+      "last_mount": [
+        "172.30.0.1:/storage",
+        "/disk",
+        "nfs",
+        "ro,relatime,vers=3,rsize=524288,wsize=524288,namlen=255,hard,nolock,proto=tcp,port=2049,timeo=50,retrans=2,sec=sys,mountaddr=172.30.0.1,mountvers=3,mountport=20048,mountproto=tcp,local_lock=all,addr=172.30.0.1",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 382,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "micropython__micropython-13039_retained_0_nfs-B-mounts.txt"
+    },
+    {
+      "trial": "micropython__micropython-13039_retained_0_local",
+      "backend": "local",
+      "mount_layers": 6,
+      "last_mount": [
+        "/dev/vda",
+        "/disk",
+        "ext4",
+        "ro,noatime,norecovery",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 0,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "micropython__micropython-13039_retained_0_local-B-mounts.txt"
+    },
+    {
+      "trial": "gin-gonic__gin-3741_retained_1_local",
+      "backend": "local",
+      "mount_layers": 7,
+      "last_mount": [
+        "/dev/vda",
+        "/disk",
+        "ext4",
+        "ro,noatime,norecovery",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 0,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "gin-gonic__gin-3741_retained_1_local-B-mounts.txt"
+    },
+    {
+      "trial": "gin-gonic__gin-3741_retained_1_nfs",
+      "backend": "nfs",
+      "mount_layers": 8,
+      "last_mount": [
+        "172.30.0.1:/storage",
+        "/disk",
+        "nfs",
+        "ro,relatime,vers=3,rsize=524288,wsize=524288,namlen=255,hard,nolock,proto=tcp,port=2049,timeo=50,retrans=2,sec=sys,mountaddr=172.30.0.1,mountvers=3,mountport=20048,mountproto=tcp,local_lock=all,addr=172.30.0.1",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 12,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "gin-gonic__gin-3741_retained_1_nfs-B-mounts.txt"
+    },
+    {
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_1_local",
+      "backend": "local",
+      "mount_layers": 9,
+      "last_mount": [
+        "/dev/vda",
+        "/disk",
+        "ext4",
+        "ro,noatime,norecovery",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 0,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "php-cs-fixer__php-cs-fixer-8331_retained_1_local-B-mounts.txt"
+    },
+    {
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_1_nfs",
+      "backend": "nfs",
+      "mount_layers": 10,
+      "last_mount": [
+        "172.30.0.1:/storage",
+        "/disk",
+        "nfs",
+        "ro,relatime,vers=3,rsize=524288,wsize=524288,namlen=255,hard,nolock,proto=tcp,port=2049,timeo=50,retrans=2,sec=sys,mountaddr=172.30.0.1,mountvers=3,mountport=20048,mountproto=tcp,local_lock=all,addr=172.30.0.1",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 159,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "php-cs-fixer__php-cs-fixer-8331_retained_1_nfs-B-mounts.txt"
+    },
+    {
+      "trial": "micropython__micropython-13039_retained_1_local",
+      "backend": "local",
+      "mount_layers": 11,
+      "last_mount": [
+        "/dev/vda",
+        "/disk",
+        "ext4",
+        "ro,noatime,norecovery",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 0,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "micropython__micropython-13039_retained_1_local-B-mounts.txt"
+    },
+    {
+      "trial": "micropython__micropython-13039_retained_1_nfs",
+      "backend": "nfs",
+      "mount_layers": 12,
+      "last_mount": [
+        "172.30.0.1:/storage",
+        "/disk",
+        "nfs",
+        "ro,relatime,vers=3,rsize=524288,wsize=524288,namlen=255,hard,nolock,proto=tcp,port=2049,timeo=50,retrans=2,sec=sys,mountaddr=172.30.0.1,mountvers=3,mountport=20048,mountproto=tcp,local_lock=all,addr=172.30.0.1",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 391,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "micropython__micropython-13039_retained_1_nfs-B-mounts.txt"
+    },
+    {
+      "trial": "gin-gonic__gin-3741_retained_2_nfs",
+      "backend": "nfs",
+      "mount_layers": 13,
+      "last_mount": [
+        "172.30.0.1:/storage",
+        "/disk",
+        "nfs",
+        "ro,relatime,vers=3,rsize=524288,wsize=524288,namlen=255,hard,nolock,proto=tcp,port=2049,timeo=50,retrans=2,sec=sys,mountaddr=172.30.0.1,mountvers=3,mountport=20048,mountproto=tcp,local_lock=all,addr=172.30.0.1",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 21,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "gin-gonic__gin-3741_retained_2_nfs-B-mounts.txt"
+    },
+    {
+      "trial": "gin-gonic__gin-3741_retained_2_local",
+      "backend": "local",
+      "mount_layers": 14,
+      "last_mount": [
+        "/dev/vda",
+        "/disk",
+        "ext4",
+        "ro,noatime,norecovery",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 0,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "gin-gonic__gin-3741_retained_2_local-B-mounts.txt"
+    },
+    {
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_2_nfs",
+      "backend": "nfs",
+      "mount_layers": 15,
+      "last_mount": [
+        "172.30.0.1:/storage",
+        "/disk",
+        "nfs",
+        "ro,relatime,vers=3,rsize=524288,wsize=524288,namlen=255,hard,nolock,proto=tcp,port=2049,timeo=50,retrans=2,sec=sys,mountaddr=172.30.0.1,mountvers=3,mountport=20048,mountproto=tcp,local_lock=all,addr=172.30.0.1",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 159,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "php-cs-fixer__php-cs-fixer-8331_retained_2_nfs-B-mounts.txt"
+    },
+    {
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_2_local",
+      "backend": "local",
+      "mount_layers": 16,
+      "last_mount": [
+        "/dev/vda",
+        "/disk",
+        "ext4",
+        "ro,noatime,norecovery",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 0,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "php-cs-fixer__php-cs-fixer-8331_retained_2_local-B-mounts.txt"
+    },
+    {
+      "trial": "micropython__micropython-13039_retained_2_nfs",
+      "backend": "nfs",
+      "mount_layers": 17,
+      "last_mount": [
+        "172.30.0.1:/storage",
+        "/disk",
+        "nfs",
+        "ro,relatime,vers=3,rsize=524288,wsize=524288,namlen=255,hard,nolock,proto=tcp,port=2049,timeo=50,retrans=2,sec=sys,mountaddr=172.30.0.1,mountvers=3,mountport=20048,mountproto=tcp,local_lock=all,addr=172.30.0.1",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 386,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "micropython__micropython-13039_retained_2_nfs-B-mounts.txt"
+    },
+    {
+      "trial": "micropython__micropython-13039_retained_2_local",
+      "backend": "local",
+      "mount_layers": 18,
+      "last_mount": [
+        "/dev/vda",
+        "/disk",
+        "ext4",
+        "ro,noatime,norecovery",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 0,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "micropython__micropython-13039_retained_2_local-B-mounts.txt"
+    },
+    {
+      "trial": "gin-gonic__gin-3741_evicted_0_nfs",
+      "backend": "nfs",
+      "mount_layers": 19,
+      "last_mount": [
+        "172.30.0.1:/storage",
+        "/disk",
+        "nfs",
+        "ro,relatime,vers=3,rsize=524288,wsize=524288,namlen=255,hard,nolock,proto=tcp,port=2049,timeo=50,retrans=2,sec=sys,mountaddr=172.30.0.1,mountvers=3,mountport=20048,mountproto=tcp,local_lock=all,addr=172.30.0.1",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 3340,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "gin-gonic__gin-3741_evicted_0_nfs-B-mounts.txt"
+    },
+    {
+      "trial": "gin-gonic__gin-3741_evicted_0_local",
+      "backend": "local",
+      "mount_layers": 20,
+      "last_mount": [
+        "/dev/vda",
+        "/disk",
+        "ext4",
+        "ro,noatime,norecovery",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 0,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "gin-gonic__gin-3741_evicted_0_local-B-mounts.txt"
+    },
+    {
+      "trial": "php-cs-fixer__php-cs-fixer-8331_evicted_0_nfs",
+      "backend": "nfs",
+      "mount_layers": 21,
+      "last_mount": [
+        "172.30.0.1:/storage",
+        "/disk",
+        "nfs",
+        "ro,relatime,vers=3,rsize=524288,wsize=524288,namlen=255,hard,nolock,proto=tcp,port=2049,timeo=50,retrans=2,sec=sys,mountaddr=172.30.0.1,mountvers=3,mountport=20048,mountproto=tcp,local_lock=all,addr=172.30.0.1",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 2033,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "php-cs-fixer__php-cs-fixer-8331_evicted_0_nfs-B-mounts.txt"
+    },
+    {
+      "trial": "php-cs-fixer__php-cs-fixer-8331_evicted_0_local",
+      "backend": "local",
+      "mount_layers": 22,
+      "last_mount": [
+        "/dev/vda",
+        "/disk",
+        "ext4",
+        "ro,noatime,norecovery",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 0,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "php-cs-fixer__php-cs-fixer-8331_evicted_0_local-B-mounts.txt"
+    },
+    {
+      "trial": "micropython__micropython-13039_evicted_0_nfs",
+      "backend": "nfs",
+      "mount_layers": 23,
+      "last_mount": [
+        "172.30.0.1:/storage",
+        "/disk",
+        "nfs",
+        "ro,relatime,vers=3,rsize=524288,wsize=524288,namlen=255,hard,nolock,proto=tcp,port=2049,timeo=50,retrans=2,sec=sys,mountaddr=172.30.0.1,mountvers=3,mountport=20048,mountproto=tcp,local_lock=all,addr=172.30.0.1",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 3655,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "micropython__micropython-13039_evicted_0_nfs-B-mounts.txt"
+    },
+    {
+      "trial": "micropython__micropython-13039_evicted_0_local",
+      "backend": "local",
+      "mount_layers": 24,
+      "last_mount": [
+        "/dev/vda",
+        "/disk",
+        "ext4",
+        "ro,noatime,norecovery",
+        "0",
+        "0"
+      ],
+      "whole_trial_nfs_reads": 0,
+      "host_cache_before": {
+        "A": 0,
+        "B": 0
+      },
+      "evidence": "micropython__micropython-13039_evicted_0_local-B-mounts.txt"
+    }
+  ],
+  "interpretation": "Last listed mount matches requested backend and all local whole-trial NFS READ counters are zero, but stacked covered mounts violate the controlled-backend precondition. Preserve this run as failed-audit evidence."
+}

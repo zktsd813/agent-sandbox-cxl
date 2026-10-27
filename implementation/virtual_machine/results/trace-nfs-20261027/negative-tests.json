@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "result": "passed",
+  "baseline_result": "passed",
+  "baseline_trials": 24,
+  "baseline_commands": 840,
+  "verifier_sha256": "386583bd1abba1f0354b670c8b22cb46dc6461ea43feb05a6d45d21abadd14e3",
+  "report_sha256": "df74546446b302d3f5c97f242c69d25ead39ef92f703e2b0decaf328b668b8c9",
+  "script_sha256": "77911e51abe1f8085db7ec9df420213d2c3b054379d39f05a8bfab42e9b9bd74",
+  "negative_cases": [
+    {
+      "test": "report_counter_and_summary",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/0: NFS counter delta"
+    },
+    {
+      "test": "raw_nfs_counter",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/0: NFS counter delta"
+    },
+    {
+      "test": "guest_stdout_with_outer_hashes",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/0: output checksum"
+    },
+    {
+      "test": "final_submission_with_all_hashes",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs: final submission fingerprint mismatch"
+    },
+    {
+      "test": "test_summary_with_all_hashes",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/4: stable test outcomes differ from original trace: {'kind': 'go', 'packages': [('?', 'github.com/gin-gonic/gin/ginS'), ('?', 'github.com/gin-gonic/gin/internal/json'), ('FAIL', 'github.com/gin-gonic/gin'), ('ok', 'github.com/gin-gonic/gin/binding'), ('ok', 'github.com/gin-gonic/gin/internal/bytesconv'), ('ok', 'github.com/gin-gonic/gin/render')]} != {'kind': 'go', 'packages': [('?', 'github.com/gin-gonic/gin/ginS'), ('?', 'github.com/gin-gonic/gin/internal/json'), ('ok', 'github.com/gin-gonic/gin'), ('ok', 'github.com/gin-gonic/gin/binding'), ('ok', 'github.com/gin-gonic/gin/internal/bytesconv'), ('ok', 'github.com/gin-gonic/gin/render')]}"
+    },
+    {
+      "test": "handoff_clock_rewind_with_consistent_timestamps",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/12: guest monotonic clock moved backwards between commands or across handoff"
+    },
+    {
+      "test": "missing_command",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs: command count"
+    },
+    {
+      "test": "duplicate_command",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs: command ordering"
+    },
+    {
+      "test": "fd_position_report_only",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0: identity missing/duplicated in raw logs"
+    },
+    {
+      "test": "source_fence_consistent_receipt",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0: source process could still execute"
+    },
+    {
+      "test": "reused_trial_evidence",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_1_nfs: export evidence belongs to another trial"
+    },
+    {
+      "test": "duplicate_backend_mount",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs: B backing mount is not uniquely readonly"
+    }
+  ]
+}

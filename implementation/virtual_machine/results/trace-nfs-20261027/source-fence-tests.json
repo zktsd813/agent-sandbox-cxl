@@ -1,0 +1,185 @@
+{
+  "result": "passed",
+  "source_file": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/trace_bench.py",
+  "source_sha256": "15f7fb63fa5e147ef30ec629053926d3634cdfbed7cc77a3b0f62699c1666332",
+  "script_template_sha256": "33c54dfded6ca55a0b39c8415a6f9ca1b2c08e110e53de42ca5a49b6d43fcec3",
+  "busybox": "/usr/bin/busybox",
+  "cpu_affinity": [
+    6,
+    7,
+    8,
+    9,
+    10,
+    11
+  ],
+  "tests": [
+    {
+      "case": "live_R_same_incarnation",
+      "expected": "rejected",
+      "result": "passed",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "case": "live_S_same_incarnation",
+      "expected": "rejected",
+      "result": "passed",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "case": "zombie_same_incarnation",
+      "expected": "accepted",
+      "result": "passed",
+      "exit_code": 0,
+      "stdout": "FENCED 777 123\nFENCE_STATE Z 123\n",
+      "stderr": ""
+    },
+    {
+      "case": "dead_X_same_incarnation",
+      "expected": "accepted",
+      "result": "passed",
+      "exit_code": 0,
+      "stdout": "FENCED 777 123\nFENCE_STATE X 123\n",
+      "stderr": ""
+    },
+    {
+      "case": "different_start_reused",
+      "expected": "accepted",
+      "result": "passed",
+      "exit_code": 0,
+      "stdout": "FENCED 777 123\nFENCE_STATE reused 999\n",
+      "stderr": ""
+    },
+    {
+      "case": "missing_process",
+      "expected": "accepted",
+      "result": "passed",
+      "exit_code": 0,
+      "stdout": "FENCED 777 123\nFENCE_STATE missing 0\n",
+      "stderr": ""
+    },
+    {
+      "case": "cat_reap_race",
+      "expected": "accepted",
+      "result": "passed",
+      "exit_code": 0,
+      "stdout": "FENCED 777 123\nFENCE_STATE missing 0\n",
+      "stderr": ""
+    },
+    {
+      "case": "cat_fail_entry_present",
+      "expected": "rejected",
+      "result": "passed",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "case": "truncated_stat",
+      "expected": "rejected",
+      "result": "passed",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "case": "malformed_short_stat",
+      "expected": "rejected",
+      "result": "passed",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "case": "malformed_starttime",
+      "expected": "rejected",
+      "result": "passed",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "case": "missing_starttime_field",
+      "expected": "rejected",
+      "result": "passed",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "case": "zero_starttime",
+      "expected": "rejected",
+      "result": "passed",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "case": "bad_pid_non_numeric",
+      "expected": "rejected",
+      "result": "passed",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "case": "bad_pid_zero",
+      "expected": "rejected",
+      "result": "passed",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "case": "bad_pid_one",
+      "expected": "rejected",
+      "result": "passed",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "case": "bad_pid_negative",
+      "expected": "rejected",
+      "result": "passed",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "case": "bad_expected_non_numeric",
+      "expected": "rejected",
+      "result": "passed",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "case": "bad_expected_zero",
+      "expected": "rejected",
+      "result": "passed",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "case": "bad_expected_negative",
+      "expected": "rejected",
+      "result": "passed",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "case": "missing_expected",
+      "expected": "rejected",
+      "result": "passed",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    }
+  ]
+}
