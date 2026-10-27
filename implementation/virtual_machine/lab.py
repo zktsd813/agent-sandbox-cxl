@@ -39,7 +39,7 @@ SESSION = os.environ.get("CXL_LAB_SESSION", "")
 if SESSION and not re.fullmatch(r"[a-z0-9_-]{1,32}", SESSION):
     raise RuntimeError("CXL_LAB_SESSION must contain 1..32 lowercase letters, digits, _ or -")
 CURRENT = LOCAL / (f"current-{SESSION}.json" if SESSION else "current.json")
-QEMU_ROOT = LOCAL / "qemu/root"
+QEMU_ROOT = Path(os.environ.get("CXL_LAB_QEMU_ROOT", str(LOCAL / "qemu/root"))).resolve()
 KERNEL_BUILD = Path(os.environ.get("CXL_LAB_KERNEL_BUILD", str(LOCAL / "kernel-build"))).resolve()
 KERNEL_MODULES = Path(os.environ.get("CXL_LAB_KERNEL_MODULES", str(LOCAL / "kernel-modules"))).resolve() / "lib/modules"
 PACKAGES = ["qemu-system-x86", "qemu-system-common", "qemu-system-data", "seabios",
@@ -410,6 +410,11 @@ def start(args):
         raise RuntimeError(f"Nested virtualization disabled: {parameter}")
     qemu = args.qemu.resolve() if args.qemu else find_qemu()
     qemu_version = output([qemu, "--version"], env=qemu_env(qemu)).splitlines()[0]
+    storage_image = getattr(args, "storage_image", None)
+    if storage_image:
+        storage_image = storage_image.resolve(strict=True)
+        if not storage_image.is_file():
+            raise RuntimeError("--storage-image must be a regular raw image file")
     if args.cxl_mib and "volatile-memdev" not in output([qemu, "-device", "cxl-type3,help"], env=qemu_env(qemu)):
         raise RuntimeError("CXL mode requires QEMU with cxl-type3 volatile-memdev; pass --qemu PATH")
     if args.dax_guest and "x-direct-ram" not in output([qemu, "-device", "cxl-type3,help"], env=qemu_env(qemu)):
@@ -466,6 +471,9 @@ def start(args):
               "dax_4k": args.dax_4k or args.dax_handoff,
               "migration_network": migration_network,
               "prepared": prepared, "assets": str(ASSETS), "host_kernel": os.uname().release, "vms": {}}
+    if storage_image:
+        config["storage_image"] = {"path": str(storage_image), "sha256": sha256(storage_image),
+                                   "readonly": True, "format": "raw", "cache": "none"}
     if args.dax_guest:
         config["source_patches"] = {name: sha256(HERE / name) for name in
                                     ["qemu-cxl-direct-ram.patch", "firecracker.patch", "ram-backend-source.json"]}
@@ -508,6 +516,9 @@ def start(args):
                     backend = f"tap,id=migration,ifname={tap},script=no,downscript=no,vhost=on,queues=1"
                 cmd.extend(["-netdev", backend,
                             "-device", "virtio-net-pci,romfile=,netdev=migration,mac=52:54:00:ca:10:" + ("01" if role == "A" else "02")])
+            if storage_image:
+                cmd.extend(["-drive", f"file={storage_image},if=none,id=storage,format=raw,readonly=on,cache=none",
+                            "-device", "virtio-blk-pci,drive=storage"])
             if cxl_backing:
                 cmd.extend(["-object", f"memory-backend-file,id=cxl-shared,size={args.cxl_mib}M,mem-path={cxl_backing},share=on",
                             "-device", "pxb-cxl,bus_nr=12,bus=pcie.0,id=cxl.0",
@@ -3319,6 +3330,7 @@ def main():
     p.add_argument("--migration-network", action="store_true", help="Connect L1 A/B with a private virtio-net link for full RAM migration")
     p.add_argument("--network-backend", choices=["socket", "tap"], default="socket", help="Use a QEMU socket or isolated host TAP/bridge with vhost-net (default socket)")
     p.add_argument("--socket-listener", choices=["A", "B"], default="A", help="Choose the QEMU socket listener; starts it before the connecting peer (default A)")
+    p.add_argument("--storage-image", type=Path, help="Attach the same read-only raw disk to both L1s for storage experiments; QEMU uses cache=none")
     p.set_defaults(func=start)
     p = subs.add_parser("verify", help="Wait for guest checks and validate host backing")
     p.add_argument("--timeout", type=float, default=180)

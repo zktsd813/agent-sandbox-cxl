@@ -1,0 +1,15 @@
+{
+  "files": {
+    "README.md": "415d4ce078b1efb50a5e6f8a7f50293bdc8ce07ebf580ea23456a45310b1703c",
+    "audit.json": "122b322c7629d03f3e5cad5d7e2325b538c4939fcb7591e791237b652bf42d1d",
+    "cleanup.json": "e4b8842f165f1d6e0f796bcf80357376869fe402126bf87765758d0f88ca7f88",
+    "first-access.pdf": "a6e4b0b7739c6e4016746ee799bc631f51bb18b2973f83f66d5fe4917c43f7e1",
+    "first-access.png": "fbae3fb34ad14b23461af7d2de8866a44fcc3b01007dac44c498cc3069f60dce",
+    "raw-evidence.tar.gz": "8bc107d5d80d59293ed6a120808b14adceff1631df313c88d7042b2aea200087",
+    "report.json": "eec079fe8280eeee43b3e721838fd50920c5c4cae9667afa9a5df9cb2aac8fe3",
+    "samples.csv": "d2a8f7708bcd7effb1a8de7b5e17c672820c21c576e909831641fdfc7ad17263",
+    "summary.json": "2077665f375716fa75341bf21c2cec6ac2a7e0614bc35bcef8eb927543fdaa5d",
+    "throughput.pdf": "1b7e86932505a2e494ff67c62f04d82ff0ec05e32417962909220a33fa2ba853",
+    "throughput.png": "d2ccdd20d1ce6e08cfa8f290365fa018688c9e2f0e2f48603a6b3ea9409d7ef3"
+  }
+}

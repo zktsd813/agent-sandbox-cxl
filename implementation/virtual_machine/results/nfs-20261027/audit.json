@@ -1,0 +1,51 @@
+{
+  "artifact_files_checked": [
+    "nfs-l2-initramfs.cpio",
+    "l1-initramfs.cpio",
+    "l1-kernel",
+    "storage.raw",
+    "shared-probe",
+    "nfs-probe",
+    "l2-initramfs.cpio"
+  ],
+  "build_runtime_source_differences": {
+    "nfs_bench.py": {
+      "build": "7353d457a0cc8fa8b13086280829bd61b72a94e84cba1580f21b7b7344aa91a3",
+      "runtime": "d2bc1e3889f36b358af73328d03c10ea7e7959314698a404110eb87c399c0e72"
+    }
+  },
+  "groups": 20,
+  "handoffs": 8,
+  "independent_checksums": {
+    "(0, 67108864)": "29aa1064b3d00833",
+    "(0, 8388608)": "7c39b2d9f62d526f",
+    "(134217728, 67108864)": "1364d7d9977ee1e7"
+  },
+  "measured_source_directory": "/tmp/nfs-measured-sources-1793078912062228047",
+  "raw_events": 376,
+  "report": "implementation/virtual_machine/.local/runs/20261027T052826Z-099bkhye/nfs-1793078912062228047/report.json",
+  "result": "passed",
+  "rpc_counter_differences": [
+    {
+      "backend": "nfs",
+      "completed_minus_started": 1,
+      "condition": "cold_host",
+      "cycle": 1,
+      "global_started_read_calls": 1699,
+      "label": "s79_cold_host_random",
+      "mount_completed_read_ops": 1700,
+      "pattern": "random"
+    }
+  ],
+  "rpc_counter_note": "proc3 counts calls at start; mountstats counts completed tasks; snapshots are sequential. Exact cause of an observed difference is not identified by these aggregate counters.",
+  "runtime_sources_checked": [
+    "nfs_bench.py",
+    "nfs_probe.c",
+    "nfs-l2-init.sh",
+    "nfs_dependencies.sh",
+    "lab.py"
+  ],
+  "samples": 192,
+  "schema_version": 1,
+  "steady_samples_per_group": 12
+}
