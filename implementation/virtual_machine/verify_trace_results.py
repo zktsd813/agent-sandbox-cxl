@@ -50,6 +50,80 @@ def inside(directory, name):
     return path
 
 
+def raw_receipt(directory, evidence, prefix, label):
+    raw = inside(directory, evidence["file"]).read_text().replace("\r", "")
+    records = [json.loads(line[len(prefix):]) for line in raw.splitlines() if line.startswith(prefix)]
+    require(len(records) == 1, f"{label}: missing/duplicate native receipt")
+    require(records[0] == evidence["receipt"], f"{label}: native receipt raw/report disagreement")
+    return records[0]
+
+
+def fnv1a64(data):
+    value = 14695981039346656037
+    for byte in data:
+        value = ((value ^ byte) * 1099511628211) & ((1 << 64) - 1)
+    return f"{value:016x}"
+
+
+def audit_state_transport(handoff, trial, stage, directory, memory_bytes, transport):
+    """Bind native receipts to this trial and to both independently fetched states."""
+    label = f"{trial['id']}/handoff{stage}"
+    require(handoff.get("state_transport", "serial") == transport, f"{label}: state transport disagreement")
+    require(handoff.get("handoff_mode", "snapshot" if transport == "serial" else None) == "snapshot",
+            f"{label}: trace evidence does not demonstrate direct/reuse handoff")
+    if transport == "serial":
+        require("mailbox" not in handoff, f"{label}: serial handoff contains mailbox claims")
+        return {"transport": transport, "mailbox_phases": {}, "api_phases": {}}
+    require(transport == "dax-mailbox", f"{label}: unknown state transport")
+    nonce = trial["mailbox_nonce"]
+    require(isinstance(nonce, str) and re.fullmatch(r"[0-9a-f]{16}", nonce) and int(nonce, 16) > 0,
+            f"{label}: invalid mailbox session nonce")
+    source = inside(directory, handoff["state_file"]).read_bytes()
+    target_path = inside(directory, handoff["destination_state_file"])
+    require(target_path.resolve() != inside(directory, handoff["state_file"]).resolve(),
+            f"{label}: destination evidence reuses source state file")
+    target = target_path.read_bytes()
+    integrity = handoff["destination_state_integrity"]
+    require(target == source, f"{label}: mailbox destination state differs from source")
+    require(len(target) == integrity["bytes"] and sha(target) == integrity["sha256"] and
+            integrity["source_unchanged_during_fetch"] is True, f"{label}: destination state fetch integrity")
+    require(handoff["destination_prestarted"] is True, f"{label}: destination was not prestarted")
+    require(set(handoff["mailbox"]) == {"publish", "receive"}, f"{label}: mailbox phases")
+    durations, files = {}, []
+    for phase in ("publish", "receive"):
+        evidence = handoff["mailbox"][phase]
+        files.append(evidence["file"])
+        receipt = raw_receipt(directory, evidence, "STATE_MAILBOX_JSON ", label + "/" + phase)
+        expected = {"phase": phase, "role": handoff["source"] if phase == "publish" else handoff["destination"],
+                    "source_role": handoff["source"], "nonce": nonce, "round": stage + 1,
+                    "schema": "534e415053484f02", "offset": 1048576, "capacity": 262144,
+                    "memory_bytes": memory_bytes, "state_bytes": len(source), "state_hash": fnv1a64(source)}
+        require(all(receipt.get(key) == value for key, value in expected.items()),
+                f"{label}/{phase}: mailbox session/layout/payload metadata mismatch")
+        require(0 < len(source) <= receipt["capacity"] and
+                receipt["offset"] + receipt["capacity"] < 2097152,
+                f"{label}/{phase}: mailbox overlaps guest RAM or exceeds capacity")
+        duration = receipt["duration_ns"]
+        require(type(duration) is int and 0 <= duration < 2 ** 64,
+                f"{label}/{phase}: invalid native duration")
+        durations[phase] = duration
+    require(set(handoff["api_observations"]) == {"pause", "snapshot", "load", "resume"},
+            f"{label}: native API phases")
+    api_durations = {}
+    for phase, evidence in handoff["api_observations"].items():
+        files.append(evidence["file"])
+        receipt = raw_receipt(directory, evidence, "LAB_API_JSON ", label + "/" + phase)
+        require(receipt["status"] == receipt["expected_status"] == 204 and
+                re.match(r"HTTP/1\.1 204(?: |\r?\n)", receipt["response"]),
+                f"{label}/{phase}: unsuccessful native API response")
+        duration = receipt["duration_us"]
+        require(type(duration) in (int, float) and math.isfinite(duration) and duration >= 0,
+                f"{label}/{phase}: invalid native API duration")
+        api_durations[phase] = duration
+    require(len(set(files)) == len(files), f"{label}: reused native receipt file")
+    return {"transport": transport, "mailbox_phases": durations, "api_phases": api_durations}
+
+
 def fingerprint(data):
     return {"sha256": sha(data), "without_startup_warning_sha256": sha(data.replace(WARNING, b"")),
             "startup_warning_count": data.count(WARNING)}
@@ -246,8 +320,9 @@ def test_summary(command, output):
     return None
 
 
-def audit_trial(trial, plan, trace, directory, memory_mib=None):
+def audit_trial(trial, plan, trace, directory, memory_mib=None, state_transport=None):
     name = trial["id"]
+    transport = state_transport or ("dax-mailbox" if "mailbox_nonce" in trial else "serial")
     require(trial["result"] == "passed", f"{name}: trial failed")
     require(trial["trace_sha256"] == trace["sha256"] == plan["trace_sha256"], f"{name}: trace hash")
     require(trial["image_sha256"] == plan["image_sha256"], f"{name}: image hash")
@@ -435,6 +510,7 @@ def audit_trial(trial, plan, trace, directory, memory_mib=None):
         require(identity["sentinel_sha256"] == sha(state.encode()), f"{name}: mutable file contents not retained")
     require(len(trial["handoffs"]) == 2, f"{name}: handoff count")
     boundaries = [plan["handoff_before"], len(commands) - 2]
+    transport_audits = []
     for index, handoff in enumerate(trial["handoffs"]):
         label = f"{name}/handoff{index}"
         require((handoff["source"], handoff["destination"]) == (("A", "B") if index == 0 else ("B", "A")),
@@ -453,6 +529,7 @@ def audit_trial(trial, plan, trace, directory, memory_mib=None):
                 f"{label}: state length")
         require(digest(state) == handoff["state_integrity"]["sha256"], f"{label}: state checksum")
         require(handoff["state_integrity"]["source_unchanged_during_fetch"], f"{label}: unstable state fetch")
+        transport_audits.append(audit_state_transport(handoff, trial, index, directory, dax_bytes, transport))
         require(handoff["source_fenced"] is True, f"{label}: source not fenced")
         fence = inside(directory, handoff["fence_file"]).read_bytes().decode()
         require(fence == handoff["source_fence"], f"{label}: source fence raw/report disagreement")
@@ -511,6 +588,7 @@ def audit_trial(trial, plan, trace, directory, memory_mib=None):
                            "raw_bytes_match": submitted["sha256"] == trace["submission"]["sha256"],
                            "patch_bytes_match": True},
             "handoffs": len(trial["handoffs"]), "identities": len(identities),
+            "state_transport": transport, "native_handoff_phases": transport_audits,
             "rpc_counter_differences": counter_differences}
 
 
@@ -525,6 +603,12 @@ def audit(args):
     trials = report["trials"]
     require(bool(trials) and len({row["id"] for row in trials}) == len(trials), "missing/duplicate trials")
     arguments = report["arguments"]
+    state_transport = arguments.get("state_transport", "serial")
+    require(state_transport in ("serial", "dax-mailbox"), "unsupported state transport")
+    if state_transport == "dax-mailbox":
+        require(len({row["mailbox_nonce"] for row in trials}) == len(trials), "mailbox session nonce reused across trials")
+    else:
+        require(all("mailbox_nonce" not in row for row in trials), "serial trial contains mailbox session")
     config = report["config"]
     require(config["dax_guest"] and not config["dax_kvm_state"] and not config["dax_handoff"],
             "experiment did not use ordinary shared-DAX RAM")
@@ -575,6 +659,15 @@ def audit(args):
         require(digest(inside(sources, name)) == expected_hash, f"runtime source drift: {name}")
     for name in ("trace-l2-init.sh", "trace-guest-run.sh"):
         require(manifest["source_hashes"][name] == runtime[name], f"guest compiled/prepared source differs at runtime: {name}")
+    helper_sources = []
+    if state_transport == "dax-mailbox":
+        for key, name in (("probe_source", "shared_probe.c"), ("cache_probe_source", "cache_probe.h"),
+                          ("mptcp_probe_source", "mptcp_probe.h")):
+            require(manifest["inputs"][key]["sha256"] == runtime[name], f"native helper prepared/runtime source drift: {name}")
+            helper_sources.append(name)
+        require(manifest["source_hashes"]["shared_probe.c"] == runtime["shared_probe.c"], "native helper source provenance differs")
+        require(manifest["inputs"]["shared_probe"]["sha256"] == manifest["artifacts"]["shared-probe"],
+                "native helper input/artifact binary differs")
     patch_dir = args.patch_dir or directory / "measured-patches"
     patches_checked = []
     if args.patch_dir or patch_dir.is_dir():
@@ -586,7 +679,7 @@ def audit(args):
     for name in names:
         effective_environment(manifest["traces"][name], parsed[name])
     audits = [audit_trial(row, manifest["traces"][row["trace"]], parsed[row["trace"]], directory,
-                          memory_mib=arguments["memory_mib"]) for row in trials]
+                          memory_mib=arguments["memory_mib"], state_transport=state_transport) for row in trials]
     require(len({row["boot_id"] for row in audits}) == len(trials), "independent trials reused a guest boot identity")
     for name in names:
         remote = [audit for row, audit in zip(trials, audits) if row["trace"] == name and
@@ -602,7 +695,17 @@ def audit(args):
         for name, expected_hash in manifest["artifacts"].items():
             require(digest(inside(asset_dir, name)) == expected_hash, f"prepared artifact hash: {name}")
             checked_artifacts.append(name)
-        l1_files = newc_files(asset_dir / "l1-initramfs.cpio", {f"lab/{name}-initramfs.cpio" for name in names})
+        wanted = {f"lab/{name}-initramfs.cpio" for name in names}
+        if state_transport == "dax-mailbox":
+            wanted.add("lab/shared-probe")
+        l1_files = newc_files(asset_dir / "l1-initramfs.cpio", wanted)
+        if state_transport == "dax-mailbox":
+            helper = l1_files["lab/shared-probe"]
+            require(helper["mode"] & 0o170000 == 0o100000 and helper["mode"] & 0o111 and
+                    helper["data"] == (asset_dir / "shared-probe").read_bytes() and
+                    sha(helper["data"]) == manifest["artifacts"]["shared-probe"],
+                    "L1 embedded native helper differs from audited executable artifact")
+            checked_artifacts.append("l1-initramfs.cpio:lab/shared-probe")
         for name in names:
             plan = manifest["traces"][name]
             image = Path(plan["source_image"])
@@ -632,11 +735,17 @@ def audit(args):
               "recorded_exits_checked": sum(row["recorded_exits_checked"] for row in audits),
               "submission_exits_checked": len(trials), "submissions_checked": len(trials),
               "handoffs": sum(row["handoffs"] for row in audits),
+              "state_transport": state_transport,
+              "mailbox_handoffs_checked": sum(phase["transport"] == "dax-mailbox" for row in audits for phase in row["native_handoff_phases"]),
+              "native_mailbox_phases_checked": sum(len(phase["mailbox_phases"]) for row in audits for phase in row["native_handoff_phases"]),
+              "native_api_phases_checked": sum(len(phase["api_phases"]) for row in audits for phase in row["native_handoff_phases"]),
+              "native_timing_note": "Each native phase uses its own node's monotonic clock; phase sums are not end-to-end downtime.",
               "fresh_guest_boot_ids": len({row["boot_id"] for row in audits}),
               "stable_test_summaries_checked": sum(len(row["test_outcomes"]) for row in audits),
               "submission_normalization": {"removed_exact_line": WARNING.decode(), "require_same_warning_count": True,
                   "raw_hash_difference_trials": [row["trial"] for row in audits if not row["submission"]["raw_bytes_match"]]},
               "runtime_sources_checked": sorted(runtime), "artifact_files_checked": checked_artifacts,
+              "native_helper_sources_checked": helper_sources,
               "source_patches_checked": sorted(patches_checked),
               "prepared_executable_wrappers_checked": wrappers_checked,
               "rpc_counter_differences": [item for row in audits for item in row["rpc_counter_differences"]],

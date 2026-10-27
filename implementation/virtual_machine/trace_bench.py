@@ -23,7 +23,7 @@ import nfs_bench as nfs
 
 HERE = Path(__file__).resolve().parent
 SOURCES = ("trace_bench.py", "trace_prepare.py", "trace-l2-init.sh", "trace-guest-run.sh",
-           "nfs_bench.py", "nfs_probe.c", "lab.py", "nfs_dependencies.sh")
+           "nfs_bench.py", "nfs_probe.c", "lab.py", "nfs_dependencies.sh", "shared_probe.c", "cache_probe.h", "mptcp_probe.h")
 
 
 def serial(vm, directory, command, token, event, timeout=180):
@@ -96,27 +96,58 @@ def source_fence_script(directory):
         "printf 'FENCED %s %s\\nFENCE_STATE %s %s\\n' \"$p\" \"$expected\" \"$reason\" \"$observed\"")
 
 
-def handoff(vms, directory, out, trial, source, destination, stage):
+def handoff(vms, directory, out, trial, source, destination, stage, transport, memory_mib):
     source_vm, target_vm = vms[source], vms[destination]
     token = f"{trial['id']}_h{stage}_before"
     before = serial(source_vm, directory, f"identity {token}", token, "trace_identity")
+    prefix = f"{trial['id']}-h{stage}"
+    observations, mailbox = {}, {}
+
+    def observed_api(vm, phase, path, method, body):
+        raw = nfs.api(vm, directory, path, method, body)
+        filename = f"{prefix}-{phase}-api.txt"
+        (out / filename).write_text(raw)
+        rows = [json.loads(line.removeprefix("LAB_API_JSON ")) for line in raw.splitlines()
+                if line.startswith("LAB_API_JSON ")]
+        if len(rows) != 1 or rows[0]["status"] != 204:
+            raise RuntimeError(f"Invalid native API receipt: {phase}")
+        observations[phase] = {"file": filename, "receipt": rows[0]}
+
+    def transfer(vm, phase, role):
+        raw = nfs.shell(vm, "/lab/shared-probe state-mailbox " + shlex.join([
+            role, phase, "/dev/dax0.0", directory + "/state", trial["mailbox_nonce"],
+            str(stage + 1), str(memory_mib)]))
+        filename = f"{prefix}-mailbox-{phase}.txt"
+        (out / filename).write_text(raw)
+        rows = [json.loads(line.removeprefix("STATE_MAILBOX_JSON ")) for line in raw.splitlines()
+                if line.startswith("STATE_MAILBOX_JSON ")]
+        if len(rows) != 1:
+            raise RuntimeError(f"Invalid native mailbox receipt: {phase}")
+        mailbox[phase] = {"file": filename, "receipt": rows[0]}
+
+    # Prestart only an empty API process. Restore creates its private KVM objects.
+    # No guest RAM mapping or initialization happens during this preparation.
+    if transport == "dax-mailbox":
+        nfs.start_fc(target_vm, directory)
     t = time.monotonic_ns()
-    nfs.api(source_vm, directory, "/vm", "PATCH", {"state": "Paused"})
-    nfs.api(source_vm, directory, "/snapshot/create", "PUT", {"snapshot_type": "Full",
+    observed_api(source_vm, "pause", "/vm", "PATCH", {"state": "Paused"})
+    observed_api(source_vm, "snapshot", "/snapshot/create", "PUT", {"snapshot_type": "Full",
         "snapshot_path": directory + "/state", "mem_file_path": "/dev/dax0.0"})
     nfs.stop_fc(source_vm, directory)
     fenced = nfs.shell(source_vm, source_fence_script(directory))
-    state, integrity = lab.guest_fetch_file(source_vm, directory + "/state")
-    name = f"{trial['id']}-h{stage}-state.bin"
-    (out / name).write_bytes(state)
-    save_log(source_vm, directory, out, trial, source, stage)
-    nfs.upload(target_vm, directory + "/state", state)
-    nfs.start_fc(target_vm, directory)
-    nfs.api(target_vm, directory, "/snapshot/load", "PUT", {"snapshot_path": directory + "/state",
+    if transport == "dax-mailbox":
+        transfer(source_vm, "publish", source)
+        transfer(target_vm, "receive", destination)
+    else:
+        state, integrity = lab.guest_fetch_file(source_vm, directory + "/state")
+        nfs.upload(target_vm, directory + "/state", state)
+        nfs.start_fc(target_vm, directory)
+    observed_api(target_vm, "load", "/snapshot/load", "PUT", {"snapshot_path": directory + "/state",
         "mem_backend": {"backend_type": "File", "backend_path": "/dev/dax0.0"}, "resume_vm": False})
-    nfs.api(target_vm, directory, "/vm", "PATCH", {"state": "Resumed"})
+    observed_api(target_vm, "resume", "/vm", "PATCH", {"state": "Resumed"})
     token = f"{trial['id']}_h{stage}_after"
     after = serial(target_vm, directory, f"identity {token}", token, "trace_identity")
+    controller_handoff_ns = time.monotonic_ns() - t
     for key in ("boot_id", "pid", "next_index", "sentinel_sha256", "fd_inode"):
         if before[key] != after[key]:
             raise RuntimeError(f"Handoff lost guest state: {key}")
@@ -125,13 +156,29 @@ def handoff(vms, directory, out, trial, source, destination, stage):
             after["fd_line"] != f"FD-{after['boot_id']}-{after['fd_ordinal']}" or
             after["fd_position"] != before["fd_position"] + len(after["fd_line"]) + 1):
         raise RuntimeError("Handoff lost unlinked open file or its read cursor")
-    fence_file = f"{trial['id']}-h{stage}-fence.txt"
+    # Evidence collection is outside the pause-to-identity controller interval.
+    # In mailbox mode these are audit copies, never the restore transport.
+    if transport == "dax-mailbox":
+        state, integrity = lab.guest_fetch_file(source_vm, directory + "/state")
+    received, received_integrity = lab.guest_fetch_file(target_vm, directory + "/state")
+    if state != received:
+        raise RuntimeError("Destination checkpoint differs from source")
+    name, received_name = prefix + "-state.bin", prefix + "-destination-state.bin"
+    (out / name).write_bytes(state)
+    (out / received_name).write_bytes(received)
+    save_log(source_vm, directory, out, trial, source, stage)
+    fence_file = prefix + "-fence.txt"
     (out / fence_file).write_text(fenced)
     record = {"source": source, "destination": destination, "before_identity": before,
               "after_identity": after, "state_file": name, "state_bytes": len(state),
               "state_integrity": integrity, "ram_transfer_bytes": 0, "source_fence": fenced,
               "source_fenced": True, "fence_file": fence_file,
-              "controller_handoff_ns": time.monotonic_ns() - t}
+              "state_transport": transport, "handoff_mode": "snapshot",
+              "destination_prestarted": transport == "dax-mailbox",
+              "destination_state_file": received_name, "destination_state_integrity": received_integrity,
+              "api_observations": observations, "controller_handoff_ns": controller_handoff_ns}
+    if mailbox:
+        record["mailbox"] = mailbox
     trial["handoffs"].append(record)
     return record
 
@@ -180,7 +227,9 @@ def run(args):
         "limitations": ["One physical host, nested KVM, emulated coherent CXL",
             "Guest RAM begins in shared DAX; no initial DRAM-to-CXL promotion",
             "Readonly image lower plus guest tmpfs upper; no shared writable disk",
-            "Serial controller pauses are excluded from command-time totals",
+            "Serial control commands remain; state transport is selected separately",
+            "Controller handoff includes shell/API waits and identity check; excludes prestart and audit collection",
+            "Controller pauses are excluded from command-time totals",
             "Guest uptime resolution 10ms; no recorded think-time gaps or external network",
             "No physical NIC or network shaping; device/controller cache uncontrolled"]}
     lab.save_json(out / "report.json", report)
@@ -207,6 +256,8 @@ def run(args):
                             "backend": backend, "cache_mode": mode, "commands": [], "handoffs": [], "logs": [],
                             "trace_sha256": entry["trace_sha256"], "image_sha256": entry["image_sha256"],
                             "result": "running"}
+                        if args.state_transport == "dax-mailbox":
+                            trial["mailbox_nonce"] = os.urandom(8).hex()
                         report["trials"].append(trial)
                         lab.save_json(out / "report.json", report)
                         trial["backend_mount_file"] = trial["id"] + "-B-mounts.txt"
@@ -245,7 +296,7 @@ def run(args):
                             index = command["index"]
                             if index in boundaries:
                                 target = "B" if role == "A" else "A"
-                                handoff(vms, directory, out, trial, role, target, stage)
+                                handoff(vms, directory, out, trial, role, target, stage, args.state_transport, args.memory_mib)
                                 role, stage = target, stage + 1
                                 if mode == "evicted":
                                     token = f"{trial['id']}_evict{stage}"
@@ -319,6 +370,8 @@ def run(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--state-transport", choices=("serial", "dax-mailbox"), default="serial",
+                        help="Snapshot state transport; DAX mode prestarts only the destination API process")
     parser.add_argument("--names", nargs="+")
     parser.add_argument("--cycles", type=int, default=3)
     parser.add_argument("--eviction-cycles", type=int, default=1)

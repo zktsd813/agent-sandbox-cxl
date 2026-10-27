@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "result": "passed",
+  "baseline_result": "passed",
+  "baseline_trials": 24,
+  "baseline_commands": 840,
+  "verifier_sha256": "b2b74e7c38373d9933e7167641d2afdca0bb4b0519927cab7f15cea3b9b4b877",
+  "report_sha256": "b221b480b6670dd7b11b88a2c3cdc06ea930820e99cd90c59dab488d4eb9e590",
+  "script_sha256": "9873fc0e34781cbbcb56ba067bb8c88b328eac67cd3dc79c2f2203bcc125227d",
+  "negative_cases": [
+    {
+      "test": "report_counter_and_summary",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/0: NFS counter delta"
+    },
+    {
+      "test": "raw_nfs_counter",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/0: NFS counter delta"
+    },
+    {
+      "test": "guest_stdout_with_outer_hashes",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/0: output checksum"
+    },
+    {
+      "test": "final_submission_with_all_hashes",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs: final submission fingerprint mismatch"
+    },
+    {
+      "test": "test_summary_with_all_hashes",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/4: stable test outcomes differ from original trace: {'kind': 'go', 'packages': [('?', 'github.com/gin-gonic/gin/ginS'), ('?', 'github.com/gin-gonic/gin/internal/json'), ('FAIL', 'github.com/gin-gonic/gin'), ('ok', 'github.com/gin-gonic/gin/binding'), ('ok', 'github.com/gin-gonic/gin/internal/bytesconv'), ('ok', 'github.com/gin-gonic/gin/render')]} != {'kind': 'go', 'packages': [('?', 'github.com/gin-gonic/gin/ginS'), ('?', 'github.com/gin-gonic/gin/internal/json'), ('ok', 'github.com/gin-gonic/gin'), ('ok', 'github.com/gin-gonic/gin/binding'), ('ok', 'github.com/gin-gonic/gin/internal/bytesconv'), ('ok', 'github.com/gin-gonic/gin/render')]}"
+    },
+    {
+      "test": "handoff_clock_rewind_with_consistent_timestamps",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/12: guest monotonic clock moved backwards between commands or across handoff"
+    },
+    {
+      "test": "missing_command",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs: command count"
+    },
+    {
+      "test": "duplicate_command",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs: command ordering"
+    },
+    {
+      "test": "fd_position_report_only",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0: identity missing/duplicated in raw logs"
+    },
+    {
+      "test": "source_fence_consistent_receipt",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0: source process could still execute"
+    },
+    {
+      "test": "handoff_mode_direct",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0: trace evidence does not demonstrate direct/reuse handoff"
+    },
+    {
+      "test": "reused_trial_evidence",
+      "result": "rejected",
+      "reason": "mailbox session nonce reused across trials"
+    },
+    {
+      "test": "duplicate_backend_mount",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs: B backing mount is not uniquely readonly"
+    },
+    {
+      "test": "mailbox_destination_with_refreshed_sha",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0: mailbox destination state differs from source"
+    },
+    {
+      "test": "mailbox_hash_with_matching_receipts",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0/publish: mailbox session/layout/payload metadata mismatch"
+    },
+    {
+      "test": "mailbox_foreign_nonce_with_matching_receipt",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0/receive: mailbox session/layout/payload metadata mismatch"
+    },
+    {
+      "test": "mailbox_foreign_round_with_matching_receipt",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0/receive: mailbox session/layout/payload metadata mismatch"
+    },
+    {
+      "test": "mailbox_duplicate_native_receipt",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0/receive: missing/duplicate native receipt"
+    },
+    {
+      "test": "native_api_failed_response_with_matching_receipt",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0/load: unsuccessful native API response"
+    },
+    {
+      "test": "native_helper_source_with_refreshed_sha",
+      "result": "rejected",
+      "reason": "native helper prepared/runtime source drift: shared_probe.c"
+    },
+    {
+      "test": "reused_mailbox_trial_nonce",
+      "result": "rejected",
+      "reason": "mailbox session nonce reused across trials"
+    }
+  ]
+}

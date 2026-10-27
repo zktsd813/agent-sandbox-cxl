@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "event": "unapproved_heavy_audit_overlapped_active_formal_run",
+  "audit_agent": "/root/trace_validator",
+  "exec_session_id": 1069,
+  "audit_started_utc": "2026-10-27T08:15:42.710323923Z",
+  "audit_finished_utc": "2026-10-27T08:15:59.182410078Z",
+  "observed_interval_seconds": 16.472086155,
+  "timestamp_evidence": "log filesystem birth time and final modification time; JSON completion modification time agrees",
+  "command": "taskset -c 6-11 python3 implementation/virtual_machine/verify_trace_results.py implementation/virtual_machine/.local/runs/20261027T080700Z-10uvwsz0/trace-1793088432668177511/report.json --artifacts --assets-dir implementation/virtual_machine/.local/assets-trace-mailbox-v1-20261027 --json-out /tmp/trace-mailbox-smoke-artifact-audit.json > /tmp/trace-mailbox-smoke-artifact-audit.log",
+  "active_formal_report": "implementation/virtual_machine/.local/runs/20261027T080920Z-d2ke0avs/trace-1793088572687426396/report.json",
+  "operation_scope": "Read and SHA256 prepared artifacts and a selected source image; parse initramfs; read completed smoke evidence. No VM state mutations or guest commands.",
+  "termination_attempt": "Root stop message received; Ctrl-C sent via write_stdin to session 1069; tool returned completed exit_code=0.",
+  "negative_suite_started": false,
+  "evidence_copies_started": false,
+  "cause": "Agent incorrectly treated sandbox-filtered /proc visibility as proof that no QEMU was active, instead of waiting for root's explicit formal-stop notification.",
+  "performance_scope": "CPU affinity was 6-11, but shared memory bandwidth, caches, and storage may affect concurrent measurements. Compatibility assertions remain independently auditable; timing values overlapping this interval require disclosure or repetition.",
+  "followup_constraint": "No large artifact hashing or evidence copying until root explicitly confirms the formal run is stopped."
+}
