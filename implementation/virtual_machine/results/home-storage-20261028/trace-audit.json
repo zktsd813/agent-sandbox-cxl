@@ -1,0 +1,5207 @@
+{
+  "artifact_files_checked": [
+    "l1-initramfs.cpio",
+    "l1-kernel",
+    "gin-gonic__gin-3741-initramfs.cpio",
+    "ram-transfer",
+    "storage.raw",
+    "shared-probe",
+    "micropython__micropython-13039-initramfs.cpio",
+    "nfs-probe",
+    "php-cs-fixer__php-cs-fixer-8331-initramfs.cpio",
+    "l2-initramfs.cpio",
+    "l1-initramfs.cpio:lab/shared-probe",
+    "l1-initramfs.cpio:lab/ram-transfer",
+    "/home/ijkim/agent-sandbox-cxl/experiments/contention/.local/images/gin-gonic__gin-3741/rootfs.ext4",
+    "/home/ijkim/agent-sandbox-cxl/experiments/contention/.local/images/php-cs-fixer__php-cs-fixer-8331/rootfs.ext4",
+    "/home/ijkim/agent-sandbox-cxl/experiments/contention/.local/images/micropython__micropython-13039/rootfs.ext4"
+  ],
+  "commands": 840,
+  "fresh_guest_boot_ids": 24,
+  "handoffs": 48,
+  "mailbox_handoffs_checked": 48,
+  "native_api_phases_checked": 192,
+  "native_helper_sources_checked": [
+    "shared_probe.c",
+    "cache_probe.h",
+    "mptcp_probe.h",
+    "ram_transfer.c"
+  ],
+  "native_mailbox_phases_checked": 96,
+  "native_ram_phases_checked": 72,
+  "native_timing_note": "Each native phase uses its own node's monotonic clock; phase sums are not end-to-end downtime.",
+  "prepared_executable_wrappers_checked": 105,
+  "ram_copied_bytes": 103079215104,
+  "ram_lifecycle": "home-roundtrip",
+  "recorded_exits_checked": 816,
+  "result": "passed",
+  "rpc_counter_differences": [],
+  "rpc_counter_note": "proc3 counts started RPCs, mountstats counts completed RPCs; snapshots are sequential.",
+  "runtime_sources_checked": [
+    "cache_probe.h",
+    "lab.py",
+    "mptcp_probe.h",
+    "nfs_bench.py",
+    "nfs_dependencies.sh",
+    "nfs_probe.c",
+    "ram_transfer.c",
+    "shared_probe.c",
+    "trace-guest-run.sh",
+    "trace-l2-init.sh",
+    "trace_bench.py",
+    "trace_prepare.py"
+  ],
+  "schema_version": 1,
+  "source_patches_checked": [
+    "firecracker.patch",
+    "qemu-cxl-direct-ram.patch",
+    "ram-backend-source.json"
+  ],
+  "stable_test_summaries_checked": 72,
+  "state_transport": "dax-mailbox",
+  "submission_exits_checked": 24,
+  "submission_normalization": {
+    "raw_hash_difference_trials": [
+      "micropython__micropython-13039_retained_0_nfs",
+      "micropython__micropython-13039_retained_0_local",
+      "micropython__micropython-13039_retained_1_local",
+      "micropython__micropython-13039_retained_1_nfs",
+      "micropython__micropython-13039_retained_2_nfs",
+      "micropython__micropython-13039_retained_2_local",
+      "micropython__micropython-13039_evicted_0_nfs",
+      "micropython__micropython-13039_evicted_0_local"
+    ],
+    "removed_exact_line": "/root/.bashrc: line 1: /opt/miniconda3/etc/profile.d/conda.sh: No such file or directory\n",
+    "require_same_warning_count": true
+  },
+  "submissions_checked": 24,
+  "summary": [
+    {
+      "backend": "local",
+      "cache_mode": "evicted",
+      "guest_duration_s": {
+        "max": 20.609999999999996,
+        "median": 20.609999999999996,
+        "min": 20.609999999999996
+      },
+      "n": 1,
+      "trace": "gin-gonic__gin-3741"
+    },
+    {
+      "backend": "nfs",
+      "cache_mode": "evicted",
+      "guest_duration_s": {
+        "max": 20.880000000000013,
+        "median": 20.880000000000013,
+        "min": 20.880000000000013
+      },
+      "n": 1,
+      "trace": "gin-gonic__gin-3741"
+    },
+    {
+      "backend": "local",
+      "cache_mode": "retained",
+      "guest_duration_s": {
+        "max": 19.21999999999999,
+        "median": 19.180000000000007,
+        "min": 19.159999999999997
+      },
+      "n": 3,
+      "trace": "gin-gonic__gin-3741"
+    },
+    {
+      "backend": "nfs",
+      "cache_mode": "retained",
+      "guest_duration_s": {
+        "max": 19.74999999999999,
+        "median": 19.219999999999995,
+        "min": 18.829999999999995
+      },
+      "n": 3,
+      "trace": "gin-gonic__gin-3741"
+    },
+    {
+      "backend": "local",
+      "cache_mode": "evicted",
+      "guest_duration_s": {
+        "max": 16.510000000000005,
+        "median": 16.510000000000005,
+        "min": 16.510000000000005
+      },
+      "n": 1,
+      "trace": "micropython__micropython-13039"
+    },
+    {
+      "backend": "nfs",
+      "cache_mode": "evicted",
+      "guest_duration_s": {
+        "max": 16.140000000000015,
+        "median": 16.140000000000015,
+        "min": 16.140000000000015
+      },
+      "n": 1,
+      "trace": "micropython__micropython-13039"
+    },
+    {
+      "backend": "local",
+      "cache_mode": "retained",
+      "guest_duration_s": {
+        "max": 15.40999999999999,
+        "median": 15.189999999999984,
+        "min": 14.700000000000005
+      },
+      "n": 3,
+      "trace": "micropython__micropython-13039"
+    },
+    {
+      "backend": "nfs",
+      "cache_mode": "retained",
+      "guest_duration_s": {
+        "max": 15.05,
+        "median": 14.929999999999998,
+        "min": 14.780000000000022
+      },
+      "n": 3,
+      "trace": "micropython__micropython-13039"
+    },
+    {
+      "backend": "local",
+      "cache_mode": "evicted",
+      "guest_duration_s": {
+        "max": 9.099999999999989,
+        "median": 9.099999999999989,
+        "min": 9.099999999999989
+      },
+      "n": 1,
+      "trace": "php-cs-fixer__php-cs-fixer-8331"
+    },
+    {
+      "backend": "nfs",
+      "cache_mode": "evicted",
+      "guest_duration_s": {
+        "max": 9.279999999999989,
+        "median": 9.279999999999989,
+        "min": 9.279999999999989
+      },
+      "n": 1,
+      "trace": "php-cs-fixer__php-cs-fixer-8331"
+    },
+    {
+      "backend": "local",
+      "cache_mode": "retained",
+      "guest_duration_s": {
+        "max": 8.380000000000003,
+        "median": 8.289999999999994,
+        "min": 8.17999999999999
+      },
+      "n": 3,
+      "trace": "php-cs-fixer__php-cs-fixer-8331"
+    },
+    {
+      "backend": "nfs",
+      "cache_mode": "retained",
+      "guest_duration_s": {
+        "max": 8.339999999999993,
+        "median": 8.280000000000006,
+        "min": 8.21
+      },
+      "n": 3,
+      "trace": "php-cs-fixer__php-cs-fixer-8331"
+    }
+  ],
+  "trial_audits": [
+    {
+      "boot_id": "2babe833-6060-49a2-aea1-a81e48616281",
+      "commands": 27,
+      "destination_duration_s": 9.759999999999991,
+      "final_exit_checked": 1,
+      "guest_duration_s": 19.74999999999999,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 22,
+        "mount_read_received_bytes": 1047296,
+        "mount_read_sent_bytes": 2376,
+        "nfs_read_calls": 22,
+        "read_ios": 11180,
+        "read_sectors": 535600,
+        "rx_bytes": 1052668,
+        "tx_bytes": 8584,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 14912.287,
+            "pause": 1169.175,
+            "resume": 4813.488,
+            "snapshot": 1764669.324
+          },
+          "mailbox_phases": {
+            "publish": 268676,
+            "receive": 808480
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 10666.027,
+            "pause": 842.088,
+            "resume": 4109.375,
+            "snapshot": 2679.943
+          },
+          "mailbox_phases": {
+            "publish": 531588,
+            "receive": 201173
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 322,
+        "tx_bytes": 438
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              257,
+              2385
+            ],
+            "vma": {
+              "end": 140590121484288,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140587974000640
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 9348775890
+          },
+          "source_mapping": {
+            "owner": [
+              217,
+              674
+            ],
+            "vma": {
+              "end": 140719633203200,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 140717485719552
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              1674,
+              5280
+            ],
+            "vma": {
+              "end": 139626524180480,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/gin-gonic__gin-3741_retained_0_nfs-h1-memory",
+              "permissions": "rw-p",
+              "start": 139624376696832
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 7884103507,
+            "poison": 3838955549
+          },
+          "source_mapping": {
+            "owner": [
+              257,
+              2385
+            ],
+            "vma": {
+              "end": 140590121484288,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140587974000640
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_retained_0_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 22,
+        "mount_read_received_bytes": 1047296,
+        "mount_read_sent_bytes": 2376,
+        "nfs_read_calls": 22,
+        "rx_bytes": 1052990,
+        "tx_bytes": 9022
+      }
+    },
+    {
+      "boot_id": "39fbc97f-83fe-42ae-9c33-65a9e29f00f9",
+      "commands": 27,
+      "destination_duration_s": 9.529999999999998,
+      "final_exit_checked": 1,
+      "guest_duration_s": 19.159999999999997,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 11802,
+        "read_sectors": 535848,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 14304.482,
+            "pause": 1126.02,
+            "resume": 4715.409,
+            "snapshot": 1000946.828
+          },
+          "mailbox_phases": {
+            "publish": 224982,
+            "receive": 745235
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 14439.913,
+            "pause": 724.508,
+            "resume": 4625.872,
+            "snapshot": 2960.237
+          },
+          "mailbox_phases": {
+            "publish": 545149,
+            "receive": 645450
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 220,
+        "tx_bytes": 150
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              1918,
+              8774
+            ],
+            "vma": {
+              "end": 140537979994112,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140535832510464
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8147900007
+          },
+          "source_mapping": {
+            "owner": [
+              1888,
+              7103
+            ],
+            "vma": {
+              "end": 140204279070720,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 140202131587072
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              3321,
+              11404
+            ],
+            "vma": {
+              "end": 140484177559552,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/gin-gonic__gin-3741_retained_0_local-h1-memory",
+              "permissions": "rw-p",
+              "start": 140482030075904
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 7937850912,
+            "poison": 4264423898
+          },
+          "source_mapping": {
+            "owner": [
+              1918,
+              8774
+            ],
+            "vma": {
+              "end": 140537979994112,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140535832510464
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_retained_0_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 220,
+        "tx_bytes": 150
+      }
+    },
+    {
+      "boot_id": "6319850c-8472-4864-ac67-612a3ab10d7e",
+      "commands": 35,
+      "destination_duration_s": 2.9099999999999895,
+      "final_exit_checked": 1,
+      "guest_duration_s": 8.21,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 158,
+        "mount_read_received_bytes": 17366784,
+        "mount_read_sent_bytes": 17064,
+        "nfs_read_calls": 158,
+        "read_ios": 8373,
+        "read_sectors": 155024,
+        "rx_bytes": 17398792,
+        "tx_bytes": 47232,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 14697.353,
+            "pause": 1249.125,
+            "resume": 9074.274,
+            "snapshot": 1094174.63
+          },
+          "mailbox_phases": {
+            "publish": 172287,
+            "receive": 705345
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 13429.411,
+            "pause": 1023.871,
+            "resume": 4150.698,
+            "snapshot": 2864.924
+          },
+          "mailbox_phases": {
+            "publish": 542128,
+            "receive": 776515
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              3632,
+              15042
+            ],
+            "vma": {
+              "end": 139956748025856,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139954600542208
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8111701727
+          },
+          "source_mapping": {
+            "owner": [
+              3538,
+              13280
+            ],
+            "vma": {
+              "end": 139670683910144,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 139668536426496
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              4498,
+              17048
+            ],
+            "vma": {
+              "end": 140098230288384,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/php-cs-fixer__php-cs-fixer-8331_retained_0_nfs-h1-memory",
+              "permissions": "rw-p",
+              "start": 140096082804736
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 8362148205,
+            "poison": 4058893407
+          },
+          "source_mapping": {
+            "owner": [
+              3632,
+              15042
+            ],
+            "vma": {
+              "end": 139956748025856,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139954600542208
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_0_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 158,
+        "mount_read_received_bytes": 17366784,
+        "mount_read_sent_bytes": 17064,
+        "nfs_read_calls": 158,
+        "rx_bytes": 17398974,
+        "tx_bytes": 47460
+      }
+    },
+    {
+      "boot_id": "b18c10f8-fad5-4d73-9de2-74d69e3ca979",
+      "commands": 35,
+      "destination_duration_s": 2.7900000000000027,
+      "final_exit_checked": 1,
+      "guest_duration_s": 8.289999999999994,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 8697,
+        "read_sectors": 155024,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 17270.274,
+            "pause": 1033.581,
+            "resume": 5115.239,
+            "snapshot": 1091572.851
+          },
+          "mailbox_phases": {
+            "publish": 172375,
+            "receive": 802835
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 13410.087,
+            "pause": 836.307,
+            "resume": 4192.987,
+            "snapshot": 2911.73
+          },
+          "mailbox_phases": {
+            "publish": 562027,
+            "receive": 434442
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 220,
+        "tx_bytes": 150
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              4559,
+              20706
+            ],
+            "vma": {
+              "end": 140162830958592,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140160683474944
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8147038363
+          },
+          "source_mapping": {
+            "owner": [
+              4751,
+              18981
+            ],
+            "vma": {
+              "end": 139793281318912,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 139791133835264
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              5744,
+              22676
+            ],
+            "vma": {
+              "end": 140530035982336,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/php-cs-fixer__php-cs-fixer-8331_retained_0_local-h1-memory",
+              "permissions": "rw-p",
+              "start": 140527888498688
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 7986622760,
+            "poison": 4182052630
+          },
+          "source_mapping": {
+            "owner": [
+              4559,
+              20706
+            ],
+            "vma": {
+              "end": 140162830958592,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140160683474944
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_0_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 220,
+        "tx_bytes": 150
+      }
+    },
+    {
+      "boot_id": "89f2e21f-bd20-4ad6-be6c-8211a3b88672",
+      "commands": 43,
+      "destination_duration_s": 7.880000000000017,
+      "final_exit_checked": 1,
+      "guest_duration_s": 14.780000000000022,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 383,
+        "mount_read_received_bytes": 12173184,
+        "mount_read_sent_bytes": 41364,
+        "nfs_read_calls": 383,
+        "read_ios": 16788,
+        "read_sectors": 321128,
+        "rx_bytes": 12212336,
+        "tx_bytes": 95550,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 17154.263,
+            "pause": 1303.21,
+            "resume": 4415.077,
+            "snapshot": 1075257.412
+          },
+          "mailbox_phases": {
+            "publish": 284130,
+            "receive": 696748
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 16322.151,
+            "pause": 905.808,
+            "resume": 4382.643,
+            "snapshot": 2741.333
+          },
+          "mailbox_phases": {
+            "publish": 590443,
+            "receive": 513018
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 298
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              5514,
+              26848
+            ],
+            "vma": {
+              "end": 140130312519680,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140128165036032
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8204757125
+          },
+          "source_mapping": {
+            "owner": [
+              5988,
+              24587
+            ],
+            "vma": {
+              "end": 140211828817920,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 140209681334272
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              7212,
+              29596
+            ],
+            "vma": {
+              "end": 139797297364992,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/micropython__micropython-13039_retained_0_nfs-h1-memory",
+              "permissions": "rw-p",
+              "start": 139795149881344
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 7979829134,
+            "poison": 3475217760
+          },
+          "source_mapping": {
+            "owner": [
+              5514,
+              26848
+            ],
+            "vma": {
+              "end": 140130312519680,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140128165036032
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_retained_0_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 383,
+        "mount_read_received_bytes": 12173184,
+        "mount_read_sent_bytes": 41364,
+        "nfs_read_calls": 383,
+        "rx_bytes": 12212518,
+        "tx_bytes": 95848
+      }
+    },
+    {
+      "boot_id": "603c53ec-0763-4dca-a417-6042d0917c7d",
+      "commands": 43,
+      "destination_duration_s": 7.870000000000008,
+      "final_exit_checked": 1,
+      "guest_duration_s": 15.40999999999999,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 15777,
+        "read_sectors": 320872,
+        "rx_bytes": 108,
+        "tx_bytes": 108,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 14440.157,
+            "pause": 934.503,
+            "resume": 6475.02,
+            "snapshot": 1079334.456
+          },
+          "mailbox_phases": {
+            "publish": 202653,
+            "receive": 853825
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 14918.097,
+            "pause": 825.118,
+            "resume": 4300.881,
+            "snapshot": 2971.807
+          },
+          "mailbox_phases": {
+            "publish": 565393,
+            "receive": 639690
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 42,
+        "tx_bytes": 42
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              7116,
+              33683
+            ],
+            "vma": {
+              "end": 140702405099520,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140700257615872
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8256735205
+          },
+          "source_mapping": {
+            "owner": [
+              7468,
+              31467
+            ],
+            "vma": {
+              "end": 139758093205504,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 139755945721856
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              8767,
+              36451
+            ],
+            "vma": {
+              "end": 139948013387776,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/micropython__micropython-13039_retained_0_local-h1-memory",
+              "permissions": "rw-p",
+              "start": 139945865904128
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 8023073101,
+            "poison": 4245618668
+          },
+          "source_mapping": {
+            "owner": [
+              7116,
+              33683
+            ],
+            "vma": {
+              "end": 140702405099520,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140700257615872
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_retained_0_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      }
+    },
+    {
+      "boot_id": "f00059fe-a727-4c07-b8f7-ea2d73ccc0ff",
+      "commands": 27,
+      "destination_duration_s": 9.659999999999993,
+      "final_exit_checked": 1,
+      "guest_duration_s": 19.21999999999999,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 11502,
+        "read_sectors": 535904,
+        "rx_bytes": 84,
+        "tx_bytes": 84,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 18552.047,
+            "pause": 1052.803,
+            "resume": 4482.35,
+            "snapshot": 1001930.264
+          },
+          "mailbox_phases": {
+            "publish": 281625,
+            "receive": 724900
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 15684.2,
+            "pause": 991.603,
+            "resume": 5255.054,
+            "snapshot": 2856.566
+          },
+          "mailbox_phases": {
+            "publish": 580795,
+            "receive": 685415
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 66,
+        "tx_bytes": 66
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              8582,
+              40105
+            ],
+            "vma": {
+              "end": 140058556366848,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140056408883200
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8080431572
+          },
+          "source_mapping": {
+            "owner": [
+              9011,
+              38418
+            ],
+            "vma": {
+              "end": 139913062252544,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 139910914768896
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              10408,
+              42888
+            ],
+            "vma": {
+              "end": 140705615839232,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/gin-gonic__gin-3741_retained_1_local-h1-memory",
+              "permissions": "rw-p",
+              "start": 140703468355584
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 8398745821,
+            "poison": 4199000927
+          },
+          "source_mapping": {
+            "owner": [
+              8582,
+              40105
+            ],
+            "vma": {
+              "end": 140058556366848,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140056408883200
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_retained_1_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      }
+    },
+    {
+      "boot_id": "9aeeb8ca-f1a6-434a-85e7-9aa1945612f3",
+      "commands": 27,
+      "destination_duration_s": 9.449999999999996,
+      "final_exit_checked": 1,
+      "guest_duration_s": 18.829999999999995,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 21,
+        "mount_read_received_bytes": 776832,
+        "mount_read_sent_bytes": 2268,
+        "nfs_read_calls": 21,
+        "read_ios": 12308,
+        "read_sectors": 535432,
+        "rx_bytes": 781232,
+        "tx_bytes": 6432,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 13076.987,
+            "pause": 1029.81,
+            "resume": 2810.013,
+            "snapshot": 982692.162
+          },
+          "mailbox_phases": {
+            "publish": 159312,
+            "receive": 773344
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 16165.56,
+            "pause": 758.262,
+            "resume": 4719.575,
+            "snapshot": 2675.103
+          },
+          "mailbox_phases": {
+            "publish": 584221,
+            "receive": 515120
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 252,
+        "tx_bytes": 228
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              10224,
+              46515
+            ],
+            "vma": {
+              "end": 139952104931328,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139949957447680
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8178267532
+          },
+          "source_mapping": {
+            "owner": [
+              10613,
+              44810
+            ],
+            "vma": {
+              "end": 140272509911040,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 140270362427392
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              11987,
+              49282
+            ],
+            "vma": {
+              "end": 139759244541952,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/gin-gonic__gin-3741_retained_1_nfs-h1-memory",
+              "permissions": "rw-p",
+              "start": 139757097058304
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 7833821262,
+            "poison": 3448375170
+          },
+          "source_mapping": {
+            "owner": [
+              10224,
+              46515
+            ],
+            "vma": {
+              "end": 139952104931328,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139949957447680
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_retained_1_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 21,
+        "mount_read_received_bytes": 776832,
+        "mount_read_sent_bytes": 2268,
+        "nfs_read_calls": 21,
+        "rx_bytes": 781484,
+        "tx_bytes": 6660
+      }
+    },
+    {
+      "boot_id": "b6f9856e-ce9b-442c-a006-4455206d0d5b",
+      "commands": 35,
+      "destination_duration_s": 2.7099999999999937,
+      "final_exit_checked": 1,
+      "guest_duration_s": 8.17999999999999,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 8661,
+        "read_sectors": 155024,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 12037.892,
+            "pause": 1141.611,
+            "resume": 4233.584,
+            "snapshot": 1092496.768
+          },
+          "mailbox_phases": {
+            "publish": 177943,
+            "receive": 709272
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 16355.311,
+            "pause": 769.761,
+            "resume": 4391.885,
+            "snapshot": 2743.723
+          },
+          "mailbox_phases": {
+            "publish": 569551,
+            "receive": 252748
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 220
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              11930,
+              52842
+            ],
+            "vma": {
+              "end": 140175921381376,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140173773897728
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8026073835
+          },
+          "source_mapping": {
+            "owner": [
+              12199,
+              51072
+            ],
+            "vma": {
+              "end": 140285917003776,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 140283769520128
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              13182,
+              54923
+            ],
+            "vma": {
+              "end": 139878092242944,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/php-cs-fixer__php-cs-fixer-8331_retained_1_local-h1-memory",
+              "permissions": "rw-p",
+              "start": 139875944759296
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 8712816131,
+            "poison": 4159536397
+          },
+          "source_mapping": {
+            "owner": [
+              11930,
+              52842
+            ],
+            "vma": {
+              "end": 140175921381376,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140173773897728
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_1_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 220
+      }
+    },
+    {
+      "boot_id": "44e9bd02-6380-4931-a336-aecb448747ec",
+      "commands": 35,
+      "destination_duration_s": 2.8300000000000054,
+      "final_exit_checked": 1,
+      "guest_duration_s": 8.280000000000006,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 156,
+        "mount_read_received_bytes": 17276416,
+        "mount_read_sent_bytes": 16848,
+        "nfs_read_calls": 156,
+        "read_ios": 9282,
+        "read_sectors": 155024,
+        "rx_bytes": 17305536,
+        "tx_bytes": 46710,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 13753.221,
+            "pause": 1006.23,
+            "resume": 4789.642,
+            "snapshot": 1092356.353
+          },
+          "mailbox_phases": {
+            "publish": 278863,
+            "receive": 794280
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 14607.147,
+            "pause": 794.491,
+            "resume": 4135.792,
+            "snapshot": 2785.413
+          },
+          "mailbox_phases": {
+            "publish": 385683,
+            "receive": 784172
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 224,
+        "tx_bytes": 270
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              12826,
+              58817
+            ],
+            "vma": {
+              "end": 139962808795136,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139960661311488
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8237409737
+          },
+          "source_mapping": {
+            "owner": [
+              13438,
+              56946
+            ],
+            "vma": {
+              "end": 140381270310912,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 140379122827264
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              14422,
+              60919
+            ],
+            "vma": {
+              "end": 140263532003328,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/php-cs-fixer__php-cs-fixer-8331_retained_1_nfs-h1-memory",
+              "permissions": "rw-p",
+              "start": 140261384519680
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 7860584390,
+            "poison": 3446072719
+          },
+          "source_mapping": {
+            "owner": [
+              12826,
+              58817
+            ],
+            "vma": {
+              "end": 139962808795136,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139960661311488
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_1_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 156,
+        "mount_read_received_bytes": 17276416,
+        "mount_read_sent_bytes": 16848,
+        "nfs_read_calls": 156,
+        "rx_bytes": 17305760,
+        "tx_bytes": 46980
+      }
+    },
+    {
+      "boot_id": "01f60efa-131a-41c2-8c6c-751cbbb92d67",
+      "commands": 43,
+      "destination_duration_s": 7.690000000000008,
+      "final_exit_checked": 1,
+      "guest_duration_s": 14.700000000000005,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 16407,
+        "read_sectors": 321632,
+        "rx_bytes": 150,
+        "tx_bytes": 150,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 13172.824,
+            "pause": 1093.419,
+            "resume": 4419.194,
+            "snapshot": 1054492.281
+          },
+          "mailbox_phases": {
+            "publish": 215776,
+            "receive": 759588
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 13666.355,
+            "pause": 872.66,
+            "resume": 6544.909,
+            "snapshot": 2697.843
+          },
+          "mailbox_phases": {
+            "publish": 539838,
+            "receive": 704679
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              13784,
+              64964
+            ],
+            "vma": {
+              "end": 139956261486592,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139954114002944
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8237822947
+          },
+          "source_mapping": {
+            "owner": [
+              14663,
+              62750
+            ],
+            "vma": {
+              "end": 140162543648768,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 140160396165120
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              15909,
+              67743
+            ],
+            "vma": {
+              "end": 140018209259520,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/micropython__micropython-13039_retained_1_local-h1-memory",
+              "permissions": "rw-p",
+              "start": 140016061775872
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 7983220670,
+            "poison": 4249526066
+          },
+          "source_mapping": {
+            "owner": [
+              13784,
+              64964
+            ],
+            "vma": {
+              "end": 139956261486592,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139954114002944
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_retained_1_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      }
+    },
+    {
+      "boot_id": "1d4dbb16-1ae4-4b65-abab-8c9a58c84ec7",
+      "commands": 43,
+      "destination_duration_s": 7.949999999999989,
+      "final_exit_checked": 1,
+      "guest_duration_s": 14.929999999999998,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 384,
+        "mount_read_received_bytes": 12222464,
+        "mount_read_sent_bytes": 41472,
+        "nfs_read_calls": 384,
+        "read_ios": 16743,
+        "read_sectors": 321128,
+        "rx_bytes": 12261620,
+        "tx_bytes": 95988,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 19333.755,
+            "pause": 1119.12,
+            "resume": 4965.99,
+            "snapshot": 1067430.292
+          },
+          "mailbox_phases": {
+            "publish": 155923,
+            "receive": 839150
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 13147.139,
+            "pause": 909.141,
+            "resume": 4934.94,
+            "snapshot": 3112.392
+          },
+          "mailbox_phases": {
+            "publish": 566569,
+            "receive": 330523
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              15375,
+              72025
+            ],
+            "vma": {
+              "end": 140412773728256,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140410626244608
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8105012148
+          },
+          "source_mapping": {
+            "owner": [
+              16171,
+              69692
+            ],
+            "vma": {
+              "end": 140372957200384,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 140370809716736
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              17417,
+              74830
+            ],
+            "vma": {
+              "end": 140655445671936,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/micropython__micropython-13039_retained_1_nfs-h1-memory",
+              "permissions": "rw-p",
+              "start": 140653298188288
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 7912275195,
+            "poison": 3448330074
+          },
+          "source_mapping": {
+            "owner": [
+              15375,
+              72025
+            ],
+            "vma": {
+              "end": 140412773728256,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140410626244608
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_retained_1_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 384,
+        "mount_read_received_bytes": 12222464,
+        "mount_read_sent_bytes": 41472,
+        "nfs_read_calls": 384,
+        "rx_bytes": 12261802,
+        "tx_bytes": 96216
+      }
+    },
+    {
+      "boot_id": "bfd84f3a-f677-45fc-9c26-2fa96243b989",
+      "commands": 27,
+      "destination_duration_s": 9.559999999999999,
+      "final_exit_checked": 1,
+      "guest_duration_s": 19.219999999999995,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 18,
+        "mount_read_received_bytes": 583936,
+        "mount_read_sent_bytes": 1944,
+        "nfs_read_calls": 18,
+        "read_ios": 12174,
+        "read_sectors": 535640,
+        "rx_bytes": 587358,
+        "tx_bytes": 5472,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 14175.093,
+            "pause": 1127.281,
+            "resume": 4510.004,
+            "snapshot": 985120.328
+          },
+          "mailbox_phases": {
+            "publish": 213102,
+            "receive": 712138
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 12648.311,
+            "pause": 1051.348,
+            "resume": 6345.934,
+            "snapshot": 2867.204
+          },
+          "mailbox_phases": {
+            "publish": 548345,
+            "receive": 483592
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              16863,
+              78511
+            ],
+            "vma": {
+              "end": 139693500923904,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139691353440256
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8088750484
+          },
+          "source_mapping": {
+            "owner": [
+              17668,
+              76730
+            ],
+            "vma": {
+              "end": 139787998593024,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 139785851109376
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              19072,
+              81329
+            ],
+            "vma": {
+              "end": 140656150315008,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/gin-gonic__gin-3741_retained_2_nfs-h1-memory",
+              "permissions": "rw-p",
+              "start": 140654002831360
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 8259546993,
+            "poison": 4225479311
+          },
+          "source_mapping": {
+            "owner": [
+              16863,
+              78511
+            ],
+            "vma": {
+              "end": 139693500923904,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139691353440256
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_retained_2_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 18,
+        "mount_read_received_bytes": 583936,
+        "mount_read_sent_bytes": 1944,
+        "nfs_read_calls": 18,
+        "rx_bytes": 587540,
+        "tx_bytes": 5700
+      }
+    },
+    {
+      "boot_id": "994908de-a052-4c11-9c18-e44911851d4a",
+      "commands": 27,
+      "destination_duration_s": 9.420000000000005,
+      "final_exit_checked": 1,
+      "guest_duration_s": 19.180000000000007,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 11535,
+        "read_sectors": 535784,
+        "rx_bytes": 66,
+        "tx_bytes": 66,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 14417.789,
+            "pause": 1081.03,
+            "resume": 2242.556,
+            "snapshot": 980363.181
+          },
+          "mailbox_phases": {
+            "publish": 292688,
+            "receive": 783398
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 13382.087,
+            "pause": 844.812,
+            "resume": 4004.579,
+            "snapshot": 2812.866
+          },
+          "mailbox_phases": {
+            "publish": 540517,
+            "receive": 321560
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 84,
+        "tx_bytes": 84
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              18500,
+              85009
+            ],
+            "vma": {
+              "end": 139869749772288,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139867602288640
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8078260432
+          },
+          "source_mapping": {
+            "owner": [
+              19280,
+              83259
+            ],
+            "vma": {
+              "end": 139633910349824,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 139631762866176
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              20699,
+              87787
+            ],
+            "vma": {
+              "end": 139869739286528,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/gin-gonic__gin-3741_retained_2_local-h1-memory",
+              "permissions": "rw-p",
+              "start": 139867591802880
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 7965867338,
+            "poison": 4210169886
+          },
+          "source_mapping": {
+            "owner": [
+              18500,
+              85009
+            ],
+            "vma": {
+              "end": 139869749772288,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139867602288640
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_retained_2_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      }
+    },
+    {
+      "boot_id": "23e8b34a-cd52-4b0a-9e18-4c68628743ac",
+      "commands": 35,
+      "destination_duration_s": 2.8299999999999947,
+      "final_exit_checked": 1,
+      "guest_duration_s": 8.339999999999993,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 154,
+        "mount_read_received_bytes": 17132800,
+        "mount_read_sent_bytes": 16632,
+        "nfs_read_calls": 154,
+        "read_ios": 8738,
+        "read_sectors": 155024,
+        "rx_bytes": 17161732,
+        "tx_bytes": 47238,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 14409.419,
+            "pause": 1043.115,
+            "resume": 5031.475,
+            "snapshot": 1091755.986
+          },
+          "mailbox_phases": {
+            "publish": 312316,
+            "receive": 723798
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 17060.576,
+            "pause": 994.753,
+            "resume": 3952.463,
+            "snapshot": 3019.929
+          },
+          "mailbox_phases": {
+            "publish": 587537,
+            "receive": 268738
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 252,
+        "tx_bytes": 228
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              20203,
+              91636
+            ],
+            "vma": {
+              "end": 139675874361344,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139673726877696
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8217236431
+          },
+          "source_mapping": {
+            "owner": [
+              20901,
+              89689
+            ],
+            "vma": {
+              "end": 139973701402624,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 139971553918976
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              21894,
+              93759
+            ],
+            "vma": {
+              "end": 140291501719552,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/php-cs-fixer__php-cs-fixer-8331_retained_2_nfs-h1-memory",
+              "permissions": "rw-p",
+              "start": 140289354235904
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 7964368436,
+            "poison": 3434729015
+          },
+          "source_mapping": {
+            "owner": [
+              20203,
+              91636
+            ],
+            "vma": {
+              "end": 139675874361344,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139673726877696
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_2_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 154,
+        "mount_read_received_bytes": 17132800,
+        "mount_read_sent_bytes": 16632,
+        "nfs_read_calls": 154,
+        "rx_bytes": 17161984,
+        "tx_bytes": 47466
+      }
+    },
+    {
+      "boot_id": "dca34d5b-5d2d-4e0a-b079-745fead536ad",
+      "commands": 35,
+      "destination_duration_s": 2.9400000000000013,
+      "final_exit_checked": 1,
+      "guest_duration_s": 8.380000000000003,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 8426,
+        "read_sectors": 155024,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 14325.26,
+            "pause": 1123.035,
+            "resume": 4209.435,
+            "snapshot": 1077593.677
+          },
+          "mailbox_phases": {
+            "publish": 201623,
+            "receive": 813788
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 14306.985,
+            "pause": 855.455,
+            "resume": 6600.526,
+            "snapshot": 2478.15
+          },
+          "mailbox_phases": {
+            "publish": 564023,
+            "receive": 710657
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              21108,
+              97479
+            ],
+            "vma": {
+              "end": 139841190756352,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139839043272704
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8159870181
+          },
+          "source_mapping": {
+            "owner": [
+              22141,
+              95631
+            ],
+            "vma": {
+              "end": 140050073387008,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 140047925903360
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              23124,
+              99617
+            ],
+            "vma": {
+              "end": 140482902491136,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/php-cs-fixer__php-cs-fixer-8331_retained_2_local-h1-memory",
+              "permissions": "rw-p",
+              "start": 140480755007488
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 7917874402,
+            "poison": 3442691486
+          },
+          "source_mapping": {
+            "owner": [
+              21108,
+              97479
+            ],
+            "vma": {
+              "end": 139841190756352,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139839043272704
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_retained_2_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      }
+    },
+    {
+      "boot_id": "0aa019c0-a8e4-4cce-b453-3613d87ae78f",
+      "commands": 43,
+      "destination_duration_s": 7.890000000000004,
+      "final_exit_checked": 1,
+      "guest_duration_s": 15.05,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 379,
+        "mount_read_received_bytes": 11726208,
+        "mount_read_sent_bytes": 40932,
+        "nfs_read_calls": 379,
+        "read_ios": 15746,
+        "read_sectors": 320872,
+        "rx_bytes": 11765064,
+        "tx_bytes": 94950,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 14809.809,
+            "pause": 1079.926,
+            "resume": 2677.184,
+            "snapshot": 1066109.988
+          },
+          "mailbox_phases": {
+            "publish": 193980,
+            "receive": 735915
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 17169.343,
+            "pause": 852.523,
+            "resume": 4937.394,
+            "snapshot": 3129.233
+          },
+          "mailbox_phases": {
+            "publish": 583651,
+            "receive": 714814
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              22077,
+              103939
+            ],
+            "vma": {
+              "end": 139837338288128,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139835190804480
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8088585618
+          },
+          "source_mapping": {
+            "owner": [
+              23374,
+              101489
+            ],
+            "vma": {
+              "end": 140387326885888,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 140385179402240
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              24646,
+              106791
+            ],
+            "vma": {
+              "end": 140507107819520,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/micropython__micropython-13039_retained_2_nfs-h1-memory",
+              "permissions": "rw-p",
+              "start": 140504960335872
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 8440781308,
+            "poison": 3421715766
+          },
+          "source_mapping": {
+            "owner": [
+              22077,
+              103939
+            ],
+            "vma": {
+              "end": 139837338288128,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139835190804480
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_retained_2_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 379,
+        "mount_read_received_bytes": 11726208,
+        "mount_read_sent_bytes": 40932,
+        "nfs_read_calls": 379,
+        "rx_bytes": 11765246,
+        "tx_bytes": 95178
+      }
+    },
+    {
+      "boot_id": "c75a910e-2f01-42b8-a83c-9731924325e9",
+      "commands": 43,
+      "destination_duration_s": 7.909999999999982,
+      "final_exit_checked": 1,
+      "guest_duration_s": 15.189999999999984,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 16505,
+        "read_sectors": 321632,
+        "rx_bytes": 84,
+        "tx_bytes": 84,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 14760.768,
+            "pause": 991.94,
+            "resume": 4300.506,
+            "snapshot": 1075440.598
+          },
+          "mailbox_phases": {
+            "publish": 247621,
+            "receive": 793575
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 16349.908,
+            "pause": 943.59,
+            "resume": 4468.658,
+            "snapshot": 2900.323
+          },
+          "mailbox_phases": {
+            "publish": 566567,
+            "receive": 442302
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 66,
+        "tx_bytes": 136
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              23693,
+              111060
+            ],
+            "vma": {
+              "end": 140628465811456,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140626318327808
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8236832449
+          },
+          "source_mapping": {
+            "owner": [
+              24897,
+              108708
+            ],
+            "vma": {
+              "end": 140255409733632,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 140253262249984
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              26182,
+              113902
+            ],
+            "vma": {
+              "end": 139712670990336,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/micropython__micropython-13039_retained_2_local-h1-memory",
+              "permissions": "rw-p",
+              "start": 139710523506688
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 8454252943,
+            "poison": 4183070396
+          },
+          "source_mapping": {
+            "owner": [
+              23693,
+              111060
+            ],
+            "vma": {
+              "end": 140628465811456,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140626318327808
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_retained_2_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 220
+      }
+    },
+    {
+      "boot_id": "33ff3ec8-3ff9-44ce-9479-0554ed1b84e0",
+      "commands": 27,
+      "destination_duration_s": 11.120000000000019,
+      "final_exit_checked": 1,
+      "guest_duration_s": 20.880000000000013,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 3267,
+        "mount_read_received_bytes": 123826560,
+        "mount_read_sent_bytes": 352836,
+        "nfs_read_calls": 3267,
+        "read_ios": 25389,
+        "read_sectors": 724984,
+        "rx_bytes": 124158912,
+        "tx_bytes": 814548,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 18764.624,
+            "pause": 959.84,
+            "resume": 5043.734,
+            "snapshot": 990119.629
+          },
+          "mailbox_phases": {
+            "publish": 369578,
+            "receive": 746751
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 16099.118,
+            "pause": 946.623,
+            "resume": 4666.447,
+            "snapshot": 2896.669
+          },
+          "mailbox_phases": {
+            "publish": 591629,
+            "receive": 496343
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              25152,
+              117726
+            ],
+            "vma": {
+              "end": 139917378191360,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139915230707712
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8216311472
+          },
+          "source_mapping": {
+            "owner": [
+              26435,
+              115906
+            ],
+            "vma": {
+              "end": 139977354641408,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 139975207157760
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              27847,
+              120796
+            ],
+            "vma": {
+              "end": 140621966737408,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/gin-gonic__gin-3741_evicted_0_nfs-h1-memory",
+              "permissions": "rw-p",
+              "start": 140619819253760
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 7867759891,
+            "poison": 3417089074
+          },
+          "source_mapping": {
+            "owner": [
+              25152,
+              117726
+            ],
+            "vma": {
+              "end": 139917378191360,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139915230707712
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_evicted_0_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 3267,
+        "mount_read_received_bytes": 123826560,
+        "mount_read_sent_bytes": 352836,
+        "nfs_read_calls": 3267,
+        "rx_bytes": 124159094,
+        "tx_bytes": 814776
+      }
+    },
+    {
+      "boot_id": "c2b0ec46-bdd5-40ab-80d6-810463de6614",
+      "commands": 27,
+      "destination_duration_s": 11.049999999999994,
+      "final_exit_checked": 1,
+      "guest_duration_s": 20.609999999999996,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 25986,
+        "read_sectors": 723992,
+        "rx_bytes": 150,
+        "tx_bytes": 150,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 14527.186,
+            "pause": 977.256,
+            "resume": 4841.551,
+            "snapshot": 1010168.661
+          },
+          "mailbox_phases": {
+            "publish": 560909,
+            "receive": 798489
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 12571.19,
+            "pause": 987.637,
+            "resume": 3362.121,
+            "snapshot": 2983.633
+          },
+          "mailbox_phases": {
+            "publish": 537737,
+            "receive": 704357
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              27052,
+              124443
+            ],
+            "vma": {
+              "end": 139622669615104,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139620522131456
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8048420827
+          },
+          "source_mapping": {
+            "owner": [
+              28121,
+              122671
+            ],
+            "vma": {
+              "end": 140456706965504,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 140454559481856
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              29536,
+              127472
+            ],
+            "vma": {
+              "end": 140083034324992,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/gin-gonic__gin-3741_evicted_0_local-h1-memory",
+              "permissions": "rw-p",
+              "start": 140080886841344
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 7939727742,
+            "poison": 4271417323
+          },
+          "source_mapping": {
+            "owner": [
+              27052,
+              124443
+            ],
+            "vma": {
+              "end": 139622669615104,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139620522131456
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 26,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151"
+        }
+      },
+      "test_outcomes": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "trial": "gin-gonic__gin-3741_evicted_0_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      }
+    },
+    {
+      "boot_id": "5ebebc38-34ca-417b-8a44-24a75548d07e",
+      "commands": 35,
+      "destination_duration_s": 3.669999999999998,
+      "final_exit_checked": 1,
+      "guest_duration_s": 9.279999999999989,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 1925,
+        "mount_read_received_bytes": 87655040,
+        "mount_read_sent_bytes": 207900,
+        "nfs_read_calls": 1925,
+        "read_ios": 14498,
+        "read_sectors": 270296,
+        "rx_bytes": 87862522,
+        "tx_bytes": 490776,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 14469.569,
+            "pause": 1187.409,
+            "resume": 4434.662,
+            "snapshot": 1074256.038
+          },
+          "mailbox_phases": {
+            "publish": 548748,
+            "receive": 741360
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 17070.459,
+            "pause": 967.328,
+            "resume": 2007.45,
+            "snapshot": 2961.67
+          },
+          "mailbox_phases": {
+            "publish": 611228,
+            "receive": 271176
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              29041,
+              131405
+            ],
+            "vma": {
+              "end": 140462545436672,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140460397953024
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8208986458
+          },
+          "source_mapping": {
+            "owner": [
+              29824,
+              129430
+            ],
+            "vma": {
+              "end": 139910193348608,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 139908045864960
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              30828,
+              133689
+            ],
+            "vma": {
+              "end": 140219043020800,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/php-cs-fixer__php-cs-fixer-8331_evicted_0_nfs-h1-memory",
+              "permissions": "rw-p",
+              "start": 140216895537152
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 7995901375,
+            "poison": 3445608860
+          },
+          "source_mapping": {
+            "owner": [
+              29041,
+              131405
+            ],
+            "vma": {
+              "end": 140462545436672,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140460397953024
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_evicted_0_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 1925,
+        "mount_read_received_bytes": 87655040,
+        "mount_read_sent_bytes": 207900,
+        "nfs_read_calls": 1925,
+        "rx_bytes": 87862704,
+        "tx_bytes": 491004
+      }
+    },
+    {
+      "boot_id": "5754fc22-07f4-4d45-b1ae-c29d7d284696",
+      "commands": 35,
+      "destination_duration_s": 3.70999999999999,
+      "final_exit_checked": 1,
+      "guest_duration_s": 9.099999999999989,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 13954,
+        "read_sectors": 270296,
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 17539.022,
+            "pause": 975.155,
+            "resume": 3240.016,
+            "snapshot": 1087441.423
+          },
+          "mailbox_phases": {
+            "publish": 195904,
+            "receive": 755648
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 13324.796,
+            "pause": 829.32,
+            "resume": 4606.009,
+            "snapshot": 2917.638
+          },
+          "mailbox_phases": {
+            "publish": 607195,
+            "receive": 500700
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              30094,
+              137440
+            ],
+            "vma": {
+              "end": 140283029225472,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140280881741824
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8029576615
+          },
+          "source_mapping": {
+            "owner": [
+              31106,
+              135599
+            ],
+            "vma": {
+              "end": 139899160231936,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 139897012748288
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              32057,
+              139657
+            ],
+            "vma": {
+              "end": 139913754312704,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/php-cs-fixer__php-cs-fixer-8331_evicted_0_local-h1-memory",
+              "permissions": "rw-p",
+              "start": 139911606829056
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 7973270962,
+            "poison": 3429703191
+          },
+          "source_mapping": {
+            "owner": [
+              30094,
+              137440
+            ],
+            "vma": {
+              "end": 140283029225472,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 140280881741824
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 34,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": true,
+        "source": {
+          "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241"
+        }
+      },
+      "test_outcomes": [
+        {
+          "assertions": 1172,
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1153,
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34
+        },
+        {
+          "assertions": 1172,
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28
+        },
+        {
+          "assertions": 1378,
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30
+        }
+      ],
+      "trial": "php-cs-fixer__php-cs-fixer-8331_evicted_0_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      }
+    },
+    {
+      "boot_id": "4b8dc7f2-dba8-4500-a9b8-f706ccd61300",
+      "commands": 43,
+      "destination_duration_s": 9.230000000000004,
+      "final_exit_checked": 1,
+      "guest_duration_s": 16.140000000000015,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 3480,
+        "mount_read_received_bytes": 110930944,
+        "mount_read_sent_bytes": 375840,
+        "nfs_read_calls": 3480,
+        "read_ios": 26471,
+        "read_sectors": 491616,
+        "rx_bytes": 111257572,
+        "tx_bytes": 867804,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 15649.823,
+            "pause": 996.784,
+            "resume": 4535.522,
+            "snapshot": 1054543.225
+          },
+          "mailbox_phases": {
+            "publish": 194354,
+            "receive": 761240
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 13259.161,
+            "pause": 538.302,
+            "resume": 4507.537,
+            "snapshot": 2192.78
+          },
+          "mailbox_phases": {
+            "publish": 541625,
+            "receive": 691796
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 182,
+        "tx_bytes": 228
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              31197,
+              144045
+            ],
+            "vma": {
+              "end": 139827687194624,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139825539710976
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8383313698
+          },
+          "source_mapping": {
+            "owner": [
+              32363,
+              141579
+            ],
+            "vma": {
+              "end": 140331286790144,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 140329139306496
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              1116,
+              147080
+            ],
+            "vma": {
+              "end": 139733623635968,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/micropython__micropython-13039_evicted_0_nfs-h1-memory",
+              "permissions": "rw-p",
+              "start": 139731476152320
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 7987832876,
+            "poison": 4215487317
+          },
+          "source_mapping": {
+            "owner": [
+              31197,
+              144045
+            ],
+            "vma": {
+              "end": 139827687194624,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139825539710976
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_evicted_0_nfs",
+      "trial_network_delta": {
+        "mount_read_ops": 3480,
+        "mount_read_received_bytes": 110930944,
+        "mount_read_sent_bytes": 375840,
+        "nfs_read_calls": 3480,
+        "rx_bytes": 111257754,
+        "tx_bytes": 868032
+      }
+    },
+    {
+      "boot_id": "bea66b92-aff2-44df-b829-677d217e54a1",
+      "commands": 43,
+      "destination_duration_s": 9.279999999999987,
+      "final_exit_checked": 1,
+      "guest_duration_s": 16.510000000000005,
+      "handoffs": 2,
+      "identities": 4,
+      "io": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "read_ios": 28662,
+        "read_sectors": 490856,
+        "rx_bytes": 150,
+        "tx_bytes": 150,
+        "write_ios": 0,
+        "write_sectors": 0
+      },
+      "native_handoff_phases": [
+        {
+          "api_phases": {
+            "load": 14452.675,
+            "pause": 926.367,
+            "resume": 2486.221,
+            "snapshot": 1051524.079
+          },
+          "mailbox_phases": {
+            "publish": 196643,
+            "receive": 799388
+          },
+          "transport": "dax-mailbox"
+        },
+        {
+          "api_phases": {
+            "load": 13403.571,
+            "pause": 937.423,
+            "resume": 6367.367,
+            "snapshot": 2988.261
+          },
+          "mailbox_phases": {
+            "publish": 541769,
+            "receive": 696943
+          },
+          "transport": "dax-mailbox"
+        }
+      ],
+      "outside_command_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "ram_handoffs": [
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              580,
+              151464
+            ],
+            "vma": {
+              "end": 139670704881664,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139668557398016
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "import": 8083873606
+          },
+          "source_mapping": {
+            "owner": [
+              1413,
+              149053
+            ],
+            "vma": {
+              "end": 139660781158400,
+              "offset": 0,
+              "path": "",
+              "permissions": "rw-p",
+              "start": 139658633674752
+            }
+          }
+        },
+        {
+          "copied_bytes": 2147483648,
+          "destination_mapping": {
+            "owner": [
+              2693,
+              154450
+            ],
+            "vma": {
+              "end": 139934052646912,
+              "offset": 0,
+              "path": "/run/trace-4e848b789e7bf887/micropython__micropython-13039_evicted_0_local-h1-memory",
+              "permissions": "rw-p",
+              "start": 139931905163264
+            }
+          },
+          "lifecycle": "home-roundtrip",
+          "operations": {
+            "export": 8010003867,
+            "poison": 3438405054
+          },
+          "source_mapping": {
+            "owner": [
+              580,
+              151464
+            ],
+            "vma": {
+              "end": 139670704881664,
+              "offset": 2097152,
+              "path": "/dev/dax0.0",
+              "permissions": "rw-s",
+              "start": 139668557398016
+            }
+          }
+        }
+      ],
+      "ram_lifecycle": "home-roundtrip",
+      "recorded_exits_checked": 42,
+      "rpc_counter_differences": [],
+      "state_transport": "dax-mailbox",
+      "submission": {
+        "actual": {
+          "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        },
+        "patch_bytes_match": true,
+        "raw_bytes_match": false,
+        "source": {
+          "sha256": "58fc0ce07c47c3dacea3e60d0c5d83f0032d84d0a5b359744ac09a36484d3ff2",
+          "startup_warning_count": 1,
+          "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02"
+        }
+      },
+      "test_outcomes": [
+        {
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          },
+          "index": 33,
+          "kind": "micropython",
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "testcases": 16063,
+          "tests": 514
+        },
+        {
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          },
+          "index": 34,
+          "kind": "micropython",
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "testcases": 4,
+          "tests": 1
+        }
+      ],
+      "trial": "micropython__micropython-13039_evicted_0_local",
+      "trial_network_delta": {
+        "mount_read_ops": 0,
+        "mount_read_received_bytes": 0,
+        "mount_read_sent_bytes": 0,
+        "nfs_read_calls": 0,
+        "rx_bytes": 150,
+        "tx_bytes": 150
+      }
+    }
+  ],
+  "trials": 24
+}

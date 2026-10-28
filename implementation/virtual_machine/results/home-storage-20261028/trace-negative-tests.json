@@ -1,0 +1,212 @@
+{
+  "schema_version": 1,
+  "result": "passed",
+  "baseline_result": "passed",
+  "baseline_trials": 24,
+  "baseline_commands": 840,
+  "verifier_sha256": "24f9f5e8b33da86d88805315d8632a3ea0c6ab92808549a1cd9760022a777bd1",
+  "report_sha256": "5c996663fa9a7a1e2c1b35ebc98aabacfff5bcecff65b3183fec9e26b9c919db",
+  "script_sha256": "7252b95e3a17b707a5f1bf10af1984eba1cd192875a1bb8a7b9f8a22d6553b52",
+  "negative_cases": [
+    {
+      "test": "report_counter_and_summary",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/0: NFS counter delta"
+    },
+    {
+      "test": "raw_nfs_counter",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/0: NFS counter delta"
+    },
+    {
+      "test": "guest_stdout_with_outer_hashes",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/0: output checksum"
+    },
+    {
+      "test": "final_submission_with_all_hashes",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs: final submission fingerprint mismatch"
+    },
+    {
+      "test": "test_summary_with_all_hashes",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/4: stable test outcomes differ from original trace: {'kind': 'go', 'packages': [('?', 'github.com/gin-gonic/gin/ginS'), ('?', 'github.com/gin-gonic/gin/internal/json'), ('FAIL', 'github.com/gin-gonic/gin'), ('ok', 'github.com/gin-gonic/gin/binding'), ('ok', 'github.com/gin-gonic/gin/internal/bytesconv'), ('ok', 'github.com/gin-gonic/gin/render')]} != {'kind': 'go', 'packages': [('?', 'github.com/gin-gonic/gin/ginS'), ('?', 'github.com/gin-gonic/gin/internal/json'), ('ok', 'github.com/gin-gonic/gin'), ('ok', 'github.com/gin-gonic/gin/binding'), ('ok', 'github.com/gin-gonic/gin/internal/bytesconv'), ('ok', 'github.com/gin-gonic/gin/render')]}"
+    },
+    {
+      "test": "handoff_clock_rewind_with_consistent_timestamps",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/12: guest monotonic clock moved backwards between commands or across handoff"
+    },
+    {
+      "test": "missing_command",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs: command count"
+    },
+    {
+      "test": "duplicate_command",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs: command ordering"
+    },
+    {
+      "test": "fd_position_report_only",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0: identity missing/duplicated in raw logs"
+    },
+    {
+      "test": "source_fence_consistent_receipt",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0: source process could still execute"
+    },
+    {
+      "test": "handoff_mode_direct",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0: trace evidence does not demonstrate direct/reuse handoff"
+    },
+    {
+      "test": "reused_trial_evidence",
+      "result": "rejected",
+      "reason": "mailbox session nonce reused across trials"
+    },
+    {
+      "test": "duplicate_backend_mount",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs: B backing mount is not uniquely readonly"
+    },
+    {
+      "test": "mailbox_destination_with_refreshed_sha",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0: mailbox destination state differs from source"
+    },
+    {
+      "test": "mailbox_hash_with_matching_receipts",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0/publish: mailbox session/layout/payload metadata mismatch"
+    },
+    {
+      "test": "mailbox_foreign_nonce_with_matching_receipt",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0/receive: mailbox session/layout/payload metadata mismatch"
+    },
+    {
+      "test": "mailbox_foreign_round_with_matching_receipt",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0/receive: mailbox session/layout/payload metadata mismatch"
+    },
+    {
+      "test": "mailbox_duplicate_native_receipt",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0/receive: missing/duplicate native receipt"
+    },
+    {
+      "test": "native_api_failed_response_with_matching_receipt",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0/load: unsuccessful native API response"
+    },
+    {
+      "test": "native_helper_source_with_refreshed_sha",
+      "result": "rejected",
+      "reason": "native helper prepared/runtime source drift: shared_probe.c"
+    },
+    {
+      "test": "reused_mailbox_trial_nonce",
+      "result": "rejected",
+      "reason": "mailbox session nonce reused across trials"
+    },
+    {
+      "test": "ram_zero_copy_claim",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0/RAM: incorrect RAM tier/copy count"
+    },
+    {
+      "test": "ram_wrong_return_tier",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff1/RAM: incorrect RAM tier/copy count"
+    },
+    {
+      "test": "ram_short_copy_with_matching_receipt",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0/RAM/import: RAM copy/byte verification metadata"
+    },
+    {
+      "test": "ram_partial_verification_with_matching_receipt",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff1/RAM/export: RAM copy/byte verification metadata"
+    },
+    {
+      "test": "ram_fnv_mismatch_with_matching_receipt",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0/RAM/import: copy FNV mismatch"
+    },
+    {
+      "test": "ram_reserved_prefix_with_matching_receipt",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0/RAM/import: RAM copy/byte verification metadata"
+    },
+    {
+      "test": "ram_missing_poison",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff1/RAM: missing/extra native RAM phases"
+    },
+    {
+      "test": "ram_wrong_poison_with_matching_receipt",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff1/RAM/poison: RAM copy/byte verification metadata"
+    },
+    {
+      "test": "ram_duplicate_native_receipt",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0/RAM/import: missing/duplicate native receipt"
+    },
+    {
+      "test": "ram_source_pid_forgery",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0/RAM: copied RAM without fencing its owner"
+    },
+    {
+      "test": "ram_source_pid_and_fence_forgery",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs: initial DRAM owner/mapping changed before promotion"
+    },
+    {
+      "test": "ram_return_dax_vma_with_matching_raw",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff1/RAM/destination: DRAM guest retains DAX or lacks complete private RAM VMA"
+    },
+    {
+      "test": "ram_short_vma_with_matching_raw",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0/RAM/destination: incorrect shared CXL RAM VMA"
+    },
+    {
+      "test": "ram_private_cxl_vma_with_matching_raw",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff0/RAM/destination: incorrect shared CXL RAM VMA"
+    },
+    {
+      "test": "ram_initial_owner_forgery",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs: initial DRAM owner/mapping changed before promotion"
+    },
+    {
+      "test": "ram_nonlocal_file_mount_with_matching_raw",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff1/RAM/destination: restored memory file is not on local tmpfs"
+    },
+    {
+      "test": "ram_wrong_native_file_directory",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/handoff1/RAM: native RAM path differs from snapshot/restore API"
+    },
+    {
+      "test": "ram_helper_source_with_refreshed_sha",
+      "result": "rejected",
+      "reason": "RAM transfer helper prepared/runtime source drift"
+    },
+    {
+      "test": "ram_lifecycle_downgrade_consistent_reports",
+      "result": "rejected",
+      "reason": "gin-gonic__gin-3741_retained_0_nfs/stage0: missing/duplicate DAX mapping"
+    }
+  ]
+}

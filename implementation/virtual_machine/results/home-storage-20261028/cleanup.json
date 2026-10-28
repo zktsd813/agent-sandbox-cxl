@@ -1,0 +1,1081 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-28T05:22:14.250215+00:00",
+  "result": "passed",
+  "read_only_resource_audit": true,
+  "reports": [
+    {
+      "report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T045018Z-i3y0_2u5/home-storage-1793163019326669414/report.json",
+      "result": "passed",
+      "errors": [],
+      "processes": [
+        {
+          "role": "A",
+          "recorded_pid": 2613907,
+          "recorded_starttime": "302795781",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        },
+        {
+          "role": "B",
+          "recorded_pid": 2613908,
+          "recorded_starttime": "302795781",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        }
+      ],
+      "paths": [
+        {
+          "resource": "control_dir",
+          "path": "/tmp/qvl-iikj69_p",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "ephemeral_memory_dir",
+          "path": "/dev/shm/cxl-lab-06lzcitt",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "cxl_backing",
+          "path": "/dev/shm/cxl-lab-06lzcitt/cxl-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "shared_backing",
+          "path": "/dev/shm/cxl-lab-06lzcitt/shared-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A QMP",
+          "path": "/tmp/qvl-iikj69_p/a.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A console",
+          "path": "/tmp/qvl-iikj69_p/a.console.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B QMP",
+          "path": "/tmp/qvl-iikj69_p/b.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B console",
+          "path": "/tmp/qvl-iikj69_p/b.console.sock",
+          "applicable": true,
+          "absent": true
+        }
+      ],
+      "network": {
+        "applicable": true,
+        "query": [
+          "/usr/sbin/ip",
+          "-json",
+          "-details",
+          "link",
+          "show"
+        ],
+        "ownership_alias": "cxl-lab:534471d25c794e5b",
+        "expected_interfaces": [
+          {
+            "role": "bridge",
+            "name": "cxb534471d2",
+            "absent": true
+          },
+          {
+            "role": "A",
+            "name": "cxt534471d2a",
+            "absent": true
+          },
+          {
+            "role": "B",
+            "name": "cxt534471d2b",
+            "absent": true
+          }
+        ],
+        "interfaces_still_carrying_owned_alias": []
+      },
+      "config_source": {
+        "location": "embedded config",
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T045018Z-i3y0_2u5/home-storage-1793163019326669414/report.json",
+        "report_sha256": "7426759fcc88f544b9b7665a2a45b4884b3bacb2f7c95a1c020de407c2f2c504"
+      },
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T045018Z-i3y0_2u5",
+      "input_result": "passed",
+      "input_case": null
+    },
+    {
+      "report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T045445Z-2mvc_idf/trace-1793163298593660568/report.json",
+      "result": "passed",
+      "errors": [],
+      "processes": [
+        {
+          "role": "A",
+          "recorded_pid": 2614931,
+          "recorded_starttime": "302823707",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        },
+        {
+          "role": "B",
+          "recorded_pid": 2614932,
+          "recorded_starttime": "302823708",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        }
+      ],
+      "paths": [
+        {
+          "resource": "control_dir",
+          "path": "/tmp/qvl-mts9fmm5",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "ephemeral_memory_dir",
+          "path": "/dev/shm/cxl-lab-1bx9u1tb",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "cxl_backing",
+          "path": "/dev/shm/cxl-lab-1bx9u1tb/cxl-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "shared_backing",
+          "path": "/dev/shm/cxl-lab-1bx9u1tb/shared-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A QMP",
+          "path": "/tmp/qvl-mts9fmm5/a.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A console",
+          "path": "/tmp/qvl-mts9fmm5/a.console.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B QMP",
+          "path": "/tmp/qvl-mts9fmm5/b.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B console",
+          "path": "/tmp/qvl-mts9fmm5/b.console.sock",
+          "applicable": true,
+          "absent": true
+        }
+      ],
+      "network": {
+        "applicable": true,
+        "query": [
+          "/usr/sbin/ip",
+          "-json",
+          "-details",
+          "link",
+          "show"
+        ],
+        "ownership_alias": "cxl-lab:964c726469dea7a0",
+        "expected_interfaces": [
+          {
+            "role": "bridge",
+            "name": "cxb964c7264",
+            "absent": true
+          },
+          {
+            "role": "A",
+            "name": "cxt964c7264a",
+            "absent": true
+          },
+          {
+            "role": "B",
+            "name": "cxt964c7264b",
+            "absent": true
+          }
+        ],
+        "interfaces_still_carrying_owned_alias": []
+      },
+      "config_source": {
+        "location": "embedded config",
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T045445Z-2mvc_idf/trace-1793163298593660568/report.json",
+        "report_sha256": "5c996663fa9a7a1e2c1b35ebc98aabacfff5bcecff65b3183fec9e26b9c919db"
+      },
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T045445Z-2mvc_idf",
+      "input_result": "passed",
+      "input_case": null
+    },
+    {
+      "report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T042852Z-ppfz5epq/home-storage-1793161733863739834/report.json",
+      "result": "passed",
+      "errors": [],
+      "processes": [
+        {
+          "role": "A",
+          "recorded_pid": 2607896,
+          "recorded_starttime": "302667235",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        },
+        {
+          "role": "B",
+          "recorded_pid": 2607897,
+          "recorded_starttime": "302667235",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        }
+      ],
+      "paths": [
+        {
+          "resource": "control_dir",
+          "path": "/tmp/qvl-vjazqssq",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "ephemeral_memory_dir",
+          "path": "/dev/shm/cxl-lab-qc9i5sqn",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "cxl_backing",
+          "path": "/dev/shm/cxl-lab-qc9i5sqn/cxl-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "shared_backing",
+          "path": "/dev/shm/cxl-lab-qc9i5sqn/shared-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A QMP",
+          "path": "/tmp/qvl-vjazqssq/a.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A console",
+          "path": "/tmp/qvl-vjazqssq/a.console.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B QMP",
+          "path": "/tmp/qvl-vjazqssq/b.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B console",
+          "path": "/tmp/qvl-vjazqssq/b.console.sock",
+          "applicable": true,
+          "absent": true
+        }
+      ],
+      "network": {
+        "applicable": true,
+        "query": [
+          "/usr/sbin/ip",
+          "-json",
+          "-details",
+          "link",
+          "show"
+        ],
+        "ownership_alias": "cxl-lab:751b3f870bf35301",
+        "expected_interfaces": [
+          {
+            "role": "bridge",
+            "name": "cxb751b3f87",
+            "absent": true
+          },
+          {
+            "role": "A",
+            "name": "cxt751b3f87a",
+            "absent": true
+          },
+          {
+            "role": "B",
+            "name": "cxt751b3f87b",
+            "absent": true
+          }
+        ],
+        "interfaces_still_carrying_owned_alias": []
+      },
+      "config_source": {
+        "location": "embedded config",
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T042852Z-ppfz5epq/home-storage-1793161733863739834/report.json",
+        "report_sha256": "b9593657ddf7b5b9e949c779744833d1aafa924e756752575d8d49213dcce7e1"
+      },
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T042852Z-ppfz5epq",
+      "input_result": "passed",
+      "input_case": null
+    },
+    {
+      "report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T042345Z-7ey10qvo/home-storage-1793161426350807358/report.json",
+      "result": "passed",
+      "errors": [],
+      "processes": [
+        {
+          "role": "A",
+          "recorded_pid": 2606660,
+          "recorded_starttime": "302636482",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        },
+        {
+          "role": "B",
+          "recorded_pid": 2606661,
+          "recorded_starttime": "302636483",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        }
+      ],
+      "paths": [
+        {
+          "resource": "control_dir",
+          "path": "/tmp/qvl-8yczlpya",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "ephemeral_memory_dir",
+          "path": "/dev/shm/cxl-lab-8a_kbhy9",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "cxl_backing",
+          "path": "/dev/shm/cxl-lab-8a_kbhy9/cxl-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "shared_backing",
+          "path": "/dev/shm/cxl-lab-8a_kbhy9/shared-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A QMP",
+          "path": "/tmp/qvl-8yczlpya/a.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A console",
+          "path": "/tmp/qvl-8yczlpya/a.console.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B QMP",
+          "path": "/tmp/qvl-8yczlpya/b.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B console",
+          "path": "/tmp/qvl-8yczlpya/b.console.sock",
+          "applicable": true,
+          "absent": true
+        }
+      ],
+      "network": {
+        "applicable": true,
+        "query": [
+          "/usr/sbin/ip",
+          "-json",
+          "-details",
+          "link",
+          "show"
+        ],
+        "ownership_alias": "cxl-lab:47055d4668e11339",
+        "expected_interfaces": [
+          {
+            "role": "bridge",
+            "name": "cxb47055d46",
+            "absent": true
+          },
+          {
+            "role": "A",
+            "name": "cxt47055d46a",
+            "absent": true
+          },
+          {
+            "role": "B",
+            "name": "cxt47055d46b",
+            "absent": true
+          }
+        ],
+        "interfaces_still_carrying_owned_alias": []
+      },
+      "config_source": {
+        "location": "embedded config",
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T042345Z-7ey10qvo/home-storage-1793161426350807358/report.json",
+        "report_sha256": "04e51aad4bb940a72c5f7b61a6caaef10ef7568cc36a852a86da16a097ae5fa9"
+      },
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T042345Z-7ey10qvo",
+      "input_result": "passed",
+      "input_case": null
+    },
+    {
+      "report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T044711Z-modlz0p_/home-storage-1793162831995205656/report.json",
+      "result": "passed",
+      "errors": [],
+      "processes": [
+        {
+          "role": "A",
+          "recorded_pid": 2613071,
+          "recorded_starttime": "302777047",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        },
+        {
+          "role": "B",
+          "recorded_pid": 2613072,
+          "recorded_starttime": "302777047",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        }
+      ],
+      "paths": [
+        {
+          "resource": "control_dir",
+          "path": "/tmp/qvl-ym4hlcpz",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "ephemeral_memory_dir",
+          "path": "/dev/shm/cxl-lab-fmvrza9a",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "cxl_backing",
+          "path": "/dev/shm/cxl-lab-fmvrza9a/cxl-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "shared_backing",
+          "path": "/dev/shm/cxl-lab-fmvrza9a/shared-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A QMP",
+          "path": "/tmp/qvl-ym4hlcpz/a.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A console",
+          "path": "/tmp/qvl-ym4hlcpz/a.console.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B QMP",
+          "path": "/tmp/qvl-ym4hlcpz/b.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B console",
+          "path": "/tmp/qvl-ym4hlcpz/b.console.sock",
+          "applicable": true,
+          "absent": true
+        }
+      ],
+      "network": {
+        "applicable": true,
+        "query": [
+          "/usr/sbin/ip",
+          "-json",
+          "-details",
+          "link",
+          "show"
+        ],
+        "ownership_alias": "cxl-lab:96a8fc9fe1af38b8",
+        "expected_interfaces": [
+          {
+            "role": "bridge",
+            "name": "cxb96a8fc9f",
+            "absent": true
+          },
+          {
+            "role": "A",
+            "name": "cxt96a8fc9fa",
+            "absent": true
+          },
+          {
+            "role": "B",
+            "name": "cxt96a8fc9fb",
+            "absent": true
+          }
+        ],
+        "interfaces_still_carrying_owned_alias": []
+      },
+      "config_source": {
+        "location": "embedded config",
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T044711Z-modlz0p_/home-storage-1793162831995205656/report.json",
+        "report_sha256": "ce7012c563f3ff6f7fcd4d04d47b055c9b7894e121c15189397a8fc3e492095c"
+      },
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T044711Z-modlz0p_",
+      "input_result": "failed",
+      "input_case": null
+    },
+    {
+      "report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T043533Z-2wqapmsf/trace-1793162145562370636/report.json",
+      "result": "passed",
+      "errors": [],
+      "processes": [
+        {
+          "role": "A",
+          "recorded_pid": 2609604,
+          "recorded_starttime": "302708406",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        },
+        {
+          "role": "B",
+          "recorded_pid": 2609605,
+          "recorded_starttime": "302708406",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        }
+      ],
+      "paths": [
+        {
+          "resource": "control_dir",
+          "path": "/tmp/qvl-m98korjd",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "ephemeral_memory_dir",
+          "path": "/dev/shm/cxl-lab-zuf0u41a",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "cxl_backing",
+          "path": "/dev/shm/cxl-lab-zuf0u41a/cxl-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "shared_backing",
+          "path": "/dev/shm/cxl-lab-zuf0u41a/shared-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A QMP",
+          "path": "/tmp/qvl-m98korjd/a.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A console",
+          "path": "/tmp/qvl-m98korjd/a.console.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B QMP",
+          "path": "/tmp/qvl-m98korjd/b.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B console",
+          "path": "/tmp/qvl-m98korjd/b.console.sock",
+          "applicable": true,
+          "absent": true
+        }
+      ],
+      "network": {
+        "applicable": true,
+        "query": [
+          "/usr/sbin/ip",
+          "-json",
+          "-details",
+          "link",
+          "show"
+        ],
+        "ownership_alias": "cxl-lab:e325044a5d517290",
+        "expected_interfaces": [
+          {
+            "role": "bridge",
+            "name": "cxbe325044a",
+            "absent": true
+          },
+          {
+            "role": "A",
+            "name": "cxte325044aa",
+            "absent": true
+          },
+          {
+            "role": "B",
+            "name": "cxte325044ab",
+            "absent": true
+          }
+        ],
+        "interfaces_still_carrying_owned_alias": []
+      },
+      "config_source": {
+        "location": "embedded config",
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T043533Z-2wqapmsf/trace-1793162145562370636/report.json",
+        "report_sha256": "7e81a714a68ebb3172d3a340b1b604aa9125a3e0cc6524d3a21202e88a56a72d"
+      },
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T043533Z-2wqapmsf",
+      "input_result": "passed",
+      "input_case": null
+    },
+    {
+      "report": "/tmp/compat-safe-direct-block-20261028/report.json",
+      "result": "passed",
+      "errors": [],
+      "processes": [
+        {
+          "role": "A",
+          "recorded_pid": 2609031,
+          "recorded_starttime": "302697815",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        },
+        {
+          "role": "B",
+          "recorded_pid": 2609032,
+          "recorded_starttime": "302697815",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        }
+      ],
+      "paths": [
+        {
+          "resource": "control_dir",
+          "path": "/tmp/qvl-a1835jmk",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "ephemeral_memory_dir",
+          "path": "/dev/shm/cxl-lab-_2h2ja0o",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "cxl_backing",
+          "path": "/dev/shm/cxl-lab-_2h2ja0o/cxl-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "shared_backing",
+          "path": "/dev/shm/cxl-lab-_2h2ja0o/shared-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A QMP",
+          "path": "/tmp/qvl-a1835jmk/a.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A console",
+          "path": "/tmp/qvl-a1835jmk/a.console.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B QMP",
+          "path": "/tmp/qvl-a1835jmk/b.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B console",
+          "path": "/tmp/qvl-a1835jmk/b.console.sock",
+          "applicable": true,
+          "absent": true
+        }
+      ],
+      "network": {
+        "applicable": true,
+        "query": [
+          "/usr/sbin/ip",
+          "-json",
+          "-details",
+          "link",
+          "show"
+        ],
+        "ownership_alias": "cxl-lab:73caa9eb6f27ffa7",
+        "expected_interfaces": [
+          {
+            "role": "bridge",
+            "name": "cxb73caa9eb",
+            "absent": true
+          },
+          {
+            "role": "A",
+            "name": "cxt73caa9eba",
+            "absent": true
+          },
+          {
+            "role": "B",
+            "name": "cxt73caa9ebb",
+            "absent": true
+          }
+        ],
+        "interfaces_still_carrying_owned_alias": []
+      },
+      "config_source": {
+        "location": "embedded config",
+        "path": "/tmp/compat-safe-direct-block-20261028/report.json",
+        "report_sha256": "75949d9223890fccfc1a465728eca489340defd86efb4831f643760f5099f846"
+      },
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T043358Z-hbbokyg1",
+      "input_result": "failed",
+      "input_case": "direct-block"
+    },
+    {
+      "report": "/tmp/compat-safe-direct-block-20261028-v2/report.json",
+      "result": "passed",
+      "errors": [],
+      "processes": [
+        {
+          "role": "A",
+          "recorded_pid": 2612544,
+          "recorded_starttime": "302770401",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        },
+        {
+          "role": "B",
+          "recorded_pid": 2612546,
+          "recorded_starttime": "302770402",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        }
+      ],
+      "paths": [
+        {
+          "resource": "control_dir",
+          "path": "/tmp/qvl-waq4an8b",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "ephemeral_memory_dir",
+          "path": "/dev/shm/cxl-lab-9yvc0xai",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "cxl_backing",
+          "path": "/dev/shm/cxl-lab-9yvc0xai/cxl-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "shared_backing",
+          "path": "/dev/shm/cxl-lab-9yvc0xai/shared-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A QMP",
+          "path": "/tmp/qvl-waq4an8b/a.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A console",
+          "path": "/tmp/qvl-waq4an8b/a.console.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B QMP",
+          "path": "/tmp/qvl-waq4an8b/b.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B console",
+          "path": "/tmp/qvl-waq4an8b/b.console.sock",
+          "applicable": true,
+          "absent": true
+        }
+      ],
+      "network": {
+        "applicable": true,
+        "query": [
+          "/usr/sbin/ip",
+          "-json",
+          "-details",
+          "link",
+          "show"
+        ],
+        "ownership_alias": "cxl-lab:c8239bdc2abfa724",
+        "expected_interfaces": [
+          {
+            "role": "bridge",
+            "name": "cxbc8239bdc",
+            "absent": true
+          },
+          {
+            "role": "A",
+            "name": "cxtc8239bdca",
+            "absent": true
+          },
+          {
+            "role": "B",
+            "name": "cxtc8239bdcb",
+            "absent": true
+          }
+        ],
+        "interfaces_still_carrying_owned_alias": []
+      },
+      "config_source": {
+        "location": "embedded config",
+        "path": "/tmp/compat-safe-direct-block-20261028-v2/report.json",
+        "report_sha256": "db94126bbaa9c22a3cae551849e8c2de98f0f1b9cac901721509744f194b7961"
+      },
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T044604Z-wheeo3wr",
+      "input_result": "passed",
+      "input_case": "direct-block"
+    },
+    {
+      "report": "/tmp/compat-safe-direct-two-vcpu-20261028-v2/report.json",
+      "result": "passed",
+      "errors": [],
+      "processes": [
+        {
+          "role": "A",
+          "recorded_pid": 2612668,
+          "recorded_starttime": "302771340",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        },
+        {
+          "role": "B",
+          "recorded_pid": 2612669,
+          "recorded_starttime": "302771341",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        }
+      ],
+      "paths": [
+        {
+          "resource": "control_dir",
+          "path": "/tmp/qvl-9e7d42bi",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "ephemeral_memory_dir",
+          "path": "/dev/shm/cxl-lab-j54ykfp1",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "cxl_backing",
+          "path": "/dev/shm/cxl-lab-j54ykfp1/cxl-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "shared_backing",
+          "path": "/dev/shm/cxl-lab-j54ykfp1/shared-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A QMP",
+          "path": "/tmp/qvl-9e7d42bi/a.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A console",
+          "path": "/tmp/qvl-9e7d42bi/a.console.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B QMP",
+          "path": "/tmp/qvl-9e7d42bi/b.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B console",
+          "path": "/tmp/qvl-9e7d42bi/b.console.sock",
+          "applicable": true,
+          "absent": true
+        }
+      ],
+      "network": {
+        "applicable": true,
+        "query": [
+          "/usr/sbin/ip",
+          "-json",
+          "-details",
+          "link",
+          "show"
+        ],
+        "ownership_alias": "cxl-lab:feef97fc0844b239",
+        "expected_interfaces": [
+          {
+            "role": "bridge",
+            "name": "cxbfeef97fc",
+            "absent": true
+          },
+          {
+            "role": "A",
+            "name": "cxtfeef97fca",
+            "absent": true
+          },
+          {
+            "role": "B",
+            "name": "cxtfeef97fcb",
+            "absent": true
+          }
+        ],
+        "interfaces_still_carrying_owned_alias": []
+      },
+      "config_source": {
+        "location": "embedded config",
+        "path": "/tmp/compat-safe-direct-two-vcpu-20261028-v2/report.json",
+        "report_sha256": "73bac5e69443cf4121d5b3b43a8048d6bf179cbc8ea59c1b64550d6a44611633"
+      },
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T044614Z-iqhfi9i3",
+      "input_result": "passed",
+      "input_case": "direct-two-vcpu"
+    },
+    {
+      "report": "/tmp/compat-safe-direct-baseline-20261028-v2/report.json",
+      "result": "passed",
+      "errors": [],
+      "processes": [
+        {
+          "role": "A",
+          "recorded_pid": 2612828,
+          "recorded_starttime": "302772733",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        },
+        {
+          "role": "B",
+          "recorded_pid": 2612829,
+          "recorded_starttime": "302772734",
+          "owned_incarnation_dead": true,
+          "reason": "PID absent"
+        }
+      ],
+      "paths": [
+        {
+          "resource": "control_dir",
+          "path": "/tmp/qvl-9ostbd1s",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "ephemeral_memory_dir",
+          "path": "/dev/shm/cxl-lab-odopojux",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "cxl_backing",
+          "path": "/dev/shm/cxl-lab-odopojux/cxl-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "shared_backing",
+          "path": "/dev/shm/cxl-lab-odopojux/shared-memory.bin",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A QMP",
+          "path": "/tmp/qvl-9ostbd1s/a.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU A console",
+          "path": "/tmp/qvl-9ostbd1s/a.console.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B QMP",
+          "path": "/tmp/qvl-9ostbd1s/b.qmp.sock",
+          "applicable": true,
+          "absent": true
+        },
+        {
+          "resource": "QEMU B console",
+          "path": "/tmp/qvl-9ostbd1s/b.console.sock",
+          "applicable": true,
+          "absent": true
+        }
+      ],
+      "network": {
+        "applicable": false,
+        "reason": "No owned host TAP network configured"
+      },
+      "config_source": {
+        "location": "embedded config",
+        "path": "/tmp/compat-safe-direct-baseline-20261028-v2/report.json",
+        "report_sha256": "802a4aa141d35101c9c704c7a55266cec193548305ec5f0c79bfa868fc9621c0"
+      },
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T044628Z-0wyyrbin",
+      "input_result": "passed",
+      "input_case": "direct-baseline"
+    }
+  ],
+  "errors": [],
+  "semantics": "Owned PID incarnation must be absent/exited; configured control/memory/socket paths and owned network names/alias must be absent. This is a point-in-time observation.",
+  "observer": {
+    "pid": 2618783,
+    "euid": 0,
+    "namespaces": {
+      "pid": "pid:[4026531836]",
+      "net": "net:[4026531840]",
+      "mnt": "mnt:[4026531841]",
+      "user": "user:[4026531837]"
+    },
+    "procfs_pid1_pid_namespace": "pid:[4026531836]",
+    "nspid": [
+      2618783
+    ],
+    "boot_id": "bb266dab-144e-46f5-99e6-ce56c7c5b71e",
+    "scope": "Only resources visible in these namespaces; real-host execution is caller's responsibility."
+  }
+}

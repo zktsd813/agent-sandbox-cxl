@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-28",
+  "result": "passed",
+  "purpose": "Home-owned writable disk plus snapshot DRAM/CXL lifecycle correctness; direct unsupported configurations remain rejected",
+  "home": {
+    "cycles": 3,
+    "transitions": 12,
+    "commands": 74,
+    "guest_events": 98,
+    "ram_copied_bytes": 3221225472,
+    "cxl_only_ram_copy_bytes": 0,
+    "fresh_boot_persistence": true,
+    "full_log_files": 14,
+    "raw_state_files_compared": 24,
+    "evidence_mutations_rejected": 31
+  },
+  "disk": {
+    "pattern_words_checked": 10494464,
+    "actual_image_corruptions_rejected": 6,
+    "clean_shutdown_only": true,
+    "inner_sha256": "b31b697f4ebc55e6a2f1087aa3b427422e2853c7611def43cf2c43d57d2fce9e",
+    "outer_sha256": "77677e78f88d9772e610d2bb99dd31bbf81b7cf34810f66b53e21266f3956781"
+  },
+  "trace": {
+    "trials": 24,
+    "commands": 840,
+    "handoffs": 48,
+    "recorded_exits_checked": 816,
+    "submission_exits_checked": 24,
+    "submissions_checked": 24,
+    "stable_test_summaries_checked": 72,
+    "ram_copied_bytes": 103079215104,
+    "native_ram_phases_checked": 72,
+    "native_mailbox_phases_checked": 96,
+    "native_api_phases_checked": 192,
+    "ram_lifecycle": "home-roundtrip",
+    "state_transport": "dax-mailbox",
+    "evidence_mutations_rejected": 40,
+    "submission_normalization": {
+      "raw_hash_difference_trials": [
+        "micropython__micropython-13039_retained_0_nfs",
+        "micropython__micropython-13039_retained_0_local",
+        "micropython__micropython-13039_retained_1_local",
+        "micropython__micropython-13039_retained_1_nfs",
+        "micropython__micropython-13039_retained_2_nfs",
+        "micropython__micropython-13039_retained_2_local",
+        "micropython__micropython-13039_evicted_0_nfs",
+        "micropython__micropython-13039_evicted_0_local"
+      ],
+      "removed_exact_line": "/root/.bashrc: line 1: /opt/miniconda3/etc/profile.d/conda.sh: No such file or directory\n",
+      "require_same_warning_count": true
+    },
+    "expected_nonzero_exits": 48
+  },
+  "direct": {
+    "supported_diskless_handoffs": 20,
+    "unsupported_cases_safely_rejected": 2,
+    "evidence_mutations_rejected": 42,
+    "block_migration_supported": false
+  },
+  "build": {
+    "firecracker_sha256": "4dae92f73528627231d1a15c8a4c289e6b3b3bacb2ad4fa18c2f988ab2d8480c",
+    "patch_sha256": "1dd78061e791c947036e3859449f02ae7dd0b441e48ab653a4167b9304fe9d0e",
+    "base_revision": "95f868c8e345b1cc8faccd1a3c910b4989dc3f58",
+    "selected_tests_passed": 11
+  },
+  "research": {
+    "confirmed_agent_rl_tmpfs_examples": [
+      "NVIDIA NeMo-Gym / Nemotron 3 Super",
+      "Aleph Alpha Kolibri"
+    ],
+    "containers_not_cxl_migration": true
+  },
+  "limitations": [
+    "One coherent physical-host nested KVM lab",
+    "Stop-and-copy at DRAM/CXL tier changes; no latency claim",
+    "Controller-only writer fencing, no distributed failure recovery",
+    "No power-loss durability claim",
+    "Real trace uses RO disk plus guest tmpfs upper; persistent ext4 tested separately",
+    "Direct block migration and PML/MPTCP integration remain future work"
+  ]
+}

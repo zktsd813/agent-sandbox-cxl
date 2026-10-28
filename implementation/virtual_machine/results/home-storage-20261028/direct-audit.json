@@ -1,0 +1,314 @@
+{
+  "schema_version": 1,
+  "result": "passed",
+  "cases": [
+    {
+      "case": "direct-block",
+      "raw_api_receipts": 7,
+      "preflight_rejected": true,
+      "ownership_and_generation_unchanged": true,
+      "source_usable_before_resume": true,
+      "source_usable_after_resume": true,
+      "validated_cold_reads": 3,
+      "same_open_cookie": "8919ed5bc4f4593c",
+      "read_before_resume": true,
+      "read_after_resume": true
+    },
+    {
+      "case": "direct-two-vcpu",
+      "raw_api_receipts": 6,
+      "preflight_rejected": true,
+      "ownership_and_generation_unchanged": true,
+      "source_usable_before_resume": true,
+      "source_usable_after_resume": true,
+      "configured_vcpus": 2,
+      "guest_counter_before_without_resume_after": [
+        2,
+        4,
+        6
+      ]
+    },
+    {
+      "case": "direct-baseline",
+      "handoffs": 20,
+      "native_events": 42,
+      "snapshot_bytes": 0,
+      "ram_transfer_bytes": 0,
+      "continuity_errors": 0
+    }
+  ],
+  "negative_tests": [
+    {
+      "case": "direct-block",
+      "mutation": "failed_case",
+      "rejected": true,
+      "reason": "case did not pass"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "cleanup",
+      "rejected": true,
+      "reason": "owned lab cleanup failure"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "source_hash",
+      "rejected": true,
+      "reason": "measured source SHA256 mismatch"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "compatibility",
+      "rejected": true,
+      "reason": "unsafe rejection or unsupported compatibility claim"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "contract_not_requested",
+      "rejected": true,
+      "reason": "safe preflight contract not requested"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "api_raw_disagreement",
+      "rejected": true,
+      "reason": "API native/report mismatch"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "guard_wrong_message",
+      "rejected": true,
+      "reason": "wrong preflight rejection message"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "pool_owner_changed",
+      "rejected": true,
+      "reason": "preflight changed owner/generation/object creation"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "source_log_tampered",
+      "rejected": true,
+      "reason": "full source log integrity"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "wrong_guest_cpu_count",
+      "rejected": true,
+      "reason": "guest CPU configuration"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "preflight_stage",
+      "rejected": true,
+      "reason": "unsafe rejection or unsupported compatibility claim"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "source_unusable",
+      "rejected": true,
+      "reason": "unsafe rejection or unsupported compatibility claim"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "source_api_paused",
+      "rejected": true,
+      "reason": "source API reports changed identity or non-running state after preflight"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "immediate_read_cached",
+      "rejected": true,
+      "reason": "read did not validate uncached file data through virtio-blk"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "immediate_no_block_io",
+      "rejected": true,
+      "reason": "read did not validate uncached file data through virtio-blk"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "fd_cookie_changed",
+      "rejected": true,
+      "reason": "guest identity or before-Resume cold read order lost"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "immediate_probe_timeout",
+      "rejected": true,
+      "reason": "native cold read missing or inconsistent"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "probe_after_resume",
+      "rejected": true,
+      "reason": "guest identity or before-Resume cold read order lost"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "failed_case",
+      "rejected": true,
+      "reason": "case did not pass"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "cleanup",
+      "rejected": true,
+      "reason": "owned lab cleanup failure"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "source_hash",
+      "rejected": true,
+      "reason": "measured source SHA256 mismatch"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "compatibility",
+      "rejected": true,
+      "reason": "unsafe rejection or unsupported compatibility claim"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "contract_not_requested",
+      "rejected": true,
+      "reason": "safe preflight contract not requested"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "api_raw_disagreement",
+      "rejected": true,
+      "reason": "API native/report mismatch"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "guard_wrong_message",
+      "rejected": true,
+      "reason": "wrong preflight rejection message"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "pool_owner_changed",
+      "rejected": true,
+      "reason": "preflight changed owner/generation/object creation"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "source_log_tampered",
+      "rejected": true,
+      "reason": "full source log integrity"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "wrong_guest_cpu_count",
+      "rejected": true,
+      "reason": "guest CPU configuration"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "preflight_stage",
+      "rejected": true,
+      "reason": "unsafe rejection or unsupported compatibility claim"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "source_unusable",
+      "rejected": true,
+      "reason": "unsafe rejection or unsupported compatibility claim"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "source_api_paused",
+      "rejected": true,
+      "reason": "source API reports changed identity or non-running state after preflight"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "counter_stalled",
+      "rejected": true,
+      "reason": "guest counters did not progress across preflight and Resume"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "counter_fabricated",
+      "rejected": true,
+      "reason": "counter observation absent/duplicated in source log"
+    },
+    {
+      "case": "direct-baseline",
+      "mutation": "failed_case",
+      "rejected": true,
+      "reason": "case did not pass"
+    },
+    {
+      "case": "direct-baseline",
+      "mutation": "cleanup",
+      "rejected": true,
+      "reason": "owned lab cleanup failure"
+    },
+    {
+      "case": "direct-baseline",
+      "mutation": "source_hash",
+      "rejected": true,
+      "reason": "measured source SHA256 mismatch"
+    },
+    {
+      "case": "direct-baseline",
+      "mutation": "compatibility",
+      "rejected": true,
+      "reason": "baseline compatibility claim"
+    },
+    {
+      "case": "direct-baseline",
+      "mutation": "contract_not_requested",
+      "rejected": true,
+      "reason": "safe preflight contract not requested"
+    },
+    {
+      "case": "direct-baseline",
+      "mutation": "baseline_handoff_count",
+      "rejected": true,
+      "reason": "baseline nested validation mismatch"
+    },
+    {
+      "case": "direct-baseline",
+      "mutation": "baseline_continuity_error",
+      "rejected": true,
+      "reason": "baseline nested validation mismatch"
+    },
+    {
+      "case": "direct-baseline",
+      "mutation": "baseline_sample_corruption",
+      "rejected": true,
+      "reason": "baseline native/report mismatch"
+    },
+    {
+      "case": "direct-baseline",
+      "mutation": "baseline_native_reordered",
+      "rejected": true,
+      "reason": "baseline native per-role round chronology"
+    }
+  ],
+  "reports": [
+    {
+      "directory": "/tmp/compat-safe-direct-block-20261028-v2",
+      "sha256": "db94126bbaa9c22a3cae551849e8c2de98f0f1b9cac901721509744f194b7961"
+    },
+    {
+      "directory": "/tmp/compat-safe-direct-two-vcpu-20261028-v2",
+      "sha256": "73bac5e69443cf4121d5b3b43a8048d6bf179cbc8ea59c1b64550d6a44611633"
+    },
+    {
+      "directory": "/tmp/compat-safe-direct-baseline-20261028-v2",
+      "sha256": "802a4aa141d35101c9c704c7a55266cec193548305ec5f0c79bfa868fc9621c0"
+    }
+  ],
+  "verifier_sha256": "617cc380171501429cd0b7562cb813eaf6f13e9141d090d1c093d81d012ef387",
+  "limitations": [
+    "One coherent nested-KVM lab; unsupported block/two-vCPU direct migration remains rejected",
+    "API request metadata derives from measured controller; native responses and full logs checked independently",
+    "Cleanup is a recorded post-run assertion, not historical kernel-state reconstruction"
+  ]
+}

@@ -1,6 +1,6 @@
 # CXL microVM 실행 이전 연구와 구현 정리
 
-정리 기준: 2026년 10월 27일. Host NFS trace 재생에 이어 기존 이전 모드와의 호환성을 검증했다. 측정 날짜와 환경은 각 결과에 따로 표시한다.
+정리 기준: 2026년 10월 28일. Host NFS와 기존 이전 모드의 호환성에 이어, 고향 노드의 writable disk와 DRAM↔CXL 수명주기를 연결했다. 측정 날짜와 환경은 각 결과에 따로 표시한다.
 
 목표는 **sandbox의 메모리를 CXL에 유지하면서 실행을 담당하는 노드를 바꾸는 것**이다. RAM 전체를 옮기는 비용을 줄여, 이미 실행 중인 sandbox도 다른 노드의 여유 CPU를 사용할 수 있게 하려는 연구다.
 
@@ -31,8 +31,8 @@
 | PML과 cache | Dirty-page 기반 CPU flush/invalidate의 독립 계측 | 모든 writer 추적, 실제 handoff 통합, 비일관 환경 correctness |
 | DSA | Cache Flush capability와 preflush 순서 조사 | 실제 DSA 접근·완료 처리·성능 검증 |
 | MPTCP | Guest client가 A→B snapshot 복원 뒤 같은 연결로 통신 | 빠른 제어 경로, 반복 이동, server 이동, direct/reuse 장치 승계 |
-| Filesystem | Read-only virtio-blk lower + guest tmpfs upper로 수정·빌드·테스트·열린 FD를 A→B→A에서 유지 | Persistent writable disk의 flush·단일 writer 승계, 공통 이미지 CXL 매핑 |
-| NFS | Local/NFS 비교 24 trials·840개 명령·48 handoffs, 원본 trace 결과와 독립 검증 일치 | 실제 다중 host·물리 network, 초기 DRAM→CXL promotion, 장기 반복 |
+| Filesystem | RO lower + tmpfs upper의 trace, 그리고 별도 writable ext4의 local→NFS→local 복귀·clean reboot 보존 | 장애 시 단일 writer 보장, 전원 장애 내구성, direct/reuse 장치 승계, 공통 이미지 CXL 매핑 |
+| NFS와 RAM 배치 | Host NFS image 접근과 guest cache 유지, DRAM→CXL promotion·고향 DRAM 복귀 | 실제 다중 host·물리 network, 명령 실행 도중 이전, 최적화된 제어 경로와 통합 |
 
 **환경을 구분해야 한다.** DRAM/CXL workload 실험과 microVM handoff 실험은 같은 종류의 측정이 아니다. 현재 handoff는 한 coherent 물리 host 위의 QEMU A/B와 nested KVM 환경이다. 독립된 Linux 사이의 실행 이전을 확인했지만, 실제 비일관 CXL에서 stale cache가 발생하는 상황을 검증한 것은 아니다.
 
@@ -121,10 +121,12 @@ Reuse-prepared는 노드마다 worker 하나를 교대로 사용하는 구현이
 Direct는 지정 KVM 객체와 pointer graph를 DAX에 두고 일부 host 연결을 목적지의 것으로 다시 연결한다. 현재 지원 범위는 1 vCPU와 호환 CPU/VMCS, 맞춰 둔 kernel/module 주소와 DAX PFN 등 강한 조건을 전제로 한다. Linux guest direct 경로에서는 source Firecracker가 A에 남고 B의 executor가 동일 KVM 객체를 실행한다. 완전한 VMM·I/O 서비스 이전으로 해석하지 않는다. Block/net/vsock 등의 worker 재사용과 direct의 PML 활성화는 현재 제한 또는 거부 대상이다.
 
 상태 전달 계열의 `snapshot`·`reuse`·`reuse-prepared`와 direct를 별도로 재실행해 지원 구성의 회귀를 확인했다.
-파일 경로는 일반 snapshot의 DAX mailbox에 연결해 **24 trials·840명령·48 handoffs**를 검증했다. `PrepareReuse`는 block/다중 vCPU를 명시적으로 거부하고,
-direct도 같은 제약을 실제로 거부했다. 특히 direct + block에서는 거부 뒤 Resume 204에도 다음 guest 읽기에
-응답하지 않는 복구 문제가 나타났다. 기존 빠른 diskless direct 결과를 파일 장치가 있는 구성의 성공으로 확대할 수 없다.
-[모드별 실제 시험과 실패 경계](../implementation/virtual_machine/results/mode-compatibility-20261027/README.md)
+파일 경로는 일반 snapshot의 DAX mailbox에 연결해 검증했다. `PrepareReuse`와 direct의 block/다중 vCPU 지원 제한은 유지한다.
+10월 27일 direct + block 거절 뒤 읽기가 멈추는 문제가 발견됐고, 10월 28일 **정지 전 구성 검사와 API event loop의 거절 처리**를 수정했다.
+수정 후에는 HTTP 400 직후 별도 Resume 없이 같은 열린 FD의 cold read가 완료됐다. 2-vCPU VM도 요청 거절 뒤 counter가 `2→4→6`으로 진행했고, 별도 1-vCPU diskless direct는 20회 handoff를 통과했다.
+이것은 실패 처리의 수정이지 direct의 virtio-blk 이전 구현이 아니다.
+[이전 모드 검증과 당시 실패](../implementation/virtual_machine/results/mode-compatibility-20261027/README.md) ·
+[수정 후 디스크·RAM 검증](../implementation/virtual_machine/results/home-storage-20261028/README.md)
 
 ### 진행 과정의 주요 시점
 
@@ -138,6 +140,8 @@ direct도 같은 제약을 실제로 거부했다. 특히 direct + block에서�
 | 10월 22일 | MPTCP guest-client 경로 교체와 실제 A→B snapshot 연결 유지 |
 | 10월 23일 | 구현·문서·보관 로그 검증 후 main에 MPTCP 결과 반영 |
 | 이후 논의와 10월 26일 정리 | 파일 경로, guest-only cache, DSec, CXL 공통 이미지 공유 비교와 후속 계획 통합 |
+| 10월 27일 | Host NFS 실제 trace, DAX state mailbox, 기존 모드 호환성과 direct 실패 경계 |
+| 10월 28일 | 고향 writable disk 왕복, DRAM↔CXL RAM 복사, direct 거절 처리 수정, RL tmpfs 사례 확인 |
 
 ## 측정 결과의 의미
 
@@ -284,6 +288,67 @@ Guest cache를 유지한 조건의 명령 시간 중앙값은 local/NFS 각각 G
 
 초기 synthetic 실험은 cache에 남은 페이지의 block/NFS READ 0을 확인했다. 재검토 중 기존 backend 전환의 mount 누적을 발견해 수정했고, 초기 수치는 역사적 기록으로 보존했다. 최종 trace 표는 수정 후 새 VM pair에서 전체 matrix를 다시 측정한 값이다. 수정 후 synthetic 회귀 20 samples와 mount 전환 검사도 통과했다. [초기 결과와 소급 audit의 범위](../implementation/virtual_machine/results/nfs-20261027/README.md)
 
+### 고향 디스크와 DRAM↔CXL 왕복 구현
+
+Guest에는 처음부터 끝까지 **같은 ext4와 virtio-blk**를 보인다. Guest mount를 NFS로 바꾸지 않는다.
+이미지의 소유 노드는 A이며, B에서 실행할 때 Firecracker의 image FD가 A의 이미지를 host NFS로 연다.
+
+| 실행 위치 | Guest RAM | Firecracker가 여는 이미지 |
+|---|---|---|
+| 최초 A | A의 DRAM | A local disk의 `sandbox.raw` |
+| A에서 CXL로 promotion | CXL | 같은 A local image |
+| B로 실행 이전 | 같은 CXL | Host NFS로 A의 같은 image |
+| A로 실행 복귀 | 같은 CXL | A local image |
+| A의 DRAM으로 demotion | A의 DRAM | A local image |
+
+Promotion과 demotion은 VM을 멈추고 RAM 전체를 복사한다. CXL에 머무는 A↔B 이동에서만 RAM을 복사하지 않고 CPU·장치 상태를 mailbox로 보낸다.
+Page cache와 dirty page, inode/FD 상태도 guest RAM의 일부이므로 이 수명주기에 따라 유지된다.
+Dirty page가 guest에 아직 남아 있어도 RAM과 함께 보존하고, 이후 writeback은 현재 host backend를 사용한다.
+
+Source를 pause한 뒤 block I/O drain·host fsync의 오류를 검사하고, source process 종료와 PID incarnation을 확인한 다음 destination을 만든다.
+새 destination은 경로가 같은 `/disk/sandbox.raw`를 열되 A에서는 local bind, B에서는 NFS mount를 사용한다.
+이 시험은 중단된 source와 목적지의 image bytes를 비교하고 B의 cache를 비운 뒤 접근한다. 실제 분산 시스템의 lease/fencing 장애 복구를 대신하지 않는다.
+
+별도 writable ext4 fixture에서는 `write`, `fsync`, dirty write, `MAP_SHARED`, 열린 FD와 unlink된 FD를 검사한다.
+복귀 시 RAM VMA가 local private mapping인지 확인하고, 이전 CXL 영역을 덮어쓴 뒤에도 guest가 재개되는지 검사한다.
+마지막에는 clean unmount 후 새 guest로 부팅해 disk 내용을 다시 읽는다. 이것은 **정상 종료 후 영속성**이며 갑작스러운 전원 장애 내구성 시험은 아니다.
+
+실제 개발 trace는 기존 RO image + guest tmpfs upper를 유지하며, 같은 RAM promotion/demotion을 거친다.
+따라서 writable ext4 검증과 실제 trace 검증의 쓰기 배치는 서로 다르다.
+현재 image GET_ID는 host inode/device에서 만들어지므로 local/NFS에서 동일한 가상 disk serial까지 보장하지 않는다.
+검증한 identity는 ext4와 열린 파일, guest 프로세스·데이터의 연속성이다.
+
+10월 28일 최종 실행은 writable ext4 **12회 전환·74개 파일 명령**과 clean reboot 보존을 통과했다.
+같은 최종 build의 실제 trace **24 trials·840개 명령·48회 DRAM↔CXL 전환**도 독립 검증을 통과했다.
+Home 증거 변조 31개, trace 증거 변조 40개, 실제 disk 손상 6개를 별도로 탐지했다.
+[실행 결과와 원시 증거](../implementation/virtual_machine/results/home-storage-20261028/README.md)
+
+### Agent RL에서 수정 파일을 tmpfs에 두는 실제 사례
+
+2026-10-28 확인 기준, **agent RL의 writable workspace를 tmpfs에 두는 직접적인 사례가 있다.**
+단순히 `/tmp`를 사용하거나 Docker OverlayFS를 사용한다는 이유로 tmpfs 사례로 분류하지 않았다.
+
+| 사례 | 실행 중 수정 파일 | 실행 후 보존 |
+|---|---|---|
+| NVIDIA Nemotron 3 Super / NeMo-Gym SWE-RL | Task SIF image 위 writable tmpfs overlay에서 OpenHands가 repository 수정 | Patch·trajectory·평가 결과를 별도 bind 경로로 내보냄 |
+| Aleph Alpha Kolibri RL | 공유 read-only squashfuse/SIF 위 sandbox별 크기 제한 tmpfs OverlayFS upper | 해당 글은 writable workspace 배치를 설명하며, 모든 결과물의 영속 저장 정책까지 입증하지 않음 |
+| DSec | Writable ext4/OverlayBD, node local disk에 쓰기 | Disk 기반이며 tmpfs upper 사례가 아님 |
+
+NVIDIA는 [기술 보고서 p.30](https://research.nvidia.com/labs/nemotron/files/NVIDIA-Nemotron-3-Super-Technical-Report.pdf#page=30)의
+SWE-RL Infrastructure와 [실제 실행 코드](https://github.com/NVIDIA-NeMo/Gym/blob/main/responses_api_agents/swe_agents/app.py)
+양쪽에서 확인했다. `_build_apptainer_command`는 `--writable-tmpfs`를 사용하며
+`params.persistent_dir`를 `/trajectories_mount`에 bind한다. [SWE agent README](https://github.com/NVIDIA-NeMo/Gym/blob/main/responses_api_agents/swe_agents/README.md)는
+patch 추출과 별도 평가 container, 결과 디렉토리 보존을 설명한다. 현재 main과 보고서의 소스 버전이 같다고 주장하지 않는다.
+Kolibri의 구조는 [Aleph Alpha 공식 기술 글](https://aleph-alpha.com/en/blog/why-rl-environments-have-always-been-an-infra-problem/)에서 확인했다.
+DSec의 disk upper는 [논문 §5.1–5.3](https://arxiv.org/html/2609.22978v1#S5.SS1)에 명시되어 있다.
+
+따라서 RO base + guest tmpfs upper는 agent RL에 근거가 있는 비교 구성이다. 다만 위 tmpfs 사례는
+container 기반이며 CXL microVM handoff의 검증은 아니다. Tmpfs workspace의 수정 상태를 VM RAM과
+함께 유지하는 요구와, 수정 내용을 home-node disk에 영속 저장하는 요구는 구분한다.
+Apptainer의 [공식 설명](https://apptainer.org/docs/user/latest/persistent_overlays.html)도 `--writable-tmpfs` 변경분이
+container 종료 시 사라진다고 명시한다. 일반 [Docker overlay2](https://docs.docker.com/engine/storage/drivers/overlayfs-driver/)는
+backing filesystem에 upper를 두므로 tmpfs와 동일하지 않다.
+
 ### Host cache를 생략하는 방법과 공통 페이지 공유는 다르다
 
 | 후보 | Guest 파일 데이터 cache | Host 이미지 데이터 cache | 의미 |
@@ -352,7 +417,7 @@ DSec이 CXL을 사용하지 않은 이유는 논문에 명시되지 않았다. �
 
 | 작업 | 구체적인 다음 단계 | 완료 판단 |
 |---|---|---|
-| 파일 연속성 확장 | RO lower + tmpfs upper의 A→B→A는 완료. 초기 DRAM→CXL promotion, 명령 실행 중 이전, 장기 왕복·단일 writer persistent disk 추가 | Promotion 및 진행 중 작업의 상태 연속성, 열린 FD/offset, `write→fsync→response` 내구성 |
+| 파일 연속성 확장 | DRAM↔CXL·home disk 왕복을 기반으로 명령 실행 중 이전, 장애 복구와 장기 반복 추가 | 열린 FD/offset·dirty 데이터 보존, `write→fsync→response` 장애 내구성, 중복 writer 차단 |
 | MPTCP 제어 경로 단축 | Serial state 전달을 DAX mailbox로 교체하고 반복 이동 계측 | 연결 identity 유지, record 누락·중복·오류 0, 단계별 blackout 기록 |
 | 공통 이미지 공유 | 두 VM에 동일 RO backing을 pmem/DAX로 연결하고 VM별 upper 구성 | 같은 backing offset 매핑, 한 VM의 변경이 다른 VM 원본에 영향 없음 |
 
@@ -384,7 +449,7 @@ PML buffer·bitmap과 VMM의 software dirty 추적을 이 경계에 연결한다
 |---|---|---|
 | DSA 단독 검증 | Capability, DAX 주소, descriptor·completion·실패 처리 | 전 범위 처리와 오류 시 ownership 게시 차단 |
 | DSA preflush | Epoch reset, 누적 U, 재쓰기, queue budget | 반복 재쓰기·timeout에서도 데이터 일치; background 비용과 tail 지연 분리 |
-| 장치가 있는 reuse/direct | Direct 거부의 사전 검사·rollback부터 수정하고 net/block 논리 상태와 host backend 재연결 | 거부 후 source 정상 동작, late I/O·lost IRQ·중복 owner 없는 반복 이전 |
+| 장치가 있는 reuse/direct | 완료된 구성 preflight를 바탕으로 late kernel export 실패 rollback과 net/block 상태·host backend 재연결 | 거부 후 source 정상 동작, late I/O·lost IRQ·중복 owner 없는 반복 이전 |
 | 실제 다중 host CXL | 주소 매핑, visibility, control atomic/authority, fencing | Source crash·ACK 유실·재시도에서도 중복 실행 방지 |
 | 범위 확대 | 다중 vCPU barrier, 여러 VM allocation과 회수 | 구성 불일치 거부, 영역 격리와 반복 수명 검증 |
 
@@ -421,6 +486,7 @@ ACK 유실만으로 source를 다시 실행하면 destination과 동시 writer�
 | [크기별 비교](../implementation/virtual_machine/dax-size-comparison.json) | Reuse/direct의 첫 응답·scan·최초 방문 |
 | [PML/cache summary](../implementation/virtual_machine/results/cache-pml-20261021/summary.json) | 독립 cache 처리 실측 |
 | [MPTCP summary](../implementation/virtual_machine/results/mptcp-20261022/summary.json) | 네 가지 연결 시험, event와 artifact hash |
+| [Home disk·RAM lifecycle 결과](../implementation/virtual_machine/results/home-storage-20261028/README.md) | Writable disk 왕복, DRAM↔CXL trace, direct 거절 처리와 RL tmpfs 사례 |
 | [배포 검증 기록](../implementation/virtual_machine/results/publication.json) | 10월 21일 구현 및 10월 23일 MPTCP 반영 검증 |
 | [Write 관측 보고서](results/write-pages-node1-20261021/write-report.md) | Docker write footprint의 정의와 한계 |
 | [Fleet 결과](../experiments/contention/RESULTS-fleet.md) | 규모 확대 모델과 검증·보정 한계 |

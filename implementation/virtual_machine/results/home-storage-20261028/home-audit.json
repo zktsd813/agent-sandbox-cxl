@@ -1,0 +1,185 @@
+{
+  "result": "passed",
+  "evidence_level": "complete",
+  "cycles": 3,
+  "transitions": 12,
+  "commands": 74,
+  "guest_events": 98,
+  "native_api_phases": 56,
+  "native_ram_operations": 9,
+  "mailbox_phases": 12,
+  "state_files_byte_compared": 24,
+  "cold_reads_local": 9,
+  "cold_reads_nfs": 3,
+  "mapped_patterns_independently_recomputed": 12,
+  "full_data_patterns": true,
+  "fresh_guest_disk_audit": true,
+  "source_files": 10,
+  "full_firecracker_logs": 14,
+  "limitations": [
+    "Coherent nested-KVM lab, not physical multi-host or noncoherent CXL validation",
+    "Native RAM full byte comparisons verified by receipts; full RAM payload not archived",
+    "Fresh clean guest boot verifies disk persistence, not power-loss durability",
+    "API response bytes are native receipts; request metadata comes from measured controller",
+    "Host cache drops are laboratory control, not a distributed storage coherence protocol"
+  ],
+  "negative_tests": [
+    {
+      "test": "source_hash",
+      "result": "rejected",
+      "reason": "measured source SHA256"
+    },
+    {
+      "test": "cycle_count",
+      "result": "rejected",
+      "reason": "missing lifecycle stages/commands"
+    },
+    {
+      "test": "wrong_lifecycle_tier",
+      "result": "rejected",
+      "reason": "lifecycle graph does not return home"
+    },
+    {
+      "test": "missing_transition",
+      "result": "rejected",
+      "reason": "missing lifecycle stages/commands"
+    },
+    {
+      "test": "state_byte_corruption",
+      "result": "rejected",
+      "reason": "serialized state bytes differ"
+    },
+    {
+      "test": "state_fetch_unstable",
+      "result": "rejected",
+      "reason": "fetched evidence integrity"
+    },
+    {
+      "test": "source_fence_running",
+      "result": "rejected",
+      "reason": "incarnation-aware source fence missing"
+    },
+    {
+      "test": "ram_reserved_prefix",
+      "result": "rejected",
+      "reason": "RAM native range/copy evidence"
+    },
+    {
+      "test": "ram_copy_underreported",
+      "result": "rejected",
+      "reason": "RAM native range/copy evidence"
+    },
+    {
+      "test": "ram_hash_disagreement",
+      "result": "rejected",
+      "reason": "RAM full byte comparison/checksum"
+    },
+    {
+      "test": "missing_poison",
+      "result": "rejected",
+      "reason": "RAM import/export/poison sequence"
+    },
+    {
+      "test": "poison_short_range",
+      "result": "rejected",
+      "reason": "old CXL poison coverage"
+    },
+    {
+      "test": "mailbox_nonce",
+      "result": "rejected",
+      "reason": "mailbox nonce changed before return"
+    },
+    {
+      "test": "mailbox_payload_hash",
+      "result": "rejected",
+      "reason": "mailbox layout/role/payload mismatch"
+    },
+    {
+      "test": "guest_boot_changed",
+      "result": "rejected",
+      "reason": "guest reboot/process replacement"
+    },
+    {
+      "test": "guest_fd_offset_reset",
+      "result": "rejected",
+      "reason": "file generation or retained FD offset regressed"
+    },
+    {
+      "test": "mapped_pattern",
+      "result": "rejected",
+      "reason": "mapped file independent pattern mismatch"
+    },
+    {
+      "test": "generation_jump",
+      "result": "rejected",
+      "reason": "write/read generation arguments"
+    },
+    {
+      "test": "nfs_write_counter",
+      "result": "rejected",
+      "reason": "NFS write raw/report mismatch"
+    },
+    {
+      "test": "nfs_read_delta",
+      "result": "rejected",
+      "reason": "NFS cold read delta mismatch"
+    },
+    {
+      "test": "local_backing_wrong_filesystem",
+      "result": "rejected",
+      "reason": "home backing is not writable local ext4"
+    },
+    {
+      "test": "destination_image_stale",
+      "result": "rejected",
+      "reason": "backing disk bytes changed/stale at handoff"
+    },
+    {
+      "test": "fresh_boot_reused",
+      "result": "rejected",
+      "reason": "fresh guest lost persistent state"
+    },
+    {
+      "test": "fresh_audit_data_changed",
+      "result": "rejected",
+      "reason": "fresh guest lost persistent state"
+    },
+    {
+      "test": "api_status",
+      "result": "rejected",
+      "reason": "native API did not succeed"
+    },
+    {
+      "test": "api_restore_path",
+      "result": "rejected",
+      "reason": "CXL restore path"
+    },
+    {
+      "test": "duplicate_guest_event",
+      "result": "rejected",
+      "reason": "workload command sequence"
+    },
+    {
+      "test": "cleanup_failure",
+      "result": "rejected",
+      "reason": "controller cleanup errors"
+    },
+    {
+      "test": "poison_after_resume",
+      "result": "rejected",
+      "reason": "unsafe native operation order"
+    },
+    {
+      "test": "state_wrong_fetch_path",
+      "result": "rejected",
+      "reason": "fetched state path differs from API"
+    },
+    {
+      "test": "final_fence_missing",
+      "result": "rejected",
+      "reason": "final original guest fence missing"
+    }
+  ],
+  "report_sha256": "7426759fcc88f544b9b7665a2a45b4884b3bacb2f7c95a1c020de407c2f2c504",
+  "verifier_sha256": "abc19a574b38926bf0f6d45835dd9cc07436f2c3a5161d359d2c83271ca48599"
+}

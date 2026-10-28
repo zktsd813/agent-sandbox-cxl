@@ -1,0 +1,12 @@
+{
+  "result": "passed",
+  "compression": "gzip",
+  "archive": "/tmp/home-storage-final-api-outer.raw.gz",
+  "archive_bytes": 84207310,
+  "archive_sha256": "c5bd9453d1e81708045975e220845643bb2bca94012681194a8ed23c771f73bf",
+  "uncompressed_bytes": 218103808,
+  "uncompressed_sha256": "77677e78f88d9772e610d2bb99dd31bbf81b7cf34810f66b53e21266f3956781",
+  "inner_sha256": "b31b697f4ebc55e6a2f1087aa3b427422e2853c7611def43cf2c43d57d2fce9e",
+  "source_audit": "/tmp/home-storage-final-api-disk-audit.json",
+  "purpose": "canonical outer image after clean shutdown, no duplicate inner/file copies published"
+}
