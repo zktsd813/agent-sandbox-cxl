@@ -65,6 +65,112 @@ def fnv1a64(data):
     return f"{value:016x}"
 
 
+def audit_ram_mapping(directory, evidence, role, tier, memory_bytes, memory_path, label):
+    """Parse /proc/PID/maps again; the report's parsed VMA list is not authority."""
+    require(evidence["role"] == role and evidence["tier"] == tier and evidence["memory_path"] == memory_path,
+            f"{label}: RAM mapping role/tier/path")
+    raw = inside(directory, evidence["file"]).read_text().replace("\r", "")
+    owners = re.findall(r"^RAM_MAP_OWNER ([0-9]+) ([0-9]+)$", raw, re.M)
+    require(len(owners) == 1 and int(owners[0][0]) > 1 and int(owners[0][1]) > 0,
+            f"{label}: missing owned RAM mapping")
+    owner = (int(owners[0][0]), int(owners[0][1]))
+    require(owner == (evidence["owner_pid"], evidence["owner_starttime"]), f"{label}: RAM owner raw/report mismatch")
+    mounts = re.findall(r"^RAM_RUN_MOUNT (.*)$", raw, re.M)
+    require(len(mounts) == 1 and mounts[0] == evidence["run_mount"], f"{label}: local RAM mount evidence")
+    mount = mounts[0].split()
+    require(len(mount) == 6 and mount[1:3] == ["/run", "tmpfs"] and "rw" in mount[3].split(","),
+            f"{label}: restored memory file is not on local tmpfs")
+    mappings = []
+    for line in raw.splitlines():
+        match = re.match(r"^([0-9a-f]+)-([0-9a-f]+) ([-rwxps]{4}) ([0-9a-f]+) \S+ \d+\s*(.*)$", line)
+        if match:
+            start, end, permissions, offset, path = match.groups()
+            mappings.append({"start": int(start, 16), "end": int(end, 16), "permissions": permissions,
+                             "offset": int(offset, 16), "path": path.strip()})
+    require(mappings == evidence["mappings"] and mappings, f"{label}: RAM VMA raw/report mismatch")
+    require(all(m["end"] > m["start"] and m["start"] % 4096 == m["end"] % 4096 == 0 for m in mappings) and
+            all(a["end"] <= b["start"] for a, b in zip(mappings, mappings[1:])), f"{label}: invalid VMA layout")
+    dax = [m for m in mappings if m["path"] == "/dev/dax0.0"]
+    if tier == "cxl":
+        require(len(dax) == 1 and dax[0]["end"] - dax[0]["start"] == memory_bytes and
+                dax[0]["permissions"] == "rw-s" and dax[0]["offset"] == 2097152,
+                f"{label}: incorrect shared CXL RAM VMA")
+        selected = dax[0]
+    else:
+        candidates = [m for m in mappings if m["end"] - m["start"] == memory_bytes and
+                      m["permissions"] == "rw-p" and m["path"] == (memory_path or "")]
+        require(not dax and len(candidates) == 1 and candidates[0]["offset"] == 0,
+                f"{label}: DRAM guest retains DAX or lacks complete private RAM VMA")
+        selected = candidates[0]
+    return {"owner": owner, "vma": selected}
+
+
+def audit_ram_lifecycle(handoff, trial, stage, directory, memory_bytes, lifecycle, state_directory=None):
+    label = f"{trial['id']}/handoff{stage}/RAM"
+    if lifecycle == "shared-cxl":
+        require(handoff["ram_transfer_bytes"] == 0 and
+                handoff.get("ram_lifecycle", "shared-cxl") == "shared-cxl" and
+                "ram_operations" not in handoff and "ram_mappings" not in handoff,
+                f"{label}: shared-CXL evidence claims tier copying")
+        return {"lifecycle": lifecycle, "copied_bytes": 0, "operations": {}}
+    require(lifecycle == "home-roundtrip" and handoff["ram_lifecycle"] == lifecycle,
+            f"{label}: RAM lifecycle mismatch")
+    require(handoff["state_transport"] == "dax-mailbox" and 0 < memory_bytes <= 2147483648,
+            f"{label}: tier copying requires native state transport and bounded RAM")
+    source_tier, target_tier = (("dram", "cxl") if stage == 0 else ("cxl", "dram"))
+    require((handoff["source_ram_tier"], handoff["destination_ram_tier"]) == (source_tier, target_tier) and
+            handoff["ram_transfer_bytes"] == memory_bytes, f"{label}: incorrect RAM tier/copy count")
+    operation = "import" if stage == 0 else "export"
+    expected_operations = {operation} if stage == 0 else {operation, "poison"}
+    require(set(handoff["ram_operations"]) == expected_operations, f"{label}: missing/extra native RAM phases")
+    copy = handoff["ram_operations"][operation]
+    memory_path = copy["memory_file"]
+    require(re.fullmatch(r"/run/trace-[0-9a-f]{16}/" + re.escape(trial["id"]) + rf"-h{stage}-memory", memory_path),
+            f"{label}: RAM file is not the unique owned trial file")
+    if state_directory is not None:
+        require(memory_path == f"{state_directory}/{trial['id']}-h{stage}-memory",
+                f"{label}: native RAM path differs from snapshot/restore API")
+    phases, files = {}, []
+    for name, evidence in handoff["ram_operations"].items():
+        files.append(evidence["file"])
+        require(evidence["file"] == f"{trial['id']}-h{stage}-ram-{name}.txt" and evidence["role"] == "A" and
+                evidence["memory_file"] == ("POST_DEMOTION_TEST" if name == "poison" else memory_path),
+                f"{label}/{name}: native RAM evidence identity")
+        receipt = raw_receipt(directory, evidence, "RAM_TRANSFER_JSON ", f"{label}/{name}")
+        expected = {"schema_version": 1, "operation": name, "result": "passed", "bytes": memory_bytes,
+                    "copied_bytes": 0 if name == "poison" else memory_bytes, "verified_bytes": memory_bytes,
+                    "poisoned_bytes": memory_bytes if name == "poison" else 0,
+                    "poison_byte": 165 if name == "poison" else -1, "dax_offset": 2097152,
+                    "byte_comparison": name != "poison", "coherent_quiesced_lab_required": True}
+        require(all(type(receipt.get(key)) is type(value) and receipt.get(key) == value for key, value in expected.items()),
+                f"{label}/{name}: RAM copy/byte verification metadata")
+        align, capacity = receipt["dax_align"], receipt["dax_capacity"]
+        require(type(align) is int and 4096 <= align <= 2097152 and align & (align - 1) == 0 and
+                type(capacity) is int and capacity % align == 0 and
+                receipt["mapping_bytes"] == (memory_bytes + align - 1) // align * align and
+                2097152 + receipt["mapping_bytes"] <= capacity,
+                f"{label}/{name}: RAM copy overlaps reservation or exceeds DAX")
+        require(re.fullmatch(r"[0-9a-f]{16}", receipt["source_fnv1a64"]) and
+                receipt["source_fnv1a64"] == receipt["destination_fnv1a64"], f"{label}/{name}: copy FNV mismatch")
+        require(all(type(receipt[key]) is int and receipt[key] >= 0 for key in ("operation_ns", "verify_ns", "total_ns")) and
+                receipt["total_ns"] >= receipt["operation_ns"] + receipt["verify_ns"], f"{label}/{name}: native RAM durations")
+        phases[name] = receipt["total_ns"]
+    require(set(handoff["ram_mappings"]) == {"source", "destination"}, f"{label}: missing mapping evidence")
+    require(all(handoff["ram_mappings"][side]["file"] == f"{trial['id']}-h{stage}-{side}-maps.txt"
+                for side in ("source", "destination")), f"{label}: RAM mapping evidence belongs to another trial")
+    source = audit_ram_mapping(directory, handoff["ram_mappings"]["source"], handoff["source"], source_tier,
+                               memory_bytes, None, label + "/source")
+    target = audit_ram_mapping(directory, handoff["ram_mappings"]["destination"], handoff["destination"], target_tier,
+                               memory_bytes, memory_path if target_tier == "dram" else None, label + "/destination")
+    files.extend(handoff["ram_mappings"][side]["file"] for side in ("source", "destination"))
+    require(len(set(files)) == len(files), f"{label}: reused RAM evidence file")
+    fence = inside(directory, handoff["fence_file"]).read_text().replace("\r", "")
+    owners = re.findall(r"^FENCED ([0-9]+) ([0-9]+)$", fence, re.M)
+    require(len(owners) == 1 and source["owner"] == tuple(map(int, owners[0])), f"{label}: copied RAM without fencing its owner")
+    return {"lifecycle": lifecycle, "copied_bytes": memory_bytes, "operations": phases,
+            "source_mapping": source, "destination_mapping": target}
+
+
 def audit_state_transport(handoff, trial, stage, directory, memory_bytes, transport):
     """Bind native receipts to this trial and to both independently fetched states."""
     label = f"{trial['id']}/handoff{stage}"
@@ -320,9 +426,12 @@ def test_summary(command, output):
     return None
 
 
-def audit_trial(trial, plan, trace, directory, memory_mib=None, state_transport=None):
+def audit_trial(trial, plan, trace, directory, memory_mib=None, state_transport=None, ram_lifecycle=None):
     name = trial["id"]
     transport = state_transport or ("dax-mailbox" if "mailbox_nonce" in trial else "serial")
+    lifecycle = ram_lifecycle or trial.get("ram_lifecycle", "shared-cxl")
+    require(lifecycle in ("shared-cxl", "home-roundtrip") and trial.get("ram_lifecycle", "shared-cxl") == lifecycle,
+            f"{name}: RAM lifecycle disagreement")
     require(trial["result"] == "passed", f"{name}: trial failed")
     require(trial["trace_sha256"] == trace["sha256"] == plan["trace_sha256"], f"{name}: trace hash")
     require(trial["image_sha256"] == plan["image_sha256"], f"{name}: image hash")
@@ -363,13 +472,16 @@ def audit_trial(trial, plan, trace, directory, memory_mib=None, state_transport=
         text = path.read_text(errors="replace")
         serial_text += text
         mappings = re.findall(r" DAX_RAM path=(\S+) offset=([0-9]+) gpa=([0-9]+) bytes=([0-9]+) initialize=(true|false) hva=0x[0-9a-f]+", text)
-        require(len(mappings) == 1, f"{name}/stage{log['stage']}: missing/duplicate DAX mapping")
-        backing, offset, gpa, size, initialize = mappings[0]
-        if dax_bytes is None:
-            dax_bytes = int(size)
-        require(backing == "/dev/dax0.0" and int(offset) == 2097152 and int(gpa) == 0 and
-                int(size) == dax_bytes > 0 and initialize == ("true" if log["stage"] == 0 else "false"),
-                f"{name}/stage{log['stage']}: guest RAM not retained in the shared DAX mapping")
+        if lifecycle == "home-roundtrip" and log["stage"] != 1:
+            require(not mappings, f"{name}/stage{log['stage']}: DRAM stage logged DAX RAM")
+        else:
+            require(len(mappings) == 1, f"{name}/stage{log['stage']}: missing/duplicate DAX mapping")
+            backing, offset, gpa, size, initialize = mappings[0]
+            if dax_bytes is None:
+                dax_bytes = int(size)
+            require(backing == "/dev/dax0.0" and int(offset) == 2097152 and int(gpa) == 0 and
+                    int(size) == dax_bytes > 0 and initialize == ("true" if log["stage"] == 0 else "false"),
+                    f"{name}/stage{log['stage']}: guest RAM not retained in the shared DAX mapping")
         requests = []
         for api_path, encoded in re.findall(r'The API server received a Put request on "([^"]+)" with body (".*")\.', text):
             if api_path in ("/snapshot/create", "/snapshot/load"):
@@ -380,9 +492,14 @@ def audit_trial(trial, plan, trace, directory, memory_mib=None, state_transport=
         for api_path, body in requests:
             snapshot_paths.append(body["snapshot_path"])
             if api_path == "/snapshot/create":
-                require(body["snapshot_type"] == "Full" and body["mem_file_path"] == "/dev/dax0.0", f"{name}: snapshot copied RAM to another file")
+                expected_memory = (str(PurePosixPath(body["snapshot_path"]).parent / f"{name}-h0-memory")
+                                   if lifecycle == "home-roundtrip" and log["stage"] == 0 else "/dev/dax0.0")
+                require(body["snapshot_type"] == "Full" and body["mem_file_path"] == expected_memory,
+                        f"{name}: snapshot used an incorrect RAM backing")
             else:
-                require(body["mem_backend"] == {"backend_type": "File", "backend_path": "/dev/dax0.0"} and
+                expected_memory = (str(PurePosixPath(body["snapshot_path"]).parent / f"{name}-h1-memory")
+                                   if lifecycle == "home-roundtrip" and log["stage"] == 2 else "/dev/dax0.0")
+                require(body["mem_backend"] == {"backend_type": "File", "backend_path": expected_memory} and
                         body["resume_vm"] is False, f"{name}: restore used a different memory backing")
     require(len(set(snapshot_paths)) == 1, f"{name}: snapshot paths differ between source and destination")
     require(not FATAL_KERNEL.search(serial_text), f"{name}: fatal kernel/VMM error in serial log")
@@ -510,7 +627,14 @@ def audit_trial(trial, plan, trace, directory, memory_mib=None, state_transport=
         require(identity["sentinel_sha256"] == sha(state.encode()), f"{name}: mutable file contents not retained")
     require(len(trial["handoffs"]) == 2, f"{name}: handoff count")
     boundaries = [plan["handoff_before"], len(commands) - 2]
-    transport_audits = []
+    transport_audits, ram_audits = [], []
+    if lifecycle == "home-roundtrip":
+        require(memory_mib is not None and transport == "dax-mailbox", f"{name}: missing RAM lifecycle configuration")
+        require(trial["initial_ram_mapping"]["file"] == name + "-initial-maps.txt", f"{name}: wrong initial mapping evidence")
+        initial_mapping = audit_ram_mapping(directory, trial["initial_ram_mapping"], "A", "dram", dax_bytes, None,
+                                             name + "/initial-RAM")
+    else:
+        require("initial_ram_mapping" not in trial, f"{name}: unexpected RAM lifecycle proof")
     for index, handoff in enumerate(trial["handoffs"]):
         label = f"{name}/handoff{index}"
         require((handoff["source"], handoff["destination"]) == (("A", "B") if index == 0 else ("B", "A")),
@@ -523,7 +647,8 @@ def audit_trial(trial, plan, trace, directory, memory_mib=None, state_transport=
         for field in ("boot_id", "pid", "sentinel_sha256", "fd_inode", "fd_deleted"):
             require(before[field] == after[field], f"{label}: {field} continuity")
         require(after["fd_ordinal"] == before["fd_ordinal"] + 1, f"{label}: FD did not continue")
-        require(handoff["ram_transfer_bytes"] == 0, f"{label}: RAM copied")
+        ram_audits.append(audit_ram_lifecycle(handoff, trial, index, directory, dax_bytes, lifecycle,
+                                             str(PurePosixPath(snapshot_paths[0]).parent)))
         state = inside(directory, handoff["state_file"])
         require(0 < state.stat().st_size == handoff["state_bytes"] == handoff["state_integrity"]["bytes"] < 4 * 1024 * 1024,
                 f"{label}: state length")
@@ -545,6 +670,10 @@ def audit_trial(trial, plan, trace, directory, memory_mib=None, state_transport=
                 (reason in ("Z", "X") and observed == expected_start) or
                 (reason == "reused" and observed > 0 and observed != expected_start),
                 f"{label}: source process could still execute")
+    if lifecycle == "home-roundtrip":
+        require(initial_mapping == ram_audits[0]["source_mapping"], f"{name}: initial DRAM owner/mapping changed before promotion")
+        require(ram_audits[0]["destination_mapping"] == ram_audits[1]["source_mapping"],
+                f"{name}: CXL owner/mapping changed without a recorded handoff")
     evictions = [row for row in raw if row["event"] == "trace_evicted"]
     if trial["cache_mode"] == "evicted":
         require([row["next_index"] for row in evictions] == boundaries and evictions == trial["evictions"],
@@ -589,6 +718,7 @@ def audit_trial(trial, plan, trace, directory, memory_mib=None, state_transport=
                            "patch_bytes_match": True},
             "handoffs": len(trial["handoffs"]), "identities": len(identities),
             "state_transport": transport, "native_handoff_phases": transport_audits,
+            "ram_lifecycle": lifecycle, "ram_handoffs": ram_audits,
             "rpc_counter_differences": counter_differences}
 
 
@@ -605,6 +735,11 @@ def audit(args):
     arguments = report["arguments"]
     state_transport = arguments.get("state_transport", "serial")
     require(state_transport in ("serial", "dax-mailbox"), "unsupported state transport")
+    ram_lifecycle = arguments.get("ram_lifecycle", "shared-cxl")
+    require(ram_lifecycle in ("shared-cxl", "home-roundtrip"), "unsupported RAM lifecycle")
+    if ram_lifecycle == "home-roundtrip":
+        require(state_transport == "dax-mailbox" and 0 < arguments["memory_mib"] <= 2048,
+                "home-roundtrip requires native state mailbox and at most 2 GiB RAM")
     if state_transport == "dax-mailbox":
         require(len({row["mailbox_nonce"] for row in trials}) == len(trials), "mailbox session nonce reused across trials")
     else:
@@ -668,6 +803,12 @@ def audit(args):
         require(manifest["source_hashes"]["shared_probe.c"] == runtime["shared_probe.c"], "native helper source provenance differs")
         require(manifest["inputs"]["shared_probe"]["sha256"] == manifest["artifacts"]["shared-probe"],
                 "native helper input/artifact binary differs")
+    if ram_lifecycle == "home-roundtrip":
+        require(manifest["inputs"]["ram_transfer_source"]["sha256"] == runtime["ram_transfer.c"],
+                "RAM transfer helper prepared/runtime source drift")
+        require(manifest["inputs"]["ram_transfer"]["sha256"] == manifest["artifacts"]["ram-transfer"],
+                "RAM transfer helper input/artifact binary differs")
+        helper_sources.append("ram_transfer.c")
     patch_dir = args.patch_dir or directory / "measured-patches"
     patches_checked = []
     if args.patch_dir or patch_dir.is_dir():
@@ -679,7 +820,8 @@ def audit(args):
     for name in names:
         effective_environment(manifest["traces"][name], parsed[name])
     audits = [audit_trial(row, manifest["traces"][row["trace"]], parsed[row["trace"]], directory,
-                          memory_mib=arguments["memory_mib"], state_transport=state_transport) for row in trials]
+                          memory_mib=arguments["memory_mib"], state_transport=state_transport,
+                          ram_lifecycle=ram_lifecycle) for row in trials]
     require(len({row["boot_id"] for row in audits}) == len(trials), "independent trials reused a guest boot identity")
     for name in names:
         remote = [audit for row, audit in zip(trials, audits) if row["trace"] == name and
@@ -698,6 +840,8 @@ def audit(args):
         wanted = {f"lab/{name}-initramfs.cpio" for name in names}
         if state_transport == "dax-mailbox":
             wanted.add("lab/shared-probe")
+        if ram_lifecycle == "home-roundtrip":
+            wanted.add("lab/ram-transfer")
         l1_files = newc_files(asset_dir / "l1-initramfs.cpio", wanted)
         if state_transport == "dax-mailbox":
             helper = l1_files["lab/shared-probe"]
@@ -706,6 +850,13 @@ def audit(args):
                     sha(helper["data"]) == manifest["artifacts"]["shared-probe"],
                     "L1 embedded native helper differs from audited executable artifact")
             checked_artifacts.append("l1-initramfs.cpio:lab/shared-probe")
+        if ram_lifecycle == "home-roundtrip":
+            helper = l1_files["lab/ram-transfer"]
+            require(helper["mode"] & 0o170000 == 0o100000 and helper["mode"] & 0o111 and
+                    helper["data"] == (asset_dir / "ram-transfer").read_bytes() and
+                    sha(helper["data"]) == manifest["artifacts"]["ram-transfer"],
+                    "L1 embedded RAM helper differs from audited executable artifact")
+            checked_artifacts.append("l1-initramfs.cpio:lab/ram-transfer")
         for name in names:
             plan = manifest["traces"][name]
             image = Path(plan["source_image"])
@@ -736,6 +887,9 @@ def audit(args):
               "submission_exits_checked": len(trials), "submissions_checked": len(trials),
               "handoffs": sum(row["handoffs"] for row in audits),
               "state_transport": state_transport,
+              "ram_lifecycle": ram_lifecycle,
+              "ram_copied_bytes": sum(phase["copied_bytes"] for row in audits for phase in row["ram_handoffs"]),
+              "native_ram_phases_checked": sum(len(phase["operations"]) for row in audits for phase in row["ram_handoffs"]),
               "mailbox_handoffs_checked": sum(phase["transport"] == "dax-mailbox" for row in audits for phase in row["native_handoff_phases"]),
               "native_mailbox_phases_checked": sum(len(phase["mailbox_phases"]) for row in audits for phase in row["native_handoff_phases"]),
               "native_api_phases_checked": sum(len(phase["api_phases"]) for row in audits for phase in row["native_handoff_phases"]),

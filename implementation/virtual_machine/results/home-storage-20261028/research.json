@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "checked_date": "2026-10-28",
+  "result": "confirmed",
+  "direct_agent_rl_cases": 2,
+  "sources": [
+    {
+      "id": "nvidia_nemotron3_super",
+      "classification": "direct_agent_rl_tmpfs_upper_evidence",
+      "title": "Nemotron 3 Super technical report",
+      "url": "https://research.nvidia.com/labs/nemotron/files/NVIDIA-Nemotron-3-Super-Technical-Report.pdf#page=30",
+      "locator": "p.30, SWE-RL Infrastructure",
+      "quote": "filesystem isolation via a writable tmpfs overlay while sharing the host kernel.",
+      "finding": "NeMo-Gym SWE-RL launches task SIF images in Apptainer; OpenHands edits the repository, extracts a code patch, and ground-truth tests provide binary rewards. The report explicitly identifies writable tmpfs overlay.",
+      "scope": "Container isolation, not microVM or CXL migration."
+    },
+    {
+      "id": "nvidia_gym_source",
+      "classification": "implementation_evidence",
+      "title": "NeMo Gym SWE agent command construction",
+      "url": "https://github.com/NVIDIA-NeMo/Gym/blob/main/responses_api_agents/swe_agents/app.py",
+      "locator": "SWEBenchWrapper._build_apptainer_command",
+      "quote": "apptainer exec --writable-tmpfs --cleanenv --pid --no-mount home,tmp,bind-paths",
+      "finding": "The current code launches a writable tmpfs overlay and bind-mounts params.persistent_dir at /trajectories_mount. Repository changes can be temporary while final artifacts are exported.",
+      "scope": "Current main independently corroborates the report; do not claim identical source version to the paper."
+    },
+    {
+      "id": "nvidia_gym_artifacts",
+      "classification": "artifact_lifecycle_evidence",
+      "title": "NeMo Gym SWE Agents README",
+      "url": "https://github.com/NVIDIA-NeMo/Gym/blob/main/responses_api_agents/swe_agents/README.md",
+      "locator": "Artifact locations and cleanup; Agent flow per instance",
+      "finding": "Agent edits repository inside task SIF, produces patch; separate evaluation container tests it. Persistent per-run results and shared setup trees are distinct from temporary workspace writes."
+    },
+    {
+      "id": "aleph_alpha_kolibri",
+      "classification": "direct_production_agent_rl_tmpfs_upper_evidence",
+      "title": "RL environments are an infra problem",
+      "url": "https://aleph-alpha.com/en/blog/why-rl-environments-have-always-been-an-infra-problem/",
+      "locator": "Sandboxes",
+      "quote": "each sandbox gets its own writable layer through an OverlayFS layer backed by a size-capped tmpfs.",
+      "finding": "Kolibri RL uses shared scratch SIF files, read-only squashfuse mounts shared by sandboxes, and a separate size-capped tmpfs writable overlay per sandbox. The post reports about 25,000 active sandboxes on average during the final training run.",
+      "scope": "Primary company engineering account; linked technical-report PDF timed out and was not used as evidence."
+    },
+    {
+      "id": "dsec_counterexample",
+      "classification": "disk_backed_upper_counterexample",
+      "title": "DeepSeek Elastic Compute (DSec)",
+      "url": "https://arxiv.org/html/2609.22978v1#S5.SS1",
+      "locator": "Sections 5.1 and 5.3",
+      "quote": "We place the writable layer on the node’s local disk",
+      "finding": "MicroVM overlayfs upper is a directory on a writable ext4 disk; OverlayBD and ublk provide on-demand reads and local writes. This is not evidence for tmpfs upper."
+    },
+    {
+      "id": "apptainer_semantics",
+      "classification": "primary_runtime_documentation",
+      "title": "Apptainer Persistent Overlays",
+      "url": "https://apptainer.org/docs/user/latest/persistent_overlays.html",
+      "finding": "--writable-tmpfs stores changes in an in-memory temporary filesystem and discards them when the container finishes; sessiondir max size controls its cap. Separate bind mounts may persist output."
+    },
+    {
+      "id": "docker_overlay2",
+      "classification": "distinction",
+      "title": "Docker OverlayFS storage driver",
+      "url": "https://docs.docker.com/engine/storage/drivers/overlayfs-driver/",
+      "finding": "The classic overlay2 example stores image and writable layers under /var/lib/docker/overlay2 on the configured backing filesystem. OverlayFS alone does not imply tmpfs."
+    },
+    {
+      "id": "docker_tmpfs",
+      "classification": "primary_runtime_documentation",
+      "title": "Docker tmpfs mounts",
+      "url": "https://docs.docker.com/engine/storage/tmpfs/",
+      "finding": "Explicit tmpfs mounts differ from the writable container layer; contents disappear on container stop, count against memory limits, and may be swapped if swap is enabled."
+    },
+    {
+      "id": "mini_swe_singularity",
+      "classification": "not_proven_tmpfs",
+      "title": "mini-swe-agent Singularity environment",
+      "url": "https://github.com/SWE-agent/mini-swe-agent/blob/main/src/minisweagent/environments/singularity.py",
+      "finding": "Current backend builds a writable sandbox directory under tempfile.gettempdir and runs --writable. A temporary directory is not proof that its backing is tmpfs."
+    }
+  ],
+  "interpretation": "RO image plus tmpfs upper is an established agent RL choice when temporary rollout workspace and exported artifacts suffice. This does not establish cross-host CXL microVM correctness or persistent writable-disk durability.",
+  "research_method": "Primary reports, first-party engineering account, official source and runtime docs. Search results about only /tmp or /dev/shm were not counted as full workspace tmpfs evidence."
+}

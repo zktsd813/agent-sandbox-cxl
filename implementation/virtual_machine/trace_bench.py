@@ -23,7 +23,8 @@ import nfs_bench as nfs
 
 HERE = Path(__file__).resolve().parent
 SOURCES = ("trace_bench.py", "trace_prepare.py", "trace-l2-init.sh", "trace-guest-run.sh",
-           "nfs_bench.py", "nfs_probe.c", "lab.py", "nfs_dependencies.sh", "shared_probe.c", "cache_probe.h", "mptcp_probe.h")
+           "nfs_bench.py", "nfs_probe.c", "lab.py", "nfs_dependencies.sh", "shared_probe.c", "cache_probe.h", "mptcp_probe.h",
+           "ram_transfer.c")
 
 
 def serial(vm, directory, command, token, event, timeout=180):
@@ -96,12 +97,59 @@ def source_fence_script(directory):
         "printf 'FENCED %s %s\\nFENCE_STATE %s %s\\n' \"$p\" \"$expected\" \"$reason\" \"$observed\"")
 
 
-def handoff(vms, directory, out, trial, source, destination, stage, transport, memory_mib):
+def ram_mapping(vm, directory, out, filename, role, tier, memory_bytes, memory_path=None):
+    raw = nfs.shell(vm, f"read p expected < {directory}/fc.pid\n"
+        "record=$(cat /proc/$p/stat)\nrecord=${record##*) }\nset -- $record\nshift 19\n"
+        "[ \"$1\" = \"$expected\" ]\nprintf 'RAM_MAP_OWNER %s %s\\n' \"$p\" \"$expected\"\n"
+        "awk '$2==\"/run\" {print \"RAM_RUN_MOUNT \" $0}' /proc/mounts\ncat /proc/$p/maps")
+    (out / filename).write_text(raw)
+    owners = re.findall(r"^RAM_MAP_OWNER ([0-9]+) ([0-9]+)$", raw.replace("\r", ""), re.M)
+    mounts = re.findall(r"^RAM_RUN_MOUNT (.*)$", raw.replace("\r", ""), re.M)
+    if len(owners) != 1 or len(mounts) != 1 or mounts[0].split()[2] != "tmpfs":
+        raise RuntimeError("Missing owned RAM mapping or local tmpfs mount")
+    mappings = []
+    for line in raw.splitlines():
+        match = re.match(r"^([0-9a-f]+)-([0-9a-f]+) ([-rwxps]{4}) ([0-9a-f]+) \S+ \d+\s*(.*)$", line)
+        if match:
+            start, end, permissions, offset, path = match.groups()
+            mappings.append({"start": int(start, 16), "end": int(end, 16), "permissions": permissions,
+                             "offset": int(offset, 16), "path": path.strip()})
+    dax = [row for row in mappings if row["path"] == "/dev/dax0.0"]
+    candidates = dax if tier == "cxl" else [row for row in mappings if row["path"] == (memory_path or "") and
+                row["end"] - row["start"] == memory_bytes and row["permissions"] == "rw-p"]
+    if (tier == "cxl" and (len(dax) != 1 or dax[0]["end"] - dax[0]["start"] != memory_bytes or
+                           dax[0]["permissions"] != "rw-s" or dax[0]["offset"] != 2097152)) or (
+            tier == "dram" and (dax or len(candidates) != 1 or candidates[0]["offset"] != 0)):
+        raise RuntimeError(f"Guest RAM does not match requested {tier} backing")
+    return {"file": filename, "role": role, "tier": tier, "memory_path": memory_path,
+            "owner_pid": int(owners[0][0]), "owner_starttime": int(owners[0][1]), "mappings": mappings,
+            "run_mount": mounts[0]}
+
+
+def handoff(vms, directory, out, trial, source, destination, stage, transport, memory_mib,
+            ram_lifecycle="shared-cxl"):
     source_vm, target_vm = vms[source], vms[destination]
     token = f"{trial['id']}_h{stage}_before"
     before = serial(source_vm, directory, f"identity {token}", token, "trace_identity")
     prefix = f"{trial['id']}-h{stage}"
-    observations, mailbox = {}, {}
+    observations, mailbox, ram_operations, mappings = {}, {}, {}, {}
+    lifecycle = ram_lifecycle == "home-roundtrip"
+    source_tier, destination_tier = (("dram", "cxl") if stage == 0 else ("cxl", "dram")) if lifecycle else ("cxl", "cxl")
+    ram_file = f"{directory}/{trial['id']}-h{stage}-memory"
+    memory_bytes = memory_mib * 1024 * 1024
+
+    def ram_transfer(vm, role, operation, path):
+        command = "/lab/ram-transfer " + shlex.join([operation, path, "/dev/dax0.0", str(memory_bytes)])
+        if operation == "poison":
+            command = "RAM_TRANSFER_ALLOW_POISON=1 " + command
+        raw = nfs.shell(vm, command, timeout=300)
+        filename = f"{prefix}-ram-{operation}.txt"
+        (out / filename).write_text(raw)
+        rows = [json.loads(line.removeprefix("RAM_TRANSFER_JSON ")) for line in raw.splitlines()
+                if line.startswith("RAM_TRANSFER_JSON ")]
+        if len(rows) != 1 or rows[0].get("result") != "passed" or rows[0].get("operation") != operation:
+            raise RuntimeError(f"RAM {operation} failed: {raw}")
+        ram_operations[operation] = {"file": filename, "receipt": rows[0], "role": role, "memory_file": path}
 
     def observed_api(vm, phase, path, method, body):
         raw = nfs.api(vm, directory, path, method, body)
@@ -128,22 +176,39 @@ def handoff(vms, directory, out, trial, source, destination, stage, transport, m
     # Prestart only an empty API process. Restore creates its private KVM objects.
     # No guest RAM mapping or initialization happens during this preparation.
     if transport == "dax-mailbox":
-        nfs.start_fc(target_vm, directory)
+        nfs.start_fc(target_vm, directory, destination_tier)
+    if lifecycle:
+        mappings["source"] = ram_mapping(source_vm, directory, out, f"{prefix}-source-maps.txt",
+                                         source, source_tier, memory_bytes)
     t = time.monotonic_ns()
     observed_api(source_vm, "pause", "/vm", "PATCH", {"state": "Paused"})
     observed_api(source_vm, "snapshot", "/snapshot/create", "PUT", {"snapshot_type": "Full",
-        "snapshot_path": directory + "/state", "mem_file_path": "/dev/dax0.0"})
+        "snapshot_path": directory + "/state", "mem_file_path": ram_file if source_tier == "dram" else "/dev/dax0.0"})
     nfs.stop_fc(source_vm, directory)
     fenced = nfs.shell(source_vm, source_fence_script(directory))
+    if lifecycle:
+        if source_tier == "dram":
+            ram_transfer(source_vm, source, "import", ram_file)
+        else:
+            ram_transfer(target_vm, destination, "export", ram_file)
     if transport == "dax-mailbox":
         transfer(source_vm, "publish", source)
         transfer(target_vm, "receive", destination)
     else:
         state, integrity = lab.guest_fetch_file(source_vm, directory + "/state")
         nfs.upload(target_vm, directory + "/state", state)
-        nfs.start_fc(target_vm, directory)
+        nfs.start_fc(target_vm, directory, destination_tier)
+    memory_path = ram_file if destination_tier == "dram" else "/dev/dax0.0"
     observed_api(target_vm, "load", "/snapshot/load", "PUT", {"snapshot_path": directory + "/state",
-        "mem_backend": {"backend_type": "File", "backend_path": "/dev/dax0.0"}, "resume_vm": False})
+        "mem_backend": {"backend_type": "File", "backend_path": memory_path}, "resume_vm": False})
+    if lifecycle:
+        mappings["destination"] = ram_mapping(target_vm, directory, out, f"{prefix}-destination-maps.txt",
+                                              destination, destination_tier, memory_bytes,
+                                              memory_path if destination_tier == "dram" else None)
+        if destination_tier == "dram":
+            # Both previous owners are fenced; the new private mapping is local.
+            # Overwriting retired CXL before resume tests independence from it.
+            ram_transfer(target_vm, destination, "poison", "POST_DEMOTION_TEST")
     observed_api(target_vm, "resume", "/vm", "PATCH", {"state": "Resumed"})
     token = f"{trial['id']}_h{stage}_after"
     after = serial(target_vm, directory, f"identity {token}", token, "trace_identity")
@@ -171,7 +236,7 @@ def handoff(vms, directory, out, trial, source, destination, stage, transport, m
     (out / fence_file).write_text(fenced)
     record = {"source": source, "destination": destination, "before_identity": before,
               "after_identity": after, "state_file": name, "state_bytes": len(state),
-              "state_integrity": integrity, "ram_transfer_bytes": 0, "source_fence": fenced,
+              "state_integrity": integrity, "ram_transfer_bytes": memory_bytes if lifecycle else 0, "source_fence": fenced,
               "source_fenced": True, "fence_file": fence_file,
               "state_transport": transport, "handoff_mode": "snapshot",
               "destination_prestarted": transport == "dax-mailbox",
@@ -179,6 +244,11 @@ def handoff(vms, directory, out, trial, source, destination, stage, transport, m
               "api_observations": observations, "controller_handoff_ns": controller_handoff_ns}
     if mailbox:
         record["mailbox"] = mailbox
+    if lifecycle:
+        record.update(ram_lifecycle=ram_lifecycle, source_ram_tier=source_tier, destination_ram_tier=destination_tier,
+                      ram_operations=ram_operations, ram_mappings=mappings)
+        if source_tier == "dram":
+            nfs.shell(source_vm, "rm " + shlex.quote(ram_file))
     trial["handoffs"].append(record)
     return record
 
@@ -208,7 +278,15 @@ def run(args):
         raise ValueError("Guest RAM/vCPUs exceed lab capacity")
     if not 1 <= args.cycles <= 10 or not 0 <= args.eviction_cycles <= 10:
         raise ValueError("cycles must be 1..10; eviction-cycles 0..10")
+    if args.ram_lifecycle == "home-roundtrip" and (args.state_transport != "dax-mailbox" or
+                                                  not 1 <= args.memory_mib <= 2048):
+        raise ValueError("home-roundtrip requires dax-mailbox and at most 2 GiB in one static RAM region")
+    if args.ram_lifecycle == "home-roundtrip" and config["l1_memory_mib"] < 2 * args.memory_mib + 1024:
+        raise ValueError("home-roundtrip needs L1 RAM for the guest, a full local snapshot, and 1 GiB headroom")
     manifest = config["prepared"]
+    if args.ram_lifecycle == "home-roundtrip" and not all(key in manifest["inputs"] for key in
+                                                          ("ram_transfer", "ram_transfer_source")):
+        raise ValueError("Prepare lifecycle assets with --ram-transfer before starting this experiment")
     names = args.names or list(manifest["traces"])
     if len(set(names)) != len(names) or not set(names) <= set(manifest["traces"]):
         raise ValueError("Invalid trace selection")
@@ -225,7 +303,8 @@ def run(args):
         "arguments": {**vars(args), "names": names}, "trials": [], "cleanup_errors": [],
         "runtime_sources": {name: lab.sha256(HERE / name) for name in SOURCES},
         "limitations": ["One physical host, nested KVM, emulated coherent CXL",
-            "Guest RAM begins in shared DAX; no initial DRAM-to-CXL promotion",
+            ("A/DRAM -> B/CXL -> A/DRAM via stopped full RAM copies; no live pre-copy or latency claim"
+             if args.ram_lifecycle == "home-roundtrip" else "Guest RAM begins in shared DAX; no initial DRAM-to-CXL promotion"),
             "Readonly image lower plus guest tmpfs upper; no shared writable disk",
             "Serial control commands remain; state transport is selected separately",
             "Controller handoff includes shell/API waits and identity check; excludes prestart and audit collection",
@@ -255,7 +334,7 @@ def run(args):
                         trial = {"id": f"{name}_{mode}_{cycle}_{backend}", "trace": name, "cycle": cycle,
                             "backend": backend, "cache_mode": mode, "commands": [], "handoffs": [], "logs": [],
                             "trace_sha256": entry["trace_sha256"], "image_sha256": entry["image_sha256"],
-                            "result": "running"}
+                            "ram_lifecycle": args.ram_lifecycle, "result": "running"}
                         if args.state_transport == "dax-mailbox":
                             trial["mailbox_nonce"] = os.urandom(8).hex()
                         report["trials"].append(trial)
@@ -273,7 +352,7 @@ def run(args):
                             trial["host_cache_before"][role] = pages[0]
                         trial["trial_counter_before"] = f"counters/{trial['id']}-trial-before"
                         trial_before = observe(b, out, trial["trial_counter_before"])
-                        nfs.start_fc(a, directory)
+                        nfs.start_fc(a, directory, "dram" if args.ram_lifecycle == "home-roundtrip" else "cxl")
                         components = {
                             "/machine-config": {"vcpu_count": args.vcpus, "mem_size_mib": args.memory_mib},
                             "/boot-source": {"kernel_image_path": "/lab/l2-vmlinux",
@@ -288,6 +367,9 @@ def run(args):
                             f"read p s < {directory}/fc.pid\nkill -0 \"$p\"\n"
                             f"! grep -q 'Kernel panic' {directory}/fc.log\n"
                             "n=$((n+1))\n[ $n -lt 3000 ]\nsleep .02\ndone", timeout=90)
+                        if args.ram_lifecycle == "home-roundtrip":
+                            trial["initial_ram_mapping"] = ram_mapping(a, directory, out,
+                                trial["id"] + "-initial-maps.txt", "A", "dram", args.memory_mib * 1024 * 1024)
                         role, stage = "A", 0
                         boundaries = [entry["handoff_before"], entry["command_count"] - 2]
                         trial["handoff_before"] = boundaries
@@ -296,7 +378,8 @@ def run(args):
                             index = command["index"]
                             if index in boundaries:
                                 target = "B" if role == "A" else "A"
-                                handoff(vms, directory, out, trial, role, target, stage, args.state_transport, args.memory_mib)
+                                handoff(vms, directory, out, trial, role, target, stage, args.state_transport,
+                                        args.memory_mib, args.ram_lifecycle)
                                 role, stage = target, stage + 1
                                 if mode == "evicted":
                                     token = f"{trial['id']}_evict{stage}"
@@ -321,6 +404,8 @@ def run(args):
                         token = trial["id"] + "_export"
                         exported = serial(vms[role], directory, f"export {token}", token, "trace_export", timeout=180)
                         nfs.stop_fc(vms[role], directory)
+                        if args.ram_lifecycle == "home-roundtrip":
+                            nfs.shell(a, "rm " + shlex.quote(f"{directory}/{trial['id']}-h1-memory"))
                         raw = save_log(vms[role], directory, out, trial, role, stage)
                         # Archive framing is generated by the guest controller, never workload stdout.
                         match = re.search(rf"TRACE_EXPORT_BEGIN {re.escape(token)} [0-9]+ [0-9a-f]{{64}}\r?\n(.*?)TRACE_EXPORT_END {re.escape(token)}", raw.decode(), re.S)
@@ -372,6 +457,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--state-transport", choices=("serial", "dax-mailbox"), default="serial",
                         help="Snapshot state transport; DAX mode prestarts only the destination API process")
+    parser.add_argument("--ram-lifecycle", choices=("shared-cxl", "home-roundtrip"), default="shared-cxl",
+                        help="Keep shared CXL RAM, or copy A DRAM -> CXL -> A DRAM at the existing boundaries")
     parser.add_argument("--names", nargs="+")
     parser.add_argument("--cycles", type=int, default=3)
     parser.add_argument("--eviction-cycles", type=int, default=1)

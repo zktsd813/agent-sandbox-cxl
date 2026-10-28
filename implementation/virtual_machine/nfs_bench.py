@@ -116,11 +116,15 @@ def stop_fc(vm, directory):
           "[ \"$target_pid\" -gt 1 ]\nstop_snapshot_process\nfi\n")
 
 
-def start_fc(vm, directory):
+def start_fc(vm, directory, ram_tier="cxl"):
+    if ram_tier not in ("cxl", "dram"):
+        raise ValueError("RAM tier must be cxl or dram")
+    ram_env = ("FC_DAX_RAM=/dev/dax0.0 FC_DAX_OFFSET=2097152 FC_DAX_SNAPSHOT=1"
+               if ram_tier == "cxl" else "FC_DAX_SNAPSHOT=0")
     shell(vm, f"mkdir -p {directory}\nrm -f {directory}/api.sock {directory}/input\n"
           f"mkfifo {directory}/input\n"
           f"(exec 3<>{directory}/input\n"
-          f"exec env FC_DAX_RAM=/dev/dax0.0 FC_DAX_OFFSET=2097152 FC_DAX_SNAPSHOT=1 "
+          f"exec env -u FC_DAX_RAM -u FC_DAX_OFFSET {ram_env} "
           f"/lab/firecracker --api-sock {directory}/api.sock <&3 > {directory}/fc.log 2>&1) &\n" +
           record_pid(directory) + f"n=0\nwhile [ ! -S {directory}/api.sock ]; do\n"
           f"read p s < {directory}/fc.pid\nkill -0 \"$p\"\nn=$((n+1))\n[ $n -lt 500 ]\nsleep .01\ndone")

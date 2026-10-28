@@ -32,6 +32,8 @@ def main():
     parser.add_argument("--qemu-root", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--iterations", type=int, default=20)
+    parser.add_argument("--require-safe-direct-rejection", action="store_true",
+                        help="Require the new preflight guard and working guest I/O before any Resume call")
     args = parser.parse_args()
     require(not args.out.exists(), "Choose a new output directory")
     out = args.out.resolve()
@@ -197,9 +199,25 @@ def main():
             report["pool_before"] = pool(a, "pool-before")
             if direct:
                 rejection = api(a, "PATCH", "/vm", {"state": "Paused"}, 400)
-                require("Direct shared KVM object handoff failed" in rejection["response"]
-                        and "os error 95" in rejection["response"], "Direct rejection was not EOPNOTSUPP")
-                report["rejection_stage"] = "direct_pause_export"
+                if args.require_safe_direct_rejection:
+                    expected = "diskless MMIO workers only" if block else "one vCPU"
+                    require("Unsupported direct handoff configuration" in rejection["response"] and
+                            expected in rejection["response"], "Direct rejection was not the preflight guard")
+                    report["rejection_stage"] = "direct_preflight"
+                    if block:
+                        immediate = bounded_probe(a, "after_rejection_without_resume", 64 * 1024 * 1024)
+                        require(immediate["completed"] and immediate["read"]["open_cookie"] == before["read"]["open_cookie"] and
+                                immediate["read"]["resident_before"] == 0 and immediate["read"]["block_delta"]["read_sectors"] > 0,
+                                "Direct rejection broke source cold I/O before Resume")
+                    else:
+                        time.sleep(2)
+                        immediate = {"counter": counter(a)}
+                        require(immediate["counter"] > before["counter"], "Direct rejection stopped source execution")
+                    report["source_without_resume"] = immediate
+                else:
+                    require("Direct shared KVM object handoff failed" in rejection["response"]
+                            and "os error 95" in rejection["response"], "Direct rejection was not EOPNOTSUPP")
+                    report["rejection_stage"] = "direct_pause_export"
             else:
                 api(a, "PATCH", "/vm", {"state": "Paused"})
                 rejection = api(a, "PUT", "/actions", {"action_type": "PrepareReuse"}, 400)
@@ -229,6 +247,8 @@ def main():
                           compatibility="rejected_by_existing_guard", result="passed")
             if direct and not usable:
                 report["source_recovery_finding"] = "Resume API succeeded but source guest I/O/progress did not recover; direct pause partially quiesces before rejecting."
+            if direct and args.require_safe_direct_rejection:
+                require(usable, "Direct preflight left source unusable after Resume")
             if not direct:
                 require(usable, "Reuse rejection left the source unusable")
     except BaseException as exc:

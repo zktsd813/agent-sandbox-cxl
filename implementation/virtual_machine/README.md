@@ -22,7 +22,7 @@ DAX 공유 영역은 기본 2GiB다. 기본 microVM은 1 vCPU·128MiB이고 RAM 
 
 <a id="session-handoff"></a>
 
-## 다음 세션 인계: 2026-10-27
+## 다음 세션 인계: 2026-10-28
 
 목표는 **microVM의 상태를 CXL에 유지하면서 실행 노드를 바꾸고, 기존 application 연결과
 파일 접근까지 이어가는 것**이다. CPU/RAM 전환과 실제 서비스 I/O 전환을 함께 완성하는 중이다.
@@ -33,7 +33,12 @@ DAX 공유 영역은 기본 2GiB다. 기본 microVM은 1 vCPU·128MiB이고 RAM 
 | CPU/RAM | 공유 DAX snapshot(2 vCPU trace 포함), KVM worker reuse/prepared, 동일 객체 direct handoff 및 크기별 측정 | 실제 물리 노드·다중 vCPU 및 장치가 있는 direct/reuse |
 | Network | MPTCP를 쓰는 guest **client**를 A→B snapshot 복원해 같은 연결로 전송 지속 | 빠른 제어 경로 연결, inbound/server 이동, direct/reuse의 net 장치 승계 |
 | Cache | PML dirty-page 기반 CPU cache 관리 비용 측정; EMR/DSA 조사 | DSA 하드웨어에서 preflush·최종 flush·reader invalidate 구현과 검증 |
-| Filesystem | Host NFS의 RO lower + guest tmpfs upper, 실제 trace 24 trials·840명령·48 handoffs에서 A→B→A 상태 유지 | Persistent disk의 flush·단일 writer, 명령 중 이전·장기 왕복, 공통 이미지 DAX 공유 |
+| Filesystem | 기존 Host NFS RO lower + guest tmpfs upper trace; 추가로 A 소유 writable ext4와 DRAM↔CXL lifecycle 시험 구현 | 장애 시 단일 writer 보장, 명령 중 이전·장기 왕복, 공통 이미지 DAX 공유 |
+
+2026-10-28 추가 경로의 재현 절차는 [home storage lifecycle](#home-storage-lifecycle)과
+[trace RAM lifecycle](#trace-ram-lifecycle)에 있다. Persistent ext4 시험과 기존 tmpfs upper trace를
+구분한다. 최종 실행은 writable ext4 **12회 전환·74개 명령**, 실제 trace **24 trials·840개 명령·48회 전환**을 통과했다.
+[결과·원시 증거·offline 재검증](results/home-storage-20261028/README.md)에 소스와 build hash, 오류 주입, 보존된 disk를 함께 정리했다.
 
 2026-10-26 설계 업데이트: 파일 접근은 일반 snapshot의 작은 disk부터 검증하고, 공통 read-only
 이미지의 DAX 매핑과 VM별 writable layer를 별도 실험한다. MPTCP 제어 경로 단축은 병렬로
@@ -41,7 +46,8 @@ DAX 공유 영역은 기본 2GiB다. 기본 microVM은 1 vCPU·128MiB이고 RAM 
 [초기 synthetic 기록](results/nfs-20261027/README.md)은 guest cache hit의 NFS READ 0을 확인했다.
 후속 리뷰에서 backend mount 누적을 고쳐 초기 성능 수치는 역사적 기록으로 구분했다.
 수정 후 실제 개발 trace **24 trials·840명령·48 handoffs**와 synthetic 회귀 20 samples를 통과했다.
-RO lower + tmpfs upper의 수정·빌드·FD 상태는 유지되며 persistent disk·direct/reuse 통합은 남아 있다.
+이 10월 27일 기록은 RO lower + tmpfs upper의 수정·빌드·FD 상태를 검증한 결과다.
+이후 추가한 persistent disk snapshot 시험은 아래에 별도로 설명하며, 장치가 있는 direct/reuse 통합은 남아 있다.
 [실행 절차](#host-nfs와-실제-개발-trace-재생)와 [최종 trace 실험 기록](results/trace-nfs-20261027/README.md)에
 재현 명령, 독립 검증, 변조 시험과 원시 자료를 보관한다.
 PML/cache·CPU/RAM·MPTCP는 각각 검증한 상태이며 통합 서비스 전환의 실측값은 아직 없다.
@@ -62,7 +68,8 @@ Serial 제어 전달이 포함되고, KVM/EPT를 새로 만드는 별도 시험�
    remote path-manager, listener 및 NAT/LB 처리를 정한다.
 4. 같은 토폴로지의 TCP/MPTCP 정상 실행 throughput·CPU와 전환 p50/p99를 비교한다.
    CXL host packet queue는 필요성이 확인되면 추가한다. DSA preflush는 별도 후속 과제이며
-   Host NFS의 다음 단계는 초기 DRAM→CXL promotion, 명령 실행 중 이전·장기 왕복, persistent writable image다. 파일·PML을 포함한 통합 순서는 [전체 계획](../../docs/cxl-microvm-overview.md#후속-구현-계획)을 따른다.
+   Host NFS의 DRAM↔CXL 및 persistent writable image 시험을 바탕으로, 다음에는 명령 실행 중 이전·장기 왕복과
+   장애 복구를 다룬다. 파일·PML을 포함한 통합 순서는 [전체 계획](../../docs/cxl-microvm-overview.md#후속-구현-계획)을 따른다.
 
 CPU/RAM 제어는 기존 `lab.py`·`build.sh`·`shared-probe`를 사용한다. 파일 실험은
 `nfs_bench.py`의 공통 NFS 설정·소유 프로세스 관리를 재사용하며, 실제 trace 준비·재생·독립 검증을 별도 script로 둔다.
@@ -89,7 +96,8 @@ EPT 등의 지정 객체를 DAX에 할당하고 A에서 detach한 객체를 B에
 의미적 snapshot은 raw `struct kvm`이나 VMCS 바이트를 직렬화하지 않는다.
 Firecracker의 `MicrovmState`에 CPU 레지스터·MSR·interrupt controller·clock·장치 상태를 담는다.
 Diskless 1-vCPU 구성의 상태 파일은 약 **13.7KB**, 2-vCPU·block trace에서는 약 **25KB**다. 버전·길이·hash를 확인한 뒤 목적지가 읽는다.
-RAM은 복사하거나 파일로 dump하지 않는다. FD, eventfd, host thread, `mm` 등 host 연결은 각 Linux 소유다.
+기존 shared-CXL 경로는 RAM을 복사하거나 파일로 dump하지 않는다. 아래의 DRAM↔CXL 전환은
+전체 RAM을 복사하는 별도 경로다. FD, eventfd, host thread, `mm` 등 host 연결은 각 Linux 소유다.
 
 동일한 HVA 매핑은 `0x400000000000`으로 고정할 수 있다. guest VA/GPA를 바꾸지 않아
 게스트 page table을 고칠 필요가 없지만, **서로 다른 KVM의 EPT를 그대로 공유하는 기능은 아니다.**
@@ -100,6 +108,9 @@ RAM은 복사하거나 파일로 dump하지 않는다. FD, eventfd, host thread,
 지원 구성 회귀와 파일 구성을 구분했다. Host NFS·virtio-blk는 일반 `snapshot`에서 검증하며,
 `reuse/prepared`와 direct의 기존 device/vCPU 제한을 제거하지 않았다. 특히 direct block의
 전환 거부 뒤 Resume API가 성공해도 guest 요청이 복구되지 않는 실패 경로를 확인했다.
+현재 패치는 지원하지 않는 direct block·다중 vCPU 구성을 pause 전에 거절하도록 한다.
+`mode_compatibility.py --require-safe-direct-rejection`은 거절 직후, Resume 호출 전에도 source가
+진행하는지 검사한다. 이는 안전한 거절 조건이며, direct에서 disk 이전을 지원한다는 뜻은 아니다.
 
 ## 비어 있는 worker의 의미
 
@@ -284,6 +295,147 @@ Timeout과 최종 제출 명령의 실패는 거부한다. 시간은 guest 명�
 `verify_nfs_results.py`는 raw 관측에서 delta를 재계산하며 성공 시 `host_observations=raw_validated`를 기록한다.
 이 파일이 없는 과거 archive는 `report_only_legacy`로 명시한다. 과거 guest raw event·checksum 검증과,
 host 수치를 report에서만 확인한 범위를 구분하기 위한 표시다.
+
+<a id="home-storage-lifecycle"></a>
+
+## Home storage와 DRAM↔CXL lifecycle
+
+`home_storage_bench.py`는 **A/DRAM → A/CXL → B/CXL → A/CXL → A/DRAM** 순서로
+일반 snapshot 경로를 실행한다. Guest는 모든 단계에서 같은 virtio-blk 장치와 writable ext4를 본다.
+바뀌는 것은 Firecracker가 `/disk/sandbox.raw`를 여는 host 경로다. A에서는 A의 local ext4,
+B에서는 A가 export한 NFSv3를 이용한다. RAM이 CXL에 있다는 이유만으로 NFS를 쓰지는 않는다.
+A/CXL 단계에서도 storage는 local이며, 귀환 대상은 이미지를 소유한 A다.
+
+`--home-storage-image`는 template `storage.raw`를 run 디렉터리의 `home-storage.raw`로 복사하고
+**A에만 RW disk를 연결**한다. Outer ext4 안의 `sandbox.raw`가 실제 guest ext4 image이며,
+B에는 그 disk의 복사본을 연결하지 않는다. Controller는 source Firecracker를 정지·종료하고
+PID와 시작 시각으로 fence한 후 다음 writer를 시작한다. Guest의 파일 수정은 tmpfs upper가 아니라
+이 ext4에 기록된다. 단일 호스트의 coherent CXL 모사 환경에서 controller가 소유권을 관리하며,
+분산 lease나 장애 시 fencing, 비일관 CXL의 cache coherence를 구현한 것은 아니다.
+
+DRAM→CXL promotion과 CXL→DRAM demotion은 **정지 후 전체 RAM 복사**다.
+Native `ram-transfer`가 실제 복사량과 전체 byte 비교 결과를 기록한다. CXL→CXL 이동에서는
+RAM 복사 없이 CPU/device state만 DAX mailbox로 전달한다. A로 demotion한 뒤에는 실제 RAM VMA가
+local file인지 확인하고, 이전 CXL RAM을 덮어쓴 후 guest를 재개해 CXL 의존성이 사라졌는지 검사한다.
+이 덮어쓰기 단계는 disposable 실험 전용이며 controller가 모든 이전 owner를 fence한 뒤 수행한다.
+현재 helper는 앞 2MiB의 control/mailbox 영역을 제외하고 최대 2GiB의 단일 RAM region을 다룬다.
+
+아래 명령은 저장소 루트에서 실행한다. 먼저 앞 절의 `nfs_dependencies.sh`와 `nfs_bench.py prepare`로
+NFS 지원 kernel·userspace가 있는 base assets를 준비한다. `CXL_HOME_BASE`에는 그 새 경로를 지정한다.
+Firecracker에는 현재 `firecracker.patch`를 반영하고, 이미 준비된 asset의 binary를 사후 교체하지 않는다.
+
+```bash
+export CXL_HOME_BASE="$PWD/implementation/virtual_machine/.local/assets-trace-base-new"
+export CXL_HOME_BUILD="$PWD/implementation/virtual_machine/.local/home-tools-new"
+export CXL_LAB_SESSION=home-storage-new
+export CXL_LAB_ASSETS="$PWD/implementation/virtual_machine/.local/assets-home-storage-new"
+mkdir -p "$CXL_HOME_BUILD"
+gcc -std=c11 -O2 -static -Wall -Wextra -Werror \
+  implementation/virtual_machine/ram_transfer.c -o "$CXL_HOME_BUILD/ram-transfer"
+gcc -O2 -static -pthread -Wall -Wextra -Werror \
+  implementation/virtual_machine/shared_probe.c -o "$CXL_HOME_BUILD/shared-probe"
+gcc -std=c11 -O2 -static -Wall -Wextra -Werror -DRAM_TRANSFER_UNIT_TEST \
+  implementation/virtual_machine/ram_transfer.c -o "$CXL_HOME_BUILD/ram-transfer-unit"
+"$CXL_HOME_BUILD/ram-transfer-unit" > "$CXL_HOME_BUILD/ram-transfer-unit.jsonl"
+python3 implementation/virtual_machine/home_storage_prepare.py \
+  --base-assets "$CXL_HOME_BASE" --assets "$CXL_LAB_ASSETS" \
+  --firecracker /absolute/path/to/current-patched-firecracker \
+  --shared-probe "$CXL_HOME_BUILD/shared-probe" \
+  --ram-transfer "$CXL_HOME_BUILD/ram-transfer" --payload-mib 64 --mutable-mib 16
+```
+
+Prepare는 `home_storage_probe.c`를 `gcc -std=c11 -O2 -static -Wall -Wextra -Werror`로 빌드한다.
+`--busybox /absolute/path/to/static-busybox`로 BusyBox를 명시할 수도 있다. `cpio`, `mke2fs`,
+`blkid`, `readelf`가 필요하며 host에 image를 mount하지 않는다. Manifest에는 source·binary·image와
+초기 파일의 SHA-256, ext4 UUID, compiler와 flags를 남긴다. 재준비할 때는 새 asset 경로를 사용한다.
+
+```bash
+taskset -c 0-5 python3 implementation/virtual_machine/lab.py start \
+  --vcpus 2 --memory-mib 4096 --cxl-mib 4096 --dax-guest --dax-4k \
+  --migration-network --network-backend tap --memory-backing-dir /dev/shm \
+  --home-storage-image "$CXL_LAB_ASSETS/storage.raw" \
+  --qemu /absolute/path/to/patched-qemu-system-x86_64
+taskset -c 0-5 python3 implementation/virtual_machine/home_storage_bench.py \
+  --cycles 3 --memory-mib 512 --vcpus 2
+# HOME_STORAGE_REPORT 출력의 경로를 기록한다. 실패한 경우에도 선택한 pair를 종료한다.
+python3 implementation/virtual_machine/lab.py stop
+export CXL_HOME_REPORT=/absolute/path/to/home-storage-output/report.json
+taskset -c 0-5 python3 implementation/virtual_machine/verify_home_storage.py \
+  "$CXL_HOME_REPORT" --full-patterns --negative-tests \
+  --out /absolute/path/to/home-storage-output/audit.json
+```
+
+`--cycles 1`은 짧은 기능 확인에 쓸 수 있다. 실행 pair는 재사용하지 않고 매번 새로 시작한다.
+Controller는 read/write/fsync, rename과 순서가 있는 journal, `MAP_SHARED` 파일, 계속 열린 FD와
+unlink 후 남은 FD의 내용·offset을 검사한다. Cold read의 guest block counter와 B의 NFS counter를
+함께 확인해 B에서만 NFS READ가 생기는지, remote fsync write가 NFS에 도달하는지 판별한다.
+마지막에는 원래 guest를 종료·unmount한 뒤 새 guest를 `home.audit=<generation>`으로 부팅하고,
+같은 disk를 `ro,noload,noatime`으로 읽어 저장된 내용을 검사한다. 이는 정상 종료 후 persistence
+검증이며 전원 장애나 journal recovery 검증은 아니다. 독립 verifier는 원시 receipt·VMA·state bytes·
+source fence와 파일 pattern을 다시 확인하며 `--negative-tests`는 증거의 메모리 사본만 변조한다.
+
+모든 QEMU가 종료된 뒤 실제 변경된 image도 보존해 검사할 수 있다. 아래 run 경로는 report의
+`config.home_storage_image.path`가 가리키는 `home-storage.raw`의 부모 디렉터리다.
+
+```bash
+export CXL_HOME_RUN=/absolute/path/to/run-containing-home-storage.raw
+e2fsck -fn "$CXL_HOME_RUN/home-storage.raw"
+debugfs -R "dump /sandbox.raw $CXL_HOME_RUN/sandbox-final.raw" "$CXL_HOME_RUN/home-storage.raw"
+e2fsck -fn "$CXL_HOME_RUN/sandbox-final.raw"
+sha256sum "$CXL_HOME_RUN/home-storage.raw" "$CXL_HOME_RUN/sandbox-final.raw"
+```
+
+`lab.py stop`은 해당 session의 VM과 임시 CXL backing을 정리하고 run의 로그·변경된 disk는 보존한다.
+실패 후에도 offline 검사 전에 `lab.py status`로 종료 여부를 확인한다. Heavy hash·pattern 검증은
+VM 실행이 끝난 후 수행한다. Dirty-page 연속성을 관측하기 위해 이 fixture는 guest ext4 `commit=600`,
+`dirty_writeback_centisecs=0`을 사용한다. Serial 제어와 전체 검증도 포함하므로 **정확성 시험이며
+latency benchmark가 아니다**. PML 증분 복사, pre-copy, MPTCP 연결 이동은 이 경로에 아직 통합하지 않았다.
+
+<a id="trace-ram-lifecycle"></a>
+
+## 실제 trace에서 DRAM→CXL→DRAM 실행
+
+기존 `trace_bench.py`의 기본값은 `--ram-lifecycle shared-cxl`이며 이전 실행 방법과 같다.
+`--ram-lifecycle home-roundtrip`을 선택하면 기록된 두 명령 경계에서 **A/DRAM → B/CXL → A/DRAM**으로
+옮긴다. 첫 경계는 source RAM snapshot을 CXL에 import하고, 두 번째 경계는 CXL을 A의 local tmpfs
+RAM file로 export한다. Source 종료·fence, 전체 byte 비교, 실제 VMA 확인과 demotion 후 CXL 덮어쓰기
+검증을 포함한다. 각 tier 전환의 `ram_transfer_bytes`에는 guest RAM 전체 크기가 기록된다.
+
+이 trace의 filesystem은 기존 **RO ext4 lower + guest tmpfs upper**다. Local/NFS backend 대조도 유지한다.
+따라서 persistent ext4 쓰기의 근거는 앞의 home storage 시험이며, trace에서는 실제 수정·빌드·FD 상태가
+RAM tier 변경을 거쳐 이어지는지를 검증한다. `home-roundtrip`은 `--state-transport dax-mailbox`가 필수이며
+최대 guest RAM은 2GiB다. L1 RAM은 guest RAM 두 배에 최소 1GiB 여유가 필요해 아래에서는 8GiB를 사용한다.
+
+```bash
+export CXL_LAB_SESSION=trace-home-new
+export CXL_LAB_ASSETS="$PWD/implementation/virtual_machine/.local/assets-trace-home-new"
+python3 implementation/virtual_machine/trace_prepare.py \
+  --source-repo /absolute/path/to/repository-with-traces-and-images \
+  --base-assets "$CXL_HOME_BASE" --assets "$CXL_LAB_ASSETS" \
+  --dependency-manifest "$CXL_NFS_OUT/manifest.json" \
+  --shared-probe "$CXL_HOME_BUILD/shared-probe" --ram-transfer "$CXL_HOME_BUILD/ram-transfer"
+taskset -c 0-5 python3 implementation/virtual_machine/lab.py start \
+  --vcpus 2 --memory-mib 8192 --cxl-mib 4096 --dax-guest --dax-4k \
+  --migration-network --network-backend tap --memory-backing-dir /dev/shm \
+  --storage-image "$CXL_LAB_ASSETS/storage.raw" \
+  --qemu /absolute/path/to/patched-qemu-system-x86_64
+taskset -c 0-5 python3 implementation/virtual_machine/trace_bench.py \
+  --state-transport dax-mailbox --ram-lifecycle home-roundtrip \
+  --cycles 3 --eviction-cycles 1 --memory-mib 2048 --vcpus 2 \
+  --host-cpus-a 0-2 --host-cpus-b 3-5
+# TRACE_REPORT 출력의 경로를 기록하고, 실패한 경우에도 이 session을 종료한다.
+python3 implementation/virtual_machine/lab.py stop
+python3 implementation/virtual_machine/verify_trace_results.py \
+  /absolute/path/to/trace-output/report.json --formal --artifacts \
+  --assets-dir "$CXL_LAB_ASSETS" --json-out /absolute/path/to/trace-output/audit.json
+```
+
+Trace prepare는 base asset에 들어 있는 Firecracker를 사용하므로 해당 base도 현재 패치로 준비해야 한다.
+`--ram-transfer`는 native helper를 L1의 `/lab/ram-transfer`에 넣고 binary/source hash를 manifest에 기록한다.
+Smoke는 앞 절처럼 Gin만 한 번 실행하고 verifier의 `--formal`을 생략한다. Verifier는 기존 serial·
+shared-CXL archive도 지원하며, 새 lifecycle에서는 RAM 복사량·source PID·VMA·poison receipt까지 검사한다.
+이 경로 역시 한 물리 host의 coherent 실험이다. Tier 변경의 stop-and-copy 비용과 serial controller
+시간을 기존 direct handoff의 µs/ms 수치와 합쳐 해석하지 않는다.
 
 ## 기존 측정값 읽는 법
 

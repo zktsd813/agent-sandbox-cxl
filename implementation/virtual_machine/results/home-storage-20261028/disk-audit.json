@@ -1,0 +1,934 @@
+{
+  "schema_version": 1,
+  "result": "passed",
+  "report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T045018Z-i3y0_2u5/home-storage-1793163019326669414/report.json",
+  "report_sha256": "7426759fcc88f544b9b7665a2a45b4884b3bacb2f7c95a1c020de407c2f2c504",
+  "disk": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T045018Z-i3y0_2u5/home-storage.raw",
+  "probe": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-home-storage-api-v4-20261028/home-storage-probe",
+  "evidence_dir": "/tmp/home-storage-final-api-disk-audit.json.evidence",
+  "shutdown": {
+    "mode": "live-host-stopped-lab",
+    "processes": {
+      "A": {
+        "pid": 2613907,
+        "expected_starttime": "302795781",
+        "reason": "missing",
+        "alive": false
+      },
+      "B": {
+        "pid": 2613908,
+        "expected_starttime": "302795781",
+        "reason": "missing",
+        "alive": false
+      }
+    },
+    "pid_namespace": "pid:[4026531836]",
+    "absent_paths": [
+      "/tmp/qvl-iikj69_p",
+      "/dev/shm/cxl-lab-06lzcitt",
+      "/dev/shm/cxl-lab-06lzcitt/cxl-memory.bin"
+    ]
+  },
+  "commands": [
+    {
+      "label": "outer-fsck",
+      "argv": [
+        "e2fsck",
+        "-f",
+        "-n",
+        "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T045018Z-i3y0_2u5/home-storage.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.00580582395195961,
+      "stdout": "000-outer-fsck.stdout",
+      "stdout_sha256": "ca3ae02edb3635c482ecaca57a6256f97f49e4ffa2821741b7a73322228908bf",
+      "stderr": "000-outer-fsck.stderr",
+      "stderr_sha256": "737b663434009c5b72ffb6bb537ec4119fc5399ec7416772978ca23c69255c89"
+    },
+    {
+      "label": "inner-extract",
+      "argv": [
+        "debugfs",
+        "-R",
+        "dump -p \"/sandbox.raw\" \"/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw\"",
+        "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T045018Z-i3y0_2u5/home-storage.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.2468487680889666,
+      "stdout": "001-inner-extract.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "001-inner-extract.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "inner-fsck",
+      "argv": [
+        "e2fsck",
+        "-f",
+        "-n",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.30275852885097265,
+      "stdout": "002-inner-fsck.stdout",
+      "stdout_sha256": "c48ed8186d03893a8a903735bdc5936d6ca481c30c05402cbd21153aaadd0d63",
+      "stderr": "002-inner-fsck.stderr",
+      "stderr_sha256": "737b663434009c5b72ffb6bb537ec4119fc5399ec7416772978ca23c69255c89"
+    },
+    {
+      "label": "inner-stats",
+      "argv": [
+        "debugfs",
+        "-R",
+        "stats",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.0017469548620283604,
+      "stdout": "003-inner-stats.stdout",
+      "stdout_sha256": "bddef8971f6cfc35f097028ebb1541638f7ee74ba66fd45220dfff2f65206be6",
+      "stderr": "003-inner-stats.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "inner-root-list",
+      "argv": [
+        "debugfs",
+        "-R",
+        "ls -p /",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.003133665770292282,
+      "stdout": "004-inner-root-list.stdout",
+      "stdout_sha256": "92ef72990da8794e09c276ab3f428e151c784cc0f2772137157e18e821257d8e",
+      "stderr": "004-inner-root-list.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "file-extract-cursor.bin",
+      "argv": [
+        "debugfs",
+        "-R",
+        "dump -p \"/cursor.bin\" \"/tmp/home-storage-final-api-disk-audit.json.evidence/files/cursor.bin\"",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.0016027898527681828,
+      "stdout": "005-file-extract-cursor.bin.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "005-file-extract-cursor.bin.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "file-extract-fixture",
+      "argv": [
+        "debugfs",
+        "-R",
+        "dump -p \"/fixture\" \"/tmp/home-storage-final-api-disk-audit.json.evidence/files/fixture\"",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.002076171338558197,
+      "stdout": "006-file-extract-fixture.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "006-file-extract-fixture.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "file-extract-generation",
+      "argv": [
+        "debugfs",
+        "-R",
+        "dump -p \"/generation\" \"/tmp/home-storage-final-api-disk-audit.json.evidence/files/generation\"",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.0014832247979938984,
+      "stdout": "007-file-extract-generation.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "007-file-extract-generation.stderr",
+      "stderr_sha256": "2eca857fbbf75b51381b5615f4688b7793d558cb0a48c6b16fb9afd827cc7b2d"
+    },
+    {
+      "label": "file-extract-journal.log",
+      "argv": [
+        "debugfs",
+        "-R",
+        "dump -p \"/journal.log\" \"/tmp/home-storage-final-api-disk-audit.json.evidence/files/journal.log\"",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.001832704059779644,
+      "stdout": "008-file-extract-journal.log.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "008-file-extract-journal.log.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "file-extract-mapped.bin",
+      "argv": [
+        "debugfs",
+        "-R",
+        "dump -p \"/mapped.bin\" \"/tmp/home-storage-final-api-disk-audit.json.evidence/files/mapped.bin\"",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.0014493800699710846,
+      "stdout": "009-file-extract-mapped.bin.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "009-file-extract-mapped.bin.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "file-extract-mutable.bin",
+      "argv": [
+        "debugfs",
+        "-R",
+        "dump -p \"/mutable.bin\" \"/tmp/home-storage-final-api-disk-audit.json.evidence/files/mutable.bin\"",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.022082524839788675,
+      "stdout": "010-file-extract-mutable.bin.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "010-file-extract-mutable.bin.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "file-extract-payload.bin",
+      "argv": [
+        "debugfs",
+        "-R",
+        "dump -p \"/payload.bin\" \"/tmp/home-storage-final-api-disk-audit.json.evidence/files/payload.bin\"",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.06770320096984506,
+      "stdout": "011-file-extract-payload.bin.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "011-file-extract-payload.bin.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "probe-audit",
+      "argv": [
+        "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-home-storage-api-v4-20261028/home-storage-probe",
+        "audit",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/files",
+        "12"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.14453428704291582,
+      "stdout": "012-probe-audit.stdout",
+      "stdout_sha256": "c7ca001afc52913b5bb8d5ffaf415b190c81388eacd4a2ee432f2cf3abd10cfc",
+      "stderr": "012-probe-audit.stderr",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "negative-copy-mutable.bin",
+      "argv": [
+        "cp",
+        "--reflink=auto",
+        "--sparse=always",
+        "--",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-b2hw3xsg/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.08294497709721327,
+      "stdout": "013-negative-copy-mutable.bin.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "013-negative-copy-mutable.bin.stderr",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "negative-bmap-mutable.bin",
+      "argv": [
+        "debugfs",
+        "-R",
+        "bmap \"/mutable.bin\" 4095",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.003594357054680586,
+      "stdout": "014-negative-bmap-mutable.bin.stdout",
+      "stdout_sha256": "56ffabfa61cc5bddeaec3b86ca50bbfcc27906c2be1a407b8aa24c9f3e19fe1d",
+      "stderr": "014-negative-bmap-mutable.bin.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "negative-extract-mutable.bin",
+      "argv": [
+        "debugfs",
+        "-R",
+        "dump -p \"/mutable.bin\" \"/tmp/home-storage-final-api-disk-audit.json.evidence/negative-b2hw3xsg/files/mutable.bin\"",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-b2hw3xsg/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.02270856872200966,
+      "stdout": "015-negative-extract-mutable.bin.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "015-negative-extract-mutable.bin.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "negative-probe-mutable.bin",
+      "argv": [
+        "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-home-storage-api-v4-20261028/home-storage-probe",
+        "audit",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-b2hw3xsg/files",
+        "12"
+      ],
+      "exit_code": 1,
+      "elapsed_s": 0.029480268713086843,
+      "stdout": "016-negative-probe-mutable.bin.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "016-negative-probe-mutable.bin.stderr",
+      "stderr_sha256": "d947b2740590c742636f3dffe6924f65f31ed56528883912b784ab9345c0c9b8"
+    },
+    {
+      "label": "negative-copy-mapped.bin",
+      "argv": [
+        "cp",
+        "--reflink=auto",
+        "--sparse=always",
+        "--",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-69xzwftt/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.07821841072291136,
+      "stdout": "017-negative-copy-mapped.bin.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "017-negative-copy-mapped.bin.stderr",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "negative-bmap-mapped.bin",
+      "argv": [
+        "debugfs",
+        "-R",
+        "bmap \"/mapped.bin\" 0",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.004007377661764622,
+      "stdout": "018-negative-bmap-mapped.bin.stdout",
+      "stdout_sha256": "85063905063e0adf4a5ca1dae7b490f4f1d273b6be8814720a24a1476bd57312",
+      "stderr": "018-negative-bmap-mapped.bin.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "negative-extract-mapped.bin",
+      "argv": [
+        "debugfs",
+        "-R",
+        "dump -p \"/mapped.bin\" \"/tmp/home-storage-final-api-disk-audit.json.evidence/negative-69xzwftt/files/mapped.bin\"",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-69xzwftt/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.0017281509935855865,
+      "stdout": "019-negative-extract-mapped.bin.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "019-negative-extract-mapped.bin.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "negative-probe-mapped.bin",
+      "argv": [
+        "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-home-storage-api-v4-20261028/home-storage-probe",
+        "audit",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-69xzwftt/files",
+        "12"
+      ],
+      "exit_code": 1,
+      "elapsed_s": 0.03240482788532972,
+      "stdout": "020-negative-probe-mapped.bin.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "020-negative-probe-mapped.bin.stderr",
+      "stderr_sha256": "d947b2740590c742636f3dffe6924f65f31ed56528883912b784ab9345c0c9b8"
+    },
+    {
+      "label": "negative-copy-payload.bin",
+      "argv": [
+        "cp",
+        "--reflink=auto",
+        "--sparse=always",
+        "--",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-h2z_6nyz/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.07793456828221679,
+      "stdout": "021-negative-copy-payload.bin.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "021-negative-copy-payload.bin.stderr",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "negative-bmap-payload.bin",
+      "argv": [
+        "debugfs",
+        "-R",
+        "bmap \"/payload.bin\" 16383",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.004099935758858919,
+      "stdout": "022-negative-bmap-payload.bin.stdout",
+      "stdout_sha256": "ebf4add0b9498043321b2f7f662ef5640d9a272cc56f1661266004e39f8784c8",
+      "stderr": "022-negative-bmap-payload.bin.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "negative-extract-payload.bin",
+      "argv": [
+        "debugfs",
+        "-R",
+        "dump -p \"/payload.bin\" \"/tmp/home-storage-final-api-disk-audit.json.evidence/negative-h2z_6nyz/files/payload.bin\"",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-h2z_6nyz/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.06754211103543639,
+      "stdout": "023-negative-extract-payload.bin.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "023-negative-extract-payload.bin.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "negative-probe-payload.bin",
+      "argv": [
+        "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-home-storage-api-v4-20261028/home-storage-probe",
+        "audit",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-h2z_6nyz/files",
+        "12"
+      ],
+      "exit_code": 1,
+      "elapsed_s": 0.1441970099695027,
+      "stdout": "024-negative-probe-payload.bin.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "024-negative-probe-payload.bin.stderr",
+      "stderr_sha256": "d947b2740590c742636f3dffe6924f65f31ed56528883912b784ab9345c0c9b8"
+    },
+    {
+      "label": "negative-copy-cursor.bin",
+      "argv": [
+        "cp",
+        "--reflink=auto",
+        "--sparse=always",
+        "--",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-bsk83j48/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.07696971110999584,
+      "stdout": "025-negative-copy-cursor.bin.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "025-negative-copy-cursor.bin.stderr",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "negative-bmap-cursor.bin",
+      "argv": [
+        "debugfs",
+        "-R",
+        "bmap \"/cursor.bin\" 15",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.003997881896793842,
+      "stdout": "026-negative-bmap-cursor.bin.stdout",
+      "stdout_sha256": "970f11106d799991d1e08a8e8a1698a02d9b021b7cc03ae6c6c3c12ad291f497",
+      "stderr": "026-negative-bmap-cursor.bin.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "negative-extract-cursor.bin",
+      "argv": [
+        "debugfs",
+        "-R",
+        "dump -p \"/cursor.bin\" \"/tmp/home-storage-final-api-disk-audit.json.evidence/negative-bsk83j48/files/cursor.bin\"",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-bsk83j48/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.0026046540588140488,
+      "stdout": "027-negative-extract-cursor.bin.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "027-negative-extract-cursor.bin.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "negative-probe-cursor.bin",
+      "argv": [
+        "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-home-storage-api-v4-20261028/home-storage-probe",
+        "audit",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-bsk83j48/files",
+        "12"
+      ],
+      "exit_code": 1,
+      "elapsed_s": 0.14280216582119465,
+      "stdout": "028-negative-probe-cursor.bin.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "028-negative-probe-cursor.bin.stderr",
+      "stderr_sha256": "d947b2740590c742636f3dffe6924f65f31ed56528883912b784ab9345c0c9b8"
+    },
+    {
+      "label": "negative-copy-journal.log",
+      "argv": [
+        "cp",
+        "--reflink=auto",
+        "--sparse=always",
+        "--",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-n64ej9p9/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.07766581792384386,
+      "stdout": "029-negative-copy-journal.log.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "029-negative-copy-journal.log.stderr",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "negative-bmap-journal.log",
+      "argv": [
+        "debugfs",
+        "-R",
+        "bmap \"/journal.log\" 0",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.0038860938511788845,
+      "stdout": "030-negative-bmap-journal.log.stdout",
+      "stdout_sha256": "6ff4be717c949a7fecfdc75a846ad11ea8ad17e8d1a29a2a54aa41f11a382b29",
+      "stderr": "030-negative-bmap-journal.log.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "negative-extract-journal.log",
+      "argv": [
+        "debugfs",
+        "-R",
+        "dump -p \"/journal.log\" \"/tmp/home-storage-final-api-disk-audit.json.evidence/negative-n64ej9p9/files/journal.log\"",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-n64ej9p9/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.0022708000615239143,
+      "stdout": "031-negative-extract-journal.log.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "031-negative-extract-journal.log.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "negative-probe-journal.log",
+      "argv": [
+        "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-home-storage-api-v4-20261028/home-storage-probe",
+        "audit",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-n64ej9p9/files",
+        "12"
+      ],
+      "exit_code": 1,
+      "elapsed_s": 0.0006828359328210354,
+      "stdout": "032-negative-probe-journal.log.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "032-negative-probe-journal.log.stderr",
+      "stderr_sha256": "32cd461054cd7762071cd0b622ca13e4966a27f495768374b1808bf70639bfba"
+    },
+    {
+      "label": "negative-copy-generation",
+      "argv": [
+        "cp",
+        "--reflink=auto",
+        "--sparse=always",
+        "--",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-gzkkv3jv/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.07846223702654243,
+      "stdout": "033-negative-copy-generation.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "033-negative-copy-generation.stderr",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "negative-bmap-generation",
+      "argv": [
+        "debugfs",
+        "-R",
+        "bmap \"/generation\" 0",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.0035355971194803715,
+      "stdout": "034-negative-bmap-generation.stdout",
+      "stdout_sha256": "be994ca97be6778dec76953c6d9fcd55ca5ad26793cad6f8325fa4e2a75cecea",
+      "stderr": "034-negative-bmap-generation.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    },
+    {
+      "label": "negative-extract-generation",
+      "argv": [
+        "debugfs",
+        "-R",
+        "dump -p \"/generation\" \"/tmp/home-storage-final-api-disk-audit.json.evidence/negative-gzkkv3jv/files/generation\"",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-gzkkv3jv/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.001785301137715578,
+      "stdout": "035-negative-extract-generation.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "035-negative-extract-generation.stderr",
+      "stderr_sha256": "adee72151cdb59d34c91810a5f440ff8e6a42df57dedc81f06aafbcd23fc78fb"
+    },
+    {
+      "label": "negative-probe-generation",
+      "argv": [
+        "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-home-storage-api-v4-20261028/home-storage-probe",
+        "audit",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-gzkkv3jv/files",
+        "12"
+      ],
+      "exit_code": 1,
+      "elapsed_s": 0.0005647880025207996,
+      "stdout": "036-negative-probe-generation.stdout",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr": "036-negative-probe-generation.stderr",
+      "stderr_sha256": "9b452298f706185067aea7507bda1dac9cb77e18a5009ba5e5abb804058d879b"
+    }
+  ],
+  "scope": "Retained disk after clean guest and host unmount; no host mounts; not power-loss durability",
+  "negative_cases": [
+    {
+      "file": "mutable.bin",
+      "result": "rejected",
+      "file_offset": 16777215,
+      "image_offset": 43188223,
+      "before_byte": "c1",
+      "after_byte": "c0",
+      "mutated_image_sha256": "d88187d6ac6b67184eda8190c606997af88f731749606a8e05d638e9f2ad17a3",
+      "mutated_file_sha256": "943154f5c458d2ae360c06323e6f3cb92e90034de99b077528758303358027c0",
+      "probe": {
+        "label": "negative-probe-mutable.bin",
+        "argv": [
+          "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-home-storage-api-v4-20261028/home-storage-probe",
+          "audit",
+          "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-b2hw3xsg/files",
+          "12"
+        ],
+        "exit_code": 1,
+        "elapsed_s": 0.029480268713086843,
+        "stdout": "016-negative-probe-mutable.bin.stdout",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "016-negative-probe-mutable.bin.stderr",
+        "stderr_sha256": "d947b2740590c742636f3dffe6924f65f31ed56528883912b784ab9345c0c9b8"
+      },
+      "python_oracle": {
+        "word": 2097151,
+        "expected": "c19fb8ded5e95b40",
+        "observed": "c09fb8ded5e95b40"
+      },
+      "temporary_copy_removed": true
+    },
+    {
+      "file": "mapped.bin",
+      "result": "rejected",
+      "file_offset": 4095,
+      "image_offset": 26411007,
+      "before_byte": "43",
+      "after_byte": "42",
+      "mutated_image_sha256": "a962ef84a264501cf8bd977ce9086f2c54b52d49190186c02a12d607d54b8076",
+      "mutated_file_sha256": "ce9c19864adc1888740ead5a1feea958de87ee3e36466da94ada776a827c92d4",
+      "probe": {
+        "label": "negative-probe-mapped.bin",
+        "argv": [
+          "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-home-storage-api-v4-20261028/home-storage-probe",
+          "audit",
+          "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-69xzwftt/files",
+          "12"
+        ],
+        "exit_code": 1,
+        "elapsed_s": 0.03240482788532972,
+        "stdout": "020-negative-probe-mapped.bin.stdout",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "020-negative-probe-mapped.bin.stderr",
+        "stderr_sha256": "d947b2740590c742636f3dffe6924f65f31ed56528883912b784ab9345c0c9b8"
+      },
+      "python_oracle": {
+        "word": 511,
+        "expected": "438c5efccc4add0e",
+        "observed": "428c5efccc4add0e"
+      },
+      "temporary_copy_removed": true
+    },
+    {
+      "file": "payload.bin",
+      "result": "rejected",
+      "file_offset": 67108863,
+      "image_offset": 110297087,
+      "before_byte": "7f",
+      "after_byte": "7e",
+      "mutated_image_sha256": "b8c0ae9eb65a6ab4a884352cd34a990c4a1284cb6f968e6a3bd23e8278c1f2a1",
+      "mutated_file_sha256": "6033de49fee64531fd06a55ddff16b740f20a32a3d7a7dd049572310db109716",
+      "probe": {
+        "label": "negative-probe-payload.bin",
+        "argv": [
+          "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-home-storage-api-v4-20261028/home-storage-probe",
+          "audit",
+          "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-h2z_6nyz/files",
+          "12"
+        ],
+        "exit_code": 1,
+        "elapsed_s": 0.1441970099695027,
+        "stdout": "024-negative-probe-payload.bin.stdout",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "024-negative-probe-payload.bin.stderr",
+        "stderr_sha256": "d947b2740590c742636f3dffe6924f65f31ed56528883912b784ab9345c0c9b8"
+      },
+      "python_oracle": {
+        "word": 8388607,
+        "expected": "7f9270e090e5fe9a",
+        "observed": "7e9270e090e5fe9a"
+      },
+      "temporary_copy_removed": true
+    },
+    {
+      "file": "cursor.bin",
+      "result": "rejected",
+      "file_offset": 65535,
+      "image_offset": 26398719,
+      "before_byte": "dd",
+      "after_byte": "dc",
+      "mutated_image_sha256": "b8e99fd4e74242062af387e57a4d412902a3c350ba08f62332d8d7ac3c5862e2",
+      "mutated_file_sha256": "fcc405a016a836678020c9817be162b8e9c3b8ff98325005cf3fad91aab3864d",
+      "probe": {
+        "label": "negative-probe-cursor.bin",
+        "argv": [
+          "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-home-storage-api-v4-20261028/home-storage-probe",
+          "audit",
+          "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-bsk83j48/files",
+          "12"
+        ],
+        "exit_code": 1,
+        "elapsed_s": 0.14280216582119465,
+        "stdout": "028-negative-probe-cursor.bin.stdout",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "028-negative-probe-cursor.bin.stderr",
+        "stderr_sha256": "d947b2740590c742636f3dffe6924f65f31ed56528883912b784ab9345c0c9b8"
+      },
+      "python_oracle": {
+        "word": 8191,
+        "expected": "dde40af2a6860c0b",
+        "observed": "dce40af2a6860c0b"
+      },
+      "temporary_copy_removed": true
+    },
+    {
+      "file": "journal.log",
+      "result": "rejected",
+      "file_offset": 157,
+      "image_offset": 110362781,
+      "before_byte": "32",
+      "after_byte": "33",
+      "mutated_image_sha256": "73be2b46b0dc8b1b42a5b2732bd0c303945523d6afb054813ea4117cfc67ca1c",
+      "mutated_file_sha256": "3588301f86f1e5316e67a775aac5a0335cae04ac26acf5ee411dc23fcc801195",
+      "probe": {
+        "label": "negative-probe-journal.log",
+        "argv": [
+          "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-home-storage-api-v4-20261028/home-storage-probe",
+          "audit",
+          "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-n64ej9p9/files",
+          "12"
+        ],
+        "exit_code": 1,
+        "elapsed_s": 0.0006828359328210354,
+        "stdout": "032-negative-probe-journal.log.stdout",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "032-negative-probe-journal.log.stderr",
+        "stderr_sha256": "32cd461054cd7762071cd0b622ca13e4966a27f495768374b1808bf70639bfba"
+      },
+      "python_oracle": {
+        "expected_text": "generation=1\ngeneration=2\ngeneration=3\ngeneration=4\ngeneration=5\ngeneration=6\ngeneration=7\ngeneration=8\ngeneration=9\ngeneration=10\ngeneration=11\ngeneration=12\n",
+        "observed_hex": "67656e65726174696f6e3d310a67656e65726174696f6e3d320a67656e65726174696f6e3d330a67656e65726174696f6e3d340a67656e65726174696f6e3d350a67656e65726174696f6e3d360a67656e65726174696f6e3d370a67656e65726174696f6e3d380a67656e65726174696f6e3d390a67656e65726174696f6e3d31300a67656e65726174696f6e3d31310a67656e65726174696f6e3d31330a"
+      },
+      "temporary_copy_removed": true
+    },
+    {
+      "file": "generation",
+      "result": "rejected",
+      "file_offset": 0,
+      "image_offset": 136323072,
+      "before_byte": "31",
+      "after_byte": "32",
+      "mutated_image_sha256": "b3e8668204bd98e0d91a36826aafadfdce4041f0d0999f7bad07194223a041f5",
+      "mutated_file_sha256": "f14b4987904bcb5814e4459a057ed4d20f58a633152288a761214dcd28780b56",
+      "probe": {
+        "label": "negative-probe-generation",
+        "argv": [
+          "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-home-storage-api-v4-20261028/home-storage-probe",
+          "audit",
+          "/tmp/home-storage-final-api-disk-audit.json.evidence/negative-gzkkv3jv/files",
+          "12"
+        ],
+        "exit_code": 1,
+        "elapsed_s": 0.0005647880025207996,
+        "stdout": "036-negative-probe-generation.stdout",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "036-negative-probe-generation.stderr",
+        "stderr_sha256": "9b452298f706185067aea7507bda1dac9cb77e18a5009ba5e5abb804058d879b"
+      },
+      "python_oracle": {
+        "expected_text": "12\n",
+        "observed_hex": "32320a"
+      },
+      "temporary_copy_removed": true
+    }
+  ],
+  "probe_sha256": "e8dfcc754ccfabd55ca04c841ddf94171e36e72a480920ea0555ec6d5bd6edcb",
+  "outer": {
+    "bytes": 218103808,
+    "sha256": "77677e78f88d9772e610d2bb99dd31bbf81b7cf34810f66b53e21266f3956781",
+    "initial_sha256": "4dc92913dd7ad886c7e6c795d5122db57ade7d18ce2df5ce1d4df463f2d4c085",
+    "fsck": {
+      "label": "outer-fsck",
+      "argv": [
+        "e2fsck",
+        "-f",
+        "-n",
+        "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261028T045018Z-i3y0_2u5/home-storage.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.00580582395195961,
+      "stdout": "000-outer-fsck.stdout",
+      "stdout_sha256": "ca3ae02edb3635c482ecaca57a6256f97f49e4ffa2821741b7a73322228908bf",
+      "stderr": "000-outer-fsck.stderr",
+      "stderr_sha256": "737b663434009c5b72ffb6bb537ec4119fc5399ec7416772978ca23c69255c89"
+    }
+  },
+  "inner": {
+    "file": "sandbox.raw",
+    "bytes": 150994944,
+    "sha256": "b31b697f4ebc55e6a2f1087aa3b427422e2853c7611def43cf2c43d57d2fce9e",
+    "fsck": {
+      "label": "inner-fsck",
+      "argv": [
+        "e2fsck",
+        "-f",
+        "-n",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.30275852885097265,
+      "stdout": "002-inner-fsck.stdout",
+      "stdout_sha256": "c48ed8186d03893a8a903735bdc5936d6ca481c30c05402cbd21153aaadd0d63",
+      "stderr": "002-inner-fsck.stderr",
+      "stderr_sha256": "737b663434009c5b72ffb6bb537ec4119fc5399ec7416772978ca23c69255c89"
+    },
+    "uuid": "ce2545b3-8711-48a2-9194-708f22bf471c",
+    "block_size": 4096,
+    "stats": {
+      "label": "inner-stats",
+      "argv": [
+        "debugfs",
+        "-R",
+        "stats",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/sandbox.raw"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.0017469548620283604,
+      "stdout": "003-inner-stats.stdout",
+      "stdout_sha256": "bddef8971f6cfc35f097028ebb1541638f7ee74ba66fd45220dfff2f65206be6",
+      "stderr": "003-inner-stats.stderr",
+      "stderr_sha256": "c0eda8e792b06ab4531f47cc421ca68489490dd5a9aa7c1eeae93b4d3193ef44"
+    }
+  },
+  "files": {
+    "cursor.bin": {
+      "bytes": 65536,
+      "sha256": "99b83a2d9a0380a61d3d1a0741f0f86e4e8f5eca4ef88d43b2d11671443dd65b"
+    },
+    "fixture": {
+      "bytes": 34,
+      "sha256": "88d6d2d2b58a57b62fc053a5fcc91febd37c3ff5c4d3faf22deab016ed617e15"
+    },
+    "generation": {
+      "bytes": 3,
+      "sha256": "a1fb50e6c86fae1679ef3351296fd6713411a08cf8dd1790a4fd05fae8688164"
+    },
+    "journal.log": {
+      "bytes": 159,
+      "sha256": "643970bfba74257b8e8c64b4638c3162dc2ee48b39828c05ead83b692b3e5adb"
+    },
+    "mapped.bin": {
+      "bytes": 4096,
+      "sha256": "c55e0627bbb2b1423b2da8c084ded5479f20fb0141d8eae22964186f4b15671b"
+    },
+    "mutable.bin": {
+      "bytes": 16777216,
+      "sha256": "ea0301b19816c8c0d49a834ae9305b0e5c3f9468cad5909becb647ece5a022a7"
+    },
+    "payload.bin": {
+      "bytes": 67108864,
+      "sha256": "a263d9c3602fa98c55950a3549bbac676af03837c6571a5a3af642336741cff2"
+    }
+  },
+  "generation": 12,
+  "journal_lines": 12,
+  "probe_audit": {
+    "command": {
+      "label": "probe-audit",
+      "argv": [
+        "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-home-storage-api-v4-20261028/home-storage-probe",
+        "audit",
+        "/tmp/home-storage-final-api-disk-audit.json.evidence/files",
+        "12"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.14453428704291582,
+      "stdout": "012-probe-audit.stdout",
+      "stdout_sha256": "c7ca001afc52913b5bb8d5ffaf415b190c81388eacd4a2ee432f2cf3abd10cfc",
+      "stderr": "012-probe-audit.stderr",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "receipt": {
+      "event": "home_audit",
+      "boot_id": "bb266dab-144e-46f5-99e6-ce56c7c5b71e",
+      "generation": 12,
+      "mutable_bytes": 16777216,
+      "payload_bytes": 67108864,
+      "mutable_hash": "360ee99c0c9ea181",
+      "mapped_hash": "5b0b5515ce0b29d8",
+      "payload_hash": "44f9ddb1cd40a0d0",
+      "cursor_hash": "a0f86b36f1b45347",
+      "ok": true
+    }
+  },
+  "python_oracle": {
+    "mutable.bin": {
+      "bytes": 16777216,
+      "words": 2097152,
+      "fnv1a64": "360ee99c0c9ea181"
+    },
+    "mapped.bin": {
+      "bytes": 4096,
+      "words": 512,
+      "fnv1a64": "5b0b5515ce0b29d8"
+    },
+    "payload.bin": {
+      "bytes": 67108864,
+      "words": 8388608,
+      "fnv1a64": "44f9ddb1cd40a0d0"
+    },
+    "cursor.bin": {
+      "bytes": 65536,
+      "words": 8192,
+      "fnv1a64": "a0f86b36f1b45347"
+    }
+  },
+  "pattern_words_checked": 10494464,
+  "pattern_bytes_checked": 83955712,
+  "original_images_unchanged": true,
+  "completed_at_utc": "2026-10-28T04:53:40.071923+00:00",
+  "archive_note": "Keep one canonical outer disk plus this script, measured probe, report and logs; extraction and corruption cases are reproducible without archiving duplicate files/images."
+}
