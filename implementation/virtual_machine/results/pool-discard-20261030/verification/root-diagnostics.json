@@ -1,0 +1,16 @@
+{
+  "trace_parser_tests": 12,
+  "result": "passed",
+  "source_sha256": {
+    "pool_cow_trace.py": "f9297bae2266ef0dc3b17b3229fb226c468d4a9fe6a1544b90276bb0510711d2",
+    "test_pool_cow_trace.py": "e9da8b08280dfc7d3829792e43cc5e68188fbca24306bc97e09bbd424c277f3e",
+    "pool_cow_latency.c": "8ddf06ae369adf929875c5e0fb9f33e5aa7503593cca94f9fc8340839e957909"
+  },
+  "scope": "Parser rejection tests and real CRLF regression. Live trace results are recorded separately.",
+  "microprobe_build": {
+    "command": "gcc -std=c11 -O2 -static -Wall -Wextra -Werror pool_cow_latency.c -o /tmp/pool-cow-latency-verification",
+    "compiler": "gcc (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0",
+    "binary_sha256": "d10354e472e11ce4da2f176b04610b7f3c98ebe09017b9dab5f27e2f20ddd06d",
+    "separate_rebuild_byte_identical": true
+  }
+}

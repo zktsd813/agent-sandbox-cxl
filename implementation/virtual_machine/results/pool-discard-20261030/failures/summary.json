@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "classification": "failed_pilots_excluded_from_formal_performance",
+  "pilots": [
+    {
+      "id": "pilot1",
+      "analysis": "pilot1/failure-analysis.json",
+      "archive": "pilot1-evidence.tar.xz",
+      "classification": "failed_pilot_not_formal_performance",
+      "cause": "CRLF serial receipt did not match the anchored vCPU-thread regex used by that measured source.",
+      "saved_samples": 3,
+      "profile_error": "ValueError('no profiled vCPU identity')",
+      "raw_receipt": "baseline/0538-cow-profile-setup.txt",
+      "source": "measured-sources/pool_cow_trace.py",
+      "original_regex_matches": [],
+      "CRLF_aware_exact_line_matches": [
+        268,
+        269
+      ],
+      "interpretation": "Three completed baseline samples remain raw failed-attempt evidence; no values enter the formal performance comparison."
+    },
+    {
+      "id": "pilot2",
+      "analysis": "pilot2/failure-analysis.json",
+      "archive": "pilot2-evidence.tar.xz",
+      "classification": "failed_pilot_not_formal_performance",
+      "cause": "A 224MiB anonymous allocation did not force enough originally shared GPAs to be reused. The >=128MiB physical-page overlap check failed rather than accepting aggregate allocation size as evidence.",
+      "saved_samples": 0,
+      "anon_mib": 224,
+      "original_cache_pages": 40960,
+      "host_detached_original_pages": 40960,
+      "guest_acked_original_pages": 40960,
+      "no_copy_host_batches": 13,
+      "actual_reused_original_pages": 3072,
+      "changed_reused_pages": 3072,
+      "actual_reused_mib": 12.0,
+      "required_reused_mib": 128,
+      "raw_files": [
+        "0215-pfn-values.bin",
+        "0239-discard-events.bin",
+        "0243-guest-report-trace.bin",
+        "0244-detached-target-gpas.txt",
+        "0265-anon-pfn-values.bin"
+      ],
+      "interpretation": "The protocol detached and acknowledged the whole 160MiB original set, but only 12MiB entered the measured anonymous workload. This is insufficient end-to-end reuse coverage, not a reported remap/ACK failure. Raw timings are excluded from formal results.",
+      "follow_up": "A separately archived stopped memory smoke used a measured safe 400MiB allocation, reused/changed 38,611 original pages (150.82421875MiB), and informed the fixed 400MiB formal workload."
+    },
+    {
+      "id": "pilot3",
+      "analysis": "pilot3/failure-analysis.json",
+      "archive": "pilot3-evidence.tar.xz",
+      "classification": "failed_and_independent_audit_rejected_pilot_not_formal_performance",
+      "suite_result": "failed",
+      "anon_mib": 400,
+      "both_arms_same_suite_sources": true,
+      "firecracker_sha256": "a4d6f75f0cad5885009097221e464952a1706e3d1792826c14a0dfa84c8a6023",
+      "reporting": {
+        "original_controller_result_preserved": "passed",
+        "completed_controller_samples": 3,
+        "independent_result": "rejected",
+        "reason": "guest event fields changed",
+        "finding": "A guest serial trace record was interrupted by native POOL_DISCARD_JSON output in the shared stdout log. A clean ftrace ring does not establish intact export.",
+        "corrupted_capture": "reporting/0493-guest-report-trace.bin",
+        "independent_rejection": "independent-reporting-rejection.json",
+        "corrective_action": "Separate the VMM logger via --log-path vmm.log, guest serial stdout via fc.log, and stderr via stderr.log on each boot/restore. stdout/stderr redirection alone is insufficient because the default logger writes stdout."
+      },
+      "baseline": {
+        "original_controller_result_preserved": "failed",
+        "completed_controller_samples": 3,
+        "error": "ValueError('no write-protect fault calls observed')",
+        "raw_profile": [
+          "baseline/0546-cow-profile-setup.txt",
+          "baseline/0549-cow-profile-stop.txt",
+          "baseline/0550-cow-profile-trace.bin",
+          "baseline/0551-cow-profile-stats.bin",
+          "baseline/0552-cow-profile-profile.bin"
+        ],
+        "interpretation": "The diagnostic had no matched do_wp_page calls and was correctly rejected. This does not establish that no CoW occurred.",
+        "source_hypothesis_not_runtime_proven": "The caller re-admits/remaps canonical pages but does not read them after admission and before profiling. First-write faults can take do_cow_fault and the custom DAX vmf->cow_page copy path instead of do_wp_page. Root is validating the profiler separately."
+      },
+      "preservation": "Original suite and arm statuses and bytes were not rewritten. Both stopped outer runs, receipts and measured sources are archived. No timing from either arm enters formal performance."
+    }
+  ]
+}

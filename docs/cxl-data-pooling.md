@@ -16,7 +16,7 @@
 | 쓰기 격리 | 수정한 devDAX 경로가 CPU 및 host HVA 쓰기를 private DRAM 페이지로 CoW |
 | 이전 | 논리적 guest RAM 전체를 snapshot 파일로 구체화한 뒤 DRAM/CXL에 복원 |
 
-Guest kernel에 pooling 기능이나 filesystem lookup hook을 추가하지 않는다. Guest probe는 파일 읽기·쓰기·cache residency 측정만 수행하며, pooling controller에 inode나 folio 포인터를 제공하지 않는다.
+초기 pooling 구현은 guest kernel에 pooling 기능이나 filesystem lookup hook을 추가하지 않는다. Guest probe는 파일 읽기·쓰기·cache residency 측정만 수행하며, pooling controller에 inode나 folio 포인터를 제공하지 않는다. 후속 [페이지 폐기 알림](cxl-page-discard.md)은 표준 Linux free-page reporting을 활성화하고 검증용 tracepoint를 추가한다. 이 경로도 inode·folio metadata를 공유하지 않는다.
 
 현재는 **정지 시점의 admission**이다. 매 virtio-blk 요청에서 Bloom을 조회하여 storage read를 건너뛰는 온라인 경로는 구현하지 않았다. 일반 읽기는 먼저 image에서 완료되고, 관측한 후보를 다음 admission에서 공유한다. 공유를 설정한 뒤의 guest cache hit은 해당 VM의 기존 page-cache 경로와 GPA를 그대로 사용한다.
 
@@ -85,7 +85,7 @@ Firecracker의 `PoolCache` action은 다음을 확인한다.
 - 현재 hint의 key와 4KiB 전체 바이트를 확인한다. 재사용된 GPA는 mismatch로 건너뛴다.
 - `MAP_FIXED` 실패로 주소 공간이 손상되었을 가능성이 있으면 그 프로세스의 resume·snapshot·추가 admission을 차단한다.
 
-Balloon, virtio-mem, pmem 장치는 이 prototype에서 거부한다. 해당 장치의 discard·hotplug 동작을 새 backing 구조와 통합하지 않았기 때문이다. Canonical frame의 불변성과 전체 수명은 신뢰하는 실험 controller의 책임이다. Driver 자체가 모든 privileged host writer를 막는 보안 경계는 아니다.
+일반 balloon inflation, virtio-mem, pmem 장치는 이 prototype에서 거부한다. 후속 [페이지 폐기 알림](cxl-page-discard.md)에서는 `FC_POOL_DISCARD=1`일 때 target 0의 reporting-only balloon만 허용한다. 일반적인 메모리 반환·hotplug 동작까지 새 backing 구조와 통합한 것은 아니다. Canonical frame의 불변성과 전체 수명은 신뢰하는 실험 controller의 책임이다. Driver 자체가 모든 privileged host writer를 막는 보안 경계는 아니다.
 
 이 실험의 Firecracker는 전용 L1 안에서 `--no-seccomp`로 실행한다. Runtime admission이 여는 plan/report/sysfs와 새 mapping 작업을 기존 production seccomp 정책에 통합한 것은 아니다. 실험에서의 데이터 격리 검증과 production sandbox 보안 설정의 검증을 구분한다.
 

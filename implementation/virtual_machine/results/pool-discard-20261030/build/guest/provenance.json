@@ -1,0 +1,101 @@
+{
+  "schema": "pool-discard-guest-build-provenance-v1",
+  "result": "passed",
+  "vendor_archive": {
+    "archive": "/home/ijkim/dcd-v3-2023-10-30.zip",
+    "archive_sha256": "5b29096b3c7e4d9dceeb431d5ff35cd549159524c055301d1e5d4cb6b5819975",
+    "archive_root": "linux-kernel-dcd-v3-2023-10-30",
+    "entries": 87081,
+    "uncompressed_bytes": 1353567505,
+    "symlinks": 63,
+    "base_version": "6.6.0-rc6",
+    "local_patch": "cxl-static-capacity.patch",
+    "modified_source_files": [
+      "drivers/cxl/core/hdm.c",
+      "drivers/cxl/core/mbox.c"
+    ],
+    "patch_order": [
+      "cxl-static-capacity.patch",
+      "kvm-dax-state.patch"
+    ],
+    "source_checkout_in_git": false,
+    "archive_requirement": "Obtain the supplied archive separately, verify archive_sha256, and extract archive_root into implementation/linux; build.sh applies both patches."
+  },
+  "vendor_archive_actual_sha256": "5b29096b3c7e4d9dceeb431d5ff35cd549159524c055301d1e5d4cb6b5819975",
+  "base_relevant_sources_match_vendor": true,
+  "base_source_hashes": {
+    "drivers/virtio/virtio_balloon.c": "f188b41e684ed870a76c3a98f2f19906f87b928582fa46564c500493115c2b53",
+    "mm/page_reporting.c": "64b76f913a3247ec09bdadd946f5768e261858dd3f299a205a3d615cf2762649"
+  },
+  "compiled_source_hashes": {
+    "drivers/virtio/virtio_balloon.c": "6eb65444683a89a1c5f7959bc11edbce4ce055512b5dfb23c26d026fd7289c1a",
+    "mm/page_reporting.c": "64b76f913a3247ec09bdadd946f5768e261858dd3f299a205a3d615cf2762649",
+    "include/trace/events/pool_discard.h": "aa232a41855aa47417c5dae4faae096cfce65f54ef7a989b9563e8f3b55d3e18"
+  },
+  "trace_patch_apply_matches_compiled_sources": true,
+  "trace_patch_sha256": "211468b6a9ea3a18eeb51d84299ee8db9de6721f58905177b62ba3b8178c6296",
+  "base_config_sha256": "793c44048f74d4c2e29cca2a33021f2ff3a50876f7436e590ab2b9019fba31b6",
+  "config_sha256": "08d8c9ecf79f63a2b30470466de70c5285f4b73fb8cf3f5bbe62a2c5f2bbf127",
+  "kernel_sha256": "ea81dc49b729e8d5111765c11ace1a11bd53db59f75fd65d933f0d983a368d05",
+  "kernel_release": "6.6.0-rc6-dcd-v3",
+  "kernel_rebuilt_during_packaging": false,
+  "final_probe_rebuilt_exactly": true,
+  "final_probe_source_sha256": "061084e76364e056d945327c62e5ed487770b22602922f9e4394b92c97f0de7f",
+  "final_probe_binary_sha256": "7c91d4bbcf139fb22e195cac60e44034fa7ab00304086c1086bbdfa365bb92ad",
+  "pilot_probe_binary_sha256": "77a5f969167da67f7a7bdf721edae2c5099bd4eb9e7fcd80b9727c05146f9f09",
+  "runtime_fixtures": [
+    {
+      "arm": "baseline",
+      "role": "A",
+      "file": "runtime/baseline-A-fixture-hashes.txt",
+      "hashes": {
+        "firecracker": "a4d6f75f0cad5885009097221e464952a1706e3d1792826c14a0dfa84c8a6023",
+        "l2-vmlinux": "ea81dc49b729e8d5111765c11ace1a11bd53db59f75fd65d933f0d983a368d05",
+        "pool-discard-l2-initramfs.cpio": "01a962acc7491efef541198325efd38b7dc16558f59db9dcf6691ca9c2647bb3",
+        "pool-discard-probe": "7c91d4bbcf139fb22e195cac60e44034fa7ab00304086c1086bbdfa365bb92ad",
+        "pool-cow-latency": "d10354e472e11ce4da2f176b04610b7f3c98ebe09017b9dab5f27e2f20ddd06d"
+      },
+      "source_report_sha256": "9577ba3618409ad34052bb8c60f15828166900636690b60a3d12963e175f5377"
+    },
+    {
+      "arm": "baseline",
+      "role": "B",
+      "file": "runtime/baseline-B-fixture-hashes.txt",
+      "hashes": {
+        "firecracker": "a4d6f75f0cad5885009097221e464952a1706e3d1792826c14a0dfa84c8a6023",
+        "l2-vmlinux": "ea81dc49b729e8d5111765c11ace1a11bd53db59f75fd65d933f0d983a368d05",
+        "pool-discard-l2-initramfs.cpio": "01a962acc7491efef541198325efd38b7dc16558f59db9dcf6691ca9c2647bb3",
+        "pool-discard-probe": "7c91d4bbcf139fb22e195cac60e44034fa7ab00304086c1086bbdfa365bb92ad",
+        "pool-cow-latency": "d10354e472e11ce4da2f176b04610b7f3c98ebe09017b9dab5f27e2f20ddd06d"
+      },
+      "source_report_sha256": "9577ba3618409ad34052bb8c60f15828166900636690b60a3d12963e175f5377"
+    },
+    {
+      "arm": "reporting",
+      "role": "A",
+      "file": "runtime/reporting-A-fixture-hashes.txt",
+      "hashes": {
+        "firecracker": "a4d6f75f0cad5885009097221e464952a1706e3d1792826c14a0dfa84c8a6023",
+        "l2-vmlinux": "ea81dc49b729e8d5111765c11ace1a11bd53db59f75fd65d933f0d983a368d05",
+        "pool-discard-l2-initramfs.cpio": "01a962acc7491efef541198325efd38b7dc16558f59db9dcf6691ca9c2647bb3",
+        "pool-discard-probe": "7c91d4bbcf139fb22e195cac60e44034fa7ab00304086c1086bbdfa365bb92ad",
+        "pool-cow-latency": "d10354e472e11ce4da2f176b04610b7f3c98ebe09017b9dab5f27e2f20ddd06d"
+      },
+      "source_report_sha256": "afde0ed510d9d1109b0d4878cfaa2e33ff2f563489efdc31d7c5c67e9fc48d8d"
+    },
+    {
+      "arm": "reporting",
+      "role": "B",
+      "file": "runtime/reporting-B-fixture-hashes.txt",
+      "hashes": {
+        "firecracker": "a4d6f75f0cad5885009097221e464952a1706e3d1792826c14a0dfa84c8a6023",
+        "l2-vmlinux": "ea81dc49b729e8d5111765c11ace1a11bd53db59f75fd65d933f0d983a368d05",
+        "pool-discard-l2-initramfs.cpio": "01a962acc7491efef541198325efd38b7dc16558f59db9dcf6691ca9c2647bb3",
+        "pool-discard-probe": "7c91d4bbcf139fb22e195cac60e44034fa7ab00304086c1086bbdfa365bb92ad",
+        "pool-cow-latency": "d10354e472e11ce4da2f176b04610b7f3c98ebe09017b9dab5f27e2f20ddd06d"
+      },
+      "source_report_sha256": "afde0ed510d9d1109b0d4878cfaa2e33ff2f563489efdc31d7c5c67e9fc48d8d"
+    }
+  ],
+  "scope": "Real compiled source/config/logs and runtime hash binding. Kernel binary and vendor archive retained locally; source snapshots and their identities preserved here."
+}

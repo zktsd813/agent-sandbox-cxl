@@ -1,0 +1,14 @@
+
+running 9 tests
+test devices::virtio::balloon::device::tests::pool_discard_reporting_ack_and_rejection_protocol ... ok
+test devices::virtio::balloon::device::tests::pool_reporting_only_config_is_narrow ... ok
+test devices::virtio::block::virtio::request::tests::pool_cache_hints_require_complete_successful_read ... ok
+test pool_cache::tests::candidate_key_is_not_just_gpa ... ok
+test pool_cache::tests::identity_must_be_full_digest ... ok
+test pool_cache::tests::pool_discard_coalesces_and_busy_partial_byte_defers_whole_page ... ok
+test pool_cache::tests::pool_discard_mapping_failure_poison_prevents_further_use ... ok
+test pool_cache::tests::pool_discard_preflight_rejects_all_before_any_mapping ... ok
+test pool_cache::tests::pool_discard_private_zero_preserves_canonical_peer_and_dirty_tracking ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 821 filtered out; finished in 0.01s
+

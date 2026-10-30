@@ -1,0 +1,18 @@
+{
+  "file": "memory-smoke-evidence.tar.xz",
+  "format": "tar.xz",
+  "compression": "xz -3 -T2",
+  "bytes": 2418900,
+  "sha256": "2aadb9d04d094ba85cc582fa9cc154e8acabf21e87b173fd91cd80a73ed8f0bc",
+  "source_directory": "/tmp/pool-discard-failure-staging-20261030/memory-smoke",
+  "report_member": "memory-smoke/report.json",
+  "report_sha256": "13bd5313c4cad253a61809036ad4374801bbe0014f7afb55bacde55bccb31b9b",
+  "member_count": 133,
+  "regular_file_count": 131,
+  "directory_count": 2,
+  "uncompressed_file_bytes": 27206467,
+  "member_names_sizes_sha256_manifest_digest": "40c6deada5c1d06f86e8f2246338562b469044de29d65f310ea40ecdd9616e92",
+  "verified": "Exact member set, type, length, and SHA256 of every regular file compared with the source directory.",
+  "old_gzip_verified_identical": false,
+  "seconds": 2.7178776720538735
+}

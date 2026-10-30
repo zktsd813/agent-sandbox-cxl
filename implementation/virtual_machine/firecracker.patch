@@ -954,7 +954,7 @@ index c4801646a..943c74f3a 100644
      pub fn setup_irqchip(&self) -> Result<(), KvmVmError> {
          self.fd()
 diff --git a/src/vmm/src/builder.rs b/src/vmm/src/builder.rs
-index bcb0e027a..8a847977d 100644
+index bcb0e027a..150cc7bdf 100644
 --- a/src/vmm/src/builder.rs
 +++ b/src/vmm/src/builder.rs
 @@ -42,7 +42,7 @@ use crate::initrd::{InitrdConfig, InitrdError};
@@ -983,8 +983,26 @@ index bcb0e027a..8a847977d 100644
  
      #[cfg(feature = "gdb")]
      let (gdb_tx, gdb_rx) = mpsc::channel();
-@@ -436,19 +442,24 @@ pub fn build_microvm_from_snapshot(
+@@ -434,21 +440,42 @@ pub fn build_microvm_from_snapshot(
+     vm_resources: &mut VmResources,
+     clock_realtime: bool,
  ) -> Result<Arc<Mutex<Vmm>>, BuildMicrovmFromSnapshotError> {
++    // Device restore bypasses preboot allocation checks. Reject unsupported
++    // memory-management devices before constructing a DAX-backed restored VM.
++    if std::env::var_os("FC_DAX_RAM").is_some() {
++        let unsupported = match &microvm_state.device_states.virtio_state {
++            crate::device_manager::VirtioDevicesState::Mmio(s) => s.memory_device.is_some()
++                || !s.pmem_devices.is_empty()
++                || (s.balloon_device.is_some() && !crate::pool_cache::discard_enabled()),
++            crate::device_manager::VirtioDevicesState::Pci(s) => s.memory_device.is_some()
++                || !s.pmem_devices.is_empty()
++                || (s.balloon_device.is_some() && !crate::pool_cache::discard_enabled()),
++        };
++        if unsupported {
++            return Err(BuildMicrovmFromSnapshotError::RestoreMmioDevice(MicrovmStateError::NotAllowed(
++                "DAX restore permits only opt-in reporting-only balloon, no hotplug/pmem".into())));
++        }
++    }
      // Build Vmm.
      debug!("event_start: build microvm from snapshot");
 +    let mut timing = RestoreTiming::new("build");
@@ -1008,7 +1026,7 @@ index bcb0e027a..8a847977d 100644
  
      #[cfg(target_arch = "x86_64")]
      {
-@@ -464,13 +475,20 @@ pub fn build_microvm_from_snapshot(
+@@ -464,13 +491,20 @@ pub fn build_microvm_from_snapshot(
          }
      }
  
@@ -1029,7 +1047,7 @@ index bcb0e027a..8a847977d 100644
  
      #[cfg(target_arch = "aarch64")]
      {
-@@ -485,6 +503,7 @@ pub fn build_microvm_from_snapshot(
+@@ -485,6 +519,7 @@ pub fn build_microvm_from_snapshot(
      // Restore kvm vm state.
      #[cfg(target_arch = "x86_64")]
      vm.restore_state(&microvm_state.vm_state, clock_realtime)?;
@@ -1037,7 +1055,7 @@ index bcb0e027a..8a847977d 100644
  
      // Restore the boot source config paths.
      vm_resources.boot_source.config = microvm_state.vm_info.boot_source;
-@@ -509,12 +528,16 @@ pub fn build_microvm_from_snapshot(
+@@ -509,12 +544,16 @@ pub fn build_microvm_from_snapshot(
      #[allow(unused_mut)]
      let mut device_manager =
          DeviceManager::restore(device_ctor_args, &microvm_state.device_states)?;
@@ -1054,7 +1072,7 @@ index bcb0e027a..8a847977d 100644
          vm,
          device_manager,
      };
-@@ -527,12 +550,15 @@ pub fn build_microvm_from_snapshot(
+@@ -527,12 +566,15 @@ pub fn build_microvm_from_snapshot(
              .ok_or(BuildMicrovmFromSnapshotError::MissingVcpuSeccompFilters)?
              .clone(),
      )?;
@@ -1070,7 +1088,7 @@ index bcb0e027a..8a847977d 100644
  
      Ok(vmm)
  }
-@@ -853,6 +879,9 @@ pub(crate) mod tests {
+@@ -853,6 +895,9 @@ pub(crate) mod tests {
              machine_config: MachineConfig::default(),
              boot_source_config: BootSourceConfig::default(),
              shutdown_exit_code: None,
@@ -1080,7 +1098,7 @@ index bcb0e027a..8a847977d 100644
              vm: Vm::Kvm(Arc::new(vm)),
              device_manager: default_device_manager(),
          }
-@@ -871,6 +900,9 @@ pub(crate) mod tests {
+@@ -871,6 +916,9 @@ pub(crate) mod tests {
              machine_config: MachineConfig::default(),
              boot_source_config: BootSourceConfig::default(),
              shutdown_exit_code: None,
@@ -1197,6 +1215,291 @@ index e38480179..fb1e3396f 100644
      pub fn new(
          serial_in: Option<Stdin>,
          serial_out: SerialOut,
+diff --git a/src/vmm/src/devices/virtio/balloon/device.rs b/src/vmm/src/devices/virtio/balloon/device.rs
+index 4008b154b..c1cde166e 100644
+--- a/src/vmm/src/devices/virtio/balloon/device.rs
++++ b/src/vmm/src/devices/virtio/balloon/device.rs
+@@ -278,6 +278,12 @@ impl Balloon {
+         free_page_hinting: bool,
+         free_page_reporting: bool,
+     ) -> Result<Balloon, BalloonError> {
++        if crate::pool_cache::discard_enabled()
++            && (amount_mib != 0 || deflate_on_oom || stats_polling_interval_s != 0
++                || free_page_hinting || !free_page_reporting)
++        {
++            return Err(BalloonError::PoolDiscard("requires zero target, reporting only, no stats/hinting/OOM deflation".into()));
++        }
+         let mut avail_features = 1u64 << VIRTIO_F_VERSION_1;
+ 
+         if deflate_on_oom {
+@@ -374,6 +380,9 @@ impl Balloon {
+     }
+ 
+     pub(crate) fn process_inflate(&mut self) -> Result<(), BalloonError> {
++        if crate::pool_cache::discard_enabled() {
++            return Err(BalloonError::PoolDiscard("inflation is disabled for pool reporting".into()));
++        }
+         // This is safe since we checked in the event handler that the device is activated.
+         let mem = &self
+             .device_state
+@@ -467,6 +476,9 @@ impl Balloon {
+     }
+ 
+     pub(crate) fn process_deflate_queue(&mut self) -> Result<(), BalloonError> {
++        if crate::pool_cache::discard_enabled() {
++            return Err(BalloonError::PoolDiscard("deflation is disabled for pool reporting".into()));
++        }
+         METRICS.deflate_count.inc();
+ 
+         let queue = &mut self.queues[DEFLATE_INDEX];
+@@ -616,6 +628,9 @@ impl Balloon {
+     }
+ 
+     pub(crate) fn process_free_page_reporting_queue(&mut self) -> Result<(), BalloonError> {
++        if crate::pool_cache::discard_enabled() {
++            return self.process_pool_reporting_queue();
++        }
+         let mem = &self
+             .device_state
+             .active_state()
+@@ -652,6 +667,87 @@ impl Balloon {
+         Ok(())
+     }
+ 
++    /// Runtime form of the narrow opt-in contract; also checked after restore.
++    pub(crate) fn pool_reporting_only(&self) -> bool {
++        let allowed = (1u64 << VIRTIO_F_VERSION_1) | (1u64 << VIRTIO_BALLOON_F_FREE_PAGE_REPORTING);
++        self.config_space.num_pages == 0 && self.config_space.actual_pages == 0
++            && self.stats_polling_interval_s == 0 && self.avail_features == allowed
++            && self.acked_features & !allowed == 0 && self.queues.len() == 3
++            && (!self.is_activated() || self.acked_features & (1u64 << VIRTIO_BALLOON_F_FREE_PAGE_REPORTING) != 0)
++    }
++
++    fn process_pool_reporting_queue(&mut self) -> Result<(), BalloonError> {
++        use crate::pool_cache::{DiscardRange, discard_reported, log_discard};
++        if !self.pool_reporting_only() {
++            return Err(BalloonError::PoolDiscard("invalid reporting-only device state".into()));
++        }
++        let mem = &self.device_state.active_state().ok_or(BalloonError::DeviceNotActive)?.mem;
++        // Snapshot all of this device's active ring extents before mutably borrowing
++        // its report queue. A guest may not discard the queue used to acknowledge it.
++        let protected: Vec<(u64, u64)> = self.queues.iter().filter(|q| q.ready).flat_map(|q| {
++            [(q.desc_table_address.0, 16 * u64::from(q.size)),
++             (q.avail_ring_address.0, 6 + 2 * u64::from(q.size)),
++             (q.used_ring_address.0, 6 + 8 * u64::from(q.size))]
++        }).collect();
++        let idx = self.free_page_reporting_idx();
++        let queue = &mut self.queues[idx];
++        let mut needs_interrupt = false;
++        while let Some(head) = queue.pop()? {
++            let queue_head = head.index;
++            let mut chain = Some(head);
++            let mut ranges = Vec::new();
++            let mut seen = std::collections::BTreeSet::new();
++            // Freeze the entire chain before touching any target mapping.
++            while let Some(desc) = chain {
++                if !seen.insert(desc.index) || !desc.is_write_only() || ranges.len() >= 256
++                    || desc.flags & !(crate::devices::virtio::queue::VIRTQ_DESC_F_NEXT
++                        | crate::devices::virtio::queue::VIRTQ_DESC_F_WRITE) != 0 {
++                    return Err(BalloonError::PoolDiscard("cyclic, oversized or non-writable report chain".into()));
++                }
++                let end = desc.addr.0.checked_add(u64::from(desc.len))
++                    .ok_or_else(|| BalloonError::PoolDiscard("descriptor range overflow".into()))?;
++                if protected.iter().any(|&(start, bytes)| desc.addr.0 < start.saturating_add(bytes) && start < end) {
++                    return Err(BalloonError::PoolDiscard("reported page overlaps balloon queue metadata".into()));
++                }
++                ranges.push(DiscardRange { gpa: desc.addr.0, bytes: u64::from(desc.len) });
++                // Inspect the raw NEXT bit: has_next() masks TTL exhaustion,
++                // which must be rejected rather than silently truncating a cycle.
++                let has_next = desc.flags & crate::devices::virtio::queue::VIRTQ_DESC_F_NEXT != 0;
++                chain = desc.next_descriptor();
++                if has_next && chain.is_none() {
++                    return Err(BalloonError::PoolDiscard("truncated report chain".into()));
++                }
++            }
++            let mut report = match discard_reported(mem, queue_head, ranges) {
++                Ok(report) => report,
++                Err(err) => {
++                    METRICS.free_page_report_fails.inc();
++                    if crate::pool_cache::mapping_failed() {
++                        // Runtime MAP_FIXED may already have removed a mapping.
++                        // No ACK, resume, or snapshot is safe; stop all vCPUs now.
++                        error!("fatal pool discard mapping failure: {err}");
++                        std::process::abort();
++                    }
++                    return Err(BalloonError::PoolDiscard(err.to_string()));
++                }
++            };
++            METRICS.free_page_report_count.add(report.requested.len() as u64);
++            METRICS.free_page_report_freed.add(report.discarded_pages * 4096);
++            log_discard(&report);
++            queue.add_used(queue_head, 0)?;
++            // Release publication is the protocol ACK. Guest retains isolation
++            // until this becomes visible, irrespective of interrupt delivery.
++            queue.advance_used_ring_idx();
++            report.phase = "ack";
++            log_discard(&report);
++            needs_interrupt = true;
++        }
++        if needs_interrupt {
++            self.signal_used_queue(idx)?;
++        }
++        Ok(())
++    }
++
+     pub(crate) fn signal_used_queue(&self, qidx: usize) -> Result<(), BalloonError> {
+         self.interrupt_trigger()
+             .trigger(VirtioInterruptType::Queue(
+@@ -710,6 +806,9 @@ impl Balloon {
+ 
+     /// Update the target size of the balloon.
+     pub fn update_size(&mut self, amount_mib: u32) -> Result<(), BalloonError> {
++        if crate::pool_cache::discard_enabled() && amount_mib != 0 {
++            return Err(BalloonError::PoolDiscard("pool reporting target must remain zero".into()));
++        }
+         if self.is_activated() {
+             let mem = &self.device_state.active_state().unwrap().mem;
+             // The balloon cannot have a target size greater than the size of
+@@ -1577,6 +1676,108 @@ pub(crate) mod tests {
+         }
+     }
+ 
++    #[test]
++    fn pool_discard_reporting_ack_and_rejection_protocol() {
++        const NAME: &str = "devices::virtio::balloon::device::tests::pool_discard_reporting_ack_and_rejection_protocol";
++        if std::env::var("FC_POOL_DISCARD_UNIT_CHILD").as_deref() != Ok("1") {
++            // Isolate opt-in process configuration and shared pool state from
++            // unrelated tests, even when cargo runs them concurrently.
++            let result = std::process::Command::new(std::env::current_exe().unwrap())
++                .args(["--exact", NAME, "--test-threads=1", "--nocapture"])
++                .env("FC_POOL_DISCARD_UNIT_CHILD", "1").env("FC_POOL_DISCARD", "1")
++                .env("FC_POOL_VM_ID", "test-vm").env("FC_POOL_RUN_EPOCH", "test-epoch")
++                .env_remove("FC_POOL_HINTS_RESTORE").output().unwrap();
++            assert!(result.status.success(), "{}{}", String::from_utf8_lossy(&result.stdout), String::from_utf8_lossy(&result.stderr));
++            return;
++        }
++        use crate::devices::virtio::queue::VIRTQ_DESC_F_WRITE;
++        let page = 4096u64;
++        let mem = create_virtio_mem();
++        let mut th = VirtioTestHelper::<Balloon>::new(&mem, Balloon::new(0,false,0,false,true).unwrap());
++        {
++            let mut b = th.device();
++            b.acked_features = b.avail_features;
++        }
++        th.activate_device(&mem);
++        let idx = th.device().free_page_reporting_idx();
++        let addr = align_up!(th.data_address(), page);
++        mem.write_slice(&vec![0x7c; page as usize], GuestAddress(addr)).unwrap();
++        crate::pool_cache::test_set_pooled(addr);
++        let guard = crate::pool_cache::protect_io(addr + 17, 1, 0).unwrap();
++        th.add_scatter_gather(idx, &[(0,addr,page as u32,VIRTQ_DESC_F_WRITE)]);
++        th.device().process_free_page_reporting_queue().unwrap();
++        let mut data = vec![0;page as usize];
++        mem.read_slice(&mut data, GuestAddress(addr)).unwrap();
++        assert_eq!(data,vec![0x7c;page as usize]); // Busy skip is ACKed unchanged.
++        assert_eq!(th.device().queues[idx].next_used.0,1);
++        drop(guard);
++        th.add_scatter_gather(idx, &[(1,addr,page as u32,VIRTQ_DESC_F_WRITE)]);
++        th.device().process_free_page_reporting_queue().unwrap();
++        mem.read_slice(&mut data, GuestAddress(addr)).unwrap();
++        assert_eq!(data,vec![0;page as usize]);
++        assert_eq!(th.device().queues[idx].next_used.0,2);
++        assert!(th.device().update_size(1).is_err());
++        assert!(th.device().process_inflate().is_err());
++        assert!(th.device().process_deflate_queue().is_err());
++        assert!(Balloon::new(1,false,0,false,true).is_err());
++        assert!(Balloon::new(0,true,0,false,true).is_err());
++        assert!(Balloon::new(0,false,1,false,true).is_err());
++        assert!(Balloon::new(0,false,0,true,true).is_err());
++        // Final restored configuration must be checked after overriding new().
++        use crate::snapshot::Persist;
++        use crate::devices::virtio::balloon::persist::BalloonConstructorArgs;
++        let mut saved = serde_json::to_value(th.device().save()).unwrap();
++        saved["config_space"]["num_pages"] = serde_json::json!(1);
++        assert!(Balloon::restore(BalloonConstructorArgs {mem:mem.clone()}, &serde_json::from_value(saved.clone()).unwrap()).is_err());
++        saved["config_space"]["num_pages"] = serde_json::json!(0);
++        saved["config_space"]["actual_pages"] = serde_json::json!(1);
++        assert!(Balloon::restore(BalloonConstructorArgs {mem:mem.clone()}, &serde_json::from_value(saved).unwrap()).is_err());
++        // Entire chain preflight: a valid prefix must not be changed if a later
++        // descriptor is unaligned. The used index must stay unchanged (no ACK).
++        mem.write_slice(&vec![0x53; page as usize], GuestAddress(addr)).unwrap();
++        crate::pool_cache::test_set_pooled(addr);
++        th.add_scatter_gather(idx, &[(2,addr,page as u32,VIRTQ_DESC_F_WRITE),
++            (3,addr+page+1,page as u32,VIRTQ_DESC_F_WRITE)]);
++        assert!(th.device().process_free_page_reporting_queue().is_err());
++        assert_eq!(th.device().queues[idx].next_used.0,2);
++        mem.read_slice(&mut data, GuestAddress(addr)).unwrap();
++        assert_eq!(data,vec![0x53;page as usize]);
++        th.add_scatter_gather(idx, &[(4,addr,page as u32,0)]);
++        assert!(th.device().process_free_page_reporting_queue().is_err());
++        assert_eq!(th.device().queues[idx].next_used.0,2);
++        th.add_scatter_gather(idx, &[(5,0,page as u32,VIRTQ_DESC_F_WRITE)]);
++        assert!(th.device().process_free_page_reporting_queue().is_err());
++        assert_eq!(th.device().queues[idx].next_used.0,2);
++        // Full queue-size cycles would otherwise be silently truncated by the
++        // DescriptorChain TTL helper; the raw NEXT bit must make this an error.
++        let full: Vec<_> = (0..16).map(|i| (i,addr,page as u32,VIRTQ_DESC_F_WRITE)).collect();
++        th.add_scatter_gather(idx, &full);
++        let last = th.device().queues[idx].desc_table_address.0 + 15 * 16;
++        mem.write_obj(crate::devices::virtio::queue::Descriptor {addr,len:page as u32,
++            flags:VIRTQ_DESC_F_WRITE | crate::devices::virtio::queue::VIRTQ_DESC_F_NEXT,next:0}, GuestAddress(last)).unwrap();
++        let err = th.device().process_free_page_reporting_queue().unwrap_err();
++        assert!(format!("{err:?}").contains("truncated"));
++        assert_eq!(th.device().queues[idx].next_used.0,2);
++    }
++
++    #[test]
++    fn pool_reporting_only_config_is_narrow() {
++        let mut b = Balloon::new(0, false, 0, false, true).unwrap();
++        assert!(b.pool_reporting_only());
++        b.config_space.num_pages = 1;
++        assert!(!b.pool_reporting_only());
++        b.config_space.num_pages = 0;
++        b.config_space.actual_pages = 1;
++        assert!(!b.pool_reporting_only());
++        b.config_space.actual_pages = 0;
++        b.avail_features |= 1u64 << VIRTIO_BALLOON_F_FREE_PAGE_HINTING;
++        assert!(!b.pool_reporting_only());
++        for (mib, oom, stats, hints, reporting) in [(1,false,0,false,true),
++            (0,true,0,false,true),(0,false,1,false,true),(0,false,0,true,true),(0,false,0,false,false)] {
++            assert!(!Balloon::new(mib,oom,stats,hints,reporting).unwrap().pool_reporting_only());
++        }
++    }
++
+     #[test]
+     fn test_process_reporting() {
+         let mem = create_virtio_mem();
+diff --git a/src/vmm/src/devices/virtio/balloon/mod.rs b/src/vmm/src/devices/virtio/balloon/mod.rs
+index cf8da2cec..a7ea5541b 100644
+--- a/src/vmm/src/devices/virtio/balloon/mod.rs
++++ b/src/vmm/src/devices/virtio/balloon/mod.rs
+@@ -76,6 +76,8 @@ const VIRTIO_BALLOON_S_DIRECT_RECLAIM: u16 = 15;
+ pub enum BalloonError {
+     /// Device not activated yet.
+     DeviceNotActive,
++    /// Pool discard reporting rejected: {0}
++    PoolDiscard(String),
+     /// Attempting to use hinting when not enabled
+     HintingNotEnabled,
+     /// EventFd error: {0}
+diff --git a/src/vmm/src/devices/virtio/balloon/persist.rs b/src/vmm/src/devices/virtio/balloon/persist.rs
+index 6637d196e..ca675b88e 100644
+--- a/src/vmm/src/devices/virtio/balloon/persist.rs
++++ b/src/vmm/src/devices/virtio/balloon/persist.rs
+@@ -185,6 +185,13 @@ impl Persist<'_> for Balloon {
+             free_page_hint_cmd_id: FREE_PAGE_HINT_DONE,
+         };
+         balloon.hinting_state = state.hinting_state;
++        if crate::pool_cache::discard_enabled()
++            && (!balloon.pool_reporting_only()
++                || (state.virtio_state.activated
++                    && balloon.acked_features & (1u64 << VIRTIO_BALLOON_F_FREE_PAGE_REPORTING) == 0))
++        {
++            return Err(super::BalloonError::PoolDiscard("restored balloon is not reporting-only".into()));
++        }
+ 
+         if state.virtio_state.activated && balloon.stats_enabled() {
+             // Restore the stats descriptor.
 diff --git a/src/vmm/src/devices/virtio/block/virtio/device.rs b/src/vmm/src/devices/virtio/block/virtio/device.rs
 index 78c1adde8..3088ad681 100644
 --- a/src/vmm/src/devices/virtio/block/virtio/device.rs
@@ -1299,6 +1602,22 @@ index 78c1adde8..3088ad681 100644
  
              // Check that all the pending flush requests were processed during `prepare_save()`.
              check_flush_requests_batch(5, &vq);
+diff --git a/src/vmm/src/devices/virtio/block/virtio/io/async_io.rs b/src/vmm/src/devices/virtio/block/virtio/io/async_io.rs
+index 26a1f9aa9..c97e0a0f4 100644
+--- a/src/vmm/src/devices/virtio/block/virtio/io/async_io.rs
++++ b/src/vmm/src/devices/virtio/block/virtio/io/async_io.rs
+@@ -104,6 +104,11 @@ impl AsyncFileEngine {
+     }
+ 
+     pub fn update_file(&mut self, file: File) -> Result<(), AsyncIoError> {
++        if crate::pool_cache::discard_enabled() {
++            // Keep pending GPA guards alive until every old-ring operation is
++            // complete before replacing/dropping its request slab.
++            self.drain(false)?;
++        }
+         let ring = Self::new_ring(&file, self.completion_evt.as_raw_fd())
+             .map_err(AsyncIoError::IoUring)?;
+ 
 diff --git a/src/vmm/src/devices/virtio/block/virtio/persist.rs b/src/vmm/src/devices/virtio/block/virtio/persist.rs
 index 493c487bb..da8a7ae83 100644
 --- a/src/vmm/src/devices/virtio/block/virtio/persist.rs
@@ -1312,18 +1631,19 @@ index 493c487bb..da8a7ae83 100644
          })
      }
 diff --git a/src/vmm/src/devices/virtio/block/virtio/request.rs b/src/vmm/src/devices/virtio/block/virtio/request.rs
-index a6f5813ce..0222ab5fd 100644
+index a6f5813ce..18bed9cca 100644
 --- a/src/vmm/src/devices/virtio/block/virtio/request.rs
 +++ b/src/vmm/src/devices/virtio/block/virtio/request.rs
-@@ -96,6 +96,7 @@ impl Status {
+@@ -96,6 +96,8 @@ impl Status {
  
  #[derive(Debug)]
  pub struct PendingRequest {
 +    pool_hint: Option<(String, u64, u64)>,
++    _pool_io_guard: Option<crate::pool_cache::IoGuard>,
      r#type: RequestType,
      data_len: u32,
      status_addr: GuestAddress,
-@@ -161,6 +162,9 @@ impl PendingRequest {
+@@ -161,6 +163,9 @@ impl PendingRequest {
                  block_metrics.read_bytes.add(transferred_data_len.into());
                  if let Status::Ok { .. } = status {
                      block_metrics.read_count.inc();
@@ -1333,20 +1653,24 @@ index a6f5813ce..0222ab5fd 100644
                  }
                  status
              }
-@@ -425,6 +429,7 @@ impl Request {
+@@ -425,6 +430,8 @@ impl Request {
  
      fn to_pending_request(&self, desc_idx: u16) -> PendingRequest {
          PendingRequest {
 +            pool_hint: None,
++            _pool_io_guard: None,
              r#type: self.r#type,
              data_len: self.data_len,
              status_addr: self.status_addr,
-@@ -440,7 +445,11 @@ impl Request {
+@@ -440,7 +447,14 @@ impl Request {
          block_metrics: &BlockDeviceMetrics,
          discard_supported: bool,
      ) -> ProcessingResult {
 -        let pending = self.to_pending_request(desc_idx);
 +        let mut pending = self.to_pending_request(desc_idx);
++        if matches!(self.r#type, RequestType::In | RequestType::Out | RequestType::GetDeviceID) {
++            pending._pool_io_guard = crate::pool_cache::protect_io(self.data_addr.0, self.data_len, self.status_addr.0);
++        }
 +        if self.r#type == RequestType::In {
 +            pending.pool_hint = disk.pool_identity.as_ref().map(|id|
 +                (id.clone(), self.data_addr.0, self.offset()));
@@ -1354,7 +1678,7 @@ index a6f5813ce..0222ab5fd 100644
          let res = match self.r#type {
              RequestType::In => {
                  let _metric = block_metrics.read_agg.record_latency_metrics();
-@@ -510,9 +519,34 @@ mod tests {
+@@ -510,9 +524,36 @@ mod tests {
  
      const NUM_DISK_SECTORS: u64 = 1024;
  
@@ -1364,6 +1688,7 @@ index a6f5813ce..0222ab5fd 100644
 +        let metrics = BlockDeviceMetrics::default();
 +        let request = |gpa, kind| PendingRequest {
 +            pool_hint: Some(("a".repeat(64), gpa, 0x20000)),
++            _pool_io_guard: None,
 +            r#type: kind,
 +            data_len: 8192,
 +            status_addr: GuestAddress(0),
@@ -1386,11 +1711,12 @@ index a6f5813ce..0222ab5fd 100644
          fn default() -> Self {
              PendingRequest {
 +                pool_hint: None,
++            _pool_io_guard: None,
                  r#type: RequestType::In,
                  data_len: 0,
                  status_addr: Default::default(),
 diff --git a/src/vmm/src/lib.rs b/src/vmm/src/lib.rs
-index 41b7b8d69..a76e3bb66 100644
+index 41b7b8d69..7a52a1d20 100644
 --- a/src/vmm/src/lib.rs
 +++ b/src/vmm/src/lib.rs
 @@ -96,6 +96,9 @@ pub mod pci;
@@ -1441,7 +1767,7 @@ index 41b7b8d69..a76e3bb66 100644
  
      /// VM object.
      pub vm: Vm,
-@@ -461,23 +481,130 @@ impl Vmm {
+@@ -461,23 +481,133 @@ impl Vmm {
  
      /// Sends a resume command to the vCPUs.
      pub fn resume_vm(&mut self) -> Result<(), VmmError> {
@@ -1523,13 +1849,16 @@ index 41b7b8d69..a76e3bb66 100644
 +            return Err(VmmError::PoolCache(io::Error::other("PoolCache requires a paused VM")));
 +        }
 +        let mut unsupported_memory_device = false;
-+        self.device_manager.for_each_virtio_device(|kind, _| {
-+            unsupported_memory_device |= matches!(kind,
-+                VirtioDeviceType::Balloon | VirtioDeviceType::Mem | VirtioDeviceType::Pmem);
++        self.device_manager.for_each_virtio_device(|kind, device| {
++            unsupported_memory_device |= matches!(kind, VirtioDeviceType::Mem | VirtioDeviceType::Pmem);
++            if kind == VirtioDeviceType::Balloon {
++                unsupported_memory_device |= !pool_cache::discard_enabled()
++                    || !device.as_any().downcast_ref::<Balloon>().is_some_and(Balloon::pool_reporting_only);
++            }
 +        });
 +        if unsupported_memory_device {
 +            return Err(VmmError::PoolCache(io::Error::other(
-+                "PoolCache does not support balloon, memory hotplug, or pmem devices")));
++                "PoolCache allows only reporting-only opt-in balloon, no memory hotplug or pmem")));
 +        }
 +        // Saving devices drains asynchronous block writes and publishes completion
 +        // rings before any host address is remapped. The main event loop is locked
@@ -1574,7 +1903,7 @@ index 41b7b8d69..a76e3bb66 100644
          self.instance_info.state = VmState::Paused;
          Ok(())
      }
-@@ -498,6 +625,15 @@ impl Vmm {
+@@ -498,6 +628,15 @@ impl Vmm {
  
      /// Saves the state of a paused Microvm.
      pub fn save_state(&mut self, vm_info: &VmInfo) -> Result<MicrovmState, MicrovmStateError> {
@@ -1590,7 +1919,7 @@ index 41b7b8d69..a76e3bb66 100644
          self.check_unsnapshottable_devices()?;
  
          // We need to save device state before saving KVM state.
-@@ -506,11 +642,18 @@ impl Vmm {
+@@ -506,11 +645,18 @@ impl Vmm {
          // state before we save device state, that interrupt will never be delivered to the guest
          // upon resuming from the snapshot.
          let device_states = self.device_manager.save();
@@ -1610,7 +1939,7 @@ index 41b7b8d69..a76e3bb66 100644
          let kvm_state = kvm_vm.kvm().save_state();
          let vm_state = {
              #[cfg(target_arch = "x86_64")]
-@@ -528,6 +671,8 @@ impl Vmm {
+@@ -528,6 +674,8 @@ impl Vmm {
                      .map_err(MicrovmStateError::SaveVmState)?
              }
          };
@@ -1620,7 +1949,7 @@ index 41b7b8d69..a76e3bb66 100644
          Ok(MicrovmState {
              vm_info: vm_info.clone(),
 diff --git a/src/vmm/src/persist.rs b/src/vmm/src/persist.rs
-index 71a0345cb..66ad53f99 100644
+index 71a0345cb..fa692ed3d 100644
 --- a/src/vmm/src/persist.rs
 +++ b/src/vmm/src/persist.rs
 @@ -7,14 +7,17 @@ use std::fmt::Debug;
@@ -1656,7 +1985,7 @@ index 71a0345cb..66ad53f99 100644
  };
  use crate::vstate::vcpu::{VcpuSendEventError, VcpuState};
  use crate::vstate::vm::{VmError, VmState};
-@@ -165,38 +170,146 @@ pub enum CreateSnapshotError {
+@@ -165,38 +170,148 @@ pub enum CreateSnapshotError {
  /// Snapshot version
  pub const SNAPSHOT_VERSION: Version = Version::new(12, 0, 0);
  
@@ -1805,10 +2134,12 @@ index 71a0345cb..66ad53f99 100644
          .mark_virtio_queue_memory_dirty(kvm_vm.guest_memory());
 +    timing.mark("memory_and_queue_handling");
 +    timing.finish();
++
++    crate::pool_cache::log_discard_snapshot(&params.snapshot_path, &params.mem_file_path);
  
      Ok(())
  }
-@@ -381,7 +494,9 @@ pub fn restore_from_snapshot(
+@@ -381,7 +496,9 @@ pub fn restore_from_snapshot(
      params: &LoadSnapshotParams,
      vm_resources: &mut VmResources,
  ) -> Result<Arc<Mutex<Vmm>>, RestoreFromSnapshotError> {
@@ -1818,7 +2149,7 @@ index 71a0345cb..66ad53f99 100644
      for entry in &params.network_overrides {
          // Only the active transport carries virtio device state, so we look at whichever
          // variant this snapshot was saved with. The MMIO and PCI transports wrap their net
-@@ -448,6 +563,7 @@ pub fn restore_from_snapshot(
+@@ -448,6 +565,7 @@ pub fn restore_from_snapshot(
  
      // Some sanity checks before building the microvm.
      snapshot_state_sanity_check(&microvm_state)?;
@@ -1826,7 +2157,7 @@ index 71a0345cb..66ad53f99 100644
  
      let mem_backend_path = &params.mem_backend.backend_path;
      let mem_state = &microvm_state.vm_state.memory;
-@@ -479,7 +595,8 @@ pub fn restore_from_snapshot(
+@@ -479,7 +597,8 @@ pub fn restore_from_snapshot(
          )
          .map_err(RestoreFromSnapshotGuestMemoryError::Uffd)?,
      };
@@ -1836,7 +2167,7 @@ index 71a0345cb..66ad53f99 100644
          instance_info,
          event_manager,
          microvm_state,
-@@ -489,7 +606,10 @@ pub fn restore_from_snapshot(
+@@ -489,7 +608,10 @@ pub fn restore_from_snapshot(
          vm_resources,
          params.clock_realtime,
      )
@@ -1848,7 +2179,7 @@ index 71a0345cb..66ad53f99 100644
  }
  
  /// Error type for [`snapshot_state_from_file`]
-@@ -505,7 +625,7 @@ pub enum SnapshotStateFromFileError {
+@@ -505,7 +627,7 @@ pub enum SnapshotStateFromFileError {
      UnknownVsockDevice,
  }
  
@@ -1857,7 +2188,7 @@ index 71a0345cb..66ad53f99 100644
      snapshot_path: &Path,
  ) -> Result<MicrovmState, SnapshotStateFromFileError> {
      let mut snapshot_reader = File::open(snapshot_path)?;
-@@ -531,6 +651,26 @@ fn guest_memory_from_file(
+@@ -531,6 +653,26 @@ fn guest_memory_from_file(
      track_dirty_pages: bool,
      huge_pages: HugePageConfig,
  ) -> Result<Vec<GuestRegionMmap>, GuestMemoryFromFileError> {
@@ -1884,7 +2215,7 @@ index 71a0345cb..66ad53f99 100644
      let mem_file = File::open(mem_file_path)?;
      let guest_mem =
          memory::snapshot_file(mem_file, mem_state.regions(), track_dirty_pages, huge_pages)?;
-@@ -687,6 +827,61 @@ mod tests {
+@@ -687,6 +829,61 @@ mod tests {
      use crate::vmm_config::vsock::tests::default_config;
      use crate::vstate::memory::{GuestMemoryRegionState, GuestRegionType};
  
@@ -1946,24 +2277,821 @@ index 71a0345cb..66ad53f99 100644
      fn default_vmm_with_devices() -> Vmm {
          let mut event_manager = EventManager::new().expect("Cannot create EventManager");
          let mut vmm = default_vmm();
+diff --git a/src/vmm/src/pool_cache.rs b/src/vmm/src/pool_cache.rs
+new file mode 100644
+index 000000000..3b3d63398
+--- /dev/null
++++ b/src/vmm/src/pool_cache.rs
+@@ -0,0 +1,790 @@
++// Copyright 2026
++// SPDX-License-Identifier: Apache-2.0
++
++//! Experimental immutable block-data pooling. Hints are I/O history, not guest
++//! page-cache residency. The controller owns immutable image identity, the
++//! approximate Bloom directory and frozen CXL frame lifetime. Admission runs only
++//! with vCPUs paused and all device writes drained, and validates every byte.
++//! Private devDAX mappings require the lab kernel's opt-in CoW extension.
++
++use std::collections::{BTreeMap, BTreeSet};
++use std::fs::{File, OpenOptions};
++use std::io::{self, BufReader, BufWriter, Write};
++use std::os::fd::AsRawFd;
++use std::os::unix::fs::{FileTypeExt, MetadataExt};
++use std::sync::{Mutex, OnceLock};
++use std::time::Instant;
++
++use serde::{Deserialize, Serialize};
++use vm_memory::{GuestMemoryBackend, GuestMemoryRegion};
++
++use crate::vstate::memory::{Bytes, GuestAddress, GuestMemoryExtension, GuestMemoryMmap};
++
++const PAGE: usize = 4096;
++// serde_json performs small reads/writes; buffering is essential when a
++// checkpoint sidecar lives on an NFS mount with attribute-cache validation.
++const JSON_BUFFER: usize = 64 * 1024;
++
++#[derive(Clone, Debug, Deserialize, Serialize)]
++#[serde(deny_unknown_fields)]
++pub(crate) struct Hint {
++    pub gpa: u64,
++    pub image_id: String,
++    pub image_offset: u64,
++    pub sequence: u64,
++}
++
++#[derive(Debug, Deserialize, Serialize)]
++#[serde(deny_unknown_fields)]
++struct HintFile {
++    version: u32,
++    vm_id: String,
++    run_epoch: String,
++    hints: Vec<Hint>,
++}
++
++#[derive(Debug, Default)]
++struct State {
++    hints: BTreeMap<u64, Hint>,
++    sequence: u64,
++    overlays: bool,
++    pooled_gpas: BTreeSet<u64>,
++    pending_io: BTreeMap<u64, Vec<(u64, u64)>>,
++    next_io: u64,
++    discard_sequence: u64,
++    mapping_failed: bool,
++    restore_error: Option<String>,
++}
++
++fn invalid(message: impl Into<String>) -> io::Error {
++    io::Error::new(io::ErrorKind::InvalidInput, message.into())
++}
++
++fn required(name: &str) -> io::Result<String> {
++    std::env::var(name)
++        .ok()
++        .filter(|v| !v.is_empty())
++        .ok_or_else(|| invalid(format!("{name} is required")))
++}
++
++fn valid_identity(id: &str) -> bool {
++    id.len() == 64 && id.bytes().all(|b| b.is_ascii_hexdigit())
++}
++
++fn state() -> &'static Mutex<State> {
++    static STATE: OnceLock<Mutex<State>> = OnceLock::new();
++    STATE.get_or_init(|| {
++        let mut s = State::default();
++        if let Ok(path) = std::env::var("FC_POOL_HINTS_RESTORE") {
++            let result = (|| -> io::Result<()> {
++                let saved: HintFile = serde_json::from_reader(BufReader::with_capacity(
++                    JSON_BUFFER,
++                    File::open(path)?,
++                ))?;
++                let image_id = required("FC_POOL_IMAGE_ID")?;
++                if saved.version != 1
++                    || saved.vm_id != required("FC_POOL_VM_ID")?
++                    || !valid_identity(&image_id)
++                {
++                    return Err(invalid("restored pool hint identity/version mismatch"));
++                }
++                for h in saved.hints {
++                    if h.gpa % PAGE as u64 != 0
++                        || h.image_offset % PAGE as u64 != 0
++                        || h.image_id != image_id
++                        || s.hints.contains_key(&h.gpa)
++                    {
++                        return Err(invalid("invalid restored pool hint"));
++                    }
++                    s.sequence = s.sequence.max(h.sequence);
++                    s.hints.insert(h.gpa, h);
++                }
++                Ok(())
++            })();
++            if let Err(error) = result {
++                s.hints.clear();
++                s.restore_error = Some(error.to_string());
++            }
++        }
++        Mutex::new(s)
++    })
++}
++
++/// Only an explicitly identified read-only drive can contribute hints.
++pub(crate) fn disk_identity(path: &str, read_only: bool) -> Option<String> {
++    if !read_only || std::env::var("FC_POOL_IMAGE_PATH").as_deref() != Ok(path) {
++        return None;
++    }
++    let id = std::env::var("FC_POOL_IMAGE_ID").ok()?;
++    if !valid_identity(&id)
++        || required("FC_POOL_VM_ID").is_err()
++        || required("FC_POOL_RUN_EPOCH").is_err()
++    {
++        return None;
++    }
++    Some(id)
++}
++
++/// Call only after a complete successful read and before used-ring publication.
++pub(crate) fn observe(image_id: &str, gpa: u64, image_offset: u64, length: u32) {
++    if gpa % PAGE as u64 != 0 || image_offset % PAGE as u64 != 0 {
++        return;
++    }
++    let mut s = state().lock().expect("pool state poisoned");
++    for delta in (0..u64::from(length) / PAGE as u64).map(|n| n * PAGE as u64) {
++        let Some(address) = gpa.checked_add(delta) else {
++            break;
++        };
++        let Some(offset) = image_offset.checked_add(delta) else {
++            break;
++        };
++        s.sequence += 1;
++        let sequence = s.sequence;
++        s.hints.insert(
++            address,
++            Hint {
++                gpa: address,
++                image_id: image_id.to_owned(),
++                image_offset: offset,
++                sequence,
++            },
++        );
++    }
++}
++
++pub(crate) fn dump_hints() -> io::Result<()> {
++    let Ok(path) = std::env::var("FC_POOL_HINTS") else {
++        return Ok(());
++    };
++    let s = state().lock().expect("pool state poisoned");
++    if let Some(error) = &s.restore_error {
++        return Err(invalid(error));
++    }
++    let hints = HintFile {
++        version: 1,
++        vm_id: required("FC_POOL_VM_ID")?,
++        run_epoch: required("FC_POOL_RUN_EPOCH")?,
++        hints: s.hints.values().cloned().collect(),
++    };
++    let temporary = format!("{path}.new");
++    let mut writer = BufWriter::with_capacity(JSON_BUFFER, File::create(&temporary)?);
++    serde_json::to_writer(&mut writer, &hints)?;
++    writer.flush()?;
++    std::fs::rename(temporary, path)
++}
++
++pub(crate) fn mapping_failed() -> bool {
++    state().lock().expect("pool state poisoned").mapping_failed
++}
++
++pub(crate) fn has_overlays() -> bool {
++    state().lock().expect("pool state poisoned").overlays
++}
++
++/// Explicitly opt into the reporting-only guest/host discard handshake.
++pub(crate) fn discard_enabled() -> bool {
++    static ENABLED: OnceLock<bool> = OnceLock::new();
++    *ENABLED.get_or_init(|| std::env::var("FC_POOL_DISCARD").as_deref() == Ok("1"))
++}
++
++/// RAII ownership covers io_uring pins until completion/cancellation releases
++/// the PendingRequest. A report overlapping an active buffer is acknowledged as
++/// a conservative no-op: the original CoW mapping remains available.
++#[derive(Debug)]
++pub(crate) struct IoGuard(u64);
++impl Drop for IoGuard {
++    fn drop(&mut self) {
++        state().lock().expect("pool state poisoned").pending_io.remove(&self.0);
++    }
++}
++
++pub(crate) fn protect_io(gpa: u64, bytes: u32, status: u64) -> Option<IoGuard> {
++    if !discard_enabled() {
++        return None;
++    }
++    let mut s = state().lock().expect("pool state poisoned");
++    s.next_io = s.next_io.checked_add(1).expect("pool I/O sequence exhausted");
++    let id = s.next_io;
++    // Overflow is conservatively protected through the top of the address space.
++    s.pending_io.insert(id, vec![(gpa, gpa.saturating_add(u64::from(bytes))),
++                                (status, status.saturating_add(1))]);
++    Some(IoGuard(id))
++}
++
++#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
++pub(crate) struct DiscardRange {
++    pub gpa: u64,
++    pub bytes: u64,
++}
++
++#[derive(Debug, Serialize)]
++pub(crate) struct DiscardReport {
++    pub phase: &'static str,
++    vm_id: String,
++    run_epoch: String,
++    pub batch: u64,
++    pub queue_head: u16,
++    pub requested: Vec<DiscardRange>,
++    pub discarded: Vec<DiscardRange>,
++    pub requested_pages: u64,
++    pub discarded_pages: u64,
++    pub skipped_busy_pages: u64,
++    pub hints_removed: u64,
++    pub copied_bytes: u64,
++    pub host_work_ns: u64,
++}
++
++fn overlaps(a: (u64, u64), b: (u64, u64)) -> bool {
++    a.0 < b.1 && b.0 < a.1
++}
++
++fn checked_report_ranges(mem: &GuestMemoryMmap, ranges: &[DiscardRange]) -> io::Result<()> {
++    if ranges.is_empty() || ranges.len() > 256 {
++        return Err(invalid("discard descriptor count must be 1..256"));
++    }
++    let mut intervals = Vec::with_capacity(ranges.len());
++    for r in ranges {
++        let end = r.gpa.checked_add(r.bytes).ok_or_else(|| invalid("discard address overflow"))?;
++        let length = usize::try_from(r.bytes).map_err(|_| invalid("discard length overflow"))?;
++        if r.bytes == 0 || r.gpa % PAGE as u64 != 0 || r.bytes % PAGE as u64 != 0 {
++            return Err(invalid("discard must cover complete aligned nonempty pages"));
++        }
++        mem.get_slice(GuestAddress(r.gpa), length).map_err(|_| invalid("discard outside a contiguous guest RAM region"))?;
++        intervals.push((r.gpa, end));
++    }
++    intervals.sort_unstable();
++    if intervals.windows(2).any(|w| w[0].1 > w[1].0) {
++        return Err(invalid("overlapping discard descriptors"));
++    }
++    Ok(())
++}
++
++fn discard_with(
++    mem: &GuestMemoryMmap,
++    ranges: &[DiscardRange],
++    s: &mut State,
++    mut replace: impl FnMut(*mut u8, usize) -> io::Result<()>,
++) -> io::Result<(Vec<DiscardRange>, u64, u64)> {
++    checked_report_ranges(mem, ranges)?;
++    if s.mapping_failed || s.restore_error.is_some() {
++        return Err(invalid("pool state is not usable"));
++    }
++    let mut selected = BTreeSet::new();
++    let mut busy = 0;
++    for r in ranges {
++        for &gpa in s.pooled_gpas.range(r.gpa..r.gpa + r.bytes) {
++            if s.pending_io.values().flatten().any(|&v| overlaps((gpa, gpa + PAGE as u64), v)) {
++                busy += 1;
++            } else {
++                selected.insert(gpa);
++            }
++        }
++    }
++    let mut mapped: Vec<DiscardRange> = Vec::new();
++    for &gpa in &selected {
++        if let Some(last) = mapped.last_mut()
++            && last.gpa + last.bytes == gpa {
++                last.bytes += PAGE as u64;
++                continue;
++            }
++        mapped.push(DiscardRange { gpa, bytes: PAGE as u64 });
++    }
++    // Resolve every target before any MAP_FIXED. Guest reporting quarantines all
++    // listed pages until used-ring publication; pending device buffers are skipped.
++    let targets: Vec<_> = mapped.iter().map(|r| {
++        mem.get_slice(GuestAddress(r.gpa), r.bytes as usize)
++            .map_err(|_| invalid("discard target crosses guest region"))?;
++        mem.get_host_address(GuestAddress(r.gpa)).map(|hva| (hva, r))
++            .map_err(|_| invalid("discard target has no host address"))
++    }).collect::<io::Result<_>>()?;
++    for (hva, r) in targets {
++        s.mapping_failed = true; // MAP_FIXED failure can leave the old VMA unmapped.
++        replace(hva, r.bytes as usize)?;
++        s.mapping_failed = false;
++        s.overlays = true; // Anonymous zero backing still invalidates DAX-only snapshots.
++        mem.mark_dirty(GuestAddress(r.gpa), r.bytes as usize);
++    }
++    for gpa in selected {
++        s.pooled_gpas.remove(&gpa);
++    }
++    let stale: Vec<_> = ranges.iter().flat_map(|r| s.hints.range(r.gpa..r.gpa + r.bytes).map(|(&gpa, _)| gpa))
++        .filter(|&gpa| !s.pending_io.values().flatten().any(|&v| overlaps((gpa, gpa + PAGE as u64), v)))
++        .collect();
++    let removed = stale.len() as u64;
++    for gpa in stale { s.hints.remove(&gpa); }
++    Ok((mapped, busy, removed))
++}
++
++fn replace_private_zero(hva: *mut u8, bytes: usize) -> io::Result<()> {
++    // SAFETY: caller validates and owns the entire target range and guarantees
++    // no access until return. Anonymous backing never reads the canonical file.
++    let mapped = unsafe { libc::mmap(hva.cast(), bytes, libc::PROT_READ | libc::PROT_WRITE,
++        libc::MAP_PRIVATE | libc::MAP_ANONYMOUS | libc::MAP_FIXED | libc::MAP_NORESERVE, -1, 0) };
++    if mapped == libc::MAP_FAILED { Err(io::Error::last_os_error()) } else { Ok(()) }
++}
++
++/// No canonical bytes are read or written. The guest driver owns/quarantines
++/// these pages until the caller publishes the used-ring ACK. This function only
++/// detaches previously installed pool aliases, not every free DAX RAM page.
++pub(crate) fn discard_reported(mem: &GuestMemoryMmap, queue_head: u16,
++                              requested: Vec<DiscardRange>) -> io::Result<DiscardReport> {
++    let start = Instant::now();
++    let vm_id = required("FC_POOL_VM_ID")?;
++    let run_epoch = required("FC_POOL_RUN_EPOCH")?;
++    let mut s = state().lock().expect("pool state poisoned");
++    let (discarded, skipped_busy_pages, hints_removed) =
++        discard_with(mem, &requested, &mut s, replace_private_zero)?;
++    s.discard_sequence = s.discard_sequence.checked_add(1).expect("discard sequence exhausted");
++    Ok(DiscardReport { phase: "mapped", vm_id, run_epoch, batch: s.discard_sequence, queue_head,
++        requested_pages: requested.iter().map(|r| r.bytes / PAGE as u64).sum(),
++        discarded_pages: discarded.iter().map(|r| r.bytes / PAGE as u64).sum(),
++        requested, discarded, skipped_busy_pages, hints_removed, copied_bytes: 0,
++        host_work_ns: start.elapsed().as_nanos().try_into().unwrap_or(u64::MAX) })
++}
++
++pub(crate) fn log_discard(report: &DiscardReport) {
++    // Native timing stops before serialization/log output. Exact coalesced ranges
++    // support independent guest submit/ACK and host PFN correlation.
++    static TRACE: OnceLock<bool> = OnceLock::new();
++    if *TRACE.get_or_init(|| std::env::var("FC_POOL_DISCARD_TRACE").as_deref() == Ok("1")) {
++        // Lab-only lossless evidence: ordinary rate-limited info would suppress
++        // descriptor transactions and make submit/ACK joins incomplete.
++        crate::logger::info_unrestricted!("POOL_DISCARD_JSON {}", serde_json::to_string(report).expect("discard report serialization"));
++    }
++}
++
++/// The snapshot caller and reporting callbacks share one event loop. This last
++/// batch is therefore the exact cut represented by saved queue state and RAM;
++/// later paused-source reports are outside the checkpoint.
++pub(crate) fn log_discard_snapshot(snapshot_path: &std::path::Path,
++                                   mem_file_path: &std::path::Path) {
++    if std::env::var("FC_POOL_DISCARD_TRACE").as_deref() != Ok("1") {
++        return;
++    }
++    let discard_sequence = state().lock().expect("pool state poisoned").discard_sequence;
++    let marker = serde_json::json!({
++        "version": 1,
++        "phase": "complete",
++        "vm_id": std::env::var("FC_POOL_VM_ID").ok(),
++        "run_epoch": std::env::var("FC_POOL_RUN_EPOCH").ok(),
++        "discard_sequence": discard_sequence,
++        "snapshot_path": snapshot_path,
++        "mem_file_path": mem_file_path,
++    });
++    crate::logger::info_unrestricted!("POOL_DISCARD_SNAPSHOT_JSON {}", marker);
++}
++
++#[cfg(test)]
++pub(crate) fn test_set_pooled(gpa: u64) {
++    let mut s = state().lock().unwrap();
++    s.pooled_gpas.clear();
++    s.pooled_gpas.insert(gpa);
++    s.overlays = true;
++}
++
++#[cfg(test)]
++pub(crate) fn test_hint(gpa: u64) -> Option<Hint> {
++    state()
++        .lock()
++        .expect("pool state poisoned")
++        .hints
++        .get(&gpa)
++        .cloned()
++}
++
++#[derive(Debug, Deserialize)]
++#[serde(deny_unknown_fields)]
++struct PlanPage {
++    gpa: u64,
++    image_id: String,
++    image_offset: u64,
++    pool_offset: u64,
++}
++
++#[derive(Debug, Deserialize)]
++#[serde(deny_unknown_fields)]
++struct Plan {
++    vm_id: String,
++    run_epoch: String,
++    pool_path: String,
++    pages: Vec<PlanPage>,
++}
++
++#[derive(Debug, Serialize)]
++struct MappedPage {
++    gpa: u64,
++    pool_offset: u64,
++    hva: u64,
++}
++
++#[derive(Debug, Default, Serialize)]
++struct Report {
++    version: u32,
++    vm_id: String,
++    run_epoch: String,
++    requested: usize,
++    mapped: usize,
++    rejected_hint: usize,
++    rejected_content: usize,
++    mapped_bytes: usize,
++    mapped_gpas: Vec<u64>,
++    mapped_pages: Vec<MappedPage>,
++}
++
++/// A temporary read-only view of canonical CXL bytes. Drop does not release the
++/// controller's frame pin; the prototype freezes all published frames forever.
++struct View(*mut libc::c_void);
++impl Drop for View {
++    fn drop(&mut self) {
++        // SAFETY: this object owns exactly one page-long mmap.
++        unsafe {
++            libc::munmap(self.0, PAGE);
++        }
++    }
++}
++
++fn view(file: &File, offset: u64) -> io::Result<View> {
++    let offset = libc::off_t::try_from(offset).map_err(|_| invalid("pool offset overflow"))?;
++    // SAFETY: a fresh read-only page mapping; file and bounds were validated.
++    let ptr = unsafe {
++        libc::mmap(
++            std::ptr::null_mut(),
++            PAGE,
++            libc::PROT_READ,
++            libc::MAP_SHARED,
++            file.as_raw_fd(),
++            offset,
++        )
++    };
++    if ptr == libc::MAP_FAILED {
++        return Err(io::Error::last_os_error());
++    }
++    Ok(View(ptr))
++}
++
++fn key_matches(hint: Option<&Hint>, p: &PlanPage) -> bool {
++    hint.is_some_and(|h| h.image_id == p.image_id && h.image_offset == p.image_offset)
++}
++
++/// Caller guarantees a paused VM, a drained device manager, and no concurrent
++/// host writes. mmap's MMU notifier invalidates KVM translations before return.
++pub(crate) fn apply(mem: &GuestMemoryMmap) -> io::Result<()> {
++    dump_hints()?;
++    let plan: Plan = serde_json::from_reader(BufReader::with_capacity(
++        JSON_BUFFER,
++        File::open(required("FC_POOL_PLAN")?)?,
++    ))?;
++    let vm_id = required("FC_POOL_VM_ID")?;
++    let epoch = required("FC_POOL_RUN_EPOCH")?;
++    if plan.vm_id != vm_id || plan.run_epoch != epoch {
++        return Err(invalid("pool plan VM identity/run epoch mismatch"));
++    }
++    let mut report = Report {
++        version: 1,
++        vm_id,
++        run_epoch: epoch,
++        requested: plan.pages.len(),
++        ..Report::default()
++    };
++    if !plan.pages.is_empty() {
++        if std::fs::read_to_string("/sys/module/device_dax/parameters/pool_cow")?.trim() != "Y" {
++            return Err(invalid("lab devDAX pool CoW support is not enabled"));
++        }
++        let image_id = required("FC_POOL_IMAGE_ID")?;
++        if !valid_identity(&image_id) {
++            return Err(invalid("invalid immutable image identity"));
++        }
++        let file = OpenOptions::new().read(true).open(&plan.pool_path)?;
++        if !file.metadata()?.file_type().is_char_device() {
++            return Err(invalid("pool backing must be a devDAX character device"));
++        }
++        let name = std::path::Path::new(&plan.pool_path)
++            .file_name()
++            .and_then(|s| s.to_str())
++            .ok_or_else(|| invalid("invalid pool path"))?;
++        if !name.starts_with("dax") || !name[3..].chars().all(|c| c.is_ascii_digit() || c == '.') {
++            return Err(invalid("pool backing must be /dev/daxX.Y"));
++        }
++        let attribute = |attr: &str| -> io::Result<u64> {
++            std::fs::read_to_string(format!("/sys/bus/dax/devices/{name}/{attr}"))?
++                .trim()
++                .parse()
++                .map_err(|_| invalid("invalid devDAX attribute"))
++        };
++        if attribute("align")? != PAGE as u64 {
++            return Err(invalid("pool requires 4 KiB devDAX alignment"));
++        }
++        let capacity = attribute("size")?;
++        let dev = std::fs::read_to_string(format!("/sys/bus/dax/devices/{name}/dev"))?;
++        let (major, minor) = dev
++            .trim()
++            .split_once(':')
++            .ok_or_else(|| invalid("invalid devDAX device number"))?;
++        let major: u32 = major.parse().map_err(|_| invalid("invalid devDAX major"))?;
++        let minor: u32 = minor.parse().map_err(|_| invalid("invalid devDAX minor"))?;
++        let rdev = file.metadata()?.rdev();
++        if rdev != libc::makedev(major, minor) {
++            return Err(invalid(
++                "opened pool backing does not match devDAX sysfs identity",
++            ));
++        }
++        let pool_base: u64 = required("FC_POOL_OFFSET")?
++            .parse()
++            .map_err(|_| invalid("invalid FC_POOL_OFFSET"))?;
++        let pool_size: u64 = required("FC_POOL_BYTES")?
++            .parse()
++            .map_err(|_| invalid("invalid FC_POOL_BYTES"))?;
++        let pool_end = pool_base
++            .checked_add(pool_size)
++            .ok_or_else(|| invalid("pool allocation overflow"))?;
++        if pool_base % PAGE as u64 != 0
++            || pool_size == 0
++            || pool_size % PAGE as u64 != 0
++            || pool_end > capacity
++        {
++            return Err(invalid("invalid frozen pool allocation bounds"));
++        }
++        for region in mem.iter() {
++            if let Some(backing) = region.file_offset() {
++                let metadata = backing.file().metadata()?;
++                if metadata.file_type().is_char_device() && metadata.rdev() == rdev {
++                    let ram_end = backing
++                        .start()
++                        .checked_add(region.len())
++                        .ok_or_else(|| invalid("RAM allocation overflow"))?;
++                    if pool_base < ram_end && backing.start() < pool_end {
++                        return Err(invalid(
++                            "frozen pool allocation overlaps this VM's mutable RAM reservation",
++                        ));
++                    }
++                }
++            }
++        }
++        let mut unique = BTreeSet::new();
++        // Complete structural preflight before replacing any mapping.
++        for p in &plan.pages {
++            if p.gpa % PAGE as u64 != 0
++                || p.image_offset % PAGE as u64 != 0
++                || p.pool_offset % PAGE as u64 != 0
++                || p.image_id != image_id
++                || p.pool_offset < pool_base
++                || p.pool_offset
++                    .checked_add(PAGE as u64)
++                    .is_none_or(|end| end > pool_end)
++                || !unique.insert(p.gpa)
++            {
++                return Err(invalid(
++                    "unaligned, duplicate, out-of-range or wrong-image pool page",
++                ));
++            }
++            mem.get_slice(GuestAddress(p.gpa), PAGE)
++                .map_err(|e| invalid(e.to_string()))?;
++        }
++        let mut s = state().lock().expect("pool state poisoned");
++        if let Some(error) = &s.restore_error {
++            return Err(invalid(error));
++        }
++        for p in plan.pages {
++            if !key_matches(s.hints.get(&p.gpa), &p) {
++                report.rejected_hint += 1;
++                continue;
++            }
++            let canonical = view(&file, p.pool_offset)?;
++            let mut current = [0u8; PAGE];
++            mem.read_slice(&mut current, GuestAddress(p.gpa))
++                .map_err(|e| invalid(e.to_string()))?;
++            // SAFETY: canonical is a valid immutable read-only page until dropped.
++            let expected = unsafe { std::slice::from_raw_parts(canonical.0.cast::<u8>(), PAGE) };
++            if current != expected {
++                report.rejected_content += 1;
++                continue;
++            }
++            let destination = mem
++                .get_host_address(GuestAddress(p.gpa))
++                .map_err(|e| invalid(e.to_string()))?;
++            // SAFETY: the whole destination page belongs to paused guest RAM;
++            // all I/O has drained, contents match exactly, and the pool remains
++            // immutable. Kernel private CoW covers later CPU and host writes.
++            s.mapping_failed = true; // MAP_FIXED may unmap before a later failure.
++            let ptr = unsafe {
++                libc::mmap(
++                    destination.cast(),
++                    PAGE,
++                    libc::PROT_READ | libc::PROT_WRITE,
++                    libc::MAP_PRIVATE | libc::MAP_FIXED,
++                    file.as_raw_fd(),
++                    p.pool_offset as libc::off_t,
++                )
++            };
++            if ptr == libc::MAP_FAILED {
++                return Err(io::Error::last_os_error());
++            }
++            s.mapping_failed = false;
++            s.overlays = true;
++            s.pooled_gpas.insert(p.gpa);
++            report.mapped += 1;
++            report.mapped_bytes += PAGE;
++            report.mapped_gpas.push(p.gpa);
++            report.mapped_pages.push(MappedPage {
++                gpa: p.gpa,
++                pool_offset: p.pool_offset,
++                hva: destination as u64,
++            });
++        }
++    }
++    let mut writer =
++        BufWriter::with_capacity(JSON_BUFFER, File::create(required("FC_POOL_REPORT")?)?);
++    serde_json::to_writer(&mut writer, &report)?;
++    writer.flush()
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn candidate_key_is_not_just_gpa() {
++        let h = Hint {
++            gpa: 4096,
++            image_id: "a".repeat(64),
++            image_offset: 8192,
++            sequence: 7,
++        };
++        let mut p = PlanPage {
++            gpa: 4096,
++            image_id: "a".repeat(64),
++            image_offset: 8192,
++            pool_offset: 0,
++        };
++        assert!(key_matches(Some(&h), &p));
++        p.image_offset += 4096;
++        assert!(!key_matches(Some(&h), &p));
++        p.image_offset = 8192;
++        p.image_id = "b".repeat(64);
++        assert!(!key_matches(Some(&h), &p));
++        assert!(!key_matches(None, &p));
++    }
++
++    #[test]
++    fn identity_must_be_full_digest() {
++        assert!(valid_identity(&"a".repeat(64)));
++        assert!(!valid_identity(&"a".repeat(63)));
++        assert!(!valid_identity(&"z".repeat(64)));
++    }
++
++    fn discard_test_mem(pages: usize) -> GuestMemoryMmap {
++        use crate::vmm_config::machine_config::HugePageConfig;
++        use crate::vstate::memory::{anonymous, test_utils::into_region_ext};
++        into_region_ext(anonymous(std::iter::once((GuestAddress(0), pages * PAGE)),
++            true, HugePageConfig::None).unwrap())
++    }
++
++    fn range(gpa: u64, pages: u64) -> DiscardRange {
++        DiscardRange { gpa, bytes: pages * PAGE as u64 }
++    }
++
++    fn bytes(mem: &GuestMemoryMmap, gpa: u64) -> Vec<u8> {
++        let mut value = vec![0; PAGE];
++        mem.read_slice(&mut value, GuestAddress(gpa)).unwrap();
++        value
++    }
++
++    #[test]
++    fn pool_discard_private_zero_preserves_canonical_peer_and_dirty_tracking() {
++        use std::os::unix::fs::FileExt;
++        use crate::vstate::memory::Bitmap;
++        use vmm_sys_util::tempfile::TempFile;
++        let mut file = TempFile::new().unwrap().into_file();
++        file.write_all(&vec![0x6a; PAGE]).unwrap();
++        let mem = discard_test_mem(3);
++        let peer = discard_test_mem(3);
++        for m in [&mem, &peer] {
++            m.write_slice(&vec![0x9c; 3 * PAGE], GuestAddress(0)).unwrap();
++            let hva = m.get_host_address(GuestAddress(PAGE as u64)).unwrap();
++            // SAFETY: test owns the live guest allocation and maps exactly one page.
++            assert_ne!(unsafe { libc::mmap(hva.cast(), PAGE, libc::PROT_READ | libc::PROT_WRITE,
++                libc::MAP_PRIVATE | libc::MAP_FIXED, file.as_raw_fd(), 0) }, libc::MAP_FAILED);
++        }
++        assert_eq!(bytes(&mem, PAGE as u64), vec![0x6a; PAGE]);
++        let mut s = State::default();
++        s.pooled_gpas.insert(PAGE as u64);
++        mem.reset_dirty();
++        let (mapped, busy, _) = discard_with(&mem, &[range(0, 3)], &mut s, replace_private_zero).unwrap();
++        assert_eq!(mapped, vec![range(PAGE as u64, 1)]);
++        assert_eq!(busy, 0);
++        assert!(s.pooled_gpas.is_empty() && s.overlays && !s.mapping_failed);
++        assert_eq!(bytes(&mem, 0), vec![0x9c; PAGE]);
++        assert_eq!(bytes(&mem, PAGE as u64), vec![0; PAGE]);
++        assert_eq!(bytes(&mem, (2 * PAGE) as u64), vec![0x9c; PAGE]);
++        assert_eq!(bytes(&peer, PAGE as u64), vec![0x6a; PAGE]);
++        let region = mem.iter().next().unwrap();
++        assert!(!region.bitmap().dirty_at(0));
++        assert!(region.bitmap().dirty_at(PAGE));
++        assert!(!region.bitmap().dirty_at(2 * PAGE));
++        // Reuse the detached page; neither peer nor canonical backing changes.
++        mem.write_slice(&vec![0xdd; PAGE], GuestAddress(PAGE as u64)).unwrap();
++        assert_eq!(bytes(&peer, PAGE as u64), vec![0x6a; PAGE]);
++        let mut actual = vec![0; PAGE];
++        file.read_exact_at(&mut actual, 0).unwrap();
++        assert_eq!(actual, vec![0x6a; PAGE]);
++    }
++
++    #[test]
++    fn pool_discard_preflight_rejects_all_before_any_mapping() {
++        let mem = discard_test_mem(3);
++        let invalid = vec![vec![], vec![DiscardRange {gpa: 1, bytes: PAGE as u64}],
++            vec![DiscardRange {gpa: 0, bytes: 1}], vec![DiscardRange {gpa: 0, bytes: 0}],
++            vec![range(0, 2), range(PAGE as u64, 1)],
++            vec![range(0, 1), range((3 * PAGE) as u64, 1)],
++            vec![DiscardRange {gpa: u64::MAX - 4095, bytes: 4096}]];
++        for ranges in invalid {
++            let mut s = State::default();
++            s.pooled_gpas.extend([0, PAGE as u64]);
++            assert!(discard_with(&mem, &ranges, &mut s, |_, _| panic!("preflight mapped bytes")).is_err());
++            assert!(!s.mapping_failed && !s.overlays && s.pooled_gpas.len() == 2);
++        }
++    }
++
++    #[test]
++    fn pool_discard_coalesces_and_busy_partial_byte_defers_whole_page() {
++        let mem = discard_test_mem(4);
++        mem.write_slice(&vec![0x82; 4 * PAGE], GuestAddress(0)).unwrap();
++        let mut s = State::default();
++        s.pooled_gpas.extend([0, PAGE as u64, (2 * PAGE) as u64]);
++        s.pending_io.insert(77, vec![(2 * PAGE as u64 + 17, 2 * PAGE as u64 + 18)]);
++        for gpa in [0, PAGE as u64, 2 * PAGE as u64, 3 * PAGE as u64] {
++            s.hints.insert(gpa, Hint {gpa, image_id: "a".repeat(64), image_offset: gpa, sequence: 1});
++        }
++        let mut calls = 0;
++        let (mapped, busy, removed) = discard_with(&mem, &[range(0, 4)], &mut s, |hva, len| {
++            calls += 1; replace_private_zero(hva, len)
++        }).unwrap();
++        assert_eq!(calls, 1);
++        assert_eq!(mapped, vec![range(0, 2)]);
++        assert_eq!((busy, removed), (1, 3));
++        assert_eq!(bytes(&mem, 2 * PAGE as u64), vec![0x82; PAGE]);
++        assert_eq!(s.pooled_gpas, BTreeSet::from([2 * PAGE as u64]));
++        assert_eq!(s.hints.keys().copied().collect::<Vec<_>>(), vec![2 * PAGE as u64]);
++        s.pending_io.remove(&77);
++        let (mapped, busy, removed) = discard_with(&mem, &[range(2 * PAGE as u64, 1)], &mut s, replace_private_zero).unwrap();
++        assert_eq!(mapped, vec![range(2 * PAGE as u64, 1)]);
++        assert_eq!((busy, removed), (0, 1));
++    }
++
++    #[test]
++    fn pool_discard_mapping_failure_poison_prevents_further_use() {
++        let mem = discard_test_mem(3);
++        let mut s = State::default();
++        s.pooled_gpas.extend([0, 2 * PAGE as u64]);
++        let mut calls = 0;
++        assert!(discard_with(&mem, &[range(0, 3)], &mut s, |hva, len| {
++            calls += 1;
++            if calls == 2 { Err(io::Error::from_raw_os_error(libc::ENOMEM)) }
++            else { replace_private_zero(hva, len) }
++        }).is_err());
++        assert_eq!(calls, 2);
++        assert!(s.mapping_failed && s.overlays);
++        assert!(discard_with(&mem, &[range(0, 1)], &mut s, |_, _| panic!("poisoned mapping retried")).is_err());
++    }
++
++}
 diff --git a/src/vmm/src/resources.rs b/src/vmm/src/resources.rs
-index 55f784a8d..42f971edc 100644
+index 55f784a8d..9806c079b 100644
 --- a/src/vmm/src/resources.rs
 +++ b/src/vmm/src/resources.rs
-@@ -491,6 +491,31 @@ impl VmResources {
+@@ -491,6 +491,32 @@ impl VmResources {
              .iter()
              .any(|b| b.lock().expect("Poisoned lock").is_vhost_user());
  
 +        // Explicit lab opt-in; ordinary Firecracker configuration is unchanged.
 +        if let Some(path) = std::env::var_os("FC_DAX_RAM") {
 +            if self.memory_hotplug.is_some()
-+                || self.balloon.get().is_some()
++                || self.balloon.get().is_some_and(|b| !(crate::pool_cache::discard_enabled()
++                    && b.lock().expect("Poisoned balloon lock").pool_reporting_only()))
 +                || vhost_user_device_used
 +                || self.machine_config.huge_pages
 +                    != crate::vmm_config::machine_config::HugePageConfig::None
 +            {
 +                return Err(MemoryError::Dax(
-+                    "DAX RAM requires no balloon, hotplug, vhost-user or huge-page override".into(),
++                    "DAX RAM requires reporting-only opt-in balloon, no hotplug, vhost-user or huge-page override".into(),
 +                ));
 +            }
 +            let offset = std::env::var("FC_DAX_OFFSET")
@@ -3692,476 +4820,3 @@ index dfedd6474..05ddc6fd9 100644
  
          let mut entry = kvm_irq_routing_entry {
              gsi,
-diff --git a/src/vmm/src/pool_cache.rs b/src/vmm/src/pool_cache.rs
-new file mode 100644
-index 000000000..879d41770
---- /dev/null
-+++ b/src/vmm/src/pool_cache.rs
-@@ -0,0 +1,467 @@
-+// Copyright 2026
-+// SPDX-License-Identifier: Apache-2.0
-+
-+//! Experimental immutable block-data pooling. Hints are I/O history, not guest
-+//! page-cache residency. The controller owns immutable image identity, the
-+//! approximate Bloom directory and frozen CXL frame lifetime. Admission runs only
-+//! with vCPUs paused and all device writes drained, and validates every byte.
-+//! Private devDAX mappings require the lab kernel's opt-in CoW extension.
-+
-+use std::collections::{BTreeMap, BTreeSet};
-+use std::fs::{File, OpenOptions};
-+use std::io::{self, BufReader, BufWriter, Write};
-+use std::os::fd::AsRawFd;
-+use std::os::unix::fs::{FileTypeExt, MetadataExt};
-+use std::sync::{Mutex, OnceLock};
-+
-+use serde::{Deserialize, Serialize};
-+use vm_memory::{GuestMemoryBackend, GuestMemoryRegion};
-+
-+use crate::vstate::memory::{Bytes, GuestAddress, GuestMemoryMmap};
-+
-+const PAGE: usize = 4096;
-+// serde_json performs small reads/writes; buffering is essential when a
-+// checkpoint sidecar lives on an NFS mount with attribute-cache validation.
-+const JSON_BUFFER: usize = 64 * 1024;
-+
-+#[derive(Clone, Debug, Deserialize, Serialize)]
-+#[serde(deny_unknown_fields)]
-+pub(crate) struct Hint {
-+    pub gpa: u64,
-+    pub image_id: String,
-+    pub image_offset: u64,
-+    pub sequence: u64,
-+}
-+
-+#[derive(Debug, Deserialize, Serialize)]
-+#[serde(deny_unknown_fields)]
-+struct HintFile {
-+    version: u32,
-+    vm_id: String,
-+    run_epoch: String,
-+    hints: Vec<Hint>,
-+}
-+
-+#[derive(Debug, Default)]
-+struct State {
-+    hints: BTreeMap<u64, Hint>,
-+    sequence: u64,
-+    overlays: bool,
-+    mapping_failed: bool,
-+    restore_error: Option<String>,
-+}
-+
-+fn invalid(message: impl Into<String>) -> io::Error {
-+    io::Error::new(io::ErrorKind::InvalidInput, message.into())
-+}
-+
-+fn required(name: &str) -> io::Result<String> {
-+    std::env::var(name)
-+        .ok()
-+        .filter(|v| !v.is_empty())
-+        .ok_or_else(|| invalid(format!("{name} is required")))
-+}
-+
-+fn valid_identity(id: &str) -> bool {
-+    id.len() == 64 && id.bytes().all(|b| b.is_ascii_hexdigit())
-+}
-+
-+fn state() -> &'static Mutex<State> {
-+    static STATE: OnceLock<Mutex<State>> = OnceLock::new();
-+    STATE.get_or_init(|| {
-+        let mut s = State::default();
-+        if let Ok(path) = std::env::var("FC_POOL_HINTS_RESTORE") {
-+            let result = (|| -> io::Result<()> {
-+                let saved: HintFile = serde_json::from_reader(BufReader::with_capacity(
-+                    JSON_BUFFER,
-+                    File::open(path)?,
-+                ))?;
-+                let image_id = required("FC_POOL_IMAGE_ID")?;
-+                if saved.version != 1
-+                    || saved.vm_id != required("FC_POOL_VM_ID")?
-+                    || !valid_identity(&image_id)
-+                {
-+                    return Err(invalid("restored pool hint identity/version mismatch"));
-+                }
-+                for h in saved.hints {
-+                    if h.gpa % PAGE as u64 != 0
-+                        || h.image_offset % PAGE as u64 != 0
-+                        || h.image_id != image_id
-+                        || s.hints.contains_key(&h.gpa)
-+                    {
-+                        return Err(invalid("invalid restored pool hint"));
-+                    }
-+                    s.sequence = s.sequence.max(h.sequence);
-+                    s.hints.insert(h.gpa, h);
-+                }
-+                Ok(())
-+            })();
-+            if let Err(error) = result {
-+                s.hints.clear();
-+                s.restore_error = Some(error.to_string());
-+            }
-+        }
-+        Mutex::new(s)
-+    })
-+}
-+
-+/// Only an explicitly identified read-only drive can contribute hints.
-+pub(crate) fn disk_identity(path: &str, read_only: bool) -> Option<String> {
-+    if !read_only || std::env::var("FC_POOL_IMAGE_PATH").as_deref() != Ok(path) {
-+        return None;
-+    }
-+    let id = std::env::var("FC_POOL_IMAGE_ID").ok()?;
-+    if !valid_identity(&id)
-+        || required("FC_POOL_VM_ID").is_err()
-+        || required("FC_POOL_RUN_EPOCH").is_err()
-+    {
-+        return None;
-+    }
-+    Some(id)
-+}
-+
-+/// Call only after a complete successful read and before used-ring publication.
-+pub(crate) fn observe(image_id: &str, gpa: u64, image_offset: u64, length: u32) {
-+    if gpa % PAGE as u64 != 0 || image_offset % PAGE as u64 != 0 {
-+        return;
-+    }
-+    let mut s = state().lock().expect("pool state poisoned");
-+    for delta in (0..u64::from(length) / PAGE as u64).map(|n| n * PAGE as u64) {
-+        let Some(address) = gpa.checked_add(delta) else {
-+            break;
-+        };
-+        let Some(offset) = image_offset.checked_add(delta) else {
-+            break;
-+        };
-+        s.sequence += 1;
-+        let sequence = s.sequence;
-+        s.hints.insert(
-+            address,
-+            Hint {
-+                gpa: address,
-+                image_id: image_id.to_owned(),
-+                image_offset: offset,
-+                sequence,
-+            },
-+        );
-+    }
-+}
-+
-+pub(crate) fn dump_hints() -> io::Result<()> {
-+    let Ok(path) = std::env::var("FC_POOL_HINTS") else {
-+        return Ok(());
-+    };
-+    let s = state().lock().expect("pool state poisoned");
-+    if let Some(error) = &s.restore_error {
-+        return Err(invalid(error));
-+    }
-+    let hints = HintFile {
-+        version: 1,
-+        vm_id: required("FC_POOL_VM_ID")?,
-+        run_epoch: required("FC_POOL_RUN_EPOCH")?,
-+        hints: s.hints.values().cloned().collect(),
-+    };
-+    let temporary = format!("{path}.new");
-+    let mut writer = BufWriter::with_capacity(JSON_BUFFER, File::create(&temporary)?);
-+    serde_json::to_writer(&mut writer, &hints)?;
-+    writer.flush()?;
-+    std::fs::rename(temporary, path)
-+}
-+
-+pub(crate) fn mapping_failed() -> bool {
-+    state().lock().expect("pool state poisoned").mapping_failed
-+}
-+
-+pub(crate) fn has_overlays() -> bool {
-+    state().lock().expect("pool state poisoned").overlays
-+}
-+
-+#[cfg(test)]
-+pub(crate) fn test_hint(gpa: u64) -> Option<Hint> {
-+    state()
-+        .lock()
-+        .expect("pool state poisoned")
-+        .hints
-+        .get(&gpa)
-+        .cloned()
-+}
-+
-+#[derive(Debug, Deserialize)]
-+#[serde(deny_unknown_fields)]
-+struct PlanPage {
-+    gpa: u64,
-+    image_id: String,
-+    image_offset: u64,
-+    pool_offset: u64,
-+}
-+
-+#[derive(Debug, Deserialize)]
-+#[serde(deny_unknown_fields)]
-+struct Plan {
-+    vm_id: String,
-+    run_epoch: String,
-+    pool_path: String,
-+    pages: Vec<PlanPage>,
-+}
-+
-+#[derive(Debug, Serialize)]
-+struct MappedPage {
-+    gpa: u64,
-+    pool_offset: u64,
-+    hva: u64,
-+}
-+
-+#[derive(Debug, Default, Serialize)]
-+struct Report {
-+    version: u32,
-+    vm_id: String,
-+    run_epoch: String,
-+    requested: usize,
-+    mapped: usize,
-+    rejected_hint: usize,
-+    rejected_content: usize,
-+    mapped_bytes: usize,
-+    mapped_gpas: Vec<u64>,
-+    mapped_pages: Vec<MappedPage>,
-+}
-+
-+/// A temporary read-only view of canonical CXL bytes. Drop does not release the
-+/// controller's frame pin; the prototype freezes all published frames forever.
-+struct View(*mut libc::c_void);
-+impl Drop for View {
-+    fn drop(&mut self) {
-+        // SAFETY: this object owns exactly one page-long mmap.
-+        unsafe {
-+            libc::munmap(self.0, PAGE);
-+        }
-+    }
-+}
-+
-+fn view(file: &File, offset: u64) -> io::Result<View> {
-+    let offset = libc::off_t::try_from(offset).map_err(|_| invalid("pool offset overflow"))?;
-+    // SAFETY: a fresh read-only page mapping; file and bounds were validated.
-+    let ptr = unsafe {
-+        libc::mmap(
-+            std::ptr::null_mut(),
-+            PAGE,
-+            libc::PROT_READ,
-+            libc::MAP_SHARED,
-+            file.as_raw_fd(),
-+            offset,
-+        )
-+    };
-+    if ptr == libc::MAP_FAILED {
-+        return Err(io::Error::last_os_error());
-+    }
-+    Ok(View(ptr))
-+}
-+
-+fn key_matches(hint: Option<&Hint>, p: &PlanPage) -> bool {
-+    hint.is_some_and(|h| h.image_id == p.image_id && h.image_offset == p.image_offset)
-+}
-+
-+/// Caller guarantees a paused VM, a drained device manager, and no concurrent
-+/// host writes. mmap's MMU notifier invalidates KVM translations before return.
-+pub(crate) fn apply(mem: &GuestMemoryMmap) -> io::Result<()> {
-+    dump_hints()?;
-+    let plan: Plan = serde_json::from_reader(BufReader::with_capacity(
-+        JSON_BUFFER,
-+        File::open(required("FC_POOL_PLAN")?)?,
-+    ))?;
-+    let vm_id = required("FC_POOL_VM_ID")?;
-+    let epoch = required("FC_POOL_RUN_EPOCH")?;
-+    if plan.vm_id != vm_id || plan.run_epoch != epoch {
-+        return Err(invalid("pool plan VM identity/run epoch mismatch"));
-+    }
-+    let mut report = Report {
-+        version: 1,
-+        vm_id,
-+        run_epoch: epoch,
-+        requested: plan.pages.len(),
-+        ..Report::default()
-+    };
-+    if !plan.pages.is_empty() {
-+        if std::fs::read_to_string("/sys/module/device_dax/parameters/pool_cow")?.trim() != "Y" {
-+            return Err(invalid("lab devDAX pool CoW support is not enabled"));
-+        }
-+        let image_id = required("FC_POOL_IMAGE_ID")?;
-+        if !valid_identity(&image_id) {
-+            return Err(invalid("invalid immutable image identity"));
-+        }
-+        let file = OpenOptions::new().read(true).open(&plan.pool_path)?;
-+        if !file.metadata()?.file_type().is_char_device() {
-+            return Err(invalid("pool backing must be a devDAX character device"));
-+        }
-+        let name = std::path::Path::new(&plan.pool_path)
-+            .file_name()
-+            .and_then(|s| s.to_str())
-+            .ok_or_else(|| invalid("invalid pool path"))?;
-+        if !name.starts_with("dax") || !name[3..].chars().all(|c| c.is_ascii_digit() || c == '.') {
-+            return Err(invalid("pool backing must be /dev/daxX.Y"));
-+        }
-+        let attribute = |attr: &str| -> io::Result<u64> {
-+            std::fs::read_to_string(format!("/sys/bus/dax/devices/{name}/{attr}"))?
-+                .trim()
-+                .parse()
-+                .map_err(|_| invalid("invalid devDAX attribute"))
-+        };
-+        if attribute("align")? != PAGE as u64 {
-+            return Err(invalid("pool requires 4 KiB devDAX alignment"));
-+        }
-+        let capacity = attribute("size")?;
-+        let dev = std::fs::read_to_string(format!("/sys/bus/dax/devices/{name}/dev"))?;
-+        let (major, minor) = dev
-+            .trim()
-+            .split_once(':')
-+            .ok_or_else(|| invalid("invalid devDAX device number"))?;
-+        let major: u32 = major.parse().map_err(|_| invalid("invalid devDAX major"))?;
-+        let minor: u32 = minor.parse().map_err(|_| invalid("invalid devDAX minor"))?;
-+        let rdev = file.metadata()?.rdev();
-+        if rdev != libc::makedev(major, minor) {
-+            return Err(invalid(
-+                "opened pool backing does not match devDAX sysfs identity",
-+            ));
-+        }
-+        let pool_base: u64 = required("FC_POOL_OFFSET")?
-+            .parse()
-+            .map_err(|_| invalid("invalid FC_POOL_OFFSET"))?;
-+        let pool_size: u64 = required("FC_POOL_BYTES")?
-+            .parse()
-+            .map_err(|_| invalid("invalid FC_POOL_BYTES"))?;
-+        let pool_end = pool_base
-+            .checked_add(pool_size)
-+            .ok_or_else(|| invalid("pool allocation overflow"))?;
-+        if pool_base % PAGE as u64 != 0
-+            || pool_size == 0
-+            || pool_size % PAGE as u64 != 0
-+            || pool_end > capacity
-+        {
-+            return Err(invalid("invalid frozen pool allocation bounds"));
-+        }
-+        for region in mem.iter() {
-+            if let Some(backing) = region.file_offset() {
-+                let metadata = backing.file().metadata()?;
-+                if metadata.file_type().is_char_device() && metadata.rdev() == rdev {
-+                    let ram_end = backing
-+                        .start()
-+                        .checked_add(region.len())
-+                        .ok_or_else(|| invalid("RAM allocation overflow"))?;
-+                    if pool_base < ram_end && backing.start() < pool_end {
-+                        return Err(invalid(
-+                            "frozen pool allocation overlaps this VM's mutable RAM reservation",
-+                        ));
-+                    }
-+                }
-+            }
-+        }
-+        let mut unique = BTreeSet::new();
-+        // Complete structural preflight before replacing any mapping.
-+        for p in &plan.pages {
-+            if p.gpa % PAGE as u64 != 0
-+                || p.image_offset % PAGE as u64 != 0
-+                || p.pool_offset % PAGE as u64 != 0
-+                || p.image_id != image_id
-+                || p.pool_offset < pool_base
-+                || p.pool_offset
-+                    .checked_add(PAGE as u64)
-+                    .is_none_or(|end| end > pool_end)
-+                || !unique.insert(p.gpa)
-+            {
-+                return Err(invalid(
-+                    "unaligned, duplicate, out-of-range or wrong-image pool page",
-+                ));
-+            }
-+            mem.get_slice(GuestAddress(p.gpa), PAGE)
-+                .map_err(|e| invalid(e.to_string()))?;
-+        }
-+        let mut s = state().lock().expect("pool state poisoned");
-+        if let Some(error) = &s.restore_error {
-+            return Err(invalid(error));
-+        }
-+        for p in plan.pages {
-+            if !key_matches(s.hints.get(&p.gpa), &p) {
-+                report.rejected_hint += 1;
-+                continue;
-+            }
-+            let canonical = view(&file, p.pool_offset)?;
-+            let mut current = [0u8; PAGE];
-+            mem.read_slice(&mut current, GuestAddress(p.gpa))
-+                .map_err(|e| invalid(e.to_string()))?;
-+            // SAFETY: canonical is a valid immutable read-only page until dropped.
-+            let expected = unsafe { std::slice::from_raw_parts(canonical.0.cast::<u8>(), PAGE) };
-+            if current != expected {
-+                report.rejected_content += 1;
-+                continue;
-+            }
-+            let destination = mem
-+                .get_host_address(GuestAddress(p.gpa))
-+                .map_err(|e| invalid(e.to_string()))?;
-+            // SAFETY: the whole destination page belongs to paused guest RAM;
-+            // all I/O has drained, contents match exactly, and the pool remains
-+            // immutable. Kernel private CoW covers later CPU and host writes.
-+            s.mapping_failed = true; // MAP_FIXED may unmap before a later failure.
-+            let ptr = unsafe {
-+                libc::mmap(
-+                    destination.cast(),
-+                    PAGE,
-+                    libc::PROT_READ | libc::PROT_WRITE,
-+                    libc::MAP_PRIVATE | libc::MAP_FIXED,
-+                    file.as_raw_fd(),
-+                    p.pool_offset as libc::off_t,
-+                )
-+            };
-+            if ptr == libc::MAP_FAILED {
-+                return Err(io::Error::last_os_error());
-+            }
-+            s.mapping_failed = false;
-+            s.overlays = true;
-+            report.mapped += 1;
-+            report.mapped_bytes += PAGE;
-+            report.mapped_gpas.push(p.gpa);
-+            report.mapped_pages.push(MappedPage {
-+                gpa: p.gpa,
-+                pool_offset: p.pool_offset,
-+                hva: destination as u64,
-+            });
-+        }
-+    }
-+    let mut writer =
-+        BufWriter::with_capacity(JSON_BUFFER, File::create(required("FC_POOL_REPORT")?)?);
-+    serde_json::to_writer(&mut writer, &report)?;
-+    writer.flush()
-+}
-+
-+#[cfg(test)]
-+mod tests {
-+    use super::*;
-+
-+    #[test]
-+    fn candidate_key_is_not_just_gpa() {
-+        let h = Hint {
-+            gpa: 4096,
-+            image_id: "a".repeat(64),
-+            image_offset: 8192,
-+            sequence: 7,
-+        };
-+        let mut p = PlanPage {
-+            gpa: 4096,
-+            image_id: "a".repeat(64),
-+            image_offset: 8192,
-+            pool_offset: 0,
-+        };
-+        assert!(key_matches(Some(&h), &p));
-+        p.image_offset += 4096;
-+        assert!(!key_matches(Some(&h), &p));
-+        p.image_offset = 8192;
-+        p.image_id = "b".repeat(64);
-+        assert!(!key_matches(Some(&h), &p));
-+        assert!(!key_matches(None, &p));
-+    }
-+
-+    #[test]
-+    fn identity_must_be_full_digest() {
-+        assert!(valid_identity(&"a".repeat(64)));
-+        assert!(!valid_identity(&"a".repeat(63)));
-+        assert!(!valid_identity(&"z".repeat(64)));
-+    }
-+}

@@ -1,0 +1,9 @@
+{
+  "result": "passed",
+  "formal_suite_positive_audit_identical_after_fresh_archive_extraction": true,
+  "original_audit_sha256": "a1af31d9c291b6944a4ffe453dcfc53e617247c9fbbc657887b7fda657f54415",
+  "replay_audit_sha256": "a1af31d9c291b6944a4ffe453dcfc53e617247c9fbbc657887b7fda657f54415",
+  "raw_receipts": 3300,
+  "diagnostic_positive_audit_identical_after_fresh_archive_extraction": true,
+  "diagnostic_raw_receipts": 118
+}

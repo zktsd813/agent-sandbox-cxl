@@ -1145,3 +1145,24 @@ Runtime admission을 사용하는 Firecracker는 전용 L1 안에서 `--no-secco
 페이지를 `mlock`하고 file offset→GPA를 기록한다. Pause 중 이 GPA를 VMM HVA와 canonical PFN에
 연결하고, 검사 뒤 unpin한다. 이 기록은 admission plan 생성에 사용하지 않는다. 초기의
 `mincore`와 과거 hint GPA PFN 각각의 검사와 보강된 현재 cache-page 대응 검사는 결과에서 구분한다.
+
+### Guest의 명시적 폐기 알림과 private backing 교체
+
+[페이지 폐기 설계](../../docs/cxl-page-discard.md)는 표준 Linux virtio-balloon free-page
+reporting의 guest 격리 → host 처리 → used-ring ACK → allocator 반환 순서를 사용한다.
+기존 pooling 환경의 VM ID/epoch 설정에 `FC_POOL_DISCARD=1`을 추가하며, balloon은
+target 0·reporting 활성·hinting/stats/deflate-on-OOM 비활성 구성만 허용한다.
+`FC_POOL_DISCARD_TRACE=1`은 검증용 손실 없는 batch 및 snapshot 경계 기록을 켠다.
+
+Host는 그 VM에 설치했던 공유 overlay를 anonymous zero backing으로 교체한다.
+Canonical과 다른 VM의 alias는 유지한다. 진행 중인 block I/O와 겹친 페이지는 건너뛰며,
+report ACK와 실제 detach 성공은 별도로 집계한다. 보고 전 재사용은 기존 CoW로 처리한다.
+Fresh backing의 실제 page allocation은 lazy이므로 첫 쓰기 비용 전체를 없애는 기능은 아니다.
+
+`pool_discard_prepare.py`/`pool_discard_run.py`가 별도 fixture와 비교 실험을 만들고,
+`verify_pool_discard.py`가 실제 guest ACK, GPA 재사용, host PFN, peer 데이터와 이전 경계를
+검사한다. Guest trace patch는 계측용이며 filesystem lookup이나 allocator 정책을 바꾸지 않는다.
+[실측 결과와 원본 검증](results/pool-discard-20261030/README.md)은 한 페이지 진단과
+3개 VM의 반복·NFS·DRAM/CXL 이전, 보고 대기와 refill 비용을 구분한다.
+원래 DAX reservation 반환, private backing의 CXL 배치, overlay를 포함한 direct handoff는
+여전히 후속 작업이다.

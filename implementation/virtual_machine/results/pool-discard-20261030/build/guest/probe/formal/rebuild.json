@@ -1,0 +1,19 @@
+{
+  "result": "passed",
+  "command": [
+    "gcc",
+    "-std=c11",
+    "-O2",
+    "-static",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "pool_discard_probe.c",
+    "-o",
+    "/tmp/discard-probe-replay-wflrdd1b/pool-discard-probe"
+  ],
+  "cwd": "/tmp/discard-probe-replay-wflrdd1b",
+  "source_sha256": "061084e76364e056d945327c62e5ed487770b22602922f9e4394b92c97f0de7f",
+  "binary_sha256": "7c91d4bbcf139fb22e195cac60e44034fa7ab00304086c1086bbdfa365bb92ad",
+  "expected_binary_sha256": "7c91d4bbcf139fb22e195cac60e44034fa7ab00304086c1086bbdfa365bb92ad"
+}

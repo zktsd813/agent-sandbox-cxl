@@ -1,0 +1,18 @@
+{
+  "file": "pilot2-evidence.tar.xz",
+  "format": "tar.xz",
+  "compression": "xz -3 -T2",
+  "bytes": 4971968,
+  "sha256": "cbf547eb382c652225cf312940a18d433d331bb2c4517bdc5f66f89387ae74c2",
+  "source_directory": "/tmp/pool-discard-failure-staging-20261030/pilot2",
+  "report_member": "pilot2/report.json",
+  "report_sha256": "68b3ac3f57f1cac293a014107eb2fa5bbaa5a085739f7cf3ecd5bbdccb6b0f09",
+  "member_count": 314,
+  "regular_file_count": 309,
+  "directory_count": 5,
+  "uncompressed_file_bytes": 63520672,
+  "member_names_sizes_sha256_manifest_digest": "70826985c9b29f958809515aa19b170fbac323bf22b7bdb067bef0cf7cc5cfbe",
+  "verified": "Exact member set, type, length, and SHA256 of every regular file compared with the source directory.",
+  "old_gzip_verified_identical": false,
+  "seconds": 7.458086106926203
+}

@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "classification": "failed_pilot_not_formal_performance",
+  "checked_utc": "2026-10-30T07:14:12.863297+00:00",
+  "suite_source": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/pool-discard-pilot-20261030",
+  "arm_source": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/pool-discard-pilot-20261030/baseline",
+  "original_run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T065951Z-__lii0fw",
+  "suite_sha256": "82a151139c9285097dc6d4e10216837ead076f5f2ff98b971a907b011d7ec387",
+  "arm_report_sha256": "95b571d5b8a854d2f532032c035f8da2167f662c395685ebb1aee49551eaf7b7",
+  "processes": [
+    {
+      "role": "A",
+      "pid": 2904995,
+      "recorded_starttime": "320854012",
+      "observed_starttime": null,
+      "matching_process_alive": false,
+      "console_exists": false,
+      "qmp_exists": false
+    },
+    {
+      "role": "B",
+      "pid": 2904996,
+      "recorded_starttime": "320854012",
+      "observed_starttime": null,
+      "matching_process_alive": false,
+      "console_exists": false,
+      "qmp_exists": false
+    }
+  ],
+  "network_cleanup_recorded": true,
+  "ephemeral_memory_directory_absent": true,
+  "receipt_hashes_verified": 543,
+  "suite_source_hashes_verified": 9,
+  "arm_source_hashes_verified": 21,
+  "excluded_files": [
+    "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/pool-discard-pilot-20261030/baseline-storage.raw",
+    "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T065951Z-__lii0fw/home-storage.raw"
+  ],
+  "saved_samples": 3,
+  "suite_error": "CalledProcessError(1, ['taskset', '-c', '0-7', 'python3', '-u', '/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/pool_discard_bench.py', '--mode', 'baseline', '--rounds', '1', '--profile'])",
+  "arm_error": "ValueError('no profiled vCPU identity')",
+  "firecracker_sha256": "75a9b6e52dd152b17962fb52cbf04d983ba7c035629517a91d2b43eb9ea45127",
+  "production_patch_sha256": "3600228b2076bf60fc01fdd74e22b4416100f4c020446e465e5d3bff31f0fb8b"
+}

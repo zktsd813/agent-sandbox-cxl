@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "reviewer": "discard_backend",
+  "review_type": "read_only_snapshot_cut_and_protocol_accounting",
+  "result": "no_false_acceptance_issue_found_in_current_entry_path",
+  "source_sha256": {
+    "verify_pool_discard.py": "019052565fbb4e7711f3c6ac70db8776f2478fc4e47cc53d73b099f1e11b3250",
+    "verify_pool_discard_protocol.py": "0fdaf7654bfb4b4b140f5e7cabed6a33d612582b3cd441c37a1431e3958f473a"
+  },
+  "sources_modified": false,
+  "new_tests_run": false,
+  "confirmed": [
+    "Every retired host epoch requires one exact successful snapshot marker with VM/epoch identity, sequence, and full logical snapshot paths.",
+    "Batch numbers and log order must agree on both sides of the marker. The kept prefix starts at batch 1 and has exactly discard_sequence complete mapped/ACK pairs.",
+    "The top-level verifier validates all raw API responses as 204 and binds their request bodies before host_epochs uses the unique snapshot call.",
+    "A host ACK present in frozen RAM but not yet consumed by the paused guest is retained; restored guest completion can therefore correlate with its old source epoch. Post-cut source ACKs are excluded explicitly, not dropped by GPA guesswork.",
+    "The guest parser requires a loss-free sequential submission/completion history with one active batch. Host parser requires contiguous per-epoch mapped/ACK pairs and equal fields. Ordered interval-union comparison then checks exactly the same page sets.",
+    "Final host records after a captured guest prefix are labeled tails rather than counted as guest-observed completions. Busy/no-op ACKs are distinguished from discarded ranges."
+  ],
+  "conservative_limits": [
+    "An incomplete retired host batch is rejected before applying its snapshot cut, even if that batch lies strictly after the cut and is outside restored state. This is a possible false rejection of safely fenced evidence, not a false success.",
+    "host_epochs itself relies on the top-level raw API success validation. It is not a standalone API evidence validator. Additional socket/role and receipt-order binding could be useful hardening, though current unique VM/epoch snapshot paths and native marker identity already constrain matching."
+  ],
+  "runtime_scope": "This is source review only. Formal multi-epoch replay must still run against the completed saved receipts."
+}

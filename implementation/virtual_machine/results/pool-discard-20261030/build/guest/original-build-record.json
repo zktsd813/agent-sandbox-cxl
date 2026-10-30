@@ -1,0 +1,46 @@
+{
+  "result": "passed",
+  "source": "/tmp/pool-discard-guest-linux-20261030",
+  "build": "/tmp/pool-discard-guest-build-20261030",
+  "base_guest_config": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/nfs-deps-trace/kernel-build/.config",
+  "base_guest_config_sha256": "793c44048f74d4c2e29cca2a33021f2ff3a50876f7436e590ab2b9019fba31b6",
+  "guest_config_sha256": "08d8c9ecf79f63a2b30470466de70c5285f4b73fb8cf3f5bbe62a2c5f2bbf127",
+  "kernel_sha256": "ea81dc49b729e8d5111765c11ace1a11bd53db59f75fd65d933f0d983a368d05",
+  "kernel_release": "6.6.0-rc6-dcd-v3",
+  "compiler_command_source_verified": true,
+  "added_config": [
+    "CONFIG_BALLOON_COMPACTION=y",
+    "CONFIG_MEMORY_BALLOON=y",
+    "CONFIG_PAGE_REPORTING=y",
+    "CONFIG_VIRTIO_BALLOON=y"
+  ],
+  "removed_config": [
+    "# CONFIG_PAGE_REPORTING is not set",
+    "# CONFIG_VIRTIO_BALLOON is not set"
+  ],
+  "sources": {
+    "drivers/virtio/virtio_balloon.c": "6eb65444683a89a1c5f7959bc11edbce4ce055512b5dfb23c26d026fd7289c1a",
+    "mm/page_reporting.c": "64b76f913a3247ec09bdadd946f5768e261858dd3f299a205a3d615cf2762649",
+    "include/trace/events/pool_discard.h": "aa232a41855aa47417c5dae4faae096cfce65f54ef7a989b9563e8f3b55d3e18"
+  },
+  "build_log_sha256": "eb25638f845665446dea4ed89017f083792c3db71c76435ad2c3f503ef621be9",
+  "commands": [
+    [
+      "make",
+      "-C",
+      "/tmp/pool-discard-guest-linux-20261030",
+      "O=/tmp/pool-discard-guest-build-20261030",
+      "LOCALVERSION=",
+      "olddefconfig"
+    ],
+    [
+      "make",
+      "-C",
+      "/tmp/pool-discard-guest-linux-20261030",
+      "O=/tmp/pool-discard-guest-build-20261030",
+      "LOCALVERSION=",
+      "-j24",
+      "vmlinux"
+    ]
+  ]
+}

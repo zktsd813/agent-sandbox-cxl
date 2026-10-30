@@ -1,0 +1,12 @@
+{
+  "schema": "pool-discard-pilot-independent-rejection-v1",
+  "result": "rejected",
+  "report_sha256": "1e5d11b135bf80d67a49b6d40766f0a725830b2fa57825bb156818a1378a2ada",
+  "reason": "guest event fields changed",
+  "type": "ValueError",
+  "traceback": "Traceback (most recent call last):\n  File \"<stdin>\", line 5, in <module>\n  File \"/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/verify_pool_discard.py\", line 457, in verify_arm\n    samples = [verify_sample(e,s) for s in report[\"samples\"]]\n  File \"/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/verify_pool_discard.py\", line 457, in <listcomp>\n    samples = [verify_sample(e,s) for s in report[\"samples\"]]\n  File \"/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/verify_pool_discard.py\", line 306, in verify_sample\n    joined = correlate(text, e.host_epochs(vm, epoch))\n  File \"/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/verify_pool_discard_protocol.py\", line 160, in correlate\n    guest, guest_tail = guest_batches(guest_text, memory_bytes)\n  File \"/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/verify_pool_discard_protocol.py\", line 71, in guest_batches\n    for event in trace_events(text):\n  File \"/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/verify_pool_discard_protocol.py\", line 58, in trace_events\n    require(set(fields) == {\"seq\", \"phase\", \"index\", \"nents\", \"gpa\", \"bytes\", \"result\"},\n  File \"/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/verify_pool_discard_protocol.py\", line 21, in require\n    raise ValueError(message)\nValueError: guest event fields changed\n",
+  "actual_corrupted_capture": "0493-guest-report-trace.bin",
+  "corrupted_capture_sha256": "5063e373958bd08a40078dcce60cbe05b44246a39ca37a438f2ea71231b75d53",
+  "finding": "Guest serial trace line413 is interrupted by host POOL_DISCARD_JSON batch16. The ftrace ring itself has no overruns; the shared stdout export is corrupted. Do not classify arm as independently passed.",
+  "corrective_action": "Configure a dedicated VMM logger target before boot/restore; collect guest serial and host reporting logs separately."
+}

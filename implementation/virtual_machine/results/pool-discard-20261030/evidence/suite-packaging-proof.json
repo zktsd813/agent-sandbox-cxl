@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "classification": "formal_discard_suite",
+  "source": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/pool-discard-formal-20261030",
+  "result_preserved": "passed",
+  "suite_report_sha256": "f965e0334fad7c7d2741b06703c40ef79d90cf2f301decb7e2c6ada5c30d078b",
+  "source_hashes_verified": 9,
+  "arm_report_sha256": {
+    "reporting": "afde0ed510d9d1109b0d4878cfaa2e33ff2f563489efdc31d7c5c67e9fc48d8d",
+    "baseline": "9577ba3618409ad34052bb8c60f15828166900636690b60a3d12963e175f5377"
+  },
+  "fixture_manifest_sha256": "1569de552e7dabb039d0eb953690c53f485b55da76855f7c8b179d6626e9c4ae",
+  "all_arms_stopped": true,
+  "archive_layout": "Strip formal-suite/ once to replay root; extract reporting/ and baseline/ without stripping.",
+  "large_work_cpu_affinity": "8-11"
+}

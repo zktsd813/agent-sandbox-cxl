@@ -6,6 +6,8 @@
 
 같은 upstream의 [수정하지 않은 Firecracker와 비교](docs/firecracker-pooling-comparison.md)하여 독립 VM의 데이터 frame 공유, stock snapshot clone의 기존 공유 기능, guest 작업 시간과 현재 CoW 비용을 구분했다. [실측 자료](implementation/virtual_machine/results/stock-comparison-20261030/README.md)는 원본 증거와 오프라인 검증기를 포함한다.
 
+[공유 페이지 폐기와 재사용](docs/cxl-page-discard.md)은 guest의 명시적 free-page report를 받아 해당 VM의 공유 연결을 private zero backing으로 바꾸고, 완료 ACK 이후 재사용하는 경로를 설명한다. 기존 4.08초 측정은 한 페이지가 아니라 160MiB cache eviction과 224MiB 전체 재사용 workload의 시간이다.
+
 mini-swe-agent의 기록된 명령을 Docker에서 재실행하고 CPU·메모리·동시성·LLC MPKI를 측정한다. Trace replay는 CPU NUMA node 0과 DRAM(node 0) / CXL(node 2) 메모리 비교를 지원한다. 별도 microVM 실험은 공유 DAX RAM 위의 상태 복원·KVM worker 재사용·direct handoff와 PML/cache 처리 비용을 검증한다. GPU, 모델 가중치, LLM API key는 사용하지 않는다.
 
 2026-10-23 기준 microVM 구현·측정·EMR/DSA 조사와 MPTCP 연결을 유지한 snapshot 이전 결과는 [실행 문서와 다음 세션 인계](implementation/virtual_machine/README.md#session-handoff)에 모았다. 현재 전환 실험은 한 물리 호스트의 두 Linux VM 사이이며 실제 비일관 CXL 다중 호스트 검증은 남아 있다. DSA와 주기적 preflush는 조사·설계 단계로, 해당 성능을 측정한 결과는 없다.

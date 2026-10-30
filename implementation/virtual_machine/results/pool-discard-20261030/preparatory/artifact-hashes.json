@@ -1,0 +1,27 @@
+[
+  {
+    "file": "README.md",
+    "bytes": 1364,
+    "sha256": "6430bfbe18f3839c048b8f1dda78b1984f10bab534fc7d0be44d903207e59f2a"
+  },
+  {
+    "file": "memory-smoke-evidence.tar.xz",
+    "bytes": 2418900,
+    "sha256": "2aadb9d04d094ba85cc582fa9cc154e8acabf21e87b173fd91cd80a73ed8f0bc"
+  },
+  {
+    "file": "memory-smoke-package.json",
+    "bytes": 833,
+    "sha256": "4c05d82bc3d923f22f7a91aa2cbd5687c86808b8af1d94c51a1260ab7b1e71c7"
+  },
+  {
+    "file": "memory-smoke-packaging-proof.json",
+    "bytes": 1958,
+    "sha256": "0a33eb59085092250c800040787d70f679219cd42cd44f18bdb6a1d3c2ccdeb6"
+  },
+  {
+    "file": "memory-smoke-report.json",
+    "bytes": 1725374,
+    "sha256": "13bd5313c4cad253a61809036ad4374801bbe0014f7afb55bacde55bccb31b9b"
+  }
+]

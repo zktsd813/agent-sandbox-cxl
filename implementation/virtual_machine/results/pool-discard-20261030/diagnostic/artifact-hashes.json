@@ -1,0 +1,37 @@
+[
+  {
+    "file": "README.md",
+    "bytes": 2607,
+    "sha256": "6aab1d11c6b7fec43768f8978afb0d929d1caad5bd760f6a664b81930bd3d025"
+  },
+  {
+    "file": "cow-diagnostic-evidence.tar.xz",
+    "bytes": 4385888,
+    "sha256": "5ddec8c37b4954a813699b096316cda07e1e862a6a37429b92c8bd9da667ac8b"
+  },
+  {
+    "file": "cow-diagnostic-package.json",
+    "bytes": 841,
+    "sha256": "c695a32755eee80c88139e38a11f15405beb7fd512d1c1f955a02d8c7ae35760"
+  },
+  {
+    "file": "packaging-proof.json",
+    "bytes": 2267,
+    "sha256": "0d1bc87b5fa9a158ddc9c66a787d4e8921cfaeea66064ab1a3d80aca579b3e4c"
+  },
+  {
+    "file": "report.json",
+    "bytes": 1724392,
+    "sha256": "9df40d299fc794d33f6b48a6e9f798b130fa87c16348c071189ec17070ab2cfc"
+  },
+  {
+    "file": "summary.json",
+    "bytes": 1393,
+    "sha256": "d7c853ea0c9a377ff1e64378cdb9ed43d75e9747998577777957e0d906a57d5b"
+  },
+  {
+    "file": "../verification/cow-diagnostic-independent-audit.json",
+    "bytes": 3106,
+    "sha256": "1507d177b16d24b473848616a600cfd0d1435adf5decdb719b3a3ed33272f591"
+  }
+]
