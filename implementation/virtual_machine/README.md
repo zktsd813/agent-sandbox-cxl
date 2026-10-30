@@ -1191,3 +1191,18 @@ manifest에 보존하고, 두 handoff에서 같은 backing을 복원한다. Dire
 빌드·실행·원시 증거의 독립 재검증은 [결과 README](results/guest-pool-handoff-20261030/README.md),
 구조·메모리 비용·신뢰 경계는 [설계 문서](../../docs/cxl-guest-pool-handoff.md)에 정리한다.
 이 검증의 serial controller wall time을 기존 최적화 direct latency나 4KiB CoW 비용으로 해석하지 않는다.
+
+### 실제 SWE trace에 적용
+
+`swe_pool_prepare.py`와 `swe_pool_run.py`는 264개 기록 중 Gin·PHP-CS-Fixer·MicroPython의
+원본 명령을 1-vCPU·2GiB sandbox에서 실행한다. 같은 patched VMM의 DRAM 대조군과
+state-only/direct 조건을 두고, 명령 경계에서 DRAM→CXL→B→A→DRAM 및 추가 promotion/demotion을 수행한다.
+Guest는 RO ext4 lower + tmpfs upper를 유지하고, B의 host image FD만 NFS를 사용한다.
+
+파일을 인위적으로 읽어 cache를 채우지 않고 현재 resident lower folio만 등록한다.
+`verify_swe_pool.py`는 원본 명령·종료 코드·test 결과·제출 패치와 실제 PFN·상태 연속성·grant 반환을
+독립 검증한다. 선택된 파일의 공유 크기와 guest 전체 `Cached` 값을 구분하며, 이 단일 VM trace 시험을
+여러 VM의 메모리 절감율 측정으로 해석하지 않는다. [흐름과 재현 방법](../../docs/cxl-swe-pool-traces.md)을 참고한다.
+
+[완료한 9개 조건의 결과](results/swe-pool-traces-20261030/README.md)는 원본 315개 명령,
+promotion 12회·demotion 12회·handoff 12회, 독립 검증과 의미적 변조 거부 27건을 포함한다.
