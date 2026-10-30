@@ -1,0 +1,18 @@
+{
+  "file": "sync-evidence.tar.xz",
+  "format": "tar.xz",
+  "compression": "xz -3 -T2",
+  "bytes": 31311616,
+  "sha256": "a123487a70f2b4b2a00a0ac48e43acf487478752d1760c89945f7a5b3a254532",
+  "source_directory": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T035934Z-iymez2na/pool-1793332783177002154",
+  "report_member": "sync/report.json",
+  "report_sha256": "13252c3396b0b87468f848c898ca61fa4264de52c181f54b26258f45d5399290",
+  "member_count": 1659,
+  "regular_file_count": 1657,
+  "directory_count": 2,
+  "uncompressed_file_bytes": 989242247,
+  "member_names_sizes_sha256_manifest_digest": "b668cca9c386c31ab3751bd8584b8569fab855b7445e75e0531cdb58f6e00b5b",
+  "verified": "Exact member set, type, length, and SHA256 of every regular file compared with the source directory.",
+  "old_gzip_verified_identical": true,
+  "seconds": 40.9270556778647
+}

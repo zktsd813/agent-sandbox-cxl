@@ -474,6 +474,7 @@ def start(args):
               "dax_kvm_state": args.dax_kvm_state,
               "dax_handoff": args.dax_handoff,
               "dax_4k": args.dax_4k or args.dax_handoff,
+              "pool_cow": getattr(args, "pool_cow", False),
               "migration_network": migration_network,
               "prepared": prepared, "assets": str(ASSETS), "host_kernel": os.uname().release, "vms": {}}
     if storage_image:
@@ -524,6 +525,8 @@ def start(args):
                    "-device", "ivshmem-plain,memdev=shared",
                    "-chardev", f"socket,id=console,path={console_path},server=on,wait=off,logfile={prefix}.serial.log",
                    "-serial", "chardev:console", "-qmp", f"unix:{qmp_path},server=on,wait=off"]
+            if getattr(args, "pool_cow", False):
+                cmd[cmd.index("-append") + 1] += " device_dax.pool_cow=1"
             if migration_network:
                 cmd[cmd.index("-append") + 1] += " lab.migration_ip=" + migration_network["ips"][role]
                 if args.network_backend == "socket":
@@ -3348,6 +3351,7 @@ def main():
     p.add_argument("--dax-kvm-state", action="store_true", help="Use the experimental KVM device-DAX state allocator on VM A")
     p.add_argument("--dax-handoff", action="store_true", help="Direct shared KVM handoff lab; fixed kernel addresses, 4KiB DAX, no automatic L2")
     p.add_argument("--dax-4k", action="store_true", help="Configure the shared device-DAX allocation with 4KiB alignment for matched EPT measurements")
+    p.add_argument("--pool-cow", action="store_true", help="Opt in to experimental device-DAX MAP_PRIVATE CoW in the disposable L1 kernels")
     p.add_argument("--migration-network", action="store_true", help="Connect L1 A/B with a private virtio-net link for full RAM migration")
     p.add_argument("--network-backend", choices=["socket", "tap"], default="socket", help="Use a QEMU socket or isolated host TAP/bridge with vhost-net (default socket)")
     p.add_argument("--socket-listener", choices=["A", "B"], default="A", help="Choose the QEMU socket listener; starts it before the connecting peer (default A)")
@@ -3529,6 +3533,8 @@ def main():
             parser.error("cxl-mib must be zero or a power of two >= 256")
         if args.dax_4k and not args.cxl_mib:
             parser.error("--dax-4k requires --cxl-mib")
+        if args.pool_cow and (not args.dax_guest or not args.dax_4k or args.dax_handoff or args.dax_kvm_state):
+            parser.error("--pool-cow requires --dax-guest --dax-4k and ordinary snapshot mode")
         if args.dax_guest and args.cxl_mib < 256:
             parser.error("dax-guest requires --cxl-mib >= 256")
         if args.dax_kvm_state and (not args.dax_guest or args.cxl_mib < 1024):

@@ -1,0 +1,12 @@
+{
+  "result": "passed",
+  "sandboxes": 3,
+  "transitions": 10,
+  "guest_commands": 133,
+  "raw_receipts": 1065,
+  "minimum_guest_resident_bytes": 167772160,
+  "minimum_measured_shared_bytes": 167772160,
+  "minimum_three_vm_common_bytes": 167772160,
+  "current_file_cache_gpa_proven": true,
+  "logical_snapshot_bytes": 5368709120
+}

@@ -1,9 +1,12 @@
 diff --git a/src/firecracker/src/api_server/request/actions.rs b/src/firecracker/src/api_server/request/actions.rs
-index a3b3f3f3a..bea0b3641 100644
+index a3b3f3f3a..3070d7947 100644
 --- a/src/firecracker/src/api_server/request/actions.rs
 +++ b/src/firecracker/src/api_server/request/actions.rs
-@@ -18,6 +18,8 @@ enum ActionType {
+@@ -16,8 +16,11 @@ use super::StatusCode;
+ #[derive(Debug, Deserialize, Serialize)]
+ enum ActionType {
      FlushMetrics,
++    PoolCache,
      InstanceStart,
      SendCtrlAltDel,
 +    #[cfg(target_arch = "x86_64")]
@@ -11,8 +14,11 @@ index a3b3f3f3a..bea0b3641 100644
  }
  
  // The model of the json body from a sync request. We use Serde to transform each associated
-@@ -37,6 +39,8 @@ pub(crate) fn parse_put_actions(body: &Body) -> Result<ParsedRequest, RequestErr
+@@ -35,8 +38,11 @@ pub(crate) fn parse_put_actions(body: &Body) -> Result<ParsedRequest, RequestErr
+     })?;
+ 
      match action_body.action_type {
++        ActionType::PoolCache => Ok(ParsedRequest::new_sync(VmmAction::PoolCache)),
          ActionType::FlushMetrics => Ok(ParsedRequest::new_sync(VmmAction::FlushMetrics)),
          ActionType::InstanceStart => Ok(ParsedRequest::new_sync(VmmAction::StartMicroVm)),
 +        #[cfg(target_arch = "x86_64")]
@@ -20,10 +26,12 @@ index a3b3f3f3a..bea0b3641 100644
          ActionType::SendCtrlAltDel => {
              // SendCtrlAltDel not supported on aarch64.
              #[cfg(target_arch = "aarch64")]
-@@ -57,6 +61,9 @@ mod tests {
+@@ -57,6 +63,11 @@ mod tests {
  
      #[test]
      fn test_parse_put_actions_request() {
++        assert_eq!(parse_put_actions(&Body::new(r#"{"action_type":"PoolCache"}"#)).unwrap(),
++            ParsedRequest::new_sync(VmmAction::PoolCache));
 +        #[cfg(target_arch = "x86_64")]
 +        assert_eq!(parse_put_actions(&Body::new(r#"{"action_type":"PrepareReuse"}"#)).unwrap(),
 +            ParsedRequest::new_sync(VmmAction::PrepareReuse));
@@ -36,7 +44,7 @@ index 70abff48c..a50681ee3 100644
 +++ b/src/firecracker/src/api_server_adapter.rs
 @@ -2,10 +2,13 @@
  // SPDX-License-Identifier: Apache-2.0
-
+ 
  use std::os::unix::io::AsRawFd;
 +use std::io::{Read, Write};
 +use std::os::unix::net::{UnixListener, UnixStream};
@@ -45,13 +53,13 @@ index 70abff48c..a50681ee3 100644
  use std::sync::{Arc, Mutex};
  use std::thread;
 +use std::time::{Duration, Instant};
-
+ 
  use event_manager::{EventOps, Events, MutEventSubscriber, SubscriberOps};
  use vmm::logger::{ProcessTimeReporter, error_unrestricted, info_unrestricted, warn_unrestricted};
 @@ -48,6 +51,76 @@ struct ApiServerAdapter {
      request: Option<ApiRequest>,
  }
-
+ 
 +/// Opt-in laboratory control: one persistent local connection, no HTTP/API thread.
 +/// The pause loop also freezes device event dispatch, like the normal API adapter.
 +struct DaxControl {
@@ -138,7 +146,7 @@ index 70abff48c..a50681ee3 100644
 @@ -84,33 +160,36 @@ impl ApiServerAdapter {
          Ok(())
      }
-
+ 
 -    fn _handle_request(&mut self, req_action: VmmAction, event_manager: &mut EventManager) {
 +    fn _handle_request(&mut self, req_action: VmmAction, event_manager: &mut EventManager) -> bool {
          let response = self.controller.handle_request(req_action, event_manager);
@@ -150,13 +158,13 @@ index 70abff48c..a50681ee3 100644
              .expect("one-shot channel closed");
 +        succeeded
      }
-
+ 
      fn handle_request(&mut self, event_manager: &mut EventManager) {
          if let Some(api_request) = self.request.take() {
              let request_is_pause = *api_request == VmmAction::Pause;
 -            self._handle_request(*api_request, event_manager);
 +            let request_succeeded = self._handle_request(*api_request, event_manager);
-
+ 
 -            // If the latest req is a pause request, temporarily switch to a mode where we
 +            // After an accepted pause request, temporarily switch to a mode where we
              // do blocking `recv`s on the `from_api` receiver in a loop, until we get
@@ -180,7 +188,7 @@ index 70abff48c..a50681ee3 100644
                      }
                  }
 @@ -272,3 +351,79 @@ pub(crate) fn run_with_api(
-
+ 
      result
  }
 +
@@ -258,6 +266,407 @@ index 70abff48c..a50681ee3 100644
 +        assert_eq!(dispatched.load(Ordering::SeqCst), 1);
 +    }
 +
++}
+diff --git a/src/firecracker/src/dax_heap.rs b/src/firecracker/src/dax_heap.rs
+new file mode 100644
+index 000000000..84fb71000
+--- /dev/null
++++ b/src/firecracker/src/dax_heap.rs
+@@ -0,0 +1,395 @@
++// SPDX-License-Identifier: Apache-2.0
++//! Opt-in single-process heap in device-DAX. No fallback after activation.
++use std::alloc::{GlobalAlloc, Layout, System};
++use std::fs::OpenOptions;
++use std::io;
++use std::mem::size_of;
++use std::os::fd::AsRawFd;
++use std::os::unix::fs::FileTypeExt;
++use std::ptr;
++use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
++
++const CONTROL_BYTES: usize = 4096;
++const MAGIC: usize = 0x4643444158484541;
++
++#[repr(C, align(64))]
++struct Control {
++    magic: usize,
++    base: usize,
++    length: usize,
++    head: AtomicUsize,
++    allocs: AtomicUsize,
++    frees: AtomicUsize,
++    live_bytes: AtomicUsize,
++    failures: AtomicUsize,
++    lock: AtomicBool,
++}
++
++#[repr(C)]
++struct FreeBlock {
++    bytes: usize,
++    next: usize,
++}
++
++#[repr(C)]
++struct Header {
++    start: usize,
++    bytes: usize,
++}
++
++struct DaxHeap {
++    base: AtomicUsize,
++}
++
++#[global_allocator]
++static HEAP: DaxHeap = DaxHeap {
++    base: AtomicUsize::new(0),
++};
++
++impl DaxHeap {
++    // SAFETY: caller owns an aligned writable mapping of at least two pages,
++    // and has not yet published it to allocator callers.
++    unsafe fn attach(&self, base: usize, length: usize) {
++        unsafe {
++            ptr::write(
++                base as *mut Control,
++                Control {
++                    magic: MAGIC,
++                    base,
++                    length,
++                    head: AtomicUsize::new(CONTROL_BYTES),
++                    allocs: AtomicUsize::new(0),
++                    frees: AtomicUsize::new(0),
++                    live_bytes: AtomicUsize::new(0),
++                    failures: AtomicUsize::new(0),
++                    lock: AtomicBool::new(false),
++                },
++            );
++            ptr::write(
++                (base + CONTROL_BYTES) as *mut FreeBlock,
++                FreeBlock {
++                    bytes: length - CONTROL_BYTES,
++                    next: 0,
++                },
++            );
++        }
++        self.base.store(base, Ordering::Release);
++    }
++
++    fn lock(control: &Control) {
++        while control
++            .lock
++            .compare_exchange_weak(false, true, Ordering::Acquire, Ordering::Relaxed)
++            .is_err()
++        {
++            std::hint::spin_loop();
++        }
++    }
++}
++
++// SAFETY: all free-list mutations are protected by the arena lock. Returned
++// allocations are disjoint and aligned; allocation metadata uses arena offsets.
++unsafe impl GlobalAlloc for DaxHeap {
++    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
++        let base = self.base.load(Ordering::Acquire);
++        if base == 0 {
++            return unsafe { System.alloc(layout) };
++        }
++        // SAFETY: attach published an initialized, process-lifetime mapping.
++        let control = unsafe { &*(base as *const Control) };
++        Self::lock(control);
++        let mut previous = 0;
++        let mut current = control.head.load(Ordering::Relaxed);
++        while current != 0 {
++            // SAFETY: free-list offsets refer to owned blocks within the arena.
++            let block = unsafe { &mut *((base + current) as *mut FreeBlock) };
++            let align = layout.align().max(8);
++            let start = base + current + size_of::<Header>();
++            let user = match start.checked_add(align - 1) {
++                Some(v) => v & !(align - 1),
++                None => break,
++            };
++            let needed = match (user - base - current)
++                .checked_add(layout.size().max(1))
++                .and_then(|v| v.checked_add(7))
++            {
++                Some(v) => v & !7,
++                None => break,
++            };
++            if needed <= block.bytes {
++                let bytes = if block.bytes - needed >= size_of::<FreeBlock>() {
++                    let split = current + needed;
++                    unsafe {
++                        ptr::write(
++                            (base + split) as *mut FreeBlock,
++                            FreeBlock {
++                                bytes: block.bytes - needed,
++                                next: block.next,
++                            },
++                        );
++                    }
++                    needed
++                } else {
++                    block.bytes
++                };
++                let next = if bytes == block.bytes {
++                    block.next
++                } else {
++                    current + bytes
++                };
++                if previous == 0 {
++                    control.head.store(next, Ordering::Relaxed);
++                } else {
++                    unsafe {
++                        (*((base + previous) as *mut FreeBlock)).next = next;
++                    }
++                }
++                unsafe {
++                    ptr::write(
++                        (user - size_of::<Header>()) as *mut Header,
++                        Header {
++                            start: current,
++                            bytes,
++                        },
++                    );
++                }
++                control.allocs.fetch_add(1, Ordering::Relaxed);
++                control.live_bytes.fetch_add(bytes, Ordering::Relaxed);
++                control.lock.store(false, Ordering::Release);
++                return user as *mut u8;
++            }
++            previous = current;
++            current = block.next;
++        }
++        control.failures.fetch_add(1, Ordering::Relaxed);
++        control.lock.store(false, Ordering::Release);
++        ptr::null_mut()
++    }
++
++    unsafe fn dealloc(&self, pointer: *mut u8, layout: Layout) {
++        let base = self.base.load(Ordering::Acquire);
++        if base == 0 {
++            unsafe {
++                System.dealloc(pointer, layout);
++            }
++            return;
++        }
++        let control = unsafe { &*(base as *const Control) };
++        if (pointer as usize) < base || pointer as usize - base >= control.length {
++            unsafe {
++                System.dealloc(pointer, layout);
++            }
++            return;
++        }
++        // SAFETY: GlobalAlloc requires a live pointer previously returned by alloc.
++        let header = unsafe { ptr::read(pointer.sub(size_of::<Header>()) as *const Header) };
++        Self::lock(control);
++        let mut previous = 0;
++        let mut current = control.head.load(Ordering::Relaxed);
++        while current != 0 && current < header.start {
++            previous = current;
++            current = unsafe { (*((base + current) as *const FreeBlock)).next };
++        }
++        let block = (base + header.start) as *mut FreeBlock;
++        unsafe {
++            ptr::write(
++                block,
++                FreeBlock {
++                    bytes: header.bytes,
++                    next: current,
++                },
++            );
++            if current != 0 && header.start + (*block).bytes == current {
++                let following = &*((base + current) as *const FreeBlock);
++                (*block).bytes += following.bytes;
++                (*block).next = following.next;
++            }
++            if previous == 0 {
++                control.head.store(header.start, Ordering::Relaxed);
++            } else {
++                let preceding = &mut *((base + previous) as *mut FreeBlock);
++                if previous + preceding.bytes == header.start {
++                    preceding.bytes += (*block).bytes;
++                    preceding.next = (*block).next;
++                } else {
++                    preceding.next = header.start;
++                }
++            }
++        }
++        control.frees.fetch_add(1, Ordering::Relaxed);
++        control
++            .live_bytes
++            .fetch_sub(header.bytes, Ordering::Relaxed);
++        control.lock.store(false, Ordering::Release);
++    }
++}
++
++pub fn init() -> io::Result<()> {
++    let Some(path) = std::env::var_os("FC_DAX_HEAP") else {
++        return Ok(());
++    };
++    let invalid = || io::Error::new(io::ErrorKind::InvalidInput, "invalid DAX heap allocation");
++    let offset: usize = std::env::var("FC_DAX_HEAP_OFFSET")
++        .unwrap_or_else(|_| "536870912".into())
++        .parse()
++        .map_err(|_| invalid())?;
++    let length: usize = std::env::var("FC_DAX_HEAP_BYTES")
++        .unwrap_or_else(|_| "67108864".into())
++        .parse()
++        .map_err(|_| invalid())?;
++    let path = std::path::Path::new(&path);
++    let name = path
++        .file_name()
++        .and_then(|v| v.to_str())
++        .ok_or_else(invalid)?;
++    let file = OpenOptions::new().read(true).write(true).open(path)?;
++    if !file.metadata()?.file_type().is_char_device() {
++        return Err(invalid());
++    }
++    let attr = |name_attr| -> io::Result<usize> {
++        std::fs::read_to_string(format!("/sys/bus/dax/devices/{name}/{name_attr}"))?
++            .trim()
++            .parse()
++            .map_err(|_| invalid())
++    };
++    let align = attr("align")?;
++    if !align.is_power_of_two()
++        || offset % align != 0
++        || length % align != 0
++        || length <= CONTROL_BYTES
++        || offset.checked_add(length).ok_or_else(invalid)? > attr("size")?
++    {
++        return Err(invalid());
++    }
++    let mapped = unsafe {
++        libc::mmap(
++            ptr::null_mut(),
++            length,
++            libc::PROT_READ | libc::PROT_WRITE,
++            libc::MAP_SHARED,
++            file.as_raw_fd(),
++            offset as libc::off_t,
++        )
++    };
++    if mapped == libc::MAP_FAILED {
++        return Err(io::Error::last_os_error());
++    }
++    // Cold boot only: initialize this exclusively reserved heap allocation.
++    unsafe {
++        HEAP.attach(mapped as usize, length);
++    }
++    eprintln!(
++        "DAX_HEAP path={} offset={} bytes={} base={:#x}",
++        path.display(),
++        offset,
++        length,
++        mapped as usize
++    );
++    Ok(())
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn alignment_reuse_coalescing_and_no_fallback() {
++        let length = 128 * 1024;
++        let base = unsafe {
++            libc::mmap(
++                ptr::null_mut(),
++                length,
++                libc::PROT_READ | libc::PROT_WRITE,
++                libc::MAP_PRIVATE | libc::MAP_ANONYMOUS,
++                -1,
++                0,
++            )
++        };
++        assert_ne!(base, libc::MAP_FAILED);
++        let heap = DaxHeap {
++            base: AtomicUsize::new(0),
++        };
++        unsafe {
++            heap.attach(base as usize, length);
++        }
++        let mut allocations = Vec::new();
++        for align in [1, 8, 64, 4096] {
++            let layout = Layout::from_size_align(1003, align).unwrap();
++            let pointer = unsafe { heap.alloc(layout) };
++            assert!(!pointer.is_null());
++            assert_eq!(pointer as usize % align, 0);
++            unsafe {
++                ptr::write_bytes(pointer, 0x5a, layout.size());
++            }
++            allocations.push((pointer, layout));
++        }
++        for (pointer, layout) in allocations.into_iter().rev() {
++            assert!(
++                unsafe { std::slice::from_raw_parts(pointer, layout.size()) }
++                    .iter()
++                    .all(|v| *v == 0x5a)
++            );
++            unsafe {
++                heap.dealloc(pointer, layout);
++            }
++        }
++        let control = unsafe { &*(base as *const Control) };
++        assert_eq!(control.live_bytes.load(Ordering::Relaxed), 0);
++        let free = unsafe { &*((base as usize + CONTROL_BYTES) as *const FreeBlock) };
++        assert_eq!(free.bytes, length - CONTROL_BYTES);
++        assert_eq!(free.next, 0);
++        assert!(unsafe { heap.alloc(Layout::from_size_align(length, 8).unwrap()) }.is_null());
++        std::thread::scope(|scope| {
++            for worker in 0..4usize {
++                let heap = &heap;
++                scope.spawn(move || {
++                    let mut seed = worker + 1;
++                    let mut live = Vec::new();
++                    for _ in 0..1000 {
++                        seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
++                        if !live.is_empty() && (seed & 3 == 0 || live.len() > 12) {
++                            let index = seed % live.len();
++                            let (pointer, layout): (*mut u8, Layout) = live.swap_remove(index);
++                            assert!(
++                                unsafe { std::slice::from_raw_parts(pointer, layout.size()) }
++                                    .iter()
++                                    .all(|byte| *byte == worker as u8)
++                            );
++                            unsafe {
++                                heap.dealloc(pointer, layout);
++                            }
++                        } else {
++                            let layout =
++                                Layout::from_size_align(1 + seed % 1024, 1 << (seed % 10)).unwrap();
++                            let pointer = unsafe { heap.alloc(layout) };
++                            if !pointer.is_null() {
++                                assert_eq!(pointer as usize % layout.align(), 0);
++                                unsafe {
++                                    ptr::write_bytes(pointer, worker as u8, layout.size());
++                                }
++                                live.push((pointer, layout));
++                            }
++                        }
++                    }
++                    for (pointer, layout) in live {
++                        unsafe {
++                            heap.dealloc(pointer, layout);
++                        }
++                    }
++                });
++            }
++        });
++        assert_eq!(control.live_bytes.load(Ordering::Relaxed), 0);
++        assert_eq!(
++            control.allocs.load(Ordering::Relaxed),
++            control.frees.load(Ordering::Relaxed)
++        );
++        assert_eq!(
++            unsafe { (*((base as usize + CONTROL_BYTES) as *const FreeBlock)).bytes },
++            length - CONTROL_BYTES
++        );
++        unsafe {
++            libc::munmap(base, length);
++        }
++    }
 +}
 diff --git a/src/firecracker/src/main.rs b/src/firecracker/src/main.rs
 index 8baa66ac6..d8e94758e 100644
@@ -788,33 +1197,228 @@ index e38480179..fb1e3396f 100644
      pub fn new(
          serial_in: Option<Stdin>,
          serial_out: SerialOut,
+diff --git a/src/vmm/src/devices/virtio/block/virtio/device.rs b/src/vmm/src/devices/virtio/block/virtio/device.rs
+index 78c1adde8..3088ad681 100644
+--- a/src/vmm/src/devices/virtio/block/virtio/device.rs
++++ b/src/vmm/src/devices/virtio/block/virtio/device.rs
+@@ -59,6 +59,7 @@ pub enum FileEngineType {
+ /// Helper object for setting up all `Block` fields derived from its backing file.
+ #[derive(Debug)]
+ pub struct DiskProperties {
++    pub pool_identity: Option<String>,
+     pub file_path: String,
+     pub file_engine: FileEngine,
+     pub nsectors: u64,
+@@ -105,6 +106,7 @@ impl DiskProperties {
+         let image_id = Self::build_disk_image_id(&disk_image);
+ 
+         Ok(Self {
++            pool_identity: crate::pool_cache::disk_identity(&disk_image_path, is_disk_read_only),
+             file_path: disk_image_path,
+             file_engine: FileEngine::from_file(disk_image, file_engine_type)
+                 .map_err(VirtioBlockError::FileEngine)?,
+@@ -122,6 +124,7 @@ impl DiskProperties {
+         let mut disk_image = Self::open_file(&disk_image_path, is_disk_read_only)?;
+         let disk_size = Self::file_size(&disk_image_path, &mut disk_image)?;
+ 
++        self.pool_identity = None; // A changed backing needs a fresh verified identity.
+         self.image_id = Self::build_disk_image_id(&disk_image);
+         self.file_engine
+             .update_file_path(disk_image)
+@@ -403,6 +406,8 @@ pub struct VirtioBlock {
+     pub disk: DiskProperties,
+     pub rate_limiter: RateLimiter,
+     pub is_io_engine_throttled: bool,
++    // Host-only outcome of the latest snapshot preparation, never serialized.
++    pub(crate) snapshot_prepare_error: Option<String>,
+     pub metrics: Arc<BlockDeviceMetrics>,
+ }
+ 
+@@ -504,6 +509,7 @@ impl VirtioBlock {
+             disk: disk_properties,
+             rate_limiter,
+             is_io_engine_throttled: false,
++            snapshot_prepare_error: None,
+             metrics: BlockMetricsPerDevice::alloc(config.drive_id),
+         })
+     }
+@@ -744,11 +750,17 @@ impl VirtioBlock {
+ 
+     /// Prepare device for being snapshotted.
+     pub fn prepare_save(&mut self) {
++        self.snapshot_prepare_error = None;
+         if !self.is_activated() {
+             return;
+         }
+ 
+-        self.drain_and_flush(false);
++        // Persist::save is infallible. Retain a failure so Vmm::save_state can
++        // reject the checkpoint before serializing it or collecting CPU state.
++        if let Err(err) = self.disk.file_engine.drain_and_flush(false) {
++            self.snapshot_prepare_error = Some(err.to_string());
++            return;
++        }
+         if let FileEngine::Async(ref _engine) = self.disk.file_engine {
+             self.process_async_completion_queue();
+         }
+@@ -1968,6 +1980,29 @@ mod tests {
+         }
+     }
+ 
++    #[test]
++    fn test_prepare_save_flush_failure_is_reported_and_retryable() {
++        for engine in [FileEngineType::Sync, FileEngineType::Async] {
++            let mut block = default_block(engine);
++            let mem = default_mem();
++            let vq = VirtQueue::new(GuestAddress(0), &mem, 16);
++            block.queues[0] = vq.create_queue();
++            block.activate(mem, default_interrupt()).unwrap();
++            let good_file = block.disk.file_engine.file().try_clone().unwrap();
++            // An actual fsync(/dev/null) fails with EINVAL, exercising the real
++            // sync and io_uring engines rather than a fabricated result flag.
++            block.disk.file_engine = FileEngine::from_file(
++                File::open("/dev/null").unwrap(), engine).unwrap();
++            block.prepare_save();
++            assert!(block.snapshot_prepare_error.is_some());
++            block.prepare_save();
++            assert!(block.snapshot_prepare_error.is_some());
++            block.disk.file_engine = FileEngine::from_file(good_file, engine).unwrap();
++            block.prepare_save();
++            assert!(block.snapshot_prepare_error.is_none());
++        }
++    }
++
+     #[test]
+     fn test_prepare_save() {
+         for engine in [FileEngineType::Sync, FileEngineType::Async] {
+@@ -1983,6 +2018,7 @@ mod tests {
+             add_flush_requests_batch(&mut block, &vq, 5);
+             simulate_queue_event(&mut block, None);
+             block.prepare_save();
++            assert!(block.snapshot_prepare_error.is_none());
+ 
+             // Check that all the pending flush requests were processed during `prepare_save()`.
+             check_flush_requests_batch(5, &vq);
+diff --git a/src/vmm/src/devices/virtio/block/virtio/persist.rs b/src/vmm/src/devices/virtio/block/virtio/persist.rs
+index 493c487bb..da8a7ae83 100644
+--- a/src/vmm/src/devices/virtio/block/virtio/persist.rs
++++ b/src/vmm/src/devices/virtio/block/virtio/persist.rs
+@@ -144,6 +144,7 @@ impl Persist<'_> for VirtioBlock {
+             disk: disk_properties,
+             rate_limiter,
+             is_io_engine_throttled: false,
++            snapshot_prepare_error: None,
+             metrics: BlockMetricsPerDevice::alloc(state.id.clone()),
+         })
+     }
+diff --git a/src/vmm/src/devices/virtio/block/virtio/request.rs b/src/vmm/src/devices/virtio/block/virtio/request.rs
+index a6f5813ce..0222ab5fd 100644
+--- a/src/vmm/src/devices/virtio/block/virtio/request.rs
++++ b/src/vmm/src/devices/virtio/block/virtio/request.rs
+@@ -96,6 +96,7 @@ impl Status {
+ 
+ #[derive(Debug)]
+ pub struct PendingRequest {
++    pool_hint: Option<(String, u64, u64)>,
+     r#type: RequestType,
+     data_len: u32,
+     status_addr: GuestAddress,
+@@ -161,6 +162,9 @@ impl PendingRequest {
+                 block_metrics.read_bytes.add(transferred_data_len.into());
+                 if let Status::Ok { .. } = status {
+                     block_metrics.read_count.inc();
++                    if let Some((identity, gpa, offset)) = &self.pool_hint {
++                        crate::pool_cache::observe(identity, *gpa, *offset, self.data_len);
++                    }
+                 }
+                 status
+             }
+@@ -425,6 +429,7 @@ impl Request {
+ 
+     fn to_pending_request(&self, desc_idx: u16) -> PendingRequest {
+         PendingRequest {
++            pool_hint: None,
+             r#type: self.r#type,
+             data_len: self.data_len,
+             status_addr: self.status_addr,
+@@ -440,7 +445,11 @@ impl Request {
+         block_metrics: &BlockDeviceMetrics,
+         discard_supported: bool,
+     ) -> ProcessingResult {
+-        let pending = self.to_pending_request(desc_idx);
++        let mut pending = self.to_pending_request(desc_idx);
++        if self.r#type == RequestType::In {
++            pending.pool_hint = disk.pool_identity.as_ref().map(|id|
++                (id.clone(), self.data_addr.0, self.offset()));
++        }
+         let res = match self.r#type {
+             RequestType::In => {
+                 let _metric = block_metrics.read_agg.record_latency_metrics();
+@@ -510,9 +519,34 @@ mod tests {
+ 
+     const NUM_DISK_SECTORS: u64 = 1024;
+ 
++    #[test]
++    fn pool_cache_hints_require_complete_successful_read() {
++        let mem = default_mem();
++        let metrics = BlockDeviceMetrics::default();
++        let request = |gpa, kind| PendingRequest {
++            pool_hint: Some(("a".repeat(64), gpa, 0x20000)),
++            r#type: kind,
++            data_len: 8192,
++            status_addr: GuestAddress(0),
++            desc_idx: 0,
++        };
++        request(0x10000, RequestType::In).finish(&mem, Ok(4096), &metrics);
++        assert!(crate::pool_cache::test_hint(0x10000).is_none());
++        request(0x20000, RequestType::In)
++            .finish(&mem, Err(IoErr::UnsupportedRequest(99)), &metrics);
++        assert!(crate::pool_cache::test_hint(0x20000).is_none());
++        request(0x30000, RequestType::Out).finish(&mem, Ok(8192), &metrics);
++        assert!(crate::pool_cache::test_hint(0x30000).is_none());
++        request(0x40000, RequestType::In).finish(&mem, Ok(8192), &metrics);
++        assert_eq!(crate::pool_cache::test_hint(0x40000).unwrap().image_offset, 0x20000);
++        assert_eq!(crate::pool_cache::test_hint(0x41000).unwrap().image_offset, 0x21000);
++        assert!(crate::pool_cache::test_hint(0x42000).is_none());
++    }
++
+     impl Default for PendingRequest {
+         fn default() -> Self {
+             PendingRequest {
++                pool_hint: None,
+                 r#type: RequestType::In,
+                 data_len: 0,
+                 status_addr: Default::default(),
 diff --git a/src/vmm/src/lib.rs b/src/vmm/src/lib.rs
-index 41b7b8d69..b670ca37a 100644
+index 41b7b8d69..a76e3bb66 100644
 --- a/src/vmm/src/lib.rs
 +++ b/src/vmm/src/lib.rs
-@@ -96,6 +96,8 @@ pub mod pci;
+@@ -96,6 +96,9 @@ pub mod pci;
  pub mod persist;
  /// Resource store for configured microVM resources.
  pub mod resources;
 +#[cfg(target_arch = "x86_64")]
 +mod reuse;
++mod pool_cache;
  /// microVM RPC API adapters.
  pub mod rpc_interface;
  /// Seccomp filter utilities.
-@@ -169,6 +171,9 @@ pub use crate::vstate::vm::{StartVcpusError, Vm};
-
+@@ -169,6 +172,9 @@ pub use crate::vstate::vm::{StartVcpusError, Vm};
+ 
  /// Shorthand type for the EventManager flavour used by Firecracker.
  pub type EventManager = BaseEventManager<Arc<Mutex<dyn MutEventSubscriber>>>;
 +/// Last laboratory control durations: vCPU channel, DAX ioctl, IRQFD binding.
 +pub static DAX_CONTROL_TIMINGS: [std::sync::atomic::AtomicU64; 3] =
 +    [const { std::sync::atomic::AtomicU64::new(0) }; 3];
-
+ 
  // Since the exit code names e.g. `SIGBUS` are most appropriate yet trigger a test error with the
  // clippy lint `upper_case_acronyms` we have disabled this lint for this enum.
-@@ -217,6 +222,14 @@ pub const HTTP_MAX_PAYLOAD_SIZE: usize = 51200;
+@@ -217,6 +223,16 @@ pub const HTTP_MAX_PAYLOAD_SIZE: usize = 51200;
  /// have permissions to open the KVM fd).
  #[derive(Debug, thiserror::Error, displaydoc::Display)]
  pub enum VmmError {
++    /// Experimental block-data pool operation failed: {0}
++    PoolCache(io::Error),
 +    /// A failed experimental reuse restore must not be resumed.
 +    ReuseRestoreFailed,
 +    /// A prepared experimental reuse worker needs a successful snapshot load before Resume.
@@ -826,7 +1430,7 @@ index 41b7b8d69..b670ca37a 100644
      #[cfg(target_arch = "aarch64")]
      /// Invalid command line error.
      Cmdline,
-@@ -303,6 +316,10 @@ pub struct Vmm {
+@@ -303,6 +319,10 @@ pub struct Vmm {
      pub machine_config: MachineConfig,
      boot_source_config: BootSourceConfig,
      shutdown_exit_code: Option<FcExitCode>,
@@ -834,13 +1438,16 @@ index 41b7b8d69..b670ca37a 100644
 +    reuse_restore_failed: bool,
 +    #[cfg(target_arch = "x86_64")]
 +    reuse_prepared: Option<reuse::ReusePrepared>,
-
+ 
      /// VM object.
      pub vm: Vm,
-@@ -461,23 +478,97 @@ impl Vmm {
-
+@@ -461,23 +481,130 @@ impl Vmm {
+ 
      /// Sends a resume command to the vCPUs.
      pub fn resume_vm(&mut self) -> Result<(), VmmError> {
++        if pool_cache::mapping_failed() {
++            return Err(VmmError::PoolCache(io::Error::other("failed pool mapping: this process cannot resume")));
++        }
 +        #[cfg(target_arch = "x86_64")]
 +        if self.reuse_prepared.is_some() {
 +            return Err(VmmError::ReusePrepared);
@@ -871,7 +1478,7 @@ index 41b7b8d69..b670ca37a 100644
          self.instance_info.state = VmState::Running;
          Ok(())
      }
-
+ 
 +    /// Reject unsupported direct devices before changing vCPU or IRQFD state.
 +    #[cfg(target_arch = "x86_64")]
 +    pub(crate) fn check_direct_handoff_configuration(&self) -> Result<(), VmmError> {
@@ -907,6 +1514,36 @@ index 41b7b8d69..b670ca37a 100644
 +        }
 +    }
 +
++    /// Install immutable CXL data overlays while every guest/device writer is stopped.
++    pub fn pool_cache(&mut self) -> Result<(), VmmError> {
++        if pool_cache::mapping_failed() {
++            return Err(VmmError::PoolCache(io::Error::other("failed pool mapping: restart from the last valid snapshot")));
++        }
++        if self.instance_info.state != VmState::Paused {
++            return Err(VmmError::PoolCache(io::Error::other("PoolCache requires a paused VM")));
++        }
++        let mut unsupported_memory_device = false;
++        self.device_manager.for_each_virtio_device(|kind, _| {
++            unsupported_memory_device |= matches!(kind,
++                VirtioDeviceType::Balloon | VirtioDeviceType::Mem | VirtioDeviceType::Pmem);
++        });
++        if unsupported_memory_device {
++            return Err(VmmError::PoolCache(io::Error::other(
++                "PoolCache does not support balloon, memory hotplug, or pmem devices")));
++        }
++        // Saving devices drains asynchronous block writes and publishes completion
++        // rings before any host address is remapped. The main event loop is locked
++        // throughout this action, so no net/balloon event can mutate RAM here.
++        self.check_unsnapshottable_devices()
++            .map_err(|e| VmmError::PoolCache(io::Error::other(e.to_string())))?;
++        let _ = self.device_manager.save();
++        self.check_block_snapshot_preparation()
++            .map_err(|e| VmmError::PoolCache(io::Error::other(e.to_string())))?;
++        let vm = self.vm.as_kvm()
++            .ok_or_else(|| VmmError::PoolCache(io::Error::other("PoolCache requires KVM")))?;
++        pool_cache::apply(vm.guest_memory()).map_err(VmmError::PoolCache)
++    }
++
      /// Sends a pause command to the vCPUs.
      pub fn pause_vm(&mut self) -> Result<(), VmmError> {
 +        #[cfg(target_arch = "x86_64")]
@@ -937,10 +1574,13 @@ index 41b7b8d69..b670ca37a 100644
          self.instance_info.state = VmState::Paused;
          Ok(())
      }
-@@ -498,6 +589,12 @@ impl Vmm {
-
+@@ -498,6 +625,15 @@ impl Vmm {
+ 
      /// Saves the state of a paused Microvm.
      pub fn save_state(&mut self, vm_info: &VmInfo) -> Result<MicrovmState, MicrovmStateError> {
++        if pool_cache::mapping_failed() {
++            return Err(MicrovmStateError::NotAllowed("failed pool mapping: this process cannot snapshot".into()));
++        }
 +        #[cfg(target_arch = "x86_64")]
 +        if self.reuse_prepared.is_some() {
 +            return Err(MicrovmStateError::NotAllowed(
@@ -948,13 +1588,14 @@ index 41b7b8d69..b670ca37a 100644
 +        }
 +        let mut timing = persist::RestoreTiming::new("save_state");
          self.check_unsnapshottable_devices()?;
-
+ 
          // We need to save device state before saving KVM state.
-@@ -506,11 +603,17 @@ impl Vmm {
+@@ -506,11 +642,18 @@ impl Vmm {
          // state before we save device state, that interrupt will never be delivered to the guest
          // upon resuming from the snapshot.
          let device_states = self.device_manager.save();
 +        self.check_block_snapshot_preparation()?;
++        pool_cache::dump_hints().map_err(|e| MicrovmStateError::NotAllowed(e.to_string()))?;
 +        timing.mark("device_state");
          let kvm_vm = self
              .vm
@@ -969,17 +1610,17 @@ index 41b7b8d69..b670ca37a 100644
          let kvm_state = kvm_vm.kvm().save_state();
          let vm_state = {
              #[cfg(target_arch = "x86_64")]
-@@ -528,6 +631,8 @@ impl Vmm {
+@@ -528,6 +671,8 @@ impl Vmm {
                      .map_err(MicrovmStateError::SaveVmState)?
              }
          };
 +        timing.mark("kvm_vm_state");
 +        timing.finish();
-
+ 
          Ok(MicrovmState {
              vm_info: vm_info.clone(),
 diff --git a/src/vmm/src/persist.rs b/src/vmm/src/persist.rs
-index 71a0345cb..63b60e0f7 100644
+index 71a0345cb..66ad53f99 100644
 --- a/src/vmm/src/persist.rs
 +++ b/src/vmm/src/persist.rs
 @@ -7,14 +7,17 @@ use std::fmt::Debug;
@@ -992,13 +1633,13 @@ index 71a0345cb..63b60e0f7 100644
  use std::path::Path;
  use std::sync::{Arc, Mutex};
 +use std::time::Instant;
-
+ 
  use semver::Version;
  use serde::{Deserialize, Serialize};
  use userfaultfd::{FeatureFlags, Uffd, UffdBuilder};
 +use vm_memory::GuestMemoryBackend;
  use vmm_sys_util::sock_ctrl_msg::ScmSocket;
-
+ 
  #[cfg(target_arch = "aarch64")]
 @@ -37,10 +40,12 @@ use crate::utils::u64_to_usize;
  use crate::vmm_config::boot_source::BootSourceConfig;
@@ -1015,10 +1656,10 @@ index 71a0345cb..63b60e0f7 100644
  };
  use crate::vstate::vcpu::{VcpuSendEventError, VcpuState};
  use crate::vstate::vm::{VmError, VmState};
-@@ -165,38 +170,143 @@ pub enum CreateSnapshotError {
+@@ -165,38 +170,146 @@ pub enum CreateSnapshotError {
  /// Snapshot version
  pub const SNAPSHOT_VERSION: Version = Version::new(12, 0, 0);
-
+ 
 +/// Opt-in lab timings. Clock samples are collected in memory; emit once after
 +/// the measured work, rather than logging inside each restore stage.
 +pub(crate) struct RestoreTiming {
@@ -1089,6 +1730,9 @@ index 71a0345cb..63b60e0f7 100644
  ) -> Result<(), CreateSnapshotError> {
 +    let mut timing = RestoreTiming::new("create_snapshot");
 +    let dax_offset = dax_snapshot_offset(&params.mem_file_path)?;
++    if dax_offset.is_some() && crate::pool_cache::has_overlays() {
++        return Err(MemoryError::Dax("pooled RAM requires a materialized logical snapshot, not a state-only DAX snapshot".into()).into());
++    }
 +    if dax_offset.is_some() && params.snapshot_type != SnapshotType::Full {
 +        return Err(MemoryError::Dax("state-only DAX snapshot requires Full".into()).into());
 +    }
@@ -1125,14 +1769,14 @@ index 71a0345cb..63b60e0f7 100644
          .save_state(vm_info)
          .map_err(CreateSnapshotError::MicrovmState)?;
 +    timing.mark("state_collection");
-
+ 
      snapshot_state_to_file(
          &microvm_state,
          &params.snapshot_path,
          params.sync_snapshot_files,
      )?;
 +    timing.mark("encode_and_write");
-
+ 
      let kvm_vm = vmm.vm.as_kvm().ok_or_else(|| {
          CreateSnapshotError::MicrovmState(MicrovmStateError::NotAllowed(
              "snapshot requires KVM".into(),
@@ -1153,7 +1797,7 @@ index 71a0345cb..63b60e0f7 100644
 +        memory_timing.mark("dump_ram_file");
 +        memory_timing.finish();
 +    }
-
+ 
      // We need to mark queues as dirty again for all activated devices. The reason we
      // do it here is that we don't mark pages as dirty during runtime
      // for queue objects.
@@ -1161,10 +1805,10 @@ index 71a0345cb..63b60e0f7 100644
          .mark_virtio_queue_memory_dirty(kvm_vm.guest_memory());
 +    timing.mark("memory_and_queue_handling");
 +    timing.finish();
-
+ 
      Ok(())
  }
-@@ -381,7 +491,9 @@ pub fn restore_from_snapshot(
+@@ -381,7 +494,9 @@ pub fn restore_from_snapshot(
      params: &LoadSnapshotParams,
      vm_resources: &mut VmResources,
  ) -> Result<Arc<Mutex<Vmm>>, RestoreFromSnapshotError> {
@@ -1174,15 +1818,15 @@ index 71a0345cb..63b60e0f7 100644
      for entry in &params.network_overrides {
          // Only the active transport carries virtio device state, so we look at whichever
          // variant this snapshot was saved with. The MMIO and PCI transports wrap their net
-@@ -448,6 +560,7 @@ pub fn restore_from_snapshot(
-
+@@ -448,6 +563,7 @@ pub fn restore_from_snapshot(
+ 
      // Some sanity checks before building the microvm.
      snapshot_state_sanity_check(&microvm_state)?;
 +    timing.mark("config_and_validation");
-
+ 
      let mem_backend_path = &params.mem_backend.backend_path;
      let mem_state = &microvm_state.vm_state.memory;
-@@ -479,7 +592,8 @@ pub fn restore_from_snapshot(
+@@ -479,7 +595,8 @@ pub fn restore_from_snapshot(
          )
          .map_err(RestoreFromSnapshotGuestMemoryError::Uffd)?,
      };
@@ -1192,7 +1836,7 @@ index 71a0345cb..63b60e0f7 100644
          instance_info,
          event_manager,
          microvm_state,
-@@ -489,7 +603,10 @@ pub fn restore_from_snapshot(
+@@ -489,7 +606,10 @@ pub fn restore_from_snapshot(
          vm_resources,
          params.clock_realtime,
      )
@@ -1202,18 +1846,18 @@ index 71a0345cb..63b60e0f7 100644
 +    timing.finish();
 +    Ok(vmm)
  }
-
+ 
  /// Error type for [`snapshot_state_from_file`]
-@@ -505,7 +622,7 @@ pub enum SnapshotStateFromFileError {
+@@ -505,7 +625,7 @@ pub enum SnapshotStateFromFileError {
      UnknownVsockDevice,
  }
-
+ 
 -fn snapshot_state_from_file(
 +pub(crate) fn snapshot_state_from_file(
      snapshot_path: &Path,
  ) -> Result<MicrovmState, SnapshotStateFromFileError> {
      let mut snapshot_reader = File::open(snapshot_path)?;
-@@ -531,6 +648,26 @@ fn guest_memory_from_file(
+@@ -531,6 +651,26 @@ fn guest_memory_from_file(
      track_dirty_pages: bool,
      huge_pages: HugePageConfig,
  ) -> Result<Vec<GuestRegionMmap>, GuestMemoryFromFileError> {
@@ -1240,10 +1884,10 @@ index 71a0345cb..63b60e0f7 100644
      let mem_file = File::open(mem_file_path)?;
      let guest_mem =
          memory::snapshot_file(mem_file, mem_state.regions(), track_dirty_pages, huge_pages)?;
-@@ -687,6 +824,61 @@ mod tests {
+@@ -687,6 +827,61 @@ mod tests {
      use crate::vmm_config::vsock::tests::default_config;
      use crate::vstate::memory::{GuestMemoryRegionState, GuestRegionType};
-
+ 
 +    #[test]
 +    fn test_storage_snapshot_flush_failure_writes_no_checkpoint() {
 +        use crate::builder::tests::default_vmm_with_pci;
@@ -1338,11 +1982,741 @@ index 55f784a8d..42f971edc 100644
          // Page faults are more expensive for shared memory mapping, including  memfd.
          // For this reason, we only back guest memory with a memfd
          // if a vhost-user-blk device is configured in the VM, otherwise we fall back to
+diff --git a/src/vmm/src/reuse.rs b/src/vmm/src/reuse.rs
+new file mode 100644
+index 000000000..0f90a81c0
+--- /dev/null
++++ b/src/vmm/src/reuse.rs
+@@ -0,0 +1,715 @@
++// Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
++// SPDX-License-Identifier: Apache-2.0
++
++//! Opt-in, deliberately narrow semantic restore into an already-used KVM worker.
++//! RAM stays at the same DAX offset; this does not import kernel pointers or VMCS bytes.
++
++use std::os::fd::AsRawFd;
++use std::os::unix::fs::{FileTypeExt, MetadataExt};
++use std::path::Path;
++use std::sync::atomic::{AtomicU64, Ordering};
++
++use kvm_bindings::{CpuId, KVM_MAX_CPUID_ENTRIES};
++use vm_memory::{GuestMemoryBackend, GuestMemoryRegion};
++
++use crate::device_manager::{DevicesState, VirtioDevicesState};
++use crate::devices::legacy::EventFdTrigger;
++use crate::persist::{
++    MicrovmState, RestoreTiming, VmInfo, dax_snapshot_offset, snapshot_state_from_file,
++};
++use crate::snapshot::Persist;
++use crate::vmm_config::instance_info::VmState;
++use crate::vmm_config::machine_config::HugePageConfig;
++use crate::vmm_config::snapshot::{LoadSnapshotParams, MemBackendType};
++use crate::vstate::memory::{GuestMemoryExtension, GuestMemoryMmap, GuestRegionType};
++use crate::{VcpuResponse, Vmm};
++
++static REUSE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
++
++/// A single outstanding local preparation. Eventfd clones retain kernel identity across UART
++/// replacement. No snapshot bytes, guest RAM, or remote pointers are stored here.
++#[derive(Debug)]
++pub(crate) struct ReusePrepared {
++    irqfds: [(EventFdTrigger, u32); 4],
++    strict_irqfd: bool,
++    generation: u64,
++}
++
++/// Captured before first KVM_RUN. KVM forbids changing this CPU model after use;
++/// caching avoids loading the VMCS on the VMM thread just to read invariants.
++#[derive(Debug)]
++pub(crate) struct ReuseCpuContract {
++    cpuid: CpuId,
++    immutable_msrs: Vec<(u32, u64)>,
++    tsc_khz: Option<u32>,
++}
++
++fn immutable_msr(index: u32) -> bool {
++    matches!(index, 0x10a | 0x345 | 0xc0011029 | 0x480..=0x491)
++}
++
++impl ReuseCpuContract {
++    pub(crate) fn capture(vcpu: &crate::arch::KvmVcpu) -> Result<Self, String> {
++        let cpuid = vcpu
++            .fd
++            .get_cpuid2(KVM_MAX_CPUID_ENTRIES)
++            .map_err(|e| e.to_string())?;
++        ensure(
++            cpuid.as_slice().iter().all(|leaf| match leaf.function {
++                1 => leaf.ecx & (1 << 5) == 0,
++                0x80000001 => leaf.ecx & (1 << 2) == 0,
++                _ => true,
++            }),
++            "reuse worker CPU exposes nested virtualization",
++        )?;
++        let mut indices: Vec<_> = vcpu
++            .snapshot_msr_indices()
++            .into_iter()
++            .filter(|i| immutable_msr(*i))
++            .collect();
++        indices.dedup();
++        let immutable_msrs = if indices.is_empty() {
++            Vec::new()
++        } else {
++            vcpu.get_msr_chunk(indices.iter().copied(), indices.len())
++                .map_err(|e| e.to_string())?
++                .as_slice()
++                .iter()
++                .map(|entry| (entry.index, entry.data))
++                .collect()
++        };
++        Ok(Self {
++            cpuid: cpuid_contract(cpuid),
++            immutable_msrs,
++            tsc_khz: vcpu.fd.get_tsc_khz().ok(),
++        })
++    }
++
++    fn validate(&self, state: &crate::vstate::vcpu::VcpuState) -> Result<(), String> {
++        ensure(
++            self.cpuid == cpuid_contract(state.cpuid.clone()),
++            "reuse CPUID model mismatch",
++        )?;
++        ensure(
++            state
++                .saved_msrs
++                .iter()
++                .flat_map(|m| m.as_slice())
++                .filter(|m| immutable_msr(m.index))
++                .all(|msr| self.immutable_msrs.contains(&(msr.index, msr.data))),
++            "reuse immutable feature MSR mismatch",
++        )?;
++        ensure(
++            state.tsc_khz.is_none() || state.tsc_khz == self.tsc_khz,
++            "reuse TSC frequency mismatch",
++        )
++    }
++}
++
++fn ensure(ok: bool, reason: &str) -> Result<(), String> {
++    ok.then_some(()).ok_or_else(|| reason.to_owned())
++}
++
++/// Preparation and restore must retain the same shared physical DAX allocation.
++fn validate_dax_backing(
++    memory: &GuestMemoryMmap,
++    path: &Path,
++    mut offset: u64,
++) -> Result<(), String> {
++    let wanted = std::fs::metadata(path).map_err(|e| e.to_string())?;
++    ensure(
++        wanted.file_type().is_char_device(),
++        "reuse backing is not device DAX",
++    )?;
++    for region in memory.iter() {
++        let backing = region.file_offset().ok_or("reuse backing is anonymous")?;
++        let got = backing.file().metadata().map_err(|e| e.to_string())?;
++        ensure(
++            got.rdev() == wanted.rdev()
++                && backing.start() == offset
++                && region.flags() & libc::MAP_SHARED != 0,
++            "reuse DAX allocation mismatch",
++        )?;
++        offset = offset
++            .checked_add(region.len())
++            .ok_or("reuse DAX offset overflow")?;
++    }
++    Ok(())
++}
++
++fn diskless(state: &DevicesState) -> bool {
++    match &state.virtio_state {
++        VirtioDevicesState::Mmio(devices) => {
++            devices.block_devices.is_empty()
++                && devices.net_devices.is_empty()
++                && devices.vsock_device.is_none()
++                && devices.balloon_device.is_none()
++                && devices.mmds.is_none()
++                && devices.entropy_device.is_none()
++                && devices.pmem_devices.is_empty()
++                && devices.memory_device.is_none()
++        }
++        VirtioDevicesState::Pci(_) => false,
++    }
++}
++
++// These bits/lengths are rewritten by this kernel's __kvm_update_cpuid_runtime.
++// Comparing the remaining fields rejects CPU model changes before SET ioctls.
++fn cpuid_contract(mut cpuid: CpuId) -> CpuId {
++    cpuid.retain(|leaf| {
++        !(leaf.function == 0 && leaf.index == 0 && leaf.flags == 0 && leaf.eax == 0)
++    });
++    for leaf in cpuid.as_mut_slice() {
++        match (leaf.function, leaf.index) {
++            (1, _) => {
++                leaf.ecx &= !((1 << 27) | (1 << 3));
++                leaf.edx &= !(1 << 9);
++            }
++            (7, 0) => leaf.ecx &= !(1 << 4),
++            (0xd, 0 | 1) => leaf.ebx = 0,
++            _ => (),
++        }
++    }
++    cpuid
++}
++
++fn controlled_cpu(state: &crate::vstate::vcpu::VcpuState) -> bool {
++    state.sregs.cr4 & (1 << 13) == 0
++        && state.sregs.efer & (1 << 12) == 0
++        && state.sregs.efer & (1 << 10) != 0
++        && controlled_cpuid(&state.cpuid)
++}
++
++fn controlled_cpuid(cpuid: &CpuId) -> bool {
++    cpuid
++        .as_slice()
++        .iter()
++        .any(|leaf| leaf.function == 0x80000001 && leaf.edx & (1 << 20) != 0)
++        && cpuid.as_slice().iter().all(|leaf| match leaf.function {
++            1 => leaf.ecx & ((1 << 5) | (1 << 24)) == 0,
++            0x80000001 => leaf.ecx & (1 << 2) == 0,
++            0xa => leaf.eax == 0 && leaf.ebx == 0 && leaf.ecx == 0 && leaf.edx == 0,
++            0x40000001 => leaf.eax & !((1 << 0) | (1 << 1) | (1 << 3) | (1 << 24)) == 0,
++            _ => true,
++        })
++}
++
++impl Vmm {
++    fn reuse_irqfds(&self) -> Result<[(EventFdTrigger, u32); 4], String> {
++        let legacy = self
++            .device_manager
++            .legacy_devices
++            .as_ref()
++            .ok_or("reuse needs legacy UART")?;
++        Ok([
++            (
++                legacy
++                    .stdio_serial
++                    .lock()
++                    .unwrap()
++                    .serial
++                    .interrupt_evt()
++                    .try_clone()
++                    .map_err(|e| e.to_string())?,
++                4,
++            ),
++            (
++                EventFdTrigger::new(
++                    legacy
++                        .i8042
++                        .lock()
++                        .unwrap()
++                        .kbd_interrupt_evt
++                        .try_clone()
++                        .map_err(|e| e.to_string())?,
++                ),
++                1,
++            ),
++            (
++                self.device_manager
++                    .acpi_devices
++                    .vmgenid()
++                    .interrupt_evt
++                    .try_clone()
++                    .map_err(|e| e.to_string())?,
++                self.device_manager.acpi_devices.vmgenid().gsi,
++            ),
++            (
++                self.device_manager
++                    .acpi_devices
++                    .vmclock()
++                    .interrupt_evt
++                    .try_clone()
++                    .map_err(|e| e.to_string())?,
++                self.device_manager.acpi_devices.vmclock().gsi,
++            ),
++        ])
++    }
++
++    /// Coarse preparation can overlap source execution/save. It only retires local worker state:
++    /// no KVM_RUN, snapshot decode, guest-memory writes, or incoming CPU state are involved.
++    pub(crate) fn prepare_reused_worker(&mut self) -> Result<(), String> {
++        ensure(
++            std::env::var("FC_DAX_REUSE").as_deref() == Ok("1"),
++            "reuse not enabled",
++        )?;
++        ensure(
++            self.instance_info.state == VmState::Paused && !self.reuse_restore_failed,
++            "reuse preparation requires a healthy paused worker",
++        )?;
++        // A duplicate never toggles EFER back or queues another vCPU event.
++        if let Some(prepared) = &self.reuse_prepared {
++            crate::logger::info_unrestricted!(
++                "DAX_REUSE_PREPARED generation={} duplicate=true",
++                prepared.generation
++            );
++            return Ok(());
++        }
++        let mut timing = RestoreTiming::new("reuse_prepare");
++        ensure(
++            std::env::var("FC_DAX_NO_NESTED_GUEST").as_deref() == Ok("1")
++                && self.machine_config.vcpu_count == 1
++                && !self.machine_config.track_dirty_pages
++                && self.machine_config.huge_pages == HugePageConfig::None,
++            "reuse preparation requires the one-vCPU, no-nested, non-dirty DAX pool",
++        )?;
++        let vm = self.vm.as_kvm().ok_or("reuse requires KVM")?;
++        // Check the current PIT before clearing it; otherwise preparation could hide an
++        // unsupported active timer from the later snapshot compatibility check.
++        ensure(
++            crate::vstate::vm::KvmVm::reuse_pit_disabled(
++                &vm.save_state().map_err(|e| e.to_string())?,
++            ),
++            "reuse receiver previously used an active PIT",
++        )?;
++        let devices = self.device_manager.save();
++        ensure(
++            diskless(&devices),
++            "reuse supports diskless MMIO workers only",
++        )?;
++        let serial = self
++            .device_manager
++            .legacy_devices
++            .as_ref()
++            .ok_or("reuse needs legacy UART")?
++            .stdio_serial
++            .lock()
++            .expect("Poisoned lock");
++        ensure(serial.input.is_none(), "reuse requires output-only UART")?;
++        drop(serial);
++        let path =
++            std::env::var_os("FC_DAX_RAM").ok_or("reuse preparation needs configured DAX")?;
++        let path = Path::new(&path);
++        let offset = dax_snapshot_offset(path)
++            .map_err(|e| e.to_string())?
++            .ok_or("reuse preparation needs configured DAX")?;
++        ensure(
++            vm.guest_memory()
++                .describe()
++                .regions
++                .iter()
++                .all(|r| r.region_type == GuestRegionType::Dram),
++            "reuse preparation requires DRAM memslots",
++        )?;
++        validate_dax_backing(vm.guest_memory(), path, offset)?;
++        {
++            let handles = vm.vcpus_handles();
++            ensure(
++                handles.len() == 1
++                    && handles[0]
++                        .reuse_cpu_contract
++                        .as_ref()
++                        .is_some_and(|contract| controlled_cpuid(&contract.cpuid)),
++                "reuse preparation requires clock-only PV/no-PMU/no-nested CPU profile",
++            )?;
++        }
++        let irqfds = self.reuse_irqfds()?;
++        let strict_irqfd = std::env::var("FC_DAX_REUSE_QUIET_IRQFD").as_deref() != Ok("1");
++        timing.mark("validation");
++        self.reuse_restore_failed = true;
++        vm.quiesce_reused_pit().map_err(|e| e.to_string())?;
++        timing.mark("quiesce_old_timers");
++        if strict_irqfd {
++            for (event, gsi) in &irqfds {
++                vm.fd()
++                    .unregister_irqfd(event, *gsi)
++                    .map_err(|e| e.to_string())?;
++            }
++        }
++        timing.mark("irqfd_deassign");
++        for (event, _) in &irqfds {
++            while event.read().is_ok() {}
++        }
++        timing.mark("drain_old_events");
++        {
++            let mut handles = vm.vcpus_handles();
++            handles[0].prepare_reuse_without_kick();
++            match handles[0]
++                .response_receiver()
++                .recv_timeout(crate::RECV_TIMEOUT_SEC)
++            {
++                Ok(VcpuResponse::PreparedReuse) => (),
++                response => return Err(format!("reuse vCPU preparation failed: {response:?}")),
++            }
++        }
++        timing.mark("vcpu_prepare");
++        let generation = REUSE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
++        self.reuse_prepared = Some(ReusePrepared {
++            irqfds,
++            strict_irqfd,
++            generation,
++        });
++        self.reuse_restore_failed = false;
++        crate::logger::info_unrestricted!(
++            "DAX_REUSE_PREPARED generation={} duplicate=false",
++            generation
++        );
++        timing.finish();
++        Ok(())
++    }
++
++    fn validate_reuse(
++        &self,
++        params: &LoadSnapshotParams,
++        state: &MicrovmState,
++    ) -> Result<(), String> {
++        ensure(
++            state.vcpu_states.len() == 1 && self.machine_config.vcpu_count == 1,
++            "reuse currently requires one vCPU",
++        )?;
++        crate::persist::snapshot_state_sanity_check(state).map_err(|e| e.to_string())?;
++        ensure(
++            std::env::var("FC_DAX_REUSE").as_deref() == Ok("1"),
++            "reuse not enabled",
++        )?;
++        ensure(
++            std::env::var("FC_DAX_NO_NESTED_GUEST").as_deref() == Ok("1"),
++            "reuse requires a pool booted without nested VMX/SVM",
++        )?;
++        ensure(
++            self.instance_info.state == VmState::Paused && !self.reuse_restore_failed,
++            "reuse requires a healthy paused worker",
++        )?;
++        let actual = VmInfo::from(self);
++        ensure(
++            actual.mem_size_mib == state.vm_info.mem_size_mib
++                && actual.smt == state.vm_info.smt
++                && actual.cpu_template == state.vm_info.cpu_template
++                && actual.huge_pages == state.vm_info.huge_pages
++                && actual.huge_pages == HugePageConfig::None
++                && params.huge_pages.resolve(state.vm_info.huge_pages) == HugePageConfig::None,
++            "reuse VM hardware configuration mismatch",
++        )?;
++        ensure(
++            !params.track_dirty_pages
++                && !self.machine_config.track_dirty_pages
++                && params.network_overrides.is_empty()
++                && params.vsock_override.is_none()
++                && params.mem_backend.backend_type == MemBackendType::File,
++            "reuse requires state-only DAX without dirty tracking or backend overrides",
++        )?;
++        let vm = self.vm.as_kvm().ok_or("reuse requires KVM")?;
++        ensure(
++            vm.guest_memory().describe() == state.vm_state.memory
++                && state
++                    .vm_state
++                    .memory
++                    .regions
++                    .iter()
++                    .all(|r| r.region_type == GuestRegionType::Dram),
++            "reuse memory layout mismatch",
++        )?;
++        ensure(
++            vm.kvm().save_state().kvm_cap_modifiers == state.kvm_state.kvm_cap_modifiers,
++            "reuse KVM capability mismatch",
++        )?;
++        ensure(
++            crate::vstate::vm::KvmVm::reuse_pit_disabled(&state.vm_state),
++            "reuse currently requires a disabled PIT",
++        )?;
++        ensure(
++            controlled_cpu(&state.vcpu_states[0]),
++            "reuse requires clock-only PV/no-PMU/no-nested CPU profile",
++        )?;
++        let offset = dax_snapshot_offset(&params.mem_backend.backend_path)
++            .map_err(|e| e.to_string())?
++            .ok_or("reuse requires the configured DAX backend")?;
++        validate_dax_backing(vm.guest_memory(), &params.mem_backend.backend_path, offset)?;
++        let devices = self.device_manager.save();
++        ensure(
++            diskless(&devices) && diskless(&state.device_states),
++            "reuse supports diskless MMIO workers only",
++        )?;
++        let old_acpi = &devices.acpi_state;
++        let new_acpi = &state.device_states.acpi_state;
++        ensure(
++            old_acpi.vmgenid.addr == new_acpi.vmgenid.addr
++                && old_acpi.vmgenid.gsi == new_acpi.vmgenid.gsi
++                && old_acpi.vmclock.guest_address == new_acpi.vmclock.guest_address
++                && old_acpi.vmclock.gsi == new_acpi.vmclock.gsi,
++            "reuse ACPI layout mismatch",
++        )?;
++        let serial = self
++            .device_manager
++            .legacy_devices
++            .as_ref()
++            .ok_or("reuse needs legacy UART")?
++            .stdio_serial
++            .lock()
++            .expect("Poisoned lock");
++        ensure(
++            serial.input.is_none()
++                && state
++                    .device_states
++                    .serial_state
++                    .as_ref()
++                    .is_some_and(|s| s.in_buffer.len() <= 64),
++            "reuse requires output-only UART with valid FIFO",
++        )?;
++        ensure(
++            bitcode::serialize(&vm.resource_allocator().save()).map_err(|e| e.to_string())?
++                == bitcode::serialize(&state.vm_state.resource_allocator)
++                    .map_err(|e| e.to_string())?,
++            "reuse resource allocation mismatch",
++        )?;
++        let handles = vm.vcpus_handles();
++        ensure(handles.len() == 1, "reuse worker vCPU handle mismatch")?;
++        let mut incoming_indices: Vec<_> = state.vcpu_states[0]
++            .saved_msrs
++            .iter()
++            .flat_map(|chunk| chunk.as_slice().iter().map(|msr| msr.index))
++            .collect();
++        incoming_indices.sort_unstable();
++        ensure(
++            incoming_indices == handles[0].reuse_msr_indices,
++            "reuse snapshot MSR index schema mismatch",
++        )?;
++        handles[0]
++            .reuse_cpu_contract
++            .as_ref()
++            .ok_or("reuse worker has no immutable CPU contract")?
++            .validate(&state.vcpu_states[0])?;
++        ensure(
++            crate::vstate::vm::KvmVm::reuse_pit_disabled(
++                &vm.save_state().map_err(|e| e.to_string())?,
++            ),
++            "reuse receiver previously used an active PIT",
++        )?;
++        Ok(())
++    }
++
++    pub(crate) fn restore_reused_snapshot(
++        &mut self,
++        params: &LoadSnapshotParams,
++    ) -> Result<(), String> {
++        let mut timing = RestoreTiming::new("reuse");
++        let mut state =
++            snapshot_state_from_file(&params.snapshot_path).map_err(|e| e.to_string())?;
++        timing.mark("state_file_deserialize");
++        self.validate_reuse(params, &state)?;
++        let was_prepared = self.reuse_prepared.is_some();
++        let (irqfds, strict_irqfd, sequence) = if let Some(prepared) = self.reuse_prepared.take() {
++            (prepared.irqfds, prepared.strict_irqfd, prepared.generation)
++        } else {
++            (
++                self.reuse_irqfds()?,
++                std::env::var("FC_DAX_REUSE_QUIET_IRQFD").as_deref() != Ok("1"),
++                REUSE_SEQUENCE.fetch_add(1, Ordering::Relaxed),
++            )
++        };
++        let legacy = self.device_manager.legacy_devices.as_ref().unwrap();
++        timing.mark("validation");
++        // Any subsequent failure leaves the worker paused and permanently blocks Resume.
++        self.reuse_restore_failed = true;
++        let vm = self.vm.as_kvm().unwrap();
++        let before_fd = vm.fd().as_raw_fd();
++        if !was_prepared {
++            vm.quiesce_reused_pit().map_err(|e| e.to_string())?;
++        }
++        timing.mark("quiesce_old_timers");
++        // KVM_IRQFD deassignment synchronizes its waitqueue and flushes injection work.
++        // Reading the eventfd counter alone cannot drain already-queued kernel work.
++        if strict_irqfd && !was_prepared {
++            for (event, gsi) in &irqfds {
++                vm.fd()
++                    .unregister_irqfd(event, *gsi)
++                    .map_err(|e| e.to_string())?;
++            }
++        }
++        timing.mark("irqfd_deassign");
++        // Drain stale notifications before overwriting the saved IRQ controller state.
++        if !was_prepared {
++            for (evt, _) in &irqfds {
++                while evt.read().is_ok() {}
++            }
++        }
++        timing.mark("drain_old_events");
++        {
++            let mut handles = vm.vcpus_handles();
++            handles[0].restore_without_kick(state.vcpu_states.pop().unwrap(), was_prepared);
++            match handles[0]
++                .response_receiver()
++                .recv_timeout(crate::RECV_TIMEOUT_SEC)
++            {
++                Ok(VcpuResponse::RestoredState) => (),
++                response => return Err(format!("reuse vCPU restore failed: {response:?}")),
++            }
++        }
++        timing.mark("vcpu_state_restore");
++        vm.restore_state(&state.vm_state, params.clock_realtime)
++            .map_err(|e| e.to_string())?;
++        self.device_manager
++            .acpi_devices
++            .replay_gsi_allocations(vm)
++            .map_err(|e| e.to_string())?;
++        timing.mark("vm_irq_clock_restore");
++        if strict_irqfd {
++            for (event, gsi) in &irqfds {
++                vm.fd()
++                    .register_irqfd(event, *gsi)
++                    .map_err(|e| e.to_string())?;
++            }
++        }
++        timing.mark("irqfd_register");
++        legacy
++            .stdio_serial
++            .lock()
++            .unwrap()
++            .restore_reused(&state.device_states.serial_state.as_ref().unwrap().into())
++            .map_err(|e| e.to_string())?;
++        legacy.i8042.lock().unwrap().reset_reused();
++        self.device_manager
++            .acpi_devices
++            .restore_reused(&state.device_states.acpi_state, vm.guest_memory())
++            .map_err(|e| e.to_string())?;
++        self.boot_source_config = state.vm_info.boot_source;
++        timing.mark("devices_restore");
++        let handles = vm.vcpus_handles();
++        crate::logger::info_unrestricted!(
++            "DAX_REUSE_IDENTITY {}",
++            serde_json::json!({
++                "sequence":sequence,"vm_fd":before_fd,"vm_ptr":format!("{:p}",vm.as_ref()),
++                "vcpu_fd":handles[0].vcpu_fd.as_raw_fd(),"ram_mapping_reused":true,
++                "strict_irqfd":strict_irqfd,
++                "receiver_prepared":was_prepared,
++                "prepare_generation":was_prepared.then_some(sequence),
++                "tlb_invalidation":"efer_nx_toggle",
++                "vm_creates":0,"vcpu_creates":0,"thread_creates":0,
++            })
++        );
++        drop(handles);
++        self.reuse_restore_failed = false;
++        timing.finish();
++        Ok(())
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use kvm_bindings::kvm_cpuid_entry2;
++
++    #[test]
++    fn cpuid_contract_ignores_only_kernel_runtime_fields() {
++        let entries = [
++            kvm_cpuid_entry2 {
++                function: 1,
++                ecx: 1 << 26,
++                ..Default::default()
++            },
++            kvm_cpuid_entry2 {
++                function: 0xd,
++                index: 0,
++                eax: 7,
++                ebx: 512,
++                ..Default::default()
++            },
++        ];
++        let original = CpuId::from_entries(&entries).unwrap();
++        let mut runtime = original.clone();
++        runtime.as_mut_slice()[0].ecx |= 1 << 27;
++        runtime.as_mut_slice()[0].edx |= 1 << 9;
++        runtime.as_mut_slice()[1].ebx = 832;
++        assert_eq!(
++            cpuid_contract(original.clone()),
++            cpuid_contract(runtime.clone())
++        );
++        runtime.as_mut_slice()[0].ecx ^= 1 << 26;
++        assert_ne!(cpuid_contract(original), cpuid_contract(runtime));
++    }
++
++    #[test]
++    fn worker_rejects_nested_and_host_bound_features() {
++        let mut state = crate::vstate::vcpu::VcpuState::default();
++        state.sregs.efer = 1 << 10;
++        state.cpuid = CpuId::from_entries(&[
++            kvm_cpuid_entry2 {
++                function: 1,
++                ..Default::default()
++            },
++            kvm_cpuid_entry2 {
++                function: 0x40000001,
++                eax: 1 << 3,
++                ..Default::default()
++            },
++            kvm_cpuid_entry2 {
++                function: 0x80000001,
++                edx: 1 << 20,
++                ..Default::default()
++            },
++        ])
++        .unwrap();
++        assert!(controlled_cpu(&state));
++        state.cpuid.as_mut_slice()[0].ecx |= 1 << 5;
++        assert!(!controlled_cpu(&state));
++        state.cpuid.as_mut_slice()[0].ecx = 0;
++        state.cpuid.as_mut_slice()[1].eax |= 1 << 5; // APF
++        assert!(!controlled_cpu(&state));
++        state.cpuid.as_mut_slice()[1].eax = 1 << 3;
++        state.sregs.cr4 |= 1 << 13;
++        assert!(!controlled_cpu(&state));
++        state.sregs.cr4 = 0;
++        state.cpuid.as_mut_slice()[2].edx = 0;
++        assert!(!controlled_cpu(&state));
++    }
++
++    #[test]
++    fn diskless_contract_rejects_pci_and_devices() {
++        let mut state = DevicesState::default();
++        assert!(diskless(&state));
++        if let VirtioDevicesState::Mmio(devices) = &mut state.virtio_state {
++            devices.mmds = Some(crate::device_manager::persist::MmdsState {
++                version: crate::mmds::data_store::MmdsVersion::V2,
++                imds_compat: false,
++            });
++        }
++        assert!(!diskless(&state));
++        state.virtio_state = VirtioDevicesState::Pci(Default::default());
++        assert!(!diskless(&state));
++    }
++
++    #[test]
++    fn cached_contract_rejects_immutable_values_and_frequency_changes() {
++        let mut state = crate::vstate::vcpu::VcpuState::default();
++        state.saved_msrs = vec![
++            kvm_bindings::Msrs::from_entries(&[kvm_bindings::kvm_msr_entry {
++                index: 0x10a,
++                data: 7,
++                ..Default::default()
++            }])
++            .unwrap(),
++        ];
++        state.tsc_khz = Some(3_000_000);
++        let contract = ReuseCpuContract {
++            cpuid: cpuid_contract(state.cpuid.clone()),
++            immutable_msrs: vec![(0x10a, 7)],
++            tsc_khz: state.tsc_khz,
++        };
++        assert!(contract.validate(&state).is_ok());
++        state.saved_msrs[0].as_mut_slice()[0].data = 8;
++        assert!(contract.validate(&state).is_err());
++        state.saved_msrs[0].as_mut_slice()[0].data = 7;
++        state.tsc_khz = Some(2_000_000);
++        assert!(contract.validate(&state).is_err());
++    }
++}
 diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
-index ca743fa6f..cbf47291f 100644
+index ca743fa6f..809916826 100644
 --- a/src/vmm/src/rpc_interface.rs
 +++ b/src/vmm/src/rpc_interface.rs
-@@ -133,6 +133,9 @@ pub enum VmmAction {
+@@ -100,6 +100,8 @@ pub enum VmmAction {
+     PatchMMDS(Value),
+     /// Pause the guest, by pausing the microVM VCPUs.
+     Pause,
++    /// Admit observed immutable block data to the experimental CXL pool while paused.
++    PoolCache,
+     /// Repopulate the MMDS contents.
+     PutMMDS(Value),
+     /// Configure the guest vCPU features.
+@@ -133,6 +135,9 @@ pub enum VmmAction {
      /// driver is listening on the guest end, this can be used to shut down the microVM gracefully.
      #[cfg(target_arch = "x86_64")]
      SendCtrlAltDel,
@@ -1352,7 +2726,7 @@ index ca743fa6f..cbf47291f 100644
      /// Update the balloon size, after microVM start.
      UpdateBalloon(BalloonUpdateConfig),
      /// Update the balloon statistics polling interval, after microVM start.
-@@ -313,6 +316,8 @@ impl fmt::Debug for PrebootApiController<'_> {
+@@ -313,6 +318,8 @@ impl fmt::Debug for PrebootApiController<'_> {
  /// Error type for [`PrebootApiController::load_snapshot`]
  #[derive(Debug, thiserror::Error, displaydoc::Display)]
  pub enum LoadSnapshotError {
@@ -1361,7 +2735,15 @@ index ca743fa6f..cbf47291f 100644
      /// Loading a microVM snapshot not allowed after configuring boot-specific resources.
      LoadSnapshotNotAllowed,
      /// Failed to restore from snapshot: {0}
-@@ -517,7 +522,7 @@ impl<'a> PrebootApiController<'a> {
+@@ -503,6 +510,7 @@ impl<'a> PrebootApiController<'a> {
+             CreateSnapshot(_)
+             | FlushMetrics
+             | Pause
++            | PoolCache
+             | Resume
+             | GetBalloonStats
+             | GetMemoryHotplugStatus
+@@ -517,7 +525,7 @@ impl<'a> PrebootApiController<'a> {
              | StopFreePageHinting
              | HotUnplugDevice(_) => Err(VmmActionError::OperationNotSupportedPreBoot),
              #[cfg(target_arch = "x86_64")]
@@ -1370,7 +2752,7 @@ index ca743fa6f..cbf47291f 100644
          }
      }
  
-@@ -700,6 +705,14 @@ impl RuntimeApiController {
+@@ -700,6 +708,14 @@ impl RuntimeApiController {
          event_manager: &mut EventManager,
      ) -> Result<VmmData, VmmActionError> {
          use self::VmmAction::*;
@@ -1385,10 +2767,14 @@ index ca743fa6f..cbf47291f 100644
          match request {
              // Supported operations allowed post-boot.
              CreateSnapshot(snapshot_create_cfg) => self.create_snapshot(&snapshot_create_cfg),
-@@ -786,6 +799,20 @@ impl RuntimeApiController {
+@@ -786,6 +802,24 @@ impl RuntimeApiController {
                  .hot_unplug_device(device_id, event_manager)
                  .map(|()| VmmData::Empty),
              Pause => self.pause(),
++            PoolCache => {
++                self.vmm.lock().expect("Poisoned lock").pool_cache()?;
++                Ok(VmmData::Empty)
++            }
 +            #[cfg(target_arch = "x86_64")]
 +            PrepareReuse => {
 +                self.vmm.lock().expect("Poisoned lock").prepare_reused_worker()
@@ -2306,1215 +3692,476 @@ index dfedd6474..05ddc6fd9 100644
  
          let mut entry = kvm_irq_routing_entry {
              gsi,
-diff --git a/src/firecracker/src/dax_heap.rs b/src/firecracker/src/dax_heap.rs
+diff --git a/src/vmm/src/pool_cache.rs b/src/vmm/src/pool_cache.rs
 new file mode 100644
-index 000000000..84fb71000
+index 000000000..879d41770
 --- /dev/null
-+++ b/src/firecracker/src/dax_heap.rs
-@@ -0,0 +1,395 @@
-+// SPDX-License-Identifier: Apache-2.0
-+//! Opt-in single-process heap in device-DAX. No fallback after activation.
-+use std::alloc::{GlobalAlloc, Layout, System};
-+use std::fs::OpenOptions;
-+use std::io;
-+use std::mem::size_of;
-+use std::os::fd::AsRawFd;
-+use std::os::unix::fs::FileTypeExt;
-+use std::ptr;
-+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-+
-+const CONTROL_BYTES: usize = 4096;
-+const MAGIC: usize = 0x4643444158484541;
-+
-+#[repr(C, align(64))]
-+struct Control {
-+    magic: usize,
-+    base: usize,
-+    length: usize,
-+    head: AtomicUsize,
-+    allocs: AtomicUsize,
-+    frees: AtomicUsize,
-+    live_bytes: AtomicUsize,
-+    failures: AtomicUsize,
-+    lock: AtomicBool,
-+}
-+
-+#[repr(C)]
-+struct FreeBlock {
-+    bytes: usize,
-+    next: usize,
-+}
-+
-+#[repr(C)]
-+struct Header {
-+    start: usize,
-+    bytes: usize,
-+}
-+
-+struct DaxHeap {
-+    base: AtomicUsize,
-+}
-+
-+#[global_allocator]
-+static HEAP: DaxHeap = DaxHeap {
-+    base: AtomicUsize::new(0),
-+};
-+
-+impl DaxHeap {
-+    // SAFETY: caller owns an aligned writable mapping of at least two pages,
-+    // and has not yet published it to allocator callers.
-+    unsafe fn attach(&self, base: usize, length: usize) {
-+        unsafe {
-+            ptr::write(
-+                base as *mut Control,
-+                Control {
-+                    magic: MAGIC,
-+                    base,
-+                    length,
-+                    head: AtomicUsize::new(CONTROL_BYTES),
-+                    allocs: AtomicUsize::new(0),
-+                    frees: AtomicUsize::new(0),
-+                    live_bytes: AtomicUsize::new(0),
-+                    failures: AtomicUsize::new(0),
-+                    lock: AtomicBool::new(false),
-+                },
-+            );
-+            ptr::write(
-+                (base + CONTROL_BYTES) as *mut FreeBlock,
-+                FreeBlock {
-+                    bytes: length - CONTROL_BYTES,
-+                    next: 0,
-+                },
-+            );
-+        }
-+        self.base.store(base, Ordering::Release);
-+    }
-+
-+    fn lock(control: &Control) {
-+        while control
-+            .lock
-+            .compare_exchange_weak(false, true, Ordering::Acquire, Ordering::Relaxed)
-+            .is_err()
-+        {
-+            std::hint::spin_loop();
-+        }
-+    }
-+}
-+
-+// SAFETY: all free-list mutations are protected by the arena lock. Returned
-+// allocations are disjoint and aligned; allocation metadata uses arena offsets.
-+unsafe impl GlobalAlloc for DaxHeap {
-+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-+        let base = self.base.load(Ordering::Acquire);
-+        if base == 0 {
-+            return unsafe { System.alloc(layout) };
-+        }
-+        // SAFETY: attach published an initialized, process-lifetime mapping.
-+        let control = unsafe { &*(base as *const Control) };
-+        Self::lock(control);
-+        let mut previous = 0;
-+        let mut current = control.head.load(Ordering::Relaxed);
-+        while current != 0 {
-+            // SAFETY: free-list offsets refer to owned blocks within the arena.
-+            let block = unsafe { &mut *((base + current) as *mut FreeBlock) };
-+            let align = layout.align().max(8);
-+            let start = base + current + size_of::<Header>();
-+            let user = match start.checked_add(align - 1) {
-+                Some(v) => v & !(align - 1),
-+                None => break,
-+            };
-+            let needed = match (user - base - current)
-+                .checked_add(layout.size().max(1))
-+                .and_then(|v| v.checked_add(7))
-+            {
-+                Some(v) => v & !7,
-+                None => break,
-+            };
-+            if needed <= block.bytes {
-+                let bytes = if block.bytes - needed >= size_of::<FreeBlock>() {
-+                    let split = current + needed;
-+                    unsafe {
-+                        ptr::write(
-+                            (base + split) as *mut FreeBlock,
-+                            FreeBlock {
-+                                bytes: block.bytes - needed,
-+                                next: block.next,
-+                            },
-+                        );
-+                    }
-+                    needed
-+                } else {
-+                    block.bytes
-+                };
-+                let next = if bytes == block.bytes {
-+                    block.next
-+                } else {
-+                    current + bytes
-+                };
-+                if previous == 0 {
-+                    control.head.store(next, Ordering::Relaxed);
-+                } else {
-+                    unsafe {
-+                        (*((base + previous) as *mut FreeBlock)).next = next;
-+                    }
-+                }
-+                unsafe {
-+                    ptr::write(
-+                        (user - size_of::<Header>()) as *mut Header,
-+                        Header {
-+                            start: current,
-+                            bytes,
-+                        },
-+                    );
-+                }
-+                control.allocs.fetch_add(1, Ordering::Relaxed);
-+                control.live_bytes.fetch_add(bytes, Ordering::Relaxed);
-+                control.lock.store(false, Ordering::Release);
-+                return user as *mut u8;
-+            }
-+            previous = current;
-+            current = block.next;
-+        }
-+        control.failures.fetch_add(1, Ordering::Relaxed);
-+        control.lock.store(false, Ordering::Release);
-+        ptr::null_mut()
-+    }
-+
-+    unsafe fn dealloc(&self, pointer: *mut u8, layout: Layout) {
-+        let base = self.base.load(Ordering::Acquire);
-+        if base == 0 {
-+            unsafe {
-+                System.dealloc(pointer, layout);
-+            }
-+            return;
-+        }
-+        let control = unsafe { &*(base as *const Control) };
-+        if (pointer as usize) < base || pointer as usize - base >= control.length {
-+            unsafe {
-+                System.dealloc(pointer, layout);
-+            }
-+            return;
-+        }
-+        // SAFETY: GlobalAlloc requires a live pointer previously returned by alloc.
-+        let header = unsafe { ptr::read(pointer.sub(size_of::<Header>()) as *const Header) };
-+        Self::lock(control);
-+        let mut previous = 0;
-+        let mut current = control.head.load(Ordering::Relaxed);
-+        while current != 0 && current < header.start {
-+            previous = current;
-+            current = unsafe { (*((base + current) as *const FreeBlock)).next };
-+        }
-+        let block = (base + header.start) as *mut FreeBlock;
-+        unsafe {
-+            ptr::write(
-+                block,
-+                FreeBlock {
-+                    bytes: header.bytes,
-+                    next: current,
-+                },
-+            );
-+            if current != 0 && header.start + (*block).bytes == current {
-+                let following = &*((base + current) as *const FreeBlock);
-+                (*block).bytes += following.bytes;
-+                (*block).next = following.next;
-+            }
-+            if previous == 0 {
-+                control.head.store(header.start, Ordering::Relaxed);
-+            } else {
-+                let preceding = &mut *((base + previous) as *mut FreeBlock);
-+                if previous + preceding.bytes == header.start {
-+                    preceding.bytes += (*block).bytes;
-+                    preceding.next = (*block).next;
-+                } else {
-+                    preceding.next = header.start;
-+                }
-+            }
-+        }
-+        control.frees.fetch_add(1, Ordering::Relaxed);
-+        control
-+            .live_bytes
-+            .fetch_sub(header.bytes, Ordering::Relaxed);
-+        control.lock.store(false, Ordering::Release);
-+    }
-+}
-+
-+pub fn init() -> io::Result<()> {
-+    let Some(path) = std::env::var_os("FC_DAX_HEAP") else {
-+        return Ok(());
-+    };
-+    let invalid = || io::Error::new(io::ErrorKind::InvalidInput, "invalid DAX heap allocation");
-+    let offset: usize = std::env::var("FC_DAX_HEAP_OFFSET")
-+        .unwrap_or_else(|_| "536870912".into())
-+        .parse()
-+        .map_err(|_| invalid())?;
-+    let length: usize = std::env::var("FC_DAX_HEAP_BYTES")
-+        .unwrap_or_else(|_| "67108864".into())
-+        .parse()
-+        .map_err(|_| invalid())?;
-+    let path = std::path::Path::new(&path);
-+    let name = path
-+        .file_name()
-+        .and_then(|v| v.to_str())
-+        .ok_or_else(invalid)?;
-+    let file = OpenOptions::new().read(true).write(true).open(path)?;
-+    if !file.metadata()?.file_type().is_char_device() {
-+        return Err(invalid());
-+    }
-+    let attr = |name_attr| -> io::Result<usize> {
-+        std::fs::read_to_string(format!("/sys/bus/dax/devices/{name}/{name_attr}"))?
-+            .trim()
-+            .parse()
-+            .map_err(|_| invalid())
-+    };
-+    let align = attr("align")?;
-+    if !align.is_power_of_two()
-+        || offset % align != 0
-+        || length % align != 0
-+        || length <= CONTROL_BYTES
-+        || offset.checked_add(length).ok_or_else(invalid)? > attr("size")?
-+    {
-+        return Err(invalid());
-+    }
-+    let mapped = unsafe {
-+        libc::mmap(
-+            ptr::null_mut(),
-+            length,
-+            libc::PROT_READ | libc::PROT_WRITE,
-+            libc::MAP_SHARED,
-+            file.as_raw_fd(),
-+            offset as libc::off_t,
-+        )
-+    };
-+    if mapped == libc::MAP_FAILED {
-+        return Err(io::Error::last_os_error());
-+    }
-+    // Cold boot only: initialize this exclusively reserved heap allocation.
-+    unsafe {
-+        HEAP.attach(mapped as usize, length);
-+    }
-+    eprintln!(
-+        "DAX_HEAP path={} offset={} bytes={} base={:#x}",
-+        path.display(),
-+        offset,
-+        length,
-+        mapped as usize
-+    );
-+    Ok(())
-+}
-+
-+#[cfg(test)]
-+mod tests {
-+    use super::*;
-+
-+    #[test]
-+    fn alignment_reuse_coalescing_and_no_fallback() {
-+        let length = 128 * 1024;
-+        let base = unsafe {
-+            libc::mmap(
-+                ptr::null_mut(),
-+                length,
-+                libc::PROT_READ | libc::PROT_WRITE,
-+                libc::MAP_PRIVATE | libc::MAP_ANONYMOUS,
-+                -1,
-+                0,
-+            )
-+        };
-+        assert_ne!(base, libc::MAP_FAILED);
-+        let heap = DaxHeap {
-+            base: AtomicUsize::new(0),
-+        };
-+        unsafe {
-+            heap.attach(base as usize, length);
-+        }
-+        let mut allocations = Vec::new();
-+        for align in [1, 8, 64, 4096] {
-+            let layout = Layout::from_size_align(1003, align).unwrap();
-+            let pointer = unsafe { heap.alloc(layout) };
-+            assert!(!pointer.is_null());
-+            assert_eq!(pointer as usize % align, 0);
-+            unsafe {
-+                ptr::write_bytes(pointer, 0x5a, layout.size());
-+            }
-+            allocations.push((pointer, layout));
-+        }
-+        for (pointer, layout) in allocations.into_iter().rev() {
-+            assert!(
-+                unsafe { std::slice::from_raw_parts(pointer, layout.size()) }
-+                    .iter()
-+                    .all(|v| *v == 0x5a)
-+            );
-+            unsafe {
-+                heap.dealloc(pointer, layout);
-+            }
-+        }
-+        let control = unsafe { &*(base as *const Control) };
-+        assert_eq!(control.live_bytes.load(Ordering::Relaxed), 0);
-+        let free = unsafe { &*((base as usize + CONTROL_BYTES) as *const FreeBlock) };
-+        assert_eq!(free.bytes, length - CONTROL_BYTES);
-+        assert_eq!(free.next, 0);
-+        assert!(unsafe { heap.alloc(Layout::from_size_align(length, 8).unwrap()) }.is_null());
-+        std::thread::scope(|scope| {
-+            for worker in 0..4usize {
-+                let heap = &heap;
-+                scope.spawn(move || {
-+                    let mut seed = worker + 1;
-+                    let mut live = Vec::new();
-+                    for _ in 0..1000 {
-+                        seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
-+                        if !live.is_empty() && (seed & 3 == 0 || live.len() > 12) {
-+                            let index = seed % live.len();
-+                            let (pointer, layout): (*mut u8, Layout) = live.swap_remove(index);
-+                            assert!(
-+                                unsafe { std::slice::from_raw_parts(pointer, layout.size()) }
-+                                    .iter()
-+                                    .all(|byte| *byte == worker as u8)
-+                            );
-+                            unsafe {
-+                                heap.dealloc(pointer, layout);
-+                            }
-+                        } else {
-+                            let layout =
-+                                Layout::from_size_align(1 + seed % 1024, 1 << (seed % 10)).unwrap();
-+                            let pointer = unsafe { heap.alloc(layout) };
-+                            if !pointer.is_null() {
-+                                assert_eq!(pointer as usize % layout.align(), 0);
-+                                unsafe {
-+                                    ptr::write_bytes(pointer, worker as u8, layout.size());
-+                                }
-+                                live.push((pointer, layout));
-+                            }
-+                        }
-+                    }
-+                    for (pointer, layout) in live {
-+                        unsafe {
-+                            heap.dealloc(pointer, layout);
-+                        }
-+                    }
-+                });
-+            }
-+        });
-+        assert_eq!(control.live_bytes.load(Ordering::Relaxed), 0);
-+        assert_eq!(
-+            control.allocs.load(Ordering::Relaxed),
-+            control.frees.load(Ordering::Relaxed)
-+        );
-+        assert_eq!(
-+            unsafe { (*((base as usize + CONTROL_BYTES) as *const FreeBlock)).bytes },
-+            length - CONTROL_BYTES
-+        );
-+        unsafe {
-+            libc::munmap(base, length);
-+        }
-+    }
-+}
-diff --git a/src/vmm/src/reuse.rs b/src/vmm/src/reuse.rs
-new file mode 100644
-index 000000000..0f90a81c0
---- /dev/null
-+++ b/src/vmm/src/reuse.rs
-@@ -0,0 +1,715 @@
-+// Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
++++ b/src/vmm/src/pool_cache.rs
+@@ -0,0 +1,467 @@
++// Copyright 2026
 +// SPDX-License-Identifier: Apache-2.0
 +
-+//! Opt-in, deliberately narrow semantic restore into an already-used KVM worker.
-+//! RAM stays at the same DAX offset; this does not import kernel pointers or VMCS bytes.
++//! Experimental immutable block-data pooling. Hints are I/O history, not guest
++//! page-cache residency. The controller owns immutable image identity, the
++//! approximate Bloom directory and frozen CXL frame lifetime. Admission runs only
++//! with vCPUs paused and all device writes drained, and validates every byte.
++//! Private devDAX mappings require the lab kernel's opt-in CoW extension.
 +
++use std::collections::{BTreeMap, BTreeSet};
++use std::fs::{File, OpenOptions};
++use std::io::{self, BufReader, BufWriter, Write};
 +use std::os::fd::AsRawFd;
 +use std::os::unix::fs::{FileTypeExt, MetadataExt};
-+use std::path::Path;
-+use std::sync::atomic::{AtomicU64, Ordering};
++use std::sync::{Mutex, OnceLock};
 +
-+use kvm_bindings::{CpuId, KVM_MAX_CPUID_ENTRIES};
++use serde::{Deserialize, Serialize};
 +use vm_memory::{GuestMemoryBackend, GuestMemoryRegion};
 +
-+use crate::device_manager::{DevicesState, VirtioDevicesState};
-+use crate::devices::legacy::EventFdTrigger;
-+use crate::persist::{
-+    MicrovmState, RestoreTiming, VmInfo, dax_snapshot_offset, snapshot_state_from_file,
-+};
-+use crate::snapshot::Persist;
-+use crate::vmm_config::instance_info::VmState;
-+use crate::vmm_config::machine_config::HugePageConfig;
-+use crate::vmm_config::snapshot::{LoadSnapshotParams, MemBackendType};
-+use crate::vstate::memory::{GuestMemoryExtension, GuestMemoryMmap, GuestRegionType};
-+use crate::{VcpuResponse, Vmm};
++use crate::vstate::memory::{Bytes, GuestAddress, GuestMemoryMmap};
 +
-+static REUSE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
++const PAGE: usize = 4096;
++// serde_json performs small reads/writes; buffering is essential when a
++// checkpoint sidecar lives on an NFS mount with attribute-cache validation.
++const JSON_BUFFER: usize = 64 * 1024;
 +
-+/// A single outstanding local preparation. Eventfd clones retain kernel identity across UART
-+/// replacement. No snapshot bytes, guest RAM, or remote pointers are stored here.
-+#[derive(Debug)]
-+pub(crate) struct ReusePrepared {
-+    irqfds: [(EventFdTrigger, u32); 4],
-+    strict_irqfd: bool,
-+    generation: u64,
++#[derive(Clone, Debug, Deserialize, Serialize)]
++#[serde(deny_unknown_fields)]
++pub(crate) struct Hint {
++    pub gpa: u64,
++    pub image_id: String,
++    pub image_offset: u64,
++    pub sequence: u64,
 +}
 +
-+/// Captured before first KVM_RUN. KVM forbids changing this CPU model after use;
-+/// caching avoids loading the VMCS on the VMM thread just to read invariants.
-+#[derive(Debug)]
-+pub(crate) struct ReuseCpuContract {
-+    cpuid: CpuId,
-+    immutable_msrs: Vec<(u32, u64)>,
-+    tsc_khz: Option<u32>,
++#[derive(Debug, Deserialize, Serialize)]
++#[serde(deny_unknown_fields)]
++struct HintFile {
++    version: u32,
++    vm_id: String,
++    run_epoch: String,
++    hints: Vec<Hint>,
 +}
 +
-+fn immutable_msr(index: u32) -> bool {
-+    matches!(index, 0x10a | 0x345 | 0xc0011029 | 0x480..=0x491)
++#[derive(Debug, Default)]
++struct State {
++    hints: BTreeMap<u64, Hint>,
++    sequence: u64,
++    overlays: bool,
++    mapping_failed: bool,
++    restore_error: Option<String>,
 +}
 +
-+impl ReuseCpuContract {
-+    pub(crate) fn capture(vcpu: &crate::arch::KvmVcpu) -> Result<Self, String> {
-+        let cpuid = vcpu
-+            .fd
-+            .get_cpuid2(KVM_MAX_CPUID_ENTRIES)
-+            .map_err(|e| e.to_string())?;
-+        ensure(
-+            cpuid.as_slice().iter().all(|leaf| match leaf.function {
-+                1 => leaf.ecx & (1 << 5) == 0,
-+                0x80000001 => leaf.ecx & (1 << 2) == 0,
-+                _ => true,
-+            }),
-+            "reuse worker CPU exposes nested virtualization",
-+        )?;
-+        let mut indices: Vec<_> = vcpu
-+            .snapshot_msr_indices()
-+            .into_iter()
-+            .filter(|i| immutable_msr(*i))
-+            .collect();
-+        indices.dedup();
-+        let immutable_msrs = if indices.is_empty() {
-+            Vec::new()
-+        } else {
-+            vcpu.get_msr_chunk(indices.iter().copied(), indices.len())
-+                .map_err(|e| e.to_string())?
-+                .as_slice()
-+                .iter()
-+                .map(|entry| (entry.index, entry.data))
-+                .collect()
-+        };
-+        Ok(Self {
-+            cpuid: cpuid_contract(cpuid),
-+            immutable_msrs,
-+            tsc_khz: vcpu.fd.get_tsc_khz().ok(),
-+        })
++fn invalid(message: impl Into<String>) -> io::Error {
++    io::Error::new(io::ErrorKind::InvalidInput, message.into())
++}
++
++fn required(name: &str) -> io::Result<String> {
++    std::env::var(name)
++        .ok()
++        .filter(|v| !v.is_empty())
++        .ok_or_else(|| invalid(format!("{name} is required")))
++}
++
++fn valid_identity(id: &str) -> bool {
++    id.len() == 64 && id.bytes().all(|b| b.is_ascii_hexdigit())
++}
++
++fn state() -> &'static Mutex<State> {
++    static STATE: OnceLock<Mutex<State>> = OnceLock::new();
++    STATE.get_or_init(|| {
++        let mut s = State::default();
++        if let Ok(path) = std::env::var("FC_POOL_HINTS_RESTORE") {
++            let result = (|| -> io::Result<()> {
++                let saved: HintFile = serde_json::from_reader(BufReader::with_capacity(
++                    JSON_BUFFER,
++                    File::open(path)?,
++                ))?;
++                let image_id = required("FC_POOL_IMAGE_ID")?;
++                if saved.version != 1
++                    || saved.vm_id != required("FC_POOL_VM_ID")?
++                    || !valid_identity(&image_id)
++                {
++                    return Err(invalid("restored pool hint identity/version mismatch"));
++                }
++                for h in saved.hints {
++                    if h.gpa % PAGE as u64 != 0
++                        || h.image_offset % PAGE as u64 != 0
++                        || h.image_id != image_id
++                        || s.hints.contains_key(&h.gpa)
++                    {
++                        return Err(invalid("invalid restored pool hint"));
++                    }
++                    s.sequence = s.sequence.max(h.sequence);
++                    s.hints.insert(h.gpa, h);
++                }
++                Ok(())
++            })();
++            if let Err(error) = result {
++                s.hints.clear();
++                s.restore_error = Some(error.to_string());
++            }
++        }
++        Mutex::new(s)
++    })
++}
++
++/// Only an explicitly identified read-only drive can contribute hints.
++pub(crate) fn disk_identity(path: &str, read_only: bool) -> Option<String> {
++    if !read_only || std::env::var("FC_POOL_IMAGE_PATH").as_deref() != Ok(path) {
++        return None;
 +    }
++    let id = std::env::var("FC_POOL_IMAGE_ID").ok()?;
++    if !valid_identity(&id)
++        || required("FC_POOL_VM_ID").is_err()
++        || required("FC_POOL_RUN_EPOCH").is_err()
++    {
++        return None;
++    }
++    Some(id)
++}
 +
-+    fn validate(&self, state: &crate::vstate::vcpu::VcpuState) -> Result<(), String> {
-+        ensure(
-+            self.cpuid == cpuid_contract(state.cpuid.clone()),
-+            "reuse CPUID model mismatch",
-+        )?;
-+        ensure(
-+            state
-+                .saved_msrs
-+                .iter()
-+                .flat_map(|m| m.as_slice())
-+                .filter(|m| immutable_msr(m.index))
-+                .all(|msr| self.immutable_msrs.contains(&(msr.index, msr.data))),
-+            "reuse immutable feature MSR mismatch",
-+        )?;
-+        ensure(
-+            state.tsc_khz.is_none() || state.tsc_khz == self.tsc_khz,
-+            "reuse TSC frequency mismatch",
++/// Call only after a complete successful read and before used-ring publication.
++pub(crate) fn observe(image_id: &str, gpa: u64, image_offset: u64, length: u32) {
++    if gpa % PAGE as u64 != 0 || image_offset % PAGE as u64 != 0 {
++        return;
++    }
++    let mut s = state().lock().expect("pool state poisoned");
++    for delta in (0..u64::from(length) / PAGE as u64).map(|n| n * PAGE as u64) {
++        let Some(address) = gpa.checked_add(delta) else {
++            break;
++        };
++        let Some(offset) = image_offset.checked_add(delta) else {
++            break;
++        };
++        s.sequence += 1;
++        let sequence = s.sequence;
++        s.hints.insert(
++            address,
++            Hint {
++                gpa: address,
++                image_id: image_id.to_owned(),
++                image_offset: offset,
++                sequence,
++            },
++        );
++    }
++}
++
++pub(crate) fn dump_hints() -> io::Result<()> {
++    let Ok(path) = std::env::var("FC_POOL_HINTS") else {
++        return Ok(());
++    };
++    let s = state().lock().expect("pool state poisoned");
++    if let Some(error) = &s.restore_error {
++        return Err(invalid(error));
++    }
++    let hints = HintFile {
++        version: 1,
++        vm_id: required("FC_POOL_VM_ID")?,
++        run_epoch: required("FC_POOL_RUN_EPOCH")?,
++        hints: s.hints.values().cloned().collect(),
++    };
++    let temporary = format!("{path}.new");
++    let mut writer = BufWriter::with_capacity(JSON_BUFFER, File::create(&temporary)?);
++    serde_json::to_writer(&mut writer, &hints)?;
++    writer.flush()?;
++    std::fs::rename(temporary, path)
++}
++
++pub(crate) fn mapping_failed() -> bool {
++    state().lock().expect("pool state poisoned").mapping_failed
++}
++
++pub(crate) fn has_overlays() -> bool {
++    state().lock().expect("pool state poisoned").overlays
++}
++
++#[cfg(test)]
++pub(crate) fn test_hint(gpa: u64) -> Option<Hint> {
++    state()
++        .lock()
++        .expect("pool state poisoned")
++        .hints
++        .get(&gpa)
++        .cloned()
++}
++
++#[derive(Debug, Deserialize)]
++#[serde(deny_unknown_fields)]
++struct PlanPage {
++    gpa: u64,
++    image_id: String,
++    image_offset: u64,
++    pool_offset: u64,
++}
++
++#[derive(Debug, Deserialize)]
++#[serde(deny_unknown_fields)]
++struct Plan {
++    vm_id: String,
++    run_epoch: String,
++    pool_path: String,
++    pages: Vec<PlanPage>,
++}
++
++#[derive(Debug, Serialize)]
++struct MappedPage {
++    gpa: u64,
++    pool_offset: u64,
++    hva: u64,
++}
++
++#[derive(Debug, Default, Serialize)]
++struct Report {
++    version: u32,
++    vm_id: String,
++    run_epoch: String,
++    requested: usize,
++    mapped: usize,
++    rejected_hint: usize,
++    rejected_content: usize,
++    mapped_bytes: usize,
++    mapped_gpas: Vec<u64>,
++    mapped_pages: Vec<MappedPage>,
++}
++
++/// A temporary read-only view of canonical CXL bytes. Drop does not release the
++/// controller's frame pin; the prototype freezes all published frames forever.
++struct View(*mut libc::c_void);
++impl Drop for View {
++    fn drop(&mut self) {
++        // SAFETY: this object owns exactly one page-long mmap.
++        unsafe {
++            libc::munmap(self.0, PAGE);
++        }
++    }
++}
++
++fn view(file: &File, offset: u64) -> io::Result<View> {
++    let offset = libc::off_t::try_from(offset).map_err(|_| invalid("pool offset overflow"))?;
++    // SAFETY: a fresh read-only page mapping; file and bounds were validated.
++    let ptr = unsafe {
++        libc::mmap(
++            std::ptr::null_mut(),
++            PAGE,
++            libc::PROT_READ,
++            libc::MAP_SHARED,
++            file.as_raw_fd(),
++            offset,
 +        )
++    };
++    if ptr == libc::MAP_FAILED {
++        return Err(io::Error::last_os_error());
 +    }
++    Ok(View(ptr))
 +}
 +
-+fn ensure(ok: bool, reason: &str) -> Result<(), String> {
-+    ok.then_some(()).ok_or_else(|| reason.to_owned())
++fn key_matches(hint: Option<&Hint>, p: &PlanPage) -> bool {
++    hint.is_some_and(|h| h.image_id == p.image_id && h.image_offset == p.image_offset)
 +}
 +
-+/// Preparation and restore must retain the same shared physical DAX allocation.
-+fn validate_dax_backing(
-+    memory: &GuestMemoryMmap,
-+    path: &Path,
-+    mut offset: u64,
-+) -> Result<(), String> {
-+    let wanted = std::fs::metadata(path).map_err(|e| e.to_string())?;
-+    ensure(
-+        wanted.file_type().is_char_device(),
-+        "reuse backing is not device DAX",
-+    )?;
-+    for region in memory.iter() {
-+        let backing = region.file_offset().ok_or("reuse backing is anonymous")?;
-+        let got = backing.file().metadata().map_err(|e| e.to_string())?;
-+        ensure(
-+            got.rdev() == wanted.rdev()
-+                && backing.start() == offset
-+                && region.flags() & libc::MAP_SHARED != 0,
-+            "reuse DAX allocation mismatch",
-+        )?;
-+        offset = offset
-+            .checked_add(region.len())
-+            .ok_or("reuse DAX offset overflow")?;
++/// Caller guarantees a paused VM, a drained device manager, and no concurrent
++/// host writes. mmap's MMU notifier invalidates KVM translations before return.
++pub(crate) fn apply(mem: &GuestMemoryMmap) -> io::Result<()> {
++    dump_hints()?;
++    let plan: Plan = serde_json::from_reader(BufReader::with_capacity(
++        JSON_BUFFER,
++        File::open(required("FC_POOL_PLAN")?)?,
++    ))?;
++    let vm_id = required("FC_POOL_VM_ID")?;
++    let epoch = required("FC_POOL_RUN_EPOCH")?;
++    if plan.vm_id != vm_id || plan.run_epoch != epoch {
++        return Err(invalid("pool plan VM identity/run epoch mismatch"));
 +    }
-+    Ok(())
-+}
-+
-+fn diskless(state: &DevicesState) -> bool {
-+    match &state.virtio_state {
-+        VirtioDevicesState::Mmio(devices) => {
-+            devices.block_devices.is_empty()
-+                && devices.net_devices.is_empty()
-+                && devices.vsock_device.is_none()
-+                && devices.balloon_device.is_none()
-+                && devices.mmds.is_none()
-+                && devices.entropy_device.is_none()
-+                && devices.pmem_devices.is_empty()
-+                && devices.memory_device.is_none()
++    let mut report = Report {
++        version: 1,
++        vm_id,
++        run_epoch: epoch,
++        requested: plan.pages.len(),
++        ..Report::default()
++    };
++    if !plan.pages.is_empty() {
++        if std::fs::read_to_string("/sys/module/device_dax/parameters/pool_cow")?.trim() != "Y" {
++            return Err(invalid("lab devDAX pool CoW support is not enabled"));
 +        }
-+        VirtioDevicesState::Pci(_) => false,
-+    }
-+}
-+
-+// These bits/lengths are rewritten by this kernel's __kvm_update_cpuid_runtime.
-+// Comparing the remaining fields rejects CPU model changes before SET ioctls.
-+fn cpuid_contract(mut cpuid: CpuId) -> CpuId {
-+    cpuid.retain(|leaf| {
-+        !(leaf.function == 0 && leaf.index == 0 && leaf.flags == 0 && leaf.eax == 0)
-+    });
-+    for leaf in cpuid.as_mut_slice() {
-+        match (leaf.function, leaf.index) {
-+            (1, _) => {
-+                leaf.ecx &= !((1 << 27) | (1 << 3));
-+                leaf.edx &= !(1 << 9);
-+            }
-+            (7, 0) => leaf.ecx &= !(1 << 4),
-+            (0xd, 0 | 1) => leaf.ebx = 0,
-+            _ => (),
++        let image_id = required("FC_POOL_IMAGE_ID")?;
++        if !valid_identity(&image_id) {
++            return Err(invalid("invalid immutable image identity"));
 +        }
-+    }
-+    cpuid
-+}
-+
-+fn controlled_cpu(state: &crate::vstate::vcpu::VcpuState) -> bool {
-+    state.sregs.cr4 & (1 << 13) == 0
-+        && state.sregs.efer & (1 << 12) == 0
-+        && state.sregs.efer & (1 << 10) != 0
-+        && controlled_cpuid(&state.cpuid)
-+}
-+
-+fn controlled_cpuid(cpuid: &CpuId) -> bool {
-+    cpuid
-+        .as_slice()
-+        .iter()
-+        .any(|leaf| leaf.function == 0x80000001 && leaf.edx & (1 << 20) != 0)
-+        && cpuid.as_slice().iter().all(|leaf| match leaf.function {
-+            1 => leaf.ecx & ((1 << 5) | (1 << 24)) == 0,
-+            0x80000001 => leaf.ecx & (1 << 2) == 0,
-+            0xa => leaf.eax == 0 && leaf.ebx == 0 && leaf.ecx == 0 && leaf.edx == 0,
-+            0x40000001 => leaf.eax & !((1 << 0) | (1 << 1) | (1 << 3) | (1 << 24)) == 0,
-+            _ => true,
-+        })
-+}
-+
-+impl Vmm {
-+    fn reuse_irqfds(&self) -> Result<[(EventFdTrigger, u32); 4], String> {
-+        let legacy = self
-+            .device_manager
-+            .legacy_devices
-+            .as_ref()
-+            .ok_or("reuse needs legacy UART")?;
-+        Ok([
-+            (
-+                legacy
-+                    .stdio_serial
-+                    .lock()
-+                    .unwrap()
-+                    .serial
-+                    .interrupt_evt()
-+                    .try_clone()
-+                    .map_err(|e| e.to_string())?,
-+                4,
-+            ),
-+            (
-+                EventFdTrigger::new(
-+                    legacy
-+                        .i8042
-+                        .lock()
-+                        .unwrap()
-+                        .kbd_interrupt_evt
-+                        .try_clone()
-+                        .map_err(|e| e.to_string())?,
-+                ),
-+                1,
-+            ),
-+            (
-+                self.device_manager
-+                    .acpi_devices
-+                    .vmgenid()
-+                    .interrupt_evt
-+                    .try_clone()
-+                    .map_err(|e| e.to_string())?,
-+                self.device_manager.acpi_devices.vmgenid().gsi,
-+            ),
-+            (
-+                self.device_manager
-+                    .acpi_devices
-+                    .vmclock()
-+                    .interrupt_evt
-+                    .try_clone()
-+                    .map_err(|e| e.to_string())?,
-+                self.device_manager.acpi_devices.vmclock().gsi,
-+            ),
-+        ])
-+    }
-+
-+    /// Coarse preparation can overlap source execution/save. It only retires local worker state:
-+    /// no KVM_RUN, snapshot decode, guest-memory writes, or incoming CPU state are involved.
-+    pub(crate) fn prepare_reused_worker(&mut self) -> Result<(), String> {
-+        ensure(
-+            std::env::var("FC_DAX_REUSE").as_deref() == Ok("1"),
-+            "reuse not enabled",
-+        )?;
-+        ensure(
-+            self.instance_info.state == VmState::Paused && !self.reuse_restore_failed,
-+            "reuse preparation requires a healthy paused worker",
-+        )?;
-+        // A duplicate never toggles EFER back or queues another vCPU event.
-+        if let Some(prepared) = &self.reuse_prepared {
-+            crate::logger::info_unrestricted!(
-+                "DAX_REUSE_PREPARED generation={} duplicate=true",
-+                prepared.generation
-+            );
-+            return Ok(());
++        let file = OpenOptions::new().read(true).open(&plan.pool_path)?;
++        if !file.metadata()?.file_type().is_char_device() {
++            return Err(invalid("pool backing must be a devDAX character device"));
 +        }
-+        let mut timing = RestoreTiming::new("reuse_prepare");
-+        ensure(
-+            std::env::var("FC_DAX_NO_NESTED_GUEST").as_deref() == Ok("1")
-+                && self.machine_config.vcpu_count == 1
-+                && !self.machine_config.track_dirty_pages
-+                && self.machine_config.huge_pages == HugePageConfig::None,
-+            "reuse preparation requires the one-vCPU, no-nested, non-dirty DAX pool",
-+        )?;
-+        let vm = self.vm.as_kvm().ok_or("reuse requires KVM")?;
-+        // Check the current PIT before clearing it; otherwise preparation could hide an
-+        // unsupported active timer from the later snapshot compatibility check.
-+        ensure(
-+            crate::vstate::vm::KvmVm::reuse_pit_disabled(
-+                &vm.save_state().map_err(|e| e.to_string())?,
-+            ),
-+            "reuse receiver previously used an active PIT",
-+        )?;
-+        let devices = self.device_manager.save();
-+        ensure(
-+            diskless(&devices),
-+            "reuse supports diskless MMIO workers only",
-+        )?;
-+        let serial = self
-+            .device_manager
-+            .legacy_devices
-+            .as_ref()
-+            .ok_or("reuse needs legacy UART")?
-+            .stdio_serial
-+            .lock()
-+            .expect("Poisoned lock");
-+        ensure(serial.input.is_none(), "reuse requires output-only UART")?;
-+        drop(serial);
-+        let path =
-+            std::env::var_os("FC_DAX_RAM").ok_or("reuse preparation needs configured DAX")?;
-+        let path = Path::new(&path);
-+        let offset = dax_snapshot_offset(path)
-+            .map_err(|e| e.to_string())?
-+            .ok_or("reuse preparation needs configured DAX")?;
-+        ensure(
-+            vm.guest_memory()
-+                .describe()
-+                .regions
-+                .iter()
-+                .all(|r| r.region_type == GuestRegionType::Dram),
-+            "reuse preparation requires DRAM memslots",
-+        )?;
-+        validate_dax_backing(vm.guest_memory(), path, offset)?;
-+        {
-+            let handles = vm.vcpus_handles();
-+            ensure(
-+                handles.len() == 1
-+                    && handles[0]
-+                        .reuse_cpu_contract
-+                        .as_ref()
-+                        .is_some_and(|contract| controlled_cpuid(&contract.cpuid)),
-+                "reuse preparation requires clock-only PV/no-PMU/no-nested CPU profile",
-+            )?;
++        let name = std::path::Path::new(&plan.pool_path)
++            .file_name()
++            .and_then(|s| s.to_str())
++            .ok_or_else(|| invalid("invalid pool path"))?;
++        if !name.starts_with("dax") || !name[3..].chars().all(|c| c.is_ascii_digit() || c == '.') {
++            return Err(invalid("pool backing must be /dev/daxX.Y"));
 +        }
-+        let irqfds = self.reuse_irqfds()?;
-+        let strict_irqfd = std::env::var("FC_DAX_REUSE_QUIET_IRQFD").as_deref() != Ok("1");
-+        timing.mark("validation");
-+        self.reuse_restore_failed = true;
-+        vm.quiesce_reused_pit().map_err(|e| e.to_string())?;
-+        timing.mark("quiesce_old_timers");
-+        if strict_irqfd {
-+            for (event, gsi) in &irqfds {
-+                vm.fd()
-+                    .unregister_irqfd(event, *gsi)
-+                    .map_err(|e| e.to_string())?;
-+            }
-+        }
-+        timing.mark("irqfd_deassign");
-+        for (event, _) in &irqfds {
-+            while event.read().is_ok() {}
-+        }
-+        timing.mark("drain_old_events");
-+        {
-+            let mut handles = vm.vcpus_handles();
-+            handles[0].prepare_reuse_without_kick();
-+            match handles[0]
-+                .response_receiver()
-+                .recv_timeout(crate::RECV_TIMEOUT_SEC)
-+            {
-+                Ok(VcpuResponse::PreparedReuse) => (),
-+                response => return Err(format!("reuse vCPU preparation failed: {response:?}")),
-+            }
-+        }
-+        timing.mark("vcpu_prepare");
-+        let generation = REUSE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
-+        self.reuse_prepared = Some(ReusePrepared {
-+            irqfds,
-+            strict_irqfd,
-+            generation,
-+        });
-+        self.reuse_restore_failed = false;
-+        crate::logger::info_unrestricted!(
-+            "DAX_REUSE_PREPARED generation={} duplicate=false",
-+            generation
-+        );
-+        timing.finish();
-+        Ok(())
-+    }
-+
-+    fn validate_reuse(
-+        &self,
-+        params: &LoadSnapshotParams,
-+        state: &MicrovmState,
-+    ) -> Result<(), String> {
-+        ensure(
-+            state.vcpu_states.len() == 1 && self.machine_config.vcpu_count == 1,
-+            "reuse currently requires one vCPU",
-+        )?;
-+        crate::persist::snapshot_state_sanity_check(state).map_err(|e| e.to_string())?;
-+        ensure(
-+            std::env::var("FC_DAX_REUSE").as_deref() == Ok("1"),
-+            "reuse not enabled",
-+        )?;
-+        ensure(
-+            std::env::var("FC_DAX_NO_NESTED_GUEST").as_deref() == Ok("1"),
-+            "reuse requires a pool booted without nested VMX/SVM",
-+        )?;
-+        ensure(
-+            self.instance_info.state == VmState::Paused && !self.reuse_restore_failed,
-+            "reuse requires a healthy paused worker",
-+        )?;
-+        let actual = VmInfo::from(self);
-+        ensure(
-+            actual.mem_size_mib == state.vm_info.mem_size_mib
-+                && actual.smt == state.vm_info.smt
-+                && actual.cpu_template == state.vm_info.cpu_template
-+                && actual.huge_pages == state.vm_info.huge_pages
-+                && actual.huge_pages == HugePageConfig::None
-+                && params.huge_pages.resolve(state.vm_info.huge_pages) == HugePageConfig::None,
-+            "reuse VM hardware configuration mismatch",
-+        )?;
-+        ensure(
-+            !params.track_dirty_pages
-+                && !self.machine_config.track_dirty_pages
-+                && params.network_overrides.is_empty()
-+                && params.vsock_override.is_none()
-+                && params.mem_backend.backend_type == MemBackendType::File,
-+            "reuse requires state-only DAX without dirty tracking or backend overrides",
-+        )?;
-+        let vm = self.vm.as_kvm().ok_or("reuse requires KVM")?;
-+        ensure(
-+            vm.guest_memory().describe() == state.vm_state.memory
-+                && state
-+                    .vm_state
-+                    .memory
-+                    .regions
-+                    .iter()
-+                    .all(|r| r.region_type == GuestRegionType::Dram),
-+            "reuse memory layout mismatch",
-+        )?;
-+        ensure(
-+            vm.kvm().save_state().kvm_cap_modifiers == state.kvm_state.kvm_cap_modifiers,
-+            "reuse KVM capability mismatch",
-+        )?;
-+        ensure(
-+            crate::vstate::vm::KvmVm::reuse_pit_disabled(&state.vm_state),
-+            "reuse currently requires a disabled PIT",
-+        )?;
-+        ensure(
-+            controlled_cpu(&state.vcpu_states[0]),
-+            "reuse requires clock-only PV/no-PMU/no-nested CPU profile",
-+        )?;
-+        let offset = dax_snapshot_offset(&params.mem_backend.backend_path)
-+            .map_err(|e| e.to_string())?
-+            .ok_or("reuse requires the configured DAX backend")?;
-+        validate_dax_backing(vm.guest_memory(), &params.mem_backend.backend_path, offset)?;
-+        let devices = self.device_manager.save();
-+        ensure(
-+            diskless(&devices) && diskless(&state.device_states),
-+            "reuse supports diskless MMIO workers only",
-+        )?;
-+        let old_acpi = &devices.acpi_state;
-+        let new_acpi = &state.device_states.acpi_state;
-+        ensure(
-+            old_acpi.vmgenid.addr == new_acpi.vmgenid.addr
-+                && old_acpi.vmgenid.gsi == new_acpi.vmgenid.gsi
-+                && old_acpi.vmclock.guest_address == new_acpi.vmclock.guest_address
-+                && old_acpi.vmclock.gsi == new_acpi.vmclock.gsi,
-+            "reuse ACPI layout mismatch",
-+        )?;
-+        let serial = self
-+            .device_manager
-+            .legacy_devices
-+            .as_ref()
-+            .ok_or("reuse needs legacy UART")?
-+            .stdio_serial
-+            .lock()
-+            .expect("Poisoned lock");
-+        ensure(
-+            serial.input.is_none()
-+                && state
-+                    .device_states
-+                    .serial_state
-+                    .as_ref()
-+                    .is_some_and(|s| s.in_buffer.len() <= 64),
-+            "reuse requires output-only UART with valid FIFO",
-+        )?;
-+        ensure(
-+            bitcode::serialize(&vm.resource_allocator().save()).map_err(|e| e.to_string())?
-+                == bitcode::serialize(&state.vm_state.resource_allocator)
-+                    .map_err(|e| e.to_string())?,
-+            "reuse resource allocation mismatch",
-+        )?;
-+        let handles = vm.vcpus_handles();
-+        ensure(handles.len() == 1, "reuse worker vCPU handle mismatch")?;
-+        let mut incoming_indices: Vec<_> = state.vcpu_states[0]
-+            .saved_msrs
-+            .iter()
-+            .flat_map(|chunk| chunk.as_slice().iter().map(|msr| msr.index))
-+            .collect();
-+        incoming_indices.sort_unstable();
-+        ensure(
-+            incoming_indices == handles[0].reuse_msr_indices,
-+            "reuse snapshot MSR index schema mismatch",
-+        )?;
-+        handles[0]
-+            .reuse_cpu_contract
-+            .as_ref()
-+            .ok_or("reuse worker has no immutable CPU contract")?
-+            .validate(&state.vcpu_states[0])?;
-+        ensure(
-+            crate::vstate::vm::KvmVm::reuse_pit_disabled(
-+                &vm.save_state().map_err(|e| e.to_string())?,
-+            ),
-+            "reuse receiver previously used an active PIT",
-+        )?;
-+        Ok(())
-+    }
-+
-+    pub(crate) fn restore_reused_snapshot(
-+        &mut self,
-+        params: &LoadSnapshotParams,
-+    ) -> Result<(), String> {
-+        let mut timing = RestoreTiming::new("reuse");
-+        let mut state =
-+            snapshot_state_from_file(&params.snapshot_path).map_err(|e| e.to_string())?;
-+        timing.mark("state_file_deserialize");
-+        self.validate_reuse(params, &state)?;
-+        let was_prepared = self.reuse_prepared.is_some();
-+        let (irqfds, strict_irqfd, sequence) = if let Some(prepared) = self.reuse_prepared.take() {
-+            (prepared.irqfds, prepared.strict_irqfd, prepared.generation)
-+        } else {
-+            (
-+                self.reuse_irqfds()?,
-+                std::env::var("FC_DAX_REUSE_QUIET_IRQFD").as_deref() != Ok("1"),
-+                REUSE_SEQUENCE.fetch_add(1, Ordering::Relaxed),
-+            )
++        let attribute = |attr: &str| -> io::Result<u64> {
++            std::fs::read_to_string(format!("/sys/bus/dax/devices/{name}/{attr}"))?
++                .trim()
++                .parse()
++                .map_err(|_| invalid("invalid devDAX attribute"))
 +        };
-+        let legacy = self.device_manager.legacy_devices.as_ref().unwrap();
-+        timing.mark("validation");
-+        // Any subsequent failure leaves the worker paused and permanently blocks Resume.
-+        self.reuse_restore_failed = true;
-+        let vm = self.vm.as_kvm().unwrap();
-+        let before_fd = vm.fd().as_raw_fd();
-+        if !was_prepared {
-+            vm.quiesce_reused_pit().map_err(|e| e.to_string())?;
++        if attribute("align")? != PAGE as u64 {
++            return Err(invalid("pool requires 4 KiB devDAX alignment"));
 +        }
-+        timing.mark("quiesce_old_timers");
-+        // KVM_IRQFD deassignment synchronizes its waitqueue and flushes injection work.
-+        // Reading the eventfd counter alone cannot drain already-queued kernel work.
-+        if strict_irqfd && !was_prepared {
-+            for (event, gsi) in &irqfds {
-+                vm.fd()
-+                    .unregister_irqfd(event, *gsi)
-+                    .map_err(|e| e.to_string())?;
-+            }
++        let capacity = attribute("size")?;
++        let dev = std::fs::read_to_string(format!("/sys/bus/dax/devices/{name}/dev"))?;
++        let (major, minor) = dev
++            .trim()
++            .split_once(':')
++            .ok_or_else(|| invalid("invalid devDAX device number"))?;
++        let major: u32 = major.parse().map_err(|_| invalid("invalid devDAX major"))?;
++        let minor: u32 = minor.parse().map_err(|_| invalid("invalid devDAX minor"))?;
++        let rdev = file.metadata()?.rdev();
++        if rdev != libc::makedev(major, minor) {
++            return Err(invalid(
++                "opened pool backing does not match devDAX sysfs identity",
++            ));
 +        }
-+        timing.mark("irqfd_deassign");
-+        // Drain stale notifications before overwriting the saved IRQ controller state.
-+        if !was_prepared {
-+            for (evt, _) in &irqfds {
-+                while evt.read().is_ok() {}
-+            }
-+        }
-+        timing.mark("drain_old_events");
++        let pool_base: u64 = required("FC_POOL_OFFSET")?
++            .parse()
++            .map_err(|_| invalid("invalid FC_POOL_OFFSET"))?;
++        let pool_size: u64 = required("FC_POOL_BYTES")?
++            .parse()
++            .map_err(|_| invalid("invalid FC_POOL_BYTES"))?;
++        let pool_end = pool_base
++            .checked_add(pool_size)
++            .ok_or_else(|| invalid("pool allocation overflow"))?;
++        if pool_base % PAGE as u64 != 0
++            || pool_size == 0
++            || pool_size % PAGE as u64 != 0
++            || pool_end > capacity
 +        {
-+            let mut handles = vm.vcpus_handles();
-+            handles[0].restore_without_kick(state.vcpu_states.pop().unwrap(), was_prepared);
-+            match handles[0]
-+                .response_receiver()
-+                .recv_timeout(crate::RECV_TIMEOUT_SEC)
++            return Err(invalid("invalid frozen pool allocation bounds"));
++        }
++        for region in mem.iter() {
++            if let Some(backing) = region.file_offset() {
++                let metadata = backing.file().metadata()?;
++                if metadata.file_type().is_char_device() && metadata.rdev() == rdev {
++                    let ram_end = backing
++                        .start()
++                        .checked_add(region.len())
++                        .ok_or_else(|| invalid("RAM allocation overflow"))?;
++                    if pool_base < ram_end && backing.start() < pool_end {
++                        return Err(invalid(
++                            "frozen pool allocation overlaps this VM's mutable RAM reservation",
++                        ));
++                    }
++                }
++            }
++        }
++        let mut unique = BTreeSet::new();
++        // Complete structural preflight before replacing any mapping.
++        for p in &plan.pages {
++            if p.gpa % PAGE as u64 != 0
++                || p.image_offset % PAGE as u64 != 0
++                || p.pool_offset % PAGE as u64 != 0
++                || p.image_id != image_id
++                || p.pool_offset < pool_base
++                || p.pool_offset
++                    .checked_add(PAGE as u64)
++                    .is_none_or(|end| end > pool_end)
++                || !unique.insert(p.gpa)
 +            {
-+                Ok(VcpuResponse::RestoredState) => (),
-+                response => return Err(format!("reuse vCPU restore failed: {response:?}")),
++                return Err(invalid(
++                    "unaligned, duplicate, out-of-range or wrong-image pool page",
++                ));
 +            }
++            mem.get_slice(GuestAddress(p.gpa), PAGE)
++                .map_err(|e| invalid(e.to_string()))?;
 +        }
-+        timing.mark("vcpu_state_restore");
-+        vm.restore_state(&state.vm_state, params.clock_realtime)
-+            .map_err(|e| e.to_string())?;
-+        self.device_manager
-+            .acpi_devices
-+            .replay_gsi_allocations(vm)
-+            .map_err(|e| e.to_string())?;
-+        timing.mark("vm_irq_clock_restore");
-+        if strict_irqfd {
-+            for (event, gsi) in &irqfds {
-+                vm.fd()
-+                    .register_irqfd(event, *gsi)
-+                    .map_err(|e| e.to_string())?;
++        let mut s = state().lock().expect("pool state poisoned");
++        if let Some(error) = &s.restore_error {
++            return Err(invalid(error));
++        }
++        for p in plan.pages {
++            if !key_matches(s.hints.get(&p.gpa), &p) {
++                report.rejected_hint += 1;
++                continue;
 +            }
++            let canonical = view(&file, p.pool_offset)?;
++            let mut current = [0u8; PAGE];
++            mem.read_slice(&mut current, GuestAddress(p.gpa))
++                .map_err(|e| invalid(e.to_string()))?;
++            // SAFETY: canonical is a valid immutable read-only page until dropped.
++            let expected = unsafe { std::slice::from_raw_parts(canonical.0.cast::<u8>(), PAGE) };
++            if current != expected {
++                report.rejected_content += 1;
++                continue;
++            }
++            let destination = mem
++                .get_host_address(GuestAddress(p.gpa))
++                .map_err(|e| invalid(e.to_string()))?;
++            // SAFETY: the whole destination page belongs to paused guest RAM;
++            // all I/O has drained, contents match exactly, and the pool remains
++            // immutable. Kernel private CoW covers later CPU and host writes.
++            s.mapping_failed = true; // MAP_FIXED may unmap before a later failure.
++            let ptr = unsafe {
++                libc::mmap(
++                    destination.cast(),
++                    PAGE,
++                    libc::PROT_READ | libc::PROT_WRITE,
++                    libc::MAP_PRIVATE | libc::MAP_FIXED,
++                    file.as_raw_fd(),
++                    p.pool_offset as libc::off_t,
++                )
++            };
++            if ptr == libc::MAP_FAILED {
++                return Err(io::Error::last_os_error());
++            }
++            s.mapping_failed = false;
++            s.overlays = true;
++            report.mapped += 1;
++            report.mapped_bytes += PAGE;
++            report.mapped_gpas.push(p.gpa);
++            report.mapped_pages.push(MappedPage {
++                gpa: p.gpa,
++                pool_offset: p.pool_offset,
++                hva: destination as u64,
++            });
 +        }
-+        timing.mark("irqfd_register");
-+        legacy
-+            .stdio_serial
-+            .lock()
-+            .unwrap()
-+            .restore_reused(&state.device_states.serial_state.as_ref().unwrap().into())
-+            .map_err(|e| e.to_string())?;
-+        legacy.i8042.lock().unwrap().reset_reused();
-+        self.device_manager
-+            .acpi_devices
-+            .restore_reused(&state.device_states.acpi_state, vm.guest_memory())
-+            .map_err(|e| e.to_string())?;
-+        self.boot_source_config = state.vm_info.boot_source;
-+        timing.mark("devices_restore");
-+        let handles = vm.vcpus_handles();
-+        crate::logger::info_unrestricted!(
-+            "DAX_REUSE_IDENTITY {}",
-+            serde_json::json!({
-+                "sequence":sequence,"vm_fd":before_fd,"vm_ptr":format!("{:p}",vm.as_ref()),
-+                "vcpu_fd":handles[0].vcpu_fd.as_raw_fd(),"ram_mapping_reused":true,
-+                "strict_irqfd":strict_irqfd,
-+                "receiver_prepared":was_prepared,
-+                "prepare_generation":was_prepared.then_some(sequence),
-+                "tlb_invalidation":"efer_nx_toggle",
-+                "vm_creates":0,"vcpu_creates":0,"thread_creates":0,
-+            })
-+        );
-+        drop(handles);
-+        self.reuse_restore_failed = false;
-+        timing.finish();
-+        Ok(())
 +    }
++    let mut writer =
++        BufWriter::with_capacity(JSON_BUFFER, File::create(required("FC_POOL_REPORT")?)?);
++    serde_json::to_writer(&mut writer, &report)?;
++    writer.flush()
 +}
 +
 +#[cfg(test)]
 +mod tests {
 +    use super::*;
-+    use kvm_bindings::kvm_cpuid_entry2;
 +
 +    #[test]
-+    fn cpuid_contract_ignores_only_kernel_runtime_fields() {
-+        let entries = [
-+            kvm_cpuid_entry2 {
-+                function: 1,
-+                ecx: 1 << 26,
-+                ..Default::default()
-+            },
-+            kvm_cpuid_entry2 {
-+                function: 0xd,
-+                index: 0,
-+                eax: 7,
-+                ebx: 512,
-+                ..Default::default()
-+            },
-+        ];
-+        let original = CpuId::from_entries(&entries).unwrap();
-+        let mut runtime = original.clone();
-+        runtime.as_mut_slice()[0].ecx |= 1 << 27;
-+        runtime.as_mut_slice()[0].edx |= 1 << 9;
-+        runtime.as_mut_slice()[1].ebx = 832;
-+        assert_eq!(
-+            cpuid_contract(original.clone()),
-+            cpuid_contract(runtime.clone())
-+        );
-+        runtime.as_mut_slice()[0].ecx ^= 1 << 26;
-+        assert_ne!(cpuid_contract(original), cpuid_contract(runtime));
-+    }
-+
-+    #[test]
-+    fn worker_rejects_nested_and_host_bound_features() {
-+        let mut state = crate::vstate::vcpu::VcpuState::default();
-+        state.sregs.efer = 1 << 10;
-+        state.cpuid = CpuId::from_entries(&[
-+            kvm_cpuid_entry2 {
-+                function: 1,
-+                ..Default::default()
-+            },
-+            kvm_cpuid_entry2 {
-+                function: 0x40000001,
-+                eax: 1 << 3,
-+                ..Default::default()
-+            },
-+            kvm_cpuid_entry2 {
-+                function: 0x80000001,
-+                edx: 1 << 20,
-+                ..Default::default()
-+            },
-+        ])
-+        .unwrap();
-+        assert!(controlled_cpu(&state));
-+        state.cpuid.as_mut_slice()[0].ecx |= 1 << 5;
-+        assert!(!controlled_cpu(&state));
-+        state.cpuid.as_mut_slice()[0].ecx = 0;
-+        state.cpuid.as_mut_slice()[1].eax |= 1 << 5; // APF
-+        assert!(!controlled_cpu(&state));
-+        state.cpuid.as_mut_slice()[1].eax = 1 << 3;
-+        state.sregs.cr4 |= 1 << 13;
-+        assert!(!controlled_cpu(&state));
-+        state.sregs.cr4 = 0;
-+        state.cpuid.as_mut_slice()[2].edx = 0;
-+        assert!(!controlled_cpu(&state));
-+    }
-+
-+    #[test]
-+    fn diskless_contract_rejects_pci_and_devices() {
-+        let mut state = DevicesState::default();
-+        assert!(diskless(&state));
-+        if let VirtioDevicesState::Mmio(devices) = &mut state.virtio_state {
-+            devices.mmds = Some(crate::device_manager::persist::MmdsState {
-+                version: crate::mmds::data_store::MmdsVersion::V2,
-+                imds_compat: false,
-+            });
-+        }
-+        assert!(!diskless(&state));
-+        state.virtio_state = VirtioDevicesState::Pci(Default::default());
-+        assert!(!diskless(&state));
-+    }
-+
-+    #[test]
-+    fn cached_contract_rejects_immutable_values_and_frequency_changes() {
-+        let mut state = crate::vstate::vcpu::VcpuState::default();
-+        state.saved_msrs = vec![
-+            kvm_bindings::Msrs::from_entries(&[kvm_bindings::kvm_msr_entry {
-+                index: 0x10a,
-+                data: 7,
-+                ..Default::default()
-+            }])
-+            .unwrap(),
-+        ];
-+        state.tsc_khz = Some(3_000_000);
-+        let contract = ReuseCpuContract {
-+            cpuid: cpuid_contract(state.cpuid.clone()),
-+            immutable_msrs: vec![(0x10a, 7)],
-+            tsc_khz: state.tsc_khz,
++    fn candidate_key_is_not_just_gpa() {
++        let h = Hint {
++            gpa: 4096,
++            image_id: "a".repeat(64),
++            image_offset: 8192,
++            sequence: 7,
 +        };
-+        assert!(contract.validate(&state).is_ok());
-+        state.saved_msrs[0].as_mut_slice()[0].data = 8;
-+        assert!(contract.validate(&state).is_err());
-+        state.saved_msrs[0].as_mut_slice()[0].data = 7;
-+        state.tsc_khz = Some(2_000_000);
-+        assert!(contract.validate(&state).is_err());
++        let mut p = PlanPage {
++            gpa: 4096,
++            image_id: "a".repeat(64),
++            image_offset: 8192,
++            pool_offset: 0,
++        };
++        assert!(key_matches(Some(&h), &p));
++        p.image_offset += 4096;
++        assert!(!key_matches(Some(&h), &p));
++        p.image_offset = 8192;
++        p.image_id = "b".repeat(64);
++        assert!(!key_matches(Some(&h), &p));
++        assert!(!key_matches(None, &p));
++    }
++
++    #[test]
++    fn identity_must_be_full_digest() {
++        assert!(valid_identity(&"a".repeat(64)));
++        assert!(!valid_identity(&"a".repeat(63)));
++        assert!(!valid_identity(&"z".repeat(64)));
 +    }
 +}
-diff --git a/src/vmm/src/devices/virtio/block/virtio/device.rs b/src/vmm/src/devices/virtio/block/virtio/device.rs
-index 78c1adde8..1db5a1f1e 100644
---- a/src/vmm/src/devices/virtio/block/virtio/device.rs
-+++ b/src/vmm/src/devices/virtio/block/virtio/device.rs
-@@ -403,6 +403,8 @@ pub struct VirtioBlock {
-     pub disk: DiskProperties,
-     pub rate_limiter: RateLimiter,
-     pub is_io_engine_throttled: bool,
-+    // Host-only outcome of the latest snapshot preparation, never serialized.
-+    pub(crate) snapshot_prepare_error: Option<String>,
-     pub metrics: Arc<BlockDeviceMetrics>,
- }
-
-@@ -504,6 +506,7 @@ impl VirtioBlock {
-             disk: disk_properties,
-             rate_limiter,
-             is_io_engine_throttled: false,
-+            snapshot_prepare_error: None,
-             metrics: BlockMetricsPerDevice::alloc(config.drive_id),
-         })
-     }
-@@ -744,11 +747,17 @@ impl VirtioBlock {
-
-     /// Prepare device for being snapshotted.
-     pub fn prepare_save(&mut self) {
-+        self.snapshot_prepare_error = None;
-         if !self.is_activated() {
-             return;
-         }
-
--        self.drain_and_flush(false);
-+        // Persist::save is infallible. Retain a failure so Vmm::save_state can
-+        // reject the checkpoint before serializing it or collecting CPU state.
-+        if let Err(err) = self.disk.file_engine.drain_and_flush(false) {
-+            self.snapshot_prepare_error = Some(err.to_string());
-+            return;
-+        }
-         if let FileEngine::Async(ref _engine) = self.disk.file_engine {
-             self.process_async_completion_queue();
-         }
-@@ -1968,6 +1977,29 @@ mod tests {
-         }
-     }
-
-+    #[test]
-+    fn test_prepare_save_flush_failure_is_reported_and_retryable() {
-+        for engine in [FileEngineType::Sync, FileEngineType::Async] {
-+            let mut block = default_block(engine);
-+            let mem = default_mem();
-+            let vq = VirtQueue::new(GuestAddress(0), &mem, 16);
-+            block.queues[0] = vq.create_queue();
-+            block.activate(mem, default_interrupt()).unwrap();
-+            let good_file = block.disk.file_engine.file().try_clone().unwrap();
-+            // An actual fsync(/dev/null) fails with EINVAL, exercising the real
-+            // sync and io_uring engines rather than a fabricated result flag.
-+            block.disk.file_engine = FileEngine::from_file(
-+                File::open("/dev/null").unwrap(), engine).unwrap();
-+            block.prepare_save();
-+            assert!(block.snapshot_prepare_error.is_some());
-+            block.prepare_save();
-+            assert!(block.snapshot_prepare_error.is_some());
-+            block.disk.file_engine = FileEngine::from_file(good_file, engine).unwrap();
-+            block.prepare_save();
-+            assert!(block.snapshot_prepare_error.is_none());
-+        }
-+    }
-+
-     #[test]
-     fn test_prepare_save() {
-         for engine in [FileEngineType::Sync, FileEngineType::Async] {
-@@ -1983,6 +2015,7 @@ mod tests {
-             add_flush_requests_batch(&mut block, &vq, 5);
-             simulate_queue_event(&mut block, None);
-             block.prepare_save();
-+            assert!(block.snapshot_prepare_error.is_none());
-
-             // Check that all the pending flush requests were processed during `prepare_save()`.
-             check_flush_requests_batch(5, &vq);
-diff --git a/src/vmm/src/devices/virtio/block/virtio/persist.rs b/src/vmm/src/devices/virtio/block/virtio/persist.rs
-index 493c487bb..da8a7ae83 100644
---- a/src/vmm/src/devices/virtio/block/virtio/persist.rs
-+++ b/src/vmm/src/devices/virtio/block/virtio/persist.rs
-@@ -144,6 +144,7 @@ impl Persist<'_> for VirtioBlock {
-             disk: disk_properties,
-             rate_limiter,
-             is_io_engine_throttled: false,
-+            snapshot_prepare_error: None,
-             metrics: BlockMetricsPerDevice::alloc(state.id.clone()),
-         })
-     }

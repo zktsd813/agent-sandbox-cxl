@@ -1,0 +1,22 @@
+
+/ # (
+> set -e
+> cat /sys/module/device_dax/parameters/pool_cow
+> /lab/pool-cow-probe /dev/dax0.0 536870912 EXPECT_DISABLED
+> dmesg | tail -10
+> )
+N
+POOL_COW_DISABLED rejection=passed errno=EINVAL
+[    0.698042]     TERM=linux
+[    0.700379] mount (76) used greatest stack depth: 14616 bytes left
+[    0.705373] mount (81) used greatest stack depth: 14584 bytes left
+[    0.729261] insmod (86) used greatest stack depth: 14464 bytes left
+[    0.773493] insmod (87) used greatest stack depth: 14216 bytes left
+[    0.822290] shared-probe (92) used greatest stack depth: 13792 bytes left
+[    0.831186] cxl region0: Bypassing cpu_cache_invalidate_memregion() for testing!
+[    0.885922] sh (93) used greatest stack depth: 13696 bytes left
+[    0.972775] input: ImExPS/2 Generic Explorer Mouse as /devices/platform/i8042/serio1/input/input3
+[  148.753355] device_dax dax0.0: pool-cow-probe: dax_mmap: fail, attempted private mapping
+/ # printf '\nLAB_COMMAND_DONE_6b6686ed69da8c37:%s\n' "$?"
+
+LAB_COMMAND_DONE_6b6686ed69da8c37:0
