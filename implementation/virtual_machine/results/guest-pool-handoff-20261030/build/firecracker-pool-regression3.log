@@ -1,0 +1,74 @@
+   Compiling vmm v0.1.0 (/firecracker/src/vmm)
+warning: variable does not need to be mutable
+   --> src/vmm/src/arch/x86_64/vm.rs:330:13
+    |
+330 |         let mut vm = setup_vm_with_memory(0x1000);
+    |             ----^^
+    |             |
+    |             help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> src/vmm/src/arch/x86_64/vm.rs:354:13
+    |
+354 |         let mut vm = setup_vm_with_memory(0x1000);
+    |             ----^^
+    |             |
+    |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> src/vmm/src/arch/x86_64/vm.rs:369:13
+    |
+369 |         let mut vm = setup_vm_with_memory(0x1000);
+    |             ----^^
+    |             |
+    |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> src/vmm/src/arch/x86_64/vm.rs:389:13
+    |
+389 |         let mut vm = setup_vm_with_memory(0x1000);
+    |             ----^^
+    |             |
+    |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> src/vmm/src/arch/x86_64/vm.rs:412:13
+    |
+412 |         let mut vm = setup_vm_with_memory(0x1000);
+    |             ----^^
+    |             |
+    |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+    --> src/vmm/src/vstate/vm.rs:1383:13
+     |
+1383 |         let mut vm = setup_vm_with_memory(0x1000);
+     |             ----^^
+     |             |
+     |             help: remove this `mut`
+
+warning: `vmm` (lib test) generated 6 warnings (run `cargo fix --lib -p vmm --tests` to apply 6 suggestions)
+    Finished `release` profile [optimized] target(s) in 1m 56s
+     Running unittests src/lib.rs (build/cargo_target/x86_64-unknown-linux-musl/release/deps/vmm-978564fa50d4521a)
+
+running 15 tests
+test devices::virtio::balloon::device::tests::pool_discard_reporting_ack_and_rejection_protocol ... ok
+test devices::virtio::balloon::device::tests::pool_reporting_only_config_is_narrow ... ok
+test devices::virtio::block::virtio::request::tests::pool_cache_hints_require_complete_successful_read ... ok
+test pool_cache::tests::candidate_key_is_not_just_gpa ... ok
+test pool_cache::tests::identity_must_be_full_digest ... ok
+test pool_cache::tests::pool_discard_coalesces_and_busy_partial_byte_defers_whole_page ... ok
+test pool_cache::tests::pool_discard_mapping_failure_poison_prevents_further_use ... ok
+test pool_cache::tests::pool_discard_preflight_rejects_all_before_any_mapping ... ok
+test pool_cache::tests::pool_discard_private_zero_preserves_canonical_peer_and_dirty_tracking ... ok
+test pool_memory::tests::bloom_or_controller_cannot_add_unregistered_gpa_or_wrong_offset ... ok
+test pool_memory::tests::closed_registration_rejects_old_plan ... ok
+test pool_memory::tests::current_guest_registration_authorizes_only_its_page_without_reading_payload ... ok
+test pool_memory::tests::incomplete_dirty_or_duplicate_records_never_authorize ... ok
+test pool_memory::tests::malformed_unicode_digest_fails_without_panic ... ok
+test pool_memory::tests::stale_cookie_epoch_token_or_changed_record_rejected ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 824 filtered out; finished in 0.01s
+

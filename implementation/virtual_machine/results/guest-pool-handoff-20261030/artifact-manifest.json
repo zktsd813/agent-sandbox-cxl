@@ -1,0 +1,387 @@
+{
+  "schema": "guest-pool-artifacts-v1",
+  "base_commit": "48461c05fdc3676069a5666ff019a0794da202bd",
+  "files": {
+    ".gitignore": {
+      "bytes": 79,
+      "sha256": "6fa682fd9200aab1738d29392a34d83d88179cba1b92da8451cc81f1c8d4c8e4"
+    },
+    "README.md": {
+      "bytes": 13297,
+      "sha256": "8e414747545e44649dbe86af998d30811cc9061fad4ac7d7d4b7969ee13ded9e"
+    },
+    "build/direct-tests-release3.log": {
+      "bytes": 336,
+      "sha256": "47a437ee1865f830c574351da48f290923d800b425fe947c40a9fcbe38fbfbd2"
+    },
+    "build/firecracker-before-release4.patch": {
+      "bytes": 272255,
+      "sha256": "80d6de7683d5e46a4450d799bf355abad74d810d91e521f5b0eb8b13d9dfc228"
+    },
+    "build/firecracker-direct-check1.log": {
+      "bytes": 6546,
+      "sha256": "097bab62db56484b3b366f6c6a6572d576e47485bb45b6a3f14820392af1ac64"
+    },
+    "build/firecracker-direct-tests.log": {
+      "bytes": 2961,
+      "sha256": "671b2ce2cbbc0c93ca3942d6dae3655f924db993322aad5b234f464f85d0d51c"
+    },
+    "build/firecracker-direct-tests3.log": {
+      "bytes": 336,
+      "sha256": "47a437ee1865f830c574351da48f290923d800b425fe947c40a9fcbe38fbfbd2"
+    },
+    "build/firecracker-direct-tests4.log": {
+      "bytes": 336,
+      "sha256": "351577ccf6f55c368576ce6f8b11633cff755d2362a569a6e61d09ecab086d00"
+    },
+    "build/firecracker-memory-tests.log": {
+      "bytes": 2499,
+      "sha256": "deb8a1dc4494586945b505fcefa7318d751aa93756b0adfa893143b73d52b077"
+    },
+    "build/firecracker-pool-regression3.log": {
+      "bytes": 3293,
+      "sha256": "25cd6fa9f67655f278366b250532b123c5fb8497c0547410b27776f4906b21f0"
+    },
+    "build/firecracker-pool-regression4.log": {
+      "bytes": 3293,
+      "sha256": "76575e716f7fe2cbb711c3702660ff4067fcea408850381d216aed4569a7980d"
+    },
+    "build/firecracker-release-build.log": {
+      "bytes": 174,
+      "sha256": "f6c0841a77072015a8eed8888b8d60dce05bfc5aa04323d274955d0d8f5209df"
+    },
+    "build/firecracker-release-build2.log": {
+      "bytes": 228,
+      "sha256": "393c5a01e43eddcac4da9bffa80fd981b37478f1fb1fa83f8e68a36efe374f51"
+    },
+    "build/firecracker-release-build3.log": {
+      "bytes": 174,
+      "sha256": "3efcab341a254ba42bf73c8e564618a19d29263bd5dc7ebca7d286c3ec97f829"
+    },
+    "build/firecracker-release-build4.log": {
+      "bytes": 174,
+      "sha256": "3efcab341a254ba42bf73c8e564618a19d29263bd5dc7ebca7d286c3ec97f829"
+    },
+    "build/firecracker-release4-build-provenance.json": {
+      "bytes": 8185,
+      "sha256": "61de829b76f0bce5242c168b6ada7b1c7d95bcff9043866006d29f653d83be0a"
+    },
+    "build/firecracker-release4-clean-application.json": {
+      "bytes": 4196,
+      "sha256": "6e727fdb1a9b6af6ad44b24e7a0ff734354952bc29f10beff58dcfb5b2c851bd"
+    },
+    "build/firecracker-release4.patch": {
+      "bytes": 272255,
+      "sha256": "80d6de7683d5e46a4450d799bf355abad74d810d91e521f5b0eb8b13d9dfc228"
+    },
+    "build/firecracker-vmm-check.log": {
+      "bytes": 119,
+      "sha256": "666d664ecbb77a15399770be5a1b183a8d86cea4ad9d52a7284eddc6315cdad2"
+    },
+    "build/guest/cli-abi.json": {
+      "bytes": 268,
+      "sha256": "2e0460ea6a38d01ba63da90a0b05062ee04c17cce81fac087108a7a17edf8d78"
+    },
+    "build/guest/cli-abi.json.attempt-1": {
+      "bytes": 268,
+      "sha256": "2e0460ea6a38d01ba63da90a0b05062ee04c17cce81fac087108a7a17edf8d78"
+    },
+    "build/guest/cli-build.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "build/guest/cli-build.log.attempt-1": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "build/guest/commands.json": {
+      "bytes": 2345,
+      "sha256": "34786fa4cf6cb881778f920446c8b6398e4b33f3761079517f9d26e812c42c6c"
+    },
+    "build/guest/compile.h": {
+      "bytes": 208,
+      "sha256": "476e0beb6cbe9d9ed8659421329a08141a18c181563f81d94d35b7fc83605e0a"
+    },
+    "build/guest/guest.config": {
+      "bytes": 142180,
+      "sha256": "390364f74cd9f03cab59d9114b7897d7ecaa72221c39e957ee1b3156edac210a"
+    },
+    "build/guest/kernel-build.log": {
+      "bytes": 1154,
+      "sha256": "c63e0ec22da97d1b80a9fec5944dc65a06a453654a107ec36e02fe8f7c992e71"
+    },
+    "build/guest/kernel-build.log.attempt-1": {
+      "bytes": 101810,
+      "sha256": "abbf2eb3dc27a983f2b4fe87cc226e7d02445b9b9c9865f51ba580c27ec50732"
+    },
+    "build/guest/kernel-build.log.attempt-2": {
+      "bytes": 18918,
+      "sha256": "ec6951e167e362ca83133435aa1860b6aa9e3781f0f0f4e68b77bdf6dc04682a"
+    },
+    "build/guest/olddefconfig.log": {
+      "bytes": 282,
+      "sha256": "bde8b680e8e5028b50e8803212e0740cac0ea13a28ecb74870a509674243a893"
+    },
+    "build/guest/olddefconfig.log.attempt-1": {
+      "bytes": 756,
+      "sha256": "227713183c8152b70810cd654c5f96319e66831bd11a17134ebfced9f7c34ba2"
+    },
+    "build/guest/olddefconfig.log.attempt-2": {
+      "bytes": 282,
+      "sha256": "bde8b680e8e5028b50e8803212e0740cac0ea13a28ecb74870a509674243a893"
+    },
+    "build/guest/provenance.json": {
+      "bytes": 2431,
+      "sha256": "835c845d772e47b526b697f2ddbf80c8e511d445e1fa196cce10863b427c5180"
+    },
+    "build/host-kernel.config": {
+      "bytes": 141898,
+      "sha256": "7da6303ddad9a24782aff314d50ee4c5f63268b1d84d96d227a833eabf42eaab"
+    },
+    "build/kernel-base-reverse.log": {
+      "bytes": 956,
+      "sha256": "adbec9aa0e7ebb13d568a7d3d8fce9a10188cdb8a16a9f6a2622972b945f9daa"
+    },
+    "build/kernel-before-local-ram.patch": {
+      "bytes": 96348,
+      "sha256": "3586985328ed851cd4d15c4eaaf49eba1fe666dee82d4d318dec1b98b33b873d"
+    },
+    "build/kernel-build-before-local-ram-provenance.json": {
+      "bytes": 3838,
+      "sha256": "653fa956c4ba1c193eecb73545999a455a56f3411d6a251498fa8d1eb2109dff"
+    },
+    "build/kernel-build-provenance.json": {
+      "bytes": 3902,
+      "sha256": "3c39bc1e4a798c2952955a4aab837fb069deec3e6176658e48237ac3116b40f0"
+    },
+    "build/kernel-clean-application.log": {
+      "bytes": 956,
+      "sha256": "97b6600a391c7d02eecb199cd78486efbc0a82e9727896c6b54551db2c452178"
+    },
+    "build/kernel-local-ram-clean-application.log": {
+      "bytes": 956,
+      "sha256": "97b6600a391c7d02eecb199cd78486efbc0a82e9727896c6b54551db2c452178"
+    },
+    "build/kernel-output-Makefile": {
+      "bytes": 133,
+      "sha256": "aa34bd29f7121d27d25f5abc31642bc77a9e92f2fe1b8c215e846e57fe910a63"
+    },
+    "build/kvm-dax-source.json": {
+      "bytes": 9503,
+      "sha256": "401de792f108d9e7846fe6f5c58b88b75a8ef97573940ad5e572b680a9cddb3a"
+    },
+    "build/kvm-dax-state.patch": {
+      "bytes": 97182,
+      "sha256": "bb11d89161ba2650ffd179e41382570e1bb99464bcfb3bcb0f1d4a4f0070333d"
+    },
+    "build/kvm_main.o.cmd": {
+      "bytes": 89106,
+      "sha256": "bc53df3d88902217a6f38010c779cfa005b7003a23b1cf9d66fd4295ef519666"
+    },
+    "build/mapper/Makefile": {
+      "bytes": 30,
+      "sha256": "7932ca2e15ee05c3e5bb39a97b4183c60299e64d5867d439faff42840d3c8fcb"
+    },
+    "build/mapper/Module.symvers": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "build/mapper/compile.h": {
+      "bytes": 208,
+      "sha256": "476e0beb6cbe9d9ed8659421329a08141a18c181563f81d94d35b7fc83605e0a"
+    },
+    "build/mapper/host-kernel.config": {
+      "bytes": 141898,
+      "sha256": "7da6303ddad9a24782aff314d50ee4c5f63268b1d84d96d227a833eabf42eaab"
+    },
+    "build/mapper/kernel-Module.symvers": {
+      "bytes": 738558,
+      "sha256": "0452e1e1cdb2155c3ab4a62baf41af8974009372623d6d6a1b504eab4044f3de"
+    },
+    "build/mapper/kernel.release": {
+      "bytes": 17,
+      "sha256": "900398ab5d81ce434c23fd33277c5a2a683adc1eeaab7cf30a688b11b0f26fb1"
+    },
+    "build/mapper/modules.order": {
+      "bytes": 60,
+      "sha256": "7bd7d44a6fc1c99151685c1725cebc434908e4f74167c156b0f6a885825af240"
+    },
+    "build/mapper/pool_memory_module.c": {
+      "bytes": 14030,
+      "sha256": "a7c8852c6ace1b38ba2169f3528601d116d1e5924f85c17855fdf370a03114a8"
+    },
+    "build/mapper/pool_memory_module.ko": {
+      "bytes": 24760,
+      "sha256": "ca53c73516f26ffe8f26293bdee5a32d5cf54256f0b05acc457e40b2664ba5a6"
+    },
+    "build/mapper/pool_memory_module.ko.cmd": {
+      "bytes": 466,
+      "sha256": "cd1ebac058f4e13e0258f2273c512266c5491848864ea70438a0c18bf7e37d21"
+    },
+    "build/mapper/pool_memory_module.mod.c": {
+      "bytes": 692,
+      "sha256": "f0383e49f34698f14127e997907bc25f0039a50228e5a53ffe1e7d3f5060be03"
+    },
+    "build/mapper/pool_memory_module.mod.o.cmd": {
+      "bytes": 52903,
+      "sha256": "99ad8bf0ba51f90c5c884ce3232785d246a4f50805388475a89e654189656a0a"
+    },
+    "build/mapper/pool_memory_module.o.cmd": {
+      "bytes": 66559,
+      "sha256": "d0eacf33df26caa6efdaf47664da54763654892f3b677612d1d511c549fbfac7"
+    },
+    "build/mapper/pool_memory_uapi.h": {
+      "bytes": 1247,
+      "sha256": "63959415df2ffba60f2794195a392467d7847ac4866645c5d26dec09a267656c"
+    },
+    "build/mapper/provenance.json": {
+      "bytes": 4836,
+      "sha256": "7b701b3dde8183b81f8c228ce431a434f02a9001a106c1cec0c8b81b8fe51422"
+    },
+    "build/pool-handoff-direct-check1.log": {
+      "bytes": 6546,
+      "sha256": "097bab62db56484b3b366f6c6a6572d576e47485bb45b6a3f14820392af1ac64"
+    },
+    "build/pool-handoff-direct-tests.log": {
+      "bytes": 2961,
+      "sha256": "671b2ce2cbbc0c93ca3942d6dae3655f924db993322aad5b234f464f85d0d51c"
+    },
+    "build/pool-handoff-kernel-build.log": {
+      "bytes": 124560,
+      "sha256": "60b35b837397728ccd28a0229bdc8d430e1a87246ac140b93b1e5ce6ae350460"
+    },
+    "build/pool-handoff-kernel-config.log": {
+      "bytes": 766,
+      "sha256": "eb5380663db10690485c3b102d329dcf1349792f4c244207b9c11305c73b6914"
+    },
+    "build/pool-handoff-kernel-local-ram-build.log": {
+      "bytes": 3708,
+      "sha256": "ab6cd165f467ceeb65c899a83397bc0eab7a643f93e270fbefaa849b6fcc85cd"
+    },
+    "build/pool-handoff-kernel-local-ram-modules-install.log": {
+      "bytes": 2227,
+      "sha256": "845b61385b5cf7aadd0563292e26e01db363047551c46ecabea32847ff97d022"
+    },
+    "build/pool-handoff-kernel-modules-install.log": {
+      "bytes": 2227,
+      "sha256": "deb7fda647fd884b3a1e7be1940d196d907c4084eb7cbfcd1b64269c224a964d"
+    },
+    "build/previous-kvm-dax-source.json": {
+      "bytes": 8341,
+      "sha256": "08d9c58fc56d3cd36ec9f88bbaf05b9f7f13c4532070b60c89357ef88d185599"
+    },
+    "build/previous-kvm-dax-state.patch": {
+      "bytes": 91965,
+      "sha256": "61809e10100a0b7368bb008dc9e1a6967188f8d5ecb0ef490c5066aa4762a958"
+    },
+    "fixture-manifest.json": {
+      "bytes": 13826,
+      "sha256": "5eac67676f2f2c1e957a4046d13f4dd6cf27c2ad118e00599b5b86e06402fea9"
+    },
+    "preparatory-index.json": {
+      "bytes": 6038,
+      "sha256": "acebd085a4e344a1b5f7a4365c6132273326108e4fc6c099ad2369974ad4febf"
+    },
+    "raw/direct.tar.xz": {
+      "bytes": 14347520,
+      "sha256": "63eef8d46fd4a223b3e7cdc87de2da76ab868d0938dd17e7b5544a752bac6b7d"
+    },
+    "raw/preparatory.tar.xz": {
+      "bytes": 26252116,
+      "sha256": "461d5719ea8d0c43fe2fdc2083edbe2290eb4374c11c6538a83840adf6af4ca5"
+    },
+    "raw/state-only.tar.xz": {
+      "bytes": 25432808,
+      "sha256": "825779a44b6fe1f2e5c47477bfaf59c126a17d15eb1701f565dde354d9933418"
+    },
+    "summary.json": {
+      "bytes": 3576,
+      "sha256": "14ff873f7ae0d9038f7c61819ae5e895bbc657fdfd5848b77801e19a9fd7d064"
+    },
+    "verification/archive-replay-path.json": {
+      "bytes": 97,
+      "sha256": "7a2cec75cf0c2467a981733d907c360ee46d7548c83c973ad34640142acdead3"
+    },
+    "verification/audit-direct-backend.py": {
+      "bytes": 7764,
+      "sha256": "635d1dfef471c04215daa1336599ffe9786e2151f3f6931d3a5492950a8220cd"
+    },
+    "verification/direct-archive-replay.json": {
+      "bytes": 467,
+      "sha256": "43be76e900ab0c2a10bcd1a06fc40b4483d66af307ea8e1c50519b590ceae3db"
+    },
+    "verification/direct-final-backend-audit.json": {
+      "bytes": 3586,
+      "sha256": "48571bd42aa8299b97c7d0124b686f3e0dbec91afb8a13ca295d7b614957b596"
+    },
+    "verification/direct-independent-audit.json": {
+      "bytes": 467,
+      "sha256": "43be76e900ab0c2a10bcd1a06fc40b4483d66af307ea8e1c50519b590ceae3db"
+    },
+    "verification/direct-pilot2-backend-audit.json": {
+      "bytes": 2632,
+      "sha256": "31cbd3d92c69b712d751a79a6f32e9d1e779a90a5f4683b2d4b80813489a0d9e"
+    },
+    "verification/direct-semantic-mutations.json": {
+      "bytes": 3923,
+      "sha256": "48c2b345856c365e0fe9c3260beefe8af063dcd746e9ff13266de09aab75b415"
+    },
+    "verification/failed-state-owned-backing-cleanup.json": {
+      "bytes": 428,
+      "sha256": "94ae978c3b7b6ce1d8c641511dea1a43f663b909fc7cc887e3777fc5a5c1fff5"
+    },
+    "verification/guest-smoke-independent-audit.json": {
+      "bytes": 420,
+      "sha256": "60b7f8b1800bcc6029abc743bc9bd1ed8bd9f51b8cdf23c70fe9ef1806a0420a"
+    },
+    "verification/independent-provenance.json": {
+      "bytes": 3561,
+      "sha256": "e7a53b7970989523dd020bba6a39af41883ede9300975b4686d7157fefadd700"
+    },
+    "verification/root-validation.json": {
+      "bytes": 829,
+      "sha256": "0f959c33af2c703220a39a09ec42711d541bc600603eb3df7aa7e76548f262d3"
+    },
+    "verification/state-only-archive-replay.json": {
+      "bytes": 509,
+      "sha256": "5e94c09c33626804a3c3ef3464791d27ebdfe20da6b74bdc7beed6564a03747f"
+    },
+    "verification/state-only-independent-audit.json": {
+      "bytes": 509,
+      "sha256": "5e94c09c33626804a3c3ef3464791d27ebdfe20da6b74bdc7beed6564a03747f"
+    },
+    "verification/state-only-semantic-mutations.json": {
+      "bytes": 3987,
+      "sha256": "7f6ecf71f948e1ee5f8a9a433b1c5b90dfc78ae49f14bf4eadf039d9b16dfdba"
+    }
+  },
+  "published_source_hashes": {
+    "README.md": "f379a067f03ca06f18a16634ac6635af3a07e7dedcacd9eda327858ec0b33728",
+    "docs/cxl-data-pooling.md": "f0ecebbe4b5fb12d39ba310887ddaac767643e43e44d9163eae85bf4f8b05900",
+    "docs/cxl-guest-pool-handoff.md": "d2e2aa7a3a599e1666ea374fbe3948bab192256a218c4a40dda1193eb1b6d5b2",
+    "docs/cxl-microvm-overview.md": "b6b19026c9ca824908c3a29aed89799207e8c57851988bbd9a254700cf80c70d",
+    "docs/cxl-page-discard.md": "d5aa4ad8b194723c4b5fc1b626e9c92096ee029ff6c964d8e4e6973128d4a3a0",
+    "implementation/virtual_machine/firecracker.patch": "80d6de7683d5e46a4450d799bf355abad74d810d91e521f5b0eb8b13d9dfc228",
+    "implementation/virtual_machine/guest-pool-build.py": "4994682cc4502c03b76aa2918ebfb6102f2b1b89ecdcf13d3560f2a36faaff1c",
+    "implementation/virtual_machine/guest-pool-cli.c": "fae9c4ecd906a6f07cca40d69bbf48a417335d17ac2069a3a91e3c224de3cdea",
+    "implementation/virtual_machine/guest-pool-uapi.h": "b4a6bd011b2baf993de449bbf847e9dc9b4ca79c0304cbf60f8a777f88e3cfeb",
+    "implementation/virtual_machine/guest-pool.c": "8f878838feb9299295bda248cc6420f47674cfce77e4883a37c9c1b9b73bd135",
+    "implementation/virtual_machine/guest_pool_protocol.py": "4a402caf202d8ee63190afe9612031b076792357c835ba93958f29db7d4c6b10",
+    "implementation/virtual_machine/kvm-dax-source.json": "401de792f108d9e7846fe6f5c58b88b75a8ef97573940ad5e572b680a9cddb3a",
+    "implementation/virtual_machine/kvm-dax-state.patch": "bb11d89161ba2650ffd179e41382570e1bb99464bcfb3bcb0f1d4a4f0070333d",
+    "implementation/virtual_machine/pool-handoff-l2-init.sh": "7b5fb832c37b2d8d79d12a385e9452c9e5535eec6abc4dba29437ba5c0ef24e4",
+    "implementation/virtual_machine/pool_handoff_bench.py": "8ad5daa308f16ff9fa733c46f21dbb6282454946bb373f6c9bddbd39fcc2b606",
+    "implementation/virtual_machine/pool_handoff_control.py": "8e734e33f69ac0e5c7d2fd5ae4574c30599d822cae850d1d1b4f5f914072f9f0",
+    "implementation/virtual_machine/pool_handoff_prepare.py": "415ad71abe5ff826ca5cd9566253737afc86e077c24fe16e357d29be6519c523",
+    "implementation/virtual_machine/pool_handoff_probe.c": "ef430615c28d8c78b2ae53b438e76a7c017126d692ea45afe3538b53aea97188",
+    "implementation/virtual_machine/pool_handoff_run.py": "95525cbd84111653e4f31a8f1d13ae2ccff0867958adb50dd9b477fde0b903fb",
+    "implementation/virtual_machine/pool_memory_kvm_smoke.c": "b3cf64894917444c1d7dc7c416444878b9778fd40973dd6c6eaad40c6c6f48b5",
+    "implementation/virtual_machine/pool_memory_module.c": "a7c8852c6ace1b38ba2169f3528601d116d1e5924f85c17855fdf370a03114a8",
+    "implementation/virtual_machine/pool_memory_smoke.c": "21f519b6b991ceebb5f0520dfce1ce3746b9d97d81a22ff52bb83d675820f88c",
+    "implementation/virtual_machine/pool_memory_uapi.h": "63959415df2ffba60f2794195a392467d7847ac4866645c5d26dec09a267656c",
+    "implementation/virtual_machine/test_guest_pool_protocol.py": "a8ac767b3352d0b7909f83037be607d03d6ed9e64b2ca4a5a01287005335de46",
+    "implementation/virtual_machine/test_pool_handoff_control.py": "eec7532aa3a8d6616bca6082ac437d4f53ad8fbd28cc345665b5c8a6fe95948c",
+    "implementation/virtual_machine/test_pool_handoff_evidence.py": "ec97e194ac762e6c2bf0eef8027c551bc1651ec84821faec05fe404c43c92018",
+    "implementation/virtual_machine/verify_pool_handoff.py": "f364e628244c376bfd446893dedd5bd8ee41375f98f770b02f77bc9143a3d277"
+  }
+}

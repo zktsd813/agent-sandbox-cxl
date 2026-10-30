@@ -22,7 +22,15 @@ DAX 공유 영역은 기본 2GiB다. 기본 microVM은 1 vCPU·128MiB이고 RAM 
 
 <a id="session-handoff"></a>
 
-## 다음 세션 인계: 2026-10-28
+## 다음 세션 인계: 2026-10-30
+
+최신 구현은 [guest metadata 기반 pooling과 두 handoff](../../docs/cxl-guest-pool-handoff.md)다.
+현재 guest의 clean lower ext4 folio를 등록해 promotion 때 중복 backing을 공유하고,
+private CXL CoW와 현재 mapping을 direct/state-only에서 유지한다. Demotion은 논리 RAM을
+anonymous private RAM으로 복사하고 grant를 반환한다. 두 모드의 3개 독립 VM·160MiB cache,
+NFS refill·실제 OverlayFS·discard ACK/재사용 검증은 [이번 결과](results/guest-pool-handoff-20261030/README.md)를 따른다.
+아래 10월 27~28일 모드 제한과 맨 아래의 기존 pooling/discard 결과는 해당 시점의 기록이다.
+새 opt-in direct I/O 경로만 RO block+reporting balloon을 지원하며, legacy direct 경로의 거절 조건은 유지한다.
 
 목표는 **microVM의 상태를 CXL에 유지하면서 실행 노드를 바꾸고, 기존 application 연결과
 파일 접근까지 이어가는 것**이다. CPU/RAM 전환과 실제 서비스 I/O 전환을 함께 완성하는 중이다.
@@ -1099,7 +1107,7 @@ Reuse/direct의 기본 검증은 diskless 1 vCPU, 동일 구성·동일 DAX allo
 `.local/cleanup-latest.json`이 가리키는 `before-cleanup.tar.gz`에 보존했다.
 기존 `.local` 실행 결과와 원시 로그도 유지한다. 현재 운영 설명은 이 README 하나로 관리한다.
 
-## Immutable data-page pooling prototype (2026-10-30)
+## 초기 read-hint pooling prototype (2026-10-30, 후속 구현 이전)
 
 Virtio-blk의 성공한 읽기에서 `(image digest, image offset, GPA)` hint를 수집하고,
 paused VM의 현재 바이트를 검증한 뒤 동일한 canonical CXL frame에 연결하는 경로를 추가했다.
@@ -1164,5 +1172,22 @@ Fresh backing의 실제 page allocation은 lazy이므로 첫 쓰기 비용 전�
 검사한다. Guest trace patch는 계측용이며 filesystem lookup이나 allocator 정책을 바꾸지 않는다.
 [실측 결과와 원본 검증](results/pool-discard-20261030/README.md)은 한 페이지 진단과
 3개 VM의 반복·NFS·DRAM/CXL 이전, 보고 대기와 refill 비용을 구분한다.
-원래 DAX reservation 반환, private backing의 CXL 배치, overlay를 포함한 direct handoff는
-여전히 후속 작업이다.
+이 초기 결과에서는 원래 DAX reservation 반환, private backing의 CXL 배치, overlay를 포함한
+direct handoff가 후속 작업이었다. 현재 구현과 검증은 다음 절을 따른다.
+
+## Guest metadata 기반 pooling과 두 handoff
+
+`guest-pool.c`는 immutable lower ext4의 현재 resident clean folio만 등록하고,
+host가 전환을 끝낼 때까지 folio lock을 유지한다. 영구 kernel status의 epoch/token/digest를
+paused VMM이 확인하므로 Bloom이나 과거 virtio read hint가 공유 자격을 대신하지 않는다.
+이 경로에는 파일 데이터의 4KiB 전수 비교가 없다.
+
+새 `/dev/cxl_pool` module이 논리 RAM 전체를 private/canonical CXL frame에 연결한다.
+`FC_POOL_MEMORY=1`이 이 경로를 선택한다. CoW와 discard 후의 실제 frame 목록·여유 grant를
+manifest에 보존하고, 두 handoff에서 같은 backing을 복원한다. Direct는 별도로
+`FC_DAX_DIRECT_IO=1`을 사용해 readonly block과 reporting balloon의 host 연결을 승계한다.
+기존 `--pool-cow`는 사용하지 않는다.
+
+빌드·실행·원시 증거의 독립 재검증은 [결과 README](results/guest-pool-handoff-20261030/README.md),
+구조·메모리 비용·신뢰 경계는 [설계 문서](../../docs/cxl-guest-pool-handoff.md)에 정리한다.
+이 검증의 serial controller wall time을 기존 최적화 direct latency나 4KiB CoW 비용으로 해석하지 않는다.

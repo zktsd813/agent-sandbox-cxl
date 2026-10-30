@@ -1,0 +1,22 @@
+make: Entering directory '/tmp/pool-handoff-linux-20261030'
+make[1]: Entering directory '/tmp/pool-handoff-kernel-build-20261030'
+  SYMLINK /tmp/pool-handoff-kernel-modules-20261030/lib/modules/6.6.0-rc6-dcd-v3/build
+  INSTALL /tmp/pool-handoff-kernel-modules-20261030/lib/modules/6.6.0-rc6-dcd-v3/modules.order
+  INSTALL /tmp/pool-handoff-kernel-modules-20261030/lib/modules/6.6.0-rc6-dcd-v3/modules.builtin
+  INSTALL /tmp/pool-handoff-kernel-modules-20261030/lib/modules/6.6.0-rc6-dcd-v3/modules.builtin.modinfo
+  INSTALL /tmp/pool-handoff-kernel-modules-20261030/lib/modules/6.6.0-rc6-dcd-v3/kernel/arch/x86/kvm/kvm.ko
+  INSTALL /tmp/pool-handoff-kernel-modules-20261030/lib/modules/6.6.0-rc6-dcd-v3/kernel/arch/x86/kvm/kvm-intel.ko
+  INSTALL /tmp/pool-handoff-kernel-modules-20261030/lib/modules/6.6.0-rc6-dcd-v3/kernel/arch/x86/kvm/kvm-amd.ko
+  INSTALL /tmp/pool-handoff-kernel-modules-20261030/lib/modules/6.6.0-rc6-dcd-v3/kernel/fs/efivarfs/efivarfs.ko
+  INSTALL /tmp/pool-handoff-kernel-modules-20261030/lib/modules/6.6.0-rc6-dcd-v3/kernel/drivers/thermal/intel/x86_pkg_temp_thermal.ko
+  INSTALL /tmp/pool-handoff-kernel-modules-20261030/lib/modules/6.6.0-rc6-dcd-v3/kernel/net/netfilter/nf_log_syslog.ko
+  INSTALL /tmp/pool-handoff-kernel-modules-20261030/lib/modules/6.6.0-rc6-dcd-v3/kernel/net/netfilter/xt_mark.ko
+  INSTALL /tmp/pool-handoff-kernel-modules-20261030/lib/modules/6.6.0-rc6-dcd-v3/kernel/net/netfilter/xt_nat.ko
+  INSTALL /tmp/pool-handoff-kernel-modules-20261030/lib/modules/6.6.0-rc6-dcd-v3/kernel/net/netfilter/xt_LOG.ko
+  INSTALL /tmp/pool-handoff-kernel-modules-20261030/lib/modules/6.6.0-rc6-dcd-v3/kernel/net/netfilter/xt_MASQUERADE.ko
+  INSTALL /tmp/pool-handoff-kernel-modules-20261030/lib/modules/6.6.0-rc6-dcd-v3/kernel/net/netfilter/xt_addrtype.ko
+  INSTALL /tmp/pool-handoff-kernel-modules-20261030/lib/modules/6.6.0-rc6-dcd-v3/kernel/net/ipv4/netfilter/iptable_nat.ko
+  INSTALL /tmp/pool-handoff-kernel-modules-20261030/lib/modules/6.6.0-rc6-dcd-v3/kernel/virt/lib/irqbypass.ko
+  DEPMOD  /tmp/pool-handoff-kernel-modules-20261030/lib/modules/6.6.0-rc6-dcd-v3
+make[1]: Leaving directory '/tmp/pool-handoff-kernel-build-20261030'
+make: Leaving directory '/tmp/pool-handoff-linux-20261030'

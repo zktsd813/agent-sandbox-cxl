@@ -1,0 +1,103 @@
+{
+  "schema": "guest-pool-handoff-summary-v1",
+  "result": "passed",
+  "date": "2026-10-30",
+  "modes": {
+    "direct": {
+      "report_sha256": "61c50da9ecfcb88a3e58b3b8d9affaa5650b19fe0b317848167925d7b63806dc",
+      "verification": {
+        "result": "passed",
+        "mode": "direct",
+        "receipts": 792,
+        "authorities": 11,
+        "transitions": {
+          "promotion": 6,
+          "demotion": 6,
+          "direct": 4
+        },
+        "minimum_common_current_shared_bytes": 167772160,
+        "actual_private_mapping_reuse_bytes": [],
+        "ack_before_guest_reuse_bytes": [
+          150994944
+        ],
+        "controller_declared_ack_before_reuse_bytes": [
+          150994944
+        ],
+        "limitations": [
+          "Coherent nested lab; trusted guest kernel/controller"
+        ]
+      },
+      "raw_archive": "raw/direct.tar.xz",
+      "final_private_allocated_bytes": 0,
+      "archive_sha256": "63eef8d46fd4a223b3e7cdc87de2da76ab868d0938dd17e7b5544a752bac6b7d",
+      "semantic_mutations_rejected": 20
+    },
+    "state-only": {
+      "report_sha256": "09264b7a0168be03dd2dec7e5231a87da796bdc4b2fcd28bc1b822d3c7963dbb",
+      "verification": {
+        "result": "passed",
+        "mode": "state-only",
+        "receipts": 1348,
+        "authorities": 17,
+        "transitions": {
+          "promotion": 9,
+          "demotion": 9,
+          "state-only": 12
+        },
+        "minimum_common_current_shared_bytes": 167772160,
+        "actual_private_mapping_reuse_bytes": [
+          369098752,
+          369098752
+        ],
+        "ack_before_guest_reuse_bytes": [
+          150994944
+        ],
+        "controller_declared_ack_before_reuse_bytes": [
+          150978560
+        ],
+        "limitations": [
+          "Coherent nested lab; trusted guest kernel/controller"
+        ]
+      },
+      "raw_archive": "raw/state-only.tar.xz",
+      "final_private_allocated_bytes": 0,
+      "archive_sha256": "825779a44b6fe1f2e5c47477bfaf59c126a17d15eb1701f565dde354d9933418",
+      "semantic_mutations_rejected": 20
+    }
+  },
+  "configuration": {
+    "independent_sandboxes": 3,
+    "vcpus_per_vm": 1,
+    "ram_per_vm_bytes": 536870912,
+    "file_cache_per_vm_bytes": 167772160,
+    "handoff_cycles": 2,
+    "io_engine": "Async",
+    "network_storage": "host NFS on B; home local image on A",
+    "environment": "coherent single physical host, nested QEMU A/B + KVM"
+  },
+  "initial_data_capacity_bytes": {
+    "unshared_guest_ram": 1610612736,
+    "private_mapped": 1107296256,
+    "full_canonical_image": 234881024,
+    "unused_private_credits": 50331648,
+    "total_allocated": 1392508928,
+    "difference": 218103808
+  },
+  "tests": {
+    "rust_pool": 15,
+    "rust_direct": 3,
+    "python_protocol_allocator": 14,
+    "semantic_mutation_executions": 40
+  },
+  "scope": [
+    "Guest metadata private; only clean immutable lower data shared",
+    "No full RAM snapshot in either mode; promotion/demotion are memory-tier copies",
+    "One direct retained KVM graph with two ordinary peer VMs",
+    "Actual OverlayFS copy-up isolation is separate from persistent private data across handoffs",
+    "Full canonical image plus unused credits counted; no stock RSS or speedup claim",
+    "Physical non-coherent CXL, multi-vCPU direct and PML/MPTCP integration remain future work"
+  ],
+  "base_commit": "48461c05fdc3676069a5666ff019a0794da202bd",
+  "firecracker_patch_sha256": "80d6de7683d5e46a4450d799bf355abad74d810d91e521f5b0eb8b13d9dfc228",
+  "verifier_sha256": "f364e628244c376bfd446893dedd5bd8ee41375f98f770b02f77bc9143a3d277"
+}

@@ -1,0 +1,13 @@
+{
+  "result": "preparatory_audit_passed",
+  "mode": "guest-smoke",
+  "receipts": 59,
+  "cold_resident_pages": 1056,
+  "cold_absent_pages": 39904,
+  "warm_resident_pages": 40960,
+  "prepare_data_read_ios": 0,
+  "limitations": [
+    "Preparatory receipts predate full formal source/runtime instrumentation",
+    "Negative/release commands verified through completion records; auxiliary kernel states not recaptured"
+  ]
+}

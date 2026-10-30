@@ -1,0 +1,56 @@
+[
+  {
+    "original_report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T121518Z-7i84jap1/pool-handoff-1793362543846771237/report.json",
+    "archive_report": "20261030T121518Z-7i84jap1/pool-handoff-1793362543846771237/report.json",
+    "sha256": "00dce9efacc3706e00acbdb77deac234dda135d3f795631053e98820f259ccf7",
+    "mode": "guest-smoke",
+    "result": "failed",
+    "transitions": 0,
+    "error": "RuntimeError('Guest command failed:\\n\\r\\n/ # (\\r\\n> set -e\\r\\n> n=0\\r\\n> while ! grep -Eq \\'\"event\":\"pool_guest\",\"label\":\"v1e0c0\".*}[[:space:]]*$\\' /run/\\r\\r\\npool-438498c5a77ed54a/vm1-epoch0/fc.log; do\\r\\n> read p t < /run/pool-438498c5a77ed54a/vm1-epoch0/fc.pid\\r\\n> kill -0 \"$p\"\\r\\n> ! grep -Eq \\'POOL_GUEST_FATAL|Kernel panic\\' /run/pool-438498c5a77ed54a/vm1-epoc\\r\\r\\nh0/fc.log\\r\\n> n=$((n+1))\\r\\n> [ $n -lt 9000 ]\\r\\n> sleep .02\\r\\n> done\\r\\n> grep -E \\'\"event\":\"pool_guest\",\"label\":\"v1e0c0\".*}[[:space:]]*$\\' /run/pool-4384\\r\\r\\n98c5a77ed54a/vm1-epoch0/fc.log\\r\\n> )\\r\\nsh: can\\'t kill pid 234: No such process\\r\\n/ # printf \\'\\\\nLAB_COMMAND_DONE_74a238670f957881:%s\\\\n\\' \"$?\"\\r\\n\\r\\nLAB_COMMAND_DONE_74a238670f957881:1\\r')"
+  },
+  {
+    "original_report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T122253Z-kkwp2hru/pool-handoff-1793363018075771140/report.json",
+    "archive_report": "20261030T122253Z-kkwp2hru/pool-handoff-1793363018075771140/report.json",
+    "sha256": "36d19292fe8d673e7bac759e39e433641b1dc6d73a63ec012be0d2228e9d6c7f",
+    "mode": "guest-smoke",
+    "result": "passed",
+    "transitions": 0,
+    "error": null
+  },
+  {
+    "original_report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T123203Z-y2dpigei/pool-handoff-1793363625249401655/report.json",
+    "archive_report": "20261030T123203Z-y2dpigei/pool-handoff-1793363625249401655/report.json",
+    "sha256": "e602f2b06176d025b1943e4d8fe212377745e405131b7e8b1f0fb18f5d65f912",
+    "mode": "state-only",
+    "result": "passed",
+    "transitions": 14,
+    "error": null
+  },
+  {
+    "original_report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T123427Z-m9iynjnk/pool-handoff-1793363767742825067/report.json",
+    "archive_report": "20261030T123427Z-m9iynjnk/pool-handoff-1793363767742825067/report.json",
+    "sha256": "20479ba2884138a51a8b358226aa7c69a9210cb28c0b8724c4493a5ede2c89be",
+    "mode": "direct",
+    "result": "failed",
+    "transitions": 3,
+    "error": "RuntimeError('Guest console command timed out:\\n\\r\\n/ # (\\r\\n> set -e\\r\\n> mkdir -p /run/pool-72f9639f5f6d3486/vm1-epoch1\\r\\n> mkfifo /run/pool-72f9639f5f6d3486/vm1-epoch1/input\\r\\n> (exec 3<>/run/pool-72f9639f5f6d3486/vm1-epoch1/input\\r\\n> exec env -i PATH=/bin:/sbin:/usr/bin:/usr/sbin:/lab FC_POOL_MEMORY=1 FC_POOL_V\\r\\r\\nM_ID=1 FC_POOL_RUN_EPOCH=1 FC_POOL_IMAGE_ID=118011d434f822f66754b73666c5de06818e\\r\\r\\nbbf616d2e4be582476fa3f0eb224 FC_POOL_IMAGE_PATH=/disk/sandbox.raw FC_POOL_MEMORY\\r\\r\\n_PLAN=/run/pool-72f9639f5f6d3486/vm1-epoch1/memory-plan.json FC_POOL_MEMORY_REPO\\r\\r\\nRT=/run/pool-72f9639f5f6d3486/vm1-epoch1/memory-report.json FC_POOL_MEMORY_MANIF\\r\\r\\nEST=/run/pool-72f9639f5f6d3486/vm1-epoch1/memory-manifest.json FC_POOL_MEMORY_DE\\r\\r\\nVICE=/dev/cxl_pool FC_DAX_FIXED_HVA=0x400000000000 FC_DAX_SNAPSHOT=1 FC_POOL_DIS\\r\\r\\nCARD=1 FC_POOL_DISCARD_TRACE=1 FC_POOL_MEMORY_RESTORE=/run/pool-72f9639f5f6d3486\\r\\r\\n/vm1-epoch1/restore-manifest.json FC_POOL_MEMORY_LEASE=1 FC_DAX_DIRECT=1 FC_DAX_\\r\\r\\nDIRECT_IO=1 FC_DAX_DIRECT_EXPORT=/run/pool-72f9639f5f6d3486/vm1-epoch1/direct-ex\\r\\r\\nport.json FC_DAX_DIRECT_IMPORT=/run/pool-72f9639f5f6d3486/vm1-epoch1/direct-impo\\r\\r\\nrt.json FC_DAX_RAM=/dev/dax0.0 /lab/firecracker --no-seccomp --api-sock /run/poo\\r\\r\\nl-72f9639f5f6d3486/vm1-epoch1/api.sock --log-path /run/pool-72f9\\r\\n> p=$!\\r\\n> s=$(cat /proc/$p/stat)\\r\\n> s=${s##*) }\\r\\n> set -- $s\\r\\n> shift 19\\r\\n> printf \\'%s %s\\\\n\\' \"$p\" \"$1\" > /run/pool-72f9639f5f6d3486/vm1-epoch1/fc.pid\\r\\n> n=0\\r\\n> while [ ! -S /run/pool-72f9639f5f6d3486/vm1-epoch1/api.sock ]; do\\r\\n> read p t < /run/pool-72f9639f5f6d3486/vm1-epoch1/fc.pid\\r\\n> kill -0 \"$p\"\\r\\n> n=$((n+1))\\r\\n> [ $n -lt 1000 ]\\r\\n> sleep .02\\r\\n> done\\r\\n> )\\r\\n> printf \\'\\\\nLAB_COMMAND_DONE_352b17472e81f1c1:%s\\\\n\\' \"$?\"\\r\\n> \\x1b[6n')"
+  },
+  {
+    "original_report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T124558Z-ghask2wo/pool-handoff-1793364381417157353/report.json",
+    "archive_report": "20261030T124558Z-ghask2wo/pool-handoff-1793364381417157353/report.json",
+    "sha256": "e5b9522fac51e4e6c02404d3ca30108e05c5cff6a931b8c9e8e25cd747acedcf",
+    "mode": "direct",
+    "result": "passed",
+    "transitions": 10,
+    "error": null
+  },
+  {
+    "original_report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T125057Z-8vkcdu4q/pool-handoff-1793364701157639159/report.json",
+    "archive_report": "20261030T125057Z-8vkcdu4q/pool-handoff-1793364701157639159/report.json",
+    "sha256": "d14e87f37840787dcd59f8fa1202bc580785a7b4738285416ce894843d4a092d",
+    "mode": "state-only",
+    "result": "failed",
+    "transitions": 5,
+    "error": "RuntimeError('Guest command failed:\\n\\r\\n/ # (\\r\\n> set -e\\r\\n> /lab/shared-probe api /run/pool-765a9a4efa5839fd/vm1-epoch1/api.sock PUT /snap\\r\\r\\nshot/load \\'{\"snapshot_path\": \"/run/pool-765a9a4efa5839fd/vm1-epoch1/state-only.b\\r\\r\\nin\", \"mem_backend\": {\"backend_type\": \"File\", \"backend_path\": \"/dev/dax0.0\"}, \"re\\r\\r\\nsume_vm\": false}\\' 400\\r\\n> )\\r\\nAPI connect: Connection refused\\r\\n/ # printf \\'\\\\nLAB_COMMAND_DONE_1d90cc8f9cad2464:%s\\\\n\\' \"$?\"\\r\\n\\r\\nLAB_COMMAND_DONE_1d90cc8f9cad2464:1\\r\\n/')"
+  }
+]

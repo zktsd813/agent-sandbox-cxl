@@ -1,0 +1,158 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.47
+   Compiling libc v0.2.189
+   Compiling serde_core v1.0.229
+   Compiling serde v1.0.229
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.11
+   Compiling glob v0.3.4
+   Compiling thiserror v2.0.20
+    Checking cfg-if v1.0.4
+   Compiling memchr v2.8.3
+   Compiling regex-syntax v0.8.11
+   Compiling minimal-lexical v0.2.1
+    Checking bitflags v1.3.2
+    Checking bitflags v2.13.1
+   Compiling either v1.18.0
+   Compiling bindgen v0.69.5
+   Compiling zerocopy v0.8.56
+   Compiling getrandom v0.4.3
+   Compiling fs_extra v1.3.0
+   Compiling dunce v1.0.5
+   Compiling lazycell v1.3.0
+   Compiling shlex v1.3.0
+   Compiling pkg-config v0.3.34
+   Compiling lazy_static v1.5.0
+   Compiling rustc-hash v1.1.0
+    Checking rand_core v0.10.1
+    Checking cpufeatures v0.3.0
+   Compiling rustix v1.1.4
+   Compiling thiserror v1.0.69
+   Compiling zmij v1.0.23
+   Compiling unicode-segmentation v1.13.3
+   Compiling radium v0.7.0
+   Compiling unicode-xid v0.2.6
+   Compiling serde_json v1.0.151
+    Checking linux-raw-sys v0.12.1
+   Compiling micro_http v0.1.0 (https://github.com/firecracker-microvm/micro-http#7975fe0e)
+   Compiling kvm-ioctls v0.25.0
+    Checking tap v1.0.1
+   Compiling aws-lc-rs v1.18.0
+    Checking bytemuck v1.25.2
+    Checking funty v2.0.0
+    Checking itoa v1.0.18
+    Checking untrusted v0.7.1
+   Compiling libloading v0.8.9
+    Checking zeroize v1.9.0
+    Checking vm-superio v0.8.1
+    Checking base64 v0.23.1
+    Checking byteorder v1.5.0
+    Checking crc64 v2.0.0
+    Checking slab v0.4.12
+    Checking wyz v0.5.1
+    Checking chacha20 v0.10.2
+   Compiling itertools v0.12.1
+   Compiling clang-sys v1.9.1
+   Compiling convert_case v0.10.0
+   Compiling nom v7.1.3
+   Compiling syn v3.0.3
+   Compiling syn v2.0.119
+   Compiling regex-automata v0.4.18
+   Compiling jobserver v0.1.35
+   Compiling cc v1.4.4
+    Checking nix v0.27.1
+    Checking rand v0.10.2
+    Checking memfd v0.6.5
+   Compiling cexpr v0.6.0
+    Checking semver v1.0.28
+    Checking log v0.4.33
+    Checking uuid v1.24.1
+   Compiling cmake v0.1.58
+   Compiling regex v1.13.1
+   Compiling aws-lc-sys v0.44.0
+   Compiling serde_derive v1.0.229
+   Compiling thiserror-impl v2.0.20
+   Compiling displaydoc v0.2.7
+    Checking vm-memory v0.18.0
+    Checking utils v0.1.0 (/firecracker/src/utils)
+    Checking linux-loader v0.14.0
+   Compiling zerocopy-derive v0.8.56
+   Compiling thiserror-impl v1.0.69
+   Compiling derive_more-impl v2.1.1
+   Compiling bitcode_derive v0.6.9
+    Checking vmm-sys-util v0.15.0
+    Checking vm-allocator v0.1.4
+    Checking bitvec v1.1.1
+    Checking bitcode v0.6.9
+    Checking event-manager v0.4.2
+    Checking vhost v0.17.0
+    Checking derive_more v2.1.1
+   Compiling userfaultfd-sys v0.6.0
+    Checking kvm-bindings v0.14.1
+    Checking acpi_tables v0.1.0 (/firecracker/src/acpi-tables)
+    Checking userfaultfd v0.9.0
+    Checking vmm v0.1.0 (/firecracker/src/vmm)
+error[E0433]: cannot find `pool_memory` in `crate`
+   --> src/vmm/src/direct.rs:145:16
+    |
+145 |         crate::pool_memory::checkpoint_ready(vm.guest_memory()).map_err(VmmError::DaxHandoff)?;
+    |                ^^^^^^^^^^^ could not find `pool_memory` in the crate root
+
+error[E0308]: mismatched types
+    --> src/vmm/src/arch/x86_64/vcpu.rs:198:64
+     |
+ 198 |             let fd = unsafe { libc::ioctl(vm.fd().as_raw_fd(), 0xae_f3 as libc::c_ulong, 0) };
+     |                               -----------                      ^^^^^^^^^^^^^^^^^^^^^^^^ expected `i32`, found `u64`
+     |                               |
+     |                               arguments to this function are incorrect
+     |
+note: function defined here
+    --> /usr/local/rust/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.189/src/unix/linux_like/mod.rs:1756:20
+     |
+1756 |             pub fn ioctl(fd: c_int, request: Ioctl, ...) -> c_int;
+     |                    ^^^^^
+help: you can convert a `u64` to an `i32` and panic if the converted value doesn't fit
+     |
+ 198 |             let fd = unsafe { libc::ioctl(vm.fd().as_raw_fd(), (0xae_f3 as libc::c_ulong).try_into().unwrap(), 0) };
+     |                                                                +                        +++++++++++++++++++++
+
+error[E0308]: mismatched types
+    --> src/vmm/src/direct.rs:95:55
+     |
+  95 |     let fd = unsafe { libc::ioctl(kvm.fd.as_raw_fd(), read_ioctl() | 0x4000_0001, token as *mut HandoffToken) };
+     |                       -----------                     ^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `i32`, found `u64`
+     |                       |
+     |                       arguments to this function are incorrect
+     |
+note: function defined here
+    --> /usr/local/rust/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.189/src/unix/linux_like/mod.rs:1756:20
+     |
+1756 |             pub fn ioctl(fd: c_int, request: Ioctl, ...) -> c_int;
+     |                    ^^^^^
+help: you can convert a `u64` to an `i32` and panic if the converted value doesn't fit
+     |
+  95 |     let fd = unsafe { libc::ioctl(kvm.fd.as_raw_fd(), (read_ioctl() | 0x4000_0001).try_into().unwrap(), token as *mut HandoffToken) };
+     |                                                       +                          +++++++++++++++++++++
+
+error[E0308]: mismatched types
+    --> src/vmm/src/direct.rs:158:62
+     |
+ 158 |             if unsafe { libc::ioctl(vm.kvm().fd.as_raw_fd(), read_ioctl() | 4, &mut state.token as *mut HandoffToken) } < 0 {
+     |                         -----------                          ^^^^^^^^^^^^^^^^ expected `i32`, found `u64`
+     |                         |
+     |                         arguments to this function are incorrect
+     |
+note: function defined here
+    --> /usr/local/rust/registry/src/index.crates.io-1949cf8c6b5b557f/libc-0.2.189/src/unix/linux_like/mod.rs:1756:20
+     |
+1756 |             pub fn ioctl(fd: c_int, request: Ioctl, ...) -> c_int;
+     |                    ^^^^^
+help: you can convert a `u64` to an `i32` and panic if the converted value doesn't fit
+     |
+ 158 |             if unsafe { libc::ioctl(vm.kvm().fd.as_raw_fd(), (read_ioctl() | 4).try_into().unwrap(), &mut state.token as *mut HandoffToken) } < 0 {
+     |                                                              +                +++++++++++++++++++++
+
+Some errors have detailed explanations: E0308, E0433.
+For more information about an error, try `rustc --explain E0308`.
+error: could not compile `vmm` (lib) due to 4 previous errors

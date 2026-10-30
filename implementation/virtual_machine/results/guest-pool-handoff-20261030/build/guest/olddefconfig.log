@@ -1,0 +1,8 @@
+make: Entering directory '/tmp/guest-pool-linux-20261030'
+make[1]: Entering directory '/tmp/guest-pool-build-20261030'
+  GEN     Makefile
+#
+# No change to .config
+#
+make[1]: Leaving directory '/tmp/guest-pool-build-20261030'
+make: Leaving directory '/tmp/guest-pool-linux-20261030'

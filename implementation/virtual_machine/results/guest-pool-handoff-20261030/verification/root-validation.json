@@ -1,0 +1,16 @@
+{
+  "result": "passed",
+  "python_protocol_allocator": {
+    "command": "python3 -m unittest -v test_guest_pool_protocol test_pool_handoff_control",
+    "passed": 14
+  },
+  "syntax": [
+    "Python new runtime scripts compiled",
+    "bash -n pool-handoff-l2-init.sh"
+  ],
+  "new_document_links": "all local links resolve",
+  "runner": "CLI and independent code review only; final experiments used individual start/bench/stop commands",
+  "patch_validation": "Clean application and exact compiled source equality; literal patch context whitespace excluded from repository diff whitespace check",
+  "verifier_sha256": "f364e628244c376bfd446893dedd5bd8ee41375f98f770b02f77bc9143a3d277",
+  "archive_positive_replay": "Fresh extraction in /tmp/guest-pool-final-replay-8gnq482x; both modes strict; verifier frozen before final rerun"
+}

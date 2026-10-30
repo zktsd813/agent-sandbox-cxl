@@ -1,0 +1,3228 @@
+--- a/arch/x86/include/asm/kvm_host.h
++++ b/arch/x86/include/asm/kvm_host.h
+@@ -1550,6 +1550,9 @@
+ 
+ struct kvm_x86_ops {
+ 	const char *name;
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++	int (*dax_handoff)(struct kvm_vcpu *vcpu, bool attach);
++#endif
+ 
+ 	int (*check_processor_compatibility)(void);
+ 
+@@ -1806,6 +1809,8 @@
+ #define __KVM_HAVE_ARCH_VM_ALLOC
+ static inline struct kvm *kvm_arch_alloc_vm(void)
+ {
++	if (kvm_dax_enabled())
++		return kvm_dax_alloc(kvm_x86_ops.vm_size, PAGE_SIZE, "vm");
+ 	return __vmalloc(kvm_x86_ops.vm_size, GFP_KERNEL_ACCOUNT | __GFP_ZERO);
+ }
+ 
+--- a/arch/x86/kvm/Kconfig
++++ b/arch/x86/kvm/Kconfig
+@@ -62,6 +62,20 @@
+ 	  will be called kvm.
+ 
+ 	  If unsure, say N.
++
++config KVM_DAX_POOL_TEST
++	bool "Experimental single-owner KVM device-DAX state pool"
++	depends on KVM && X86_64 && ZONE_DEVICE
++	select GENERIC_ALLOCATOR
++	default n
++	help
++	  Laboratory allocator for KVM state in an explicitly reserved,
++	  already bound device-DAX range. Does not provide migration or
++	  multi-kernel ownership. Never enable on production kernels.
++	  Configure the kvm dax_pool module parameter after binding a DAX
++	  device with 4KiB page metadata. Arena exhaustion fails allocation
++	  rather than falling back to System RAM. Leave the parameter unset
++	  to retain the normal allocation paths.
+ 
+ config KVM_WERROR
+ 	bool "Compile KVM with -Werror"
+--- a/arch/x86/kvm/cpuid.c
++++ b/arch/x86/kvm/cpuid.c
+@@ -429,7 +429,7 @@
+ 		if (r)
+ 			return r;
+ 
+-		kvfree(e2);
++		kvm_dax_kvfree(e2);
+ 		return 0;
+ 	}
+ 
+@@ -443,7 +443,7 @@
+ 	if (r)
+ 		return r;
+ 
+-	kvfree(vcpu->arch.cpuid_entries);
++	kvm_dax_kvfree(vcpu->arch.cpuid_entries);
+ 	vcpu->arch.cpuid_entries = e2;
+ 	vcpu->arch.cpuid_nent = nent;
+ 
+@@ -471,7 +471,7 @@
+ 		if (IS_ERR(e))
+ 			return PTR_ERR(e);
+ 
+-		e2 = kvmalloc_array(cpuid->nent, sizeof(*e2), GFP_KERNEL_ACCOUNT);
++		e2 = kvm_dax_kvmalloc_array(cpuid->nent, sizeof(*e2), GFP_KERNEL_ACCOUNT, __func__);
+ 		if (!e2) {
+ 			r = -ENOMEM;
+ 			goto out_free_cpuid;
+@@ -492,10 +492,10 @@
+ 
+ 	r = kvm_set_cpuid(vcpu, e2, cpuid->nent);
+ 	if (r)
+-		kvfree(e2);
++		kvm_dax_kvfree(e2);
+ 
+ out_free_cpuid:
+-	kvfree(e);
++	kvm_dax_kvfree(e);
+ 
+ 	return r;
+ }
+@@ -511,14 +511,24 @@
+ 		return -E2BIG;
+ 
+ 	if (cpuid->nent) {
+-		e2 = vmemdup_user(entries, array_size(sizeof(*e2), cpuid->nent));
+-		if (IS_ERR(e2))
+-			return PTR_ERR(e2);
++		if (kvm_dax_enabled()) {
++			e2 = kvm_dax_kcalloc(cpuid->nent, sizeof(*e2), GFP_KERNEL_ACCOUNT, "cpuid");
++			if (!e2)
++				return -ENOMEM;
++			if (copy_from_user(e2, entries, array_size(sizeof(*e2), cpuid->nent))) {
++				kvm_dax_kvfree(e2);
++				return -EFAULT;
++			}
++		} else {
++			e2 = vmemdup_user(entries, array_size(sizeof(*e2), cpuid->nent));
++			if (IS_ERR(e2))
++				return PTR_ERR(e2);
++		}
+ 	}
+ 
+ 	r = kvm_set_cpuid(vcpu, e2, cpuid->nent);
+ 	if (r)
+-		kvfree(e2);
++		kvm_dax_kvfree(e2);
+ 
+ 	return r;
+ }
+@@ -1414,7 +1424,7 @@
+ 		r = -EFAULT;
+ 
+ out_free:
+-	kvfree(array.entries);
++	kvm_dax_kvfree(array.entries);
+ 	return r;
+ }
+ 
+--- a/arch/x86/kvm/i8254.c
++++ b/arch/x86/kvm/i8254.c
+@@ -659,6 +659,51 @@
+ 	.write    = speaker_ioport_write,
+ };
+ 
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++int kvm_pit_dax_handoff(struct kvm *kvm, bool attach)
++{
++	/* One shared VM per kernel in this bounded lab; keep its local worker. */
++	static struct kthread_worker *dax_worker;
++	struct kvm_pit *pit = kvm->arch.vpit;
++	struct kvm_dax_shared *s = kvm_dax_shared();
++	s64 delta;
++	int i;
++
++	if (!pit)
++		return 0;
++	if (!attach) {
++		s->pit_remaining = ktime_to_ns(hrtimer_get_expires(&pit->pit_state.timer)) - s->host_clock_ns;
++		s->pit_active = hrtimer_cancel(&pit->pit_state.timer);
++		if (s->handoff_mode == 3) {
++			/* Only expired is queued on this worker; avoid waking an idle
++			 * worker for a synthetic barrier (same drain as timer teardown). */
++			kthread_flush_work(&pit->expired);
++			dax_worker = pit->worker;
++		} else {
++			kthread_destroy_worker(pit->worker);
++		}
++		pit->worker = NULL;
++		return 0;
++	}
++	pit->worker = s->handoff_mode == 3 && dax_worker ? dax_worker :
++		kthread_create_worker(0, "kvm-dax-pit/%d", task_pid_nr(current));
++	if (IS_ERR(pit->worker))
++		return PTR_ERR(pit->worker);
++	kthread_init_work(&pit->expired, pit_do_work);
++	delta = ktime_get_ns() - s->host_clock_ns;
++	for (i = 0; i < 3; i++)
++		pit->pit_state.channels[i].count_load_time = ktime_add_ns(pit->pit_state.channels[i].count_load_time, delta);
++	hrtimer_init(&pit->pit_state.timer, CLOCK_MONOTONIC, HRTIMER_MODE_ABS);
++	pit->pit_state.timer.function = pit_timer_fn;
++	if (s->pit_active)
++		hrtimer_start(&pit->pit_state.timer,
++			ktime_add_ns(ktime_get(), max_t(s64, 1, s->pit_remaining)), HRTIMER_MODE_ABS);
++	if (atomic_read(&pit->pit_state.pending))
++		kthread_queue_work(pit->worker, &pit->expired);
++	return 0;
++}
++#endif
++
+ struct kvm_pit *kvm_create_pit(struct kvm *kvm, u32 flags)
+ {
+ 	struct kvm_pit *pit;
+@@ -667,7 +712,7 @@
+ 	pid_t pid_nr;
+ 	int ret;
+ 
+-	pit = kzalloc(sizeof(struct kvm_pit), GFP_KERNEL_ACCOUNT);
++	pit = kvm_dax_zalloc(sizeof(struct kvm_pit), GFP_KERNEL_ACCOUNT, __func__);
+ 	if (!pit)
+ 		return NULL;
+ 
+@@ -729,7 +774,7 @@
+ fail_kthread:
+ 	kvm_free_irq_source_id(kvm, pit->irq_source_id);
+ fail_request:
+-	kfree(pit);
++	kvm_dax_kvfree(pit);
+ 	return NULL;
+ }
+ 
+@@ -746,6 +791,6 @@
+ 		hrtimer_cancel(&pit->pit_state.timer);
+ 		kthread_destroy_worker(pit->worker);
+ 		kvm_free_irq_source_id(kvm, pit->irq_source_id);
+-		kfree(pit);
+-	}
+-}
++		kvm_dax_kvfree(pit);
++	}
++}
+--- a/arch/x86/kvm/i8254.h
++++ b/arch/x86/kvm/i8254.h
+@@ -57,6 +57,9 @@
+ 
+ struct kvm_pit *kvm_create_pit(struct kvm *kvm, u32 flags);
+ void kvm_free_pit(struct kvm *kvm);
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++int kvm_pit_dax_handoff(struct kvm *kvm, bool attach);
++#endif
+ 
+ void kvm_pit_load_count(struct kvm_pit *pit, int channel, u32 val,
+ 		int hpet_legacy_start);
+--- a/arch/x86/kvm/i8259.c
++++ b/arch/x86/kvm/i8259.c
+@@ -592,7 +592,7 @@
+ 	struct kvm_pic *s;
+ 	int ret;
+ 
+-	s = kzalloc(sizeof(struct kvm_pic), GFP_KERNEL_ACCOUNT);
++	s = kvm_dax_zalloc(sizeof(struct kvm_pic), GFP_KERNEL_ACCOUNT, __func__);
+ 	if (!s)
+ 		return -ENOMEM;
+ 	spin_lock_init(&s->lock);
+@@ -637,7 +637,7 @@
+ fail_unlock:
+ 	mutex_unlock(&kvm->slots_lock);
+ 
+-	kfree(s);
++	kvm_dax_kvfree(s);
+ 
+ 	return ret;
+ }
+@@ -656,5 +656,5 @@
+ 	mutex_unlock(&kvm->slots_lock);
+ 
+ 	kvm->arch.vpic = NULL;
+-	kfree(vpic);
+-}
++	kvm_dax_kvfree(vpic);
++}
+--- a/arch/x86/kvm/ioapic.c
++++ b/arch/x86/kvm/ioapic.c
+@@ -716,7 +716,7 @@
+ 	struct kvm_ioapic *ioapic;
+ 	int ret;
+ 
+-	ioapic = kzalloc(sizeof(struct kvm_ioapic), GFP_KERNEL_ACCOUNT);
++	ioapic = kvm_dax_zalloc(sizeof(struct kvm_ioapic), GFP_KERNEL_ACCOUNT, __func__);
+ 	if (!ioapic)
+ 		return -ENOMEM;
+ 	spin_lock_init(&ioapic->lock);
+@@ -731,7 +731,7 @@
+ 	mutex_unlock(&kvm->slots_lock);
+ 	if (ret < 0) {
+ 		kvm->arch.vioapic = NULL;
+-		kfree(ioapic);
++		kvm_dax_kvfree(ioapic);
+ 	}
+ 
+ 	return ret;
+@@ -749,7 +749,7 @@
+ 	kvm_io_bus_unregister_dev(kvm, KVM_MMIO_BUS, &ioapic->dev);
+ 	mutex_unlock(&kvm->slots_lock);
+ 	kvm->arch.vioapic = NULL;
+-	kfree(ioapic);
++	kvm_dax_kvfree(ioapic);
+ }
+ 
+ void kvm_get_ioapic(struct kvm *kvm, struct kvm_ioapic_state *state)
+--- a/arch/x86/kvm/lapic.c
++++ b/arch/x86/kvm/lapic.c
+@@ -211,7 +211,7 @@
+ {
+ 	struct kvm_apic_map *map = container_of(rcu, struct kvm_apic_map, rcu);
+ 
+-	kvfree(map);
++	kvm_dax_kvfree(map);
+ }
+ 
+ static int kvm_recalculate_phys_map(struct kvm_apic_map *new,
+@@ -416,9 +416,9 @@
+ 		if (kvm_apic_present(vcpu))
+ 			max_id = max(max_id, kvm_x2apic_id(vcpu->arch.apic));
+ 
+-	new = kvzalloc(sizeof(struct kvm_apic_map) +
++	new = kvm_dax_kvzalloc(sizeof(struct kvm_apic_map) +
+ 	                   sizeof(struct kvm_lapic *) * ((u64)max_id + 1),
+-			   GFP_KERNEL_ACCOUNT);
++			   GFP_KERNEL_ACCOUNT, __func__);
+ 
+ 	if (!new)
+ 		goto out;
+@@ -432,7 +432,7 @@
+ 
+ 		r = kvm_recalculate_phys_map(new, vcpu, &xapic_id_mismatch);
+ 		if (r) {
+-			kvfree(new);
++			kvm_dax_kvfree(new);
+ 			new = NULL;
+ 			if (r == -E2BIG) {
+ 				cond_resched();
+@@ -2479,9 +2479,9 @@
+ 		static_branch_slow_dec_deferred(&apic_sw_disabled);
+ 
+ 	if (apic->regs)
+-		free_page((unsigned long)apic->regs);
+-
+-	kfree(apic);
++		kvm_dax_put_page((unsigned long)apic->regs);
++
++	kvm_dax_kvfree(apic);
+ }
+ 
+ /*
+@@ -2802,19 +2802,46 @@
+ 		return HRTIMER_NORESTART;
+ }
+ 
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++int kvm_lapic_dax_handoff(struct kvm_vcpu *vcpu, bool attach)
++{
++	struct kvm_lapic *apic = vcpu->arch.apic;
++	struct kvm_dax_shared *s = kvm_dax_shared();
++	s64 delta;
++
++	if (!apic)
++		return 0;
++	if (apic->lapic_timer.hv_timer_in_use || apic->apicv_active)
++		return -EOPNOTSUPP;
++	if (!attach) {
++		s->apic_remaining = ktime_to_ns(hrtimer_get_expires(&apic->lapic_timer.timer)) - s->host_clock_ns;
++		s->apic_active = hrtimer_cancel(&apic->lapic_timer.timer);
++		return 0;
++	}
++	delta = ktime_get_ns() - s->host_clock_ns;
++	apic->lapic_timer.target_expiration = ktime_add_ns(apic->lapic_timer.target_expiration, delta);
++	hrtimer_init(&apic->lapic_timer.timer, CLOCK_MONOTONIC, HRTIMER_MODE_ABS_HARD);
++	apic->lapic_timer.timer.function = apic_timer_fn;
++	if (s->apic_active)
++		hrtimer_start(&apic->lapic_timer.timer,
++			ktime_add_ns(ktime_get(), max_t(s64, 1, s->apic_remaining)), HRTIMER_MODE_ABS_HARD);
++	return 0;
++}
++#endif
++
+ int kvm_create_lapic(struct kvm_vcpu *vcpu, int timer_advance_ns)
+ {
+ 	struct kvm_lapic *apic;
+ 
+ 	ASSERT(vcpu != NULL);
+ 
+-	apic = kzalloc(sizeof(*apic), GFP_KERNEL_ACCOUNT);
++	apic = kvm_dax_zalloc(sizeof(*apic), GFP_KERNEL_ACCOUNT, __func__);
+ 	if (!apic)
+ 		goto nomem;
+ 
+ 	vcpu->arch.apic = apic;
+ 
+-	apic->regs = (void *)get_zeroed_page(GFP_KERNEL_ACCOUNT);
++	apic->regs = (void *)kvm_dax_get_page(GFP_KERNEL_ACCOUNT, __func__);
+ 	if (!apic->regs) {
+ 		printk(KERN_ERR "malloc apic regs error for vcpu %x\n",
+ 		       vcpu->vcpu_id);
+@@ -2845,7 +2872,7 @@
+ 
+ 	return 0;
+ nomem_free_apic:
+-	kfree(apic);
++	kvm_dax_kvfree(apic);
+ 	vcpu->arch.apic = NULL;
+ nomem:
+ 	return -ENOMEM;
+--- a/arch/x86/kvm/lapic.h
++++ b/arch/x86/kvm/lapic.h
+@@ -86,6 +86,9 @@
+ struct dest_map;
+ 
+ int kvm_create_lapic(struct kvm_vcpu *vcpu, int timer_advance_ns);
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++int kvm_lapic_dax_handoff(struct kvm_vcpu *vcpu, bool attach);
++#endif
+ void kvm_free_lapic(struct kvm_vcpu *vcpu);
+ 
+ int kvm_apic_has_interrupt(struct kvm_vcpu *vcpu);
+--- a/arch/x86/kvm/mmu.h
++++ b/arch/x86/kvm/mmu.h
+@@ -7,6 +7,11 @@
+ #include "cpuid.h"
+ 
+ extern bool __read_mostly enable_mmio_caching;
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++void kvm_mmu_dax_rebind(struct kvm_vcpu *vcpu);
++void kvm_mmu_dax_invalidate(struct kvm *kvm);
++int kvm_mmu_dax_ept_rebind(struct kvm_vcpu *vcpu, bool attach);
++#endif
+ 
+ #define PT_WRITABLE_SHIFT 1
+ #define PT_USER_SHIFT 2
+--- a/arch/x86/kvm/mmu/mmu.c
++++ b/arch/x86/kvm/mmu/mmu.c
+@@ -713,7 +713,7 @@
+ 
+ static void mmu_free_pte_list_desc(struct pte_list_desc *pte_list_desc)
+ {
+-	kmem_cache_free(pte_list_desc_cache, pte_list_desc);
++	kvm_dax_cache_free(pte_list_desc_cache, pte_list_desc);
+ }
+ 
+ static bool sp_has_gptes(struct kvm_mmu_page *sp);
+@@ -1734,10 +1734,11 @@
+ 
+ 	hlist_del(&sp->hash_link);
+ 	list_del(&sp->link);
+-	free_page((unsigned long)sp->spt);
++	kvm_dax_put_page((unsigned long)sp->spt);
+ 	if (!sp->role.direct)
+-		free_page((unsigned long)sp->shadowed_translation);
+-	kmem_cache_free(mmu_page_header_cache, sp);
++		kvm_dax_put_page((unsigned long)sp->shadowed_translation);
++	if (!kvm_dax_free(sp))
++		kvm_dax_cache_free(mmu_page_header_cache, sp);
+ }
+ 
+ static unsigned kvm_page_table_hashfn(gfn_t gfn)
+@@ -3924,17 +3925,17 @@
+ 	 * Unlike 32-bit NPT, the PDP table doesn't need to be in low mem, and
+ 	 * doesn't need to be decrypted.
+ 	 */
+-	pae_root = (void *)get_zeroed_page(GFP_KERNEL_ACCOUNT);
++	pae_root = (void *)kvm_dax_get_page(GFP_KERNEL_ACCOUNT, __func__);
+ 	if (!pae_root)
+ 		return -ENOMEM;
+ 
+ #ifdef CONFIG_X86_64
+-	pml4_root = (void *)get_zeroed_page(GFP_KERNEL_ACCOUNT);
++	pml4_root = (void *)kvm_dax_get_page(GFP_KERNEL_ACCOUNT, __func__);
+ 	if (!pml4_root)
+ 		goto err_pml4;
+ 
+ 	if (need_pml5) {
+-		pml5_root = (void *)get_zeroed_page(GFP_KERNEL_ACCOUNT);
++		pml5_root = (void *)kvm_dax_get_page(GFP_KERNEL_ACCOUNT, __func__);
+ 		if (!pml5_root)
+ 			goto err_pml5;
+ 	}
+@@ -3948,9 +3949,9 @@
+ 
+ #ifdef CONFIG_X86_64
+ err_pml5:
+-	free_page((unsigned long)pml4_root);
++	kvm_dax_put_page((unsigned long)pml4_root);
+ err_pml4:
+-	free_page((unsigned long)pae_root);
++	kvm_dax_put_page((unsigned long)pae_root);
+ 	return -ENOMEM;
+ #endif
+ }
+@@ -5958,9 +5959,9 @@
+ {
+ 	if (!tdp_enabled && mmu->pae_root)
+ 		set_memory_encrypted((unsigned long)mmu->pae_root, 1);
+-	free_page((unsigned long)mmu->pae_root);
+-	free_page((unsigned long)mmu->pml4_root);
+-	free_page((unsigned long)mmu->pml5_root);
++	kvm_dax_put_page((unsigned long)mmu->pae_root);
++	kvm_dax_put_page((unsigned long)mmu->pml4_root);
++	kvm_dax_put_page((unsigned long)mmu->pml5_root);
+ }
+ 
+ static int __kvm_mmu_create(struct kvm_vcpu *vcpu, struct kvm_mmu *mmu)
+@@ -5991,7 +5992,7 @@
+ 	if (tdp_enabled && kvm_mmu_get_tdp_level(vcpu) > PT32E_ROOT_LEVEL)
+ 		return 0;
+ 
+-	page = alloc_page(GFP_KERNEL_ACCOUNT | __GFP_DMA32);
++	page = kvm_dax_page(GFP_KERNEL_ACCOUNT | __GFP_DMA32, __func__);
+ 	if (!page)
+ 		return -ENOMEM;
+ 
+@@ -6044,6 +6045,86 @@
+ 	free_mmu_pages(&vcpu->arch.guest_mmu);
+ 	return ret;
+ }
++
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++void kvm_mmu_dax_rebind(struct kvm_vcpu *vcpu)
++{
++	/* Objects in these caches are shared, slab allocator anchors are not. */
++	vcpu->arch.mmu_pte_list_desc_cache.kmem_cache = pte_list_desc_cache;
++	vcpu->arch.mmu_page_header_cache.kmem_cache = mmu_page_header_cache;
++	vcpu->kvm->arch.split_page_header_cache.kmem_cache = mmu_page_header_cache;
++	vcpu->kvm->arch.split_desc_cache.kmem_cache = pte_list_desc_cache;
++}
++
++int kvm_mmu_dax_ept_rebind(struct kvm_vcpu *vcpu, bool attach)
++{
++	/* Native metadata is stable in this kernel for never-reused DAX pages. */
++	static u64 seen_head;
++	struct kvm_dax_shared *s = kvm_dax_shared();
++	struct kvm_mmu_page *sp;
++	u64 p, count = 0;
++
++	if (!tdp_mmu_enabled || !VALID_PAGE(vcpu->arch.mmu->root.hpa) ||
++	    !kvm_dax_contains(__va(vcpu->arch.mmu->root.hpa)))
++		return -EOPNOTSUPP;
++	/* EXPORT captured this PFN; ATTACH checks current->mm before rebinding.
++	 * The cooperative ABI forbids VMA changes while this graph is exported.
++	 * Do not repeat GUP/PFN resolution during both detach and arch attach. */
++	for (p = s->ept_pages; p && (attach ? p != seen_head : !s->ept_validated);
++	     p = sp->dax_next) {
++		unsigned int i;
++		sp = (void *)(unsigned long)p;
++		if (++count > s->ept_page_count || !kvm_dax_contains(sp) ||
++		    !kvm_dax_contains(sp->spt) || !sp->tdp_mmu_page)
++			return -EXDEV;
++		if (attach) {
++			set_page_private(virt_to_page(sp->spt), (unsigned long)sp);
++			continue;
++		}
++		/* Refuse a retained translation to any source-private RAM. */
++		for (i = 0; i < SPTE_ENT_PER_PAGE; i++) {
++			u64 entry = READ_ONCE(sp->spt[i]);
++			kvm_pfn_t pfn = spte_to_pfn(entry);
++			if (!is_shadow_present_pte(entry))
++				continue;
++			if (is_last_spte(entry, sp->role.level)) {
++				u64 pages = KVM_PAGES_PER_HPAGE(sp->role.level);
++				if (!kvm_dax_data_pfn_valid(s, pfn, pages))
++					return -EXDEV;
++			} else if (!kvm_dax_contains(__va(pfn << PAGE_SHIFT))) {
++				return -EXDEV;
++			}
++		}
++	}
++	if (attach)
++		seen_head = s->ept_pages;
++	else
++		s->ept_validated = 1;
++	s->ept_root_hpa = vcpu->arch.mmu->root.hpa;
++	if (attach)
++		kvm_make_request(KVM_REQ_TLB_FLUSH_CURRENT, vcpu);
++	return 0;
++}
++
++void kvm_mmu_dax_invalidate(struct kvm *kvm)
++{
++	/* Zapping leaves alone retains the TDP MMU's root reference. Its
++	 * struct-page reverse mapping is node-local, so release roots too. */
++	if (!tdp_mmu_enabled)
++		return;
++	write_lock(&kvm->mmu_lock);
++	kvm_tdp_mmu_invalidate_all_roots(kvm);
++	write_unlock(&kvm->mmu_lock);
++	kvm_tdp_mmu_zap_invalidated_roots(kvm);
++	WARN_ON(atomic64_read(&kvm->arch.tdp_mmu_pages));
++	WARN_ON(!list_empty(&kvm->arch.tdp_mmu_roots));
++	/* The shared bump allocator never reuses retired EPT/header memory.
++	 * The RCU callback touches only that retired allocation, not @kvm.
++	 * Keep normal RCU retirement, but do not wait for callback execution. */
++	if (kvm_dax_shared()->handoff_mode < 2)
++		rcu_barrier();
++}
++#endif
+ 
+ #define BATCH_ZAP_PAGES	10
+ static void kvm_zap_obsolete_pages(struct kvm *kvm)
+--- a/arch/x86/kvm/mmu/mmu_internal.h
++++ b/arch/x86/kvm/mmu/mmu_internal.h
+@@ -129,6 +129,10 @@
+ #ifdef CONFIG_X86_64
+ 	/* Used for freeing the page asynchronously if it is a TDP MMU page. */
+ 	struct rcu_head rcu_head;
++#endif
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++	/* Shared, immutable registry; arena allocations are never reused. */
++	u64 dax_next;
+ #endif
+ };
+ 
+--- a/arch/x86/kvm/mmu/tdp_mmu.c
++++ b/arch/x86/kvm/mmu/tdp_mmu.c
+@@ -53,8 +53,9 @@
+ 
+ static void tdp_mmu_free_sp(struct kvm_mmu_page *sp)
+ {
+-	free_page((unsigned long)sp->spt);
+-	kmem_cache_free(mmu_page_header_cache, sp);
++	kvm_dax_put_page((unsigned long)sp->spt);
++	if (!kvm_dax_free(sp))
++		kvm_dax_cache_free(mmu_page_header_cache, sp);
+ }
+ 
+ /*
+@@ -199,6 +200,18 @@
+ 	sp->gfn = gfn;
+ 	sp->ptep = sptep;
+ 	sp->tdp_mmu_page = true;
++
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++	if (kvm_dax_shared() && kvm_dax_contains(sp)) {
++		struct kvm_dax_shared *s = kvm_dax_shared();
++		u64 old;
++		do {
++			old = READ_ONCE(s->ept_pages);
++			sp->dax_next = old;
++		} while (cmpxchg(&s->ept_pages, old, (unsigned long)sp) != old);
++		WRITE_ONCE(s->ept_page_count, s->ept_page_count + 1);
++	}
++#endif
+ 
+ 	trace_kvm_mmu_get_page(sp, true);
+ }
+@@ -1048,6 +1061,19 @@
+ 
+ 	kvm_mmu_hugepage_adjust(vcpu, fault);
+ 
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++	if (kvm_dax_shared() && kvm_dax_shared()->ept_validated &&
++	    kvm_dax_shared()->vm == (unsigned long)kvm &&
++	    !is_error_noslot_pfn(fault->pfn)) {
++		struct kvm_dax_shared *s = kvm_dax_shared();
++		u64 pages = KVM_PAGES_PER_HPAGE(fault->goal_level);
++		/* Validate new translations where they are installed, rather than
++		 * rescanning immutable DAX-backed mappings at every handoff. */
++		if (!kvm_dax_data_pfn_valid(s, fault->pfn, pages))
++			return -EXDEV;
++	}
++#endif
++
+ 	trace_kvm_mmu_spte_requested(fault);
+ 
+ 	rcu_read_lock();
+@@ -1327,13 +1353,16 @@
+ 
+ 	gfp |= __GFP_ZERO;
+ 
+-	sp = kmem_cache_alloc(mmu_page_header_cache, gfp);
++	sp = kvm_dax_enabled() ?
++		kvm_dax_alloc(kmem_cache_size(mmu_page_header_cache), 64, "mmu_cache_object") :
++		kvm_dax_cache_alloc(mmu_page_header_cache, gfp, __func__);
+ 	if (!sp)
+ 		return NULL;
+ 
+-	sp->spt = (void *)__get_free_page(gfp);
++	sp->spt = (void *)kvm_dax_get_page(gfp, "ept_page");
+ 	if (!sp->spt) {
+-		kmem_cache_free(mmu_page_header_cache, sp);
++		if (!kvm_dax_free(sp))
++			kvm_dax_cache_free(mmu_page_header_cache, sp);
+ 		return NULL;
+ 	}
+ 
+--- a/arch/x86/kvm/vmx/vmx.c
++++ b/arch/x86/kvm/vmx/vmx.c
+@@ -18,6 +18,7 @@
+ #include <linux/hrtimer.h>
+ #include <linux/kernel.h>
+ #include <linux/kvm_host.h>
++#include <linux/kvm_irqfd.h>
+ #include <linux/module.h>
+ #include <linux/moduleparam.h>
+ #include <linux/mod_devicetable.h>
+@@ -54,6 +55,7 @@
+ #include "hyperv.h"
+ #include "kvm_onhyperv.h"
+ #include "irq.h"
++#include "i8254.h"
+ #include "kvm_cache_regs.h"
+ #include "lapic.h"
+ #include "mmu.h"
+@@ -1498,6 +1500,35 @@
+ 
+ 	vmx_prepare_switch_to_host(to_vmx(vcpu));
+ }
++
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++static int vmx_dax_handoff(struct kvm_vcpu *vcpu, bool attach)
++{
++	struct vcpu_vmx *vmx = to_vmx(vcpu);
++	struct kvm_dax_shared *s = kvm_dax_shared();
++
++	if (vmx->loaded_vmcs != &vmx->vmcs01 || vmx->nested.vmxon ||
++	    !kvm_dax_contains(vmx->vmcs01.vmcs) || enable_pml)
++		return -EOPNOTSUPP;
++	if (!attach) {
++		loaded_vmcs_clear(&vmx->vmcs01);
++		free_vpid(vmx->vpid);
++		vmx->vpid = 0;
++		s->vmcs = kvm_dax_offset(vmx->vmcs01.vmcs);
++		return 0;
++	}
++	vmx->vpid = allocate_vpid();
++	vmx->guest_state_loaded = false;
++	vmx->guest_uret_msrs_loaded = false;
++	memset(&vmx->vmcs01.host_state, 0, sizeof(vmx->vmcs01.host_state));
++	vcpu_load(vcpu);
++	vmx_set_constant_host_state(vmx);
++	vmcs_write16(VIRTUAL_PROCESSOR_ID, vmx->vpid);
++	kvm_arch_dax_rebase_tsc(vcpu);
++	vcpu_put(vcpu);
++	return 0;
++}
++#endif
+ 
+ bool vmx_emulation_required(struct kvm_vcpu *vcpu)
+ {
+@@ -2861,10 +2892,16 @@
+ 	struct page *pages;
+ 	struct vmcs *vmcs;
+ 
+-	pages = __alloc_pages_node(node, flags, 0);
+-	if (!pages)
+-		return NULL;
+-	vmcs = page_address(pages);
++	if (kvm_dax_enabled()) {
++		vmcs = kvm_dax_alloc(PAGE_SIZE, PAGE_SIZE, "vmcs");
++		if (!vmcs)
++			return NULL;
++	} else {
++		pages = __alloc_pages_node(node, flags, 0);
++		if (!pages)
++			return NULL;
++		vmcs = page_address(pages);
++	}
+ 	memset(vmcs, 0, vmcs_config.size);
+ 
+ 	/* KVM supports Enlightened VMCS v1 only */
+@@ -2880,7 +2917,7 @@
+ 
+ void free_vmcs(struct vmcs *vmcs)
+ {
+-	free_page((unsigned long)vmcs);
++	kvm_dax_put_page((unsigned long)vmcs);
+ }
+ 
+ /*
+@@ -2894,7 +2931,7 @@
+ 	free_vmcs(loaded_vmcs->vmcs);
+ 	loaded_vmcs->vmcs = NULL;
+ 	if (loaded_vmcs->msr_bitmap)
+-		free_page((unsigned long)loaded_vmcs->msr_bitmap);
++		kvm_dax_put_page((unsigned long)loaded_vmcs->msr_bitmap);
+ 	WARN_ON(loaded_vmcs->shadow_vmcs != NULL);
+ }
+ 
+@@ -2913,7 +2950,7 @@
+ 
+ 	if (cpu_has_vmx_msr_bitmap()) {
+ 		loaded_vmcs->msr_bitmap = (unsigned long *)
+-				__get_free_page(GFP_KERNEL_ACCOUNT);
++				kvm_dax_get_page(GFP_KERNEL_ACCOUNT, "msr_bitmap");
+ 		if (!loaded_vmcs->msr_bitmap)
+ 			goto out_vmcs;
+ 		memset(loaded_vmcs->msr_bitmap, 0xff, PAGE_SIZE);
+@@ -6159,7 +6196,7 @@
+ static void vmx_destroy_pml_buffer(struct vcpu_vmx *vmx)
+ {
+ 	if (vmx->pml_pg) {
+-		__free_page(vmx->pml_pg);
++		kvm_dax_free_page(vmx->pml_pg);
+ 		vmx->pml_pg = NULL;
+ 	}
+ }
+@@ -7273,7 +7310,66 @@
+ static fastpath_t vmx_vcpu_run(struct kvm_vcpu *vcpu)
+ {
+ 	struct vcpu_vmx *vmx = to_vmx(vcpu);
++	struct kvm_dax_resume_profile *resume;
+ 	unsigned long cr3, cr4;
++
++	if (kvm_dax_enabled() && !vmx->dax_audited) {
++		struct kvm *kvm = vcpu->kvm;
++		struct kvm_kernel_irqfd *irqfd;
++		unsigned long flags;
++
++#define DAX_FIELD(name, obj, member) \
++		kvm_dax_field(name, &(obj)->member, (const void *)(obj)->member)
++		kvm_dax_ref("vm", kvm);
++		kvm_dax_ref("vcpu", vcpu);
++		DAX_FIELD("vm.mm", kvm, mm);
++		DAX_FIELD("vm.irq_routing", kvm, irq_routing);
++		DAX_FIELD("vm.pic", kvm, arch.vpic);
++		DAX_FIELD("vm.ioapic", kvm, arch.vioapic);
++		DAX_FIELD("vm.pit", kvm, arch.vpit);
++		DAX_FIELD("vm.apic_map", kvm, arch.apic_map);
++		DAX_FIELD("vm.srcu.sda", kvm, srcu.sda);
++		DAX_FIELD("vm.debugfs_dentry", kvm, debugfs_dentry);
++		DAX_FIELD("vm.mmu_notifier.mm", kvm, mmu_notifier.mm);
++		DAX_FIELD("vm.mmu_notifier.ops", kvm, mmu_notifier.ops);
++		DAX_FIELD("vm.global_list.next", kvm, vm_list.next);
++		DAX_FIELD("vcpu.kvm", vcpu, kvm);
++		DAX_FIELD("vcpu.run", vcpu, run);
++		DAX_FIELD("vcpu.pid", vcpu, pid);
++		DAX_FIELD("vcpu.preempt_notifier.ops", vcpu, preempt_notifier.ops);
++		DAX_FIELD("vcpu.apic", vcpu, arch.apic);
++		DAX_FIELD("vcpu.pio", vcpu, arch.pio_data);
++		DAX_FIELD("vcpu.cpuid", vcpu, arch.cpuid_entries);
++		DAX_FIELD("vcpu.fpu", vcpu, arch.guest_fpu.fpstate);
++		DAX_FIELD("vcpu.emulate_ctxt", vcpu, arch.emulate_ctxt);
++		DAX_FIELD("vcpu.mmu", vcpu, arch.mmu);
++		DAX_FIELD("vcpu.mmu.page_fault", vcpu->arch.mmu, page_fault);
++		DAX_FIELD("vmx.loaded_vmcs", vmx, loaded_vmcs);
++		DAX_FIELD("vmx.vmcs", vmx->loaded_vmcs, vmcs);
++		DAX_FIELD("vmx.msr_bitmap", vmx->loaded_vmcs, msr_bitmap);
++		if (vcpu->arch.apic) {
++			DAX_FIELD("lapic.regs", vcpu->arch.apic, regs);
++			DAX_FIELD("lapic.timer.base", vcpu->arch.apic, lapic_timer.timer.base);
++			DAX_FIELD("lapic.timer.function", vcpu->arch.apic, lapic_timer.timer.function);
++		}
++		if (kvm->arch.vpit) {
++			DAX_FIELD("pit.worker", kvm->arch.vpit, worker);
++			DAX_FIELD("pit.timer.base", kvm->arch.vpit, pit_state.timer.base);
++			DAX_FIELD("pit.timer.function", kvm->arch.vpit, pit_state.timer.function);
++		}
++		spin_lock_irqsave(&kvm->irqfds.lock, flags);
++		irqfd = list_first_entry_or_null(&kvm->irqfds.items, struct kvm_kernel_irqfd, list);
++		if (irqfd) {
++			DAX_FIELD("irqfd.kvm", irqfd, kvm);
++			DAX_FIELD("irqfd.eventfd", irqfd, eventfd);
++			DAX_FIELD("irqfd.wait.func", irqfd, wait.func);
++			DAX_FIELD("irqfd.inject.func", irqfd, inject.func);
++		}
++		spin_unlock_irqrestore(&kvm->irqfds.lock, flags);
++		kvm_dax_ref("ept.root", __va(vcpu->arch.mmu->root.hpa));
++		vmx->dax_audited = true;
++#undef DAX_FIELD
++	}
+ 
+ 	/* Record the guest's net vcpu time for enforced NMI injections. */
+ 	if (unlikely(!enable_vnmi &&
+@@ -7360,8 +7456,29 @@
+ 
+ 	kvm_wait_lapic_expire(vcpu);
+ 
++	resume = kvm_dax_resume_profile();
++	if (resume && !READ_ONCE(resume->entry_ready)) {
++		u64 before, after;
++
++		resume->entry_rip = kvm_rip_read(vcpu);
++		before = ktime_get_ns();
++		resume->guest_tsc = kvm_read_l1_tsc(vcpu, rdtsc_ordered());
++		after = ktime_get_ns();
++		resume->entry_ns = before + (after - before) / 2;
++		resume->sample_span_ns = after - before;
++		resume->virtual_tsc_khz = vcpu->arch.virtual_tsc_khz;
++		smp_store_release(&resume->entry_ready, 1);
++	} else {
++		resume = NULL;
++	}
+ 	/* The actual VMENTER/EXIT is in the .noinstr.text section. */
+ 	vmx_vcpu_enter_exit(vcpu, __vmx_vcpu_run_flags(vmx));
++	if (resume) {
++		resume->exit_ns = ktime_get_ns();
++		resume->exit_reason = vmx->exit_reason.full;
++		resume->entry_failed = vmx->fail || vmx->exit_reason.failed_vmentry;
++		smp_store_release(&resume->exit_ready, 1);
++	}
+ 
+ 	/* All fields are clean at this point */
+ 	if (kvm_is_using_evmcs()) {
+@@ -7459,7 +7576,7 @@
+ 	 * for the guest), etc.
+ 	 */
+ 	if (enable_pml) {
+-		vmx->pml_pg = alloc_page(GFP_KERNEL_ACCOUNT | __GFP_ZERO);
++		vmx->pml_pg = kvm_dax_page(GFP_KERNEL_ACCOUNT | __GFP_ZERO, "pml_page");
+ 		if (!vmx->pml_pg)
+ 			goto free_vpid;
+ 	}
+@@ -8210,6 +8327,10 @@
+ }
+ 
+ static struct kvm_x86_ops vmx_x86_ops __initdata = {
++
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++	.dax_handoff = vmx_dax_handoff,
++#endif
+ 	.name = KBUILD_MODNAME,
+ 
+ 	.check_processor_compatibility = vmx_check_processor_compat,
+--- a/arch/x86/kvm/vmx/vmx.h
++++ b/arch/x86/kvm/vmx/vmx.h
+@@ -248,6 +248,7 @@
+ 
+ struct vcpu_vmx {
+ 	struct kvm_vcpu       vcpu;
++	bool dax_audited;
+ 	u8                    fail;
+ 	u8		      x2apic_msr_bitmap_mode;
+ 
+--- a/arch/x86/kvm/x86.c
++++ b/arch/x86/kvm/x86.c
+@@ -4408,7 +4408,7 @@
+ 	if (writeback && copy_to_user(user_msrs->entries, entries, size))
+ 		r = -EFAULT;
+ 
+-	kfree(entries);
++	kvm_dax_kvfree(entries);
+ out:
+ 	return r;
+ }
+@@ -5662,8 +5662,8 @@
+ 		r = -EINVAL;
+ 		if (!lapic_in_kernel(vcpu))
+ 			goto out;
+-		u.lapic = kzalloc(sizeof(struct kvm_lapic_state),
+-				GFP_KERNEL_ACCOUNT);
++		u.lapic = kvm_dax_zalloc(sizeof(struct kvm_lapic_state),
++				GFP_KERNEL_ACCOUNT, __func__);
+ 
+ 		r = -ENOMEM;
+ 		if (!u.lapic)
+@@ -5854,7 +5854,7 @@
+ 		if (vcpu->arch.guest_fpu.uabi_size > sizeof(struct kvm_xsave))
+ 			break;
+ 
+-		u.xsave = kzalloc(sizeof(struct kvm_xsave), GFP_KERNEL_ACCOUNT);
++		u.xsave = kvm_dax_zalloc(sizeof(struct kvm_xsave), GFP_KERNEL_ACCOUNT, __func__);
+ 		r = -ENOMEM;
+ 		if (!u.xsave)
+ 			break;
+@@ -5883,7 +5883,7 @@
+ 	case KVM_GET_XSAVE2: {
+ 		int size = vcpu->arch.guest_fpu.uabi_size;
+ 
+-		u.xsave = kzalloc(size, GFP_KERNEL_ACCOUNT);
++		u.xsave = kvm_dax_zalloc(size, GFP_KERNEL_ACCOUNT, __func__);
+ 		r = -ENOMEM;
+ 		if (!u.xsave)
+ 			break;
+@@ -5899,7 +5899,7 @@
+ 	}
+ 
+ 	case KVM_GET_XCRS: {
+-		u.xcrs = kzalloc(sizeof(struct kvm_xcrs), GFP_KERNEL_ACCOUNT);
++		u.xcrs = kvm_dax_zalloc(sizeof(struct kvm_xcrs), GFP_KERNEL_ACCOUNT, __func__);
+ 		r = -ENOMEM;
+ 		if (!u.xcrs)
+ 			break;
+@@ -6046,7 +6046,7 @@
+ 	}
+ #endif
+ 	case KVM_GET_SREGS2: {
+-		u.sregs2 = kzalloc(sizeof(struct kvm_sregs2), GFP_KERNEL);
++		u.sregs2 = kvm_dax_zalloc(sizeof(struct kvm_sregs2), GFP_KERNEL, __func__);
+ 		r = -ENOMEM;
+ 		if (!u.sregs2)
+ 			goto out;
+@@ -6076,7 +6076,7 @@
+ 		r = -EINVAL;
+ 	}
+ out:
+-	kfree(u.buffer);
++	kvm_dax_kvfree(u.buffer);
+ out_nofree:
+ 	vcpu_put(vcpu);
+ 	return r;
+@@ -6516,7 +6516,7 @@
+ {
+ 	struct kvm_x86_msr_filter *msr_filter;
+ 
+-	msr_filter = kzalloc(sizeof(*msr_filter), GFP_KERNEL_ACCOUNT);
++	msr_filter = kvm_dax_zalloc(sizeof(*msr_filter), GFP_KERNEL_ACCOUNT, __func__);
+ 	if (!msr_filter)
+ 		return NULL;
+ 
+@@ -6532,9 +6532,9 @@
+ 		return;
+ 
+ 	for (i = 0; i < msr_filter->count; i++)
+-		kfree(msr_filter->ranges[i].bitmap);
+-
+-	kfree(msr_filter);
++		kvm_dax_kvfree(msr_filter->ranges[i].bitmap);
++
++	kvm_dax_kvfree(msr_filter);
+ }
+ 
+ static int kvm_add_msr_filter(struct kvm_x86_msr_filter *msr_filter,
+@@ -6878,7 +6878,7 @@
+ 			goto get_irqchip_out;
+ 		r = 0;
+ 	get_irqchip_out:
+-		kfree(chip);
++		kvm_dax_kvfree(chip);
+ 		break;
+ 	}
+ 	case KVM_SET_IRQCHIP: {
+@@ -6896,7 +6896,7 @@
+ 			goto set_irqchip_out;
+ 		r = kvm_vm_ioctl_set_irqchip(kvm, chip);
+ 	set_irqchip_out:
+-		kfree(chip);
++		kvm_dax_kvfree(chip);
+ 		break;
+ 	}
+ 	case KVM_GET_PIT: {
+@@ -8401,7 +8401,7 @@
+ {
+ 	struct x86_emulate_ctxt *ctxt;
+ 
+-	ctxt = kmem_cache_zalloc(x86_emulator_cache, GFP_KERNEL_ACCOUNT);
++	ctxt = kvm_dax_cache_zalloc(x86_emulator_cache, GFP_KERNEL_ACCOUNT, __func__);
+ 	if (!ctxt) {
+ 		pr_err("failed to allocate vcpu's emulator\n");
+ 		return NULL;
+@@ -11845,10 +11845,25 @@
+ 	return static_call(kvm_x86_vcpu_precreate)(kvm);
+ }
+ 
++static void kvm_free_guest_fpstate(struct fpu_guest *gfpu)
++{
++	if (kvm_dax_contains(gfpu->fpstate)) {
++		if (WARN_ON(gfpu->fpstate->in_use))
++			return;
++		kvm_dax_free(gfpu->fpstate);
++		gfpu->fpstate = NULL;
++	} else {
++		fpu_free_guest_fpstate(gfpu);
++	}
++}
++
+ int kvm_arch_vcpu_create(struct kvm_vcpu *vcpu)
+ {
+ 	struct page *page;
+ 	int r;
++	/* Dynamic XFD/AMX reallocations need a separate DAX-aware FPU API. */
++	if (kvm_dax_enabled() && boot_cpu_has(X86_FEATURE_XFD))
++		return -EOPNOTSUPP;
+ 
+ 	vcpu->arch.last_vmentry_cpu = -1;
+ 	vcpu->arch.regs_avail = ~0;
+@@ -11889,15 +11904,15 @@
+ 
+ 	r = -ENOMEM;
+ 
+-	page = alloc_page(GFP_KERNEL_ACCOUNT | __GFP_ZERO);
++	page = kvm_dax_page(GFP_KERNEL_ACCOUNT | __GFP_ZERO, __func__);
+ 	if (!page)
+ 		goto fail_free_lapic;
+ 	vcpu->arch.pio_data = page_address(page);
+ 
+-	vcpu->arch.mce_banks = kcalloc(KVM_MAX_MCE_BANKS * 4, sizeof(u64),
+-				       GFP_KERNEL_ACCOUNT);
+-	vcpu->arch.mci_ctl2_banks = kcalloc(KVM_MAX_MCE_BANKS, sizeof(u64),
+-					    GFP_KERNEL_ACCOUNT);
++	vcpu->arch.mce_banks = kvm_dax_kcalloc(KVM_MAX_MCE_BANKS * 4, sizeof(u64),
++				       GFP_KERNEL_ACCOUNT, __func__);
++	vcpu->arch.mci_ctl2_banks = kvm_dax_kcalloc(KVM_MAX_MCE_BANKS, sizeof(u64),
++					    GFP_KERNEL_ACCOUNT, __func__);
+ 	if (!vcpu->arch.mce_banks || !vcpu->arch.mci_ctl2_banks)
+ 		goto fail_free_mce_banks;
+ 	vcpu->arch.mcg_cap = KVM_MAX_MCE_BANKS;
+@@ -11912,6 +11927,19 @@
+ 	if (!fpu_alloc_guest_fpstate(&vcpu->arch.guest_fpu)) {
+ 		pr_err("failed to allocate vcpu's fpu\n");
+ 		goto free_emulate_ctxt;
++	}
++	if (kvm_dax_enabled()) {
++		struct fpstate *old = vcpu->arch.guest_fpu.fpstate;
++		size_t bytes = old->user_size + ALIGN(offsetof(struct fpstate, regs), 64);
++		struct fpstate *state = kvm_dax_alloc(bytes, 64, "guest_fpu");
++
++		if (!state) {
++			r = -ENOMEM;
++			goto free_guest_fpu;
++		}
++		memcpy(state, old, bytes);
++		vcpu->arch.guest_fpu.fpstate = state;
++		vfree(old);
+ 	}
+ 
+ 	vcpu->arch.maxphyaddr = cpuid_query_maxphyaddr(vcpu);
+@@ -11947,15 +11975,15 @@
+ 	return 0;
+ 
+ free_guest_fpu:
+-	fpu_free_guest_fpstate(&vcpu->arch.guest_fpu);
++	kvm_free_guest_fpstate(&vcpu->arch.guest_fpu);
+ free_emulate_ctxt:
+-	kmem_cache_free(x86_emulator_cache, vcpu->arch.emulate_ctxt);
++	kvm_dax_cache_free(x86_emulator_cache, vcpu->arch.emulate_ctxt);
+ free_wbinvd_dirty_mask:
+ 	free_cpumask_var(vcpu->arch.wbinvd_dirty_mask);
+ fail_free_mce_banks:
+-	kfree(vcpu->arch.mce_banks);
+-	kfree(vcpu->arch.mci_ctl2_banks);
+-	free_page((unsigned long)vcpu->arch.pio_data);
++	kvm_dax_kvfree(vcpu->arch.mce_banks);
++	kvm_dax_kvfree(vcpu->arch.mci_ctl2_banks);
++	kvm_dax_put_page((unsigned long)vcpu->arch.pio_data);
+ fail_free_lapic:
+ 	kvm_free_lapic(vcpu);
+ fail_mmu_destroy:
+@@ -11991,21 +12019,21 @@
+ 
+ 	static_call(kvm_x86_vcpu_free)(vcpu);
+ 
+-	kmem_cache_free(x86_emulator_cache, vcpu->arch.emulate_ctxt);
++	kvm_dax_cache_free(x86_emulator_cache, vcpu->arch.emulate_ctxt);
+ 	free_cpumask_var(vcpu->arch.wbinvd_dirty_mask);
+-	fpu_free_guest_fpstate(&vcpu->arch.guest_fpu);
++	kvm_free_guest_fpstate(&vcpu->arch.guest_fpu);
+ 
+ 	kvm_xen_destroy_vcpu(vcpu);
+ 	kvm_hv_vcpu_uninit(vcpu);
+ 	kvm_pmu_destroy(vcpu);
+-	kfree(vcpu->arch.mce_banks);
+-	kfree(vcpu->arch.mci_ctl2_banks);
++	kvm_dax_kvfree(vcpu->arch.mce_banks);
++	kvm_dax_kvfree(vcpu->arch.mci_ctl2_banks);
+ 	kvm_free_lapic(vcpu);
+ 	idx = srcu_read_lock(&vcpu->kvm->srcu);
+ 	kvm_mmu_destroy(vcpu);
+ 	srcu_read_unlock(&vcpu->kvm->srcu, idx);
+-	free_page((unsigned long)vcpu->arch.pio_data);
+-	kvfree(vcpu->arch.cpuid_entries);
++	kvm_dax_put_page((unsigned long)vcpu->arch.pio_data);
++	kvm_dax_kvfree(vcpu->arch.cpuid_entries);
+ 	if (!lapic_in_kernel(vcpu))
+ 		static_branch_dec(&kvm_has_noapic_vcpu);
+ }
+@@ -12302,7 +12330,7 @@
+ 
+ void kvm_arch_free_vm(struct kvm *kvm)
+ {
+-	kfree(to_kvm_hv(kvm)->hv_pa_pg);
++	kvm_dax_kvfree(to_kvm_hv(kvm)->hv_pa_pg);
+ 	__kvm_arch_free_vm(kvm);
+ }
+ 
+@@ -12373,6 +12401,113 @@
+ {
+ 	return kvm_mmu_post_init_vm(kvm);
+ }
++
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++void kvm_arch_dax_rebase_tsc(struct kvm_vcpu *vcpu)
++{
++	struct kvm *kvm = vcpu->kvm;
++	struct kvm_dax_shared *s = kvm_dax_shared();
++	unsigned long flags;
++
++	/* VMCS is loaded on the destination CPU. Force a fresh host-clock
++	 * generation rather than matching offsets from another kernel. */
++	raw_spin_lock_irqsave(&kvm->arch.tsc_write_lock, flags);
++	__kvm_synchronize_tsc(vcpu, kvm_compute_l1_tsc_offset(vcpu, s->guest_tsc),
++			      s->guest_tsc, get_kvmclock_base_ns(), false);
++	raw_spin_unlock_irqrestore(&kvm->arch.tsc_write_lock, flags);
++}
++EXPORT_SYMBOL_GPL(kvm_arch_dax_rebase_tsc);
++
++int kvm_arch_dax_handoff(struct kvm_vcpu *vcpu, bool attach)
++{
++	struct kvm *kvm = vcpu->kvm;
++	u64 start, drained;
++	int r;
++
++	/* Initial ABI deliberately excludes guest/nested hypervisors and devices. */
++	if (!kvm_x86_ops.dax_handoff || kvm->arch.nx_huge_page_recovery_thread ||
++	    is_guest_mode(vcpu) || vcpu->arch.apf.msr_en_val ||
++	    vcpu->arch.st.msr_val)
++		return -EOPNOTSUPP;
++	if (attach) {
++		static bool dax_noapic_key;
++		if (kvm_dax_shared()->host_tsc_khz != tsc_khz)
++			return -EXDEV;
++		/* KVM_CREATE_VCPU normally updates this node-local static key. */
++		if (!vcpu->arch.apic && !dax_noapic_key) {
++			static_branch_inc(&kvm_has_noapic_vcpu);
++			dax_noapic_key = true;
++		}
++		kvm_mmu_dax_rebind(vcpu);
++		if (kvm_dax_shared()->handoff_mode == 3) {
++			r = kvm_mmu_dax_ept_rebind(vcpu, true);
++			if (r)
++				return r;
++		}
++		INIT_DELAYED_WORK(&kvm->arch.kvmclock_update_work, kvmclock_update_fn);
++		INIT_DELAYED_WORK(&kvm->arch.kvmclock_sync_work, kvmclock_sync_fn);
++		/* Freeze VM logical clock during handoff, using the new host's base. */
++		pvclock_update_vm_gtod_copy(kvm);
++		kvm->arch.kvmclock_offset = kvm_dax_shared()->guest_clock_ns -
++			(kvm->arch.use_master_clock ? kvm->arch.master_kernel_ns : get_kvmclock_base_ns());
++		memset(&vcpu->arch.pv_time, 0, sizeof(vcpu->arch.pv_time));
++		kvm_gpc_init(&vcpu->arch.pv_time, kvm, vcpu, KVM_HOST_USES_PFN);
++		if (vcpu->arch.time & 1) {
++			r = kvm_gpc_activate(&vcpu->arch.pv_time, vcpu->arch.time & ~1ULL,
++				sizeof(struct pvclock_vcpu_time_info));
++			if (r)
++				return r;
++		}
++		kvm_make_request(KVM_REQ_CLOCK_UPDATE, vcpu);
++		vcpu->cpu = -1;
++		/* This sample and suspend correction belong to the old host. */
++		vcpu->arch.last_host_tsc = 0;
++		vcpu->arch.tsc_offset_adjustment = 0;
++		vcpu->arch.tsc_catchup = 0;
++		vcpu->arch.last_vmentry_cpu = -1;
++		vcpu->arch.mmio_gva = 0;
++		vcpu->arch.mmio_gfn = 0;
++		vcpu->arch.mmio_access = 0;
++		r = kvm_x86_ops.dax_handoff(vcpu, true);
++		if (r)
++			return r;
++		r = kvm_pit_dax_handoff(kvm, true);
++		return r ? r : kvm_lapic_dax_handoff(vcpu, true);
++	}
++	start = ktime_get_ns();
++	cancel_delayed_work_sync(&kvm->arch.kvmclock_sync_work);
++	cancel_delayed_work_sync(&kvm->arch.kvmclock_update_work);
++	kvm_dax_shared()->host_clock_ns = ktime_get_ns();
++	kvm_dax_shared()->guest_clock_ns = get_kvmclock_ns(kvm);
++	kvm_dax_shared()->guest_tsc = kvm_read_l1_tsc(vcpu, rdtsc());
++	kvm_dax_shared()->host_tsc_khz = tsc_khz;
++	r = kvm_lapic_dax_handoff(vcpu, false);
++	if (r)
++		return r;
++	r = kvm_pit_dax_handoff(kvm, false);
++	if (r)
++		return r;
++	drained = ktime_get_ns();
++	kvm_dax_shared()->quiesce_ns = drained - start;
++	if (kvm_dax_shared()->handoff_mode == 3) {
++		r = kvm_mmu_dax_ept_rebind(vcpu, false);
++		if (r)
++			return r;
++	} else {
++		vcpu_load(vcpu);
++		/* Unload destination-dependent EPT; retain VM/vCPU/VMCS. */
++		kvm_mmu_unload(vcpu);
++		vcpu_put(vcpu);
++	}
++	kvm_gpc_deactivate(&vcpu->arch.pv_time);
++	if (kvm_dax_shared()->handoff_mode != 3)
++		kvm_mmu_dax_invalidate(kvm);
++	kvm_dax_shared()->mmu_drain_ns = ktime_get_ns() - drained;
++	r = kvm_x86_ops.dax_handoff(vcpu, false);
++	return r;
++}
++EXPORT_SYMBOL_GPL(kvm_arch_dax_handoff);
++#endif
+ 
+ static void kvm_unload_vcpu_mmu(struct kvm_vcpu *vcpu)
+ {
+@@ -12501,8 +12636,8 @@
+ 	kvm_pic_destroy(kvm);
+ 	kvm_ioapic_destroy(kvm);
+ 	kvm_destroy_vcpus(kvm);
+-	kvfree(rcu_dereference_check(kvm->arch.apic_map, 1));
+-	kfree(srcu_dereference_check(kvm->arch.pmu_event_filter, &kvm->srcu, 1));
++	kvm_dax_kvfree(rcu_dereference_check(kvm->arch.apic_map, 1));
++	kvm_dax_kvfree(srcu_dereference_check(kvm->arch.pmu_event_filter, &kvm->srcu, 1));
+ 	kvm_mmu_uninit_vm(kvm);
+ 	kvm_page_track_cleanup(kvm);
+ 	kvm_xen_destroy_vm(kvm);
+@@ -12514,7 +12649,7 @@
+ 	int i;
+ 
+ 	for (i = 0; i < KVM_NR_PAGE_SIZES; ++i) {
+-		kvfree(slot->arch.rmap[i]);
++		kvm_dax_kvfree(slot->arch.rmap[i]);
+ 		slot->arch.rmap[i] = NULL;
+ 	}
+ }
+@@ -12526,7 +12661,7 @@
+ 	memslot_rmap_free(slot);
+ 
+ 	for (i = 1; i < KVM_NR_PAGE_SIZES; ++i) {
+-		kvfree(slot->arch.lpage_info[i - 1]);
++		kvm_dax_kvfree(slot->arch.lpage_info[i - 1]);
+ 		slot->arch.lpage_info[i - 1] = NULL;
+ 	}
+ 
+@@ -12545,7 +12680,9 @@
+ 		if (slot->arch.rmap[i])
+ 			continue;
+ 
+-		slot->arch.rmap[i] = __vcalloc(lpages, sz, GFP_KERNEL_ACCOUNT);
++		slot->arch.rmap[i] = kvm_dax_enabled() ?
++			kvm_dax_kcalloc(lpages, sz, GFP_KERNEL_ACCOUNT, "slot_rmap") :
++			__vcalloc(lpages, sz, GFP_KERNEL_ACCOUNT);
+ 		if (!slot->arch.rmap[i]) {
+ 			memslot_rmap_free(slot);
+ 			return -ENOMEM;
+@@ -12582,7 +12719,9 @@
+ 
+ 		lpages = __kvm_mmu_slot_lpages(slot, npages, level);
+ 
+-		linfo = __vcalloc(lpages, sizeof(*linfo), GFP_KERNEL_ACCOUNT);
++		linfo = kvm_dax_enabled() ?
++			kvm_dax_kcalloc(lpages, sizeof(*linfo), GFP_KERNEL_ACCOUNT, "slot_lpage") :
++			__vcalloc(lpages, sizeof(*linfo), GFP_KERNEL_ACCOUNT);
+ 		if (!linfo)
+ 			goto out_free;
+ 
+@@ -12614,7 +12753,7 @@
+ 	memslot_rmap_free(slot);
+ 
+ 	for (i = 1; i < KVM_NR_PAGE_SIZES; ++i) {
+-		kvfree(slot->arch.lpage_info[i - 1]);
++		kvm_dax_kvfree(slot->arch.lpage_info[i - 1]);
+ 		slot->arch.lpage_info[i - 1] = NULL;
+ 	}
+ 	return -ENOMEM;
+--- /dev/null
++++ b/include/linux/kvm_dax.h
+@@ -0,0 +1,171 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++#ifndef __LINUX_KVM_DAX_H
++#define __LINUX_KVM_DAX_H
++
++#include <linux/gfp.h>
++#include <linux/mm.h>
++#include <linux/slab.h>
++#include <linux/vmalloc.h>
++#include <uapi/linux/kvm_dax.h>
++
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++struct kvm;
++struct kvm_vcpu;
++/* One shared arena/VM, single execution owner. Native runtime is detached. */
++struct kvm_dax_shared {
++	u64 magic, bump, vm, kva, phys, kernel_code, vmx_code, generation;
++	u64 detach_ns, attach_ns, vmcs, vcpu;
++	u64 vm_creates, vcpu_creates;
++	u64 vm_create_calls, vcpu_create_calls;
++	u64 ram_hva, ram_bytes, host_clock_ns, guest_clock_ns;
++	s64 apic_remaining, pit_remaining;
++	u32 apic_active, pit_active;
++	u64 quiesce_ns, mmu_drain_ns, binding_ns;
++	u32 state, owner, vm_bytes, vcpu_bytes;
++	u32 handoff_mode;
++	u32 ept_validated;
++	u64 ept_pages, ept_page_count, ept_root_hpa, ram_pfn;
++	u64 guest_tsc, host_tsc_khz;
++	/* Opt-in scattered data mappings; per-GPA read PFNs captured at detach. */
++	u64 data_pfn_base, data_pages, ram_pfns;
++	u32 scattered;
++};
++enum { KVM_DAX_EMPTY, KVM_DAX_OWNED, KVM_DAX_DETACHED, KVM_DAX_BUSY, KVM_DAX_FAILED };
++struct kvm_dax_shared *kvm_dax_shared(void);
++static inline bool kvm_dax_data_pfn_valid(struct kvm_dax_shared *s,
++		unsigned long pfn, u64 pages)
++{
++	u64 first = s->scattered ? s->data_pfn_base : s->ram_pfn;
++	u64 count = s->scattered ? s->data_pages : s->ram_bytes >> PAGE_SHIFT;
++	return pages && pfn >= first && pfn - first < count &&
++		pages <= count - (pfn - first);
++}
++static inline struct kvm_dax_resume_profile *kvm_dax_resume_profile(void)
++{
++	struct kvm_dax_shared *s = kvm_dax_shared();
++	struct kvm_dax_resume_profile *p;
++
++	if (!s)
++		return NULL;
++	p = (void *)s + KVM_DAX_RESUME_PROFILE_OFFSET;
++	return READ_ONCE(p->enabled) ? p : NULL;
++}
++unsigned int kvm_dax_node(void);
++u64 kvm_dax_offset(const void *ptr);
++int kvm_arch_dax_handoff(struct kvm_vcpu *vcpu, bool attach);
++int kvm_dax_irqfd_quiesce(struct kvm *kvm);
++void kvm_arch_dax_rebase_tsc(struct kvm_vcpu *vcpu);
++bool kvm_dax_enabled(void);
++void *kvm_dax_alloc(size_t size, size_t align, const char *kind);
++bool kvm_dax_free(const void *ptr);
++bool kvm_dax_contains(const void *ptr);
++void kvm_dax_ref(const char *field, const void *ptr);
++void kvm_dax_field(const char *field, const void *storage, const void *ptr);
++void kvm_dax_pool_exit(void);
++#else
++static inline struct kvm_dax_resume_profile *kvm_dax_resume_profile(void) { return NULL; }
++static inline bool kvm_dax_enabled(void) { return false; }
++static inline void *kvm_dax_alloc(size_t s, size_t a, const char *k) { return NULL; }
++static inline bool kvm_dax_free(const void *p) { return false; }
++static inline bool kvm_dax_contains(const void *p) { return false; }
++static inline void kvm_dax_ref(const char *f, const void *p) { }
++static inline void kvm_dax_field(const char *f, const void *s, const void *p) { }
++static inline void kvm_dax_pool_exit(void) { }
++#endif
++
++/* Opt-in allocations never fall back to System RAM when the arena is full. */
++static inline void *kvm_dax_zalloc(size_t size, gfp_t flags, const char *kind)
++{
++	if (kvm_dax_enabled())
++		return kvm_dax_alloc(size, 64, kind);
++	return kzalloc(size, flags);
++}
++
++static inline void kvm_dax_kvfree(const void *ptr)
++{
++	if (!kvm_dax_free(ptr))
++		kvfree(ptr);
++}
++
++static inline void *kvm_dax_kmalloc(size_t size, gfp_t flags, const char *kind)
++{
++	if (kvm_dax_enabled())
++		return kvm_dax_alloc(size, 64, kind);
++	return kmalloc(size, flags);
++}
++
++static inline void *kvm_dax_kcalloc(size_t n, size_t size, gfp_t flags,
++				  const char *kind)
++{
++	if (kvm_dax_enabled())
++		return kvm_dax_alloc(array_size(n, size), 64, kind);
++	return kcalloc(n, size, flags);
++}
++
++static inline void *kvm_dax_kvmalloc_array(size_t n, size_t size, gfp_t flags,
++					 const char *kind)
++{
++	if (kvm_dax_enabled())
++		return kvm_dax_alloc(array_size(n, size), 64, kind);
++	return kvmalloc_array(n, size, flags);
++}
++
++static inline void *kvm_dax_kvzalloc(size_t size, gfp_t flags, const char *kind)
++{
++	if (kvm_dax_enabled())
++		return kvm_dax_alloc(size, 64, kind);
++	return kvzalloc(size, flags);
++}
++
++static inline void *kvm_dax_cache_alloc(struct kmem_cache *cache, gfp_t flags,
++				      const char *kind)
++{
++	if (kvm_dax_enabled())
++		return kvm_dax_alloc(kmem_cache_size(cache), 64, kind);
++	return kmem_cache_alloc(cache, flags);
++}
++
++static inline void kvm_dax_cache_free(struct kmem_cache *cache, void *ptr)
++{
++	if (!kvm_dax_free(ptr))
++		kmem_cache_free(cache, ptr);
++}
++
++static inline void *kvm_dax_cache_zalloc(struct kmem_cache *cache, gfp_t flags,
++				       const char *kind)
++{
++	if (kvm_dax_enabled())
++		return kvm_dax_alloc(kmem_cache_size(cache), 64, kind);
++	return kmem_cache_zalloc(cache, flags);
++}
++
++static inline unsigned long kvm_dax_get_page(gfp_t flags, const char *kind)
++{
++	if (kvm_dax_enabled())
++		return (unsigned long)kvm_dax_alloc(PAGE_SIZE, PAGE_SIZE, kind);
++	return get_zeroed_page(flags);
++}
++
++static inline void kvm_dax_put_page(unsigned long addr)
++{
++	if (!kvm_dax_free((void *)addr))
++		free_page(addr);
++}
++
++static inline struct page *kvm_dax_page(gfp_t flags, const char *kind)
++{
++	void *addr;
++
++	if (!kvm_dax_enabled())
++		return alloc_page(flags);
++	addr = kvm_dax_alloc(PAGE_SIZE, PAGE_SIZE, kind);
++	return addr ? virt_to_page(addr) : NULL;
++}
++
++static inline void kvm_dax_free_page(struct page *page)
++{
++	if (page && !kvm_dax_free(page_address(page)))
++		__free_page(page);
++}
++
++#endif
+--- a/include/linux/kvm_host.h
++++ b/include/linux/kvm_host.h
+@@ -19,6 +19,7 @@
+ #include <linux/msi.h>
+ #include <linux/slab.h>
+ #include <linux/vmalloc.h>
++#include <linux/kvm_dax.h>
+ #include <linux/rcupdate.h>
+ #include <linux/ratelimit.h>
+ #include <linux/err.h>
+@@ -1490,7 +1491,7 @@
+ 
+ static inline void __kvm_arch_free_vm(struct kvm *kvm)
+ {
+-	kvfree(kvm);
++	kvm_dax_kvfree(kvm);
+ }
+ 
+ #ifndef __KVM_HAVE_ARCH_VM_FREE
+--- /dev/null
++++ b/include/uapi/linux/kvm_dax.h
+@@ -0,0 +1,36 @@
++/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
++#ifndef _UAPI_LINUX_KVM_DAX_H
++#define _UAPI_LINUX_KVM_DAX_H
++#include <linux/types.h>
++#include <linux/ioctl.h>
++
++/* Private laboratory ABI, CONFIG_KVM_DAX_POOL_TEST only. */
++struct kvm_dax_handoff {
++	__u64 vm_offset, vcpu_offset, vmcs_offset, run_offset;
++	__u64 generation, kernel_ns, pool_used;
++	__u64 vm_creates, vcpu_creates;
++	__u64 ram_hva, ram_bytes;
++	__u32 node, flags;
++	__u64 quiesce_ns, mmu_drain_ns, binding_ns;
++	__u64 ept_root_offset, ept_page_count;
++};
++#define KVM_DAX_EXPORT _IOR(0xae, 0xf0, struct kvm_dax_handoff)
++#define KVM_DAX_ATTACH _IOWR(0xae, 0xf1, struct kvm_dax_handoff)
++#define KVM_DAX_DETACH _IOR(0xae, 0xf2, struct kvm_dax_handoff)
++#define KVM_DAX_VCPU _IO(0xae, 0xf3)
++#define KVM_DAX_PEEK _IOR(0xae, 0xf4, struct kvm_dax_handoff)
++#define KVM_DAX_REATTACH _IOWR(0xae, 0xf5, struct kvm_dax_handoff)
++#define KVM_DAX_IRQFD_QUIESCE _IO(0xae, 0xf6)
++/* Optional timing data in the reserved first arena page; not migration state. */
++#define KVM_DAX_PROFILE_OFFSET 512
++struct kvm_dax_profile {
++	__u64 detach[8], attach[8];
++};
++#define KVM_DAX_RESUME_PROFILE_OFFSET 640
++/* Destination-local clock samples, overwritten at each attach. Diagnostic only. */
++struct kvm_dax_resume_profile {
++	__u64 enabled, generation, run_ns, entry_ready;
++	__u64 entry_ns, guest_tsc, virtual_tsc_khz, sample_span_ns, entry_rip;
++	__u64 exit_ready, exit_ns, exit_reason, entry_failed;
++};
++#endif
+--- a/kernel/module/main.c
++++ b/kernel/module/main.c
+@@ -77,6 +77,11 @@
+ static void do_free_init(struct work_struct *w);
+ static DECLARE_WORK(init_free_wq, do_free_init);
+ static LLIST_HEAD(init_free_list);
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++/* LAB only: keep sequential module text placement reproducible across kernels. */
++static bool kvm_dax_sync_init;
++core_param(kvm_dax_sync_init, kvm_dax_sync_init, bool, 0);
++#endif
+ 
+ struct mod_tree_root mod_tree __cacheline_aligned = {
+ 	.addr_min = -1UL,
+@@ -2604,6 +2609,12 @@
+ 
+ 	mod_stat_inc(&modcount);
+ 
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++	/* Otherwise a subsequent module may race init-section hole reclamation. */
++	if (kvm_dax_sync_init)
++		flush_work(&init_free_wq);
++#endif
++
+ 	return 0;
+ 
+ fail_free_freeinit:
+--- a/virt/kvm/Makefile.kvm
++++ b/virt/kvm/Makefile.kvm
+@@ -6,6 +6,7 @@
+ KVM ?= ../../../virt/kvm
+ 
+ kvm-y := $(KVM)/kvm_main.o $(KVM)/eventfd.o $(KVM)/binary_stats.o
++kvm-$(CONFIG_KVM_DAX_POOL_TEST) += $(KVM)/dax_pool.o
+ kvm-$(CONFIG_KVM_VFIO) += $(KVM)/vfio.o
+ kvm-$(CONFIG_KVM_MMIO) += $(KVM)/coalesced_mmio.o
+ kvm-$(CONFIG_KVM_ASYNC_PF) += $(KVM)/async_pf.o
+--- a/virt/kvm/coalesced_mmio.c
++++ b/virt/kvm/coalesced_mmio.c
+@@ -99,7 +99,7 @@
+ 
+ 	list_del(&dev->list);
+ 
+-	kfree(dev);
++	kvm_dax_kvfree(dev);
+ }
+ 
+ static const struct kvm_io_device_ops coalesced_mmio_ops = {
+@@ -111,7 +111,7 @@
+ {
+ 	struct page *page;
+ 
+-	page = alloc_page(GFP_KERNEL_ACCOUNT | __GFP_ZERO);
++	page = kvm_dax_page(GFP_KERNEL_ACCOUNT | __GFP_ZERO, __func__);
+ 	if (!page)
+ 		return -ENOMEM;
+ 
+@@ -131,7 +131,7 @@
+ void kvm_coalesced_mmio_free(struct kvm *kvm)
+ {
+ 	if (kvm->coalesced_mmio_ring)
+-		free_page((unsigned long)kvm->coalesced_mmio_ring);
++		kvm_dax_put_page((unsigned long)kvm->coalesced_mmio_ring);
+ }
+ 
+ int kvm_vm_ioctl_register_coalesced_mmio(struct kvm *kvm,
+@@ -143,8 +143,8 @@
+ 	if (zone->pio != 1 && zone->pio != 0)
+ 		return -EINVAL;
+ 
+-	dev = kzalloc(sizeof(struct kvm_coalesced_mmio_dev),
+-		      GFP_KERNEL_ACCOUNT);
++	dev = kvm_dax_zalloc(sizeof(struct kvm_coalesced_mmio_dev),
++		      GFP_KERNEL_ACCOUNT, __func__);
+ 	if (!dev)
+ 		return -ENOMEM;
+ 
+@@ -165,7 +165,7 @@
+ 
+ out_free_dev:
+ 	mutex_unlock(&kvm->slots_lock);
+-	kfree(dev);
++	kvm_dax_kvfree(dev);
+ 
+ 	return ret;
+ }
+--- /dev/null
++++ b/virt/kvm/dax_pool.c
+@@ -0,0 +1,328 @@
++// SPDX-License-Identifier: GPL-2.0
++/* Single-owner laboratory allocator over an already bound device-DAX range. */
++#include <linux/genalloc.h>
++#include <linux/io.h>
++#include <linux/mm.h>
++#include <linux/kvm_dax.h>
++#include <linux/kvm_host.h>
++#include <linux/memremap.h>
++#include <linux/module.h>
++#include <linux/overflow.h>
++
++#define DAX_ALLOC_MAGIC 0x4b564d444158414cULL
++#define DAX_KINDS 64
++
++struct dax_alloc_header {
++	u64 magic;
++	unsigned long raw;
++	size_t total;
++	u32 kind;
++};
++
++struct dax_kind {
++	const char *name;
++	unsigned long live;
++	unsigned long allocs;
++	unsigned long frees;
++	unsigned long bytes;
++};
++
++static struct gen_pool *dax_pool;
++static struct dev_pagemap *dax_pgmap;
++static phys_addr_t dax_phys;
++static size_t dax_size;
++static void *dax_base;
++static DEFINE_MUTEX(dax_config_lock);
++static DEFINE_SPINLOCK(dax_stats_lock);
++static struct dax_kind dax_kinds[DAX_KINDS];
++static unsigned int dax_nr_kinds;
++static unsigned long dax_failures;
++static unsigned int dax_shared_mode, dax_node;
++static unsigned int dax_owner_pid;
++module_param_named(dax_shared, dax_shared_mode, uint, 0600);
++module_param_named(dax_node, dax_node, uint, 0600);
++module_param_named(dax_owner_pid, dax_owner_pid, uint, 0600);
++MODULE_PARM_DESC(dax_owner_pid, "LAB: optional selected VMM TGID; ordinary peers retain native allocations (0 = legacy global)");
++MODULE_PARM_DESC(dax_shared, "LAB: 1 initializes a shared bump arena; 2 attaches without clearing; allocations retained until lab shutdown");
++
++struct kvm_dax_shared *kvm_dax_shared(void)
++{
++	return dax_shared_mode && dax_base ? dax_base : NULL;
++}
++EXPORT_SYMBOL_GPL(kvm_dax_shared);
++
++unsigned int kvm_dax_node(void) { return dax_node; }
++EXPORT_SYMBOL_GPL(kvm_dax_node);
++
++u64 kvm_dax_offset(const void *ptr)
++{
++	return kvm_dax_contains(ptr) ? (unsigned long)ptr - (unsigned long)dax_base : U64_MAX;
++}
++EXPORT_SYMBOL_GPL(kvm_dax_offset);
++
++bool kvm_dax_enabled(void)
++{
++	/* Pair with publication after the mapping and arena are initialized. */
++	return smp_load_acquire(&dax_pool) != NULL &&
++		(!READ_ONCE(dax_owner_pid) || task_tgid_nr(current) == READ_ONCE(dax_owner_pid));
++}
++EXPORT_SYMBOL_GPL(kvm_dax_enabled);
++
++bool kvm_dax_contains(const void *ptr)
++{
++	return dax_base && (unsigned long)ptr >= (unsigned long)dax_base &&
++		(unsigned long)ptr - (unsigned long)dax_base < dax_size;
++}
++EXPORT_SYMBOL_GPL(kvm_dax_contains);
++
++void *kvm_dax_alloc(size_t size, size_t align, const char *kind)
++{
++	/* Allocators may run on a different CPU from the configuring task. */
++	struct gen_pool *pool = smp_load_acquire(&dax_pool);
++	struct dax_alloc_header *header;
++	unsigned long raw, addr, flags;
++	size_t total;
++	unsigned int i;
++	bool first;
++
++	if (!pool || !size || !is_power_of_2(align) ||
++	    check_add_overflow(size, align + sizeof(*header), &total))
++		return NULL;
++	if (dax_shared_mode) {
++		struct kvm_dax_shared *s = dax_base;
++		u64 old, next;
++		do {
++			old = READ_ONCE(s->bump);
++			addr = ALIGN((unsigned long)dax_base + old + sizeof(*header), align);
++			next = addr - (unsigned long)dax_base + size;
++			if (next > dax_size)
++				return NULL;
++		} while (cmpxchg(&s->bump, old, next) != old);
++		header = (void *)(addr - sizeof(*header));
++		header->magic = DAX_ALLOC_MAGIC;
++		header->raw = (unsigned long)dax_base + old;
++		header->total = next - old;
++		header->kind = 0;
++		memset((void *)addr, 0, size);
++		return (void *)addr;
++	}
++	raw = gen_pool_alloc(pool, total);
++	if (!raw) {
++		spin_lock_irqsave(&dax_stats_lock, flags);
++		dax_failures++;
++		spin_unlock_irqrestore(&dax_stats_lock, flags);
++		return NULL;
++	}
++	addr = ALIGN(raw + sizeof(*header), align);
++	header = (void *)(addr - sizeof(*header));
++	spin_lock_irqsave(&dax_stats_lock, flags);
++	for (i = 0; i < dax_nr_kinds; i++)
++		if (!strcmp(dax_kinds[i].name, kind))
++			break;
++	if (i == DAX_KINDS) {
++		dax_failures++;
++		spin_unlock_irqrestore(&dax_stats_lock, flags);
++		gen_pool_free(pool, raw, total);
++		return NULL;
++	}
++	if (i == dax_nr_kinds) {
++		dax_kinds[i].name = kind;
++		dax_nr_kinds++;
++	}
++	first = !dax_kinds[i].allocs;
++	dax_kinds[i].live++;
++	dax_kinds[i].allocs++;
++	dax_kinds[i].bytes += total;
++	spin_unlock_irqrestore(&dax_stats_lock, flags);
++	header->magic = DAX_ALLOC_MAGIC;
++	header->raw = raw;
++	header->total = total;
++	header->kind = i;
++	memset((void *)addr, 0, size);
++	if (first) {
++		phys_addr_t pa = dax_phys + addr - (unsigned long)dax_base;
++
++		pr_info("KVM_DAX_ALLOC kind=%s kva=%px pa=%pa bytes=%zu\n",
++			kind, (void *)addr, &pa, size);
++	}
++	return (void *)addr;
++}
++EXPORT_SYMBOL_GPL(kvm_dax_alloc);
++
++bool kvm_dax_free(const void *ptr)
++{
++	struct dax_alloc_header *header;
++	unsigned long flags, raw;
++	size_t total;
++
++	if (!kvm_dax_contains(ptr))
++		return false;
++	/* Bounded experiment: no reuse, so neither node owns a private free bitmap. */
++	if (dax_shared_mode)
++		return true;
++	header = (void *)((unsigned long)ptr - sizeof(*header));
++	if (WARN_ON_ONCE(header->magic != DAX_ALLOC_MAGIC))
++		return true;
++	raw = header->raw;
++	total = header->total;
++	spin_lock_irqsave(&dax_stats_lock, flags);
++	dax_kinds[header->kind].live--;
++	dax_kinds[header->kind].frees++;
++	dax_kinds[header->kind].bytes -= total;
++	spin_unlock_irqrestore(&dax_stats_lock, flags);
++	header->magic = 0;
++	gen_pool_free(dax_pool, raw, total);
++	return true;
++}
++EXPORT_SYMBOL_GPL(kvm_dax_free);
++
++void kvm_dax_ref(const char *field, const void *ptr)
++{
++	if (kvm_dax_enabled())
++		pr_info("KVM_DAX_REF field=%s target=%s kva=%px offset=%lu\n",
++			field, !ptr ? "null" : kvm_dax_contains(ptr) ? "pool" : "host",
++			ptr, kvm_dax_contains(ptr) ?
++			(unsigned long)ptr - (unsigned long)dax_base : 0);
++}
++EXPORT_SYMBOL_GPL(kvm_dax_ref);
++
++void kvm_dax_field(const char *field, const void *storage, const void *ptr)
++{
++	if (kvm_dax_contains(storage))
++		pr_info("KVM_DAX_FIELD field=%s storage_offset=%lu value=%016lx target=%s\n",
++			field, (unsigned long)storage - (unsigned long)dax_base,
++			(unsigned long)ptr,
++			!ptr ? "null" : kvm_dax_contains(ptr) ? "pool" : "host");
++}
++EXPORT_SYMBOL_GPL(kvm_dax_field);
++
++static int dax_pool_set(const char *val, const struct kernel_param *kp)
++{
++	unsigned long long phys, size;
++	struct dev_pagemap *pgmap;
++	struct gen_pool *pool;
++	unsigned long pfn;
++	u64 end;
++	int rc = -EINVAL, i;
++	char tail;
++
++	if (sscanf(val, "%llx,%llx %c", &phys, &size, &tail) != 2 ||
++	    !size || !IS_ALIGNED(phys, PAGE_SIZE) || !IS_ALIGNED(size, PAGE_SIZE) ||
++	    check_add_overflow((u64)phys, (u64)size - 1, &end))
++		return -EINVAL;
++	if (!boot_cpu_has(X86_FEATURE_VMX) || !tdp_enabled)
++		return -EOPNOTSUPP;
++	mutex_lock(&dax_config_lock);
++	if (dax_pool) {
++		rc = -EBUSY;
++		goto out;
++	}
++	pgmap = get_dev_pagemap(PHYS_PFN(phys), NULL);
++	if (!pgmap)
++		goto out;
++	if (pgmap->type != MEMORY_DEVICE_GENERIC || pgmap->vmemmap_shift)
++		goto put_pgmap;
++	for (i = 0; i < pgmap->nr_range; i++)
++		if (phys >= pgmap->ranges[i].start && end <= pgmap->ranges[i].end)
++			break;
++	if (i == pgmap->nr_range)
++		goto put_pgmap;
++	for (pfn = PHYS_PFN(phys); pfn <= PHYS_PFN(end); pfn++)
++		if (!pfn_valid(pfn) || !is_zone_device_page(pfn_to_page(pfn)) ||
++		    !virt_addr_valid(__va(PFN_PHYS(pfn))))
++			goto put_pgmap;
++	pool = gen_pool_create(6, NUMA_NO_NODE);
++	if (!pool) {
++		rc = -ENOMEM;
++		goto put_pgmap;
++	}
++	rc = gen_pool_add_virt(pool, (unsigned long)__va(phys), phys, size,
++			       NUMA_NO_NODE);
++	if (rc) {
++		gen_pool_destroy(pool);
++		goto put_pgmap;
++	}
++	dax_base = __va(phys);
++	dax_phys = phys;
++	dax_size = size;
++	dax_pgmap = pgmap;
++	if (dax_shared_mode) {
++		struct kvm_dax_shared *s = dax_base;
++		if (!dax_node || dax_shared_mode > 2) {
++			rc = -EINVAL;
++			goto bad_shared;
++		}
++		if (dax_shared_mode == 1) {
++			memset(s, 0, PAGE_SIZE);
++			s->bump = PAGE_SIZE;
++			s->kva = (unsigned long)dax_base;
++			s->phys = phys;
++			smp_store_release(&s->magic, 0x43584c4b564d3031ULL);
++		} else if (smp_load_acquire(&s->magic) != 0x43584c4b564d3031ULL ||
++			   s->kva != (unsigned long)dax_base || s->phys != phys) {
++			rc = -EXDEV;
++			goto bad_shared;
++		}
++	}
++	/* Publish all immutable mapping fields before any allocator can run. */
++	smp_store_release(&dax_pool, pool);
++	pr_info("KVM_DAX_POOL pa=%pa bytes=%zu page_metadata=4K\n", &dax_phys, dax_size);
++	goto out;
++bad_shared:
++	gen_pool_destroy(pool);
++	dax_base = NULL;
++put_pgmap:
++	put_dev_pagemap(pgmap);
++out:
++	mutex_unlock(&dax_config_lock);
++	return rc;
++}
++
++static int dax_pool_get(char *buffer, const struct kernel_param *kp)
++{
++	unsigned long flags;
++	unsigned int i;
++	int n;
++
++	n = scnprintf(buffer, PAGE_SIZE,
++		      "enabled=%u phys=%llx bytes=%zu available=%zu failures=%lu\n",
++		      dax_pool != NULL, (unsigned long long)dax_phys, dax_size,
++		      dax_pool ? gen_pool_avail(dax_pool) : 0, dax_failures);
++	if (kvm_dax_shared())
++		n += scnprintf(buffer + n, PAGE_SIZE - n,
++			"shared=%u node=%u state=%u owner=%u used=%llu generation=%llu\n",
++			dax_shared_mode, dax_node, kvm_dax_shared()->state,
++			kvm_dax_shared()->owner, kvm_dax_shared()->bump,
++			kvm_dax_shared()->generation);
++	if (kvm_dax_shared())
++		n += scnprintf(buffer + n, PAGE_SIZE - n,
++			"vm_create_calls=%llu vcpu_create_calls=%llu\n",
++			kvm_dax_shared()->vm_create_calls, kvm_dax_shared()->vcpu_create_calls);
++	spin_lock_irqsave(&dax_stats_lock, flags);
++	for (i = 0; i < dax_nr_kinds; i++)
++		n += scnprintf(buffer + n, PAGE_SIZE - n,
++			       "%s live=%lu allocs=%lu frees=%lu bytes=%lu\n",
++			       dax_kinds[i].name, dax_kinds[i].live, dax_kinds[i].allocs,
++			       dax_kinds[i].frees, dax_kinds[i].bytes);
++	spin_unlock_irqrestore(&dax_stats_lock, flags);
++	return n;
++}
++
++static const struct kernel_param_ops dax_pool_ops = {
++	.set = dax_pool_set,
++	.get = dax_pool_get,
++};
++module_param_cb(dax_pool, &dax_pool_ops, NULL, 0600);
++MODULE_PARM_DESC(dax_pool,
++	"LAB ONLY: device-DAX physical start,size in hex; configure once before creating VMs");
++
++void kvm_dax_pool_exit(void)
++{
++	if (!dax_pool)
++		return;
++	WARN_ON(gen_pool_avail(dax_pool) != gen_pool_size(dax_pool));
++	gen_pool_destroy(dax_pool);
++	WRITE_ONCE(dax_pool, NULL);
++	put_dev_pagemap(dax_pgmap);
++	dax_base = NULL;
++}
+--- a/virt/kvm/eventfd.c
++++ b/virt/kvm/eventfd.c
+@@ -88,6 +88,19 @@
+ 	srcu_read_unlock(&kvm->irq_srcu, idx);
+ }
+ 
++static void irqfd_synchronize_srcu(struct kvm *kvm)
++{
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++	struct kvm_dax_shared *s = kvm_dax_shared();
++	/* Retain the grace period, avoid millisecond timer batching at handoff. */
++	if (s && kvm_dax_contains(kvm) && s->handoff_mode >= 2) {
++		synchronize_srcu_expedited(&kvm->irq_srcu);
++		return;
++	}
++#endif
++	synchronize_srcu(&kvm->irq_srcu);
++}
++
+ static void
+ irqfd_resampler_shutdown(struct kvm_kernel_irqfd *irqfd)
+ {
+@@ -97,7 +110,7 @@
+ 	mutex_lock(&kvm->irqfds.resampler_lock);
+ 
+ 	list_del_rcu(&irqfd->resampler_link);
+-	synchronize_srcu(&kvm->irq_srcu);
++	irqfd_synchronize_srcu(kvm);
+ 
+ 	if (list_empty(&resampler->list)) {
+ 		list_del_rcu(&resampler->link);
+@@ -108,7 +121,7 @@
+ 		 */
+ 		kvm_set_irq(kvm, KVM_IRQFD_RESAMPLE_IRQ_SOURCE_ID,
+ 			    resampler->notifier.gsi, 0, false);
+-		kfree(resampler);
++		kvm_dax_kvfree(resampler);
+ 	}
+ 
+ 	mutex_unlock(&kvm->irqfds.resampler_lock);
+@@ -117,16 +130,14 @@
+ /*
+  * Race-free decouple logic (ordering is critical)
+  */
+-static void
+-irqfd_shutdown(struct work_struct *work)
+-{
+-	struct kvm_kernel_irqfd *irqfd =
+-		container_of(work, struct kvm_kernel_irqfd, shutdown);
++static void irqfd_shutdown_common(struct kvm_kernel_irqfd *irqfd, bool synchronized)
++{
+ 	struct kvm *kvm = irqfd->kvm;
+ 	u64 cnt;
+ 
+ 	/* Make sure irqfd has been initialized in assign path. */
+-	synchronize_srcu(&kvm->irq_srcu);
++	if (!synchronized)
++		irqfd_synchronize_srcu(kvm);
+ 
+ 	/*
+ 	 * Synchronize with the wait-queue and unhook ourselves to prevent
+@@ -152,8 +163,55 @@
+ 	irq_bypass_unregister_consumer(&irqfd->consumer);
+ #endif
+ 	eventfd_ctx_put(irqfd->eventfd);
+-	kfree(irqfd);
+-}
++	kvm_dax_kvfree(irqfd);
++}
++
++static void irqfd_shutdown(struct work_struct *work)
++{
++	irqfd_shutdown_common(container_of(work, struct kvm_kernel_irqfd, shutdown), false);
++}
++
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++/* Cooperative stopped VM: retire simple IRQFDs in the caller, with one GP.
++ * No worker scheduling and no global cleanup-workqueue flush are needed.
++ * Removing the active-list entry prevents HUP from queuing shutdown twice. */
++int kvm_dax_irqfd_quiesce(struct kvm *kvm)
++{
++	struct kvm_kernel_irqfd *fds[8], *irqfd;
++	struct kvm_vcpu *vcpu = kvm_get_vcpu(kvm, 0);
++	unsigned int count = 0, i;
++	int ret = 0;
++
++	if (!vcpu || atomic_read(&kvm->online_vcpus) != 1 ||
++	    !mutex_trylock(&vcpu->mutex))
++		return -EBUSY;
++	spin_lock_irq(&kvm->irqfds.lock);
++	list_for_each_entry(irqfd, &kvm->irqfds.items, list) {
++		if (count == ARRAY_SIZE(fds) || irqfd->resampler) {
++			ret = -EOPNOTSUPP;
++			goto unlock;
++		}
++#ifdef CONFIG_HAVE_KVM_IRQ_BYPASS
++		if (irqfd->producer) {
++			ret = -EOPNOTSUPP;
++			goto unlock;
++		}
++#endif
++		fds[count++] = irqfd;
++	}
++	for (i = 0; i < count; i++)
++		list_del_init(&fds[i]->list);
++unlock:
++	spin_unlock_irq(&kvm->irqfds.lock);
++	if (!ret && count) {
++		irqfd_synchronize_srcu(kvm);
++		for (i = 0; i < count; i++)
++			irqfd_shutdown_common(fds[i], true);
++	}
++	mutex_unlock(&vcpu->mutex);
++	return ret;
++}
++#endif
+ 
+ 
+ /* assumes kvm->irqfds.lock is held */
+@@ -315,7 +373,7 @@
+ 	if (!kvm_arch_irqfd_allowed(kvm, args))
+ 		return -EINVAL;
+ 
+-	irqfd = kzalloc(sizeof(*irqfd), GFP_KERNEL_ACCOUNT);
++	irqfd = kvm_dax_zalloc(sizeof(*irqfd), GFP_KERNEL_ACCOUNT, __func__);
+ 	if (!irqfd)
+ 		return -ENOMEM;
+ 
+@@ -363,8 +421,8 @@
+ 		}
+ 
+ 		if (!irqfd->resampler) {
+-			resampler = kzalloc(sizeof(*resampler),
+-					    GFP_KERNEL_ACCOUNT);
++			resampler = kvm_dax_zalloc(sizeof(*resampler),
++					    GFP_KERNEL_ACCOUNT, __func__);
+ 			if (!resampler) {
+ 				ret = -ENOMEM;
+ 				mutex_unlock(&kvm->irqfds.resampler_lock);
+@@ -460,7 +518,7 @@
+ 	fdput(f);
+ 
+ out:
+-	kfree(irqfd);
++	kvm_dax_kvfree(irqfd);
+ 	return ret;
+ }
+ 
+@@ -728,7 +786,7 @@
+ {
+ 	eventfd_ctx_put(p->eventfd);
+ 	list_del(&p->list);
+-	kfree(p);
++	kvm_dax_kvfree(p);
+ }
+ 
+ static bool
+@@ -847,7 +905,7 @@
+ 	if (IS_ERR(eventfd))
+ 		return PTR_ERR(eventfd);
+ 
+-	p = kzalloc(sizeof(*p), GFP_KERNEL_ACCOUNT);
++	p = kvm_dax_zalloc(sizeof(*p), GFP_KERNEL_ACCOUNT, __func__);
+ 	if (!p) {
+ 		ret = -ENOMEM;
+ 		goto fail;
+@@ -889,7 +947,7 @@
+ 
+ unlock_fail:
+ 	mutex_unlock(&kvm->slots_lock);
+-	kfree(p);
++	kvm_dax_kvfree(p);
+ 
+ fail:
+ 	eventfd_ctx_put(eventfd);
+--- a/virt/kvm/irqchip.c
++++ b/virt/kvm/irqchip.c
+@@ -109,11 +109,11 @@
+ 
+ 		hlist_for_each_entry_safe(e, n, &rt->map[i], link) {
+ 			hlist_del(&e->link);
+-			kfree(e);
++			kvm_dax_kvfree(e);
+ 		}
+ 	}
+ 
+-	kfree(rt);
++	kvm_dax_kvfree(rt);
+ }
+ 
+ void kvm_free_irq_routing(struct kvm *kvm)
+@@ -183,7 +183,7 @@
+ 
+ 	nr_rt_entries += 1;
+ 
+-	new = kzalloc(struct_size(new, map, nr_rt_entries), GFP_KERNEL_ACCOUNT);
++	new = kvm_dax_zalloc(struct_size(new, map, nr_rt_entries), GFP_KERNEL_ACCOUNT, __func__);
+ 	if (!new)
+ 		return -ENOMEM;
+ 
+@@ -194,7 +194,7 @@
+ 
+ 	for (i = 0; i < nr; ++i) {
+ 		r = -ENOMEM;
+-		e = kzalloc(sizeof(*e), GFP_KERNEL_ACCOUNT);
++		e = kvm_dax_zalloc(sizeof(*e), GFP_KERNEL_ACCOUNT, __func__);
+ 		if (!e)
+ 			goto out;
+ 
+@@ -231,7 +231,7 @@
+ 	goto out;
+ 
+ free_entry:
+-	kfree(e);
++	kvm_dax_kvfree(e);
+ out:
+ 	free_irq_routing_table(new);
+ 
+--- a/virt/kvm/kvm_main.c
++++ b/virt/kvm/kvm_main.c
+@@ -27,6 +27,7 @@
+ #include <linux/debugfs.h>
+ #include <linux/highmem.h>
+ #include <linux/file.h>
++#include <linux/fdtable.h>
+ #include <linux/syscore_ops.h>
+ #include <linux/cpu.h>
+ #include <linux/sched/signal.h>
+@@ -106,8 +107,47 @@
+ LIST_HEAD(vm_list);
+ 
+ static struct kmem_cache *kvm_vcpu_cache;
++static unsigned int dax_vcpu_size, dax_vcpu_align;
+ 
+ static __read_mostly struct preempt_ops kvm_preempt_ops;
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++/* GPL-exported RCU helpers, used only around native notifier unregister. */
++extern void rcu_expedite_gp(void);
++extern void rcu_unexpedite_gp(void);
++static long kvm_dax_vm_ioctl(struct kvm *kvm, unsigned int cmd, unsigned long arg);
++static long kvm_dax_attach(unsigned long arg, struct kvm *reuse);
++static bool dax_handoff_profile;
++module_param(dax_handoff_profile, bool, 0600);
++static bool dax_resume_profile;
++module_param(dax_resume_profile, bool, 0600);
++static void dax_profile_step(u64 *steps, unsigned int index, u64 *last)
++{
++	u64 now;
++	if (!dax_handoff_profile)
++		return;
++	now = ktime_get_ns();
++	steps[index] = now - *last;
++	*last = now;
++}
++static bool dax_local_active;
++static unsigned int dax_handoff_mode = 3;
++module_param(dax_handoff_mode, uint, 0600);
++MODULE_PARM_DESC(dax_handoff_mode, "LAB: 0 conservative, 2 deferred retirement, 3 retained EPT");
++static bool dax_scattered;
++static unsigned long long dax_data_base, dax_data_bytes;
++module_param(dax_scattered, bool, 0600);
++module_param(dax_data_base, ullong, 0600);
++module_param(dax_data_bytes, ullong, 0600);
++MODULE_PARM_DESC(dax_scattered, "LAB: retain EPT with exact per-GPA shared CXL data mappings");
++static bool kvm_dax_access(struct kvm *kvm)
++{
++	struct kvm_dax_shared *s = kvm_dax_shared();
++	return !s || s->vm != (unsigned long)kvm ||
++		(smp_load_acquire(&s->state) == KVM_DAX_OWNED && s->owner == kvm_dax_node());
++}
++#else
++static bool kvm_dax_access(struct kvm *kvm) { return true; }
++#endif
+ static DEFINE_PER_CPU(struct kvm_vcpu *, kvm_running_vcpu);
+ 
+ struct dentry *kvm_debugfs_dir;
+@@ -404,11 +444,15 @@
+ 					       gfp_t gfp_flags)
+ {
+ 	gfp_flags |= mc->gfp_zero;
++	if (kvm_dax_enabled())
++		return kvm_dax_alloc(mc->kmem_cache ? kmem_cache_size(mc->kmem_cache) : PAGE_SIZE,
++				     mc->kmem_cache ? 64 : PAGE_SIZE,
++				     mc->kmem_cache ? "mmu_cache_object" : "ept_page");
+ 
+ 	if (mc->kmem_cache)
+-		return kmem_cache_alloc(mc->kmem_cache, gfp_flags);
++		return kvm_dax_cache_alloc(mc->kmem_cache, gfp_flags, __func__);
+ 	else
+-		return (void *)__get_free_page(gfp_flags);
++		return (void *)kvm_dax_get_page(gfp_flags, __func__);
+ }
+ 
+ int __kvm_mmu_topup_memory_cache(struct kvm_mmu_memory_cache *mc, int capacity, int min)
+@@ -423,7 +467,7 @@
+ 		if (WARN_ON_ONCE(!capacity))
+ 			return -EIO;
+ 
+-		mc->objects = kvmalloc_array(sizeof(void *), capacity, gfp);
++		mc->objects = kvm_dax_kvmalloc_array(sizeof(void *), capacity, gfp, __func__);
+ 		if (!mc->objects)
+ 			return -ENOMEM;
+ 
+@@ -456,13 +500,17 @@
+ void kvm_mmu_free_memory_cache(struct kvm_mmu_memory_cache *mc)
+ {
+ 	while (mc->nobjs) {
++		if (kvm_dax_free(mc->objects[mc->nobjs - 1])) {
++			mc->nobjs--;
++			continue;
++		}
+ 		if (mc->kmem_cache)
+-			kmem_cache_free(mc->kmem_cache, mc->objects[--mc->nobjs]);
++			kvm_dax_cache_free(mc->kmem_cache, mc->objects[--mc->nobjs]);
+ 		else
+-			free_page((unsigned long)mc->objects[--mc->nobjs]);
+-	}
+-
+-	kvfree(mc->objects);
++			kvm_dax_put_page((unsigned long)mc->objects[--mc->nobjs]);
++	}
++
++	kvm_dax_kvfree(mc->objects);
+ 
+ 	mc->objects = NULL;
+ 	mc->capacity = 0;
+@@ -517,8 +565,9 @@
+ 	 */
+ 	put_pid(rcu_dereference_protected(vcpu->pid, 1));
+ 
+-	free_page((unsigned long)vcpu->run);
+-	kmem_cache_free(kvm_vcpu_cache, vcpu);
++	kvm_dax_put_page((unsigned long)vcpu->run);
++	if (!kvm_dax_free(vcpu))
++		kvm_dax_cache_free(kvm_vcpu_cache, vcpu);
+ }
+ 
+ void kvm_destroy_vcpus(struct kvm *kvm)
+@@ -913,6 +962,17 @@
+ 	struct kvm *kvm = mmu_notifier_to_kvm(mn);
+ 	int idx;
+ 
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++	/* The paused, pinned shared VM is changing owner, not being destroyed.
++	 * unregister still drains notifier readers before the core is reused. */
++	if (kvm_dax_shared() && kvm_dax_shared()->vm == (unsigned long)kvm) {
++		if (kvm_dax_shared()->state == KVM_DAX_FAILED ||
++		    (kvm_dax_shared()->state == KVM_DAX_BUSY &&
++		     kvm_dax_shared()->handoff_mode == 3))
++			return;
++	}
++#endif
++
+ 	idx = srcu_read_lock(&kvm->srcu);
+ 	kvm_flush_shadow_all(kvm);
+ 	srcu_read_unlock(&kvm->srcu, idx);
+@@ -980,7 +1040,7 @@
+ 	if (!memslot->dirty_bitmap)
+ 		return;
+ 
+-	kvfree(memslot->dirty_bitmap);
++	kvm_dax_kvfree(memslot->dirty_bitmap);
+ 	memslot->dirty_bitmap = NULL;
+ }
+ 
+@@ -991,7 +1051,7 @@
+ 
+ 	kvm_arch_free_memslot(kvm, slot);
+ 
+-	kfree(slot);
++	kvm_dax_kvfree(slot);
+ }
+ 
+ static void kvm_free_memslots(struct kvm *kvm, struct kvm_memslots *slots)
+@@ -1039,8 +1099,8 @@
+ 
+ 	if (kvm->debugfs_stat_data) {
+ 		for (i = 0; i < kvm_debugfs_num_entries; i++)
+-			kfree(kvm->debugfs_stat_data[i]);
+-		kfree(kvm->debugfs_stat_data);
++			kvm_dax_kvfree(kvm->debugfs_stat_data[i]);
++		kvm_dax_kvfree(kvm->debugfs_stat_data);
+ 	}
+ }
+ 
+@@ -1073,15 +1133,15 @@
+ 		return 0;
+ 
+ 	kvm->debugfs_dentry = dent;
+-	kvm->debugfs_stat_data = kcalloc(kvm_debugfs_num_entries,
++	kvm->debugfs_stat_data = kvm_dax_kcalloc(kvm_debugfs_num_entries,
+ 					 sizeof(*kvm->debugfs_stat_data),
+-					 GFP_KERNEL_ACCOUNT);
++					 GFP_KERNEL_ACCOUNT, __func__);
+ 	if (!kvm->debugfs_stat_data)
+ 		goto out_err;
+ 
+ 	for (i = 0; i < kvm_vm_stats_header.num_desc; ++i) {
+ 		pdesc = &kvm_vm_stats_desc[i];
+-		stat_data = kzalloc(sizeof(*stat_data), GFP_KERNEL_ACCOUNT);
++		stat_data = kvm_dax_zalloc(sizeof(*stat_data), GFP_KERNEL_ACCOUNT, __func__);
+ 		if (!stat_data)
+ 			goto out_err;
+ 
+@@ -1096,7 +1156,7 @@
+ 
+ 	for (i = 0; i < kvm_vcpu_stats_header.num_desc; ++i) {
+ 		pdesc = &kvm_vcpu_stats_desc[i];
+-		stat_data = kzalloc(sizeof(*stat_data), GFP_KERNEL_ACCOUNT);
++		stat_data = kvm_dax_zalloc(sizeof(*stat_data), GFP_KERNEL_ACCOUNT, __func__);
+ 		if (!stat_data)
+ 			goto out_err;
+ 
+@@ -1149,6 +1209,16 @@
+ 
+ static struct kvm *kvm_create_vm(unsigned long type, const char *fdname)
+ {
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++	if (kvm_dax_shared() && kvm_dax_enabled()) {
++		kvm_dax_shared()->vm_create_calls++;
++		if (kvm_dax_shared()->vm_creates)
++			return ERR_PTR(-EBUSY);
++		kvm_dax_shared()->vm_creates++;
++		/* IRQFD shutdown precedes the first EXPORT in the VMM. */
++		kvm_dax_shared()->handoff_mode = dax_handoff_mode;
++	}
++#endif
+ 	struct kvm *kvm = kvm_arch_alloc_vm();
+ 	struct kvm_memslots *slots;
+ 	int r = -ENOMEM;
+@@ -1214,7 +1284,7 @@
+ 
+ 	for (i = 0; i < KVM_NR_BUSES; i++) {
+ 		rcu_assign_pointer(kvm->buses[i],
+-			kzalloc(sizeof(struct kvm_io_bus), GFP_KERNEL_ACCOUNT));
++			kvm_dax_zalloc(sizeof(struct kvm_io_bus), GFP_KERNEL_ACCOUNT, __func__));
+ 		if (!kvm->buses[i])
+ 			goto out_err_no_arch_destroy_vm;
+ 	}
+@@ -1272,7 +1342,7 @@
+ out_err_no_arch_destroy_vm:
+ 	WARN_ON_ONCE(!refcount_dec_and_test(&kvm->users_count));
+ 	for (i = 0; i < KVM_NR_BUSES; i++)
+-		kfree(kvm_get_bus(kvm, i));
++		kvm_dax_kvfree(kvm_get_bus(kvm, i));
+ 	cleanup_srcu_struct(&kvm->irq_srcu);
+ out_err_no_irq_srcu:
+ 	cleanup_srcu_struct(&kvm->srcu);
+@@ -1391,7 +1461,8 @@
+ {
+ 	struct kvm *kvm = filp->private_data;
+ 
+-	kvm_irqfd_release(kvm);
++	if (kvm_dax_access(kvm))
++		kvm_irqfd_release(kvm);
+ 
+ 	kvm_put_kvm(kvm);
+ 	return 0;
+@@ -1701,7 +1772,7 @@
+ 		 * memory, not any metadata.  Metadata, including arch specific
+ 		 * data, may be reused by @new.
+ 		 */
+-		kfree(old);
++		kvm_dax_kvfree(old);
+ 		break;
+ 	default:
+ 		BUG();
+@@ -1868,7 +1939,7 @@
+ 	 * invalidation needs to be reverted.
+ 	 */
+ 	if (change == KVM_MR_DELETE || change == KVM_MR_MOVE) {
+-		invalid_slot = kzalloc(sizeof(*invalid_slot), GFP_KERNEL_ACCOUNT);
++		invalid_slot = kvm_dax_zalloc(sizeof(*invalid_slot), GFP_KERNEL_ACCOUNT, __func__);
+ 		if (!invalid_slot) {
+ 			mutex_unlock(&kvm->slots_arch_lock);
+ 			return -ENOMEM;
+@@ -1886,7 +1957,7 @@
+ 		 */
+ 		if (change == KVM_MR_DELETE || change == KVM_MR_MOVE) {
+ 			kvm_activate_memslot(kvm, invalid_slot, old);
+-			kfree(invalid_slot);
++			kvm_dax_kvfree(invalid_slot);
+ 		} else {
+ 			mutex_unlock(&kvm->slots_arch_lock);
+ 		}
+@@ -1913,7 +1984,7 @@
+ 
+ 	/* Free the temporary INVALID slot used for DELETE and MOVE. */
+ 	if (change == KVM_MR_DELETE || change == KVM_MR_MOVE)
+-		kfree(invalid_slot);
++		kvm_dax_kvfree(invalid_slot);
+ 
+ 	/*
+ 	 * No need to refresh new->arch, changes after dropping slots_arch_lock
+@@ -2032,7 +2103,7 @@
+ 		return -EEXIST;
+ 
+ 	/* Allocate a slot that will persist in the memslot. */
+-	new = kzalloc(sizeof(*new), GFP_KERNEL_ACCOUNT);
++	new = kvm_dax_zalloc(sizeof(*new), GFP_KERNEL_ACCOUNT, "memslot");
+ 	if (!new)
+ 		return -ENOMEM;
+ 
+@@ -2045,7 +2116,7 @@
+ 
+ 	r = kvm_set_memslot(kvm, old, new, change);
+ 	if (r)
+-		kfree(new);
++		kvm_dax_kvfree(new);
+ 	return r;
+ }
+ EXPORT_SYMBOL_GPL(__kvm_set_memory_region);
+@@ -2618,6 +2689,11 @@
+ 	pte_t pte;
+ 	spinlock_t *ptl;
+ 	int r;
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++	bool cow_retried = false;
++
++retry_pool_write:
++#endif
+ 
+ 	r = follow_pte(vma->vm_mm, addr, &ptep, &ptl);
+ 	if (r) {
+@@ -2642,6 +2718,24 @@
+ 	pte = ptep_get(ptep);
+ 
+ 	if (write_fault && !pte_write(pte)) {
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++		/* Opt-in CXL mapper owns pfn_mkwrite CoW. GUP cannot invoke it for
++		 * PFNMAP, and a read-populated canonical PTE needs an explicit
++		 * write fault before KVM can install a writable private CXL leaf.
++		 * Never call a sleeping fault handler while holding the PTE lock. */
++		if (dax_scattered && !cow_retried && (vma->vm_flags & VM_WRITE) &&
++		    vma->vm_ops && vma->vm_ops->pfn_mkwrite) {
++			bool unlocked = false;
++			pte_unmap_unlock(ptep, ptl);
++			r = fixup_user_fault(current->mm, addr, FAULT_FLAG_WRITE, &unlocked);
++			if (unlocked)
++				return -EAGAIN;
++			if (r)
++				return r;
++			cow_retried = true;
++			goto retry_pool_write;
++		}
++#endif
+ 		pfn = KVM_PFN_ERR_RO_FAULT;
+ 		goto out;
+ 	}
+@@ -3942,6 +4036,10 @@
+  */
+ static int kvm_vm_ioctl_create_vcpu(struct kvm *kvm, u32 id)
+ {
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++	if (kvm_dax_shared() && kvm_dax_contains(kvm))
++		kvm_dax_shared()->vcpu_create_calls++;
++#endif
+ 	int r;
+ 	struct kvm_vcpu *vcpu;
+ 	struct page *page;
+@@ -3964,19 +4062,24 @@
+ 	kvm->created_vcpus++;
+ 	mutex_unlock(&kvm->lock);
+ 
+-	vcpu = kmem_cache_zalloc(kvm_vcpu_cache, GFP_KERNEL_ACCOUNT);
++	vcpu = kvm_dax_enabled() ? kvm_dax_alloc(dax_vcpu_size, dax_vcpu_align, "vcpu") :
++		kvm_dax_cache_zalloc(kvm_vcpu_cache, GFP_KERNEL_ACCOUNT, __func__);
+ 	if (!vcpu) {
+ 		r = -ENOMEM;
+ 		goto vcpu_decrement;
+ 	}
+ 
+ 	BUILD_BUG_ON(sizeof(struct kvm_run) > PAGE_SIZE);
+-	page = alloc_page(GFP_KERNEL_ACCOUNT | __GFP_ZERO);
+-	if (!page) {
++	if (kvm_dax_enabled()) {
++		vcpu->run = (void *)kvm_dax_get_page(GFP_KERNEL_ACCOUNT, "kvm_run");
++	} else {
++		page = kvm_dax_page(GFP_KERNEL_ACCOUNT | __GFP_ZERO, __func__);
++		vcpu->run = page ? page_address(page) : NULL;
++	}
++	if (!vcpu->run) {
+ 		r = -ENOMEM;
+ 		goto vcpu_free;
+ 	}
+-	vcpu->run = page_address(page);
+ 
+ 	kvm_vcpu_init(vcpu, kvm, id);
+ 
+@@ -4005,6 +4108,10 @@
+ 	}
+ 
+ 	vcpu->vcpu_idx = atomic_read(&kvm->online_vcpus);
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++	if (kvm_dax_shared() && kvm_dax_contains(kvm))
++		kvm_dax_shared()->vcpu_creates++;
++#endif
+ 	r = xa_reserve(&kvm->vcpu_array, vcpu->vcpu_idx, GFP_KERNEL_ACCOUNT);
+ 	if (r)
+ 		goto unlock_vcpu_destroy;
+@@ -4041,9 +4148,10 @@
+ arch_vcpu_destroy:
+ 	kvm_arch_vcpu_destroy(vcpu);
+ vcpu_free_run_page:
+-	free_page((unsigned long)vcpu->run);
++	kvm_dax_put_page((unsigned long)vcpu->run);
+ vcpu_free:
+-	kmem_cache_free(kvm_vcpu_cache, vcpu);
++	if (!kvm_dax_free(vcpu))
++		kvm_dax_cache_free(kvm_vcpu_cache, vcpu);
+ vcpu_decrement:
+ 	mutex_lock(&kvm->lock);
+ 	kvm->created_vcpus--;
+@@ -4121,7 +4229,7 @@
+ 	struct kvm_fpu *fpu = NULL;
+ 	struct kvm_sregs *kvm_sregs = NULL;
+ 
+-	if (vcpu->kvm->mm != current->mm || vcpu->kvm->vm_dead)
++	if (!kvm_dax_access(vcpu->kvm) || vcpu->kvm->mm != current->mm || vcpu->kvm->vm_dead)
+ 		return -EIO;
+ 
+ 	if (unlikely(_IOC_TYPE(ioctl) != KVMIO))
+@@ -4137,9 +4245,18 @@
+ 
+ 	if (mutex_lock_killable(&vcpu->mutex))
+ 		return -EINTR;
++	/* A caller may have queued on this mutex before a direct detach. */
++	if (!kvm_dax_access(vcpu->kvm) || vcpu->kvm->mm != current->mm) {
++		r = -EIO;
++		goto out;
++	}
+ 	switch (ioctl) {
+ 	case KVM_RUN: {
+ 		struct pid *oldpid;
++		struct kvm_dax_resume_profile *resume = kvm_dax_resume_profile();
++
++		if (resume && !READ_ONCE(resume->run_ns))
++			WRITE_ONCE(resume->run_ns, ktime_get_ns());
+ 		r = -EINVAL;
+ 		if (arg)
+ 			goto out;
+@@ -4166,7 +4283,7 @@
+ 		struct kvm_regs *kvm_regs;
+ 
+ 		r = -ENOMEM;
+-		kvm_regs = kzalloc(sizeof(struct kvm_regs), GFP_KERNEL_ACCOUNT);
++		kvm_regs = kvm_dax_zalloc(sizeof(struct kvm_regs), GFP_KERNEL_ACCOUNT, __func__);
+ 		if (!kvm_regs)
+ 			goto out;
+ 		r = kvm_arch_vcpu_ioctl_get_regs(vcpu, kvm_regs);
+@@ -4177,7 +4294,7 @@
+ 			goto out_free1;
+ 		r = 0;
+ out_free1:
+-		kfree(kvm_regs);
++		kvm_dax_kvfree(kvm_regs);
+ 		break;
+ 	}
+ 	case KVM_SET_REGS: {
+@@ -4189,12 +4306,12 @@
+ 			goto out;
+ 		}
+ 		r = kvm_arch_vcpu_ioctl_set_regs(vcpu, kvm_regs);
+-		kfree(kvm_regs);
++		kvm_dax_kvfree(kvm_regs);
+ 		break;
+ 	}
+ 	case KVM_GET_SREGS: {
+-		kvm_sregs = kzalloc(sizeof(struct kvm_sregs),
+-				    GFP_KERNEL_ACCOUNT);
++		kvm_sregs = kvm_dax_zalloc(sizeof(struct kvm_sregs),
++				    GFP_KERNEL_ACCOUNT, __func__);
+ 		r = -ENOMEM;
+ 		if (!kvm_sregs)
+ 			goto out;
+@@ -4286,7 +4403,7 @@
+ 		break;
+ 	}
+ 	case KVM_GET_FPU: {
+-		fpu = kzalloc(sizeof(struct kvm_fpu), GFP_KERNEL_ACCOUNT);
++		fpu = kvm_dax_zalloc(sizeof(struct kvm_fpu), GFP_KERNEL_ACCOUNT, __func__);
+ 		r = -ENOMEM;
+ 		if (!fpu)
+ 			goto out;
+@@ -4318,8 +4435,8 @@
+ 	}
+ out:
+ 	mutex_unlock(&vcpu->mutex);
+-	kfree(fpu);
+-	kfree(kvm_sregs);
++	kvm_dax_kvfree(fpu);
++	kvm_dax_kvfree(kvm_sregs);
+ 	return r;
+ }
+ 
+@@ -4491,7 +4608,7 @@
+ 	if (test)
+ 		return 0;
+ 
+-	dev = kzalloc(sizeof(*dev), GFP_KERNEL_ACCOUNT);
++	dev = kvm_dax_zalloc(sizeof(*dev), GFP_KERNEL_ACCOUNT, __func__);
+ 	if (!dev)
+ 		return -ENOMEM;
+ 
+@@ -4502,7 +4619,7 @@
+ 	ret = ops->create(dev, type);
+ 	if (ret < 0) {
+ 		mutex_unlock(&kvm->lock);
+-		kfree(dev);
++		kvm_dax_kvfree(dev);
+ 		return ret;
+ 	}
+ 	list_add(&dev->vm_node, &kvm->devices);
+@@ -4795,9 +4912,23 @@
+ 	void __user *argp = (void __user *)arg;
+ 	int r;
+ 
+-	if (kvm->mm != current->mm || kvm->vm_dead)
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++	if (ioctl == KVM_DAX_REATTACH)
++		return kvm_dax_attach(arg, kvm);
++#endif
++	if (!kvm_dax_access(kvm) || kvm->mm != current->mm || kvm->vm_dead)
+ 		return -EIO;
+ 	switch (ioctl) {
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++	case KVM_DAX_IRQFD_QUIESCE:
++		if (!capable(CAP_SYS_ADMIN) || !kvm_dax_contains(kvm))
++			return -EPERM;
++		return kvm_dax_irqfd_quiesce(kvm);
++	case KVM_DAX_EXPORT:
++	case KVM_DAX_DETACH:
++	case KVM_DAX_VCPU:
++		return kvm_dax_vm_ioctl(kvm, ioctl, arg);
++#endif
+ 	case KVM_CREATE_VCPU:
+ 		r = kvm_vm_ioctl_create_vcpu(kvm, arg);
+ 		break;
+@@ -4942,7 +5073,7 @@
+ 		}
+ 		r = kvm_set_irq_routing(kvm, entries, routing.nr,
+ 					routing.flags);
+-		kvfree(entries);
++		kvm_dax_kvfree(entries);
+ 		break;
+ 	}
+ #endif /* CONFIG_HAVE_KVM_IRQ_ROUTING */
+@@ -5116,12 +5247,422 @@
+ 	return r;
+ }
+ 
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++/* Read faults must not break an immutable canonical mapping's CoW protection.
++ * Device writers and vCPUs are quiesced by the privileged userspace owner.
++ * check=true validates every target page before any native observer is bound. */
++static int kvm_dax_data_map(struct kvm_dax_shared *s, bool check)
++{
++	u64 i, count = s->ram_bytes >> PAGE_SHIFT;
++	u64 *pfns = (void *)(unsigned long)s->ram_pfns;
++
++	if (!s->scattered)
++		return 0;
++	if (!count || !s->data_pages || !kvm_dax_contains(pfns) ||
++	    !kvm_dax_contains(pfns + count - 1))
++		return -EINVAL;
++	for (i = 0; i < count; i++) {
++		kvm_pfn_t pfn = hva_to_pfn(s->ram_hva + (i << PAGE_SHIFT),
++			false, false, NULL, false, NULL);
++		if (is_error_noslot_pfn(pfn))
++			return -EFAULT;
++		kvm_release_pfn_clean(pfn);
++		if (!kvm_dax_data_pfn_valid(s, pfn, 1) || (check && pfns[i] != pfn))
++			return -EXDEV;
++		if (!check)
++			pfns[i] = pfn;
++		cond_resched();
++	}
++	return 0;
++}
++
++static void kvm_dax_result(struct kvm *kvm, struct kvm_dax_handoff *out, u64 ns)
++{
++	struct kvm_dax_shared *s = kvm_dax_shared();
++	struct kvm_vcpu *vcpu = (void *)(unsigned long)s->vcpu;
++	memset(out, 0, sizeof(*out));
++	out->vm_offset = kvm_dax_offset(kvm);
++	out->vcpu_offset = kvm_dax_offset(vcpu);
++	out->run_offset = kvm_dax_offset(vcpu->run);
++	out->vmcs_offset = s->vmcs;
++	out->generation = s->generation;
++	out->kernel_ns = ns;
++	out->pool_used = s->bump;
++	out->vm_creates = s->vm_creates;
++	out->vcpu_creates = s->vcpu_creates;
++	out->node = kvm_dax_node();
++	out->flags = s->state;
++	out->ram_hva = s->ram_hva;
++	out->ram_bytes = s->ram_bytes;
++	out->quiesce_ns = s->quiesce_ns;
++	out->mmu_drain_ns = s->mmu_drain_ns;
++	out->binding_ns = s->binding_ns;
++	out->ept_root_offset = s->ept_root_hpa ? kvm_dax_offset(__va(s->ept_root_hpa)) : 0;
++	out->ept_page_count = s->ept_page_count;
++}
++
++static long kvm_dax_vm_ioctl(struct kvm *kvm, unsigned int cmd, unsigned long arg)
++{
++	struct kvm_dax_shared *s = kvm_dax_shared();
++	struct kvm_dax_handoff out;
++	struct kvm_vcpu *vcpu = kvm_get_vcpu(kvm, 0);
++	struct pid *pid;
++	u64 start = ktime_get_ns();
++	u64 profile_last = start;
++	struct kvm_dax_profile *profile = (void *)s + KVM_DAX_PROFILE_OFFSET;
++	u64 binding_start;
++	int r;
++
++	if (!capable(CAP_SYS_ADMIN) || !s || !kvm_dax_contains(kvm) ||
++	    !vcpu || atomic_read(&kvm->online_vcpus) != 1 || !kvm_dax_contains(vcpu))
++		return -EOPNOTSUPP;
++	if (cmd == KVM_DAX_VCPU) {
++		kvm_get_kvm(kvm);
++		r = create_vcpu_fd(vcpu);
++		if (r < 0)
++			kvm_put_kvm_no_destroy(kvm);
++		return r;
++	}
++	if (cmd == KVM_DAX_EXPORT) {
++		if (s->state != KVM_DAX_EMPTY)
++			return -EBUSY;
++		if (!kvm_x86_ops.dax_handoff ||
++		    kvm->arch.nx_huge_page_recovery_thread || kvm->dirty_ring_size ||
++		    !list_empty(&kvm->irqfds.items) || !list_empty(&kvm->ioeventfds))
++			return -EOPNOTSUPP;
++		s->vm = (unsigned long)kvm;
++		s->vcpu = (unsigned long)vcpu;
++		s->kernel_code = (unsigned long)kvm_dax_vm_ioctl;
++		s->vmx_code = (unsigned long)kvm_x86_ops.dax_handoff;
++		s->vm_bytes = sizeof(*kvm);
++		s->vcpu_bytes = sizeof(*vcpu);
++		if (dax_handoff_mode > 3 || dax_handoff_mode == 1)
++			return -EINVAL;
++		s->handoff_mode = dax_handoff_mode;
++		{
++			struct kvm_memory_slot *slot = id_to_memslot(__kvm_memslots(kvm, 0), 0);
++			if (!slot || slot->base_gfn || slot->dirty_bitmap)
++				return -EOPNOTSUPP;
++			s->ram_hva = slot->userspace_addr;
++			s->ram_bytes = slot->npages << PAGE_SHIFT;
++			s->scattered = dax_scattered;
++			if (s->scattered) {
++				if (dax_handoff_mode != 3 || !dax_data_bytes ||
++				    (dax_data_base | dax_data_bytes) & ~PAGE_MASK ||
++				    dax_data_base > U64_MAX - dax_data_bytes)
++					return -EINVAL;
++				s->data_pfn_base = dax_data_base >> PAGE_SHIFT;
++				s->data_pages = dax_data_bytes >> PAGE_SHIFT;
++				s->ram_pfns = (unsigned long)kvm_dax_alloc(
++					array_size(slot->npages, sizeof(u64)), 64, "direct_data_pfns");
++				if (!s->ram_pfns)
++					return -ENOMEM;
++				r = kvm_dax_data_map(s, false);
++				if (r)
++					return r;
++			}
++			if (s->handoff_mode == 3) {
++				s->ram_pfn = hva_to_pfn(s->ram_hva, false, false, NULL, false, NULL);
++				if (is_error_noslot_pfn(s->ram_pfn))
++					return -EFAULT;
++				kvm_release_pfn_clean(s->ram_pfn);
++			}
++		}
++		s->owner = kvm_dax_node();
++		kvm_get_kvm(kvm); /* Retain the shared graph until this bounded lab ends. */
++		dax_local_active = true;
++		smp_store_release(&s->state, KVM_DAX_OWNED);
++		pr_info("KVM_DAX_EXPORT vm=%llx vcpu=%llx node=%u\n",
++			kvm_dax_offset(kvm), kvm_dax_offset(vcpu), s->owner);
++	} else {
++		if (!kvm_dax_access(kvm) || s->vm != (unsigned long)kvm)
++			return -EACCES;
++		if (!mutex_trylock(&vcpu->mutex))
++			return -EBUSY;
++		/* A userspace IO/MMIO exit is not yet a completed guest instruction. */
++		if (vcpu->arch.complete_userspace_io || vcpu->arch.apf.msr_en_val ||
++		    !list_empty(&kvm->devices) ||
++		    (!list_empty(&kvm->gpc_list) &&
++		     (!list_is_singular(&kvm->gpc_list) ||
++		      list_first_entry(&kvm->gpc_list, struct gfn_to_pfn_cache, list) != &vcpu->arch.pv_time))) {
++			r = -EOPNOTSUPP;
++			goto unlock;
++		}
++		if (cmpxchg(&s->state, KVM_DAX_OWNED, KVM_DAX_BUSY) != KVM_DAX_OWNED) {
++			r = -EBUSY;
++			goto unlock;
++		}
++		r = kvm_dax_data_map(s, false);
++		if (r) {
++			smp_store_release(&s->state, KVM_DAX_FAILED);
++			goto unlock;
++		}
++		if (dax_handoff_profile)
++			memset(profile->detach, 0, sizeof(profile->detach));
++		r = kvm_arch_dax_handoff(vcpu, false);
++		if (r) {
++			smp_store_release(&s->state, KVM_DAX_FAILED);
++			goto unlock;
++		}
++		dax_profile_step(profile->detach, 0, &profile_last);
++		binding_start = ktime_get_ns();
++		/* Stop native observers before publishing the shared object graph. */
++		kvm_destroy_pm_notifier(kvm);
++		kvm_destroy_vm_debugfs(kvm);
++		kvm->debugfs_dentry = ERR_PTR(-ENOENT);
++		kvm->debugfs_stat_data = NULL;
++		mutex_lock(&kvm_lock);
++		list_del_init(&kvm->vm_list);
++		mutex_unlock(&kvm_lock);
++		dax_profile_step(profile->detach, 1, &profile_last);
++		/* Preserve the notifier reader drain without idle-heuristic batching. */
++		if (s->handoff_mode >= 2)
++			rcu_expedite_gp();
++		mmu_notifier_unregister(&kvm->mmu_notifier, kvm->mm);
++		if (s->handoff_mode >= 2)
++			rcu_unexpedite_gp();
++		memset(&kvm->mmu_notifier, 0, sizeof(kvm->mmu_notifier));
++		dax_profile_step(profile->detach, 2, &profile_last);
++		/* Xarray's radix nodes belong to the old kernel, not to the vCPU. */
++		xa_destroy(&kvm->vcpu_array);
++		/* MMU root destruction can defer freeing pages/headers through RCU. */
++		/* Retired radix nodes do not dereference the shared VM.  DAX MMU
++		 * retirement only frees immutable, never-reused arena allocations. */
++		if (s->handoff_mode < 2)
++			rcu_barrier();
++		dax_profile_step(profile->detach, 3, &profile_last);
++		cleanup_srcu_struct(&kvm->irq_srcu);
++		cleanup_srcu_struct(&kvm->srcu);
++		dax_profile_step(profile->detach, 4, &profile_last);
++		pid = rcu_dereference_protected(vcpu->pid, 1);
++		RCU_INIT_POINTER(vcpu->pid, NULL);
++		if (pid)
++			synchronize_rcu_expedited();
++		put_pid(pid);
++		dax_profile_step(profile->detach, 5, &profile_last);
++		mmdrop(kvm->mm);
++		kvm->mm = NULL;
++		vcpu->cpu = -1;
++		vcpu->last_used_slot = NULL;
++		s->owner = 0;
++		s->generation++;
++		s->detach_ns = ktime_get_ns() - start;
++		s->binding_ns = ktime_get_ns() - binding_start;
++		mutex_unlock(&vcpu->mutex);
++		dax_profile_step(profile->detach, 6, &profile_last);
++		smp_store_release(&s->state, KVM_DAX_DETACHED);
++	}
++	kvm_dax_result(kvm, &out, ktime_get_ns() - start);
++	return copy_to_user((void __user *)arg, &out, sizeof(out)) ? -EFAULT : 0;
++unlock:
++	mutex_unlock(&vcpu->mutex);
++	return r;
++}
++
++static long kvm_dax_attach(unsigned long arg, struct kvm *reuse)
++{
++	struct kvm_dax_shared *s = kvm_dax_shared();
++	struct kvm_dax_handoff in, out;
++	struct kvm *kvm;
++	struct kvm_vcpu *vcpu;
++	u64 start = ktime_get_ns();
++	u64 profile_last = start;
++	struct kvm_dax_profile *profile = (void *)s + KVM_DAX_PROFILE_OFFSET;
++	int r, fd;
++	bool locked = false, mm_ready = false, srcu_ready = false;
++	bool irq_srcu_ready = false, notifier_ready = false, listed = false;
++	bool arch_ready = false;
++
++	if (!capable(CAP_SYS_ADMIN) || !s)
++		return -EPERM;
++	if (copy_from_user(&in, (void __user *)arg, sizeof(in)))
++		return -EFAULT;
++	if (smp_load_acquire(&s->state) != KVM_DAX_DETACHED)
++		return -EBUSY;
++	if (s->kernel_code != (unsigned long)kvm_dax_vm_ioctl ||
++	    s->vmx_code != (unsigned long)kvm_x86_ops.dax_handoff ||
++	    s->vm_bytes != sizeof(*kvm) || s->vcpu_bytes != sizeof(*vcpu) ||
++	    s->handoff_mode != dax_handoff_mode)
++		return -EXDEV;
++	kvm = (void *)(unsigned long)s->vm;
++	if (reuse && reuse != kvm)
++		return -EINVAL;
++	if (!kvm_dax_contains(kvm) || (in.vm_offset && in.vm_offset != kvm_dax_offset(kvm)))
++		return -EINVAL;
++	if (s->scattered) {
++		/* Bind device metadata to this exact ownership generation and graph. */
++		if (!dax_scattered || dax_data_base >> PAGE_SHIFT != s->data_pfn_base ||
++		    dax_data_bytes >> PAGE_SHIFT != s->data_pages ||
++		    in.generation != s->generation || in.vm_offset != kvm_dax_offset(kvm) ||
++		    in.vcpu_offset != kvm_dax_offset((void *)(unsigned long)s->vcpu) ||
++		    in.vmcs_offset != s->vmcs || in.ram_hva != s->ram_hva ||
++		    in.ram_bytes != s->ram_bytes)
++			return -EXDEV;
++		r = kvm_dax_data_map(s, true);
++		if (r)
++			return r;
++	} else if (s->handoff_mode == 3) {
++		kvm_pfn_t first, last;
++		/* Validate current->mm before installing any native observers into
++		 * the shared core. A rejected mapping leaves DETACHED untouched. */
++		first = hva_to_pfn(s->ram_hva, false, false, NULL, false, NULL);
++		last = hva_to_pfn(s->ram_hva + s->ram_bytes - PAGE_SIZE,
++				  false, false, NULL, false, NULL);
++		if (!is_error_noslot_pfn(first))
++			kvm_release_pfn_clean(first);
++		if (!is_error_noslot_pfn(last))
++			kvm_release_pfn_clean(last);
++		if (first != s->ram_pfn || last != first + (s->ram_bytes >> PAGE_SHIFT) - 1)
++			return -EXDEV;
++	}
++	fd = reuse ? -1 : get_unused_fd_flags(O_CLOEXEC);
++	if (!reuse && fd < 0)
++		return fd;
++	if (cmpxchg(&s->state, KVM_DAX_DETACHED, KVM_DAX_BUSY) != KVM_DAX_DETACHED) {
++		if (fd >= 0)
++			put_unused_fd(fd);
++		return -EBUSY;
++	}
++	if (dax_handoff_profile)
++		memset(profile->attach, 0, sizeof(profile->attach));
++	dax_profile_step(profile->attach, 0, &profile_last);
++	/* No KVM_CREATE_VM, arch VM initialization, or vCPU allocation here. */
++	if (!dax_local_active) {
++		r = hardware_enable_all();
++		if (r)
++			goto fail;
++		__module_get(kvm_chardev_ops.owner);
++		preempt_notifier_inc();
++		dax_local_active = true;
++	}
++	mmgrab(current->mm);
++	mm_ready = true;
++	kvm->mm = current->mm;
++	dax_profile_step(profile->attach, 1, &profile_last);
++	memset(&kvm->srcu, 0, sizeof(kvm->srcu));
++	memset(&kvm->irq_srcu, 0, sizeof(kvm->irq_srcu));
++	r = init_srcu_struct(&kvm->srcu);
++	if (r)
++		goto fail;
++	srcu_ready = true;
++	r = init_srcu_struct(&kvm->irq_srcu);
++	if (r)
++		goto fail;
++	irq_srcu_ready = true;
++	dax_profile_step(profile->attach, 2, &profile_last);
++	r = kvm_init_mmu_notifier(kvm);
++	if (r)
++		goto fail;
++	notifier_ready = true;
++	dax_profile_step(profile->attach, 3, &profile_last);
++	vcpu = (void *)(unsigned long)s->vcpu;
++	if (!kvm_dax_contains(vcpu) || vcpu->kvm != kvm) {
++		r = -EINVAL;
++		goto fail;
++	}
++	mutex_lock(&vcpu->mutex);
++	locked = true;
++	xa_init(&kvm->vcpu_array);
++	r = xa_err(xa_store(&kvm->vcpu_array, 0, vcpu, GFP_KERNEL));
++	if (r)
++		goto fail;
++	preempt_notifier_init(&vcpu->preempt_notifier, &kvm_preempt_ops);
++	dax_profile_step(profile->attach, 4, &profile_last);
++	r = kvm_arch_dax_handoff(vcpu, true);
++	if (r)
++		goto fail;
++	arch_ready = true;
++	dax_profile_step(profile->attach, 5, &profile_last);
++	mutex_lock(&kvm_lock);
++	list_add(&kvm->vm_list, &vm_list);
++	mutex_unlock(&kvm_lock);
++	kvm_init_pm_notifier(kvm);
++	listed = true;
++	if (!reuse) {
++		struct file *file;
++		kvm_get_kvm(kvm);
++		file = anon_inode_getfile("kvm-dax-vm", &kvm_vm_fops, kvm, O_RDWR);
++		if (IS_ERR(file)) {
++			kvm_put_kvm_no_destroy(kvm);
++			r = PTR_ERR(file);
++			goto fail;
++		}
++		fd_install(fd, file);
++	}
++	dax_profile_step(profile->attach, 6, &profile_last);
++	mutex_unlock(&vcpu->mutex);
++	locked = false;
++	kvm->userspace_pid = task_pid_nr(current);
++	{
++		struct kvm_dax_resume_profile *resume =
++			(void *)s + KVM_DAX_RESUME_PROFILE_OFFSET;
++
++		memset(resume, 0, sizeof(*resume));
++		resume->generation = s->generation;
++		resume->enabled = dax_resume_profile;
++	}
++	s->owner = kvm_dax_node();
++	smp_store_release(&s->state, KVM_DAX_OWNED);
++	s->attach_ns = ktime_get_ns() - start;
++	kvm_dax_result(kvm, &out, s->attach_ns);
++	dax_profile_step(profile->attach, 7, &profile_last);
++	if (copy_to_user((void __user *)arg, &out, sizeof(out))) {
++		smp_store_release(&s->state, KVM_DAX_FAILED);
++		if (fd >= 0)
++			close_fd(fd);
++		fd = -1;
++		r = -EFAULT;
++		goto fail;
++	}
++	return reuse ? 0 : fd;
++fail:
++	/* Fail closed. This experimental graph must not be run after partial attach. */
++	smp_store_release(&s->state, KVM_DAX_FAILED);
++	if (arch_ready)
++		kvm_arch_dax_handoff(vcpu, false);
++	if (locked)
++		mutex_unlock(&vcpu->mutex);
++	if (listed) {
++		kvm_destroy_pm_notifier(kvm);
++		mutex_lock(&kvm_lock);
++		list_del_init(&kvm->vm_list);
++		mutex_unlock(&kvm_lock);
++	}
++	if (notifier_ready)
++		mmu_notifier_unregister(&kvm->mmu_notifier, kvm->mm);
++	if (irq_srcu_ready)
++		cleanup_srcu_struct(&kvm->irq_srcu);
++	if (srcu_ready)
++		cleanup_srcu_struct(&kvm->srcu);
++	if (mm_ready) {
++		mmdrop(kvm->mm);
++		kvm->mm = NULL;
++	}
++	if (fd >= 0)
++		put_unused_fd(fd);
++	return r;
++}
++#endif
++
+ static long kvm_dev_ioctl(struct file *filp,
+ 			  unsigned int ioctl, unsigned long arg)
+ {
+ 	int r = -EINVAL;
+ 
+ 	switch (ioctl) {
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++	case KVM_DAX_ATTACH:
++		return kvm_dax_attach(arg, NULL);
++	case KVM_DAX_PEEK: {
++		struct kvm_dax_shared *s = kvm_dax_shared();
++		struct kvm_dax_handoff out;
++		if (!capable(CAP_SYS_ADMIN) || !s || !s->vm)
++			return -ENOENT;
++		kvm_dax_result((void *)(unsigned long)s->vm, &out,
++			s->state == KVM_DAX_DETACHED ? s->detach_ns : s->attach_ns);
++		return copy_to_user((void __user *)arg, &out, sizeof(out)) ? -EFAULT : 0;
++	}
++#endif
+ 	case KVM_GET_API_VERSION:
+ 		if (arg)
+ 			goto out;
+@@ -5377,7 +5918,7 @@
+ 
+ 		kvm_iodevice_destructor(pos);
+ 	}
+-	kfree(bus);
++	kvm_dax_kvfree(bus);
+ }
+ 
+ static inline int kvm_io_bus_cmp(const struct kvm_io_range *r1,
+@@ -5561,8 +6102,8 @@
+ 	if (bus->dev_count - bus->ioeventfd_count > NR_IOBUS_DEVS - 1)
+ 		return -ENOSPC;
+ 
+-	new_bus = kmalloc(struct_size(bus, range, bus->dev_count + 1),
+-			  GFP_KERNEL_ACCOUNT);
++	new_bus = kvm_dax_kmalloc(struct_size(bus, range, bus->dev_count + 1),
++			  GFP_KERNEL_ACCOUNT, __func__);
+ 	if (!new_bus)
+ 		return -ENOMEM;
+ 
+@@ -5583,7 +6124,7 @@
+ 		(bus->dev_count - i) * sizeof(struct kvm_io_range));
+ 	rcu_assign_pointer(kvm->buses[bus_idx], new_bus);
+ 	synchronize_srcu_expedited(&kvm->srcu);
+-	kfree(bus);
++	kvm_dax_kvfree(bus);
+ 
+ 	return 0;
+ }
+@@ -5609,8 +6150,8 @@
+ 	if (i == bus->dev_count)
+ 		return 0;
+ 
+-	new_bus = kmalloc(struct_size(bus, range, bus->dev_count - 1),
+-			  GFP_KERNEL_ACCOUNT);
++	new_bus = kvm_dax_kmalloc(struct_size(bus, range, bus->dev_count - 1),
++			  GFP_KERNEL_ACCOUNT, __func__);
+ 	if (new_bus) {
+ 		memcpy(new_bus, bus, struct_size(bus, range, i));
+ 		new_bus->dev_count--;
+@@ -5632,7 +6173,7 @@
+ 	}
+ 
+ 	kvm_iodevice_destructor(dev);
+-	kfree(bus);
++	kvm_dax_kvfree(bus);
+ 	return 0;
+ }
+ 
+@@ -5883,7 +6424,7 @@
+ 	active = kvm_active_vms;
+ 	mutex_unlock(&kvm_lock);
+ 
+-	env = kzalloc(sizeof(*env), GFP_KERNEL_ACCOUNT);
++	env = kvm_dax_zalloc(sizeof(*env), GFP_KERNEL_ACCOUNT, __func__);
+ 	if (!env)
+ 		return;
+ 
+@@ -5899,19 +6440,19 @@
+ 	add_uevent_var(env, "PID=%d", kvm->userspace_pid);
+ 
+ 	if (!IS_ERR(kvm->debugfs_dentry)) {
+-		char *tmp, *p = kmalloc(PATH_MAX, GFP_KERNEL_ACCOUNT);
++		char *tmp, *p = kvm_dax_kmalloc(PATH_MAX, GFP_KERNEL_ACCOUNT, __func__);
+ 
+ 		if (p) {
+ 			tmp = dentry_path_raw(kvm->debugfs_dentry, p, PATH_MAX);
+ 			if (!IS_ERR(tmp))
+ 				add_uevent_var(env, "STATS_PATH=%s", tmp);
+-			kfree(p);
++			kvm_dax_kvfree(p);
+ 		}
+ 	}
+ 	/* no need for checks, since we are adding at most only 5 keys */
+ 	env->envp[env->envp_idx++] = NULL;
+ 	kobject_uevent_env(&kvm_dev.this_device->kobj, KOBJ_CHANGE, env->envp);
+-	kfree(env);
++	kvm_dax_kvfree(env);
+ }
+ 
+ static void kvm_init_debug(void)
+@@ -6066,6 +6607,8 @@
+ 	/* A kmem cache lets us meet the alignment requirements of fx_save. */
+ 	if (!vcpu_align)
+ 		vcpu_align = __alignof__(struct kvm_vcpu);
++	dax_vcpu_size = vcpu_size;
++	dax_vcpu_align = max(vcpu_align, 64U);
+ 	kvm_vcpu_cache =
+ 		kmem_cache_create_usercopy("kvm_vcpu", vcpu_size, vcpu_align,
+ 					   SLAB_ACCOUNT,
+@@ -6159,6 +6702,7 @@
+ 	cpuhp_remove_state_nocalls(CPUHP_AP_KVM_ONLINE);
+ #endif
+ 	kvm_irqfd_exit();
++	kvm_dax_pool_exit();
+ }
+ EXPORT_SYMBOL_GPL(kvm_exit);
+ 

@@ -1,0 +1,34 @@
+make: Entering directory '/tmp/guest-pool-linux-20261030'
+make[1]: Entering directory '/tmp/guest-pool-build-20261030'
+  SYNC    include/config/auto.conf.cmd
+  GEN     Makefile
+  GEN     Makefile
+  DESCEND objtool
+  CALL    /tmp/guest-pool-linux-20261030/scripts/checksyscalls.sh
+  INSTALL libsubcmd_headers
+  CC      drivers/misc/guest-pool.o
+  AR      drivers/misc/built-in.a
+  AR      drivers/built-in.a
+  AR      built-in.a
+  AR      vmlinux.a
+  LD      vmlinux.o
+  OBJCOPY modules.builtin.modinfo
+  GEN     modules.builtin
+  MODPOST vmlinux.symvers
+  UPD     include/generated/utsversion.h
+  CC      init/version-timestamp.o
+  LD      .tmp_vmlinux.kallsyms1
+  NM      .tmp_vmlinux.kallsyms1.syms
+  KSYMS   .tmp_vmlinux.kallsyms1.S
+  AS      .tmp_vmlinux.kallsyms1.S
+  LD      .tmp_vmlinux.kallsyms2
+  NM      .tmp_vmlinux.kallsyms2.syms
+  KSYMS   .tmp_vmlinux.kallsyms2.S
+  AS      .tmp_vmlinux.kallsyms2.S
+  LD      vmlinux
+  NM      System.map
+  SORTTAB vmlinux
+  RELOCS  arch/x86/boot/compressed/vmlinux.relocs
+  RSTRIP  vmlinux
+make[1]: Leaving directory '/tmp/guest-pool-build-20261030'
+make: Leaving directory '/tmp/guest-pool-linux-20261030'

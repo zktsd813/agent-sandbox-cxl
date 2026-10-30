@@ -1,6 +1,6 @@
 # CXL microVM 실행 이전 연구와 구현 정리
 
-정리 기준: 2026년 10월 30일. Host NFS와 고향 disk의 DRAM↔CXL 수명주기에 이어, virtio-blk 관측 기반의 읽기 데이터 pooling prototype을 추가했다. 측정 날짜와 환경은 각 결과에 따로 표시한다.
+정리 기준: 2026년 10월 30일. Host NFS와 고향 disk의 DRAM↔CXL 수명주기, virtio-blk 관측 prototype에 이어, 현재 guest metadata로 공유 자격을 확인하는 pooling과 direct/state-only handoff를 추가했다. 측정 날짜와 환경은 각 결과에 따로 표시한다.
 
 목표는 **sandbox의 메모리를 CXL에 유지하면서 실행을 담당하는 노드를 바꾸는 것**이다. RAM 전체를 옮기는 비용을 줄여, 이미 실행 중인 sandbox도 다른 노드의 여유 CPU를 사용할 수 있게 하려는 연구다.
 
@@ -31,13 +31,13 @@
 | PML과 cache | Dirty-page 기반 CPU flush/invalidate의 독립 계측 | 모든 writer 추적, 실제 handoff 통합, 비일관 환경 correctness |
 | DSA | Cache Flush capability와 preflush 순서 조사 | 실제 DSA 접근·완료 처리·성능 검증 |
 | MPTCP | Guest client가 A→B snapshot 복원 뒤 같은 연결로 통신 | 빠른 제어 경로, 반복 이동, server 이동, direct/reuse 장치 승계 |
-| Filesystem | RO lower + tmpfs upper의 trace, 그리고 별도 writable ext4의 local→NFS→local 복귀·clean reboot 보존 | 장애 시 단일 writer 보장, 전원 장애 내구성, direct/reuse 장치 승계, 공통 이미지 CXL 매핑 |
+| Filesystem | RO lower + tmpfs upper의 trace, 별도 writable ext4 lifecycle, pooling의 RO block direct/state-only와 실제 OverlayFS copy-up | Writable disk의 direct 승계, 장애 복구·전원 장애 내구성, 일반 장치·다중 vCPU |
 | NFS와 RAM 배치 | Host NFS image 접근과 guest cache 유지, DRAM→CXL promotion·고향 DRAM 복귀 | 실제 다중 host·물리 network, 명령 실행 도중 이전, 최적화된 제어 경로와 통합 |
-| 읽기 데이터 pooling | VMM 읽기 hint, 모든 VM의 CXL Bloom slot, 정지 상태의 canonical page 연결과 host CoW | 원래 DAX reservation 회수, 온라인 admission, 비일관 CXL publish, shared backing을 보존하는 state-only handoff |
+| 읽기 데이터 pooling | 현재 guest inode/folio 등록, CXL Bloom, promotion 공유·private CXL CoW, demotion 할당 반환, shared backing을 유지하는 두 handoff | 온라인 admission·동적 canonical 회수, 분산 allocator와 장애 복구, 비일관 CXL publish, PML/MPTCP 통합 |
 
 **환경을 구분해야 한다.** DRAM/CXL workload 실험과 microVM handoff 실험은 같은 종류의 측정이 아니다. 현재 handoff는 한 coherent 물리 host 위의 QEMU A/B와 nested KVM 환경이다. 독립된 Linux 사이의 실행 이전을 확인했지만, 실제 비일관 CXL에서 stale cache가 발생하는 상황을 검증한 것은 아니다.
 
-새 [데이터 pooling 구현](cxl-data-pooling.md)은 guest의 inode·folio·XArray를 VM별로 유지한다. 일반 ext4/virtio-blk 경로에서 읽은 데이터의 host backing을 공유하며, guest DAX나 virtio-pmem으로 filesystem을 바꾸지 않는다. 이 prototype의 이전은 CoW 내용까지 포함한 논리 RAM 전체를 저장하므로 기존 zero-copy/state-only handoff와 구분한다. 실제 PFN 공유가 DAX 예약 용량 반환까지 의미하지는 않는다.
+현재 [guest metadata 기반 pooling](cxl-guest-pool-handoff.md)은 guest의 inode·folio·XArray를 VM별로 유지하고 immutable lower의 데이터 backing만 공유한다. Guest ext4/virtio-blk는 유지한다. 현재 mapping과 private CXL CoW를 manifest로 이어서 direct/state-only 모두 RAM snapshot 없이 이전한다. Demotion 후 반환한 grant의 실제 타 VM 재사용도 별도로 확인한다. 이전 [read-hint prototype](cxl-data-pooling.md)은 full-RAM snapshot과 반환하지 않은 DAX reservation을 사용하는 역사적 결과다.
 
 ## 출발점과 초기 실험
 
@@ -422,9 +422,9 @@ DSec이 CXL을 사용하지 않은 이유는 논문에 명시되지 않았다. �
 |---|---|---|
 | 파일 연속성 확장 | DRAM↔CXL·home disk 왕복을 기반으로 명령 실행 중 이전, 장애 복구와 장기 반복 추가 | 열린 FD/offset·dirty 데이터 보존, `write→fsync→response` 장애 내구성, 중복 writer 차단 |
 | MPTCP 제어 경로 단축 | Serial state 전달을 DAX mailbox로 교체하고 반복 이동 계측 | 연결 identity 유지, record 누락·중복·오류 0, 단계별 blackout 기록 |
-| 읽기 데이터 pooling 확장 | 관측 기반 admission을 온라인화하고 원래 frame 회수·private CoW의 CXL 배치·backing manifest 이전 추가 | 현재 파일 cache의 실제 공유 PFN, 재사용 중 격리, 반환 가능한 용량과 state-only 이전의 보존 |
+| 읽기 데이터 pooling 확장 | 검증된 guest-authorized promotion을 바탕으로 온라인 admission·동적 canonical 회수·controller 장애 복구 추가 | 실제 파일 cache PFN과 ownership 유지, non-coherent publish 검증, 양쪽 handoff에서 실패 복구 |
 
-현재 선택한 경로는 [virtio-blk 관측 기반 pooling](cxl-data-pooling.md)이다. 앞 절의 guest pmem/DAX 이미지 공유는 별도의 대안으로 남긴다. 데이터 내용이 같다는 검사만으로 물리 페이지 공유를 입증하지 않으며, 과거 hint의 GPA가 현재 파일 cache에 속하는지도 독립적으로 확인해야 한다.
+현재 선택한 경로는 [guest metadata 기반 promotion pooling](cxl-guest-pool-handoff.md)이다. 앞 절의 guest pmem/DAX 이미지 공유는 별도의 대안으로 남긴다. 일반 cache hit path는 유지하며, promotion/demotion에서 작업하는 정책이다. 현재 inode/folio와 실제 PFN을 연결해 검증하고, immutable data와 private metadata를 분리한다.
 
 ### 공통 ownership과 PML 통합
 
@@ -491,6 +491,7 @@ ACK 유실만으로 source를 다시 실행하면 destination과 동시 writer�
 | [MPTCP summary](../implementation/virtual_machine/results/mptcp-20261022/summary.json) | 네 가지 연결 시험, event와 artifact hash |
 | [Home disk·RAM lifecycle 결과](../implementation/virtual_machine/results/home-storage-20261028/README.md) | Writable disk 왕복, DRAM↔CXL trace, direct 거절 처리와 RL tmpfs 사례 |
 | [읽기 데이터 pooling](cxl-data-pooling.md) · [결과](../implementation/virtual_machine/results/pool-20261030/README.md) | Bloom 후보 탐색, CoW, 여러 sandbox의 cache와 promotion/demotion 검증 |
+| [Guest metadata pooling](cxl-guest-pool-handoff.md) · [두 모드 결과](../implementation/virtual_machine/results/guest-pool-handoff-20261030/README.md) | 현재 guest authority, private CXL CoW, grant 반환, direct/state-only handoff |
 | [배포 검증 기록](../implementation/virtual_machine/results/publication.json) | 10월 21일 구현 및 10월 23일 MPTCP 반영 검증 |
 | [Write 관측 보고서](results/write-pages-node1-20261021/write-report.md) | Docker write footprint의 정의와 한계 |
 | [Fleet 결과](../experiments/contention/RESULTS-fleet.md) | 규모 확대 모델과 검증·보정 한계 |

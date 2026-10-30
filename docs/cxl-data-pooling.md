@@ -1,5 +1,7 @@
 # CXL microVM의 읽기 데이터 페이지 pooling
 
+현재 guest metadata를 공유 자격의 근거로 사용하고 direct/state-only handoff에 연결하는 후속 구현은 [guest metadata 기반 pooling](cxl-guest-pool-handoff.md)에 설명한다. 이 문서는 이전 read-hint·전수 비교·full-RAM snapshot 실험의 기록이다.
+
 2026-10-30. 이 문서는 **virtio-blk 읽기를 관찰하고, VM을 잠시 정지한 상태에서 같은 내용의 guest RAM 페이지를 하나의 CXL 데이터 페이지에 연결하는 첫 구현**을 설명한다. Guest의 inode, folio, XArray, LRU와 참조 횟수는 각 VM 안에 유지한다. 공유 대상은 읽기 전용 image에서 온 데이터 바이트다.
 
 실행 결과와 최종 바이너리 식별은 [pooling 검증 결과](../implementation/virtual_machine/results/pool-20261030/README.md)에 기록한다. 아래의 sandbox 수와 파일 크기는 검증 구성·성공 조건이며, 실행 결과를 대신하는 수치가 아니다. 기존 이전 구조는 [microVM 개요](cxl-microvm-overview.md), 운영 명령은 [구현 README](../implementation/virtual_machine/README.md)를 함께 참고한다.

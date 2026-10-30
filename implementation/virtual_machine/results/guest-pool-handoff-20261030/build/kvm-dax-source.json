@@ -1,0 +1,182 @@
+{
+  "base": "Linux 6.6.0-rc6 from dcd-v3-2023-10-30.zip, after existing cxl-static-capacity.patch",
+  "scope": "DAX KVM allocator and experimental single-owner direct cross-kernel VM/vCPU/VMCS attach; identical x86 VMX kernels/mappings required",
+  "files": {
+    "arch/x86/include/asm/kvm_host.h": {
+      "patched_sha256": "323d0853c4cedd2c0b4d39552d9654341e7b4ee8a954973aec48578390ffbc66",
+      "base_sha256": "26ccfcd86dca8c421a0441dce5c7cd45b8d715012b2d44b8b441d9b1d3edd050"
+    },
+    "arch/x86/kvm/Kconfig": {
+      "patched_sha256": "fe76c5d0a6578d05acb330cdcac9fe128284e3543ce878f5fb8d078f758363f1",
+      "base_sha256": "848c86e55cc3255ba8e4fe47d5afef1adbfd1a79e2e41d5956e13470ea7a13b3"
+    },
+    "arch/x86/kvm/cpuid.c": {
+      "patched_sha256": "15854afb1efd6746d1f13f4cb235080a5e745901711ee56d745ee9abed39a0d6",
+      "base_sha256": "f638279b3c0369a6eefef86e4ecc50a08182d72cea56020800c18b4a5b1f29c8"
+    },
+    "arch/x86/kvm/i8254.c": {
+      "patched_sha256": "bd4283d8ddaf1b7bde0fceaee74fb51f6a9e68d92aee20bba8d2efcb7d7fb0e3",
+      "base_sha256": "5b3d1c43ffee47998ba39996699e35ef7c84fcfdeb656b2c4677f4a29e65cd92"
+    },
+    "arch/x86/kvm/i8254.h": {
+      "patched_sha256": "1b2a7f85f6cb50aecf67242459d12bc33eebd66ab3634dba95298df1c0d61180",
+      "base_sha256": "9b61e0a58bfb33acec2e868e04a3b0c12774be5be0e97b4b21c940d0573b7aee"
+    },
+    "arch/x86/kvm/i8259.c": {
+      "patched_sha256": "2bc456a5a9da63764f3b8a4659080b1153c2261a6cbb22b3dadd9e64bd027220",
+      "base_sha256": "ff92b4ccfead313a2556f84cf0ece22f3a630327e1a73129ed0d98d0d30c0d68"
+    },
+    "arch/x86/kvm/ioapic.c": {
+      "patched_sha256": "e9a6e7bd89688df64ae39162b55525d7095d8ec6299bbb47471ed0aabc903705",
+      "base_sha256": "430e267cc903e01369c4b4e1d3b61d2e05e12c0c50f8d243238b09296354e76a"
+    },
+    "arch/x86/kvm/lapic.c": {
+      "patched_sha256": "c795db2971e65a3629a3b252053f93c0bb59c006efd79639bf01a16270664bc9",
+      "base_sha256": "cb4bc8f83babd1ff9ad1823102eafc3a66910f5179681920c22c0ca86725ae4f"
+    },
+    "arch/x86/kvm/lapic.h": {
+      "patched_sha256": "ab948ebd810c6c969c5559ad4f4842db8739d35fa2b61b4517533a184323aa2d",
+      "base_sha256": "6983641d81e8a9d93f57209161f67dafdb8195be745e6ce63e1f981531ba8b06"
+    },
+    "arch/x86/kvm/mmu.h": {
+      "patched_sha256": "f0a60dbd580a2c0c55d01feb0c8fa52b434bc885b9f9caff74c4f24d7f26c23e",
+      "base_sha256": "c60ba2cfdcb935509d37b861b3a65f6ccf7e43a328e6c671d32fba72975b2ed0"
+    },
+    "arch/x86/kvm/mmu/mmu.c": {
+      "patched_sha256": "179bcb69ec8aab9d0705d5ad635abb4afff793039e299478640df63c1f60c44c",
+      "base_sha256": "e687fdf436053dd0d41ffc403e89a82bc70663a519629da38ee4bd5a52d569a8"
+    },
+    "arch/x86/kvm/mmu/tdp_mmu.c": {
+      "patched_sha256": "6ee23c1ff978384548e0bc930eecbcc178e19b48f884fcd983df3e043d5b7878",
+      "base_sha256": "416eb7932f2e3e12a039293eba4a958e173046ec62d786aa69f8b96217fb293a"
+    },
+    "arch/x86/kvm/vmx/vmx.c": {
+      "patched_sha256": "2e345435e7c350877f91a64dda6436555028c576160361696ffc3420a5ed88ce",
+      "base_sha256": "c54419b71478ec971c57dab1df7b0cebf3168989a27f3f65540d8d036d05c4ce"
+    },
+    "arch/x86/kvm/vmx/vmx.h": {
+      "patched_sha256": "82ed634613d6d9a193fa9422206848995a6291c5802a0d488080ccd9facdc888",
+      "base_sha256": "5a0a6e072cbced7cea5b76652a2a5c5b0875d33d99392f990d1d88c646ebeb16"
+    },
+    "arch/x86/kvm/x86.c": {
+      "patched_sha256": "bab5ac8cf5bdf678030c8b1a04e0a1a5f63d521b61e7929de980a7eadfb80335",
+      "base_sha256": "fe9ae905263db74ef5876a2ae49e0ce1d82a6e15866703b64fd6586c39eed2a4"
+    },
+    "include/linux/kvm_dax.h": {
+      "patched_sha256": "a845dec8f863cfe85d65125f4e9b635b061a41601a547db7eed9f0747de026f2",
+      "new": true
+    },
+    "include/linux/kvm_host.h": {
+      "patched_sha256": "ecf4b875435e8688abc61b5aa0616e9086f4e71968f02fc6ad59a57da52f657b",
+      "base_sha256": "166219e363e1462216d5b753032bd8179b6a639b9e63ef966f9923cc51aa83f6"
+    },
+    "include/uapi/linux/kvm_dax.h": {
+      "patched_sha256": "36296fff360b548720b0cebeac9eb7fd65d797c9a3f7ad129bd64d2879388297",
+      "new": true
+    },
+    "virt/kvm/Makefile.kvm": {
+      "patched_sha256": "ebcdbfbbbb8bd01dafd9fe34d48cb5b7f5b762584d223c0279ad252dd5214561",
+      "base_sha256": "6cfa1783f7a825c3728aea244fba31f2b6d979e3bce11b689ac14b29358cb908"
+    },
+    "virt/kvm/coalesced_mmio.c": {
+      "patched_sha256": "e7d83ac22262fb7764cb1e54ac13815bb72d0e9ac0924f3cb1effa1879ae7cf6",
+      "base_sha256": "414f9b16edb7fd8562af7730ccdf47f6278c1b5ac17dcde46748b7f091fa8ffb"
+    },
+    "virt/kvm/dax_pool.c": {
+      "patched_sha256": "fbe221ab711abf35b8056d804867737ee2e36d318ce1bc1f6a09755aba81ed4f",
+      "new": true
+    },
+    "virt/kvm/eventfd.c": {
+      "patched_sha256": "3eec09bd9760615c05b94587cee23b9743cc3ddf1126020242fb029151673e42",
+      "base_sha256": "64a195e57968c2a7b078e4f7f8c4684d2c1c8b9a0d7fe03f1685a73138ae5c99"
+    },
+    "virt/kvm/irqchip.c": {
+      "patched_sha256": "b99239fa7d35450bc416b74c41c22df96a37ff7878a545c392f0eb8a82e9628b",
+      "base_sha256": "2c9b22d33f02399d0a1503236b39d96a83e8c6dbe659a706f6ce10424042c64e"
+    },
+    "virt/kvm/kvm_main.c": {
+      "patched_sha256": "981690ead7c4fbe9e367eb9e74c6bbbdc4d593fd931c4f78f3001357250606e0",
+      "base_sha256": "0f70d265644639479a3fc4c7ecfccd3adb44134b4fe682612f236cae16f3dcf3"
+    },
+    "arch/x86/kvm/mmu/mmu_internal.h": {
+      "patched_sha256": "ebe7ed2a01614382e7b462471b27da73e3c3bdac8838c4ae55f7d62f9fdc0ecf",
+      "base_sha256": "89ef9181bab9d9fc7acfbb67c4bbfbd967dd33da7d823de2f07bd9c3b8db621b"
+    },
+    "kernel/module/main.c": {
+      "base_sha256": "1698bcd686cc75e2724c82f8b952599dbdc0e4086fe8151b58606676a0d3b98c",
+      "patched_sha256": "4fc5b0fc32ab6f7c92c794c055f64c055bb01b96c16eb09125e8be1024515840"
+    }
+  },
+  "direct_handoff": {
+    "abi": "include/uapi/linux/kvm_dax.h",
+    "cpu_guest_validated": true,
+    "linux_guest_status": "Current runtime: 3900 Linux handoffs, 500 CPU/FPU handoffs; strict heap/clock/TSC, negative PFN and CONFIG=n ordinary KVM regression passed",
+    "allocator": "opt-in shared bump arena, no reclamation until lab shutdown",
+    "ept": "Retained root/leaves, initial full SPTE validation plus per-fault PFN bounds guard, incremental node-local page.private rebinding; identical fixed contiguous device-DAX RAM PFNs required",
+    "report": "implementation/virtual_machine/.local/latency-refinement-summary.json",
+    "default_mode": 3,
+    "modes": {
+      "0": "conservative invalidation and barriers",
+      "2": "invalidation with deferred retirement",
+      "3": "retained EPT and expedited source IRQFD SRCU; cached per-kernel PIT worker"
+    },
+    "host_tsc": "Save guest TSC; discard old host samples and suspend correction; force a fresh KVM TSC generation on the destination VMCS; require equal host TSC frequency",
+    "concurrency_contract": "Single owner, one VM/vCPU per shared arena, no concurrent VM ioctl/VMA mutation or foreign-kernel lock waiters",
+    "watchdog": "Heap-verification time included in controller deadline; earlier image SIGALRM adjustment recorded separately",
+    "historical_report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/direct-handoff-optimized-summary.json"
+  },
+  "latency_refinement": {
+    "status": "passed",
+    "new_private_abi": [
+      "KVM_DAX_REATTACH",
+      "KVM_DAX_IRQFD_QUIESCE"
+    ],
+    "profile_offset": 512,
+    "bulk_ram_copy_bytes": 0,
+    "state_transfer_audit": "implementation/virtual_machine/handoff-state-audit.json",
+    "evidence": "implementation/virtual_machine/.local/latency-refinement-summary.json"
+  },
+  "resume_latency_attribution": {
+    "status": "passed",
+    "flag": "--resume-profile",
+    "profile_offset": 640,
+    "profile_bytes": 104,
+    "private_ioctl_abi_changed": false,
+    "firecracker_binary_changed": false,
+    "handoffs": 4500,
+    "measured_profiled_samples": 3920,
+    "evidence": "implementation/virtual_machine/.local/heartbeat-attribution-summary.json",
+    "normal_config_compile": "implementation/virtual_machine/.local/heartbeat-nodax-build.log"
+  },
+  "published_results": {
+    "initial_optimization": "direct-handoff-optimized-summary.json",
+    "latency_refinement": "latency-refinement-summary.json",
+    "heartbeat_attribution": "heartbeat-attribution-summary.json",
+    "context_and_literature": "context-switch-comparison.json"
+  },
+  "pool_handoff": {
+    "status": "compiled; runtime validation pending",
+    "source": "/tmp/pool-handoff-linux-20261030",
+    "build": "/tmp/pool-handoff-kernel-build-20261030",
+    "patch_sha256": "bb11d89161ba2650ffd179e41382570e1bb99464bcfb3bcb0f1d4a4f0070333d",
+    "previous_patch_sha256": "61809e10100a0b7368bb008dc9e1a6967188f8d5ecb0ef490c5066aa4762a958",
+    "new_sysfs_parameters": [
+      "dax_owner_pid",
+      "dax_scattered",
+      "dax_data_base",
+      "dax_data_bytes"
+    ],
+    "ownership": "one direct VM per shared kernel arena; process-selected allocation permits ordinary concurrent peers",
+    "data": "read-only per-GPA PFNs captured each detach; target exact full mapping validation; runtime PFNs bounded by CXL span",
+    "pfnmap_cow": "opt-in retry invokes pfn_mkwrite for an already-read canonical page before a guest write",
+    "patch_order": [
+      "cxl-static-capacity.patch",
+      "kvm-dax-state.patch",
+      "devdax-pool-cow.patch"
+    ],
+    "new_private_ioctl_abi": [
+      "KVM_DAX_LOCAL_RAM"
+    ],
+    "local_ram": "paused-owner scalar toggle; local DRAM may run but export/detach forbidden until CXL is rearmed"
+  }
+}

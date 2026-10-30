@@ -1,0 +1,102 @@
+{
+  "result": "passed",
+  "module_build_directory": "/tmp/pool-memory-module-build-20261030",
+  "module_sha256": "ca53c73516f26ffe8f26293bdee5a32d5cf54256f0b05acc457e40b2664ba5a6",
+  "repo_compiled_source_byte_equal": true,
+  "fixture_and_both_runtime_hashes_equal": true,
+  "source_files": {
+    "pool_memory_module.c": "a7c8852c6ace1b38ba2169f3528601d116d1e5924f85c17855fdf370a03114a8",
+    "pool_memory_uapi.h": "63959415df2ffba60f2794195a392467d7847ac4866645c5d26dec09a267656c"
+  },
+  "kernel_source": "/tmp/pool-handoff-linux-20261030",
+  "kernel_build": "/tmp/pool-handoff-kernel-build-20261030",
+  "kernel_config_sha256": "7da6303ddad9a24782aff314d50ee4c5f63268b1d84d96d227a833eabf42eaab",
+  "reproduction_command": "make -C /tmp/pool-handoff-linux-20261030 O=/tmp/pool-handoff-kernel-build-20261030 M=/tmp/pool-memory-module-build-20261030 LOCALVERSION= modules",
+  "actual_compile_command_record": "pool_memory_module.o.cmd",
+  "actual_link_command_record": "pool_memory_module.ko.cmd",
+  "artifacts": {
+    "Makefile": {
+      "source": "/tmp/pool-memory-module-build-20261030/Makefile",
+      "sha256": "7932ca2e15ee05c3e5bb39a97b4183c60299e64d5867d439faff42840d3c8fcb",
+      "bytes": 30
+    },
+    "pool_memory_module.c": {
+      "source": "/tmp/pool-memory-module-build-20261030/pool_memory_module.c",
+      "sha256": "a7c8852c6ace1b38ba2169f3528601d116d1e5924f85c17855fdf370a03114a8",
+      "bytes": 14030
+    },
+    "pool_memory_uapi.h": {
+      "source": "/tmp/pool-memory-module-build-20261030/pool_memory_uapi.h",
+      "sha256": "63959415df2ffba60f2794195a392467d7847ac4866645c5d26dec09a267656c",
+      "bytes": 1247
+    },
+    "pool_memory_module.ko": {
+      "source": "/tmp/pool-memory-module-build-20261030/pool_memory_module.ko",
+      "sha256": "ca53c73516f26ffe8f26293bdee5a32d5cf54256f0b05acc457e40b2664ba5a6",
+      "bytes": 24760
+    },
+    "pool_memory_module.o.cmd": {
+      "source": "/tmp/pool-memory-module-build-20261030/.pool_memory_module.o.cmd",
+      "sha256": "d0eacf33df26caa6efdaf47664da54763654892f3b677612d1d511c549fbfac7",
+      "bytes": 66559
+    },
+    "pool_memory_module.ko.cmd": {
+      "source": "/tmp/pool-memory-module-build-20261030/.pool_memory_module.ko.cmd",
+      "sha256": "cd1ebac058f4e13e0258f2273c512266c5491848864ea70438a0c18bf7e37d21",
+      "bytes": 466
+    },
+    "pool_memory_module.mod.o.cmd": {
+      "source": "/tmp/pool-memory-module-build-20261030/.pool_memory_module.mod.o.cmd",
+      "sha256": "99ad8bf0ba51f90c5c884ce3232785d246a4f50805388475a89e654189656a0a",
+      "bytes": 52903
+    },
+    "pool_memory_module.mod.c": {
+      "source": "/tmp/pool-memory-module-build-20261030/pool_memory_module.mod.c",
+      "sha256": "f0383e49f34698f14127e997907bc25f0039a50228e5a53ffe1e7d3f5060be03",
+      "bytes": 692
+    },
+    "Module.symvers": {
+      "source": "/tmp/pool-memory-module-build-20261030/Module.symvers",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "modules.order": {
+      "source": "/tmp/pool-memory-module-build-20261030/modules.order",
+      "sha256": "7bd7d44a6fc1c99151685c1725cebc434908e4f74167c156b0f6a885825af240",
+      "bytes": 60
+    },
+    "host-kernel.config": {
+      "source": "/tmp/pool-handoff-kernel-build-20261030/.config",
+      "sha256": "7da6303ddad9a24782aff314d50ee4c5f63268b1d84d96d227a833eabf42eaab",
+      "bytes": 141898
+    },
+    "kernel.release": {
+      "source": "/tmp/pool-handoff-kernel-build-20261030/include/config/kernel.release",
+      "sha256": "900398ab5d81ce434c23fd33277c5a2a683adc1eeaab7cf30a688b11b0f26fb1",
+      "bytes": 17
+    },
+    "compile.h": {
+      "source": "/tmp/pool-handoff-kernel-build-20261030/include/generated/compile.h",
+      "sha256": "476e0beb6cbe9d9ed8659421329a08141a18c181563f81d94d35b7fc83605e0a",
+      "bytes": 208
+    },
+    "kernel-Module.symvers": {
+      "source": "/tmp/pool-handoff-kernel-build-20261030/Module.symvers",
+      "sha256": "0452e1e1cdb2155c3ab4a62baf41af8974009372623d6d6a1b504eab4044f3de",
+      "bytes": 738558
+    }
+  },
+  "runtime_evidence": {
+    "report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T125101Z-ryobfad3/pool-handoff-1793364701427832983/report.json",
+    "report_sha256": "61c50da9ecfcb88a3e58b3b8d9affaa5650b19fe0b317848167925d7b63806dc",
+    "receipts": {
+      "A": "0014-runtime-hashes.txt",
+      "B": "0019-runtime-hashes.txt"
+    }
+  },
+  "notes": [
+    "Exact compiler and linker invocations are retained in kbuild .cmd records; top-level make command is a reproducible equivalent, not a recovered console log.",
+    "No module was rebuilt or loaded during this provenance audit.",
+    "Repo source and build source are byte-identical; binary matches frozen fixture and both live runtime hash receipts."
+  ]
+}

@@ -2,7 +2,7 @@
 
 처음 읽는 경우 [CXL microVM 연구와 구현 전체 정리](docs/cxl-microvm-overview.md)부터 본다. Workload 관측부터 실행 이전 구현, PML·MPTCP 검증, 파일 공유 설계와 후속 계획을 연결했다. 구현·실측·시뮬레이션·설계 중인 내용을 구분한다.
 
-2026-10-30의 [읽기 데이터 pooling prototype](docs/cxl-data-pooling.md)은 guest metadata를 VM별로 유지하면서 virtio-blk에서 관측한 데이터 페이지를 CXL에서 공유한다. Host NFS와 DRAM/CXL 왕복을 포함한 [검증 결과](implementation/virtual_machine/results/pool-20261030/README.md), 재현 명령과 현재 한계를 함께 기록한다.
+2026-10-30의 후속 [guest metadata 기반 pooling](docs/cxl-guest-pool-handoff.md)은 현재 clean lower ext4 page cache를 확인해 promotion 시 데이터 backing만 공유한다. Private CoW도 CXL에 유지하고, demotion에서 현재 내용을 DRAM으로 복사해 할당을 반환한다. Direct와 state-only handoff, host NFS, 실제 OverlayFS와 ACK 이후 재사용의 [검증 결과](implementation/virtual_machine/results/guest-pool-handoff-20261030/README.md)를 별도로 보관한다. 기존 [virtio-blk 관측 기반 prototype](docs/cxl-data-pooling.md)과 full-RAM snapshot 결과는 이전 단계의 기록이다.
 
 같은 upstream의 [수정하지 않은 Firecracker와 비교](docs/firecracker-pooling-comparison.md)하여 독립 VM의 데이터 frame 공유, stock snapshot clone의 기존 공유 기능, guest 작업 시간과 현재 CoW 비용을 구분했다. [실측 자료](implementation/virtual_machine/results/stock-comparison-20261030/README.md)는 원본 증거와 오프라인 검증기를 포함한다.
 

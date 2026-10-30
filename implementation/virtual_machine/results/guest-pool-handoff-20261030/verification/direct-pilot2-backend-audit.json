@@ -1,0 +1,78 @@
+{
+  "result": "passed",
+  "scope": "direct_token_and_demote_receipts",
+  "report": "implementation/virtual_machine/.local/runs/20261030T124558Z-ghask2wo/pool-handoff-1793364381417157353/report.json",
+  "report_sha256": "e5b9522fac51e4e6c02404d3ca30108e05c5cff6a931b8c9e8e25cd747acedcf",
+  "verified_receipts": 442,
+  "direct_handoffs": [
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 1,
+      "ept_pages": 129,
+      "device_state_bytes": 4260,
+      "placement_metadata_bytes": 6804059,
+      "guest_identity_preserved": true,
+      "placement_unchanged": true,
+      "paused_operation_before_resume": true,
+      "source_fenced": true
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 2,
+      "ept_pages": 182,
+      "device_state_bytes": 4259,
+      "placement_metadata_bytes": 6935144,
+      "guest_identity_preserved": true,
+      "placement_unchanged": true,
+      "paused_operation_before_resume": true,
+      "source_fenced": true
+    }
+  ],
+  "demotions": [
+    {
+      "vm": 1,
+      "epoch": 2,
+      "anonymous_rw_private_bytes": 536870912,
+      "guest_identity_and_payload_preserved": true
+    },
+    {
+      "vm": 1,
+      "epoch": 2,
+      "anonymous_rw_private_bytes": 536870912,
+      "guest_identity_and_payload_preserved": true
+    },
+    {
+      "vm": 2,
+      "epoch": 0,
+      "anonymous_rw_private_bytes": 536870912,
+      "guest_identity_and_payload_preserved": true
+    },
+    {
+      "vm": 3,
+      "epoch": 0,
+      "anonymous_rw_private_bytes": 536870912,
+      "guest_identity_and_payload_preserved": true
+    }
+  ],
+  "remote_nfs_refills": 1,
+  "fixed_kernel_identity": {
+    "vm_offset": 8192,
+    "vcpu_offset": 76928,
+    "vmcs_offset": 118784,
+    "run_offset": 90112,
+    "ept_root_offset": 475136,
+    "ram_hva": 70368744177664,
+    "ram_bytes": 536870912,
+    "vm_creates": 1,
+    "vcpu_creates": 1
+  },
+  "limits": [
+    "Runtime token equality proves retained object offsets and creation counters; EPT leaf contents/page count may change as the guest executes.",
+    "Paused import is established by successful Paused-only PoolCache before Resume plus the frozen source API gate; device-event nonexecution is a source-control property, not separately traced.",
+    "Anonymous rw-p mapping proves backing replacement; physical NUMA placement was not measured.",
+    "No CPU/RAM snapshot API and no payload in direct metadata, with frozen source, support the no-snapshot path; this is not an independent syscall/data-copy trace.",
+    "Coherent nested lab, trusted kernel/controller, one direct graph plus two ordinary peer VMs."
+  ]
+}

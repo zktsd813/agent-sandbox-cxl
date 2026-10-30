@@ -1,0 +1,151 @@
+{
+  "result": "passed",
+  "positive": {
+    "result": "passed",
+    "mode": "state-only",
+    "receipts": 1348,
+    "authorities": 17,
+    "transitions": {
+      "promotion": 9,
+      "demotion": 9,
+      "state-only": 12
+    },
+    "minimum_common_current_shared_bytes": 167772160,
+    "actual_private_mapping_reuse_bytes": [
+      369098752,
+      369098752
+    ],
+    "ack_before_guest_reuse_bytes": [
+      150994944
+    ],
+    "controller_declared_ack_before_reuse_bytes": [
+      150978560
+    ],
+    "limitations": [
+      "Coherent nested lab; trusted guest kernel/controller"
+    ]
+  },
+  "mutations": [
+    {
+      "case": "wrong_actual_pfn",
+      "rejected": true,
+      "reason": "actual native PTE disagrees with table",
+      "receipts_rehashed": true
+    },
+    {
+      "case": "writable_canonical",
+      "rejected": true,
+      "reason": "shared canonical PTE writable/wrong file frame",
+      "receipts_rehashed": true
+    },
+    {
+      "case": "remove_100mib_sharing",
+      "rejected": true,
+      "reason": "sharing count differs from current pinned cache",
+      "receipts_rehashed": true
+    },
+    {
+      "case": "omit_one_vm",
+      "rejected": true,
+      "reason": "sharing group omits/duplicates a VM",
+      "receipts_rehashed": true
+    },
+    {
+      "case": "bloom_extra_page",
+      "rejected": true,
+      "reason": "Bloom/plan admitted an unauthorized file page",
+      "receipts_rehashed": true
+    },
+    {
+      "case": "private_grant_alias",
+      "rejected": true,
+      "reason": "cross-VM physical allocation alias",
+      "receipts_rehashed": true
+    },
+    {
+      "case": "missing_source_fence",
+      "rejected": true,
+      "reason": "missing source incarnation fence",
+      "receipts_rehashed": true
+    },
+    {
+      "case": "dirty_guest_authority",
+      "rejected": true,
+      "reason": "ineligible guest page-cache authority",
+      "receipts_rehashed": true
+    },
+    {
+      "case": "stale_manifest_epoch",
+      "rejected": true,
+      "reason": "manifest incarnation/lease mismatch",
+      "receipts_rehashed": true
+    },
+    {
+      "case": "no_nfs_read",
+      "rejected": true,
+      "reason": "cold refill bypassed NFS/virtio",
+      "receipts_rehashed": true
+    },
+    {
+      "case": "fenced_wrong_process",
+      "rejected": true,
+      "reason": "source fence refers to another process incarnation",
+      "receipts_rehashed": true
+    },
+    {
+      "case": "full_ram_snapshot_path",
+      "rejected": true,
+      "reason": "wrong-mode/full-RAM snapshot",
+      "receipts_rehashed": true
+    },
+    {
+      "case": "credits_not_actual_reuse",
+      "rejected": true,
+      "reason": "retired grant was not actually reused as private mapped/copied pages",
+      "receipts_rehashed": true
+    },
+    {
+      "case": "closed_kernel_authority",
+      "rejected": true,
+      "reason": "inactive/stale kernel status",
+      "receipts_rehashed": true
+    },
+    {
+      "case": "wrong_live_status_digest",
+      "rejected": true,
+      "reason": "live status digest/reserved mismatch",
+      "receipts_rehashed": true
+    },
+    {
+      "case": "demotion_retains_cxl",
+      "rejected": true,
+      "reason": "demotion retained file/CXL/shared backing",
+      "receipts_rehashed": true
+    },
+    {
+      "case": "reuse_before_guest_ack",
+      "rejected": true,
+      "reason": "page reused before guest ACK or canonical data copied",
+      "receipts_rehashed": true
+    },
+    {
+      "case": "reused_private_pte_aliases_canonical",
+      "rejected": true,
+      "reason": "reused page still aliases canonical",
+      "receipts_rehashed": true
+    },
+    {
+      "case": "unsafe_plan_accepted",
+      "rejected": true,
+      "reason": "unsafe authority plan was accepted",
+      "receipts_rehashed": true
+    },
+    {
+      "case": "overlay_changed_lower",
+      "rejected": true,
+      "reason": "real OverlayFS copy-up incomplete/changed lower",
+      "receipts_rehashed": true
+    }
+  ],
+  "not_applicable": []
+}
