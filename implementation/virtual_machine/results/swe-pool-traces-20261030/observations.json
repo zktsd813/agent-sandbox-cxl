@@ -1,0 +1,244 @@
+{
+  "schema": "swe-pool-observations-v1",
+  "timing_scope": "Guest command sum vs controller replay (includes transitions/audits/export); API Unix-socket durations exclude outer serial and are not total downtime",
+  "trials": [
+    {
+      "trace": "gin-gonic__gin-3741",
+      "mode": "baseline",
+      "commands": 27,
+      "guest_command_seconds": 25.819999999999997,
+      "controller_replay_seconds": 33.159765117,
+      "shared_cache_bytes": [],
+      "present_current_shared_bytes": [],
+      "remote_nfs_reads": 0,
+      "shared_detachments": [],
+      "promotion_api_ms": [],
+      "demotion_api_ms": [],
+      "handoff_api_pair_sum_ms": [],
+      "final_guest_cached_kib": 450692,
+      "report_sha256": "e43178eb04b3e7847369967916669ec5038785a1f51b3c7e04db2dec70ec7c14"
+    },
+    {
+      "trace": "gin-gonic__gin-3741",
+      "mode": "state-only",
+      "commands": 27,
+      "guest_command_seconds": 26.500000000000032,
+      "controller_replay_seconds": 309.295226185,
+      "shared_cache_bytes": [
+        51634176,
+        51834880
+      ],
+      "present_current_shared_bytes": [
+        28225536,
+        0
+      ],
+      "remote_nfs_reads": 31,
+      "shared_detachments": [],
+      "promotion_api_ms": [
+        2717.098759,
+        2052.926266
+      ],
+      "demotion_api_ms": [
+        2232.694337,
+        2169.388235
+      ],
+      "handoff_api_pair_sum_ms": [
+        868.8809660000001,
+        728.8832460000001
+      ],
+      "final_guest_cached_kib": 452536,
+      "report_sha256": "03844bf94b009a4df57b47c2b375b7d65e15ee643689f5f30c00f558df075c96"
+    },
+    {
+      "trace": "gin-gonic__gin-3741",
+      "mode": "direct",
+      "commands": 27,
+      "guest_command_seconds": 24.18000000000001,
+      "controller_replay_seconds": 280.099147217,
+      "shared_cache_bytes": [
+        51257344,
+        51400704
+      ],
+      "present_current_shared_bytes": [
+        51257344,
+        0
+      ],
+      "remote_nfs_reads": 21,
+      "shared_detachments": [],
+      "promotion_api_ms": [
+        3636.564565,
+        1517.487225
+      ],
+      "demotion_api_ms": [
+        1743.984728,
+        2003.031021
+      ],
+      "handoff_api_pair_sum_ms": [
+        1408.67751,
+        933.010675
+      ],
+      "final_guest_cached_kib": 452100,
+      "report_sha256": "64864b79d1cc0c1ec24ce51ab2de0172c050ed4a553e929803c7acab111bb033"
+    },
+    {
+      "trace": "php-cs-fixer__php-cs-fixer-8331",
+      "mode": "baseline",
+      "commands": 35,
+      "guest_command_seconds": 10.040000000000004,
+      "controller_replay_seconds": 20.141353933,
+      "shared_cache_bytes": [],
+      "present_current_shared_bytes": [],
+      "remote_nfs_reads": 0,
+      "shared_detachments": [],
+      "promotion_api_ms": [],
+      "demotion_api_ms": [],
+      "handoff_api_pair_sum_ms": [],
+      "final_guest_cached_kib": 76952,
+      "report_sha256": "ec9401474fc437371df0cc0b6751fc4852b6034a5a39b250486ca0d8cf3521d3"
+    },
+    {
+      "trace": "php-cs-fixer__php-cs-fixer-8331",
+      "mode": "state-only",
+      "commands": 35,
+      "guest_command_seconds": 9.729999999999986,
+      "controller_replay_seconds": 187.344011211,
+      "shared_cache_bytes": [
+        21647360,
+        21647360
+      ],
+      "present_current_shared_bytes": [
+        11476992,
+        0
+      ],
+      "remote_nfs_reads": 161,
+      "shared_detachments": [],
+      "promotion_api_ms": [
+        3608.443323,
+        2137.3960899999997
+      ],
+      "demotion_api_ms": [
+        2673.698122,
+        2233.474611
+      ],
+      "handoff_api_pair_sum_ms": [
+        783.5027930000001,
+        742.635421
+      ],
+      "final_guest_cached_kib": 77528,
+      "report_sha256": "bfac79f9b74437ebd657addc3462cdd1415f17fbd6ffcc778fcc43cbf0213f5a"
+    },
+    {
+      "trace": "php-cs-fixer__php-cs-fixer-8331",
+      "mode": "direct",
+      "commands": 35,
+      "guest_command_seconds": 10.900000000000015,
+      "controller_replay_seconds": 180.890928536,
+      "shared_cache_bytes": [
+        21647360,
+        21647360
+      ],
+      "present_current_shared_bytes": [
+        21647360,
+        0
+      ],
+      "remote_nfs_reads": 161,
+      "shared_detachments": [],
+      "promotion_api_ms": [
+        3339.989705,
+        1479.435677
+      ],
+      "demotion_api_ms": [
+        1269.882964,
+        2001.299781
+      ],
+      "handoff_api_pair_sum_ms": [
+        1254.660402,
+        854.133774
+      ],
+      "final_guest_cached_kib": 77528,
+      "report_sha256": "3ee467f1478cbe13eb6b835ac6e184c1c582a6b695541e398a2d5dfa96bb28cc"
+    },
+    {
+      "trace": "micropython__micropython-13039",
+      "mode": "baseline",
+      "commands": 43,
+      "guest_command_seconds": 15.52,
+      "controller_replay_seconds": 26.54218109,
+      "shared_cache_bytes": [],
+      "present_current_shared_bytes": [],
+      "remote_nfs_reads": 0,
+      "shared_detachments": [],
+      "promotion_api_ms": [],
+      "demotion_api_ms": [],
+      "handoff_api_pair_sum_ms": [],
+      "final_guest_cached_kib": 164212,
+      "report_sha256": "603f16bbfcb9405ca53ebc0115666196e9c5acb82a6fff97c68bdcf9fd32fef3"
+    },
+    {
+      "trace": "micropython__micropython-13039",
+      "mode": "state-only",
+      "commands": 43,
+      "guest_command_seconds": 16.94000000000002,
+      "controller_replay_seconds": 245.419430103,
+      "shared_cache_bytes": [
+        32268288,
+        32780288
+      ],
+      "present_current_shared_bytes": [
+        17866752,
+        0
+      ],
+      "remote_nfs_reads": 372,
+      "shared_detachments": [],
+      "promotion_api_ms": [
+        3058.058078,
+        1520.980459
+      ],
+      "demotion_api_ms": [
+        1946.149777,
+        1771.565122
+      ],
+      "handoff_api_pair_sum_ms": [
+        874.40164,
+        777.1527639999999
+      ],
+      "final_guest_cached_kib": 165080,
+      "report_sha256": "0f08b6a8a420485c0393cf88aa17265151b8bab025f271ba3b127d864d48a07f"
+    },
+    {
+      "trace": "micropython__micropython-13039",
+      "mode": "direct",
+      "commands": 43,
+      "guest_command_seconds": 18.359999999999978,
+      "controller_replay_seconds": 240.641932194,
+      "shared_cache_bytes": [
+        32399360,
+        32911360
+      ],
+      "present_current_shared_bytes": [
+        32399360,
+        0
+      ],
+      "remote_nfs_reads": 369,
+      "shared_detachments": [],
+      "promotion_api_ms": [
+        3124.811136,
+        1976.603592
+      ],
+      "demotion_api_ms": [
+        1582.142108,
+        1931.534492
+      ],
+      "handoff_api_pair_sum_ms": [
+        1336.040667,
+        1055.712067
+      ],
+      "final_guest_cached_kib": 165212,
+      "report_sha256": "2b381c0efc3965a271146e0c7affa258f378c70d529cda38524d4ca31e0a2e4e"
+    }
+  ],
+  "commands": 315,
+  "handoffs": 12,
+  "promotions": 12,
+  "demotions": 12
+}

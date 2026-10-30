@@ -1,0 +1,15 @@
+test_digest_damage_truncation_and_duplicate_rows_rejected (test_swe_pool_protocol.SweRegistrationTests) ... ok
+test_duplicate_inode_and_cross_file_gpa_rejected (test_swe_pool_protocol.SweRegistrationTests) ... ok
+test_extents_may_describe_last_partial_disk_block (test_swe_pool_protocol.SweRegistrationTests) ... ok
+test_frozen_extent_outside_image_rejected (test_swe_pool_protocol.SweRegistrationTests) ... ok
+test_multifile_current_cache_with_partial_eof_excluded (test_swe_pool_protocol.SweRegistrationTests) ... ok
+test_rehashed_dirty_and_partial_eof_rejected (test_swe_pool_protocol.SweRegistrationTests) ... ok
+test_rehashed_wrong_extent_and_unknown_gpa_rejected (test_swe_pool_protocol.SweRegistrationTests) ... ok
+test_stale_and_closed_status_rejected (test_swe_pool_protocol.SweRegistrationTests) ... ok
+test_wrong_file_identity_and_device_rejected (test_swe_pool_protocol.SweRegistrationTests) ... ok
+test_zero_resident_pages_is_explicit_private_fallback (test_swe_pool_protocol.SweRegistrationTests) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.004s
+
+OK

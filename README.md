@@ -4,6 +4,8 @@
 
 2026-10-30의 후속 [guest metadata 기반 pooling](docs/cxl-guest-pool-handoff.md)은 현재 clean lower ext4 page cache를 확인해 promotion 시 데이터 backing만 공유한다. Private CoW도 CXL에 유지하고, demotion에서 현재 내용을 DRAM으로 복사해 할당을 반환한다. Direct와 state-only handoff, host NFS, 실제 OverlayFS와 ACK 이후 재사용의 [검증 결과](implementation/virtual_machine/results/guest-pool-handoff-20261030/README.md)를 별도로 보관한다. 기존 [virtio-blk 관측 기반 prototype](docs/cxl-data-pooling.md)과 full-RAM snapshot 결과는 이전 단계의 기록이다.
 
+이를 [실제 SWE trace 3개에 적용](docs/cxl-swe-pool-traces.md)해 DRAM·state-only·direct **9개 조건, 315개 명령과 36회 전환**을 검증했다. 자연 발생한 clean lower cache 20.6~49.4MiB를 canonical backing에 연결하고, A↔B 및 DRAM↔CXL 왕복 후에도 원본 작업 결과를 유지했다. [실측·원시 증거와 독립 재검증](implementation/virtual_machine/results/swe-pool-traces-20261030/README.md)을 함께 보관한다.
+
 같은 upstream의 [수정하지 않은 Firecracker와 비교](docs/firecracker-pooling-comparison.md)하여 독립 VM의 데이터 frame 공유, stock snapshot clone의 기존 공유 기능, guest 작업 시간과 현재 CoW 비용을 구분했다. [실측 자료](implementation/virtual_machine/results/stock-comparison-20261030/README.md)는 원본 증거와 오프라인 검증기를 포함한다.
 
 [공유 페이지 폐기와 재사용](docs/cxl-page-discard.md)은 guest의 명시적 free-page report를 받아 해당 VM의 공유 연결을 private zero backing으로 바꾸고, 완료 ACK 이후 재사용하는 경로를 설명한다. 기존 4.08초 측정은 한 페이지가 아니라 160MiB cache eviction과 224MiB 전체 재사용 workload의 시간이다.

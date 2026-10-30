@@ -1,0 +1,172 @@
+{
+  "schema": "swe-pool-semantic-negatives-v1",
+  "result": "passed",
+  "source_hashes": {
+    "verify_swe_pool_negatives.py": "201cac30e28ef82bdf2beec3cba16b3ca62afa294400fe93a1099fa81a842656",
+    "verify_swe_pool.py": "0b3a477bceb6e121ddf86c6a3b056ea6edc0fd48f97f5ef0908b91d0caff4952",
+    "verify_pool_handoff.py": "f364e628244c376bfd446893dedd5bd8ee41375f98f770b02f77bc9143a3d277",
+    "verify_pool_discard_protocol.py": "0fdaf7654bfb4b4b140f5e7cabed6a33d612582b3cd441c37a1431e3958f473a",
+    "verify_trace_results.py": "24f9f5e8b33da86d88805315d8632a3ea0c6ab92808549a1cd9760022a777bd1"
+  },
+  "reports": [
+    {
+      "trace": "gin-gonic__gin-3741",
+      "mode": "baseline",
+      "report_sha256": "e43178eb04b3e7847369967916669ec5038785a1f51b3c7e04db2dec70ec7c14",
+      "result": "passed",
+      "semantic_rejections": [
+        {
+          "case": "rehash_serial_archive_wrong_returncode",
+          "result": "rejected",
+          "reason": "recorded command failed/diverged/timed out"
+        }
+      ]
+    },
+    {
+      "trace": "gin-gonic__gin-3741",
+      "mode": "state-only",
+      "report_sha256": "03844bf94b009a4df57b47c2b375b7d65e15ee643689f5f30c00f558df075c96",
+      "result": "passed",
+      "semantic_rejections": [
+        {
+          "case": "rehash_serial_archive_wrong_returncode",
+          "result": "rejected",
+          "reason": "recorded command failed/diverged/timed out"
+        },
+        {
+          "case": "rehash_authority_wrong_bmap",
+          "result": "rejected",
+          "reason": "authority bmap/frozen extent mismatch"
+        },
+        {
+          "case": "rehash_authority_dirty_flag",
+          "result": "rejected",
+          "reason": "dirty/unlocked authority"
+        },
+        {
+          "case": "rehash_authority_duplicate_gpa",
+          "result": "rejected",
+          "reason": "authority GPA alias/bounds"
+        },
+        {
+          "case": "rehash_authority_inode_identity",
+          "result": "rejected",
+          "reason": "authority file differs from frozen inode"
+        },
+        {
+          "case": "inactive_live_authority",
+          "result": "rejected",
+          "reason": "stale live kernel authority"
+        },
+        {
+          "case": "stale_live_authority_token",
+          "result": "rejected",
+          "reason": "stale live kernel authority"
+        },
+        {
+          "case": "rehash_private_frame_alias",
+          "result": "rejected",
+          "reason": "private alias/range"
+        },
+        {
+          "case": "rehash_canonical_frame_marked_private",
+          "result": "rejected",
+          "reason": "private alias/range"
+        },
+        {
+          "case": "rehash_mapped_frame_in_credit_list",
+          "result": "rejected",
+          "reason": "credit alias"
+        },
+        {
+          "case": "handoff_claims_ram_transfer",
+          "result": "rejected",
+          "reason": "handoff mode/epoch/RAM copy"
+        },
+        {
+          "case": "handoff_skips_ownership_epoch",
+          "result": "rejected",
+          "reason": "handoff mode/epoch/RAM copy"
+        },
+        {
+          "case": "handoff_uses_another_process_fence",
+          "result": "rejected",
+          "reason": "wrong source fence"
+        }
+      ]
+    },
+    {
+      "trace": "gin-gonic__gin-3741",
+      "mode": "direct",
+      "report_sha256": "64864b79d1cc0c1ec24ce51ab2de0172c050ed4a553e929803c7acab111bb033",
+      "result": "passed",
+      "semantic_rejections": [
+        {
+          "case": "rehash_serial_archive_wrong_returncode",
+          "result": "rejected",
+          "reason": "recorded command failed/diverged/timed out"
+        },
+        {
+          "case": "rehash_authority_wrong_bmap",
+          "result": "rejected",
+          "reason": "authority bmap/frozen extent mismatch"
+        },
+        {
+          "case": "rehash_authority_dirty_flag",
+          "result": "rejected",
+          "reason": "dirty/unlocked authority"
+        },
+        {
+          "case": "rehash_authority_duplicate_gpa",
+          "result": "rejected",
+          "reason": "authority GPA alias/bounds"
+        },
+        {
+          "case": "rehash_authority_inode_identity",
+          "result": "rejected",
+          "reason": "authority file differs from frozen inode"
+        },
+        {
+          "case": "inactive_live_authority",
+          "result": "rejected",
+          "reason": "stale live kernel authority"
+        },
+        {
+          "case": "stale_live_authority_token",
+          "result": "rejected",
+          "reason": "stale live kernel authority"
+        },
+        {
+          "case": "rehash_private_frame_alias",
+          "result": "rejected",
+          "reason": "private alias/range"
+        },
+        {
+          "case": "rehash_canonical_frame_marked_private",
+          "result": "rejected",
+          "reason": "private alias/range"
+        },
+        {
+          "case": "rehash_mapped_frame_in_credit_list",
+          "result": "rejected",
+          "reason": "credit alias"
+        },
+        {
+          "case": "handoff_claims_ram_transfer",
+          "result": "rejected",
+          "reason": "handoff mode/epoch/RAM copy"
+        },
+        {
+          "case": "handoff_skips_ownership_epoch",
+          "result": "rejected",
+          "reason": "handoff mode/epoch/RAM copy"
+        },
+        {
+          "case": "handoff_uses_another_process_fence",
+          "result": "rejected",
+          "reason": "wrong source fence"
+        }
+      ]
+    }
+  ]
+}

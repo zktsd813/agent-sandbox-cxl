@@ -1,0 +1,1281 @@
+{
+  "result": "passed",
+  "trials": [
+    {
+      "result": "passed",
+      "mode": "baseline",
+      "trace": "gin-gonic__gin-3741",
+      "report_sha256": "e43178eb04b3e7847369967916669ec5038785a1f51b3c7e04db2dec70ec7c14",
+      "execution_inputs_sha256": "e62d47d6a982653120946bf82e9ddc69fbb2bf386e062da310c3bcafb1e8e07f",
+      "workload_inputs_sha256": "2b946d893d74c9427071b89bd2de9a95cfb71d52da5aee9e87cd13e5c9330f53",
+      "receipts": 148,
+      "transitions": {},
+      "registered_cache_bytes": [],
+      "shared_cache_bytes": [],
+      "present_current_shared_bytes": [],
+      "shared_detachments": [],
+      "authority_metadata_read_ios": [],
+      "commands": 27,
+      "returncodes": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        127,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "submission": {
+        "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+        "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151",
+        "startup_warning_count": 1
+      },
+      "tests": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "guest_command_seconds": 25.819999999999997,
+      "block_read_ios": 13089,
+      "remote_nfs_reads": 0,
+      "boot_id": "83b19067-3773-45a0-b18f-f786d7329c1d",
+      "identity_observations": 2,
+      "limitations": [
+        "Single coherent physical host; selected naturally resident lower files only",
+        "Transitions occur between recorded commands; not inside a running command"
+      ]
+    },
+    {
+      "result": "passed",
+      "mode": "state-only",
+      "trace": "gin-gonic__gin-3741",
+      "report_sha256": "03844bf94b009a4df57b47c2b375b7d65e15ee643689f5f30c00f558df075c96",
+      "execution_inputs_sha256": "e62d47d6a982653120946bf82e9ddc69fbb2bf386e062da310c3bcafb1e8e07f",
+      "workload_inputs_sha256": "2b946d893d74c9427071b89bd2de9a95cfb71d52da5aee9e87cd13e5c9330f53",
+      "receipts": 346,
+      "transitions": {
+        "promotion": 2,
+        "state-only": 2,
+        "demotion": 2
+      },
+      "registered_cache_bytes": [
+        51634176,
+        51834880,
+        51834880,
+        51834880
+      ],
+      "shared_cache_bytes": [
+        51634176,
+        51834880
+      ],
+      "present_current_shared_bytes": [
+        28225536,
+        0
+      ],
+      "shared_detachments": [],
+      "authority_metadata_read_ios": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "commands": 27,
+      "returncodes": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        127,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "submission": {
+        "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+        "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151",
+        "startup_warning_count": 1
+      },
+      "tests": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "guest_command_seconds": 26.500000000000032,
+      "block_read_ios": 12942,
+      "remote_nfs_reads": 31,
+      "boot_id": "5dc92b66-6e3a-4911-aa98-c962c0c2f148",
+      "identity_observations": 16,
+      "limitations": [
+        "Single coherent physical host; selected naturally resident lower files only",
+        "Transitions occur between recorded commands; not inside a running command"
+      ]
+    },
+    {
+      "result": "passed",
+      "mode": "direct",
+      "trace": "gin-gonic__gin-3741",
+      "report_sha256": "64864b79d1cc0c1ec24ce51ab2de0172c050ed4a553e929803c7acab111bb033",
+      "execution_inputs_sha256": "e62d47d6a982653120946bf82e9ddc69fbb2bf386e062da310c3bcafb1e8e07f",
+      "workload_inputs_sha256": "2b946d893d74c9427071b89bd2de9a95cfb71d52da5aee9e87cd13e5c9330f53",
+      "receipts": 355,
+      "transitions": {
+        "promotion": 2,
+        "direct": 2,
+        "demotion": 2
+      },
+      "registered_cache_bytes": [
+        51257344,
+        51400704,
+        51400704,
+        51400704
+      ],
+      "shared_cache_bytes": [
+        51257344,
+        51400704
+      ],
+      "present_current_shared_bytes": [
+        51257344,
+        0
+      ],
+      "shared_detachments": [],
+      "authority_metadata_read_ios": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "commands": 27,
+      "returncodes": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        127,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "submission": {
+        "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+        "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151",
+        "startup_warning_count": 1
+      },
+      "tests": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "guest_command_seconds": 24.18000000000001,
+      "block_read_ios": 13007,
+      "remote_nfs_reads": 21,
+      "boot_id": "a9a0027e-6522-492b-837d-c93e14e91ecf",
+      "identity_observations": 16,
+      "limitations": [
+        "Single coherent physical host; selected naturally resident lower files only",
+        "Transitions occur between recorded commands; not inside a running command"
+      ]
+    },
+    {
+      "result": "passed",
+      "mode": "baseline",
+      "trace": "php-cs-fixer__php-cs-fixer-8331",
+      "report_sha256": "ec9401474fc437371df0cc0b6751fc4852b6034a5a39b250486ca0d8cf3521d3",
+      "execution_inputs_sha256": "e62d47d6a982653120946bf82e9ddc69fbb2bf386e062da310c3bcafb1e8e07f",
+      "workload_inputs_sha256": "ad53ea8d5f72b32e8df95ebc64f439515ba4f6bf2bc5f10feb7449a14f12c876",
+      "receipts": 180,
+      "transitions": {},
+      "registered_cache_bytes": [],
+      "shared_cache_bytes": [],
+      "present_current_shared_bytes": [],
+      "shared_detachments": [],
+      "authority_metadata_read_ios": [],
+      "commands": 35,
+      "returncodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "submission": {
+        "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+        "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241",
+        "startup_warning_count": 1
+      },
+      "tests": [
+        {
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28,
+          "assertions": 1172
+        },
+        {
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34,
+          "assertions": 1153
+        },
+        {
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28,
+          "assertions": 1172
+        },
+        {
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30,
+          "assertions": 1378
+        }
+      ],
+      "guest_command_seconds": 10.040000000000004,
+      "block_read_ios": 10060,
+      "remote_nfs_reads": 0,
+      "boot_id": "de66bde6-08e0-4c56-b36b-eb4e918f0a1e",
+      "identity_observations": 2,
+      "limitations": [
+        "Single coherent physical host; selected naturally resident lower files only",
+        "Transitions occur between recorded commands; not inside a running command"
+      ]
+    },
+    {
+      "result": "passed",
+      "mode": "state-only",
+      "trace": "php-cs-fixer__php-cs-fixer-8331",
+      "report_sha256": "bfac79f9b74437ebd657addc3462cdd1415f17fbd6ffcc778fcc43cbf0213f5a",
+      "execution_inputs_sha256": "e62d47d6a982653120946bf82e9ddc69fbb2bf386e062da310c3bcafb1e8e07f",
+      "workload_inputs_sha256": "ad53ea8d5f72b32e8df95ebc64f439515ba4f6bf2bc5f10feb7449a14f12c876",
+      "receipts": 378,
+      "transitions": {
+        "promotion": 2,
+        "state-only": 2,
+        "demotion": 2
+      },
+      "registered_cache_bytes": [
+        21647360,
+        21647360,
+        21647360,
+        21647360
+      ],
+      "shared_cache_bytes": [
+        21647360,
+        21647360
+      ],
+      "present_current_shared_bytes": [
+        11476992,
+        0
+      ],
+      "shared_detachments": [],
+      "authority_metadata_read_ios": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "commands": 35,
+      "returncodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "submission": {
+        "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+        "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241",
+        "startup_warning_count": 1
+      },
+      "tests": [
+        {
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28,
+          "assertions": 1172
+        },
+        {
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34,
+          "assertions": 1153
+        },
+        {
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28,
+          "assertions": 1172
+        },
+        {
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30,
+          "assertions": 1378
+        }
+      ],
+      "guest_command_seconds": 9.729999999999986,
+      "block_read_ios": 10055,
+      "remote_nfs_reads": 161,
+      "boot_id": "2250fb55-b742-4e3b-b8de-1b1161a977db",
+      "identity_observations": 16,
+      "limitations": [
+        "Single coherent physical host; selected naturally resident lower files only",
+        "Transitions occur between recorded commands; not inside a running command"
+      ]
+    },
+    {
+      "result": "passed",
+      "mode": "direct",
+      "trace": "php-cs-fixer__php-cs-fixer-8331",
+      "report_sha256": "3ee467f1478cbe13eb6b835ac6e184c1c582a6b695541e398a2d5dfa96bb28cc",
+      "execution_inputs_sha256": "e62d47d6a982653120946bf82e9ddc69fbb2bf386e062da310c3bcafb1e8e07f",
+      "workload_inputs_sha256": "ad53ea8d5f72b32e8df95ebc64f439515ba4f6bf2bc5f10feb7449a14f12c876",
+      "receipts": 387,
+      "transitions": {
+        "promotion": 2,
+        "direct": 2,
+        "demotion": 2
+      },
+      "registered_cache_bytes": [
+        21647360,
+        21647360,
+        21647360,
+        21647360
+      ],
+      "shared_cache_bytes": [
+        21647360,
+        21647360
+      ],
+      "present_current_shared_bytes": [
+        21647360,
+        0
+      ],
+      "shared_detachments": [],
+      "authority_metadata_read_ios": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "commands": 35,
+      "returncodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "submission": {
+        "sha256": "f9b60e772aaa1247d11e7bb3755e83b46e40ca2f9f0bdb8bf145bd0c8bd4c9a6",
+        "without_startup_warning_sha256": "4a04c9a98ca441dd7f1c00441cdeaabd08c2a9c71f619b1ad6be4265a7ffd241",
+        "startup_warning_count": 1
+      },
+      "tests": [
+        {
+          "index": 12,
+          "kind": "phpunit",
+          "tests": 28,
+          "assertions": 1172
+        },
+        {
+          "index": 13,
+          "kind": "phpunit",
+          "tests": 34,
+          "assertions": 1153
+        },
+        {
+          "index": 21,
+          "kind": "phpunit",
+          "tests": 28,
+          "assertions": 1172
+        },
+        {
+          "index": 28,
+          "kind": "phpunit",
+          "tests": 30,
+          "assertions": 1378
+        }
+      ],
+      "guest_command_seconds": 10.900000000000015,
+      "block_read_ios": 9972,
+      "remote_nfs_reads": 161,
+      "boot_id": "61e8a20a-5ce6-49ad-8a2f-57dd43a50afe",
+      "identity_observations": 16,
+      "limitations": [
+        "Single coherent physical host; selected naturally resident lower files only",
+        "Transitions occur between recorded commands; not inside a running command"
+      ]
+    },
+    {
+      "result": "passed",
+      "mode": "baseline",
+      "trace": "micropython__micropython-13039",
+      "report_sha256": "603f16bbfcb9405ca53ebc0115666196e9c5acb82a6fff97c68bdcf9fd32fef3",
+      "execution_inputs_sha256": "e62d47d6a982653120946bf82e9ddc69fbb2bf386e062da310c3bcafb1e8e07f",
+      "workload_inputs_sha256": "318f50b76dc38bd88d39cd6abea0e6472cec41482345bc51375d8ef12131c62d",
+      "receipts": 212,
+      "transitions": {},
+      "registered_cache_bytes": [],
+      "shared_cache_bytes": [],
+      "present_current_shared_bytes": [],
+      "shared_detachments": [],
+      "authority_metadata_read_ios": [],
+      "commands": 43,
+      "returncodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "submission": {
+        "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+        "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02",
+        "startup_warning_count": 1
+      },
+      "tests": [
+        {
+          "index": 33,
+          "kind": "micropython",
+          "tests": 514,
+          "testcases": 16063,
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          }
+        },
+        {
+          "index": 34,
+          "kind": "micropython",
+          "tests": 1,
+          "testcases": 4,
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          }
+        }
+      ],
+      "guest_command_seconds": 15.52,
+      "block_read_ios": 17218,
+      "remote_nfs_reads": 0,
+      "boot_id": "ee665106-4266-4efd-9089-ec1ec9a68c80",
+      "identity_observations": 2,
+      "limitations": [
+        "Single coherent physical host; selected naturally resident lower files only",
+        "Transitions occur between recorded commands; not inside a running command"
+      ]
+    },
+    {
+      "result": "passed",
+      "mode": "state-only",
+      "trace": "micropython__micropython-13039",
+      "report_sha256": "0f08b6a8a420485c0393cf88aa17265151b8bab025f271ba3b127d864d48a07f",
+      "execution_inputs_sha256": "e62d47d6a982653120946bf82e9ddc69fbb2bf386e062da310c3bcafb1e8e07f",
+      "workload_inputs_sha256": "318f50b76dc38bd88d39cd6abea0e6472cec41482345bc51375d8ef12131c62d",
+      "receipts": 410,
+      "transitions": {
+        "promotion": 2,
+        "state-only": 2,
+        "demotion": 2
+      },
+      "registered_cache_bytes": [
+        32268288,
+        32780288,
+        32780288,
+        32780288
+      ],
+      "shared_cache_bytes": [
+        32268288,
+        32780288
+      ],
+      "present_current_shared_bytes": [
+        17866752,
+        0
+      ],
+      "shared_detachments": [],
+      "authority_metadata_read_ios": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "commands": 43,
+      "returncodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "submission": {
+        "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+        "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02",
+        "startup_warning_count": 1
+      },
+      "tests": [
+        {
+          "index": 33,
+          "kind": "micropython",
+          "tests": 514,
+          "testcases": 16063,
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          }
+        },
+        {
+          "index": 34,
+          "kind": "micropython",
+          "tests": 1,
+          "testcases": 4,
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          }
+        }
+      ],
+      "guest_command_seconds": 16.94000000000002,
+      "block_read_ios": 17012,
+      "remote_nfs_reads": 372,
+      "boot_id": "4297094c-0f5e-41cd-b996-6970de3dd924",
+      "identity_observations": 16,
+      "limitations": [
+        "Single coherent physical host; selected naturally resident lower files only",
+        "Transitions occur between recorded commands; not inside a running command"
+      ]
+    },
+    {
+      "result": "passed",
+      "mode": "direct",
+      "trace": "micropython__micropython-13039",
+      "report_sha256": "2b381c0efc3965a271146e0c7affa258f378c70d529cda38524d4ca31e0a2e4e",
+      "execution_inputs_sha256": "e62d47d6a982653120946bf82e9ddc69fbb2bf386e062da310c3bcafb1e8e07f",
+      "workload_inputs_sha256": "318f50b76dc38bd88d39cd6abea0e6472cec41482345bc51375d8ef12131c62d",
+      "receipts": 419,
+      "transitions": {
+        "promotion": 2,
+        "direct": 2,
+        "demotion": 2
+      },
+      "registered_cache_bytes": [
+        32399360,
+        32911360,
+        32911360,
+        32911360
+      ],
+      "shared_cache_bytes": [
+        32399360,
+        32911360
+      ],
+      "present_current_shared_bytes": [
+        32399360,
+        0
+      ],
+      "shared_detachments": [],
+      "authority_metadata_read_ios": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "commands": 43,
+      "returncodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "submission": {
+        "sha256": "9bd19c5c5fa10afa64de4323c50e0390136bff392b835fcee3a835c7347cb0f0",
+        "without_startup_warning_sha256": "2461a59d68407b8d3cd1702844550dbdd0978e90635b0b0c3c26467942c0ba02",
+        "startup_warning_count": 1
+      },
+      "tests": [
+        {
+          "index": 33,
+          "kind": "micropython",
+          "tests": 514,
+          "testcases": 16063,
+          "passed": 512,
+          "skipped": {
+            "count": 9,
+            "names": [
+              "builtin_next_arg2",
+              "builtin_range_binop",
+              "class_inplace_op2",
+              "io_buffered_writer",
+              "memoryview_itemsize",
+              "namedtuple_asdict",
+              "nanbox_smallint",
+              "sys_getsizeof",
+              "sys_tracebacklimit"
+            ]
+          },
+          "failed": {
+            "count": 2,
+            "names": [
+              "builtin_help",
+              "bytes_compare3"
+            ]
+          }
+        },
+        {
+          "index": 34,
+          "kind": "micropython",
+          "tests": 1,
+          "testcases": 4,
+          "passed": 0,
+          "skipped": {
+            "count": 0,
+            "names": []
+          },
+          "failed": {
+            "count": 1,
+            "names": [
+              "bytes_compare3"
+            ]
+          }
+        }
+      ],
+      "guest_command_seconds": 18.359999999999978,
+      "block_read_ios": 17062,
+      "remote_nfs_reads": 369,
+      "boot_id": "9e82855d-bdae-47ba-a2f9-57b4161e1ff9",
+      "identity_observations": 16,
+      "limitations": [
+        "Single coherent physical host; selected naturally resident lower files only",
+        "Transitions occur between recorded commands; not inside a running command"
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "trace": "gin-gonic__gin-3741",
+      "mode": "state-only",
+      "baseline_present": true,
+      "workload_results_match": true
+    },
+    {
+      "trace": "gin-gonic__gin-3741",
+      "mode": "direct",
+      "baseline_present": true,
+      "workload_results_match": true
+    },
+    {
+      "trace": "php-cs-fixer__php-cs-fixer-8331",
+      "mode": "state-only",
+      "baseline_present": true,
+      "workload_results_match": true
+    },
+    {
+      "trace": "php-cs-fixer__php-cs-fixer-8331",
+      "mode": "direct",
+      "baseline_present": true,
+      "workload_results_match": true
+    },
+    {
+      "trace": "micropython__micropython-13039",
+      "mode": "state-only",
+      "baseline_present": true,
+      "workload_results_match": true
+    },
+    {
+      "trace": "micropython__micropython-13039",
+      "mode": "direct",
+      "baseline_present": true,
+      "workload_results_match": true
+    }
+  ],
+  "execution_inputs_sha256": "e62d47d6a982653120946bf82e9ddc69fbb2bf386e062da310c3bcafb1e8e07f",
+  "coverage": {
+    "gin-gonic__gin-3741": [
+      "baseline",
+      "direct",
+      "state-only"
+    ],
+    "php-cs-fixer__php-cs-fixer-8331": [
+      "baseline",
+      "direct",
+      "state-only"
+    ],
+    "micropython__micropython-13039": [
+      "baseline",
+      "direct",
+      "state-only"
+    ]
+  },
+  "complete_three_mode_matrix": true,
+  "complete_nine_trial_matrix": true
+}

@@ -1,0 +1,421 @@
+{
+  "schema": "swe-pool-resource-cleanup-v1",
+  "created_utc": "2026-10-30T15:51:55.390370+00:00",
+  "result": "passed",
+  "successful_trials": [
+    {
+      "id": "gin-gonic__gin-3741-baseline",
+      "report": "/tmp/swe-pool-pilot5-gin-baseline-20261030/gin-gonic__gin-3741-baseline/report.json",
+      "report_sha256": "e43178eb04b3e7847369967916669ec5038785a1f51b3c7e04db2dec70ec7c14",
+      "verification": "/tmp/swe-pool-pilot5-gin-baseline-20261030/gin-gonic__gin-3741-baseline-verification.json",
+      "verification_sha256": "bbd0d2e797481fdc61b4c963f82a903c38cdd1b5d93ab7b318135ef95c31959a",
+      "storage_path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T151336Z-lchz8elh/home-storage.raw",
+      "storage_removed": true,
+      "outer_cleanup": {
+        "A": {
+          "pid": 3015652,
+          "starttime": "323818351",
+          "fenced": true
+        },
+        "B": {
+          "pid": 3015653,
+          "starttime": "323818351",
+          "fenced": true
+        }
+      },
+      "memory_backing_removed": true,
+      "network_removed": {
+        "bridge": true,
+        "A": true,
+        "B": true
+      },
+      "config_sha256": "b065e44b2afe7c18a12bd7648f4a1a0ed648084a13b7d90bd4870b2ddc2a2c10"
+    },
+    {
+      "id": "gin-gonic__gin-3741-state-only",
+      "report": "/tmp/swe-pool-gin-lifecycle-20261030/gin-gonic__gin-3741-state-only/report.json",
+      "report_sha256": "03844bf94b009a4df57b47c2b375b7d65e15ee643689f5f30c00f558df075c96",
+      "verification": "/tmp/swe-pool-gin-lifecycle-20261030/gin-gonic__gin-3741-state-only-verification.json",
+      "verification_sha256": "d270473a9a7165a14ae9e91374b45cf9b879d77e41ff4d59546df38b424232d1",
+      "storage_path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T152115Z-4n4e14qz/home-storage.raw",
+      "storage_removed": true,
+      "outer_cleanup": {
+        "A": {
+          "pid": 3016509,
+          "starttime": "323864272",
+          "fenced": true
+        },
+        "B": {
+          "pid": 3016510,
+          "starttime": "323864272",
+          "fenced": true
+        }
+      },
+      "memory_backing_removed": true,
+      "network_removed": {
+        "bridge": true,
+        "A": true,
+        "B": true
+      },
+      "config_sha256": "2516144fe90a52106ecf60f47221f3645d6af37d753f87f642e7d26735e34ac7"
+    },
+    {
+      "id": "gin-gonic__gin-3741-direct",
+      "report": "/tmp/swe-pool-gin-lifecycle-20261030/gin-gonic__gin-3741-direct/report.json",
+      "report_sha256": "64864b79d1cc0c1ec24ce51ab2de0172c050ed4a553e929803c7acab111bb033",
+      "verification": "/tmp/swe-pool-gin-lifecycle-20261030/gin-gonic__gin-3741-direct-verification.json",
+      "verification_sha256": "a3385c5005393c15888428ee3a346e83b18feded8c38c50da2c703d1717ee850",
+      "storage_path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T153015Z-6hiw3stc/home-storage.raw",
+      "storage_removed": true,
+      "outer_cleanup": {
+        "A": {
+          "pid": 3017675,
+          "starttime": "323918236",
+          "fenced": true
+        },
+        "B": {
+          "pid": 3017676,
+          "starttime": "323918236",
+          "fenced": true
+        }
+      },
+      "memory_backing_removed": true,
+      "network_removed": {
+        "bridge": true,
+        "A": true,
+        "B": true
+      },
+      "config_sha256": "0136da9b5a2186fa797889188ecea6fa31fe37f8edb257b80b5703d3fde46c15"
+    },
+    {
+      "id": "php-cs-fixer__php-cs-fixer-8331-baseline",
+      "report": "/tmp/swe-pool-php-matrix-20261030/php-cs-fixer__php-cs-fixer-8331-baseline/report.json",
+      "report_sha256": "ec9401474fc437371df0cc0b6751fc4852b6034a5a39b250486ca0d8cf3521d3",
+      "verification": "/tmp/swe-pool-php-matrix-20261030/php-cs-fixer__php-cs-fixer-8331-baseline-verification.json",
+      "verification_sha256": "77149b0dd05d85fe0e2ff4f410dc289db3839a8321290902cc2ef9c8f418c848",
+      "storage_path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T153121Z-mv657efw/home-storage.raw",
+      "storage_removed": true,
+      "outer_cleanup": {
+        "A": {
+          "pid": 3017810,
+          "starttime": "323924930",
+          "fenced": true
+        },
+        "B": {
+          "pid": 3017811,
+          "starttime": "323924930",
+          "fenced": true
+        }
+      },
+      "memory_backing_removed": true,
+      "network_removed": {
+        "bridge": true,
+        "A": true,
+        "B": true
+      },
+      "config_sha256": "281d1cb1801d301ea11cbf5305c845b7d1a3b270fdf96449b486ff52f89e59b7"
+    },
+    {
+      "id": "php-cs-fixer__php-cs-fixer-8331-state-only",
+      "report": "/tmp/swe-pool-php-matrix-20261030/php-cs-fixer__php-cs-fixer-8331-state-only/report.json",
+      "report_sha256": "bfac79f9b74437ebd657addc3462cdd1415f17fbd6ffcc778fcc43cbf0213f5a",
+      "verification": "/tmp/swe-pool-php-matrix-20261030/php-cs-fixer__php-cs-fixer-8331-state-only-verification.json",
+      "verification_sha256": "0072dcf2b19582380b96ecbedc1a139762880939d60e5416e5760b9b9717a27c",
+      "storage_path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T153446Z-re16j4f2/home-storage.raw",
+      "storage_removed": true,
+      "outer_cleanup": {
+        "A": {
+          "pid": 3018273,
+          "starttime": "323945348",
+          "fenced": true
+        },
+        "B": {
+          "pid": 3018274,
+          "starttime": "323945348",
+          "fenced": true
+        }
+      },
+      "memory_backing_removed": true,
+      "network_removed": {
+        "bridge": true,
+        "A": true,
+        "B": true
+      },
+      "config_sha256": "303e0a357d10e08ad18d4c8146d827b90148828626cc22ae68f57df6b63eccae"
+    },
+    {
+      "id": "php-cs-fixer__php-cs-fixer-8331-direct",
+      "report": "/tmp/swe-pool-php-matrix-20261030/php-cs-fixer__php-cs-fixer-8331-direct/report.json",
+      "report_sha256": "3ee467f1478cbe13eb6b835ac6e184c1c582a6b695541e398a2d5dfa96bb28cc",
+      "verification": "/tmp/swe-pool-php-matrix-20261030/php-cs-fixer__php-cs-fixer-8331-direct-verification.json",
+      "verification_sha256": "c5c072a849827255a8418a6f85b35251180037cb8564cf0f4a9aff5b23472d17",
+      "storage_path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T154034Z-3ii7hfqw/home-storage.raw",
+      "storage_removed": true,
+      "outer_cleanup": {
+        "A": {
+          "pid": 3019075,
+          "starttime": "323980101",
+          "fenced": true
+        },
+        "B": {
+          "pid": 3019076,
+          "starttime": "323980102",
+          "fenced": true
+        }
+      },
+      "memory_backing_removed": true,
+      "network_removed": {
+        "bridge": true,
+        "A": true,
+        "B": true
+      },
+      "config_sha256": "c77c26ad97677a087e7e47a4f3b922fe353cadb65f1c3cd541706626b94cff22"
+    },
+    {
+      "id": "micropython__micropython-13039-baseline",
+      "report": "/tmp/swe-pool-micro-matrix-20261030/micropython__micropython-13039-baseline/report.json",
+      "report_sha256": "603f16bbfcb9405ca53ebc0115666196e9c5acb82a6fff97c68bdcf9fd32fef3",
+      "verification": "/tmp/swe-pool-micro-matrix-20261030/micropython__micropython-13039-baseline-verification.json",
+      "verification_sha256": "9875b80bf17cda2f42d911279a83bc99613d30e965eb2883eb54115f8cdbf0b6",
+      "storage_path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T153124Z-fehvu6b3/home-storage.raw",
+      "storage_removed": true,
+      "outer_cleanup": {
+        "A": {
+          "pid": 3017875,
+          "starttime": "323925145",
+          "fenced": true
+        },
+        "B": {
+          "pid": 3017876,
+          "starttime": "323925146",
+          "fenced": true
+        }
+      },
+      "memory_backing_removed": true,
+      "network_removed": {
+        "bridge": true,
+        "A": true,
+        "B": true
+      },
+      "config_sha256": "3a1fe22fa4e3a38066bf6241d8c8fdf9fcac4f523fba3009efa2246312d9b968"
+    },
+    {
+      "id": "micropython__micropython-13039-state-only",
+      "report": "/tmp/swe-pool-micro-matrix-20261030/micropython__micropython-13039-state-only/report.json",
+      "report_sha256": "0f08b6a8a420485c0393cf88aa17265151b8bab025f271ba3b127d864d48a07f",
+      "verification": "/tmp/swe-pool-micro-matrix-20261030/micropython__micropython-13039-state-only-verification.json",
+      "verification_sha256": "e2ade1fd6f79ec9acaef0ddb1328939b39b87a151e12ee216d51f88b1665b0d4",
+      "storage_path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T153552Z-ffwlyqi1/home-storage.raw",
+      "storage_removed": true,
+      "outer_cleanup": {
+        "A": {
+          "pid": 3018478,
+          "starttime": "323951967",
+          "fenced": true
+        },
+        "B": {
+          "pid": 3018479,
+          "starttime": "323951967",
+          "fenced": true
+        }
+      },
+      "memory_backing_removed": true,
+      "network_removed": {
+        "bridge": true,
+        "A": true,
+        "B": true
+      },
+      "config_sha256": "28c6dd787c76987167159f073549661c562c27b68439531ea7565b0885fdfba5"
+    },
+    {
+      "id": "micropython__micropython-13039-direct",
+      "report": "/tmp/swe-pool-micro-matrix-20261030/micropython__micropython-13039-direct/report.json",
+      "report_sha256": "2b381c0efc3965a271146e0c7affa258f378c70d529cda38524d4ca31e0a2e4e",
+      "verification": "/tmp/swe-pool-micro-matrix-20261030/micropython__micropython-13039-direct-verification.json",
+      "verification_sha256": "17e047b190cde41a53c171540f5e914566f1f7b7c7576e2149abe5d77a004544",
+      "storage_path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T154339Z-npndchkl/home-storage.raw",
+      "storage_removed": true,
+      "outer_cleanup": {
+        "A": {
+          "pid": 3019359,
+          "starttime": "323998650",
+          "fenced": true
+        },
+        "B": {
+          "pid": 3019361,
+          "starttime": "323998651",
+          "fenced": true
+        }
+      },
+      "memory_backing_removed": true,
+      "network_removed": {
+        "bridge": true,
+        "A": true,
+        "B": true
+      },
+      "config_sha256": "e87b913390817cf162c1d113f2accd7dd782f8543ebf85956cbd1351de40996c"
+    }
+  ],
+  "diagnosed_failures": [
+    {
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T145238Z-vhin8j7k",
+      "reason": "Preboot B full-image sha256sum exceeded inherited120s timeout.",
+      "preboot": true,
+      "storage_path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T145238Z-vhin8j7k/home-storage.raw",
+      "known_bytes": 13958643712,
+      "initial_sha256": "a96f679e91ad7ada497f0fe63bd624ada6cbe64fbedaa8bc6ef0c410da9b6816",
+      "failure_report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T145238Z-vhin8j7k/swe-pool-1793371986848145704/report.json",
+      "failure_report_sha256": "09b11a98eaa98e397314af61302bac22dcbf581a8d66900bdd923718efd171e7",
+      "serial_logs": [
+        {
+          "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T145238Z-vhin8j7k/vm-a.serial.log",
+          "sha256": "3f246276b3cee0412e1cc3b3bb01233cef2076838c090745e8c4ebe3e670ca17"
+        },
+        {
+          "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T145238Z-vhin8j7k/vm-b.serial.log",
+          "sha256": "b76bcf4ba611fdb53ecb35fab08df8214a368575d6d6226e690330aefba5c819"
+        }
+      ],
+      "outer_cleanup": {
+        "A": {
+          "pid": 3012160,
+          "starttime": "323692532",
+          "fenced": true
+        },
+        "B": {
+          "pid": 3012161,
+          "starttime": "323692532",
+          "fenced": true
+        }
+      },
+      "memory_backing_removed": true,
+      "network_removed": {
+        "bridge": true,
+        "A": true,
+        "B": true
+      },
+      "config_sha256": "dcc89d246cc987c16b574c235446d98517231ab86c5b940e7d07e3be678dd5fa",
+      "removed": true
+    },
+    {
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T150037Z-c0h40pn0",
+      "reason": "Preboot tiny-read NFS hash deliberately interrupted after measured5.9MB/s made600s deadline unlikely; fixed with complete1MiB streaming SHA.",
+      "preboot": true,
+      "storage_path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T150037Z-c0h40pn0/home-storage.raw",
+      "known_bytes": 13958643712,
+      "initial_sha256": "a96f679e91ad7ada497f0fe63bd624ada6cbe64fbedaa8bc6ef0c410da9b6816",
+      "failure_report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T150037Z-c0h40pn0/swe-pool-1793372465362608087/report.json",
+      "failure_report_sha256": "d74afd44aa254ec096c893e90f99be9334b398eabf7bad0e90d357360457f27c",
+      "serial_logs": [
+        {
+          "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T150037Z-c0h40pn0/vm-a.serial.log",
+          "sha256": "1204e163d23f4f0c751e93dd6e946af4b405d93e8778ebcc393563aae7a76a49"
+        },
+        {
+          "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T150037Z-c0h40pn0/vm-b.serial.log",
+          "sha256": "819292b1b463424d818bac18f78cc6d63a29532630f986effb49b2e2cddf2ed9"
+        }
+      ],
+      "outer_cleanup": {
+        "A": {
+          "pid": 3013636,
+          "starttime": "323740385",
+          "fenced": true
+        },
+        "B": {
+          "pid": 3013637,
+          "starttime": "323740385",
+          "fenced": true
+        }
+      },
+      "memory_backing_removed": true,
+      "network_removed": {
+        "bridge": true,
+        "A": true,
+        "B": true
+      },
+      "config_sha256": "032d10cd923d78fa2d0113caa556c8f558b753bc7d5ade2b0a8b50353271685d",
+      "removed": true
+    },
+    {
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T150616Z-tew5rgxs",
+      "reason": "Preboot stat without-L measured symlink length rather than immutable image length.",
+      "preboot": true,
+      "storage_path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T150616Z-tew5rgxs/home-storage.raw",
+      "known_bytes": 13958643712,
+      "initial_sha256": "a96f679e91ad7ada497f0fe63bd624ada6cbe64fbedaa8bc6ef0c410da9b6816",
+      "failure_report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T150616Z-tew5rgxs/swe-pool-1793372804662756697/report.json",
+      "failure_report_sha256": "1bf00c3e6325f60234bc2b754a8fbe4b40a2886e3db5b157932b3afdb7712738",
+      "serial_logs": [
+        {
+          "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T150616Z-tew5rgxs/vm-a.serial.log",
+          "sha256": "3b51aa080fab615256d6a089a5adfbfb74103f5bdd907d00383fd77fa85696f1"
+        },
+        {
+          "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T150616Z-tew5rgxs/vm-b.serial.log",
+          "sha256": "03cd675c5d9ca468b732d306c6eddf974b645183c9a0ee0b7ee10f6cac7dc59e"
+        }
+      ],
+      "outer_cleanup": {
+        "A": {
+          "pid": 3014419,
+          "starttime": "323774314",
+          "fenced": true
+        },
+        "B": {
+          "pid": 3014420,
+          "starttime": "323774314",
+          "fenced": true
+        }
+      },
+      "memory_backing_removed": true,
+      "network_removed": {
+        "bridge": true,
+        "A": true,
+        "B": true
+      },
+      "config_sha256": "b85de1a0d499a56b65535e54222e8e0f711c75634885fe5de534644e36110f5c",
+      "removed": true
+    },
+    {
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T150846Z-gsctwwda",
+      "reason": "Preboot canonical import correctly rejected symlink via O_NOFOLLOW; fixed alias to exactsameinode hardlink.",
+      "preboot": true,
+      "storage_path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T150846Z-gsctwwda/home-storage.raw",
+      "known_bytes": 13958643712,
+      "initial_sha256": "a96f679e91ad7ada497f0fe63bd624ada6cbe64fbedaa8bc6ef0c410da9b6816",
+      "failure_report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T150846Z-gsctwwda/swe-pool-1793372956170305756/report.json",
+      "failure_report_sha256": "504fabc670b1650207dd13c63333e87c3aaba99683105a88ea80c72e756f0304",
+      "serial_logs": [
+        {
+          "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T150846Z-gsctwwda/vm-a.serial.log",
+          "sha256": "a6d4980ceb221ea7626fedef150691e196922361094992e59e88c81ab35c4c91"
+        },
+        {
+          "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T150846Z-gsctwwda/vm-b.serial.log",
+          "sha256": "61acd4701a96cbcd283e6bbad2c6090d255c724b6eb4ed22d4443e1da93c69e0"
+        }
+      ],
+      "outer_cleanup": {
+        "A": {
+          "pid": 3014860,
+          "starttime": "323789465",
+          "fenced": true
+        },
+        "B": {
+          "pid": 3014861,
+          "starttime": "323789465",
+          "fenced": true
+        }
+      },
+      "memory_backing_removed": true,
+      "network_removed": {
+        "bridge": true,
+        "A": true,
+        "B": true
+      },
+      "config_sha256": "f315e714e0fbab297d7a234fc0375338ca743e93f6d4731556269c1f15a99072",
+      "removed": true
+    }
+  ]
+}
