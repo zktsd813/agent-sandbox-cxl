@@ -1,0 +1,240 @@
+{
+  "schema": "pool-compare-cleanup-v1",
+  "checked_utc": "2026-10-30T05:49:36.582932+00:00",
+  "result": "passed",
+  "suites": [
+    {
+      "file": "primary-run.log",
+      "sha256": "598caff41d96dcb016e669ab28136ef7e35d192ce575dcf06832e7c3c90f11c2",
+      "original_path": "/tmp/pool-compare-suite-v3-20261030.log",
+      "stop_markers": 5,
+      "wrapper_exit_code": 0
+    },
+    {
+      "file": "tail-stock-run.log",
+      "sha256": "813d958e5025a7dd7a79251e5f2b4c78c73b6a6a70d9dfa6110d38e9d46dfacc",
+      "original_path": "/tmp/pool-compare-tail-stock-20261030.log",
+      "stop_markers": 1,
+      "wrapper_exit_code": 0
+    }
+  ],
+  "sessions": [
+    {
+      "session": "cmp1030c-0",
+      "arm": "stock-dram",
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T052014Z-7rnkevxs",
+      "run_config_sha256": "4a34fa2ca47898cebfff3327995ef639dfecab8dc023f12558527400ba9f84cb",
+      "report_sha256": "9965541b1a50c91318c4f63e0f222a1430d109b495f475ab04b0bf179403a45b",
+      "processes": [
+        {
+          "role": "A",
+          "pid": 2864646,
+          "expected_starttime": "320256298",
+          "observed_starttime": null,
+          "state": "missing",
+          "stopped": true
+        },
+        {
+          "role": "B",
+          "pid": 2864647,
+          "expected_starttime": "320256298",
+          "observed_starttime": null,
+          "state": "missing",
+          "stopped": true
+        }
+      ],
+      "all_stopped": true,
+      "ephemeral_memory_removed": true,
+      "control_sockets_removed": true,
+      "source_hashes": {
+        "pool_compare_run.py": "6094df73595416052d012e42f57102cde82434451060b0079d85d0b9c1615bc3",
+        "pool_compare_bench.py": "f86c4bc37996ac48ae97e7f227b6e8c4cf1d8639c66c53af19c3f950361a41b8",
+        "pool_compare_prepare.py": "98781dbb78a44b3349dca1b44de56fae239f1688d06ac5d99b916d471f505630",
+        "pool_compare_probe.c": "5aa064db483c2fe861c4139c100ee3ad19c37f545b7691f2a5d47666d2fa6240",
+        "pool_compare_pfn.c": "1e107accb8c6a141e9ceb3c4a0330db35bd6de0679ce91cbe6250e0ba1c54cc4"
+      },
+      "suite_sha256": "fef8aa081dd23d3916232498b91c925b11ee6fbdb86a9c1d4b2cddcd5c11b961"
+    },
+    {
+      "session": "cmp1030c-1",
+      "arm": "patched-dram-disabled",
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T052329Z-ahd_oitb",
+      "run_config_sha256": "a11ecdb0ab0a71c86a270c5d11165d49c31a86986b86cc9ca74203f23a4aee09",
+      "report_sha256": "3a0b5528f0b556e4f38145444859527f2be9c1d19c68f7777e330a3902e99170",
+      "processes": [
+        {
+          "role": "A",
+          "pid": 2865354,
+          "expected_starttime": "320275760",
+          "observed_starttime": null,
+          "state": "missing",
+          "stopped": true
+        },
+        {
+          "role": "B",
+          "pid": 2865355,
+          "expected_starttime": "320275760",
+          "observed_starttime": null,
+          "state": "missing",
+          "stopped": true
+        }
+      ],
+      "all_stopped": true,
+      "ephemeral_memory_removed": true,
+      "control_sockets_removed": true,
+      "source_hashes": {
+        "pool_compare_run.py": "6094df73595416052d012e42f57102cde82434451060b0079d85d0b9c1615bc3",
+        "pool_compare_bench.py": "f86c4bc37996ac48ae97e7f227b6e8c4cf1d8639c66c53af19c3f950361a41b8",
+        "pool_compare_prepare.py": "98781dbb78a44b3349dca1b44de56fae239f1688d06ac5d99b916d471f505630",
+        "pool_compare_probe.c": "5aa064db483c2fe861c4139c100ee3ad19c37f545b7691f2a5d47666d2fa6240",
+        "pool_compare_pfn.c": "1e107accb8c6a141e9ceb3c4a0330db35bd6de0679ce91cbe6250e0ba1c54cc4"
+      },
+      "suite_sha256": "fef8aa081dd23d3916232498b91c925b11ee6fbdb86a9c1d4b2cddcd5c11b961"
+    },
+    {
+      "session": "cmp1030c-2",
+      "arm": "patched-cxl-hints-unpooled",
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T052614Z-gnw21d_a",
+      "run_config_sha256": "939624479434856d269aaccc227768d86e6b15140e04bd3428fcc13edcaaa48c",
+      "report_sha256": "d67ebc4f69056b4d7d2d381575f88fd1219f9ba0a3eaecde830011ebcbf1a811",
+      "processes": [
+        {
+          "role": "A",
+          "pid": 2865889,
+          "expected_starttime": "320292316",
+          "observed_starttime": null,
+          "state": "missing",
+          "stopped": true
+        },
+        {
+          "role": "B",
+          "pid": 2865890,
+          "expected_starttime": "320292316",
+          "observed_starttime": null,
+          "state": "missing",
+          "stopped": true
+        }
+      ],
+      "all_stopped": true,
+      "ephemeral_memory_removed": true,
+      "control_sockets_removed": true,
+      "source_hashes": {
+        "pool_compare_run.py": "6094df73595416052d012e42f57102cde82434451060b0079d85d0b9c1615bc3",
+        "pool_compare_bench.py": "f86c4bc37996ac48ae97e7f227b6e8c4cf1d8639c66c53af19c3f950361a41b8",
+        "pool_compare_prepare.py": "98781dbb78a44b3349dca1b44de56fae239f1688d06ac5d99b916d471f505630",
+        "pool_compare_probe.c": "5aa064db483c2fe861c4139c100ee3ad19c37f545b7691f2a5d47666d2fa6240",
+        "pool_compare_pfn.c": "1e107accb8c6a141e9ceb3c4a0330db35bd6de0679ce91cbe6250e0ba1c54cc4"
+      },
+      "suite_sha256": "fef8aa081dd23d3916232498b91c925b11ee6fbdb86a9c1d4b2cddcd5c11b961"
+    },
+    {
+      "session": "cmp1030c-3",
+      "arm": "patched-cxl-pooled",
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T052951Z-69p8rxa4",
+      "run_config_sha256": "500dfe77e94c90a3810039f6d02f5d1b7da3805e38163c47a1ed1f4d680ea700",
+      "report_sha256": "69a10d735760cfb706a31dee492786f342865c61924efda715e397d7444c7466",
+      "processes": [
+        {
+          "role": "A",
+          "pid": 2866691,
+          "expected_starttime": "320313970",
+          "observed_starttime": null,
+          "state": "missing",
+          "stopped": true
+        },
+        {
+          "role": "B",
+          "pid": 2866692,
+          "expected_starttime": "320313970",
+          "observed_starttime": null,
+          "state": "missing",
+          "stopped": true
+        }
+      ],
+      "all_stopped": true,
+      "ephemeral_memory_removed": true,
+      "control_sockets_removed": true,
+      "source_hashes": {
+        "pool_compare_run.py": "6094df73595416052d012e42f57102cde82434451060b0079d85d0b9c1615bc3",
+        "pool_compare_bench.py": "f86c4bc37996ac48ae97e7f227b6e8c4cf1d8639c66c53af19c3f950361a41b8",
+        "pool_compare_prepare.py": "98781dbb78a44b3349dca1b44de56fae239f1688d06ac5d99b916d471f505630",
+        "pool_compare_probe.c": "5aa064db483c2fe861c4139c100ee3ad19c37f545b7691f2a5d47666d2fa6240",
+        "pool_compare_pfn.c": "1e107accb8c6a141e9ceb3c4a0330db35bd6de0679ce91cbe6250e0ba1c54cc4"
+      },
+      "suite_sha256": "fef8aa081dd23d3916232498b91c925b11ee6fbdb86a9c1d4b2cddcd5c11b961"
+    },
+    {
+      "session": "cmp1030c-4",
+      "arm": "stock-snapshot",
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T054354Z-wowtdz17",
+      "run_config_sha256": "3c6d630b337e6420a23f3ba537b99da568859001500e2cd5853c5e9069e012e6",
+      "report_sha256": "887b6a3ff7e0d3466e2093e7e36015fc2b7836e2a3e1ffda57628bf69a1f198a",
+      "processes": [
+        {
+          "role": "A",
+          "pid": 2868138,
+          "expected_starttime": "320398256",
+          "observed_starttime": null,
+          "state": "missing",
+          "stopped": true
+        },
+        {
+          "role": "B",
+          "pid": 2868139,
+          "expected_starttime": "320398257",
+          "observed_starttime": null,
+          "state": "missing",
+          "stopped": true
+        }
+      ],
+      "all_stopped": true,
+      "ephemeral_memory_removed": true,
+      "control_sockets_removed": true,
+      "source_hashes": {
+        "pool_compare_run.py": "6094df73595416052d012e42f57102cde82434451060b0079d85d0b9c1615bc3",
+        "pool_compare_bench.py": "f86c4bc37996ac48ae97e7f227b6e8c4cf1d8639c66c53af19c3f950361a41b8",
+        "pool_compare_prepare.py": "98781dbb78a44b3349dca1b44de56fae239f1688d06ac5d99b916d471f505630",
+        "pool_compare_probe.c": "5aa064db483c2fe861c4139c100ee3ad19c37f545b7691f2a5d47666d2fa6240",
+        "pool_compare_pfn.c": "1e107accb8c6a141e9ceb3c4a0330db35bd6de0679ce91cbe6250e0ba1c54cc4"
+      },
+      "suite_sha256": "fef8aa081dd23d3916232498b91c925b11ee6fbdb86a9c1d4b2cddcd5c11b961"
+    },
+    {
+      "session": "cmp1030tail-0",
+      "arm": "stock-dram",
+      "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T054608Z-217mva2i",
+      "run_config_sha256": "4d444e63120ee080495ea9c21ea9a9d8396d85bb5f9f3c9b334412830349f46f",
+      "report_sha256": "ffa86152853614002843658ac0fb7772a1f763b2750f963bd2061401b85a578e",
+      "processes": [
+        {
+          "role": "A",
+          "pid": 2868799,
+          "expected_starttime": "320411678",
+          "observed_starttime": null,
+          "state": "missing",
+          "stopped": true
+        },
+        {
+          "role": "B",
+          "pid": 2868800,
+          "expected_starttime": "320411678",
+          "observed_starttime": null,
+          "state": "missing",
+          "stopped": true
+        }
+      ],
+      "all_stopped": true,
+      "ephemeral_memory_removed": true,
+      "control_sockets_removed": true,
+      "source_hashes": {
+        "pool_compare_run.py": "6094df73595416052d012e42f57102cde82434451060b0079d85d0b9c1615bc3",
+        "pool_compare_bench.py": "f86c4bc37996ac48ae97e7f227b6e8c4cf1d8639c66c53af19c3f950361a41b8",
+        "pool_compare_prepare.py": "98781dbb78a44b3349dca1b44de56fae239f1688d06ac5d99b916d471f505630",
+        "pool_compare_probe.c": "5aa064db483c2fe861c4139c100ee3ad19c37f545b7691f2a5d47666d2fa6240",
+        "pool_compare_pfn.c": "1e107accb8c6a141e9ceb3c4a0330db35bd6de0679ce91cbe6250e0ba1c54cc4"
+      },
+      "suite_sha256": "7003504ee534847c01e178d05f4baff2215abcf442400dcf47689f52a99ca66d"
+    }
+  ],
+  "all_formal_pairs_stopped": true
+}

@@ -1,0 +1,286 @@
+{
+  "result": "passed",
+  "arm": "stock-dram",
+  "report_sha256": "ffa86152853614002843658ac0fb7772a1f763b2750f963bd2061401b85a578e",
+  "verifier_sha256": "3b4d907aad689a934cfd6f074c711dfbabf89cd0b59592195c9f4c2c44d39480",
+  "raw_receipts": 791,
+  "commands": 138,
+  "independent_boots": 3,
+  "initial_current_cache": {
+    "union_pages": 122880,
+    "intersection_pages": 0,
+    "same_offset_shared_pages": 0,
+    "union_bytes": 503316480,
+    "common_file_bytes": 0
+  },
+  "final_current_cache": {
+    "union_pages": 122880,
+    "intersection_pages": 0,
+    "same_offset_shared_pages": 0,
+    "union_bytes": 503316480,
+    "common_file_bytes": 0
+  },
+  "timings": {
+    "hot": {
+      "samples": 15,
+      "median_ms": 122.911822,
+      "minimum_ms": 112.679766,
+      "maximum_ms": 143.718286
+    },
+    "private_write": {
+      "samples": 15,
+      "median_ms": 9.81736,
+      "minimum_ms": 5.580769,
+      "maximum_ms": 18.121088
+    },
+    "recycle": {
+      "samples": 15,
+      "median_ms": 297.50696,
+      "minimum_ms": 276.223767,
+      "maximum_ms": 634.511214
+    },
+    "cold_refill": {
+      "samples": 15,
+      "median_ms": 218.92796,
+      "minimum_ms": 181.051266,
+      "maximum_ms": 260.175703
+    }
+  },
+  "timings_by_round": {
+    "0": {
+      "hot": {
+        "samples": 3,
+        "median_ms": 122.515021,
+        "minimum_ms": 120.578886,
+        "maximum_ms": 124.130392
+      },
+      "private_write": {
+        "samples": 3,
+        "median_ms": 8.875107,
+        "minimum_ms": 8.301919,
+        "maximum_ms": 13.181237
+      },
+      "recycle": {
+        "samples": 3,
+        "median_ms": 631.857804,
+        "minimum_ms": 625.680563,
+        "maximum_ms": 634.511214
+      },
+      "cold_refill": {
+        "samples": 3,
+        "median_ms": 259.685269,
+        "minimum_ms": 231.572073,
+        "maximum_ms": 260.175703
+      }
+    },
+    "1": {
+      "hot": {
+        "samples": 3,
+        "median_ms": 129.47996,
+        "minimum_ms": 118.221338,
+        "maximum_ms": 130.408872
+      },
+      "private_write": {
+        "samples": 3,
+        "median_ms": 13.648249,
+        "minimum_ms": 9.81736,
+        "maximum_ms": 18.121088
+      },
+      "recycle": {
+        "samples": 3,
+        "median_ms": 297.50696,
+        "minimum_ms": 276.223767,
+        "maximum_ms": 304.492298
+      },
+      "cold_refill": {
+        "samples": 3,
+        "median_ms": 204.409065,
+        "minimum_ms": 186.7028,
+        "maximum_ms": 235.094801
+      }
+    },
+    "2": {
+      "hot": {
+        "samples": 3,
+        "median_ms": 122.911822,
+        "minimum_ms": 112.679766,
+        "maximum_ms": 143.718286
+      },
+      "private_write": {
+        "samples": 3,
+        "median_ms": 8.041234,
+        "minimum_ms": 5.580769,
+        "maximum_ms": 13.316533
+      },
+      "recycle": {
+        "samples": 3,
+        "median_ms": 296.799635,
+        "minimum_ms": 282.620891,
+        "maximum_ms": 303.659454
+      },
+      "cold_refill": {
+        "samples": 3,
+        "median_ms": 189.579095,
+        "minimum_ms": 181.051266,
+        "maximum_ms": 218.92796
+      }
+    },
+    "3": {
+      "hot": {
+        "samples": 3,
+        "median_ms": 125.773925,
+        "minimum_ms": 124.087039,
+        "maximum_ms": 126.675095
+      },
+      "private_write": {
+        "samples": 3,
+        "median_ms": 10.437601,
+        "minimum_ms": 7.308894,
+        "maximum_ms": 13.206435
+      },
+      "recycle": {
+        "samples": 3,
+        "median_ms": 292.809143,
+        "minimum_ms": 291.134669,
+        "maximum_ms": 297.009018
+      },
+      "cold_refill": {
+        "samples": 3,
+        "median_ms": 213.37237,
+        "minimum_ms": 202.078266,
+        "maximum_ms": 231.761528
+      }
+    },
+    "4": {
+      "hot": {
+        "samples": 3,
+        "median_ms": 116.571579,
+        "minimum_ms": 114.608885,
+        "maximum_ms": 118.451649
+      },
+      "private_write": {
+        "samples": 3,
+        "median_ms": 9.72009,
+        "minimum_ms": 7.799155,
+        "maximum_ms": 13.272287
+      },
+      "recycle": {
+        "samples": 3,
+        "median_ms": 300.671679,
+        "minimum_ms": 290.33247,
+        "maximum_ms": 304.227501
+      },
+      "cold_refill": {
+        "samples": 3,
+        "median_ms": 223.194082,
+        "minimum_ms": 181.773714,
+        "maximum_ms": 244.030296
+      }
+    }
+  },
+  "timings_by_vm": {
+    "1": {
+      "hot": {
+        "samples": 5,
+        "median_ms": 124.087039,
+        "minimum_ms": 114.608885,
+        "maximum_ms": 143.718286
+      },
+      "private_write": {
+        "samples": 5,
+        "median_ms": 13.272287,
+        "minimum_ms": 7.308894,
+        "maximum_ms": 18.121088
+      },
+      "recycle": {
+        "samples": 5,
+        "median_ms": 303.659454,
+        "minimum_ms": 297.009018,
+        "maximum_ms": 625.680563
+      },
+      "cold_refill": {
+        "samples": 5,
+        "median_ms": 218.92796,
+        "minimum_ms": 186.7028,
+        "maximum_ms": 260.175703
+      }
+    },
+    "2": {
+      "hot": {
+        "samples": 5,
+        "median_ms": 124.130392,
+        "minimum_ms": 112.679766,
+        "maximum_ms": 130.408872
+      },
+      "private_write": {
+        "samples": 5,
+        "median_ms": 10.437601,
+        "minimum_ms": 5.580769,
+        "maximum_ms": 13.648249
+      },
+      "recycle": {
+        "samples": 5,
+        "median_ms": 292.809143,
+        "minimum_ms": 276.223767,
+        "maximum_ms": 634.511214
+      },
+      "cold_refill": {
+        "samples": 5,
+        "median_ms": 231.572073,
+        "minimum_ms": 181.051266,
+        "maximum_ms": 235.094801
+      }
+    },
+    "3": {
+      "hot": {
+        "samples": 5,
+        "median_ms": 122.515021,
+        "minimum_ms": 118.221338,
+        "maximum_ms": 125.773925
+      },
+      "private_write": {
+        "samples": 5,
+        "median_ms": 9.72009,
+        "minimum_ms": 8.041234,
+        "maximum_ms": 13.206435
+      },
+      "recycle": {
+        "samples": 5,
+        "median_ms": 296.799635,
+        "minimum_ms": 290.33247,
+        "maximum_ms": 631.857804
+      },
+      "cold_refill": {
+        "samples": 5,
+        "median_ms": 204.409065,
+        "minimum_ms": 189.579095,
+        "maximum_ms": 259.685269
+      }
+    }
+  },
+  "changed_pfns_after_recycle": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "shared_payload_bytes_before_timed_samples": [],
+  "pool_control": {
+    "events": 0,
+    "controller_reported_wall": null,
+    "raw_poolcache_api_sum_per_event": null,
+    "scope": "Paused experimental admission, including evidence transport/control. This is not migration or direct-handoff latency."
+  },
+  "timing_scope": "Within-run repeated guest workload observations, including its word oracle; not independent fleet trials or pure memory bandwidth."
+}

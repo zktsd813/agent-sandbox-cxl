@@ -1,0 +1,228 @@
+Started both VMs: /tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T051903Z-acr11w1a
+Use verify to wait for guest checks; stop shuts down only this lab.
+{
+  "result": "passed",
+  "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T051903Z-acr11w1a",
+  "host_kernel": "5.15.0-191-generic",
+  "l1_guest_kernels": {
+    "A": "6.6.0-rc6-dcd-v3",
+    "B": "6.6.0-rc6-dcd-v3"
+  },
+  "l2_guest_kernels": {
+    "A": "6.6.0-rc6-dcd-v3"
+  },
+  "outer_kvm": {
+    "A": {
+      "enabled": true,
+      "present": true
+    },
+    "B": {
+      "enabled": true,
+      "present": true
+    }
+  },
+  "guest_events": {
+    "A": [
+      {
+        "event": "migration_network",
+        "role": "A",
+        "result": "passed",
+        "ip": "172.30.0.1"
+      },
+      {
+        "event": "l1_kvm",
+        "role": "A",
+        "result": "passed",
+        "api": 12,
+        "create_vcpu": true
+      },
+      {
+        "event": "shared_memory",
+        "role": "A",
+        "result": "passed",
+        "rounds": 1000,
+        "payload_bytes": 3072,
+        "verified_bytes": 3072000,
+        "nonce": "61ad9cd8350b9ec0",
+        "pci_bdf": "0000:00:01.0",
+        "device": "",
+        "align": 4096,
+        "device_bytes": 0,
+        "elapsed_s": 0.330892
+      },
+      {
+        "event": "dax_shared_memory",
+        "role": "A",
+        "result": "passed",
+        "rounds": 100,
+        "payload_bytes": 3072,
+        "verified_bytes": 307200,
+        "nonce": "61ad9cd8350b9ec0",
+        "pci_bdf": "",
+        "device": "/dev/dax0.0",
+        "align": 4096,
+        "device_bytes": 4294967296,
+        "elapsed_s": 0.020065
+      },
+      {
+        "event": "l2_memory",
+        "role": "A",
+        "result": "passed",
+        "bytes": 16777216,
+        "passes": 3,
+        "checksum": 4179402181
+      },
+      {
+        "event": "nested_microvm",
+        "role": "A",
+        "result": "passed",
+        "counter": 3,
+        "firecracker_pid": 122
+      }
+    ],
+    "B": [
+      {
+        "event": "migration_network",
+        "role": "B",
+        "result": "passed",
+        "ip": "172.30.0.2"
+      },
+      {
+        "event": "l1_kvm",
+        "role": "B",
+        "result": "passed",
+        "api": 12,
+        "create_vcpu": true
+      },
+      {
+        "event": "shared_memory",
+        "role": "B",
+        "result": "passed",
+        "rounds": 1000,
+        "payload_bytes": 3072,
+        "verified_bytes": 3072000,
+        "nonce": "61ad9cd8350b9ec0",
+        "pci_bdf": "0000:00:01.0",
+        "device": "",
+        "align": 4096,
+        "device_bytes": 0,
+        "elapsed_s": 0.196712
+      },
+      {
+        "event": "dax_shared_memory",
+        "role": "B",
+        "result": "passed",
+        "rounds": 100,
+        "payload_bytes": 3072,
+        "verified_bytes": 307200,
+        "nonce": "61ad9cd8350b9ec0",
+        "pci_bdf": "",
+        "device": "/dev/dax0.0",
+        "align": 4096,
+        "device_bytes": 4294967296,
+        "elapsed_s": 0.080852
+      },
+      {
+        "event": "dax_observer",
+        "role": "B",
+        "result": "passed"
+      }
+    ]
+  },
+  "shared_backing_final_slots": {
+    "A": {
+      "sequence": 1000,
+      "checksum": 2790435269,
+      "payload_sha256": "7c1db8a72ff39b26094ac8b7f2004479ac473eb89246f79e548e3733c8344102"
+    },
+    "B": {
+      "sequence": 1000,
+      "checksum": 397196741,
+      "payload_sha256": "4c16056903bad98e460a1c21724e5ace535fdb8b3b1685dea7381198ab5e3870"
+    }
+  },
+  "scope": "One Firecracker on VM A; all 128MiB guest RAM in shared device-DAX; VM B is an observer.",
+  "limitations": [
+    "Same physical host, not actual CXL or cross-host coherence.",
+    "VMM heap and KVM execution metadata remain local to VM A.",
+    "No execution handoff is implemented; QEMU direct RAM mode is limited to one fixed volatile CXL region.",
+    "DCD dynamic capacity events and physical multi-host CXL coherence are not tested.",
+    "The QEMU lab kernel uses CONFIG_CXL_REGION_INVALIDATION_TEST to bypass the hypervisor cache-invalidation restriction."
+  ],
+  "cxl_dax": {
+    "backing": "/dev/shm/cxl-lab-aefiy0jg/cxl-memory.bin",
+    "bytes": 4294967296,
+    "final_slots": {
+      "A": {
+        "sequence": 100,
+        "checksum": 240818629
+      },
+      "B": {
+        "sequence": 100,
+        "checksum": 691260869
+      }
+    },
+    "mode": "CXL Type-3 fixed volatile region \u2192 device-DAX"
+  },
+  "dax_guest_ram": {
+    "owner": "A",
+    "offset": 2097152,
+    "bytes": 134217728
+  }
+}
+POOL_COMPARE_REPORT /tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T051903Z-acr11w1a/compare-stock-dram-1793337552672179180/report.json
+Traceback (most recent call last):
+  File "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/pool_compare_bench.py", line 434, in <module>
+    if __name__=="__main__":main()
+  File "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/pool_compare_bench.py", line 402, in main
+    for s in c.sandboxes:c.hostwarm();c.boot_vm(s)
+  File "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/pool_compare_bench.py", line 157, in boot_vm
+    self.start_vm(s)
+  File "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/pool_compare_bench.py", line 107, in start_vm
+    self.shell(s.role,f"mkdir -p {s.directory}\nmkfifo {s.directory}/input\n"
+  File "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/home_storage_bench.py", line 56, in shell
+    raw = nfs.shell(self.vms[role], body, timeout=timeout)
+  File "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/nfs_bench.py", line 97, in shell
+    return lab.guest_command(vm, body, timeout=timeout)
+  File "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/lab.py", line 802, in guest_command
+    raise RuntimeError(f"Guest command failed:\n{text}")
+RuntimeError: Guest command failed:
+
+/ # (
+> set -e
+> mkdir -p /run/pool-1b0cb58d7685a113/vm1-epoch0
+> mkfifo /run/pool-1b0cb58d7685a113/vm1-epoch0/input
+> (exec 3<>/run/pool-1b0cb58d7685a113/vm1-epoch0/input
+> exec env -i PATH=/bin:/sbin:/usr/bin:/usr/sbin:/lab taskset -c 2,3 /lab/firecr
+acker-stock --no-seccomp --api-sock /run/pool-1b0cb58d7685a113/vm1-epoch0/api.so
+ck <&3 > /run/pool-1b0cb58d7685a113/vm1-epoch0/fc.log 2>&1) &
+> p=$!
+> s=$(cat /proc/$p/stat)
+> s=${s##*) }
+> set -- $s
+> shift 19
+> printf '%s %s\n' "$p" "$1" > /run/pool-1b0cb58d7685a113/vm1-epoch0/fc.pid
+> n=0
+> while [ ! -S /run/pool-1b0cb58d7685a113/vm1-epoch0/api.sock ]; do
+> read p t < /run/pool-1b0cb58d7685a113/vm1-epoch0/fc.pid
+> kill -0 "$p"
+> n=$((n+1))
+> [ $n -lt 1000 ]
+> sleep .02
+> done
+> )
+sh: can't kill pid 232: No such process
+/ # printf '\nLAB_COMMAND_DONE_1e79d575e6b171d6:%s\n' "$?"
+
+LAB_COMMAND_DONE_1e79d575e6b171d6:1
+/
+Stopped lab VMs. Results retained: /tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T051903Z-acr11w1a
+POOL_COMPARE_SUITE /tmp/pool-compare-suite-v2-20261030/report.json
+Traceback (most recent call last):
+  File "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/pool_compare_run.py", line 73, in <module>
+    if __name__=="__main__":main()
+  File "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/pool_compare_run.py", line 54, in main
+    subprocess.run(prefix+[str(HERE/"pool_compare_bench.py"),"--arm",arm,"--rounds",str(a.rounds)],env=env,check=True)
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['taskset', '-c', '0-7', 'python3', '-u', '/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/pool_compare_bench.py', '--arm', 'stock-dram', '--rounds', '5']' returned non-zero exit status 1.

@@ -1,0 +1,505 @@
+{
+  "schema": "stock-firecracker-pooling-comparison-v1",
+  "result": "passed",
+  "date_utc": "2026-10-30",
+  "stock_upstream_commit": "95f868c8e345b1cc8faccd1a3c910b4989dc3f58",
+  "stock_binary_sha256": "c8e80e62d6e370a1587ddc1ce5b24b9080a934a3bc395fc3a2a7bc294b2c5e7c",
+  "patched_binary_sha256": "866f5b44b96535c0c525f6cee0a9ee09ff64900fbd83458c51c45b4de3505d08",
+  "primary_audit_sha256": "11e2521ab401b341b17b238d058e96b14104d806a34621016ec86ea8ce55b6ec",
+  "primary_arms": [
+    {
+      "arm": "stock-dram",
+      "report_sha256": "9965541b1a50c91318c4f63e0f222a1430d109b495f475ab04b0bf179403a45b",
+      "raw_receipts": 791,
+      "commands": 138,
+      "independent_boots": 3,
+      "initial_current_cache": {
+        "union_pages": 122880,
+        "intersection_pages": 0,
+        "same_offset_shared_pages": 0,
+        "union_bytes": 503316480,
+        "common_file_bytes": 0
+      },
+      "final_current_cache": {
+        "union_pages": 122880,
+        "intersection_pages": 0,
+        "same_offset_shared_pages": 0,
+        "union_bytes": 503316480,
+        "common_file_bytes": 0
+      },
+      "timings": {
+        "hot": {
+          "samples": 15,
+          "median_ms": 116.756373,
+          "minimum_ms": 89.431957,
+          "maximum_ms": 124.344222
+        },
+        "private_write": {
+          "samples": 15,
+          "median_ms": 9.616003,
+          "minimum_ms": 4.446213,
+          "maximum_ms": 19.944835
+        },
+        "recycle": {
+          "samples": 15,
+          "median_ms": 255.615402,
+          "minimum_ms": 235.226464,
+          "maximum_ms": 845.89308
+        },
+        "cold_refill": {
+          "samples": 15,
+          "median_ms": 264.678563,
+          "minimum_ms": 154.642114,
+          "maximum_ms": 417.015352
+        }
+      },
+      "pool_control": {
+        "events": 0,
+        "controller_reported_wall": null,
+        "raw_poolcache_api_sum_per_event": null,
+        "scope": "Paused experimental admission, including evidence transport/control. This is not migration or direct-handoff latency."
+      },
+      "changed_pfns_after_recycle": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "arm": "patched-dram-disabled",
+      "report_sha256": "3a0b5528f0b556e4f38145444859527f2be9c1d19c68f7777e330a3902e99170",
+      "raw_receipts": 791,
+      "commands": 138,
+      "independent_boots": 3,
+      "initial_current_cache": {
+        "union_pages": 122880,
+        "intersection_pages": 0,
+        "same_offset_shared_pages": 0,
+        "union_bytes": 503316480,
+        "common_file_bytes": 0
+      },
+      "final_current_cache": {
+        "union_pages": 122880,
+        "intersection_pages": 0,
+        "same_offset_shared_pages": 0,
+        "union_bytes": 503316480,
+        "common_file_bytes": 0
+      },
+      "timings": {
+        "hot": {
+          "samples": 15,
+          "median_ms": 112.889104,
+          "minimum_ms": 97.779785,
+          "maximum_ms": 125.17407
+        },
+        "private_write": {
+          "samples": 15,
+          "median_ms": 12.562075,
+          "minimum_ms": 4.645903,
+          "maximum_ms": 15.185173
+        },
+        "recycle": {
+          "samples": 15,
+          "median_ms": 259.86767,
+          "minimum_ms": 230.493698,
+          "maximum_ms": 600.921778
+        },
+        "cold_refill": {
+          "samples": 15,
+          "median_ms": 187.080186,
+          "minimum_ms": 151.339026,
+          "maximum_ms": 261.97692
+        }
+      },
+      "pool_control": {
+        "events": 0,
+        "controller_reported_wall": null,
+        "raw_poolcache_api_sum_per_event": null,
+        "scope": "Paused experimental admission, including evidence transport/control. This is not migration or direct-handoff latency."
+      },
+      "changed_pfns_after_recycle": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "arm": "patched-cxl-hints-unpooled",
+      "report_sha256": "d67ebc4f69056b4d7d2d381575f88fd1219f9ba0a3eaecde830011ebcbf1a811",
+      "raw_receipts": 1001,
+      "commands": 138,
+      "independent_boots": 3,
+      "initial_current_cache": {
+        "union_pages": 122880,
+        "intersection_pages": 0,
+        "same_offset_shared_pages": 0,
+        "union_bytes": 503316480,
+        "common_file_bytes": 0
+      },
+      "final_current_cache": {
+        "union_pages": 122880,
+        "intersection_pages": 0,
+        "same_offset_shared_pages": 0,
+        "union_bytes": 503316480,
+        "common_file_bytes": 0
+      },
+      "timings": {
+        "hot": {
+          "samples": 15,
+          "median_ms": 120.24924,
+          "minimum_ms": 104.056499,
+          "maximum_ms": 136.143903
+        },
+        "private_write": {
+          "samples": 15,
+          "median_ms": 10.702748,
+          "minimum_ms": 4.49382,
+          "maximum_ms": 14.521083
+        },
+        "recycle": {
+          "samples": 15,
+          "median_ms": 270.789334,
+          "minimum_ms": 225.793312,
+          "maximum_ms": 570.319442
+        },
+        "cold_refill": {
+          "samples": 15,
+          "median_ms": 198.651093,
+          "minimum_ms": 172.321064,
+          "maximum_ms": 330.83061
+        }
+      },
+      "pool_control": {
+        "events": 33,
+        "controller_reported_wall": {
+          "samples": 33,
+          "median_ms": 589.462917,
+          "minimum_ms": 510.835791,
+          "maximum_ms": 673.839793
+        },
+        "raw_poolcache_api_sum_per_event": {
+          "samples": 33,
+          "median_ms": 91.777368,
+          "minimum_ms": 59.846883,
+          "maximum_ms": 107.275609
+        },
+        "scope": "Paused experimental admission, including evidence transport/control. This is not migration or direct-handoff latency."
+      },
+      "changed_pfns_after_recycle": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "arm": "patched-cxl-pooled",
+      "report_sha256": "69a10d735760cfb706a31dee492786f342865c61924efda715e397d7444c7466",
+      "raw_receipts": 1485,
+      "commands": 138,
+      "independent_boots": 3,
+      "initial_current_cache": {
+        "union_pages": 40960,
+        "intersection_pages": 40960,
+        "same_offset_shared_pages": 40960,
+        "union_bytes": 167772160,
+        "common_file_bytes": 167772160
+      },
+      "final_current_cache": {
+        "union_pages": 40960,
+        "intersection_pages": 40960,
+        "same_offset_shared_pages": 40960,
+        "union_bytes": 167772160,
+        "common_file_bytes": 167772160
+      },
+      "timings": {
+        "hot": {
+          "samples": 15,
+          "median_ms": 138.571515,
+          "minimum_ms": 103.213805,
+          "maximum_ms": 140.62084
+        },
+        "private_write": {
+          "samples": 15,
+          "median_ms": 12.520773,
+          "minimum_ms": 5.712785,
+          "maximum_ms": 15.667055
+        },
+        "recycle": {
+          "samples": 15,
+          "median_ms": 4079.487691,
+          "minimum_ms": 4010.379201,
+          "maximum_ms": 4309.759216
+        },
+        "cold_refill": {
+          "samples": 15,
+          "median_ms": 223.232595,
+          "minimum_ms": 168.498908,
+          "maximum_ms": 346.967556
+        }
+      },
+      "pool_control": {
+        "events": 33,
+        "controller_reported_wall": {
+          "samples": 33,
+          "median_ms": 5273.349887,
+          "minimum_ms": 3230.211276,
+          "maximum_ms": 5905.042895
+        },
+        "raw_poolcache_api_sum_per_event": {
+          "samples": 33,
+          "median_ms": 860.795865,
+          "minimum_ms": 681.710239,
+          "maximum_ms": 1101.204167
+        },
+        "scope": "Paused experimental admission, including evidence transport/control. This is not migration or direct-handoff latency."
+      },
+      "changed_pfns_after_recycle": [
+        40960,
+        40960,
+        40960,
+        40960,
+        40960,
+        40960,
+        40960,
+        40960,
+        40960,
+        40960,
+        40960,
+        40960,
+        40960,
+        40960,
+        40960
+      ]
+    }
+  ],
+  "stock_tail_repeat": {
+    "audit_file": "tail-stock-audit.json",
+    "report_sha256": "ffa86152853614002843658ac0fb7772a1f763b2750f963bd2061401b85a578e",
+    "timings": {
+      "hot": {
+        "samples": 15,
+        "median_ms": 122.911822,
+        "minimum_ms": 112.679766,
+        "maximum_ms": 143.718286
+      },
+      "private_write": {
+        "samples": 15,
+        "median_ms": 9.81736,
+        "minimum_ms": 5.580769,
+        "maximum_ms": 18.121088
+      },
+      "recycle": {
+        "samples": 15,
+        "median_ms": 297.50696,
+        "minimum_ms": 276.223767,
+        "maximum_ms": 634.511214
+      },
+      "cold_refill": {
+        "samples": 15,
+        "median_ms": 218.92796,
+        "minimum_ms": 181.051266,
+        "maximum_ms": 260.175703
+      }
+    },
+    "cache": {
+      "union_pages": 122880,
+      "intersection_pages": 0,
+      "same_offset_shared_pages": 0,
+      "union_bytes": 503316480,
+      "common_file_bytes": 0
+    }
+  },
+  "stock_snapshot_proof": {
+    "result": "passed",
+    "arm": "stock-snapshot",
+    "report_sha256": "887b6a3ff7e0d3466e2093e7e36015fc2b7836e2a3e1ffda57628bf69a1f198a",
+    "verifier_sha256": "b58660801a480d2ae09306731ea5d7a7065fc13a662d687677c0ee576d3ea042",
+    "stock_binary_sha256": "c8e80e62d6e370a1587ddc1ce5b24b9080a934a3bc395fc3a2a7bc294b2c5e7c",
+    "raw_receipts": 152,
+    "raw_receipt_bytes": 12498008,
+    "measured_sources": 12,
+    "independent_donors": 1,
+    "simultaneous_clone_vmm_processes": 3,
+    "deliberately_identical_initial_guest_identity": true,
+    "same_snapshot_inode": {
+      "device": "00:17",
+      "inode": 21,
+      "path": "/run/pool-cb200336d23dcaa6/common.ram"
+    },
+    "current_cache_bytes_per_clone": 167772160,
+    "payload_unique_host_frame_bytes": 167772160,
+    "three_clone_same_offset_shared_bytes": 167772160,
+    "all_three_paused_during_pfn_scans": true,
+    "private_writer_changed_and_two_peers_unchanged": true,
+    "source_incarnations_fenced": 2,
+    "donor_snapshot_ram_bytes_observed": 536870912,
+    "remote_snapshot_type": "Full",
+    "exact_state_and_ram_transport_paths_verified": true,
+    "stock_restore_route": "A/DRAM -> B/DRAM; host image backend local -> NFS",
+    "restored_hot_payload_block_reads": 0,
+    "nfs_cold_guest_read_bytes": 167772160,
+    "nfs_read_rpc_delta": 1285,
+    "guest_commands": 19,
+    "scope": "Recorded same-host clean snapshot-file sharing and ordinary stock full restore with host NFS; no performance, net-capacity, or noncoherent-CXL claim.",
+    "rejected_evidence_mutations": [
+      "false_success",
+      "false_shared_count",
+      "historical_cache_claim",
+      "wrong_snapshot_inode",
+      "wrong_clone_vmm",
+      "lost_clone_private_state",
+      "wrong_source_fence",
+      "lost_hot_cache",
+      "wrong_nfs_read_delta",
+      "wrong_raw_digest"
+    ]
+  },
+  "rejected_evidence_mutations": {
+    "primary": {
+      "stock-dram": [
+        "false_success",
+        "missing_sample",
+        "wrong_elapsed",
+        "false_sharing",
+        "missing_cache_oracle",
+        "wrong_cow_count",
+        "wrong_binary",
+        "wrong_receipt_hash"
+      ],
+      "patched-dram-disabled": [
+        "false_success",
+        "missing_sample",
+        "wrong_elapsed",
+        "false_sharing",
+        "missing_cache_oracle",
+        "wrong_cow_count",
+        "wrong_binary",
+        "wrong_receipt_hash"
+      ],
+      "patched-cxl-hints-unpooled": [
+        "false_success",
+        "missing_sample",
+        "wrong_elapsed",
+        "false_sharing",
+        "missing_cache_oracle",
+        "wrong_cow_count",
+        "wrong_binary",
+        "wrong_receipt_hash"
+      ],
+      "patched-cxl-pooled": [
+        "false_success",
+        "missing_sample",
+        "wrong_elapsed",
+        "false_sharing",
+        "missing_cache_oracle",
+        "wrong_cow_count",
+        "wrong_binary",
+        "wrong_receipt_hash"
+      ]
+    },
+    "tail": [
+      "false_success",
+      "missing_sample",
+      "wrong_elapsed",
+      "false_sharing",
+      "missing_cache_oracle",
+      "wrong_cow_count",
+      "wrong_binary",
+      "wrong_receipt_hash"
+    ],
+    "stock_snapshot": [
+      "false_success",
+      "false_shared_count",
+      "historical_cache_claim",
+      "wrong_snapshot_inode",
+      "wrong_clone_vmm",
+      "lost_clone_private_state",
+      "wrong_source_fence",
+      "lost_hot_cache",
+      "wrong_nfs_read_delta",
+      "wrong_raw_digest"
+    ]
+  },
+  "prior_lifecycle": {
+    "result_file": "../pool-20261030/summary.json",
+    "transitions": 30,
+    "guest_commands": 321,
+    "rerun_as_part_of_this_comparison": false
+  },
+  "observed_recycle_median_ratio_pooled_to_hint_unpooled": 15.065171255969778,
+  "scope": {
+    "guest_cache_payload_mib": 160,
+    "vm_ram_mib": 512,
+    "vcpus": 2,
+    "block_engine": "Async",
+    "primary_rounds_per_vm": 5,
+    "physical_hosts": 1,
+    "nested_qemu_kvm": true,
+    "emulated_cxl": true,
+    "both_vmm_no_seccomp": true,
+    "stock_means": "Unmodified upstream VMM; same experimental L1 kernel and guest fixture as patched arms.",
+    "pfn_namespace": "L1 host physical frame numbers, not physical-host total memory accounting.",
+    "timing": "Guest operation body includes complete data oracle; excludes serial/readiness, residency/stat probes, postchecks, JSON and admission.",
+    "cold_refill": "Guest cache cold, host image fully prewarmed, local home-node storage for all primary arms.",
+    "sampling": "Three independent guests per timed arm, five sequential rounds each; fixed arm order plus one tail stock repeat, not independent fleet trials.",
+    "net_usable_cxl_capacity_reclaimed": false,
+    "pooled_state_only_direct_handoff_validated": false,
+    "noncoherent_multihost_hardware_validated": false,
+    "online_donor_export": false,
+    "nfs_and_full_snapshot_are_stock_capabilities": true,
+    "stock_same_snapshot_clean_ram_sharing_verified": true,
+    "prototype_distinction": "Paused post-boot coalescing of observed immutable image pages from independent VMs into a canonical devDAX pool, keeping guest metadata private."
+  },
+  "totals": {
+    "timed_sample_sets": 75,
+    "operations_per_sample_set": 4,
+    "guest_commands_including_oracle_and_pin_commands": 709,
+    "raw_receipts": 5011,
+    "rejected_evidence_mutations": 50,
+    "formal_lab_pairs": 6
+  },
+  "archive_replay": {
+    "result": "passed",
+    "all_original_positive_audit_fields_identical": true,
+    "primary_audit": "archive-replay-primary-audit.json",
+    "tail_audit": "archive-replay-tail-audit.json",
+    "extracted_files": 5101,
+    "package_manifest_sha256": "b2d4adbd7330d978a7ae7f2eb55b5911a2bacdc54d66384fcde94c14dbde3db9"
+  }
+}

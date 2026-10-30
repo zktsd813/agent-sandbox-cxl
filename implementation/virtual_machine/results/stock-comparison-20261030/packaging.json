@@ -1,0 +1,53 @@
+{
+  "result": "passed",
+  "output": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/results/stock-comparison-20261030/evidence",
+  "fresh_extraction": "/tmp/pool-comparison-archive-replay-20261030",
+  "member_count": 5101,
+  "uncompressed_bytes": 2288917941,
+  "package_bytes": 109632559,
+  "compressed_archive_bytes": 108547104,
+  "largest_archive_bytes": 62891872,
+  "archives": 7,
+  "split_archives": 0,
+  "excluded_storage_disks": 6,
+  "cpu_affinity": [
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+  ],
+  "compression": {
+    "format": "xz",
+    "preset": 3,
+    "threads": 1
+  },
+  "packaging": {
+    "started_utc": "2026-10-30T05:49:35.230021+00:00",
+    "finished_utc": "2026-10-30T05:53:09.814982+00:00",
+    "elapsed_seconds": 214.585
+  },
+  "fresh_extraction_timing": {
+    "started_utc": "2026-10-30T05:53:24.199044+00:00",
+    "finished_utc": "2026-10-30T05:53:37.855105+00:00",
+    "elapsed_seconds": 13.656
+  },
+  "checks": [
+    "SHA256SUMS verification passed",
+    "exact archive/source file membership and bytes/SHA256 matched",
+    "all final source bytes rehashed and source file stats unchanged",
+    "all child report references and measured-source hashes verified",
+    "published helper extracted all members into a fresh directory and verified every file"
+  ],
+  "proof_files": {
+    "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/results/stock-comparison-20261030/evidence/metadata.json": "b784f10be4e136742f24c6f864a8c3a72d5529d22d690a073972defde7f635fb",
+    "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/results/stock-comparison-20261030/evidence/manifest.json": "b2d4adbd7330d978a7ae7f2eb55b5911a2bacdc54d66384fcde94c14dbde3db9",
+    "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/results/stock-comparison-20261030/evidence/SHA256SUMS": "ad12409ce975f6da872b5a604a6cddf96a6e94e4a20b996351f6ea2bf99efb13",
+    "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/results/stock-comparison-20261030/evidence/package_pool_comparison.py": "b243be8e5851493e05b3881cc17e4c1ce491a2d12e6bc8d09eb4ec1afbec03c0",
+    "/tmp/pool-comparison-packaging-20261030.log": "9df4262a1cc20ebe4b74385e5780aa2afd1b97aca54b018f7a3a0fbaaffcae63",
+    "/tmp/pool-comparison-archive-replay-20261030.log": "5638fbf6ed31c66f4629739e255255683acff6e4f84b7202a0b67d2fabec4d7f"
+  }
+}

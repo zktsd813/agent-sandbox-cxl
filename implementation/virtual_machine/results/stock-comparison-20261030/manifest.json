@@ -1,0 +1,170 @@
+{
+  "schema": "stock-comparison-result-manifest-v1",
+  "scope": "All distributed comparison result files except this manifest itself; evidence/manifest.json separately identifies archive members.",
+  "files": {
+    "README.md": {
+      "bytes": 14926,
+      "sha256": "3454688fd1ecef0bc8a2d6355f14f56e9093b5ee53fc788f195c4755536b0fed"
+    },
+    "archive-extract.log": {
+      "bytes": 1035,
+      "sha256": "5638fbf6ed31c66f4629739e255255683acff6e4f84b7202a0b67d2fabec4d7f"
+    },
+    "archive-replay-primary-audit.json": {
+      "bytes": 34776,
+      "sha256": "20fce73551d4146d9a305b41f63e1237f1616e1030cd97c4d0888243ac22c402"
+    },
+    "archive-replay-tail-audit.json": {
+      "bytes": 6818,
+      "sha256": "4b43f5a999261c3e377444fe8812e54d9ec031ccd344d3bb68c01113c820a183"
+    },
+    "cleanup.json": {
+      "bytes": 10116,
+      "sha256": "7b1813675c30da91c9d6e0aa8453f1a1cb95f077bfdecf4e3ac83f2b08cc4de3"
+    },
+    "evidence/REPLAY.md": {
+      "bytes": 2601,
+      "sha256": "9e8faad16af240546fca946257725706d79a1d37735e30f71e62e6335be3a9d6"
+    },
+    "evidence/SHA256SUMS": {
+      "bytes": 996,
+      "sha256": "ad12409ce975f6da872b5a604a6cddf96a6e94e4a20b996351f6ea2bf99efb13"
+    },
+    "evidence/manifest.json": {
+      "bytes": 1053743,
+      "sha256": "b2d4adbd7330d978a7ae7f2eb55b5911a2bacdc54d66384fcde94c14dbde3db9"
+    },
+    "evidence/metadata.json": {
+      "bytes": 6552,
+      "sha256": "b784f10be4e136742f24c6f864a8c3a72d5529d22d690a073972defde7f635fb"
+    },
+    "evidence/package_pool_comparison.py": {
+      "bytes": 21563,
+      "sha256": "b243be8e5851493e05b3881cc17e4c1ce491a2d12e6bc8d09eb4ec1afbec03c0"
+    },
+    "evidence/primary-metadata.tar.xz": {
+      "bytes": 22808,
+      "sha256": "d12762544d21e7d5ab7eb21bc2b6af1f9b9e3b26f2b3c0bc2b01fe119a041756"
+    },
+    "evidence/primary-patched-cxl-hints-unpooled.tar.xz": {
+      "bytes": 11055608,
+      "sha256": "02c1a11c09b567f7985dc40cdf9bf86b955f547634cd061f9cf3e4cc2b7fed64"
+    },
+    "evidence/primary-patched-cxl-pooled.tar.xz": {
+      "bytes": 62891872,
+      "sha256": "359eb8355b1dbbc71566d88599072ec2e293a5016b17b0410f51aaa112574bcc"
+    },
+    "evidence/primary-patched-dram-disabled.tar.xz": {
+      "bytes": 10958284,
+      "sha256": "87796dfdc4542dbb5ec9150d92fef2f8cb5638a198956c6e360b701cbfd64ea2"
+    },
+    "evidence/primary-stock-dram.tar.xz": {
+      "bytes": 11353960,
+      "sha256": "65c49562374fba5b7831d978b20581c0741c07935ccea4c2fbaf2590b5126fc0"
+    },
+    "evidence/primary-stock-snapshot.tar.xz": {
+      "bytes": 1001352,
+      "sha256": "ff4fed2923e79f2b86b90d46e8c81cb616748e339f90bf021f02a063bf92b257"
+    },
+    "evidence/tail.tar.xz": {
+      "bytes": 11263220,
+      "sha256": "00de12ea743445a2541a8ad670ab03c6a00b7185e57e2ea1dd063acf2874d365"
+    },
+    "failures/history.json": {
+      "bytes": 3173,
+      "sha256": "c17b7e8164e28f5a305071812b4a2feb8cccda7f493b1391c11c26f498f4d369"
+    },
+    "failures/v1.log": {
+      "bytes": 7412,
+      "sha256": "ca9cf205ec4831fc61986d1c37e04ea9965cb29997308f600ce1e01ab1354c6e"
+    },
+    "failures/v2-taskset.log": {
+      "bytes": 199,
+      "sha256": "791e2708e53c41db03aec6f045e2ee8dd04192a47e9f915d76e414948e4c1ea4"
+    },
+    "failures/v2.log": {
+      "bytes": 7995,
+      "sha256": "2582617855891f75dffcb1b83c35faf38b01f71d2ad6019750b42ed26097e424"
+    },
+    "guest-probe-smoke.json": {
+      "bytes": 465,
+      "sha256": "9a6970068e7286fd14c9227d4554c2eec06740b4a15adca1d23dff39a6f5f82c"
+    },
+    "harness-review.json": {
+      "bytes": 2850,
+      "sha256": "1a4e0adfb01db83bdbe55c1a6b1b8bf7320b6d99fd1c2758754543d301e12be7"
+    },
+    "mapping-unit.json": {
+      "bytes": 2309,
+      "sha256": "7c8bb27201685d84d0eaaa409455c5cd6777aacefd0eae4c06ae80ac693750f7"
+    },
+    "packaging.json": {
+      "bytes": 2441,
+      "sha256": "8d480fa54b609d8eaf8e911a10dcf5eaec3328e8f973cde4acf7458acda354c1"
+    },
+    "packaging.log": {
+      "bytes": 2854,
+      "sha256": "9df4262a1cc20ebe4b74385e5780aa2afd1b97aca54b018f7a3a0fbaaffcae63"
+    },
+    "patched-cxl-hints-unpooled-audit.json": {
+      "bytes": 7291,
+      "sha256": "8647f08786cfc83b7885f5979e7f9cc46c3e9854fda82801f54ba8e7cf767d6f"
+    },
+    "patched-cxl-pooled-audit.json": {
+      "bytes": 7648,
+      "sha256": "c16dfd2e00733ce7f1b168e5a9c8848ec64217946d5c0ae7f702201a6e56e208"
+    },
+    "patched-dram-disabled-audit.json": {
+      "bytes": 7052,
+      "sha256": "f867d03ee9eb3597e3aae4da778fb14a95760a135fcbf207441cf875f80ff089"
+    },
+    "pfn-helper-unit.json": {
+      "bytes": 2497,
+      "sha256": "591adfda48601bf6e3e1b8889b4007be0d05088a7b2089df55d241349b2b87c9"
+    },
+    "primary-audit.json": {
+      "bytes": 35746,
+      "sha256": "11e2521ab401b341b17b238d058e96b14104d806a34621016ec86ea8ce55b6ec"
+    },
+    "primary-run.log": {
+      "bytes": 27664,
+      "sha256": "598caff41d96dcb016e669ab28136ef7e35d192ce575dcf06832e7c3c90f11c2"
+    },
+    "primary-verifier-source-review.json": {
+      "bytes": 2697,
+      "sha256": "98d87e1abf7787c3d602bdb2c7970eefb74ab8f46e8d10195e9173bf9b5d8f14"
+    },
+    "source-review.json": {
+      "bytes": 12684,
+      "sha256": "6801b17ef2936685f9f8dbbbd5959525e60ab538c871e966ac2909e5965005ad"
+    },
+    "stock-build.json": {
+      "bytes": 2516,
+      "sha256": "69202bd30322bbd19de451899cca597925d3188bc4cb2d3750dca90d866a4e01"
+    },
+    "stock-build.log": {
+      "bytes": 352,
+      "sha256": "69bc99ae0072eb540f1ccc29f185d4218c58bfa6f1e49bec92c27b811c660ae6"
+    },
+    "stock-dram-audit.json": {
+      "bytes": 7042,
+      "sha256": "27784ae5b2b6df41c29d012d78c6c16c4ef83c0edb77efdea1b0464ef6d4f767"
+    },
+    "stock-snapshot-audit.json": {
+      "bytes": 1755,
+      "sha256": "a2811b59cd617d21f8634d480bbfccfc86968f9ba50033cd80f4174c9e1cbda8"
+    },
+    "summary.json": {
+      "bytes": 15033,
+      "sha256": "5ae9b11385b72854f3c4cce619d0eb1cd7e26a56e42a0d3d8c61d9a3185d44ce"
+    },
+    "tail-stock-audit.json": {
+      "bytes": 7039,
+      "sha256": "f54abeee2e7214076d3307611ce42e754778837e7349841f3e0129a15ee1d13b"
+    },
+    "tail-stock-run.log": {
+      "bytes": 5587,
+      "sha256": "813d958e5025a7dd7a79251e5f2b4c78c73b6a6a70d9dfa6110d38e9d46dfacc"
+    }
+  }
+}

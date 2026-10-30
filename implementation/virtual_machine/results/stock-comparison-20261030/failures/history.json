@@ -1,0 +1,45 @@
+{
+  "schema": "stock-comparison-failure-history-v1",
+  "attempts": [
+    {
+      "attempt": "v1",
+      "classification": "intentional setup-only provenance restart",
+      "original_report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T051748Z-2q9cx_rm/compare-stock-dram-1793337478338797373/report.json",
+      "report_sha256": "69c8738b5fe8a2eae3433e52ba7c4d493cbacdb4bfa5a7cf58e0d2b6d543d56e",
+      "result": "failed",
+      "error": "KeyboardInterrupt()",
+      "boot_count": 0,
+      "timed_sample_sets": 0,
+      "valid_performance_samples": false,
+      "fix": "Restarted before benchmark workloads so every formal arm uses the same frozen harness with /proc/PID/exe SHA256 verification.",
+      "log": {
+        "file": "v1.log",
+        "original_path": "/tmp/pool-compare-suite-v1-20261030.log",
+        "sha256": "ca9cf205ec4831fc61986d1c37e04ea9965cb29997308f600ce1e01ab1354c6e"
+      }
+    },
+    {
+      "attempt": "v2",
+      "classification": "preboot harness affinity syntax failure",
+      "original_report": "/tmp/pool-compare-suite-v2-20261030/stock-dram/report.json",
+      "report_sha256": "00730969e0cd2973eff6531980eb3ea5c16ace835435031925eb20b31df5f3bd",
+      "result": "failed",
+      "error": "RuntimeError('Guest command failed:\\n\\r\\n/ # (\\r\\n> set -e\\r\\n> mkdir -p /run/pool-1b0cb58d7685a113/vm1-epoch0\\r\\n> mkfifo /run/pool-1b0cb58d7685a113/vm1-epoch0/input\\r\\n> (exec 3<>/run/pool-1b0cb58d7685a113/vm1-epoch0/input\\r\\n> exec env -i PATH=/bin:/sbin:/usr/bin:/usr/sbin:/lab taskset -c 2,3 /lab/firecr\\r\\r\\nacker-stock --no-seccomp --api-sock /run/pool-1b0cb58d7685a113/vm1-epoch0/api.so\\r\\r\\nck <&3 > /run/pool-1b0cb58d7685a113/vm1-epoch0/fc.log 2>&1) &\\r\\n> p=$!\\r\\n> s=$(cat /proc/$p/stat)\\r\\n> s=${s##*) }\\r\\n> set -- $s\\r\\n> shift 19\\r\\n> printf \\'%s %s\\\\n\\' \"$p\" \"$1\" > /run/pool-1b0cb58d7685a113/vm1-epoch0/fc.pid\\r\\n> n=0\\r\\n> while [ ! -S /run/pool-1b0cb58d7685a113/vm1-epoch0/api.sock ]; do\\r\\n> read p t < /run/pool-1b0cb58d7685a113/vm1-epoch0/fc.pid\\r\\n> kill -0 \"$p\"\\r\\n> n=$((n+1))\\r\\n> [ $n -lt 1000 ]\\r\\n> sleep .02\\r\\n> done\\r\\n> )\\r\\nsh: can\\'t kill pid 232: No such process\\r\\n/ # printf \\'\\\\nLAB_COMMAND_DONE_1e79d575e6b171d6:%s\\\\n\\' \"$?\"\\r\\n\\r\\nLAB_COMMAND_DONE_1e79d575e6b171d6:1\\r\\n/')",
+      "boot_count": 0,
+      "timed_sample_sets": 0,
+      "valid_performance_samples": false,
+      "fix": "Changed disposable BusyBox taskset commands from util-linux -c syntax to equivalent hexadecimal masks c,1,2; no guest workload or performance sample had started.",
+      "log": {
+        "file": "v2.log",
+        "original_path": "/tmp/pool-compare-suite-v2-20261030.log",
+        "sha256": "2582617855891f75dffcb1b83c35faf38b01f71d2ad6019750b42ed26097e424"
+      },
+      "vmm_log": {
+        "file": "v2-taskset.log",
+        "original_path": "/tmp/pool-compare-suite-v2-20261030/stock-dram/0013-vm1-final-log.bin",
+        "sha256": "791e2708e53c41db03aec6f045e2ee8dd04192a47e9f915d76e414948e4c1ea4"
+      }
+    }
+  ],
+  "final_suite": "/tmp/pool-compare-suite-v3-20261030/report.json"
+}

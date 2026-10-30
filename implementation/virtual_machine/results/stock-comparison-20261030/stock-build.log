@@ -1,0 +1,6 @@
+   Compiling seccompiler v1.17.0 (/firecracker/src/seccompiler)
+   Compiling utils v0.1.0 (/firecracker/src/utils)
+   Compiling acpi_tables v0.1.0 (/firecracker/src/acpi-tables)
+   Compiling vmm v0.1.0 (/firecracker/src/vmm)
+   Compiling firecracker v1.17.0 (/firecracker/src/firecracker)
+    Finished `release` profile [optimized] target(s) in 55.84s

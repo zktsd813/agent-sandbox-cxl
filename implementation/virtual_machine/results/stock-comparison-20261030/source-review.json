@@ -1,0 +1,244 @@
+{
+  "scope": "Read-only source review. Mechanisms below are not measured timing costs or causal attribution of any benchmark delta.",
+  "patched_runtime_sha256": "866f5b44b96535c0c525f6cee0a9ee09ff64900fbd83458c51c45b4de3505d08",
+  "stock_runtime_sha256": "c8e80e62d6e370a1587ddc1ce5b24b9080a934a3bc395fc3a2a7bc294b2c5e7c",
+  "stock_commit": "95f868c8e345b1cc8faccd1a3c910b4989dc3f58",
+  "disabled_definition": "Clear all FC_POOL_* variables. Merely omitting the PoolCache action or admitting zero pages does not disable observation when drive identity opt-in remains configured.",
+  "findings": [
+    {
+      "topic": "Drive initialization with hinting disabled",
+      "finding": "DiskProperties::new calls disk_identity once per constructed/restored drive. For a read-only drive with FC_POOL_IMAGE_PATH absent it performs that environment lookup and returns None. Writable drives short-circuit before the lookup. There is no identity cloning/index allocation here when None.",
+      "evidence": [
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/devices/virtio/block/virtio/device.rs",
+          "line": 109
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/pool_cache.rs",
+          "line": 109
+        }
+      ]
+    },
+    {
+      "topic": "Disabled per-request path",
+      "finding": "PendingRequest now carries an Option<(String,u64,u64)> initialized to None. For reads process checks disk.pool_identity; None means the map closure does not execute, hence no ID clone and no environment lookup or pool mutex on this path. Complete successful reads additionally test the pending Option; None skips observe. The enlarged request state and option/branch operations remain, so zero overhead cannot be asserted. Exact generated instruction/layout costs have not been measured.",
+      "evidence": [
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/devices/virtio/block/virtio/request.rs",
+          "line": 98
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/devices/virtio/block/virtio/request.rs",
+          "line": 430
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/devices/virtio/block/virtio/request.rs",
+          "line": 448
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/devices/virtio/block/virtio/request.rs",
+          "line": 163
+        }
+      ]
+    },
+    {
+      "topic": "Enabled hints even without mapped sharing",
+      "finding": "A configured read-only identity causes one String clone into every read request, including reads that later fail or are unaligned. On complete successful aligned reads, observe locks a process-local Mutex and inserts one BTreeMap entry per full 4KiB page, cloning the image ID for each entry. New entries may allocate tree nodes; replacements drop the prior owned Hint. This is the mechanism of the observation-enabled arm, not the fully disabled arm.",
+      "evidence": [
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/devices/virtio/block/virtio/request.rs",
+          "line": 448
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/devices/virtio/block/virtio/request.rs",
+          "line": 163
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/pool_cache.rs",
+          "line": 124
+        }
+      ]
+    },
+    {
+      "topic": "Lifecycle work remains when pooling is disabled",
+      "finding": "resume_vm and save_state call mapping_failed(), which initializes/checks OnceLock and locks the pool Mutex even with all opt-in variables absent. First initialization checks FC_POOL_HINTS_RESTORE once and otherwise constructs an empty state. save_state also calls dump_hints; with FC_POOL_HINTS unset it returns after an environment lookup without acquiring its own lock or serializing/writing hints. create_snapshot calls has_overlays only when dax_offset is Some because of short-circuit evaluation; an ordinary non-DAX snapshot skips that lock.",
+      "evidence": [
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/lib.rs",
+          "line": 483
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/lib.rs",
+          "line": 627
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/lib.rs",
+          "line": 646
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/pool_cache.rs",
+          "line": 69
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/pool_cache.rs",
+          "line": 150
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/pool_cache.rs",
+          "line": 171
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/persist.rs",
+          "line": 243
+        }
+      ]
+    },
+    {
+      "topic": "Guest cache-hit path",
+      "finding": "The hint hook is reached through queued virtio-blk requests. A guest file-cache hit that issues no virtio-blk read executes no observer callback, Bloom lookup or hint-index operation. This does not imply equal end-to-end hit latency: backing placement, page faults, CoW, and other system effects must be measured separately.",
+      "evidence": [
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/devices/virtio/block/virtio/device.rs",
+          "line": 575
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/devices/virtio/block/virtio/request.rs",
+          "line": 448
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/devices/virtio/block/virtio/request.rs",
+          "line": 163
+        }
+      ]
+    },
+    {
+      "topic": "Scope of pristine versus patched-disabled timing",
+      "finding": "The final patched executable includes earlier DAX/handoff/storage changes in addition to the pool module. An end-to-end stock versus patched-disabled delta measures their aggregate effect plus run variation. The above gates identify possible work but cannot establish which mechanism caused a measured delta.",
+      "evidence": [
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/resources.rs",
+          "line": 494
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/persist.rs",
+          "line": 222
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/lib.rs",
+          "line": 644
+        }
+      ]
+    },
+    {
+      "topic": "Stock same-RAM-snapshot sharing caveat",
+      "finding": "Stock File snapshot restore opens the RAM file and maps it MAP_PRIVATE with read/write protections. Multiple processes on the same host mapping the same underlying regular-file inode and offset can initially refer to the same host page-cache folio; later writes become private CoW. Thus stock snapshot clones can already physically share untouched guest RAM, including previously warmed guest file-cache data, without this pooling implementation or KSM. Sharing is conditional and must be verified after guest resume; the source does not guarantee every page stays shared.",
+      "evidence": [
+        {
+          "file": "/tmp/pool-stock-firecracker-20261030/source/src/vmm/src/persist.rs",
+          "line": 528
+        },
+        {
+          "file": "/tmp/pool-stock-firecracker-20261030/source/src/vmm/src/vstate/memory.rs",
+          "line": 964
+        },
+        {
+          "file": "/tmp/pool-stock-firecracker-20261030/source/src/vmm/src/vstate/memory.rs",
+          "line": 896
+        },
+        {
+          "file": "/home/ijkim/agent-sandbox-cxl/implementation/linux/mm/filemap.c",
+          "line": 3255
+        },
+        {
+          "file": "/home/ijkim/agent-sandbox-cxl/implementation/linux/mm/memory.c",
+          "line": 4580
+        },
+        {
+          "file": "/home/ijkim/agent-sandbox-cxl/implementation/linux/mm/memory.c",
+          "line": 4704
+        }
+      ]
+    },
+    {
+      "topic": "What stock snapshot sharing does not imply",
+      "finding": "Independent cold boots use separate anonymous guest-memory mappings for ordinary virtio-blk. Sharing an image file in the host page cache is not the same as sharing the guest destination frames: the sync block engine reads into each guest memory slice. Separate RAM-snapshot file inodes do not gain the same-file page-cache identity merely because their bytes or disk extents match. Ordinary NFS mappings on different hosts likewise have separate host kernel page caches; same-file clone sharing on one host is not proof of cross-host shared physical CXL pages.",
+      "evidence": [
+        {
+          "file": "/tmp/pool-stock-firecracker-20261030/source/src/vmm/src/resources.rs",
+          "line": 480
+        },
+        {
+          "file": "/tmp/pool-stock-firecracker-20261030/source/src/vmm/src/vstate/memory.rs",
+          "line": 948
+        },
+        {
+          "file": "/tmp/pool-stock-firecracker-20261030/source/src/vmm/src/devices/virtio/block/virtio/io/sync_io.rs",
+          "line": 95
+        },
+        {
+          "file": "/home/ijkim/agent-sandbox-cxl/implementation/linux/mm/filemap.c",
+          "line": 3258
+        }
+      ]
+    },
+    {
+      "topic": "Stock on CXL exposed as ordinary NUMA System RAM",
+      "finding": "Conditional inference from the allocation paths and Linux policy: if CXL capacity is onlined as normal System RAM, unmodified Firecracker anonymous guest-memory allocations can use that memory according to host NUMA/cpuset policy. Stock does not need this explicit devDAX patch merely to run on pages physically located in CXL. The Linux dax/kmem driver adds System RAM, and a parent-established NUMA task policy survives exec. This has not been validated by the current devDAX experiment and is not the same as cross-host pooling or handoff.",
+      "evidence": [
+        {
+          "file": "/tmp/pool-stock-firecracker-20261030/source/src/vmm/src/resources.rs",
+          "line": 510
+        },
+        {
+          "file": "/tmp/pool-stock-firecracker-20261030/source/src/vmm/src/vstate/memory.rs",
+          "line": 948
+        },
+        {
+          "file": "/home/ijkim/agent-sandbox-cxl/implementation/linux/drivers/dax/kmem.c",
+          "line": 131
+        },
+        {
+          "file": "/home/ijkim/agent-sandbox-cxl/implementation/linux/Documentation/admin-guide/mm/numa_memory_policy.rst",
+          "line": 8
+        },
+        {
+          "file": "/home/ijkim/agent-sandbox-cxl/implementation/linux/Documentation/admin-guide/mm/numa_memory_policy.rst",
+          "line": 44
+        }
+      ]
+    },
+    {
+      "topic": "What explicit devDAX support adds here",
+      "finding": "The patch recognizes FC_DAX_RAM/FC_DAX_OFFSET and directly maps a chosen character-device range MAP_SHARED as guest RAM, validating device alignment/capacity. Its restore path reuses that selected range. Pool admission separately remaps validated 4KiB payload pages MAP_PRIVATE|MAP_FIXED to frozen canonical devDAX offsets with the lab kernel CoW support. These are explicit backing/address/lifecycle mechanisms, not ordinary NUMA placement.",
+      "evidence": [
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/resources.rs",
+          "line": 494
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/vstate/memory.rs",
+          "line": 1007
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/vstate/memory.rs",
+          "line": 1077
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/persist.rs",
+          "line": 654
+        },
+        {
+          "file": "/tmp/firecracker-home-storage-20261028/src/vmm/src/pool_cache.rs",
+          "line": 381
+        }
+      ]
+    }
+  ],
+  "comparison_reporting_constraints": [
+    "Label independently booted stock VMs and same-snapshot stock clones as distinct baselines.",
+    "Report both guest page-cache residency and actual payload PFN sharing; a VMA or same image path alone is insufficient.",
+    "Distinguish fully disabled observation from enabled hints with admission disabled.",
+    "Do not describe ordinary Firecracker as categorically unable to use CXL System RAM.",
+    "Do not attribute benchmark deltas to locks, String allocation, NUMA latency, or KVM behavior without supporting measurements."
+  ]
+}

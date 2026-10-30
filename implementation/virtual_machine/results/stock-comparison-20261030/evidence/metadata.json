@@ -1,0 +1,218 @@
+{
+  "archives": [
+    {
+      "bytes": 22808,
+      "file": "primary-metadata.tar.xz",
+      "member_count": 6,
+      "parts": [
+        {
+          "bytes": 22808,
+          "file": "primary-metadata.tar.xz",
+          "sha256": "d12762544d21e7d5ab7eb21bc2b6af1f9b9e3b26f2b3c0bc2b01fe119a041756"
+        }
+      ],
+      "sha256": "d12762544d21e7d5ab7eb21bc2b6af1f9b9e3b26f2b3c0bc2b01fe119a041756",
+      "split": false,
+      "uncompressed_bytes": 72788
+    },
+    {
+      "bytes": 11055608,
+      "file": "primary-patched-cxl-hints-unpooled.tar.xz",
+      "member_count": 1014,
+      "parts": [
+        {
+          "bytes": 11055608,
+          "file": "primary-patched-cxl-hints-unpooled.tar.xz",
+          "sha256": "02c1a11c09b567f7985dc40cdf9bf86b955f547634cd061f9cf3e4cc2b7fed64"
+        }
+      ],
+      "sha256": "02c1a11c09b567f7985dc40cdf9bf86b955f547634cd061f9cf3e4cc2b7fed64",
+      "split": false,
+      "uncompressed_bytes": 126212194
+    },
+    {
+      "bytes": 62891872,
+      "file": "primary-patched-cxl-pooled.tar.xz",
+      "member_count": 1498,
+      "parts": [
+        {
+          "bytes": 62891872,
+          "file": "primary-patched-cxl-pooled.tar.xz",
+          "sha256": "359eb8355b1dbbc71566d88599072ec2e293a5016b17b0410f51aaa112574bcc"
+        }
+      ],
+      "sha256": "359eb8355b1dbbc71566d88599072ec2e293a5016b17b0410f51aaa112574bcc",
+      "split": false,
+      "uncompressed_bytes": 1771804221
+    },
+    {
+      "bytes": 10958284,
+      "file": "primary-patched-dram-disabled.tar.xz",
+      "member_count": 804,
+      "parts": [
+        {
+          "bytes": 10958284,
+          "file": "primary-patched-dram-disabled.tar.xz",
+          "sha256": "87796dfdc4542dbb5ec9150d92fef2f8cb5638a198956c6e360b701cbfd64ea2"
+        }
+      ],
+      "sha256": "87796dfdc4542dbb5ec9150d92fef2f8cb5638a198956c6e360b701cbfd64ea2",
+      "split": false,
+      "uncompressed_bytes": 125848740
+    },
+    {
+      "bytes": 11353960,
+      "file": "primary-stock-dram.tar.xz",
+      "member_count": 804,
+      "parts": [
+        {
+          "bytes": 11353960,
+          "file": "primary-stock-dram.tar.xz",
+          "sha256": "65c49562374fba5b7831d978b20581c0741c07935ccea4c2fbaf2590b5126fc0"
+        }
+      ],
+      "sha256": "65c49562374fba5b7831d978b20581c0741c07935ccea4c2fbaf2590b5126fc0",
+      "split": false,
+      "uncompressed_bytes": 125841509
+    },
+    {
+      "bytes": 1001352,
+      "file": "primary-stock-snapshot.tar.xz",
+      "member_count": 165,
+      "parts": [
+        {
+          "bytes": 1001352,
+          "file": "primary-stock-snapshot.tar.xz",
+          "sha256": "ff4fed2923e79f2b86b90d46e8c81cb616748e339f90bf021f02a063bf92b257"
+        }
+      ],
+      "sha256": "ff4fed2923e79f2b86b90d46e8c81cb616748e339f90bf021f02a063bf92b257",
+      "split": false,
+      "uncompressed_bytes": 13218026
+    },
+    {
+      "bytes": 11263220,
+      "file": "tail.tar.xz",
+      "member_count": 810,
+      "parts": [
+        {
+          "bytes": 11263220,
+          "file": "tail.tar.xz",
+          "sha256": "00de12ea743445a2541a8ad670ab03c6a00b7185e57e2ea1dd063acf2874d365"
+        }
+      ],
+      "sha256": "00de12ea743445a2541a8ad670ab03c6a00b7185e57e2ea1dd063acf2874d365",
+      "split": false,
+      "uncompressed_bytes": 125920463
+    }
+  ],
+  "checks": {
+    "archive_member_bytes_sha256": true,
+    "complete_archive_sha256": true,
+    "exact_source_membership": true,
+    "final_source_bytes_sha256": true,
+    "measured_sources_sha256": true,
+    "report_references_sha256": true
+  },
+  "compression": {
+    "format": "xz",
+    "preset": 3,
+    "threads": 1
+  },
+  "cpu_affinity": [
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+  ],
+  "created_utc": "2026-10-30T05:53:09.721307+00:00",
+  "excluded_files": [
+    {
+      "bytes": 4294967296,
+      "path": "primary/patched-cxl-hints-unpooled-storage.raw",
+      "reason": "mutable outer storage disk; intentionally excluded"
+    },
+    {
+      "bytes": 4294967296,
+      "path": "primary/patched-cxl-pooled-storage.raw",
+      "reason": "mutable outer storage disk; intentionally excluded"
+    },
+    {
+      "bytes": 4294967296,
+      "path": "primary/patched-dram-disabled-storage.raw",
+      "reason": "mutable outer storage disk; intentionally excluded"
+    },
+    {
+      "bytes": 4294967296,
+      "path": "primary/stock-dram-storage.raw",
+      "reason": "mutable outer storage disk; intentionally excluded"
+    },
+    {
+      "bytes": 4294967296,
+      "path": "primary/stock-snapshot-storage.raw",
+      "reason": "mutable outer storage disk; intentionally excluded"
+    },
+    {
+      "bytes": 4294967296,
+      "path": "tail/stock-dram-storage.raw",
+      "reason": "mutable outer storage disk; intentionally excluded"
+    }
+  ],
+  "manifest_sha256": "b2d4adbd7330d978a7ae7f2eb55b5911a2bacdc54d66384fcde94c14dbde3db9",
+  "max_archive_bytes": 104857600,
+  "member_count": 5101,
+  "reports": [
+    {
+      "path": "primary/report.json",
+      "result": "passed",
+      "sha256": "fef8aa081dd23d3916232498b91c925b11ee6fbdb86a9c1d4b2cddcd5c11b961"
+    },
+    {
+      "path": "primary/stock-dram/report.json",
+      "result": "passed",
+      "sha256": "9965541b1a50c91318c4f63e0f222a1430d109b495f475ab04b0bf179403a45b"
+    },
+    {
+      "path": "primary/patched-dram-disabled/report.json",
+      "result": "passed",
+      "sha256": "3a0b5528f0b556e4f38145444859527f2be9c1d19c68f7777e330a3902e99170"
+    },
+    {
+      "path": "primary/patched-cxl-hints-unpooled/report.json",
+      "result": "passed",
+      "sha256": "d67ebc4f69056b4d7d2d381575f88fd1219f9ba0a3eaecde830011ebcbf1a811"
+    },
+    {
+      "path": "primary/patched-cxl-pooled/report.json",
+      "result": "passed",
+      "sha256": "69a10d735760cfb706a31dee492786f342865c61924efda715e397d7444c7466"
+    },
+    {
+      "path": "primary/stock-snapshot/report.json",
+      "result": "passed",
+      "sha256": "887b6a3ff7e0d3466e2093e7e36015fc2b7836e2a3e1ffda57628bf69a1f198a"
+    },
+    {
+      "path": "tail/report.json",
+      "result": "passed",
+      "sha256": "7003504ee534847c01e178d05f4baff2215abcf442400dcf47689f52a99ca66d"
+    },
+    {
+      "path": "tail/stock-dram/report.json",
+      "result": "passed",
+      "sha256": "ffa86152853614002843658ac0fb7772a1f763b2750f963bd2061401b85a578e"
+    }
+  ],
+  "result": "passed",
+  "schema": "pool-comparison-package-v1",
+  "source_roots": {
+    "primary": "/tmp/pool-compare-suite-v3-20261030",
+    "tail": "/tmp/pool-compare-tail-stock-20261030"
+  },
+  "split_part_bytes": 41943040,
+  "uncompressed_bytes": 2288917941
+}

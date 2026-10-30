@@ -1127,6 +1127,18 @@ Canonical image를 미리 채우고 실험 동안 재사용하지 않으며, adm
 allocator에 반환하지 않는다. 실제 PFN 공유와 사용 가능 CXL 용량 증가를 구분한다. 현재는 paused
 admission, immutable data, coherent QEMU/nested-KVM 검증 범위다. 온라인 read 우회,
 donor export, frame 회수, 비일관 물리 CXL, pooling과 PML/MPTCP의 통합은 후속 작업이다.
+
+### 수정하지 않은 Firecracker와의 비교
+
+같은 upstream commit의 pristine VMM을 별도로 빌드하고, 3개 독립 sandbox × 5회 반복으로
+stock DRAM, 수정본 DRAM/hint 비활성, CXL/hint 활성·공유 비활성, CXL/pooling을 비교했다.
+현재 cache의 file offset→GPA→HVA→PFN을 측정해 stock의 payload 고유 frame 480MiB와
+pooling의 160MiB를 확인했다. Stock의 동일 warm snapshot clone도 같은 160MiB를 공유하므로,
+이를 독립 VM의 사후 pooling과 구분한다. 현재 CoW 재사용 비용은 크게 나타났고 원래 DAX
+reservation을 반환하지 않으므로 순 용량 절감·성능 개선을 주장하지 않는다.
+
+[기능·검증 범위](../../docs/firecracker-pooling-comparison.md),
+[측정 결과와 재현·오프라인 감사](results/stock-comparison-20261030/README.md)를 참고한다.
 Runtime admission을 사용하는 Firecracker는 전용 L1 안에서 `--no-seccomp`로 실행한다.
 새 plan/report/sysfs/mapping 작업을 production seccomp 정책에 통합하는 작업도 남아 있다.
 현재 file-cache 공유를 증명하는 검증에서는 guest의 측정용 `cachemap`이 read-only `MAP_SHARED`
