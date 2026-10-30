@@ -1,0 +1,201 @@
+Started both VMs: /tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T051748Z-2q9cx_rm
+Use verify to wait for guest checks; stop shuts down only this lab.
+{
+  "result": "passed",
+  "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T051748Z-2q9cx_rm",
+  "host_kernel": "5.15.0-191-generic",
+  "l1_guest_kernels": {
+    "A": "6.6.0-rc6-dcd-v3",
+    "B": "6.6.0-rc6-dcd-v3"
+  },
+  "l2_guest_kernels": {
+    "A": "6.6.0-rc6-dcd-v3"
+  },
+  "outer_kvm": {
+    "A": {
+      "enabled": true,
+      "present": true
+    },
+    "B": {
+      "enabled": true,
+      "present": true
+    }
+  },
+  "guest_events": {
+    "A": [
+      {
+        "event": "migration_network",
+        "role": "A",
+        "result": "passed",
+        "ip": "172.30.0.1"
+      },
+      {
+        "event": "l1_kvm",
+        "role": "A",
+        "result": "passed",
+        "api": 12,
+        "create_vcpu": true
+      },
+      {
+        "event": "shared_memory",
+        "role": "A",
+        "result": "passed",
+        "rounds": 1000,
+        "payload_bytes": 3072,
+        "verified_bytes": 3072000,
+        "nonce": "75fc62c95aa9d07a",
+        "pci_bdf": "0000:00:01.0",
+        "device": "",
+        "align": 4096,
+        "device_bytes": 0,
+        "elapsed_s": 0.255495
+      },
+      {
+        "event": "dax_shared_memory",
+        "role": "A",
+        "result": "passed",
+        "rounds": 100,
+        "payload_bytes": 3072,
+        "verified_bytes": 307200,
+        "nonce": "75fc62c95aa9d07a",
+        "pci_bdf": "",
+        "device": "/dev/dax0.0",
+        "align": 4096,
+        "device_bytes": 4294967296,
+        "elapsed_s": 0.026524
+      },
+      {
+        "event": "l2_memory",
+        "role": "A",
+        "result": "passed",
+        "bytes": 16777216,
+        "passes": 3,
+        "checksum": 4179402181
+      },
+      {
+        "event": "nested_microvm",
+        "role": "A",
+        "result": "passed",
+        "counter": 3,
+        "firecracker_pid": 122
+      }
+    ],
+    "B": [
+      {
+        "event": "migration_network",
+        "role": "B",
+        "result": "passed",
+        "ip": "172.30.0.2"
+      },
+      {
+        "event": "l1_kvm",
+        "role": "B",
+        "result": "passed",
+        "api": 12,
+        "create_vcpu": true
+      },
+      {
+        "event": "shared_memory",
+        "role": "B",
+        "result": "passed",
+        "rounds": 1000,
+        "payload_bytes": 3072,
+        "verified_bytes": 3072000,
+        "nonce": "75fc62c95aa9d07a",
+        "pci_bdf": "0000:00:01.0",
+        "device": "",
+        "align": 4096,
+        "device_bytes": 0,
+        "elapsed_s": 0.217099
+      },
+      {
+        "event": "dax_shared_memory",
+        "role": "B",
+        "result": "passed",
+        "rounds": 100,
+        "payload_bytes": 3072,
+        "verified_bytes": 307200,
+        "nonce": "75fc62c95aa9d07a",
+        "pci_bdf": "",
+        "device": "/dev/dax0.0",
+        "align": 4096,
+        "device_bytes": 4294967296,
+        "elapsed_s": 0.03373
+      },
+      {
+        "event": "dax_observer",
+        "role": "B",
+        "result": "passed"
+      }
+    ]
+  },
+  "shared_backing_final_slots": {
+    "A": {
+      "sequence": 1000,
+      "checksum": 3056636613,
+      "payload_sha256": "7af09db4d42e8b9197ce9a966979074e5eb4ac1f91c0362f960686272fdf0e60"
+    },
+    "B": {
+      "sequence": 1000,
+      "checksum": 1175527109,
+      "payload_sha256": "3c8fbc3ce13b55d7ef2573e0dd0d8f46608b4ea18c599946986ad0ab59df6728"
+    }
+  },
+  "scope": "One Firecracker on VM A; all 128MiB guest RAM in shared device-DAX; VM B is an observer.",
+  "limitations": [
+    "Same physical host, not actual CXL or cross-host coherence.",
+    "VMM heap and KVM execution metadata remain local to VM A.",
+    "No execution handoff is implemented; QEMU direct RAM mode is limited to one fixed volatile CXL region.",
+    "DCD dynamic capacity events and physical multi-host CXL coherence are not tested.",
+    "The QEMU lab kernel uses CONFIG_CXL_REGION_INVALIDATION_TEST to bypass the hypervisor cache-invalidation restriction."
+  ],
+  "cxl_dax": {
+    "backing": "/dev/shm/cxl-lab-zgdybbt6/cxl-memory.bin",
+    "bytes": 4294967296,
+    "final_slots": {
+      "A": {
+        "sequence": 100,
+        "checksum": 3721024197
+      },
+      "B": {
+        "sequence": 100,
+        "checksum": 3419659973
+      }
+    },
+    "mode": "CXL Type-3 fixed volatile region \u2192 device-DAX"
+  },
+  "dax_guest_ram": {
+    "owner": "A",
+    "offset": 2097152,
+    "bytes": 134217728
+  }
+}
+POOL_COMPARE_REPORT /tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T051748Z-2q9cx_rm/compare-stock-dram-1793337478338797373/report.json
+Traceback (most recent call last):
+  File "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/pool_compare_bench.py", line 429, in <module>
+    try:c.fetch_bytes(s.role,s.directory+"/fc.log",f"vm{s.vm}-final-log");nfs.stop_fc(c.vms[s.role],s.directory)
+  File "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/pool_compare_bench.py", line 384, in main
+    def save():lab.save_json(out/"report.json",report)
+  File "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/home_storage_bench.py", line 269, in setup
+    require(c.image_hash("A")["sha256"] == c.image_hash("B")["sha256"], "Initial disk identity mismatch")
+  File "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/pool_bench.py", line 74, in image_hash
+    measured=super().image_hash(role)
+  File "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/home_storage_bench.py", line 134, in image_hash
+    raw, name = self.shell(role, "sync\necho 3 > /proc/sys/vm/drop_caches\nsha256sum /disk/sandbox.raw", "image-hash", 120)
+  File "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/home_storage_bench.py", line 56, in shell
+    raw = nfs.shell(self.vms[role], body, timeout=timeout)
+  File "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/nfs_bench.py", line 97, in shell
+    return lab.guest_command(vm, body, timeout=timeout)
+  File "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/lab.py", line 791, in guest_command
+    chunk = sock.recv(65536)
+KeyboardInterrupt
+Stopped lab VMs. Results retained: /tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T051748Z-2q9cx_rm
+POOL_COMPARE_SUITE /tmp/pool-compare-suite-v1-20261030/report.json
+Traceback (most recent call last):
+  File "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/pool_compare_run.py", line 69, in <module>
+    if __name__=="__main__":main()
+  File "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/pool_compare_run.py", line 51, in main
+    subprocess.run(prefix+[str(HERE/"pool_compare_bench.py"),"--arm",arm,"--rounds",str(a.rounds)],env=env,check=True)
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['taskset', '-c', '0-7', 'python3', '-u', '/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/pool_compare_bench.py', '--arm', 'stock-dram', '--rounds', '5']' died with <Signals.SIGINT: 2>.

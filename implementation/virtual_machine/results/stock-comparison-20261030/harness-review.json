@@ -1,0 +1,39 @@
+{
+  "scope": "Independent source review only; experiment results are verified separately. No harness edits made by this reviewer.",
+  "reviewed_path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/pool_compare_bench.py",
+  "reviewed_source_sha256": "f86c4bc37996ac48ae97e7f227b6e8c4cf1d8639c66c53af19c3f950361a41b8",
+  "findings": [
+    {
+      "issue": "Source fencing was called before stopping live paused donor/source processes.",
+      "status": "fixed in reviewed draft",
+      "evidence_line": 309
+    },
+    {
+      "issue": "Intermediate pooled hot samples lacked actual current-cache sharing verification after recycle/refill.",
+      "status": "fixed in reviewed draft",
+      "evidence_line": 269,
+      "reason": "Every pooled sample compares current file-offset/PFN pairs against frozen initial common frames and requires >=128MiB, while initial/final group scans independently establish sharing. This is valid only because canonical frames are immutable and never reused."
+    },
+    {
+      "issue": "Stock snapshot clone arm incorrectly inherited three independent boots and timing observation counts.",
+      "status": "fixed in reviewed draft",
+      "evidence_line": 383
+    }
+  ],
+  "confirmed_contracts": [
+    "All Firecracker starts use env -i; stock and patched-DRAM arms receive no FC_POOL_* opt-ins; both CXL arms enable identical hinting.",
+    "Actual /proc/PID/exe hashes are checked against the selected arm manifest; stock uses its separate pristine binary.",
+    "The original anonymous-RAM donor is stopped/fenced before three stock restores of the same RAM-file inode; common guest identity is intentional, with distinct host VMM process evidence.",
+    "Guest timers stop before serial output and correctness postchecks; full read oracle/hash and full recycle fill/verify are intentionally inside the timed body.",
+    "Guest-cold samples require zero residency before read and positive block I/O; host backing prewarm is verified separately, so these are not storage-cold timings.",
+    "Re-admission occurs after refill and before each pooled hot sample; current-cache PFN observer is validation only.",
+    "Fresh QEMU nodes and a separate copied outer storage image are created per arm."
+  ],
+  "reporting_limits": [
+    "Do not attribute timing deltas to one source-level mechanism without additional measurements.",
+    "Snapshot clone sharing is a distinct stock capability, not independent-boot pooling.",
+    "The 15 samples per primary operation come from three guests over five rounds, not 15 independent boots.",
+    "The write operation overwrites an initialized guest-private mapping; clone host-level CoW may still occur.",
+    "The recycle duration includes eviction, allocation, full stores, full validation loads and unmap; it is not pure CoW fault latency."
+  ]
+}

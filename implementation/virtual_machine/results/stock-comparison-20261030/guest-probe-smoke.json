@@ -1,0 +1,12 @@
+{
+  "result": "passed",
+  "kind": "functional host smoke; timing values are not VM comparison results",
+  "payload_bytes": 167772160,
+  "payload_hash": "c0055a60f6b2c955",
+  "commands": 7,
+  "checked_recycle_words": 29360128,
+  "recycle_evicted_all": true,
+  "reject_128MiB_payload": true,
+  "binary_sha256": "834de69eb99f69cd0f241d607e08403330cd876735faf539a9be539ee0f7e598",
+  "source_sha256": "5aa064db483c2fe861c4139c100ee3ad19c37f545b7691f2a5d47666d2fa6240"
+}

@@ -1,0 +1,82 @@
+{
+  "result": "passed",
+  "source_sha256": "f86c4bc37996ac48ae97e7f227b6e8c4cf1d8639c66c53af19c3f950361a41b8",
+  "memory_bytes": 536870912,
+  "cases": [
+    {
+      "case": "unique_fresh_anon",
+      "result": "accepted",
+      "segments": 1
+    },
+    {
+      "case": "ambiguous_fresh_anon",
+      "result": "rejected",
+      "reason": "Ambiguous/missing fresh guest RAM: [{'start': 4294967296, 'end': 4831838208, 'permissions': 'rw-p', 'file_offset': 0, 'device': '00:00', 'inode': 0, 'path': ''}, {'start': 5368709120, 'end': 5905580032, 'permissions': 'rw-p', 'file_offset': 0, 'device': '00:00', 'inode': 0, 'path': ''}]"
+    },
+    {
+      "case": "missing_fresh_anon",
+      "result": "rejected",
+      "reason": "Ambiguous/missing fresh guest RAM: []"
+    },
+    {
+      "case": "file_mapping_not_anon",
+      "result": "rejected",
+      "reason": "Ambiguous/missing fresh guest RAM: []"
+    },
+    {
+      "case": "fresh_dax",
+      "result": "accepted",
+      "segments": 1
+    },
+    {
+      "case": "wrong_dax_offset",
+      "result": "rejected",
+      "reason": "Ambiguous/missing fresh guest RAM: []"
+    },
+    {
+      "case": "snapshot_two_segments",
+      "result": "accepted",
+      "segments": 2
+    },
+    {
+      "case": "snapshot_partial_coverage",
+      "result": "rejected",
+      "reason": "Incomplete guest RAM VMA coverage"
+    },
+    {
+      "case": "snapshot_wrong_inode",
+      "result": "rejected",
+      "reason": "Snapshot RAM mapping missing/private flag wrong"
+    },
+    {
+      "case": "snapshot_wrong_path",
+      "result": "rejected",
+      "reason": "Snapshot mapping path changed"
+    },
+    {
+      "case": "snapshot_shared_mapping",
+      "result": "rejected",
+      "reason": "Snapshot RAM mapping missing/private flag wrong"
+    },
+    {
+      "case": "snapshot_offset_implies_two_bases",
+      "result": "rejected",
+      "reason": "Snapshot RAM file offsets imply multiple bases"
+    },
+    {
+      "case": "retained_ram_with_private_overlay",
+      "result": "accepted",
+      "segments": 3
+    },
+    {
+      "case": "retained_ram_gap",
+      "result": "rejected",
+      "reason": "Guest RAM VMA coverage changed"
+    },
+    {
+      "case": "retained_ram_readonly_page",
+      "result": "rejected",
+      "reason": "Guest RAM VMA coverage changed"
+    }
+  ]
+}
