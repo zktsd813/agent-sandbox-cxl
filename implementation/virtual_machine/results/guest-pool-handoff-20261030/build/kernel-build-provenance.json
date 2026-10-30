@@ -1,0 +1,51 @@
+{
+  "result": "passed",
+  "scope": "host kernel compile, exact source/patch application; runtime validation separate",
+  "source": "/tmp/pool-handoff-linux-20261030",
+  "build": "/tmp/pool-handoff-kernel-build-20261030",
+  "version": "6.6.0-rc6-dcd-v3",
+  "commands": [
+    "make -C /tmp/pool-handoff-linux-20261030 O=/tmp/pool-handoff-kernel-build-20261030 LOCALVERSION= olddefconfig",
+    "make -C /tmp/pool-handoff-linux-20261030 O=/tmp/pool-handoff-kernel-build-20261030 LOCALVERSION= -j24 bzImage modules",
+    "make -C /tmp/pool-handoff-linux-20261030 O=/tmp/pool-handoff-kernel-build-20261030 LOCALVERSION= INSTALL_MOD_PATH=/tmp/pool-handoff-kernel-modules-20261030 modules_install"
+  ],
+  "base_hashes_verified": true,
+  "clean_patch_matches_all_files": true,
+  "file_count": 26,
+  "patch_sha256": "bb11d89161ba2650ffd179e41382570e1bb99464bcfb3bcb0f1d4a4f0070333d",
+  "source_files": {
+    "arch/x86/include/asm/kvm_host.h": "323d0853c4cedd2c0b4d39552d9654341e7b4ee8a954973aec48578390ffbc66",
+    "arch/x86/kvm/Kconfig": "fe76c5d0a6578d05acb330cdcac9fe128284e3543ce878f5fb8d078f758363f1",
+    "arch/x86/kvm/cpuid.c": "15854afb1efd6746d1f13f4cb235080a5e745901711ee56d745ee9abed39a0d6",
+    "arch/x86/kvm/i8254.c": "bd4283d8ddaf1b7bde0fceaee74fb51f6a9e68d92aee20bba8d2efcb7d7fb0e3",
+    "arch/x86/kvm/i8254.h": "1b2a7f85f6cb50aecf67242459d12bc33eebd66ab3634dba95298df1c0d61180",
+    "arch/x86/kvm/i8259.c": "2bc456a5a9da63764f3b8a4659080b1153c2261a6cbb22b3dadd9e64bd027220",
+    "arch/x86/kvm/ioapic.c": "e9a6e7bd89688df64ae39162b55525d7095d8ec6299bbb47471ed0aabc903705",
+    "arch/x86/kvm/lapic.c": "c795db2971e65a3629a3b252053f93c0bb59c006efd79639bf01a16270664bc9",
+    "arch/x86/kvm/lapic.h": "ab948ebd810c6c969c5559ad4f4842db8739d35fa2b61b4517533a184323aa2d",
+    "arch/x86/kvm/mmu.h": "f0a60dbd580a2c0c55d01feb0c8fa52b434bc885b9f9caff74c4f24d7f26c23e",
+    "arch/x86/kvm/mmu/mmu.c": "179bcb69ec8aab9d0705d5ad635abb4afff793039e299478640df63c1f60c44c",
+    "arch/x86/kvm/mmu/mmu_internal.h": "ebe7ed2a01614382e7b462471b27da73e3c3bdac8838c4ae55f7d62f9fdc0ecf",
+    "arch/x86/kvm/mmu/tdp_mmu.c": "6ee23c1ff978384548e0bc930eecbcc178e19b48f884fcd983df3e043d5b7878",
+    "arch/x86/kvm/vmx/vmx.c": "2e345435e7c350877f91a64dda6436555028c576160361696ffc3420a5ed88ce",
+    "arch/x86/kvm/vmx/vmx.h": "82ed634613d6d9a193fa9422206848995a6291c5802a0d488080ccd9facdc888",
+    "arch/x86/kvm/x86.c": "bab5ac8cf5bdf678030c8b1a04e0a1a5f63d521b61e7929de980a7eadfb80335",
+    "include/linux/kvm_dax.h": "a845dec8f863cfe85d65125f4e9b635b061a41601a547db7eed9f0747de026f2",
+    "include/linux/kvm_host.h": "ecf4b875435e8688abc61b5aa0616e9086f4e71968f02fc6ad59a57da52f657b",
+    "include/uapi/linux/kvm_dax.h": "36296fff360b548720b0cebeac9eb7fd65d797c9a3f7ad129bd64d2879388297",
+    "kernel/module/main.c": "4fc5b0fc32ab6f7c92c794c055f64c055bb01b96c16eb09125e8be1024515840",
+    "virt/kvm/Makefile.kvm": "ebcdbfbbbb8bd01dafd9fe34d48cb5b7f5b762584d223c0279ad252dd5214561",
+    "virt/kvm/coalesced_mmio.c": "e7d83ac22262fb7764cb1e54ac13815bb72d0e9ac0924f3cb1effa1879ae7cf6",
+    "virt/kvm/dax_pool.c": "fbe221ab711abf35b8056d804867737ee2e36d318ce1bc1f6a09755aba81ed4f",
+    "virt/kvm/eventfd.c": "3eec09bd9760615c05b94587cee23b9743cc3ddf1126020242fb029151673e42",
+    "virt/kvm/irqchip.c": "b99239fa7d35450bc416b74c41c22df96a37ff7878a545c392f0eb8a82e9628b",
+    "virt/kvm/kvm_main.c": "981690ead7c4fbe9e367eb9e74c6bbbdc4d593fd931c4f78f3001357250606e0"
+  },
+  "artifacts": {
+    ".config": "7da6303ddad9a24782aff314d50ee4c5f63268b1d84d96d227a833eabf42eaab",
+    "arch/x86/boot/bzImage": "78fa24d50073535ac83f67a18d8a704ab9c28c184a543f478e79d1aa6e794aec",
+    "arch/x86/kvm/kvm.ko": "5209ca66393967b714e9ddd1d42cf9e22774156750e8c62d8e2d926f8a168d79",
+    "arch/x86/kvm/kvm-intel.ko": "008e8430ce16c5bf4829845b2bfe4076f1f6c6dc06145753532e6304607fd9e9"
+  },
+  "new_private_ioctl": "KVM_DAX_LOCAL_RAM (0xaef7), scalar0/1"
+}

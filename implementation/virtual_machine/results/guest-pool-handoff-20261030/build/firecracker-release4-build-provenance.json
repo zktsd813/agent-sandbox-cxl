@@ -1,0 +1,136 @@
+{
+  "result": "passed",
+  "source_directory": "/tmp/firecracker-pool-handoff-20261030",
+  "baseline_commit": "95f868c8e345b1cc8faccd1a3c910b4989dc3f58",
+  "patch": "firecracker-release4.patch",
+  "patch_sha256": "80d6de7683d5e46a4450d799bf355abad74d810d91e521f5b0eb8b13d9dfc228",
+  "clean_application": "firecracker-release4-clean-application.json",
+  "source_files": {
+    "src/firecracker/src/api_server/request/actions.rs": "3eb8583d41ce8beb23c256b089e196ed1cc77738876154e17d2ed1d5710b60dd",
+    "src/firecracker/src/api_server_adapter.rs": "341c10437daee163e22d635b5c9faa98851f3bafc1c35d36a9bb6c789ed9d824",
+    "src/firecracker/src/dax_heap.rs": "59467eb1f9b56c37ce21ab09fa7eb342f8b9982ead20afc745ca2627ea4cbd56",
+    "src/firecracker/src/main.rs": "82c96bc08b4e970be56008131304575e25475f5a721dc70c7e3e0a86d3a54f50",
+    "src/vmm/src/arch/x86_64/vcpu.rs": "ae77c751db4ce7e656450a5c43921aaf22e30192033391038173420289e3033d",
+    "src/vmm/src/arch/x86_64/vm.rs": "2ee6ee6bfdbeb310d682ec28ea8c3389f28846b229a6b1a357019faae9310a4c",
+    "src/vmm/src/builder.rs": "a2388324d5d7242be0f6593334b4d38787c84f9544eaf112221c9e4676da9dc2",
+    "src/vmm/src/device_manager/acpi.rs": "6b879f7c63e582bb17952a86d44af350d9c77118c16f84dbd5148b655a836b87",
+    "src/vmm/src/device_manager/mmio.rs": "9cb45388d8d0959d4d5a960983e84190f5494a68196902544f7a70b58c6a9fea",
+    "src/vmm/src/device_manager/persist.rs": "c5a885faa122c901294f5d7df04621123cf52192203a4cd796b6e6c7ca4d79d9",
+    "src/vmm/src/devices/acpi/vmclock.rs": "ea9003380bf1e7263b980fb686ef7d58a0a0f3b77de646f3d90e22aebf71dfaf",
+    "src/vmm/src/devices/legacy/i8042.rs": "a47cede1411d1e54f7e7467dbac8b8ad11218c309751767a80412fc492cf3e59",
+    "src/vmm/src/devices/legacy/serial.rs": "7fc71b9c12715b2cb08ae93c5bc635434076556248046d45054331ae79d2775c",
+    "src/vmm/src/devices/virtio/balloon/device.rs": "b35e8dacbaca792c50b5971b2132da69e3c4a4207081772c3ef526088a9a04e4",
+    "src/vmm/src/devices/virtio/balloon/mod.rs": "9daf6e0556e6ff47c67e941a4e1e13f1296f657cdf850b0fc60a0bc2fc97b37b",
+    "src/vmm/src/devices/virtio/balloon/persist.rs": "9d874a83fb1f26763efb6b2b8dbf4815f25e6c17410ddc201f158bd92c8b4fc5",
+    "src/vmm/src/devices/virtio/block/virtio/device.rs": "a9aae58c0690993b90559ce497ce1e75abb9b3de289ab1a3a0ecd80c9a07ee0f",
+    "src/vmm/src/devices/virtio/block/virtio/io/async_io.rs": "2c2bfcce92e9696006dd28d6b2cdc6e8f635fb4e1a007daea70223c061257411",
+    "src/vmm/src/devices/virtio/block/virtio/persist.rs": "8ef8b4ce5bebd85f41427c9bb6276f7ed0777d42065bac52b5826385c64aad7d",
+    "src/vmm/src/devices/virtio/block/virtio/request.rs": "f63ffd9f0136ee7189ce4ef98539e3e9e29f5156bc0926db763f47182a24df0b",
+    "src/vmm/src/direct.rs": "f1e2d92899cec34eed81d90062ea34221ad0569fdfa7fa6c1cd561e3d87a6608",
+    "src/vmm/src/lib.rs": "714b764731904e3feeadfa39d584fc48b94cc509e2810c1e7fd1cefca27a06dc",
+    "src/vmm/src/persist.rs": "5fdd088a4b138b9354481c7e8169283232c89c162a99522b565245939174cb9b",
+    "src/vmm/src/pool_cache.rs": "246d2940ef87f3fa6a664afd402665e516ae141aef2ba0f7cca284c81cc8d654",
+    "src/vmm/src/pool_memory.rs": "bf278152862b5b7225cd686cde6c1231493a9a64da015c4cd333faa0bdac2d53",
+    "src/vmm/src/resources.rs": "20a7dee8ec086079f103af833b4dd0567a52a441e41d3521546188a77d4e294a",
+    "src/vmm/src/reuse.rs": "b1ad92000a201a719f96606db1c15e754f333a807f2523bb014d06dba4639204",
+    "src/vmm/src/rpc_interface.rs": "8d49a6e856e27ee6e2beaf1f6109bf4fc8723e8dc5c1d0e524fd0afbf6ae4940",
+    "src/vmm/src/vstate/memory.rs": "97d977830b5f61a06af155ae141286c3992b9e828364ce23d362ac780fd9ac7e",
+    "src/vmm/src/vstate/vcpu.rs": "2d6d3ced2b5bf1372ccee62389c6a5717c825c904ef67364669834b185563606",
+    "src/vmm/src/vstate/vm.rs": "10baacf45f9db2238774aa857c7d96f40ead5356370d53975fe67f29455f5d4a"
+  },
+  "binary": "/tmp/firecracker-pool-handoff-20261030/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker",
+  "binary_sha256": "064b48d68e094a5eadeac598f30baadaa37ddd188075feeabfc37b1549f23c60",
+  "test_binary": "/tmp/firecracker-pool-handoff-20261030/build/cargo_target/x86_64-unknown-linux-musl/release/deps/vmm-978564fa50d4521a",
+  "test_binary_sha256": "8d3af3c0bdf4d82decb036afc1941349571c67acb0eb9cf59287c1ddaaabcce9",
+  "build_command": "docker run --rm --pull never --network none --user 1001:1001 --volume /tmp/firecracker-pool-handoff-20261030:/firecracker --volume /tmp/firecracker-pool-handoff-20261030/build/cargo_registry:/usr/local/rust/registry --volume /tmp/firecracker-pool-handoff-20261030/build/cargo_git_registry:/usr/local/rust/git --workdir /firecracker public.ecr.aws/firecracker/fcuvm:v93 cargo build --bin firecracker --offline --locked --release --target x86_64-unknown-linux-musl",
+  "test_command": "same offline container with --cpuset-cpus 8-15; cargo test -p vmm --lib pool_ --offline --locked --release --target x86_64-unknown-linux-musl; then compiled test binary direct::tests --nocapture",
+  "logs": {
+    "direct-check1": {
+      "file": "firecracker-direct-check1.log",
+      "sha256": "097bab62db56484b3b366f6c6a6572d576e47485bb45b6a3f14820392af1ac64",
+      "successful_selection_counts": []
+    },
+    "vmm-check": {
+      "file": "firecracker-vmm-check.log",
+      "sha256": "666d664ecbb77a15399770be5a1b183a8d86cea4ad9d52a7284eddc6315cdad2",
+      "successful_selection_counts": []
+    },
+    "direct-tests": {
+      "file": "firecracker-direct-tests.log",
+      "sha256": "671b2ce2cbbc0c93ca3942d6dae3655f924db993322aad5b234f464f85d0d51c",
+      "successful_selection_counts": [
+        3,
+        0,
+        0,
+        0
+      ]
+    },
+    "direct-tests3": {
+      "file": "firecracker-direct-tests3.log",
+      "sha256": "47a437ee1865f830c574351da48f290923d800b425fe947c40a9fcbe38fbfbd2",
+      "successful_selection_counts": [
+        3
+      ]
+    },
+    "direct-tests4": {
+      "file": "firecracker-direct-tests4.log",
+      "sha256": "351577ccf6f55c368576ce6f8b11633cff755d2362a569a6e61d09ecab086d00",
+      "successful_selection_counts": [
+        3
+      ]
+    },
+    "memory-tests": {
+      "file": "firecracker-memory-tests.log",
+      "sha256": "deb8a1dc4494586945b505fcefa7318d751aa93756b0adfa893143b73d52b077",
+      "successful_selection_counts": [
+        6
+      ]
+    },
+    "pool-regression3": {
+      "file": "firecracker-pool-regression3.log",
+      "sha256": "25cd6fa9f67655f278366b250532b123c5fb8497c0547410b27776f4906b21f0",
+      "successful_selection_counts": [
+        15
+      ]
+    },
+    "pool-regression4": {
+      "file": "firecracker-pool-regression4.log",
+      "sha256": "76575e716f7fe2cbb711c3702660ff4067fcea408850381d216aed4569a7980d",
+      "successful_selection_counts": [
+        15
+      ]
+    },
+    "release-build": {
+      "file": "firecracker-release-build.log",
+      "sha256": "f6c0841a77072015a8eed8888b8d60dce05bfc5aa04323d274955d0d8f5209df",
+      "successful_selection_counts": []
+    },
+    "release-build2": {
+      "file": "firecracker-release-build2.log",
+      "sha256": "393c5a01e43eddcac4da9bffa80fd981b37478f1fb1fa83f8e68a36efe374f51",
+      "successful_selection_counts": []
+    },
+    "release-build3": {
+      "file": "firecracker-release-build3.log",
+      "sha256": "3efcab341a254ba42bf73c8e564618a19d29263bd5dc7ebca7d286c3ec97f829",
+      "successful_selection_counts": []
+    },
+    "release-build4": {
+      "file": "firecracker-release-build4.log",
+      "sha256": "3efcab341a254ba42bf73c8e564618a19d29263bd5dc7ebca7d286c3ec97f829",
+      "successful_selection_counts": []
+    }
+  },
+  "final_tests": {
+    "pool_selection": 15,
+    "direct_selection": 3,
+    "failed": 0
+  },
+  "notes": [
+    "Release4 source includes proof-only guest registration status and anonymous demotion mapping receipts, plus rustfmt of new files.",
+    "All31 patched files equal a clean application to upstream95f868c8.",
+    "Initial direct-check1 failures were missing then-under-development root module and musl ioctl casts; preserved as failed development attempt.",
+    "Historical test selections overlap; final success count is18 distinct tests, not the sum of every prior log.",
+    "No fresh compilation was performed in the clean-application tree; byte equality links it to the tested built source."
+  ]
+}

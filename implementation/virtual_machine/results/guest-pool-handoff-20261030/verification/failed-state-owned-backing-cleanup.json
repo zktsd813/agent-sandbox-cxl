@@ -1,0 +1,13 @@
+{
+  "outer_processes_stopped": true,
+  "removed": [
+    {
+      "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T125057Z-8vkcdu4q/shared-memory.bin",
+      "bytes": 67108864
+    },
+    {
+      "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T125057Z-8vkcdu4q/cxl-memory.bin",
+      "bytes": 4294967296
+    }
+  ]
+}

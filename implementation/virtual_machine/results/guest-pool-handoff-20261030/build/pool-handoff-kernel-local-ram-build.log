@@ -1,0 +1,100 @@
+make: Entering directory '/tmp/pool-handoff-linux-20261030'
+make[1]: Entering directory '/tmp/pool-handoff-kernel-build-20261030'
+  GEN     Makefile
+  DESCEND objtool
+  CALL    /tmp/pool-handoff-linux-20261030/scripts/checksyscalls.sh
+  INSTALL libsubcmd_headers
+  CC      arch/x86/events/intel/core.o
+  CC [M]  arch/x86/kvm/../../../virt/kvm/kvm_main.o
+  CC [M]  arch/x86/kvm/../../../virt/kvm/eventfd.o
+  CC [M]  arch/x86/kvm/../../../virt/kvm/binary_stats.o
+  CC [M]  arch/x86/kvm/../../../virt/kvm/dax_pool.o
+  CC [M]  arch/x86/kvm/../../../virt/kvm/vfio.o
+  CC [M]  arch/x86/kvm/../../../virt/kvm/coalesced_mmio.o
+  CC [M]  arch/x86/kvm/../../../virt/kvm/async_pf.o
+  CC [M]  arch/x86/kvm/../../../virt/kvm/irqchip.o
+  CC [M]  arch/x86/kvm/../../../virt/kvm/dirty_ring.o
+  CC [M]  arch/x86/kvm/../../../virt/kvm/pfncache.o
+  CC [M]  arch/x86/kvm/x86.o
+  CC      kernel/entry/kvm.o
+  CC [M]  arch/x86/kvm/emulate.o
+  CC [M]  arch/x86/kvm/i8259.o
+  CC [M]  arch/x86/kvm/irq.o
+  CC [M]  arch/x86/kvm/lapic.o
+  CC [M]  arch/x86/kvm/i8254.o
+  CC [M]  arch/x86/kvm/ioapic.o
+  CC [M]  arch/x86/kvm/irq_comm.o
+  CC [M]  arch/x86/kvm/cpuid.o
+  CC [M]  arch/x86/kvm/pmu.o
+  CC [M]  arch/x86/kvm/mtrr.o
+  AR      kernel/entry/built-in.a
+  CC [M]  arch/x86/kvm/hyperv.o
+  CC [M]  arch/x86/kvm/debugfs.o
+  CC [M]  arch/x86/kvm/mmu/mmu.o
+  CC [M]  arch/x86/kvm/mmu/page_track.o
+  CC [M]  arch/x86/kvm/mmu/spte.o
+  CC [M]  arch/x86/kvm/mmu/tdp_iter.o
+  CC [M]  arch/x86/kvm/mmu/tdp_mmu.o
+  CC [M]  arch/x86/kvm/smm.o
+  AR      kernel/built-in.a
+  CC [M]  arch/x86/kvm/vmx/vmx.o
+  CC [M]  arch/x86/kvm/kvm-asm-offsets.s
+  CC [M]  arch/x86/kvm/vmx/pmu_intel.o
+  CC [M]  arch/x86/kvm/vmx/vmcs12.o
+  CC [M]  arch/x86/kvm/vmx/hyperv.o
+  CC [M]  arch/x86/kvm/vmx/nested.o
+  CC [M]  arch/x86/kvm/vmx/posted_intr.o
+  CC [M]  arch/x86/kvm/svm/svm.o
+  CC [M]  arch/x86/kvm/svm/pmu.o
+  CC [M]  arch/x86/kvm/svm/nested.o
+  CC [M]  arch/x86/kvm/svm/avic.o
+  CC [M]  arch/x86/kvm/svm/sev.o
+  CC [M]  arch/x86/kvm/svm/hyperv.o
+  AR      arch/x86/events/intel/built-in.a
+  AR      arch/x86/events/built-in.a
+  AR      arch/x86/built-in.a
+  LD [M]  arch/x86/kvm/kvm-amd.o
+  LD [M]  arch/x86/kvm/kvm-intel.o
+  LD [M]  arch/x86/kvm/kvm.o
+  AR      built-in.a
+  AR      vmlinux.a
+  LD      vmlinux.o
+  OBJCOPY modules.builtin.modinfo
+  GEN     modules.builtin
+  MODPOST Module.symvers
+  LD [M]  arch/x86/kvm/kvm.ko
+  UPD     include/generated/utsversion.h
+  LD [M]  arch/x86/kvm/kvm-intel.ko
+  LD [M]  arch/x86/kvm/kvm-amd.ko
+  CC      init/version-timestamp.o
+  LD      .tmp_vmlinux.kallsyms1
+  NM      .tmp_vmlinux.kallsyms1.syms
+  KSYMS   .tmp_vmlinux.kallsyms1.S
+  AS      .tmp_vmlinux.kallsyms1.S
+  LD      .tmp_vmlinux.kallsyms2
+  NM      .tmp_vmlinux.kallsyms2.syms
+  KSYMS   .tmp_vmlinux.kallsyms2.S
+  AS      .tmp_vmlinux.kallsyms2.S
+  LD      vmlinux
+  NM      System.map
+  SORTTAB vmlinux
+  RELOCS  arch/x86/boot/compressed/vmlinux.relocs
+  RSTRIP  vmlinux
+  CC      arch/x86/boot/version.o
+  VOFFSET arch/x86/boot/compressed/../voffset.h
+  OBJCOPY arch/x86/boot/compressed/vmlinux.bin
+  CC      arch/x86/boot/compressed/kaslr.o
+  GZIP    arch/x86/boot/compressed/vmlinux.bin.gz
+  CC      arch/x86/boot/compressed/misc.o
+  MKPIGGY arch/x86/boot/compressed/piggy.S
+  AS      arch/x86/boot/compressed/piggy.o
+  LD      arch/x86/boot/compressed/vmlinux
+  ZOFFSET arch/x86/boot/zoffset.h
+  OBJCOPY arch/x86/boot/vmlinux.bin
+  AS      arch/x86/boot/header.o
+  LD      arch/x86/boot/setup.elf
+  OBJCOPY arch/x86/boot/setup.bin
+  BUILD   arch/x86/boot/bzImage
+Kernel: arch/x86/boot/bzImage is ready  (#15)
+make[1]: Leaving directory '/tmp/pool-handoff-kernel-build-20261030'
+make: Leaving directory '/tmp/pool-handoff-linux-20261030'

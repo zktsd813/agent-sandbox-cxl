@@ -43,11 +43,11 @@
       "base_sha256": "c60ba2cfdcb935509d37b861b3a65f6ccf7e43a328e6c671d32fba72975b2ed0"
     },
     "arch/x86/kvm/mmu/mmu.c": {
-      "patched_sha256": "00b942fd5b00c62e33ba9abc35755c5998e1f3577d7069904f0979e1479e6f72",
+      "patched_sha256": "179bcb69ec8aab9d0705d5ad635abb4afff793039e299478640df63c1f60c44c",
       "base_sha256": "e687fdf436053dd0d41ffc403e89a82bc70663a519629da38ee4bd5a52d569a8"
     },
     "arch/x86/kvm/mmu/tdp_mmu.c": {
-      "patched_sha256": "9c0a6ec8bf1747d627872b7d4ff85c84f02d7bc05344ea82859c434be8d44dd1",
+      "patched_sha256": "6ee23c1ff978384548e0bc930eecbcc178e19b48f884fcd983df3e043d5b7878",
       "base_sha256": "416eb7932f2e3e12a039293eba4a958e173046ec62d786aa69f8b96217fb293a"
     },
     "arch/x86/kvm/vmx/vmx.c": {
@@ -63,7 +63,7 @@
       "base_sha256": "fe9ae905263db74ef5876a2ae49e0ce1d82a6e15866703b64fd6586c39eed2a4"
     },
     "include/linux/kvm_dax.h": {
-      "patched_sha256": "483f3c11c918186f588efe707501d17750c33ffff0c3324d072a515bdaa92ea4",
+      "patched_sha256": "a845dec8f863cfe85d65125f4e9b635b061a41601a547db7eed9f0747de026f2",
       "new": true
     },
     "include/linux/kvm_host.h": {
@@ -71,7 +71,7 @@
       "base_sha256": "166219e363e1462216d5b753032bd8179b6a639b9e63ef966f9923cc51aa83f6"
     },
     "include/uapi/linux/kvm_dax.h": {
-      "patched_sha256": "d2801042c3a647f0ca23d978f69d07c03f49834e9daa81ebec6ec9a15a354a46",
+      "patched_sha256": "36296fff360b548720b0cebeac9eb7fd65d797c9a3f7ad129bd64d2879388297",
       "new": true
     },
     "virt/kvm/Makefile.kvm": {
@@ -83,7 +83,7 @@
       "base_sha256": "414f9b16edb7fd8562af7730ccdf47f6278c1b5ac17dcde46748b7f091fa8ffb"
     },
     "virt/kvm/dax_pool.c": {
-      "patched_sha256": "2c1e7f914651464952fb0c1009827a7eba8f58f83f2ac6db9bb90d2a68dd6053",
+      "patched_sha256": "fbe221ab711abf35b8056d804867737ee2e36d318ce1bc1f6a09755aba81ed4f",
       "new": true
     },
     "virt/kvm/eventfd.c": {
@@ -95,7 +95,7 @@
       "base_sha256": "2c9b22d33f02399d0a1503236b39d96a83e8c6dbe659a706f6ce10424042c64e"
     },
     "virt/kvm/kvm_main.c": {
-      "patched_sha256": "1f6741dc8cf9ede3a2d3c13725d7a61141da4ad35104062a230ab9854f900aaf",
+      "patched_sha256": "981690ead7c4fbe9e367eb9e74c6bbbdc4d593fd931c4f78f3001357250606e0",
       "base_sha256": "0f70d265644639479a3fc4c7ecfccd3adb44134b4fe682612f236cae16f3dcf3"
     },
     "arch/x86/kvm/mmu/mmu_internal.h": {
@@ -153,5 +153,30 @@
     "latency_refinement": "latency-refinement-summary.json",
     "heartbeat_attribution": "heartbeat-attribution-summary.json",
     "context_and_literature": "context-switch-comparison.json"
+  },
+  "pool_handoff": {
+    "status": "compiled; runtime validation pending",
+    "source": "/tmp/pool-handoff-linux-20261030",
+    "build": "/tmp/pool-handoff-kernel-build-20261030",
+    "patch_sha256": "bb11d89161ba2650ffd179e41382570e1bb99464bcfb3bcb0f1d4a4f0070333d",
+    "previous_patch_sha256": "61809e10100a0b7368bb008dc9e1a6967188f8d5ecb0ef490c5066aa4762a958",
+    "new_sysfs_parameters": [
+      "dax_owner_pid",
+      "dax_scattered",
+      "dax_data_base",
+      "dax_data_bytes"
+    ],
+    "ownership": "one direct VM per shared kernel arena; process-selected allocation permits ordinary concurrent peers",
+    "data": "read-only per-GPA PFNs captured each detach; target exact full mapping validation; runtime PFNs bounded by CXL span",
+    "pfnmap_cow": "opt-in retry invokes pfn_mkwrite for an already-read canonical page before a guest write",
+    "patch_order": [
+      "cxl-static-capacity.patch",
+      "kvm-dax-state.patch",
+      "devdax-pool-cow.patch"
+    ],
+    "new_private_ioctl_abi": [
+      "KVM_DAX_LOCAL_RAM"
+    ],
+    "local_ram": "paused-owner scalar toggle; local DRAM may run but export/detach forbidden until CXL is rearmed"
   }
 }

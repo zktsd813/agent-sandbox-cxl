@@ -1,0 +1,114 @@
+{
+  "result": "passed",
+  "scope": "direct_token_and_demote_receipts",
+  "report": "implementation/virtual_machine/.local/runs/20261030T125101Z-ryobfad3/pool-handoff-1793364701427832983/report.json",
+  "report_sha256": "61c50da9ecfcb88a3e58b3b8d9affaa5650b19fe0b317848167925d7b63806dc",
+  "verified_receipts": 792,
+  "direct_handoffs": [
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 1,
+      "ept_pages": 256,
+      "device_state_bytes": 4263,
+      "placement_metadata_bytes": 6804059,
+      "guest_identity_preserved": true,
+      "placement_unchanged": true,
+      "paused_operation_before_resume": true,
+      "source_fenced": true
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 2,
+      "ept_pages": 256,
+      "device_state_bytes": 4261,
+      "placement_metadata_bytes": 7475816,
+      "guest_identity_preserved": true,
+      "placement_unchanged": true,
+      "paused_operation_before_resume": true,
+      "source_fenced": true
+    },
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 3,
+      "ept_pages": 256,
+      "device_state_bytes": 4261,
+      "placement_metadata_bytes": 6804059,
+      "guest_identity_preserved": true,
+      "placement_unchanged": true,
+      "paused_operation_before_resume": true,
+      "source_fenced": true
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 4,
+      "ept_pages": 256,
+      "device_state_bytes": 4262,
+      "placement_metadata_bytes": 6935144,
+      "guest_identity_preserved": true,
+      "placement_unchanged": true,
+      "paused_operation_before_resume": true,
+      "source_fenced": true
+    }
+  ],
+  "demotions": [
+    {
+      "vm": 1,
+      "epoch": 0,
+      "anonymous_rw_private_bytes": 536870912,
+      "guest_identity_and_payload_preserved": true
+    },
+    {
+      "vm": 1,
+      "epoch": 2,
+      "anonymous_rw_private_bytes": 536870912,
+      "guest_identity_and_payload_preserved": true
+    },
+    {
+      "vm": 1,
+      "epoch": 4,
+      "anonymous_rw_private_bytes": 536870912,
+      "guest_identity_and_payload_preserved": true
+    },
+    {
+      "vm": 1,
+      "epoch": 4,
+      "anonymous_rw_private_bytes": 536870912,
+      "guest_identity_and_payload_preserved": true
+    },
+    {
+      "vm": 2,
+      "epoch": 0,
+      "anonymous_rw_private_bytes": 536870912,
+      "guest_identity_and_payload_preserved": true
+    },
+    {
+      "vm": 3,
+      "epoch": 0,
+      "anonymous_rw_private_bytes": 536870912,
+      "guest_identity_and_payload_preserved": true
+    }
+  ],
+  "remote_nfs_refills": 2,
+  "fixed_kernel_identity": {
+    "vm_offset": 8192,
+    "vcpu_offset": 76928,
+    "vmcs_offset": 118784,
+    "run_offset": 90112,
+    "ept_root_offset": 475136,
+    "ram_hva": 70368744177664,
+    "ram_bytes": 536870912,
+    "vm_creates": 1,
+    "vcpu_creates": 1
+  },
+  "limits": [
+    "Runtime token equality proves retained object offsets and creation counters; EPT leaf contents/page count may change as the guest executes.",
+    "Paused import is established by successful Paused-only PoolCache before Resume plus the frozen source API gate; device-event nonexecution is a source-control property, not separately traced.",
+    "Anonymous rw-p mapping proves backing replacement; physical NUMA placement was not measured.",
+    "No CPU/RAM snapshot API and no payload in direct metadata, with frozen source, support the no-snapshot path; this is not an independent syscall/data-copy trace.",
+    "Coherent nested lab, trusted kernel/controller, one direct graph plus two ordinary peer VMs."
+  ]
+}
