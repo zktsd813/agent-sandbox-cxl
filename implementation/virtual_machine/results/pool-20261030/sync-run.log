@@ -1,0 +1,174 @@
+Started both VMs: /tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T035934Z-iymez2na
+Use verify to wait for guest checks; stop shuts down only this lab.
+{
+  "result": "passed",
+  "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T035934Z-iymez2na",
+  "host_kernel": "5.15.0-191-generic",
+  "l1_guest_kernels": {
+    "A": "6.6.0-rc6-dcd-v3",
+    "B": "6.6.0-rc6-dcd-v3"
+  },
+  "l2_guest_kernels": {
+    "A": "6.6.0-rc6-dcd-v3"
+  },
+  "outer_kvm": {
+    "A": {
+      "enabled": true,
+      "present": true
+    },
+    "B": {
+      "enabled": true,
+      "present": true
+    }
+  },
+  "guest_events": {
+    "A": [
+      {
+        "event": "migration_network",
+        "role": "A",
+        "result": "passed",
+        "ip": "172.30.0.1"
+      },
+      {
+        "event": "l1_kvm",
+        "role": "A",
+        "result": "passed",
+        "api": 12,
+        "create_vcpu": true
+      },
+      {
+        "event": "shared_memory",
+        "role": "A",
+        "result": "passed",
+        "rounds": 1000,
+        "payload_bytes": 3072,
+        "verified_bytes": 3072000,
+        "nonce": "a00a95cea2c7c4d6",
+        "pci_bdf": "0000:00:01.0",
+        "device": "",
+        "align": 4096,
+        "device_bytes": 0,
+        "elapsed_s": 0.191903
+      },
+      {
+        "event": "dax_shared_memory",
+        "role": "A",
+        "result": "passed",
+        "rounds": 100,
+        "payload_bytes": 3072,
+        "verified_bytes": 307200,
+        "nonce": "a00a95cea2c7c4d6",
+        "pci_bdf": "",
+        "device": "/dev/dax0.0",
+        "align": 4096,
+        "device_bytes": 4294967296,
+        "elapsed_s": 0.023534
+      },
+      {
+        "event": "l2_memory",
+        "role": "A",
+        "result": "passed",
+        "bytes": 16777216,
+        "passes": 3,
+        "checksum": 4179402181
+      },
+      {
+        "event": "nested_microvm",
+        "role": "A",
+        "result": "passed",
+        "counter": 3,
+        "firecracker_pid": 122
+      }
+    ],
+    "B": [
+      {
+        "event": "migration_network",
+        "role": "B",
+        "result": "passed",
+        "ip": "172.30.0.2"
+      },
+      {
+        "event": "l1_kvm",
+        "role": "B",
+        "result": "passed",
+        "api": 12,
+        "create_vcpu": true
+      },
+      {
+        "event": "shared_memory",
+        "role": "B",
+        "result": "passed",
+        "rounds": 1000,
+        "payload_bytes": 3072,
+        "verified_bytes": 3072000,
+        "nonce": "a00a95cea2c7c4d6",
+        "pci_bdf": "0000:00:01.0",
+        "device": "",
+        "align": 4096,
+        "device_bytes": 0,
+        "elapsed_s": 0.392241
+      },
+      {
+        "event": "dax_shared_memory",
+        "role": "B",
+        "result": "passed",
+        "rounds": 100,
+        "payload_bytes": 3072,
+        "verified_bytes": 307200,
+        "nonce": "a00a95cea2c7c4d6",
+        "pci_bdf": "",
+        "device": "/dev/dax0.0",
+        "align": 4096,
+        "device_bytes": 4294967296,
+        "elapsed_s": 0.174315
+      },
+      {
+        "event": "dax_observer",
+        "role": "B",
+        "result": "passed"
+      }
+    ]
+  },
+  "shared_backing_final_slots": {
+    "A": {
+      "sequence": 1000,
+      "checksum": 1748265413,
+      "payload_sha256": "e6bef2b8c3c847cdc7160bd3e4005344af33b9d0b80ae7ae481aabf5b556298e"
+    },
+    "B": {
+      "sequence": 1000,
+      "checksum": 221546949,
+      "payload_sha256": "a997cd79d8df9afc5afa722e00f5c823c8998167debf4f08ad450cbf8da66f85"
+    }
+  },
+  "scope": "One Firecracker on VM A; all 128MiB guest RAM in shared device-DAX; VM B is an observer.",
+  "limitations": [
+    "Same physical host, not actual CXL or cross-host coherence.",
+    "VMM heap and KVM execution metadata remain local to VM A.",
+    "No execution handoff is implemented; QEMU direct RAM mode is limited to one fixed volatile CXL region.",
+    "DCD dynamic capacity events and physical multi-host CXL coherence are not tested.",
+    "The QEMU lab kernel uses CONFIG_CXL_REGION_INVALIDATION_TEST to bypass the hypervisor cache-invalidation restriction."
+  ],
+  "cxl_dax": {
+    "backing": "/dev/shm/cxl-lab-dz40yhsz/cxl-memory.bin",
+    "bytes": 4294967296,
+    "final_slots": {
+      "A": {
+        "sequence": 100,
+        "checksum": 157646277
+      },
+      "B": {
+        "sequence": 100,
+        "checksum": 2353266117
+      }
+    },
+    "mode": "CXL Type-3 fixed volatile region \u2192 device-DAX"
+  },
+  "dax_guest_ram": {
+    "owner": "A",
+    "offset": 2097152,
+    "bytes": 134217728
+  }
+}
+POOL_REPORT /tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T035934Z-iymez2na/pool-1793332783177002154/report.json
+Stopped lab VMs. Results retained: /tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T035934Z-iymez2na

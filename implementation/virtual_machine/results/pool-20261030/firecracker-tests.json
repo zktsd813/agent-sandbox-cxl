@@ -1,0 +1,103 @@
+{
+  "checks": [
+    {
+      "name": "pool_cache",
+      "filter": "pool_cache",
+      "exit_code": 0,
+      "seconds": 0.002808799035847187,
+      "binary_sha256": "2957cd96ae0b8cb415b991c65daed8009a92501cd4570b131d1459d7db28fa42",
+      "log": "pool_cache.log",
+      "tests_passed": 3,
+      "log_sha256": "20a1f40fba8ee5232f47e91c22aba2bd450c7d69997b68f07b087bbd0ccc0cb9"
+    },
+    {
+      "name": "prepare_save",
+      "filter": "test_prepare_save",
+      "exit_code": 0,
+      "seconds": 0.368009767960757,
+      "binary_sha256": "2957cd96ae0b8cb415b991c65daed8009a92501cd4570b131d1459d7db28fa42",
+      "log": "prepare_save.log",
+      "tests_passed": 4,
+      "log_sha256": "337d537359cad7df297e705c739f31273c446413a6803d37effebde4a8340cf2"
+    },
+    {
+      "name": "snapshot_flush_failure",
+      "filter": "test_storage_snapshot_flush_failure_writes_no_checkpoint",
+      "exit_code": 0,
+      "seconds": 0.04120084596797824,
+      "binary_sha256": "2957cd96ae0b8cb415b991c65daed8009a92501cd4570b131d1459d7db28fa42",
+      "log": "snapshot_flush_failure.log",
+      "tests_passed": 1,
+      "log_sha256": "180e4b832f4ddbe974a6d6fde6b7eb429b73fc59f6e46de9688419dc909c19bb"
+    },
+    {
+      "name": "direct_preflight",
+      "filter": "test_direct_handoff_preflight_rejects_devices_and_multiple_vcpus",
+      "exit_code": 0,
+      "seconds": 0.039478922728449106,
+      "binary_sha256": "2957cd96ae0b8cb415b991c65daed8009a92501cd4570b131d1459d7db28fa42",
+      "log": "direct_preflight.log",
+      "tests_passed": 1,
+      "log_sha256": "00afb3e62089632f4c08ea52e5c551f171cc64fd97673a483820c1ff5ea29851"
+    },
+    {
+      "name": "preboot_disallowed",
+      "filter": "rpc_interface::tests::test_preboot_disallowed",
+      "exit_code": 0,
+      "seconds": 0.003963469993323088,
+      "binary_sha256": "2957cd96ae0b8cb415b991c65daed8009a92501cd4570b131d1459d7db28fa42",
+      "log": "preboot_disallowed.log",
+      "tests_passed": 1,
+      "log_sha256": "15122f5dc034384b4746cb20c914d30667abc8f52073a3c2c58714fe93aa30c2"
+    },
+    {
+      "name": "create_guest_memory",
+      "filter": "test_create_guest_memory",
+      "exit_code": 0,
+      "seconds": 0.0022403602488338947,
+      "binary_sha256": "2957cd96ae0b8cb415b991c65daed8009a92501cd4570b131d1459d7db28fa42",
+      "log": "create_guest_memory.log",
+      "tests_passed": 1,
+      "log_sha256": "9ed2f2fcbf0154a6e461efa05d7a69bbf61affaaa3991c6d30dbcaeea86ff011"
+    },
+    {
+      "name": "actions_library",
+      "filter": "test_parse_put_actions",
+      "exit_code": 0,
+      "seconds": 0.001893429085612297,
+      "binary_sha256": "dac10e8665b1629bd44b8d83c8c38cde0d8ee95d37cb0e022eb8ef02534364be",
+      "log": "actions_library.log",
+      "tests_passed": 1,
+      "log_sha256": "4ce0d484c1602dc87ce7398d3afc06fcc48706b4be8de3e99e75fa4c9eb4d134"
+    },
+    {
+      "name": "actions_binary",
+      "filter": "test_parse_put_actions",
+      "exit_code": 0,
+      "seconds": 0.0026629180647432804,
+      "binary_sha256": "6d423d31c5b05dadf94baef660a96e43009c93fac6d1adc1c6cc9f15651be3d3",
+      "log": "actions_binary.log",
+      "tests_passed": 1,
+      "log_sha256": "4e38bb2649d1f192912e05625caec7672e056d277033a2085b17d27907e8ea0a"
+    }
+  ],
+  "all_passed": true,
+  "runtime_sha256": "866f5b44b96535c0c525f6cee0a9ee09ff64900fbd83458c51c45b4de3505d08",
+  "pooling_environment": "FC_* removed for all checks",
+  "source_pool_module_sha256": "123f19e44a1b812459eebedb714d6c906241b61b1bd68f195ad66e7e08069df6",
+  "total_tests_passed": 13,
+  "build": {
+    "exit_code": 0,
+    "log": "buffered-json-build-tests.log",
+    "api_tests_log": "buffered-json-api-tests.log",
+    "toolchain_image": "public.ecr.aws/firecracker/fcuvm:v93",
+    "target": "x86_64-unknown-linux-musl",
+    "arguments": "cargo build --bin firecracker --offline --locked --release --target x86_64-unknown-linux-musl; cargo test -p vmm pool_cache; cargo test -p firecracker test_parse_put_actions"
+  },
+  "fix": {
+    "trigger": "B/CXL PoolCache timed out restoring a large hint JSON through NFS actimeo=0",
+    "change": "64 KiB BufReader for hints/plans; 64 KiB BufWriter with explicit flush for hints/reports",
+    "baseline": "baseline-81aea7b5/summary.json",
+    "runtime_validation": "Integration lifecycle rerun is recorded separately by pool_bench"
+  }
+}

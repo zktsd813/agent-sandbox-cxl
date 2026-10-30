@@ -1,0 +1,24 @@
+{
+  "result": "passed",
+  "sandboxes": 3,
+  "transitions": 20,
+  "guest_commands": 188,
+  "raw_receipts": 1643,
+  "minimum_guest_resident_bytes": 167772160,
+  "minimum_measured_shared_bytes": 167772160,
+  "minimum_three_vm_common_bytes": 167772160,
+  "current_file_cache_gpa_proven": false,
+  "logical_snapshot_bytes": 10737418240,
+  "rejected_evidence_mutations": [
+    "false_success",
+    "missing_transition",
+    "wrong_epoch",
+    "lost_private_data",
+    "fake_cache_residency",
+    "false_shared_count",
+    "missing_pfn_scan",
+    "nfs_not_used",
+    "cleanup_failed",
+    "wrong_receipt_hash"
+  ]
+}

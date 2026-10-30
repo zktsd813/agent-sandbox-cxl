@@ -1098,3 +1098,38 @@ Reuse/direct의 기본 검증은 diskless 1 vCPU, 동일 구성·동일 DAX allo
 정리 전 README·분리된 빌드/추적 스크립트·중간 패치는
 `.local/cleanup-latest.json`이 가리키는 `before-cleanup.tar.gz`에 보존했다.
 기존 `.local` 실행 결과와 원시 로그도 유지한다. 현재 운영 설명은 이 README 하나로 관리한다.
+
+## Immutable data-page pooling prototype (2026-10-30)
+
+Virtio-blk의 성공한 읽기에서 `(image digest, image offset, GPA)` hint를 수집하고,
+paused VM의 현재 바이트를 검증한 뒤 동일한 canonical CXL frame에 연결하는 경로를 추가했다.
+Guest inode/folio/LRU는 VM별로 유지한다. 모든 VM의 Bloom slot은 DRAM/CXL tier와 관계없이
+CXL에 남으며, 정확한 후보 index는 controller/VMM의 private 상태다.
+
+설계·주소 배치·재현 명령은 [data pooling 문서](../../docs/cxl-data-pooling.md),
+실행 증거는 [pooling 결과](results/pool-20261030/README.md)에 정리한다.
+`pool_prepare.py`, `pool_bench.py`, `pool_control.py`, `verify_pool_results.py`가 fixture,
+다중 sandbox lifecycle, admission, 독립 검증을 담당한다.
+
+Kernel에는 `devdax-pool-cow.patch`가 필요하며 기본값은 비활성화다. `lab.py start`의
+`--pool-cow --dax-guest --dax-4k`가 전용 L1 kernel의 `device_dax.pool_cow=1`을 켠다.
+NFS server용 `CONFIG_NFSD=y`와 같은 build의 KVM modules도 준비해야 한다.
+공유 페이지에 대한 guest CPU 및 host HVA 쓰기는 private DRAM으로 CoW되므로, 쓰기 후
+CXL tier는 혼합 배치가 될 수 있다. 실제 PFN/CoW의 낮은 계층 검증은
+[CoW probe 결과](results/pool-cow-20261030/summary.json)에 보관한다.
+
+이번 pooling 검증은 매 이전 때 논리적 RAM 전체를 snapshot으로 저장한다. Canonical overlay와
+private CoW 페이지를 빠뜨리지 않기 위한 선택이며, **기존 state-only/direct handoff의 비용으로
+해석하지 않는다.** Overlay가 있는 VM의 state-only DAX snapshot은 거부한다. NFS는 계속 host의
+image FD 경로이고, A/CXL에서는 local image, B/CXL에서는 A의 image에 대한 NFS를 사용한다.
+
+Canonical image를 미리 채우고 실험 동안 재사용하지 않으며, admission에서 원래 DAX reservation을
+allocator에 반환하지 않는다. 실제 PFN 공유와 사용 가능 CXL 용량 증가를 구분한다. 현재는 paused
+admission, immutable data, coherent QEMU/nested-KVM 검증 범위다. 온라인 read 우회,
+donor export, frame 회수, 비일관 물리 CXL, pooling과 PML/MPTCP의 통합은 후속 작업이다.
+Runtime admission을 사용하는 Firecracker는 전용 L1 안에서 `--no-seccomp`로 실행한다.
+새 plan/report/sysfs/mapping 작업을 production seccomp 정책에 통합하는 작업도 남아 있다.
+현재 file-cache 공유를 증명하는 검증에서는 guest의 측정용 `cachemap`이 read-only `MAP_SHARED`
+페이지를 `mlock`하고 file offset→GPA를 기록한다. Pause 중 이 GPA를 VMM HVA와 canonical PFN에
+연결하고, 검사 뒤 unpin한다. 이 기록은 admission plan 생성에 사용하지 않는다. 초기의
+`mincore`와 과거 hint GPA PFN 각각의 검사와 보강된 현재 cache-page 대응 검사는 결과에서 구분한다.

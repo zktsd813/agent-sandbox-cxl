@@ -1,0 +1,10 @@
+test_dram_updates_stable_bloom_without_data_mapping (test_pool_control.ControlTests) ... ok
+test_false_positive_requires_exact_owner_match (test_pool_control.ControlTests) ... ok
+test_first_admission_can_publish_new_ready_entry (test_pool_control.ControlTests) ... ok
+test_positive_queries_only_candidate_and_reuses_canonical (test_pool_control.ControlTests) ... ok
+test_stale_negative_keeps_private_and_never_reads_owner_index (test_pool_control.ControlTests) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.001s
+
+OK

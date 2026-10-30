@@ -1,0 +1,310 @@
+{
+  "run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T034758Z-im581bxd",
+  "control_dir": "/tmp/qvl-wy3is2q7",
+  "nonce": "3599180228d71a13",
+  "rounds": 10,
+  "l1_vcpus": 2,
+  "l1_memory_mib": 1024,
+  "shared_mib": 64,
+  "backing": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T034758Z-im581bxd/shared-memory.bin",
+  "ephemeral_memory_dir": null,
+  "cxl_mib": 1024,
+  "cxl_backing": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T034758Z-im581bxd/cxl-memory.bin",
+  "qemu": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/qemu-cxl/build/qemu-system-x86_64",
+  "qemu_version": "QEMU emulator version 10.2.2 (v10.2.2-dirty)",
+  "qemu_sha256": "418b49d7f8dbb3eb2ccecbec11f2095b1b2a77ff7f80f2cce272d7b939df9c74",
+  "dax_guest": true,
+  "dax_kvm_state": false,
+  "dax_handoff": false,
+  "dax_4k": true,
+  "pool_cow": false,
+  "migration_network": null,
+  "prepared": {
+    "vendor": "intel",
+    "l1_kernel_release": "6.6.0-rc6-dcd-v3",
+    "modules": [
+      "irqbypass.ko",
+      "kvm.ko",
+      "kvm-intel.ko"
+    ],
+    "qemu": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/qemu/root/usr/bin/qemu-system-x86_64",
+    "qemu_version": "QEMU emulator version 6.2.0 (Debian 1:6.2+dfsg-2ubuntu6.31)",
+    "inputs": {
+      "l1_kernel": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/nfs-deps-trace/kernel-build/arch/x86/boot/bzImage",
+        "sha256": "91192fe393c416d0d765f63e4b4b194555429d2a7365792262e27415829a1105"
+      },
+      "firecracker": {
+        "path": "/tmp/firecracker-home-storage-20261028/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker",
+        "sha256": "4dae92f73528627231d1a15c8a4c289e6b3b3bacb2ad4fa18c2f988ab2d8480c"
+      },
+      "l2_kernel": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/nfs-deps-trace/kernel-build/vmlinux",
+        "sha256": "a99ebf21125fcc57e02f75bde0d46906f055d6101f035820743fcc598544fb5b"
+      },
+      "busybox": {
+        "path": "/usr/bin/busybox",
+        "sha256": "b3c1009e1b5c927e537487c80639cdf404f69e3eb49371d9be5d841672be3ff9"
+      },
+      "probe_source": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/shared_probe.c",
+        "sha256": "966cdf908413578b7a5a2d9e8833bfb16f8460b5e8a4405d12a850c157c330d1"
+      },
+      "l1_init": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/guest-init.sh",
+        "sha256": "c6bca182cbc1665d632f29e93663c2a0fc620dbfdcb027ab3acac7195fb1894e"
+      },
+      "l2_init": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/l2-init.sh",
+        "sha256": "3c6a703dfb8b9768f29a3f8032fd437ea321f1da4eb256b2d504ac03e1223746"
+      },
+      "cxl_init": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/guest-cxl.sh",
+        "sha256": "a80b7d0b1c8edb4adc613dec7a140d0723a3388eca96cdda1eccd713ff0c7136"
+      },
+      "cache_probe_source": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/cache_probe.h",
+        "sha256": "4bb8615c1251d297be0b5ccd1569cb442a59c13713b964afba92c4f3567978a0"
+      },
+      "mptcp_probe_source": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/mptcp_probe.h",
+        "sha256": "cb8a241eca1a4ff6cbd109965508c38ca82e1b589105142a779cd9694fbaf091"
+      },
+      "dependency_manifest": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/nfs-deps-trace/manifest.json",
+        "sha256": "8e33640bc8e350fd5ee58e64beeb7c7ede2c8bc2148afb7cd6ed4d679797afcf"
+      },
+      "kernel_config": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/nfs-deps-trace/kernel-build/.config",
+        "sha256": "793c44048f74d4c2e29cca2a33021f2ff3a50876f7436e590ab2b9019fba31b6"
+      },
+      "shared_probe": {
+        "path": "/tmp/state-mailbox-probe",
+        "sha256": "9db3d04725cdc1a783316b9003865a089cdeb418a76a21a578c71e7d3500a740"
+      },
+      "ram_transfer": {
+        "path": "/tmp/ram-transfer-20261028",
+        "sha256": "872e34e353a643ad2c56e946ffc8ddcff642ad84c6afb86c79247e37b92c47bb"
+      }
+    },
+    "firecracker_version": "Firecracker v1.17.0\n\n2026-10-28T04:49:31.387755394 [anonymous-instance:main] Firecracker exiting successfully. exit_code=0\n",
+    "schema": "cxl-home-storage-fixture-v1",
+    "base_assets": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-trace-mailbox-v1-20261027",
+    "base_manifest_sha256": "f0b6c5dcc574f1d1611a2dc157fe1be5465075f6ba43c99c70e3fd44cfe169b0",
+    "home_storage": {
+      "home_node": "A",
+      "guest_filesystem": "ext4 writable /dev/vda mounted /data; no tmpfs upper",
+      "image": {
+        "name": "sandbox.raw",
+        "bytes": 150994944,
+        "sha256": "39bd8f88e393804c19d803221a2362c51d3677a83217f4715554087adb10c274",
+        "ext4_uuid": "ce2545b3-8711-48a2-9194-708f22bf471c",
+        "files": {
+          "cursor.bin": {
+            "bytes": 65536,
+            "sha256": "99b83a2d9a0380a61d3d1a0741f0f86e4e8f5eca4ef88d43b2d11671443dd65b"
+          },
+          "fixture": {
+            "bytes": 34,
+            "sha256": "88d6d2d2b58a57b62fc053a5fcc91febd37c3ff5c4d3faf22deab016ed617e15"
+          },
+          "generation": {
+            "bytes": 2,
+            "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+          },
+          "journal.log": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "mapped.bin": {
+            "bytes": 4096,
+            "sha256": "67821347bbd81f591fef3de19d58ce8664909aba88023a350f832ae869254156"
+          },
+          "mutable.bin": {
+            "bytes": 16777216,
+            "sha256": "69f88b74856e2283b148fbc319a18fa9ce5a2f61893c78903881b0707554224a"
+          },
+          "payload.bin": {
+            "bytes": 67108864,
+            "sha256": "a263d9c3602fa98c55950a3549bbac676af03837c6571a5a3af642336741cff2"
+          }
+        },
+        "generator": {
+          "event": "home_generated",
+          "payload_bytes": 67108864,
+          "mutable_bytes": 16777216
+        }
+      },
+      "template_policy": "private RW outer copy attached to home A only; B uses A's NFS export",
+      "dirty_fixture_policy": "guest ext4 commit=600; dirty_writeback_centisecs=0; explicit fsync unchanged",
+      "persistent_checks": "mutable data, MAP_SHARED file, generation rename, ordered journal, immutable payload",
+      "memory_checks": "retained linked and unlinked FD offsets; boot ID, PID, cookie and mapping contents"
+    },
+    "build": {
+      "compiler": "/usr/bin/gcc",
+      "version": "gcc (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0\nCopyright (C) 2021 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+      "flags": [
+        "-std=c11",
+        "-O2",
+        "-static",
+        "-Wall",
+        "-Wextra",
+        "-Werror"
+      ],
+      "source": "home_storage_probe.c"
+    },
+    "source_hashes": {
+      "home_storage_prepare.py": "681833df4b949c41360be486fdd86865bcb2c953fbd2e9365c972ade54cc17b9",
+      "home_storage_probe.c": "ae8880b324acb0077e0b9f19df5591921235e571cb3796ba6bc3f29dee73bfca",
+      "home-storage-l2-init.sh": "6afe14107c8f071f5d4f9c9e324437a6b69c71397c89ffb4a00067e9925bb5bf",
+      "lab.py": "7c79a1a1a8b3dc88be148742f8e738d25b0771a070341b188d46dde973a5397e"
+    },
+    "artifacts": {
+      "l1-initramfs.cpio": "8740a91c1fc042a7fdb55bd1cd03406f29774a0708d1e09349ac1eca8bb89dc7",
+      "l1-kernel": "1e72c8a58c484dea501f1c2e3fc5a0efe93b46fe1e873e99a25c16154bf19e86",
+      "home-storage-l2-initramfs.cpio": "4071ea1c5df0f8ab44084a6582d6761423564fb7a9270aed22b6ae6384d9eee0",
+      "ram-transfer": "872e34e353a643ad2c56e946ffc8ddcff642ad84c6afb86c79247e37b92c47bb",
+      "l2-vmlinux": "a99ebf21125fcc57e02f75bde0d46906f055d6101f035820743fcc598544fb5b",
+      "home-storage-probe": "e8dfcc754ccfabd55ca04c841ddf94171e36e72a480920ea0555ec6d5bd6edcb",
+      "storage.raw": "4dc92913dd7ad886c7e6c795d5122db57ade7d18ce2df5ce1d4df463f2d4c085",
+      "firecracker": "4dae92f73528627231d1a15c8a4c289e6b3b3bacb2ad4fa18c2f988ab2d8480c",
+      "shared-probe": "9db3d04725cdc1a783316b9003865a089cdeb418a76a21a578c71e7d3500a740",
+      "nfs-probe": "17731caa2f8f47888af5e4d470948262743565cd264c862a91911bf4481c51d2",
+      "l2-initramfs.cpio": "a90a1925332c7dcdbf159b318b1cf5b76b00b3896c3c04d2a3fca74cf748d619"
+    },
+    "repacked_from": {
+      "assets": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-home-storage-v2-20261028",
+      "manifest_sha256": "e6727dd6dd12a3b98b6d686c0c1e63d7f6cad68fa3262769eb93b3f2a11ab048",
+      "purpose": "replace Firecracker with tested storage/API safety build",
+      "script_sha256": "dd841c5f910dfc2591595bd21f5b682bb55471a9df19d372f7cba6f93e26ef41"
+    },
+    "pool_cow_test": {
+      "kernel_patch_sha256": "e3511e25b0ecea137b0856a487ffae484deaee929544214a47b802930072879d",
+      "probe_sha256": "a687d21f17945f23ce21bc8b5f998dee6a224afa34415897d1b622ce480485ea",
+      "experimental": true
+    }
+  },
+  "assets": "/tmp/pool-cow-test-assets-20261030",
+  "host_kernel": "5.15.0-191-generic",
+  "vms": {
+    "A": {
+      "pid": 2851104,
+      "starttime": "319701717",
+      "command": [
+        "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/qemu-cxl/build/qemu-system-x86_64",
+        "-name",
+        "nested-lab-A",
+        "-machine",
+        "q35,accel=kvm,cxl=on",
+        "-cpu",
+        "host,vmx=on",
+        "-smp",
+        "2",
+        "-m",
+        "1024M,maxmem=2048M,slots=8",
+        "-nodefaults",
+        "-no-user-config",
+        "-display",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-kernel",
+        "/tmp/pool-cow-test-assets-20261030/l1-kernel",
+        "-initrd",
+        "/tmp/pool-cow-test-assets-20261030/l1-initramfs.cpio",
+        "-append",
+        "console=ttyS0 loglevel=4 rdinit=/init panic=1 device_dax.pool_cow=1 lab.role=A lab.nonce=3599180228d71a13 lab.rounds=10 lab.cxl_bytes=1073741824 lab.dax_guest=1 lab.dax_kvm_state=0 lab.dax_handoff=0 lab.dax_4k=1",
+        "-object",
+        "memory-backend-file,id=shared,size=64M,mem-path=/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T034758Z-im581bxd/shared-memory.bin,share=on",
+        "-device",
+        "ivshmem-plain,memdev=shared",
+        "-chardev",
+        "socket,id=console,path=/tmp/qvl-wy3is2q7/a.console.sock,server=on,wait=off,logfile=/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T034758Z-im581bxd/vm-a.serial.log",
+        "-serial",
+        "chardev:console",
+        "-qmp",
+        "unix:/tmp/qvl-wy3is2q7/a.qmp.sock,server=on,wait=off",
+        "-object",
+        "memory-backend-file,id=cxl-shared,size=1024M,mem-path=/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T034758Z-im581bxd/cxl-memory.bin,share=on",
+        "-device",
+        "pxb-cxl,bus_nr=12,bus=pcie.0,id=cxl.0",
+        "-device",
+        "cxl-rp,port=0,bus=cxl.0,id=cxl-rp0,chassis=0,slot=2",
+        "-device",
+        "cxl-type3,bus=cxl-rp0,volatile-memdev=cxl-shared,id=cxl-mem0,sn=0x100,x-direct-ram=on",
+        "-machine",
+        "cxl-fmw.0.targets.0=cxl.0,cxl-fmw.0.size=1024M,cxl-fmw.0.interleave-granularity=256",
+        "-L",
+        "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/qemu/root/usr/share/qemu",
+        "-bios",
+        "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/qemu/root/usr/share/seabios/bios-256k.bin"
+      ],
+      "console": "/tmp/qvl-wy3is2q7/a.console.sock",
+      "qmp": "/tmp/qvl-wy3is2q7/a.qmp.sock",
+      "serial_log": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T034758Z-im581bxd/vm-a.serial.log"
+    },
+    "B": {
+      "pid": 2851105,
+      "starttime": "319701717",
+      "command": [
+        "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/qemu-cxl/build/qemu-system-x86_64",
+        "-name",
+        "nested-lab-B",
+        "-machine",
+        "q35,accel=kvm,cxl=on",
+        "-cpu",
+        "host,vmx=on",
+        "-smp",
+        "2",
+        "-m",
+        "1024M,maxmem=2048M,slots=8",
+        "-nodefaults",
+        "-no-user-config",
+        "-display",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-kernel",
+        "/tmp/pool-cow-test-assets-20261030/l1-kernel",
+        "-initrd",
+        "/tmp/pool-cow-test-assets-20261030/l1-initramfs.cpio",
+        "-append",
+        "console=ttyS0 loglevel=4 rdinit=/init panic=1 device_dax.pool_cow=0 lab.role=B lab.nonce=3599180228d71a13 lab.rounds=10 lab.cxl_bytes=1073741824 lab.dax_guest=1 lab.dax_kvm_state=0 lab.dax_handoff=0 lab.dax_4k=1",
+        "-object",
+        "memory-backend-file,id=shared,size=64M,mem-path=/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T034758Z-im581bxd/shared-memory.bin,share=on",
+        "-device",
+        "ivshmem-plain,memdev=shared",
+        "-chardev",
+        "socket,id=console,path=/tmp/qvl-wy3is2q7/b.console.sock,server=on,wait=off,logfile=/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T034758Z-im581bxd/vm-b.serial.log",
+        "-serial",
+        "chardev:console",
+        "-qmp",
+        "unix:/tmp/qvl-wy3is2q7/b.qmp.sock,server=on,wait=off",
+        "-object",
+        "memory-backend-file,id=cxl-shared,size=1024M,mem-path=/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T034758Z-im581bxd/cxl-memory.bin,share=on",
+        "-device",
+        "pxb-cxl,bus_nr=12,bus=pcie.0,id=cxl.0",
+        "-device",
+        "cxl-rp,port=0,bus=cxl.0,id=cxl-rp0,chassis=0,slot=2",
+        "-device",
+        "cxl-type3,bus=cxl-rp0,volatile-memdev=cxl-shared,id=cxl-mem0,sn=0x100,x-direct-ram=on",
+        "-machine",
+        "cxl-fmw.0.targets.0=cxl.0,cxl-fmw.0.size=1024M,cxl-fmw.0.interleave-granularity=256",
+        "-L",
+        "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/qemu/root/usr/share/qemu",
+        "-bios",
+        "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/qemu/root/usr/share/seabios/bios-256k.bin"
+      ],
+      "console": "/tmp/qvl-wy3is2q7/b.console.sock",
+      "qmp": "/tmp/qvl-wy3is2q7/b.qmp.sock",
+      "serial_log": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T034758Z-im581bxd/vm-b.serial.log"
+    }
+  },
+  "source_patches": {
+    "qemu-cxl-direct-ram.patch": "fe11a2deff133df81694dc541abf6f61530b1af6c327937366a0ecaa857ff74e",
+    "firecracker.patch": "3fb9397aa1f59ce58825771a4d12abf5930cba00b648983d9133ab93013fddc8",
+    "ram-backend-source.json": "ad23fd4fe0bdd3432db8ab76120e51ddb17a11d18bd87bfa3599e374b1b83599"
+  }
+}

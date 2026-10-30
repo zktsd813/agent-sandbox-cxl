@@ -1,0 +1,24 @@
+
+/ # (
+> set -e
+> cat /sys/module/device_dax/parameters/pool_cow
+> /lab/pool-cow-probe /dev/dax0.0 536870912 OWNED_POOL_TEST
+> dmesg | tail -10
+> )
+Y
+KVM_COW shared_pfn=3604480 private_pfn=199590 pass=1
+KVM_REMAP aliases=16 mmu_notifier=passed cow=passed
+POOL_COW_PROBE {"pass":true,"shared_bytes":65536,"cpu_cow":true,"first_write_cow":true,"pread_cow":true,"fork_isolation":true,"kvm_cow":true}
+[    0.675943]   with environment:
+[    0.675944]     HOME=/
+[    0.675947]     TERM=linux
+[    0.678317] mount (75) used greatest stack depth: 14616 bytes left
+[    0.683794] mount (80) used greatest stack depth: 14200 bytes left
+[    0.750332] insmod (86) used greatest stack depth: 14184 bytes left
+[    0.825793] shared-probe (91) used greatest stack depth: 13792 bytes left
+[    0.828568] cxl region0: Bypassing cpu_cache_invalidate_memregion() for testing!
+[    0.957573] input: ImExPS/2 Generic Explorer Mouse as /devices/platform/i8042/serio1/input/input3
+[  148.883575] pool-cow-probe (172) used greatest stack depth: 13600 bytes left
+/ # printf '\nLAB_COMMAND_DONE_a9325ef4937dbafb:%s\n' "$?"
+
+LAB_COMMAND_DONE_a9325ef4937dbafb:0

@@ -1,0 +1,265 @@
+{
+  "schema": "cxl-data-pooling-results-v1",
+  "date": "2026-10-30",
+  "result": "passed",
+  "scope": "Immutable data-page pooling correctness in three real nested KVM microVM sandboxes; not agent trace performance or net capacity saving.",
+  "totals": {
+    "transitions": 30,
+    "guest_commands": 321,
+    "full_payload_checks": 173,
+    "payload_bytes_verified": 29024583680,
+    "raw_receipts": 2708
+  },
+  "runs": {
+    "sync": {
+      "result": "passed",
+      "report_sha256": "13252c3396b0b87468f848c898ca61fa4264de52c181f54b26258f45d5399290",
+      "arguments": {
+        "cycles": 2,
+        "io_engine": "Sync",
+        "memory_mib": 512,
+        "minimum_cache_mib": 128,
+        "sandboxes": 3,
+        "vcpus": 1
+      },
+      "guest_workload": {
+        "command_count": 188,
+        "commands_by_vm": {
+          "1": 74,
+          "2": 49,
+          "3": 65
+        },
+        "final_all_three_on_home_dram": true,
+        "full_payload_bytes_verified": 18790481920,
+        "full_payload_check_count": 112,
+        "minimum_resident_bytes_after_full_payload_check": 167772160,
+        "operations": {
+          "check": 101,
+          "churn": 8,
+          "evict": 8,
+          "identity": 40,
+          "warm": 11,
+          "write": 20
+        },
+        "payload_bytes_per_vm": 167772160,
+        "stable_identities_by_vm": {
+          "1": [
+            "c471e7cf-6dc2-4082-ae06-20b959ab1d51",
+            57,
+            "49e75bc5645e7f71"
+          ],
+          "2": [
+            "41473dd6-f572-471c-858a-567440dd3ace",
+            57,
+            "f18681e0786fd7ac"
+          ],
+          "3": [
+            "7ccde884-113c-4949-b3c4-485ff3beb166",
+            57,
+            "837004c1fed8f23c"
+          ]
+        }
+      },
+      "migration": {
+        "cxl_import_bytes": 7516192768,
+        "cxl_imports_full_compare": 14,
+        "demotion_poison_bytes": 3221225472,
+        "demotion_poison_cases": 6,
+        "dram_no_dax_map_checks": 6,
+        "full_logical_snapshot_bytes": 10737418240,
+        "post_transition_guest_block_reads": 0,
+        "routes": {
+          "A/cxl -> A/dram": 6,
+          "A/cxl -> B/cxl": 4,
+          "A/dram -> A/cxl": 6,
+          "B/cxl -> A/cxl": 4
+        },
+        "source_fences": 20,
+        "transition_count": 20,
+        "transport_state_ram_hints_cmp_count": 60
+      },
+      "receipts": 1643,
+      "receipt_bytes": 371694212,
+      "current_file_cache_gpa_proven": false,
+      "proof_scope": "Guest mincore residency and host canonical PFNs of historical virtio-blk candidate GPAs were measured separately. This Sync run does not prove the two sets coincide at measurement time. The six three-VM offset intersections use sequential scans, not one common frozen interval.",
+      "minimum_shared_bytes": 167772160,
+      "current_cache_audits": 0,
+      "maximum_unmatched_cache_pages": null,
+      "reuse_cow_and_nfs_cold_refill": [
+        {
+          "cycle": 0,
+          "guest_cold_read_bytes": 167772160,
+          "guest_hot_read_ios": 0,
+          "host_private_pages_after_guest_reuse": 40960,
+          "nfs_read_after": 11357,
+          "nfs_read_before": 10075,
+          "nfs_read_rpc_delta": 1282,
+          "stale_content_rejections": 40960
+        },
+        {
+          "cycle": 1,
+          "guest_cold_read_bytes": 167772160,
+          "guest_hot_read_ios": 0,
+          "host_private_pages_after_guest_reuse": 40960,
+          "nfs_read_after": 25099,
+          "nfs_read_before": 23817,
+          "nfs_read_rpc_delta": 1282,
+          "stale_content_rejections": 57751
+        }
+      ],
+      "cleanup_errors": [],
+      "wrapper_exit_code": 0,
+      "lab_pair_stopped": true,
+      "offline_audit": "sync-audit.json",
+      "independent_audit": "sync-independent-audit.json",
+      "rejected_evidence_mutations": [
+        "false_success",
+        "missing_transition",
+        "wrong_epoch",
+        "lost_private_data",
+        "fake_cache_residency",
+        "false_shared_count",
+        "missing_pfn_scan",
+        "nfs_not_used",
+        "cleanup_failed",
+        "wrong_receipt_hash"
+      ]
+    },
+    "async": {
+      "result": "passed",
+      "report_sha256": "53e16f7a9a06be9966e8dc410f64f13b8b68526a03acf5ac4d3b9bf1d55219d5",
+      "arguments": {
+        "cycles": 1,
+        "io_engine": "Async",
+        "memory_mib": 512,
+        "minimum_cache_mib": 128,
+        "sandboxes": 3,
+        "vcpus": 2
+      },
+      "guest_workload": {
+        "command_count": 133,
+        "commands_by_vm": {
+          "1": 53,
+          "2": 34,
+          "3": 46
+        },
+        "final_all_three_on_home_dram": true,
+        "full_payload_bytes_verified": 10234101760,
+        "full_payload_check_count": 61,
+        "minimum_resident_bytes_after_full_payload_check": 167772160,
+        "operations": {
+          "cachemap": 17,
+          "cacheunmap": 17,
+          "check": 54,
+          "churn": 4,
+          "evict": 4,
+          "identity": 20,
+          "warm": 7,
+          "write": 10
+        },
+        "payload_bytes_per_vm": 167772160,
+        "stable_identities_by_vm": {
+          "1": [
+            "18b345ea-f846-4659-8fbb-338b480c8435",
+            64,
+            "a3426113327aead6"
+          ],
+          "2": [
+            "cce2bccb-7f3f-46ad-afa7-1a04db2913bb",
+            64,
+            "bdcc7470b644b593"
+          ],
+          "3": [
+            "256ef500-190e-4cf5-bafb-04e46864cc5f",
+            64,
+            "8392b4ab9bcbbd79"
+          ]
+        }
+      },
+      "migration": {
+        "cxl_import_bytes": 3758096384,
+        "cxl_imports_full_compare": 7,
+        "demotion_poison_bytes": 1610612736,
+        "demotion_poison_cases": 3,
+        "dram_no_dax_map_checks": 3,
+        "full_logical_snapshot_bytes": 5368709120,
+        "post_transition_guest_block_reads": 0,
+        "routes": {
+          "A/cxl -> A/dram": 3,
+          "A/cxl -> B/cxl": 2,
+          "A/dram -> A/cxl": 3,
+          "B/cxl -> A/cxl": 2
+        },
+        "source_fences": 10,
+        "transition_count": 10,
+        "transport_state_ram_hints_cmp_count": 30
+      },
+      "receipts": 1065,
+      "receipt_bytes": 202263080,
+      "current_file_cache_gpa_proven": true,
+      "proof_scope": "Actual current guest payload-cache pages were joined from pinned file offsets to GPA, raw VMM admission HVA, and canonical PFNs. All three VMs stayed paused throughout each common-offset group scan.",
+      "minimum_shared_bytes": 167772160,
+      "current_cache_audits": 17,
+      "maximum_unmatched_cache_pages": 0,
+      "reuse_cow_and_nfs_cold_refill": [
+        {
+          "cycle": 0,
+          "guest_cold_read_bytes": 167772160,
+          "guest_hot_read_ios": 0,
+          "host_private_pages_after_guest_reuse": 40960,
+          "nfs_read_after": 11373,
+          "nfs_read_before": 10077,
+          "nfs_read_rpc_delta": 1296,
+          "stale_content_rejections": 40960
+        }
+      ],
+      "cleanup_errors": [],
+      "wrapper_exit_code": 0,
+      "lab_pair_stopped": true,
+      "offline_audit": "async-audit.json",
+      "independent_audit": "async-independent-audit.json",
+      "rejected_evidence_mutations": [
+        "false_success",
+        "missing_transition",
+        "wrong_epoch",
+        "lost_private_data",
+        "fake_cache_residency",
+        "false_shared_count",
+        "missing_pfn_scan",
+        "nfs_not_used",
+        "cleanup_failed",
+        "wrong_receipt_hash"
+      ]
+    }
+  },
+  "binaries": {
+    "firecracker": {
+      "bytes": 6114552,
+      "sha256": "866f5b44b96535c0c525f6cee0a9ee09ff64900fbd83458c51c45b4de3505d08"
+    },
+    "l1-kernel": {
+      "bytes": 13341024,
+      "sha256": "1e72c8a58c484dea501f1c2e3fc5a0efe93b46fe1e873e99a25c16154bf19e86"
+    }
+  },
+  "environment": {
+    "cxl_mib": 4096,
+    "host_kernel": "5.15.0-191-generic",
+    "l1_memory_mib": 8192,
+    "l1_vcpus": 4,
+    "qemu_version": "QEMU emulator version 10.2.2 (v10.2.2-dirty)",
+    "shared_mib": 64
+  },
+  "firecracker_regression_tests": 13,
+  "control_unit_tests": 5,
+  "patch_equivalence_files": 24,
+  "limits": [
+    "Validation uses two nested QEMU/KVM nodes with shared emulated CXL; it is not a physical noncoherent CXL protocol validation.",
+    "CoW copies are private DRAM; CXL stages are hybrid.",
+    "Canonical image slots and each VM base DAX reservation are retained; no net memory-capacity saving is claimed.",
+    "Whole logical-RAM snapshots materialize aliases and private CoW bytes; existing state-only direct handoff is rejected while overlays exist.",
+    "Current cache-page identity is proven by a validation-only guest oracle; its GPA records never construct pooling plans.",
+    "Paused admission with prefilled immutable canonical image; no online block-read bypass or donor export.",
+    "Dedicated L1 experiment uses Firecracker --no-seccomp; production policy integration is not implemented."
+  ]
+}

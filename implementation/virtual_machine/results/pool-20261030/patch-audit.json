@@ -1,0 +1,6 @@
+{
+  "result": "passed",
+  "baseline": "95f868c8e345b1cc8faccd1a3c910b4989dc3f58",
+  "patch_sha256": "2f3d07c67085fa894e610c92e53d3459339359a932ee39b205c39a925e1c9966",
+  "applied_source_files_compared": 24
+}
