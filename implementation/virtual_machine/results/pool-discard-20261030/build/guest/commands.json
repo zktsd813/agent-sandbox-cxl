@@ -1,0 +1,139 @@
+{
+  "schema": "pool-discard-guest-commands-v1",
+  "record_origin": "Commands retained from the implementation session; original make/compiler logs are preserved separately.",
+  "source_preparation": {
+    "prepared_base": "/home/ijkim/agent-sandbox-cxl/implementation/linux",
+    "isolated_source": "/tmp/pool-discard-guest-linux-20261030",
+    "isolated_build": "/tmp/pool-discard-guest-build-20261030",
+    "scope": "Separate copies of prepared source and prior guest build; original fixtures were not edited."
+  },
+  "kernel_commands": [
+    [
+      "/tmp/pool-discard-guest-linux-20261030/scripts/config",
+      "--file",
+      "/tmp/pool-discard-guest-build-20261030/.config",
+      "--enable",
+      "VIRTIO_BALLOON",
+      "--enable",
+      "PAGE_REPORTING"
+    ],
+    [
+      "make",
+      "-C",
+      "/tmp/pool-discard-guest-linux-20261030",
+      "O=/tmp/pool-discard-guest-build-20261030",
+      "LOCALVERSION=",
+      "olddefconfig"
+    ],
+    [
+      "make",
+      "-C",
+      "/tmp/pool-discard-guest-linux-20261030",
+      "O=/tmp/pool-discard-guest-build-20261030",
+      "LOCALVERSION=",
+      "-j24",
+      "vmlinux"
+    ]
+  ],
+  "probe_compile_commands": [
+    [
+      "gcc",
+      "-std=c11",
+      "-O2",
+      "-static",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "pool_discard_probe.c",
+      "-o",
+      "/tmp/pool-discard-probe"
+    ],
+    [
+      "gcc",
+      "-std=c11",
+      "-O2",
+      "-static",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "pool_discard_probe.c",
+      "-o",
+      "/tmp/pool-discard-probe-v3"
+    ]
+  ],
+  "probe_compile_versions": [
+    "pilot source ac666b399e6241e121854e4f98c822845fa67aa258950130df24599159968e0c",
+    "formal source 061084e76364e056d945327c62e5ed487770b22602922f9e4394b92c97f0de7f"
+  ],
+  "fixture_command": [
+    "python3",
+    "pool_discard_prepare.py",
+    "--base-assets",
+    ".local/assets-pool-compare-v1-20261030",
+    "--assets",
+    ".local/assets-pool-discard-v3-20261030",
+    "--firecracker",
+    "/tmp/firecracker-pool-discard-20261030/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker",
+    "--guest-kernel",
+    "/tmp/pool-discard-guest-build-20261030/vmlinux",
+    "--guest-source",
+    "/tmp/pool-discard-guest-linux-20261030",
+    "--guest-config",
+    "/tmp/pool-discard-guest-build-20261030/.config",
+    "--probe",
+    "/tmp/pool-discard-probe-v3",
+    "--extra-tool",
+    "/tmp/pool-cow-latency"
+  ],
+  "formal_command": [
+    "python3",
+    "-u",
+    "pool_discard_run.py",
+    "--assets",
+    ".local/assets-pool-discard-v3-20261030",
+    "--qemu",
+    "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/qemu-cxl/build/qemu-system-x86_64",
+    "--qemu-root",
+    "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/qemu/root",
+    "--session",
+    "discard-formal-20261030",
+    "--rounds",
+    "3",
+    "--anon-mib",
+    "400",
+    "--modes",
+    "reporting",
+    "baseline",
+    "--lifecycle",
+    "--output",
+    ".local/pool-discard-formal-20261030"
+  ],
+  "pilot_smoke": {
+    "scope": "host correctness only",
+    "payload_generate_argv": [
+      "/tmp/pool-discard-probe",
+      "generate",
+      "/tmp/pool-discard-probe-checks/payload.bin",
+      "160"
+    ],
+    "outer_launcher_not_recorded": true,
+    "retained_success_input": "warm w\nevict e\nanon_alloc a 224\nanon_fill f\nanon_verify v\nanon_free u\nwrite p 2\ncheck c\nquit q\n",
+    "negative_case_details": "Original summary retains six rejected cases and stderr; separate negative stream files were not retained."
+  },
+  "formal_probe_smoke": {
+    "scope": "host correctness only",
+    "argv_template": [
+      "/tmp/pool-discard-probe-v3",
+      "serve",
+      "/tmp/pool-discard-probe-checks/payload.bin",
+      "1",
+      "/tmp/pool-discard-probe-v3-checks/CASE.upper"
+    ],
+    "cases": {
+      "valid": "anon_alloc a 1\nanon_fill f\nanon_verify v\nanon_free x\nquit q\n",
+      "oversize": "anon_alloc a 449\n",
+      "verify_before_fill": "anon_alloc a 1\nanon_verify v\n",
+      "double_allocate": "anon_alloc a 1\nanon_alloc b 1\n"
+    }
+  }
+}

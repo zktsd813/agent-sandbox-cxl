@@ -1,0 +1,232 @@
+[
+  {
+    "file": "README.md",
+    "bytes": 6262,
+    "sha256": "d17033f7aca5e9773614ce6ea45577818b8e371f1816454fa1ef5ae17d55d1dd"
+  },
+  {
+    "file": "base-guest.config",
+    "bytes": 142129,
+    "sha256": "793c44048f74d4c2e29cca2a33021f2ff3a50876f7436e590ab2b9019fba31b6"
+  },
+  {
+    "file": "base-preparation/cxl-static-capacity.patch",
+    "bytes": 1038,
+    "sha256": "86e1aaef0b7892ffccc0e37cea1bcd1e9d6e2565f3c5ed6a973b07e7b95c29f6"
+  },
+  {
+    "file": "base-preparation/kvm-dax-state.patch",
+    "bytes": 91965,
+    "sha256": "61809e10100a0b7368bb008dc9e1a6967188f8d5ecb0ef490c5066aa4762a958"
+  },
+  {
+    "file": "commands.json",
+    "bytes": 4096,
+    "sha256": "7b04c766975c37a10aa7be4a02f676d5399066190724c79d04bd739be911003a"
+  },
+  {
+    "file": "compile.h",
+    "bytes": 208,
+    "sha256": "476e0beb6cbe9d9ed8659421329a08141a18c181563f81d94d35b7fc83605e0a"
+  },
+  {
+    "file": "compiled-source/drivers/virtio/virtio_balloon.c",
+    "bytes": 33921,
+    "sha256": "6eb65444683a89a1c5f7959bc11edbce4ce055512b5dfb23c26d026fd7289c1a"
+  },
+  {
+    "file": "compiled-source/include/trace/events/pool_discard.h",
+    "bytes": 1156,
+    "sha256": "aa232a41855aa47417c5dae4faae096cfce65f54ef7a989b9563e8f3b55d3e18"
+  },
+  {
+    "file": "compiled-source/mm/page_reporting.c",
+    "bytes": 11928,
+    "sha256": "64b76f913a3247ec09bdadd946f5768e261858dd3f299a205a3d615cf2762649"
+  },
+  {
+    "file": "compiler-commands/page_reporting.o.cmd",
+    "bytes": 75581,
+    "sha256": "43f7fac05318a978a1f86bc50346e4f6445873e44cc38c7a702860596b4a38fb"
+  },
+  {
+    "file": "compiler-commands/virtio_balloon.o.cmd",
+    "bytes": 84339,
+    "sha256": "c0c76a8c8522838ccaac1cef4da383775ac77dc44ab5c74454575648ae71a7db"
+  },
+  {
+    "file": "fixture-manifest.json",
+    "bytes": 9826,
+    "sha256": "1569de552e7dabb039d0eb953690c53f485b55da76855f7c8b179d6626e9c4ae"
+  },
+  {
+    "file": "guest.config",
+    "bytes": 142159,
+    "sha256": "08d8c9ecf79f63a2b30470466de70c5285f4b73fb8cf3f5bbe62a2c5f2bbf127"
+  },
+  {
+    "file": "kernel-build.log",
+    "bytes": 119464,
+    "sha256": "eb25638f845665446dea4ed89017f083792c3db71c76435ad2c3f503ef621be9"
+  },
+  {
+    "file": "kernel-config.log",
+    "bytes": 788,
+    "sha256": "8633abfc86cb41aef23266fa17e036fd4ffb06b1acce0a184ff841a7b2bfc252"
+  },
+  {
+    "file": "kernel-source.json",
+    "bytes": 730,
+    "sha256": "fc8f0898843496dbd724969fc06bcd4766075cac5218fd19763b9156901000de"
+  },
+  {
+    "file": "kernel.release",
+    "bytes": 17,
+    "sha256": "900398ab5d81ce434c23fd33277c5a2a683adc1eeaab7cf30a688b11b0f26fb1"
+  },
+  {
+    "file": "original-build-record.json",
+    "bytes": 1714,
+    "sha256": "d14a9b6c7c8477ca47435ec7c70d4b7d46b9829798226d8e6535c7eb401fca5a"
+  },
+  {
+    "file": "pool-discard-guest-trace.patch",
+    "bytes": 3241,
+    "sha256": "211468b6a9ea3a18eeb51d84299ee8db9de6721f58905177b62ba3b8178c6296"
+  },
+  {
+    "file": "pool-discard-l2-init.sh",
+    "bytes": 1052,
+    "sha256": "bf088ce6e9ab43aaa387024c668e9edb57a641898af04024fa85a797aabbe263"
+  },
+  {
+    "file": "probe/formal/pool_discard_probe.c",
+    "bytes": 22441,
+    "sha256": "061084e76364e056d945327c62e5ed487770b22602922f9e4394b92c97f0de7f"
+  },
+  {
+    "file": "probe/formal/rebuild.json",
+    "bytes": 556,
+    "sha256": "ee3aa94f6551abf52a34b572bf94b29aa1587365f1d2b3a34c3ff0d0e546805e"
+  },
+  {
+    "file": "probe/formal/rebuild.stderr",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "probe/formal/rebuild.stdout",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "probe/formal/smoke/double_allocate.stderr",
+    "bytes": 68,
+    "sha256": "d70ebeeba3b7bdef8e1890fda95f97b100e41acc620e6210a937b917b5293728"
+  },
+  {
+    "file": "probe/formal/smoke/double_allocate.stdout",
+    "bytes": 1030,
+    "sha256": "42ee98289f56a429e80a1451cfdd6972ed425bd81a69026bd496f32eabecc30b"
+  },
+  {
+    "file": "probe/formal/smoke/oversize.stderr",
+    "bytes": 68,
+    "sha256": "d70ebeeba3b7bdef8e1890fda95f97b100e41acc620e6210a937b917b5293728"
+  },
+  {
+    "file": "probe/formal/smoke/oversize.stdout",
+    "bytes": 105,
+    "sha256": "cc309dd973bf790c22b0f26cdea4805a9faee7b3af56d51229935f01a7ae5859"
+  },
+  {
+    "file": "probe/formal/smoke/summary.json",
+    "bytes": 571,
+    "sha256": "f9defd174108969f8fff56a1691a67f21407b00bc19d6e2009058d47cf74ab78"
+  },
+  {
+    "file": "probe/formal/smoke/valid.stderr",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "probe/formal/smoke/valid.stdout",
+    "bytes": 4739,
+    "sha256": "16e6179acc28eb154fc03c229e11aeac52e7c7036f31f0d4e905ef4304d5ad15"
+  },
+  {
+    "file": "probe/formal/smoke/verify_before_fill.stderr",
+    "bytes": 64,
+    "sha256": "46db88b0a7375a247cea08aa3e3fcb5f80a1dbea26e7ecdff2a446e6a2942c12"
+  },
+  {
+    "file": "probe/formal/smoke/verify_before_fill.stdout",
+    "bytes": 1029,
+    "sha256": "703f2730efb6f3566043d8e7b1c00cd13f42c96ec3f431dd39c2e739989de6ad"
+  },
+  {
+    "file": "probe/pilot/pool_discard_probe.c",
+    "bytes": 22246,
+    "sha256": "ac666b399e6241e121854e4f98c822845fa67aa258950130df24599159968e0c"
+  },
+  {
+    "file": "probe/pilot/smoke/generate.json",
+    "bytes": 46,
+    "sha256": "6b2d28d34ae12c40bbeaa524117ee178a6f392db88d3345a0e962254bf8bbb49"
+  },
+  {
+    "file": "probe/pilot/smoke/serve.jsonl",
+    "bytes": 7760,
+    "sha256": "489a4cec5fd46e487e8553c6a70f20cfbb04e06f5d47f969856f7dcab98ff61d"
+  },
+  {
+    "file": "probe/pilot/smoke/summary.json",
+    "bytes": 1327,
+    "sha256": "6598c3ad12dc5f132d4c360f9fd0b1d76d077e70f3edb821ce9779a849002c27"
+  },
+  {
+    "file": "provenance.json",
+    "bytes": 5517,
+    "sha256": "5a55f166101094bf1fc0e53d64e99ba9bce1a666d26e99e383e4429266c56d8b"
+  },
+  {
+    "file": "runtime/baseline-A-fixture-hashes.txt",
+    "bytes": 712,
+    "sha256": "c3314689e8897230b871dae44569b768674f84805609bd097bf31ff9d820ef0a"
+  },
+  {
+    "file": "runtime/baseline-B-fixture-hashes.txt",
+    "bytes": 706,
+    "sha256": "54a522cfd448338737397184a1e6a100000e6ff50d7922f20cb6419698bf4af1"
+  },
+  {
+    "file": "runtime/reporting-A-fixture-hashes.txt",
+    "bytes": 704,
+    "sha256": "c39cde6bd92ad4f89796c04c549c8627c7ee45bfe833d5f9194eaefaa72c51ce"
+  },
+  {
+    "file": "runtime/reporting-B-fixture-hashes.txt",
+    "bytes": 704,
+    "sha256": "72bfc269a1911345e4cabb02fa557b69c61c21158afcd7066912a0e4d531a7c8"
+  },
+  {
+    "file": "trace-patch-replay.stderr",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "trace-patch-replay.stdout",
+    "bytes": 96,
+    "sha256": "e2ee8f3f22cfbac58c34e9cc3878fa69bd0d83d1210254d58d546082fe55048f"
+  },
+  {
+    "file": "vendor-base/drivers/virtio/virtio_balloon.c",
+    "bytes": 33239,
+    "sha256": "f188b41e684ed870a76c3a98f2f19906f87b928582fa46564c500493115c2b53"
+  },
+  {
+    "file": "vendor-base/mm/page_reporting.c",
+    "bytes": 11928,
+    "sha256": "64b76f913a3247ec09bdadd946f5768e261858dd3f299a205a3d615cf2762649"
+  }
+]

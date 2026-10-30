@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "classification": "failed_pilot_not_formal_performance",
+  "checked_utc": "2026-10-30T07:14:13.041082+00:00",
+  "suite_source": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/pool-discard-pilot2-20261030",
+  "arm_source": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/pool-discard-pilot2-20261030/reporting",
+  "original_run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T070443Z-92gnk1xf",
+  "suite_sha256": "68b3ac3f57f1cac293a014107eb2fa5bbaa5a085739f7cf3ecd5bbdccb6b0f09",
+  "arm_report_sha256": "aaa5ce9d71efcf9850bc14f27e86065a16cced801b8849c4bc31d2ab7971a567",
+  "processes": [
+    {
+      "role": "A",
+      "pid": 2906143,
+      "recorded_starttime": "320883108",
+      "observed_starttime": null,
+      "matching_process_alive": false,
+      "console_exists": false,
+      "qmp_exists": false
+    },
+    {
+      "role": "B",
+      "pid": 2906144,
+      "recorded_starttime": "320883108",
+      "observed_starttime": null,
+      "matching_process_alive": false,
+      "console_exists": false,
+      "qmp_exists": false
+    }
+  ],
+  "network_cleanup_recorded": true,
+  "ephemeral_memory_directory_absent": true,
+  "receipt_hashes_verified": 270,
+  "suite_source_hashes_verified": 9,
+  "arm_source_hashes_verified": 21,
+  "excluded_files": [
+    "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/pool-discard-pilot2-20261030/reporting-storage.raw",
+    "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T070443Z-92gnk1xf/home-storage.raw"
+  ],
+  "saved_samples": 0,
+  "suite_error": "CalledProcessError(1, ['taskset', '-c', '0-7', 'python3', '-u', '/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/pool_discard_bench.py', '--mode', 'reporting', '--rounds', '1'])",
+  "arm_error": "RuntimeError('Anonymous workload did not safely reuse >=128MiB of originally shared GPAs')",
+  "firecracker_sha256": "a4d6f75f0cad5885009097221e464952a1706e3d1792826c14a0dfa84c8a6023",
+  "production_patch_sha256": "9628533ab209586480b61180a29149ab96f6bca9666725be210c56890c8e06c3"
+}

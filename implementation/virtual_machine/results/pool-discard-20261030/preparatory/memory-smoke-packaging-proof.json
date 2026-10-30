@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "classification": "preparatory_memory_sizing_not_formal_comparison",
+  "checked_utc": "2026-10-30T07:16:50.905306+00:00",
+  "source": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T071228Z-na86vzub/discard-memory-smoke-1793344358708131319",
+  "report_sha256": "13bd5313c4cad253a61809036ad4374801bbe0014f7afb55bacde55bccb31b9b",
+  "processes": [
+    {
+      "role": "A",
+      "pid": 2907537,
+      "recorded_starttime": "320929721",
+      "observed_starttime": null,
+      "matching_process_alive": false,
+      "console_exists": false,
+      "qmp_exists": false
+    },
+    {
+      "role": "B",
+      "pid": 2907538,
+      "recorded_starttime": "320929721",
+      "observed_starttime": null,
+      "matching_process_alive": false,
+      "console_exists": false,
+      "qmp_exists": false
+    }
+  ],
+  "network_cleanup_recorded": true,
+  "ephemeral_memory_directory_absent": true,
+  "receipt_hashes_verified": 121,
+  "measured_smoke_source_sha256": "4ca877146111c7c213825ccb29353f8ee03eb149eef0d7d48b0f9ace51ec1ae6",
+  "wrapper_source_sha256": "3322145a295b78f69055965f503284ddd63eec673001b0f4dd53af14a01011fb",
+  "source_provenance_limit": "Exact executed smoke script was saved by itself. Unlike formal/pilot suites, this short smoke did not archive or hash all imported controller modules at run time. The separately copied wrapper was supplied after completion. It supports sizing only.",
+  "excluded_files": [
+    "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T071228Z-na86vzub/home-storage.raw",
+    "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/pool-discard-memory-smoke2-20261030/storage.raw"
+  ],
+  "anon_mib": 400,
+  "reused_pages": 38611,
+  "changed_pages": 38611,
+  "reused_mib": 150.82421875,
+  "firecracker_sha256": "a4d6f75f0cad5885009097221e464952a1706e3d1792826c14a0dfa84c8a6023"
+}

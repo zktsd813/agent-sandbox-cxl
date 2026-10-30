@@ -1,0 +1,27 @@
+{
+  "result": "passed",
+  "scope": "host correctness only; not VM performance",
+  "binary_sha256": "7c91d4bbcf139fb22e195cac60e44034fa7ab00304086c1086bbdfa365bb92ad",
+  "cases": [
+    {
+      "name": "valid",
+      "returncode": 0,
+      "expected_outcome": true
+    },
+    {
+      "name": "oversize",
+      "returncode": 1,
+      "expected_outcome": true
+    },
+    {
+      "name": "verify_before_fill",
+      "returncode": 1,
+      "expected_outcome": true
+    },
+    {
+      "name": "double_allocate",
+      "returncode": 1,
+      "expected_outcome": true
+    }
+  ]
+}

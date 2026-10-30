@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "classification": "positive_instrumented_mechanism_diagnostic_not_formal_performance",
+  "checked_utc": "2026-10-30T07:34:18.912036+00:00",
+  "source": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T072930Z-1ixhok1b/discard-cow-diagnostic-1793345379765452791",
+  "report_sha256": "9df40d299fc794d33f6b48a6e9f798b130fa87c16348c071189ec17070ab2cfc",
+  "processes": [
+    {
+      "role": "A",
+      "pid": 2910420,
+      "recorded_starttime": "321031826",
+      "observed_starttime": null,
+      "matching_process_alive": false,
+      "console_exists": false,
+      "qmp_exists": false
+    },
+    {
+      "role": "B",
+      "pid": 2910421,
+      "recorded_starttime": "321031826",
+      "observed_starttime": null,
+      "matching_process_alive": false,
+      "console_exists": false,
+      "qmp_exists": false
+    }
+  ],
+  "network_cleanup_recorded": true,
+  "ephemeral_memory_directory_absent": true,
+  "receipt_hashes_verified": 118,
+  "measured_source_sha256": {
+    "diagnostic.py": "f25e1394dfd3b4cfc0983fedaf51fcfe6a75ea2352dc5b01761eb6f1352395f3",
+    "pool_cow_trace.py": "f9297bae2266ef0dc3b17b3229fb226c468d4a9fe6a1544b90276bb0510711d2",
+    "pool_discard_bench.py": "6f599400198348f19e93cb1d1ddd0e9d25e55a9d0dfa0c0f283b41890d654493",
+    "pool_discard_probe.c": "061084e76364e056d945327c62e5ed487770b22602922f9e4394b92c97f0de7f"
+  },
+  "source_provenance_limit": "The executed diagnostic script and three listed helpers were copied at run time. Other imported controller modules were not exhaustively copied/hashed in this short diagnostic. Frozen Firecracker binary, patch and verified build provenance are included exactly.",
+  "runtime_binary_sha256": "a4d6f75f0cad5885009097221e464952a1706e3d1792826c14a0dfa84c8a6023",
+  "runtime_patch_sha256": "9628533ab209586480b61180a29149ab96f6bca9666725be210c56890c8e06c3",
+  "runtime_build_provenance_sha256": "ef5381e929ae23e6604fdb55942aa3eca2ddb22793fe74ae4aae510415fde834",
+  "excluded_files": [
+    "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T072930Z-1ixhok1b/home-storage.raw"
+  ],
+  "anon_recycle_mib": 224,
+  "old_cache_pages_changed": 40960,
+  "large_work_cpu_affinity": "8-11"
+}

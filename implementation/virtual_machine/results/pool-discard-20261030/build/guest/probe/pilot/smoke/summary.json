@@ -1,0 +1,42 @@
+{
+  "result": "passed",
+  "scope": "host-only helper smoke, not microVM performance evidence",
+  "commands": 9,
+  "payload_mib": 160,
+  "anonymous_mib": 224,
+  "full_word_verification": true,
+  "source_sha256": "ac666b399e6241e121854e4f98c822845fa67aa258950130df24599159968e0c",
+  "binary_sha256": "77a5f969167da67f7a7bdf721edae2c5099bd4eb9e7fcd80b9727c05146f9f09",
+  "negative_state_tests": [
+    {
+      "case": "fill_without_allocation",
+      "rejected": true,
+      "stderr": "POOL_GUEST_FATAL anonymous first fill state: Invalid argument"
+    },
+    {
+      "case": "double_allocate",
+      "rejected": true,
+      "stderr": "POOL_GUEST_FATAL anonymous allocation state/range: Invalid argument"
+    },
+    {
+      "case": "verify_before_fill",
+      "rejected": true,
+      "stderr": "POOL_GUEST_FATAL anonymous verification state: Invalid argument"
+    },
+    {
+      "case": "free_before_fill",
+      "rejected": true,
+      "stderr": "POOL_GUEST_FATAL anonymous free state: Invalid argument"
+    },
+    {
+      "case": "oversize_allocation",
+      "rejected": true,
+      "stderr": "POOL_GUEST_FATAL anonymous allocation state/range: Invalid argument"
+    },
+    {
+      "case": "repeated_first_fill",
+      "rejected": true,
+      "stderr": "POOL_GUEST_FATAL anonymous first fill state: Invalid argument"
+    }
+  ]
+}

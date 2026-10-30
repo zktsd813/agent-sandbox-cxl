@@ -1,0 +1,18 @@
+{
+  "file": "formal-suite-evidence.tar.xz",
+  "format": "tar.xz",
+  "compression": "xz -3 -T2",
+  "bytes": 75808,
+  "sha256": "40ed02be5dcf8bf624f6bf50772f697c5c9f8a2db1dddebbc524a5f0123caddb",
+  "source_directory": "/tmp/pool-discard-formal-staging-20261030/formal-suite",
+  "report_member": "formal-suite/report.json",
+  "report_sha256": "f965e0334fad7c7d2741b06703c40ef79d90cf2f301decb7e2c6ada5c30d078b",
+  "member_count": 14,
+  "regular_file_count": 12,
+  "directory_count": 2,
+  "uncompressed_file_bytes": 308135,
+  "member_names_sizes_sha256_manifest_digest": "3fab01d386f4e63ae2a03c2c06fe8504eee9bad72ff40ba48848f384f066c9e7",
+  "verified": "Exact member set, type, length, and SHA256 of every regular file compared with the source directory.",
+  "old_gzip_verified_identical": false,
+  "seconds": 0.05238885758444667
+}

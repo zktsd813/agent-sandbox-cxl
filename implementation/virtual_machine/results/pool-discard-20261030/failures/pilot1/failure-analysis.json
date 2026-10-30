@@ -1,0 +1,14 @@
+{
+  "classification": "failed_pilot_not_formal_performance",
+  "cause": "CRLF serial receipt did not match the anchored vCPU-thread regex used by that measured source.",
+  "saved_samples": 3,
+  "profile_error": "ValueError('no profiled vCPU identity')",
+  "raw_receipt": "baseline/0538-cow-profile-setup.txt",
+  "source": "measured-sources/pool_cow_trace.py",
+  "original_regex_matches": [],
+  "CRLF_aware_exact_line_matches": [
+    268,
+    269
+  ],
+  "interpretation": "Three completed baseline samples remain raw failed-attempt evidence; no values enter the formal performance comparison."
+}

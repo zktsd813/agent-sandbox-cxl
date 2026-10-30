@@ -1,0 +1,18 @@
+{
+  "file": "pilot3-evidence.tar.xz",
+  "format": "tar.xz",
+  "compression": "xz -3 -T2",
+  "bytes": 28033744,
+  "sha256": "6783d4139a98ca4c3ca61c78c5757c9b341b3d5db73d92338eece91c2a1c1b2b",
+  "source_directory": "/tmp/pool-discard-failure-staging-20261030/pilot3",
+  "report_member": "pilot3/report.json",
+  "report_sha256": "058dfec09590d284b72c5c30275aff337762ebb3c3353838a4cd320a70d2e0e7",
+  "member_count": 1388,
+  "regular_file_count": 1380,
+  "directory_count": 8,
+  "uncompressed_file_bytes": 390976261,
+  "member_names_sizes_sha256_manifest_digest": "659e9fdd86cb7835fe037c834e669005130a937db387903e5f22250f03f327c7",
+  "verified": "Exact member set, type, length, and SHA256 of every regular file compared with the source directory.",
+  "old_gzip_verified_identical": false,
+  "seconds": 26.074686345644295
+}

@@ -1,0 +1,220 @@
+{
+  "schema": "pool-discard-suite-v1",
+  "result": "failed",
+  "rounds": 1,
+  "arms": [
+    {
+      "mode": "baseline",
+      "report_file": "baseline/report.json",
+      "sha256": "95b571d5b8a854d2f532032c035f8da2167f662c395685ebb1aee49551eaf7b7",
+      "original_report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T065951Z-__lii0fw/discard-baseline-1793343601644330178/report.json"
+    }
+  ],
+  "fixture_manifest": {
+    "vendor": "intel",
+    "l1_kernel_release": "6.6.0-rc6-dcd-v3",
+    "modules": [
+      "irqbypass.ko",
+      "kvm.ko",
+      "kvm-intel.ko"
+    ],
+    "qemu": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/qemu/root/usr/bin/qemu-system-x86_64",
+    "qemu_version": "QEMU emulator version 6.2.0 (Debian 1:6.2+dfsg-2ubuntu6.31)",
+    "inputs": {
+      "l1_kernel": {
+        "path": "/tmp/pool-kernel-build-20261030/arch/x86/boot/bzImage",
+        "sha256": "1e72c8a58c484dea501f1c2e3fc5a0efe93b46fe1e873e99a25c16154bf19e86"
+      },
+      "firecracker": {
+        "path": "/tmp/firecracker-pool-discard-20261030/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker",
+        "sha256": "75a9b6e52dd152b17962fb52cbf04d983ba7c035629517a91d2b43eb9ea45127"
+      },
+      "l2_kernel": {
+        "path": "/tmp/pool-discard-guest-build-20261030/vmlinux",
+        "sha256": "ea81dc49b729e8d5111765c11ace1a11bd53db59f75fd65d933f0d983a368d05"
+      },
+      "busybox": {
+        "path": "/usr/bin/busybox",
+        "sha256": "b3c1009e1b5c927e537487c80639cdf404f69e3eb49371d9be5d841672be3ff9"
+      },
+      "probe_source": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/shared_probe.c",
+        "sha256": "966cdf908413578b7a5a2d9e8833bfb16f8460b5e8a4405d12a850c157c330d1"
+      },
+      "l1_init": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/guest-init.sh",
+        "sha256": "c6bca182cbc1665d632f29e93663c2a0fc620dbfdcb027ab3acac7195fb1894e"
+      },
+      "l2_init": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/l2-init.sh",
+        "sha256": "3c6a703dfb8b9768f29a3f8032fd437ea321f1da4eb256b2d504ac03e1223746"
+      },
+      "cxl_init": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/guest-cxl.sh",
+        "sha256": "a80b7d0b1c8edb4adc613dec7a140d0723a3388eca96cdda1eccd713ff0c7136"
+      },
+      "cache_probe_source": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/cache_probe.h",
+        "sha256": "4bb8615c1251d297be0b5ccd1569cb442a59c13713b964afba92c4f3567978a0"
+      },
+      "mptcp_probe_source": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/mptcp_probe.h",
+        "sha256": "cb8a241eca1a4ff6cbd109965508c38ca82e1b589105142a779cd9694fbaf091"
+      },
+      "dependency_manifest": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/nfs-deps-trace/manifest.json",
+        "sha256": "8e33640bc8e350fd5ee58e64beeb7c7ede2c8bc2148afb7cd6ed4d679797afcf"
+      },
+      "kernel_config": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/nfs-deps-trace/kernel-build/.config",
+        "sha256": "793c44048f74d4c2e29cca2a33021f2ff3a50876f7436e590ab2b9019fba31b6"
+      },
+      "shared_probe": {
+        "path": "/tmp/state-mailbox-probe",
+        "sha256": "9db3d04725cdc1a783316b9003865a089cdeb418a76a21a578c71e7d3500a740"
+      },
+      "ram_transfer": {
+        "path": "/tmp/ram-transfer-20261028",
+        "sha256": "872e34e353a643ad2c56e946ffc8ddcff642ad84c6afb86c79247e37b92c47bb"
+      },
+      "pool_kernel_modules": {
+        "kvm.ko": "1be61aad42d131a60a7a4ac68a4cf59034b1b23ba5aaab447b1ac852bde6eba9",
+        "kvm-intel.ko": "008e8430ce16c5bf4829845b2bfe4076f1f6c6dc06145753532e6304607fd9e9"
+      },
+      "pool_tools": {
+        "pool-bloom-tool": {
+          "path": "/tmp/pool-bloom-tool",
+          "sha256": "53316c591e1dcd4681346a7abf448143bb8afa658dd83beb12a3cfba57d705bd"
+        },
+        "pool-pfn-audit": {
+          "path": "/tmp/pool-pfn-audit",
+          "sha256": "63ab55bf3f8d6e8a5c0049a8c2bdedd0c615879af8cd04dc05cdedc040c3a623"
+        },
+        "pool-cow-probe": {
+          "path": "/tmp/pool-cow-probe",
+          "sha256": "a687d21f17945f23ce21bc8b5f998dee6a224afa34415897d1b622ce480485ea"
+        }
+      }
+    },
+    "schema": "cxl-pool-discard-fixture-v1",
+    "base_assets": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-pool-compare-v1-20261030",
+    "base_manifest_sha256": "16e3575427b361a697c597edf5b65adf3caf932209ab7377a0c0a894979eccad",
+    "pool": {
+      "image": {
+        "bytes": 234881024,
+        "sha256": "118011d434f822f66754b73666c5de06818ebbf616d2e4be582476fa3f0eb224",
+        "files": {
+          "payload.bin": {
+            "bytes": 167772160,
+            "sha256": "e2c94d9f1381ca9e3760bec61f8b750cc699f6fdead31dbd0e42c1c8aa6db53d"
+          }
+        },
+        "generator": {
+          "bytes": 167772160,
+          "hash": "c0055a60f6b2c955"
+        },
+        "payload_extents": [
+          [
+            31617024,
+            102600704
+          ],
+          [
+            134336512,
+            65171456
+          ]
+        ]
+      },
+      "guest_filesystem": "ext4 read-only; private tmpfs and MAP_PRIVATE writes",
+      "guest_cache_gpa_audit": true,
+      "payload_mib": 160,
+      "cache_evidence": "fresh MAP_SHARED mincore + full-word oracle"
+    },
+    "build": {
+      "compiler": "/usr/bin/gcc",
+      "flags": [
+        "-std=c11",
+        "-O2",
+        "-static",
+        "-Wall",
+        "-Wextra",
+        "-Werror"
+      ],
+      "source": "pool_guest_probe.c"
+    },
+    "source_hashes": {
+      "pool_prepare.py": "9a19bc6ae98d6f00323b074b3196176abd6a283e1a7794cefeeecb2a2fe145a5",
+      "pool_guest_probe.c": "d675b25001cc5c71c5951098e09bb1e9746be0072ffa3c8e493a8076327e0f41",
+      "pool_dax_copy.c": "9f71538b6d764bf899aee3a1b9e1daa67915a5723dcc2027170eae401006294d",
+      "pool-l2-init.sh": "0f71d5a0978b260c7fcaab5f298b538f1eaab5f4f4d86d2328088c10774e6105",
+      "lab.py": "5445f1ac094ee998c96550ca1dfd1d656007bdc9afb60446480b8d6fad29ac4e",
+      "pool_compare_prepare.py": "98781dbb78a44b3349dca1b44de56fae239f1688d06ac5d99b916d471f505630",
+      "pool_compare_probe.c": "5aa064db483c2fe861c4139c100ee3ad19c37f545b7691f2a5d47666d2fa6240",
+      "pool_compare_pfn.c": "1e107accb8c6a141e9ceb3c4a0330db35bd6de0679ce91cbe6250e0ba1c54cc4",
+      "pool_discard_prepare.py": "134bf539453e729997b0fa77e66bcd8f851287637e3552ef355a8c8d18d091a6",
+      "pool_discard_probe.c": "ac666b399e6241e121854e4f98c822845fa67aa258950130df24599159968e0c",
+      "pool-discard-l2-init.sh": "bf088ce6e9ab43aaa387024c668e9edb57a641898af04024fa85a797aabbe263",
+      "pool-discard-guest-trace.patch": "211468b6a9ea3a18eeb51d84299ee8db9de6721f58905177b62ba3b8178c6296"
+    },
+    "artifacts": {
+      "pool-discard-l2-initramfs.cpio": "caa6128533b3679018a9fa96552407c62c10b9fa81336ea6d37c12ea70e2a929",
+      "l1-initramfs.cpio": "f04348594bf6f40532ec9f1faefb15092d2e104af47a3382ff5a992989be10d0",
+      "l1-kernel": "1e72c8a58c484dea501f1c2e3fc5a0efe93b46fe1e873e99a25c16154bf19e86",
+      "pool-cow-latency": "d10354e472e11ce4da2f176b04610b7f3c98ebe09017b9dab5f27e2f20ddd06d",
+      "l2-discard.config": "08d8c9ecf79f63a2b30470466de70c5285f4b73fb8cf3f5bbe62a2c5f2bbf127",
+      "ram-transfer": "872e34e353a643ad2c56e946ffc8ddcff642ad84c6afb86c79247e37b92c47bb",
+      "pool-compare-pfn": "e4bee15efc90a58127c8e3a75ed446929c7938c2e91672e14772e21180e95dbd",
+      "firecracker-stock": "c8e80e62d6e370a1587ddc1ce5b24b9080a934a3bc395fc3a2a7bc294b2c5e7c",
+      "l2-vmlinux": "ea81dc49b729e8d5111765c11ace1a11bd53db59f75fd65d933f0d983a368d05",
+      "storage.raw": "89fd02ee7aa6e1af493bd2739f0c38d3e139b3943435208f8dcaf0ea67030db3",
+      "pool-l2-initramfs.cpio": "210266478b49286e3a934752c76516ccfa2cebd82838b13a13bbd198212922c0",
+      "pool-compare-l2-initramfs.cpio": "1a52579f2a69af6b94a92316a242dd405d25672c76442792455fdf3b5da53ae7",
+      "firecracker": "75a9b6e52dd152b17962fb52cbf04d983ba7c035629517a91d2b43eb9ea45127",
+      "l1-kernel.config": "7da6303ddad9a24782aff314d50ee4c5f63268b1d84d96d227a833eabf42eaab",
+      "pool-compare-probe": "834de69eb99f69cd0f241d607e08403330cd876735faf539a9be539ee0f7e598",
+      "shared-probe": "9db3d04725cdc1a783316b9003865a089cdeb418a76a21a578c71e7d3500a740",
+      "nfs-probe": "17731caa2f8f47888af5e4d470948262743565cd264c862a91911bf4481c51d2",
+      "pool-dax-copy": "e25ba35c6ae978fe3fd31aa5ab54742b6f07b3d74cbefb6270bb3172849429f0",
+      "pool-guest-probe": "82c4b82a4deb5fde2ac7532783ce52d17b9f382a46a12bfa63e7b13f80446e88",
+      "l2-initramfs.cpio": "a90a1925332c7dcdbf159b318b1cf5b76b00b3896c3c04d2a3fca74cf748d619",
+      "pool-discard-probe": "77a5f969167da67f7a7bdf721edae2c5099bd4eb9e7fcd80b9727c05146f9f09"
+    },
+    "comparison": {
+      "same_inner_image_sha256": "118011d434f822f66754b73666c5de06818ebbf616d2e4be582476fa3f0eb224",
+      "fresh_outer_image": true,
+      "guest_probe": "pool_compare_probe.c",
+      "stock": {
+        "path": "/tmp/pool-stock-firecracker-20261030/firecracker-stock",
+        "sha256": "c8e80e62d6e370a1587ddc1ce5b24b9080a934a3bc395fc3a2a7bc294b2c5e7c"
+      },
+      "patched": {
+        "sha256": "75a9b6e52dd152b17962fb52cbf04d983ba7c035629517a91d2b43eb9ea45127"
+      },
+      "timing": "Guest CLOCK_MONOTONIC_RAW around operation body; read/recycle oracle included"
+    },
+    "discard": {
+      "guest_kernel_sha256": "ea81dc49b729e8d5111765c11ace1a11bd53db59f75fd65d933f0d983a368d05",
+      "guest_config_sha256": "08d8c9ecf79f63a2b30470466de70c5285f4b73fb8cf3f5bbe62a2c5f2bbf127",
+      "guest_source": "/tmp/pool-discard-guest-linux-20261030",
+      "guest_source_hashes": {
+        "drivers/virtio/virtio_balloon.c": "6eb65444683a89a1c5f7959bc11edbce4ce055512b5dfb23c26d026fd7289c1a",
+        "mm/page_reporting.c": "64b76f913a3247ec09bdadd946f5768e261858dd3f299a205a3d615cf2762649",
+        "include/trace/events/pool_discard.h": "aa232a41855aa47417c5dae4faae096cfce65f54ef7a989b9563e8f3b55d3e18"
+      },
+      "trace_protocol": "phase0 isolated-SG submit, phase1 GPA/bytes, phase2 used-ring ACK consumed, phase3 failed-submit",
+      "reporter": "Linux standard free page reporting; delayed and budgeted, no synchronous allocator modification",
+      "timing": "Separate RAW guest evict/mmap/first-fill/verify/unmap, MONOTONIC ordering timestamps"
+    }
+  },
+  "source_hashes": {
+    "pool_discard_run.py": "55dabf69552a74e415ab595bee0a6aef08e50fc938ee7df1c01c9d8c80125beb",
+    "pool_discard_bench.py": "35b36875b963a16ba440895f8768819cc6088f77bec925202e5f3d62d2c90667",
+    "pool_discard_prepare.py": "134bf539453e729997b0fa77e66bcd8f851287637e3552ef355a8c8d18d091a6",
+    "pool_discard_probe.c": "ac666b399e6241e121854e4f98c822845fa67aa258950130df24599159968e0c",
+    "pool-discard-l2-init.sh": "bf088ce6e9ab43aaa387024c668e9edb57a641898af04024fa85a797aabbe263",
+    "pool-discard-guest-trace.patch": "211468b6a9ea3a18eeb51d84299ee8db9de6721f58905177b62ba3b8178c6296",
+    "firecracker.patch": "3600228b2076bf60fc01fdd74e22b4416100f4c020446e465e5d3bff31f0fb8b",
+    "pool_cow_latency.c": "8ddf06ae369adf929875c5e0fb9f33e5aa7503593cca94f9fc8340839e957909",
+    "pool_cow_trace.py": "e6532ed031d8eca94db60961b345458d91f7b1da4517bd34fe0ce0fbad0fedc4"
+  },
+  "error": "CalledProcessError(1, ['taskset', '-c', '0-7', 'python3', '-u', '/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/pool_discard_bench.py', '--mode', 'baseline', '--rounds', '1', '--profile'])"
+}

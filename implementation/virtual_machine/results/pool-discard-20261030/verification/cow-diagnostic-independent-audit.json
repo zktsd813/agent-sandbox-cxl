@@ -1,0 +1,86 @@
+{
+  "result": "passed",
+  "schema": "pool-cow-diagnostic-independent-audit-v1",
+  "report_sha256": "9df40d299fc794d33f6b48a6e9f798b130fa87c16348c071189ec17070ab2cfc",
+  "fixture_manifest_sha256": "1569de552e7dabb039d0eb953690c53f485b55da76855f7c8b179d6626e9c4ae",
+  "runtime_sha256": "a4d6f75f0cad5885009097221e464952a1706e3d1792826c14a0dfa84c8a6023",
+  "measured_source_hashes": {
+    "pool_discard_probe.c": "061084e76364e056d945327c62e5ed487770b22602922f9e4394b92c97f0de7f",
+    "pool_cow_trace.py": "f9297bae2266ef0dc3b17b3229fb226c468d4a9fe6a1544b90276bb0510711d2",
+    "diagnostic.py": "f25e1394dfd3b4cfc0983fedaf51fcfe6a75ea2352dc5b01761eb6f1352395f3",
+    "pool_discard_bench.py": "6f599400198348f19e93cb1d1ddd0e9d25e55a9d0dfa0c0f283b41890d654493"
+  },
+  "raw_receipts": 118,
+  "cpu_stats": {
+    "0": {
+      "entries": 327681,
+      "overrun": 0,
+      "commit overrun": 0,
+      "dropped events": 0,
+      "read events": 0
+    },
+    "1": {
+      "entries": 0,
+      "overrun": 0,
+      "commit overrun": 0,
+      "dropped events": 0,
+      "read events": 0
+    },
+    "2": {
+      "entries": 0,
+      "overrun": 0,
+      "commit overrun": 0,
+      "dropped events": 0,
+      "read events": 0
+    },
+    "3": {
+      "entries": 1,
+      "overrun": 0,
+      "commit overrun": 0,
+      "dropped events": 0,
+      "read events": 0
+    }
+  },
+  "trace_entries": 327682,
+  "original_cache_pages_with_changed_pfns": 40960,
+  "functions": {
+    "fault": {
+      "symbol": "__handle_mm_fault",
+      "calls": 40960,
+      "sum_ns": 967074000,
+      "median_ns": 12000.0,
+      "maximum_ns": 191003000
+    },
+    "wp": {
+      "symbol": "do_wp_page",
+      "calls": 40960,
+      "sum_ns": 922784000,
+      "median_ns": 10000.0,
+      "maximum_ns": 191001000
+    },
+    "mmu": {
+      "symbol": "kvm_mmu_notifier_invalidate_range_start",
+      "calls": 40960,
+      "sum_ns": 78379000,
+      "median_ns": 2000.0,
+      "maximum_ns": 695000
+    },
+    "tlb": {
+      "symbol": "kvm_flush_remote_tlbs",
+      "calls": 40960,
+      "sum_ns": 31068000,
+      "median_ns": 0.0,
+      "maximum_ns": 694000
+    }
+  },
+  "guest_aggregate_ns": 5123355769,
+  "unattributed_difference_ns": 4156281769,
+  "scope": "Separate instrumented224MiB aggregate. Function durations include nesting/preemption/probe overhead, and the host trace window spans the serial round trip. The arithmetic difference is unattributed, not a measured cause. No pure copy latency claim.",
+  "provenance_limit": "Diagnostic archives four measured source files, not every imported Python module. VMM hash is independently observed in /proc/exe; fixture manifest supplied separately and hash-bound here.",
+  "verifier_sources": {
+    "verify_pool_cow_diagnostic.py": "0089035fc1fe9ff66b5f4ffc3aa3eba6cbc16a47ccb8caaeba0256c17fce498e",
+    "verify_pool_discard.py": "2a19ea46ba56c8fc73ee672565ff571d321d9de917103c4ae41552c79c1defe8",
+    "verify_pool_discard_protocol.py": "0fdaf7654bfb4b4b140f5e7cabed6a33d612582b3cd441c37a1431e3958f473a",
+    "verify_pool_compare.py": "3b4d907aad689a934cfd6f074c711dfbabf89cd0b59592195c9f4c2c44d39480"
+  }
+}

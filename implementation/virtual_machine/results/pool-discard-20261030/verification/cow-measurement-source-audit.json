@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "reviewer": "discard_backend",
+  "review_type": "independent_read_only_source_review",
+  "result": "no_blocking_measurement_bug_found_with_scope_limits",
+  "sources": {
+    "implementation/virtual_machine/pool_cow_latency.c": "8ddf06ae369adf929875c5e0fb9f33e5aa7503593cca94f9fc8340839e957909",
+    "implementation/virtual_machine/pool_cow_trace.py": "dadafeba776b1b19d57c5e83267eed842e82d5e97b25a25199ab02fb5fcf5195",
+    "implementation/virtual_machine/test_pool_cow_trace.py": "990b1903afb987542232e9e95c30174066ce755e9d425f7e62af11797e8a7a35"
+  },
+  "frozen_sources_modified": false,
+  "new_tests_run": false,
+  "reason_no_new_tests": "No actionable correctness bug found; existing tests were inspected and frozen runtime/lab work was left undisturbed.",
+  "confirmed": [
+    {
+      "area": "KVM read setup",
+      "assessment": "Code reads GPA 0x1000 into AL then exits HLT before timing the one-byte store. It checks the observed AL and verifies canonical PFN remains canonical immediately before the canonical_cow sample. If KVM read setup had already copied that canonical page, the sample aborts."
+    },
+    {
+      "area": "KVM instruction boundaries",
+      "assessment": "The real-mode instruction stream is read+HLT followed by one-byte store+HLT. Second write explicitly resets RIP to the store. Timing includes KVM_RUN entry/exit, guest instruction execution and fault work, not pure memcpy or pure fault latency."
+    },
+    {
+      "area": "Data and isolation checks",
+      "assessment": "After both stores, all 4096 bytes are checked against the mode-specific baseline. Canonical and peer bytes remain unchanged, canonical_cow switches away from canonical PFN, already_private retains its PFN, and second store retains the post-first-store PFN."
+    },
+    {
+      "area": "Measurement scope",
+      "assessment": "PFN inspection, validation, output and guest read setup are outside write timers. CLOCK_MONOTONIC_RAW and CPU affinity avoid frequency scaling of the timestamp and CPU migration; scheduler interruption and timer-call overhead can still appear."
+    },
+    {
+      "area": "Probe matching",
+      "assessment": "Entry/return matching uses a separate LIFO stack per TID and function, appropriate for synchronous nested calls and interleaved vCPUs. Decimal timestamps are converted without floating point loss. Orphan returns, pending calls at END, wrong TIDs and unsupported precision reject evidence."
+    },
+    {
+      "area": "Trace loss and identity",
+      "assessment": "Unique probe group and instance isolate the collection. Ring overrun/drop counters and kretprobe miss counters must be zero. Expected probe identities are checked exactly. Global probe hit counters are correctly treated as upper bounds because event filtering and BEGIN/END boundaries narrow the captured trace."
+    },
+    {
+      "area": "Inclusive interpretation",
+      "assessment": "do_wp_page, MMU invalidation and TLB flush durations include nested work, preemption and probe overhead. Their sums cannot be added as disjoint costs. do_wp_page call count is not a copy count, and the script explicitly documents that."
+    },
+    {
+      "area": "Window boundary behavior",
+      "assessment": "A function entering before BEGIN or returning after END can make analysis fail conservatively. Such a failure must remain an invalid diagnostic, not be repaired by silently dropping unmatched calls."
+    }
+  ],
+  "scope_limits": [
+    {
+      "id": "detach_without_deliberately_active_canonical_spte",
+      "severity": "interpretation",
+      "detail": "In discard_zero, bind_page remaps canonical then reads it only on the host and replaces it with anonymous zero before the KVM read setup. The prior mapping replacement already invalidates old KVM SPTEs. Therefore detach_ns does not deliberately measure removal of a canonical page currently mapped in guest second-level page tables; it can underrepresent live guest invalidation cost.",
+      "required_interpretation": "Use actual reporting host_work_ns for live remap/ACK work. Label standalone detach_ns as setup mapping cost."
+    },
+    {
+      "id": "zero_setup_can_allocate",
+      "severity": "interpretation",
+      "detail": "Host verification/PFN reads and the KVM read setup occur before the write timer. The KVM setup can allocate writable anonymous backing in the discard_zero mode.",
+      "required_interpretation": "Do not call discard_zero first_write_ns the complete discard-to-reuse cost or claim all allocation faults occur inside it; the config already discloses this."
+    },
+    {
+      "id": "preserved_bytes_baseline",
+      "severity": "interpretation",
+      "detail": "remaining_4095_bytes_preserved means the mode-specific expected bytes remain: original pattern for canonical_cow/already_private, zeros for discard_zero. It does not mean old canonical bytes survive discard."
+    },
+    {
+      "id": "fixed_order_and_hot_inputs",
+      "severity": "interpretation",
+      "detail": "The same canonical page is repeatedly read, remapped and checked in fixed mode order; samples represent warm controlled diagnostic behavior and include timer/scheduling cost. They are not an application-wide latency distribution or cold CXL copy bandwidth measurement."
+    },
+    {
+      "id": "trace_function_attribution",
+      "severity": "interpretation",
+      "detail": "The trace filters Firecracker vCPU threads but not a single GPA or a single actual memcpy. Background guest faults on those threads and noncopy do_wp_page paths can contribute. The profile is deliberately a separate instrumented recycle run."
+    },
+    {
+      "id": "disposable_range_ownership",
+      "severity": "operational_precondition",
+      "detail": "The diagnostic intentionally writes 64 KiB at the fixed 3.5 GiB offset of a character-device mapping. The OWNED_POOL_TEST token and fixed offset are guards, but code alone does not establish device identity or exclusive range ownership. Its caller must guarantee the disposable L1/range, as the source header requires."
+    }
+  ],
+  "conclusion": "Suitable for answering whether an individual controlled CoW write is seconds long, provided full KVM call latency, setup exclusions, and inclusive trace interpretation remain explicit. It does not isolate pure page-copy cost or establish production live discard latency.",
+  "follow_up_after_pilot3": {
+    "finding": "The inspected standalone trace function documents caller re-admit/warm as a precondition. Pilot3 caller invoked treatment then profile without a guest read after remapping. Thus absent-PTE first-write DAX CoW can bypass the selected do_wp_page symbol. The empty diagnostic correctly failed; it must not be interpreted as no CoW.",
+    "status": "source-derived explanation pending targeted runtime diagnosis",
+    "pilot_measured_caller_sha256": "407956c5e4ffcdee4aaac79ea8badd1e3536cf71e781dbcc84cda5a74ac8819a"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "file": "cow-diagnostic-evidence.tar.xz",
+  "format": "tar.xz",
+  "compression": "xz -3 -T2",
+  "bytes": 4385888,
+  "sha256": "5ddec8c37b4954a813699b096316cda07e1e862a6a37429b92c8bd9da667ac8b",
+  "source_directory": "/tmp/pool-discard-diagnostic-staging-20261030/cow-diagnostic",
+  "report_member": "cow-diagnostic/report.json",
+  "report_sha256": "9df40d299fc794d33f6b48a6e9f798b130fa87c16348c071189ec17070ab2cfc",
+  "member_count": 137,
+  "regular_file_count": 133,
+  "directory_count": 4,
+  "uncompressed_file_bytes": 75247054,
+  "member_names_sizes_sha256_manifest_digest": "59a15239803526a34b9a20a46d6c15d6c8809544c6c49f1112c119d532de06c0",
+  "verified": "Exact member set, type, length, and SHA256 of every regular file compared with the source directory.",
+  "old_gzip_verified_identical": false,
+  "seconds": 3.898301287088543
+}

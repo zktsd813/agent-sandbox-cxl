@@ -1,0 +1,32 @@
+{
+  "classification": "failed_and_independent_audit_rejected_pilot_not_formal_performance",
+  "suite_result": "failed",
+  "anon_mib": 400,
+  "both_arms_same_suite_sources": true,
+  "firecracker_sha256": "a4d6f75f0cad5885009097221e464952a1706e3d1792826c14a0dfa84c8a6023",
+  "reporting": {
+    "original_controller_result_preserved": "passed",
+    "completed_controller_samples": 3,
+    "independent_result": "rejected",
+    "reason": "guest event fields changed",
+    "finding": "A guest serial trace record was interrupted by native POOL_DISCARD_JSON output in the shared stdout log. A clean ftrace ring does not establish intact export.",
+    "corrupted_capture": "reporting/0493-guest-report-trace.bin",
+    "independent_rejection": "independent-reporting-rejection.json",
+    "corrective_action": "Separate the VMM logger via --log-path vmm.log, guest serial stdout via fc.log, and stderr via stderr.log on each boot/restore. stdout/stderr redirection alone is insufficient because the default logger writes stdout."
+  },
+  "baseline": {
+    "original_controller_result_preserved": "failed",
+    "completed_controller_samples": 3,
+    "error": "ValueError('no write-protect fault calls observed')",
+    "raw_profile": [
+      "baseline/0546-cow-profile-setup.txt",
+      "baseline/0549-cow-profile-stop.txt",
+      "baseline/0550-cow-profile-trace.bin",
+      "baseline/0551-cow-profile-stats.bin",
+      "baseline/0552-cow-profile-profile.bin"
+    ],
+    "interpretation": "The diagnostic had no matched do_wp_page calls and was correctly rejected. This does not establish that no CoW occurred.",
+    "source_hypothesis_not_runtime_proven": "The caller re-admits/remaps canonical pages but does not read them after admission and before profiling. First-write faults can take do_cow_fault and the custom DAX vmf->cow_page copy path instead of do_wp_page. Root is validating the profiler separately."
+  },
+  "preservation": "Original suite and arm statuses and bytes were not rewritten. Both stopped outer runs, receipts and measured sources are archived. No timing from either arm enters formal performance."
+}

@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "classification": "positive_instrumented_mechanism_diagnostic_not_formal_performance",
+  "controller_result": "passed",
+  "raw_report_sha256": "9df40d299fc794d33f6b48a6e9f798b130fa87c16348c071189ec17070ab2cfc",
+  "old_cache_pages_with_changed_pfns": 40960,
+  "anon_bytes": 234881024,
+  "whole_operation_ns": 5123355769,
+  "whole_operation_scope": "payload_eviction_then_anonymous_fill_verify_unmap",
+  "functions": {
+    "fault": {
+      "symbol": "__handle_mm_fault",
+      "calls": 40960,
+      "sum_ns": 967074000,
+      "median_ns": 12000.0,
+      "maximum_ns": 191003000
+    },
+    "wp": {
+      "symbol": "do_wp_page",
+      "calls": 40960,
+      "sum_ns": 922784000,
+      "median_ns": 10000.0,
+      "maximum_ns": 191001000
+    },
+    "mmu": {
+      "symbol": "kvm_mmu_notifier_invalidate_range_start",
+      "calls": 40960,
+      "sum_ns": 78379000,
+      "median_ns": 2000.0,
+      "maximum_ns": 695000
+    },
+    "tlb": {
+      "symbol": "kvm_flush_remote_tlbs",
+      "calls": 40960,
+      "sum_ns": 31068000,
+      "median_ns": 0.0,
+      "maximum_ns": 694000
+    }
+  },
+  "printed_timestamp_resolution_ns": 1000,
+  "interpretation": "Nested inclusive function totals must not be summed. No allocation/copy/verification attribution is made for time outside the measured function calls. Instrumented diagnostic is excluded from formal comparison statistics."
+}

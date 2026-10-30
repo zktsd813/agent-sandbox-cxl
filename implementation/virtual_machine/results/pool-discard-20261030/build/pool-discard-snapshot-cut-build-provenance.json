@@ -1,0 +1,82 @@
+{
+  "result": "passed",
+  "baseline_commit": "95f868c8e345b1cc8faccd1a3c910b4989dc3f58",
+  "source": "/tmp/firecracker-pool-discard-20261030",
+  "clean_patch_application": "/tmp/pool-discard-snapshot-cut-patch-check-20261030",
+  "patch_sha256": "9628533ab209586480b61180a29149ab96f6bca9666725be210c56890c8e06c3",
+  "source_files": {
+    "src/firecracker/src/api_server/request/actions.rs": "5d3be6563b8004cffeed8336d763fcc43a8289d2ee89664b49597c83603ff8c2",
+    "src/firecracker/src/api_server_adapter.rs": "a88de6e3b5f387e5ed50bb976f53760e201f269b02ec8faac55b111346b952e9",
+    "src/firecracker/src/dax_heap.rs": "59467eb1f9b56c37ce21ab09fa7eb342f8b9982ead20afc745ca2627ea4cbd56",
+    "src/firecracker/src/main.rs": "82c96bc08b4e970be56008131304575e25475f5a721dc70c7e3e0a86d3a54f50",
+    "src/vmm/src/arch/x86_64/vcpu.rs": "a05735043970d4f908fce20691bad8713cf785841deadf1a233a4c0153e141c3",
+    "src/vmm/src/arch/x86_64/vm.rs": "47c05ae0578ea2af0fd5b01909f7483e6f1ffca1dc90e76060e44c84c041e03c",
+    "src/vmm/src/builder.rs": "99feb905b6a638d467a7a5b74e1c1c106182dfec35b2d2293e7630071f28638c",
+    "src/vmm/src/device_manager/acpi.rs": "6b879f7c63e582bb17952a86d44af350d9c77118c16f84dbd5148b655a836b87",
+    "src/vmm/src/device_manager/persist.rs": "47e981a7dce292c554ab79840b3993dda988cd6c843353367a0e185d5ad709a9",
+    "src/vmm/src/devices/acpi/vmclock.rs": "ea9003380bf1e7263b980fb686ef7d58a0a0f3b77de646f3d90e22aebf71dfaf",
+    "src/vmm/src/devices/legacy/i8042.rs": "a47cede1411d1e54f7e7467dbac8b8ad11218c309751767a80412fc492cf3e59",
+    "src/vmm/src/devices/legacy/serial.rs": "7fc71b9c12715b2cb08ae93c5bc635434076556248046d45054331ae79d2775c",
+    "src/vmm/src/devices/virtio/balloon/device.rs": "b35e8dacbaca792c50b5971b2132da69e3c4a4207081772c3ef526088a9a04e4",
+    "src/vmm/src/devices/virtio/balloon/mod.rs": "9daf6e0556e6ff47c67e941a4e1e13f1296f657cdf850b0fc60a0bc2fc97b37b",
+    "src/vmm/src/devices/virtio/balloon/persist.rs": "9d874a83fb1f26763efb6b2b8dbf4815f25e6c17410ddc201f158bd92c8b4fc5",
+    "src/vmm/src/devices/virtio/block/virtio/device.rs": "a9aae58c0690993b90559ce497ce1e75abb9b3de289ab1a3a0ecd80c9a07ee0f",
+    "src/vmm/src/devices/virtio/block/virtio/io/async_io.rs": "2c2bfcce92e9696006dd28d6b2cdc6e8f635fb4e1a007daea70223c061257411",
+    "src/vmm/src/devices/virtio/block/virtio/persist.rs": "8ef8b4ce5bebd85f41427c9bb6276f7ed0777d42065bac52b5826385c64aad7d",
+    "src/vmm/src/devices/virtio/block/virtio/request.rs": "f63ffd9f0136ee7189ce4ef98539e3e9e29f5156bc0926db763f47182a24df0b",
+    "src/vmm/src/lib.rs": "fe36fede50dd71d07af2e3b92699956344272fe85e3eb226c77b4c1f8ab0357d",
+    "src/vmm/src/persist.rs": "73335e71520061a0c41e9b51441627ed6140896b06e13e487a5a18182da345d7",
+    "src/vmm/src/pool_cache.rs": "ed74fb61518cb3e5428fd6a09d3bca8df9d0d8e70e08278b51d7c4ff38e25eb7",
+    "src/vmm/src/resources.rs": "20a7dee8ec086079f103af833b4dd0567a52a441e41d3521546188a77d4e294a",
+    "src/vmm/src/reuse.rs": "b1ad92000a201a719f96606db1c15e754f333a807f2523bb014d06dba4639204",
+    "src/vmm/src/rpc_interface.rs": "d090245f38be74adc4923f320c85a1a414e35152c9e9cf2b014232d7781c2d13",
+    "src/vmm/src/vstate/memory.rs": "605fd87dd74a1556cc38a46ed26f382885afe9791ecaf427ed2e263236aa527c",
+    "src/vmm/src/vstate/vcpu.rs": "1f3436a32bdb502424fd1742e4fda27148a79a7099afb91f33a8ef5be288b442",
+    "src/vmm/src/vstate/vm.rs": "c353687e2e0dab9e153268fb1edc09f04ed97f31605ecc9888ddeca252d50cb6"
+  },
+  "binary": "/tmp/firecracker-pool-discard-20261030/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker",
+  "binary_sha256": "a4d6f75f0cad5885009097221e464952a1706e3d1792826c14a0dfa84c8a6023",
+  "build_log": "/tmp/pool-discard-release-build-snapshot-cut.log",
+  "build_log_sha256": "9e054f9f32c5225bae4bc066bb6d9eadb625fb61cf5ed560d708ea1789a48b36",
+  "old_binary_sha256": "866f5b44b96535c0c525f6cee0a9ee09ff64900fbd83458c51c45b4de3505d08",
+  "pilot_binary": "/tmp/firecracker-pool-discard-pilot-75a9b6e5",
+  "pilot_binary_sha256": "75a9b6e52dd152b17962fb52cbf04d983ba7c035629517a91d2b43eb9ea45127",
+  "tests": {
+    "pool-tests": {
+      "passed": 9,
+      "log": "/tmp/pool-discard-snapshot-cut-pool-tests.log",
+      "sha256": "f42ca426b177d13ac11d00882b572f43f9797dcc723fd9f28fd2dff1f9494e17",
+      "selection_counts": [
+        9
+      ]
+    },
+    "balloon-tests": {
+      "passed": 31,
+      "log": "/tmp/pool-discard-snapshot-cut-balloon-tests.log",
+      "sha256": "48ba3acdf05b4e20d57627f95f7d050cf49f03de4aca566f847f5a91d824d032",
+      "selection_counts": [
+        31
+      ]
+    },
+    "device-tests": {
+      "passed": 9,
+      "log": "/tmp/pool-discard-snapshot-cut-device-tests.log",
+      "sha256": "ba936fad98e34c9e3bc087eaf760babd4eee971937d40ac607e131b333b90d79",
+      "selection_counts": [
+        4,
+        1,
+        1,
+        1,
+        2
+      ]
+    }
+  },
+  "test_build_log": "/tmp/pool-discard-test-build-snapshot-cut.log",
+  "test_build_log_sha256": "ddd5be4cf7754e71836d6d8da2cc1ef0a15481049ab62a0d5ae27ccfae8e412d",
+  "notes": [
+    "Final trace-only snapshot boundary marker source; all source files verified against clean upstream patch application.",
+    "Pool and balloon test selections overlap by two tests.",
+    "Initial pilot failed/zero-match attempts retained separately in pilot build provenance.",
+    "No dedicated concurrent discard and hot-file-replacement experiment is claimed."
+  ]
+}

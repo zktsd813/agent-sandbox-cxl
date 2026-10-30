@@ -1,0 +1,31 @@
+{
+  "result": "passed",
+  "fresh_extraction": "/tmp/pool-discard-formal-replay-20261030-g1y8rhps",
+  "suite_report": "/tmp/pool-discard-formal-replay-20261030-g1y8rhps/report.json",
+  "suite_sha256": "f965e0334fad7c7d2741b06703c40ef79d90cf2f301decb7e2c6ada5c30d078b",
+  "archives": [
+    {
+      "label": "formal-suite",
+      "file": "formal-suite-evidence.tar.xz",
+      "sha256": "40ed02be5dcf8bf624f6bf50772f697c5c9f8a2db1dddebbc524a5f0123caddb",
+      "bytes": 75808,
+      "extracted_regular_files_verified": 12
+    },
+    {
+      "label": "reporting",
+      "file": "reporting-evidence.tar.xz",
+      "sha256": "6768baacd69cb5707214f7617a2fa91455a09e194f37bbb9c9532995daf659a9",
+      "bytes": 40286084,
+      "extracted_regular_files_verified": 2016
+    },
+    {
+      "label": "baseline",
+      "file": "baseline-evidence.tar.xz",
+      "sha256": "8bab984c66f500ee225a35c3cd5f7b6c8ea0d1c42fcdcb80698cce285a1dc720",
+      "bytes": 31152844,
+      "extracted_regular_files_verified": 1344
+    }
+  ],
+  "verification": "Every extracted regular file matched its frozen staging source by SHA256 and exact file set; no disk images included. Parent will run independent full replay from this extraction.",
+  "large_work_cpu_affinity": "8-11"
+}

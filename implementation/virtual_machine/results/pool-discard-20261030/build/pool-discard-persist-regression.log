@@ -1,0 +1,110 @@
+
+running 27 tests
+test device_manager::persist::tests::test_device_manager_persistence ... FAILED
+test devices::virtio::balloon::persist::tests::test_persistence ... ok
+test devices::virtio::block::virtio::persist::tests::test_cache_semantic_ser ... ok
+test devices::virtio::block::virtio::persist::tests::test_file_engine_type ... ok
+test devices::virtio::block::virtio::persist::tests::test_persistence ... ok
+test devices::virtio::mem::persist::tests::test_save_restore_state ... FAILED
+test devices::virtio::mem::persist::tests::test_save_state ... FAILED
+test devices::virtio::net::persist::tests::test_persistence ... FAILED
+test devices::virtio::persist::tests::test_block_over_mmiotransport_persistence ... ok
+test devices::virtio::persist::tests::test_net_over_mmiotransport_persistence ... FAILED
+test devices::virtio::persist::tests::test_queue_persistence ... ok
+test devices::virtio::persist::tests::test_virtio_device_state_serde ... ok
+test devices::virtio::persist::tests::test_virtiodev_sanity_checks ... ok
+test devices::virtio::persist::tests::test_vsock_over_mmiotransport_persistence ... FAILED
+test devices::virtio::pmem::persist::tests::test_persistence ... FAILED
+test devices::virtio::pmem::persist::tests::test_restore_rejects_mismatched_config_space_size ... FAILED
+test devices::virtio::rng::persist::tests::test_persistence ... ok
+test devices::virtio::vsock::persist::tests::test_persist_pending_event_ack ... ok
+test devices::virtio::vsock::persist::tests::test_persist_uds_backend ... ok
+test mmds::persist::tests::test_persistence ... ok
+test persist::tests::test_create_guest_memory ... ok
+test persist::tests::test_direct_handoff_preflight_rejects_devices_and_multiple_vcpus ... FAILED
+test persist::tests::test_microvm_state_snapshot ... FAILED
+test persist::tests::test_send_uffd_handshake ... FAILED
+test persist::tests::test_storage_snapshot_flush_failure_writes_no_checkpoint ... FAILED
+test rate_limiter::persist::tests::test_rate_limiter_persistence ... ok
+test rate_limiter::persist::tests::test_token_bucket_persistence ... ok
+
+failures:
+
+---- device_manager::persist::tests::test_device_manager_persistence stdout ----
+
+thread 'device_manager::persist::tests::test_device_manager_persistence' (4) panicked at src/vmm/src/vstate/vm.rs:979:36:
+Cannot create Kvm: Kvm(Error(2))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- devices::virtio::mem::persist::tests::test_save_restore_state stdout ----
+
+thread 'devices::virtio::mem::persist::tests::test_save_restore_state' (9) panicked at src/vmm/src/vstate/vm.rs:979:36:
+Cannot create Kvm: Kvm(Error(2))
+
+---- devices::virtio::mem::persist::tests::test_save_state stdout ----
+
+thread 'devices::virtio::mem::persist::tests::test_save_state' (10) panicked at src/vmm/src/vstate/vm.rs:979:36:
+Cannot create Kvm: Kvm(Error(2))
+
+---- devices::virtio::net::persist::tests::test_persistence stdout ----
+
+thread 'devices::virtio::net::persist::tests::test_persistence' (11) panicked at src/vmm/src/devices/virtio/net/test_utils.rs:50:6:
+called `Result::unwrap()` on an `Err` value: TapOpen(OpenTun(Os { code: 2, kind: NotFound, message: "No such file or directory" }))
+
+---- devices::virtio::persist::tests::test_net_over_mmiotransport_persistence stdout ----
+
+thread 'devices::virtio::persist::tests::test_net_over_mmiotransport_persistence' (13) panicked at src/vmm/src/devices/virtio/net/test_utils.rs:50:6:
+called `Result::unwrap()` on an `Err` value: TapOpen(OpenTun(Os { code: 2, kind: NotFound, message: "No such file or directory" }))
+
+---- devices::virtio::persist::tests::test_vsock_over_mmiotransport_persistence stdout ----
+
+thread 'devices::virtio::persist::tests::test_vsock_over_mmiotransport_persistence' (17) panicked at src/vmm/src/devices/virtio/persist.rs:484:66:
+called `Result::unwrap()` on an `Err` value: UnixBind(Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" })
+
+---- devices::virtio::pmem::persist::tests::test_persistence stdout ----
+
+thread 'devices::virtio::pmem::persist::tests::test_persistence' (18) panicked at src/vmm/src/vstate/vm.rs:979:36:
+Cannot create Kvm: Kvm(Error(2))
+
+---- devices::virtio::pmem::persist::tests::test_restore_rejects_mismatched_config_space_size stdout ----
+
+thread 'devices::virtio::pmem::persist::tests::test_restore_rejects_mismatched_config_space_size' (19) panicked at src/vmm/src/vstate/vm.rs:979:36:
+Cannot create Kvm: Kvm(Error(2))
+
+---- persist::tests::test_direct_handoff_preflight_rejects_devices_and_multiple_vcpus stdout ----
+
+thread 'persist::tests::test_direct_handoff_preflight_rejects_devices_and_multiple_vcpus' (25) panicked at src/vmm/src/vstate/vm.rs:979:36:
+Cannot create Kvm: Kvm(Error(2))
+
+---- persist::tests::test_microvm_state_snapshot stdout ----
+
+thread 'persist::tests::test_microvm_state_snapshot' (26) panicked at src/vmm/src/vstate/vm.rs:979:36:
+Cannot create Kvm: Kvm(Error(2))
+
+---- persist::tests::test_send_uffd_handshake stdout ----
+
+thread 'persist::tests::test_send_uffd_handshake' (27) panicked at src/vmm/src/persist.rs:1032:53:
+Cannot bind to socket path: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+---- persist::tests::test_storage_snapshot_flush_failure_writes_no_checkpoint stdout ----
+
+thread 'persist::tests::test_storage_snapshot_flush_failure_writes_no_checkpoint' (28) panicked at src/vmm/src/vstate/vm.rs:979:36:
+Cannot create Kvm: Kvm(Error(2))
+
+
+failures:
+    device_manager::persist::tests::test_device_manager_persistence
+    devices::virtio::mem::persist::tests::test_save_restore_state
+    devices::virtio::mem::persist::tests::test_save_state
+    devices::virtio::net::persist::tests::test_persistence
+    devices::virtio::persist::tests::test_net_over_mmiotransport_persistence
+    devices::virtio::persist::tests::test_vsock_over_mmiotransport_persistence
+    devices::virtio::pmem::persist::tests::test_persistence
+    devices::virtio::pmem::persist::tests::test_restore_rejects_mismatched_config_space_size
+    persist::tests::test_direct_handoff_preflight_rejects_devices_and_multiple_vcpus
+    persist::tests::test_microvm_state_snapshot
+    persist::tests::test_send_uffd_handshake
+    persist::tests::test_storage_snapshot_flush_failure_writes_no_checkpoint
+
+test result: FAILED. 15 passed; 12 failed; 0 ignored; 0 measured; 803 filtered out; finished in 0.01s
+

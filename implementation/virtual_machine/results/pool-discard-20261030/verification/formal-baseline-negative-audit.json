@@ -1,0 +1,43 @@
+{
+  "result": "passed",
+  "report_sha256": "9577ba3618409ad34052bb8c60f15828166900636690b60a3d12963e175f5377",
+  "mode": "baseline",
+  "cases": [
+    {
+      "case": "top_level_success_cannot_mask_failed_guest",
+      "result": "rejected",
+      "reason": "guest workload failed or changed size"
+    },
+    {
+      "case": "dropped_sample",
+      "result": "rejected",
+      "reason": "sample round/VM coverage"
+    },
+    {
+      "case": "first_fill_timer_not_raw",
+      "result": "rejected",
+      "reason": "guest result differs from raw receipt"
+    },
+    {
+      "case": "original_canonical_pfn_reused",
+      "result": "rejected",
+      "reason": "reused GPAs did not all detach from original PFNs"
+    },
+    {
+      "case": "wrong_runtime_sha",
+      "result": "rejected",
+      "reason": "runtime manifest mismatch"
+    },
+    {
+      "case": "receipt_corruption",
+      "result": "rejected",
+      "reason": "receipt hash mismatch: 0238-guest.txt"
+    }
+  ],
+  "source_sha256": "626059ece53d13b8bb62a0dcb09b4e73d56fa4440248417926eef49f4ecf7bed",
+  "verifier_sources": {
+    "verify_pool_discard.py": "2a19ea46ba56c8fc73ee672565ff571d321d9de917103c4ae41552c79c1defe8",
+    "verify_pool_discard_protocol.py": "0fdaf7654bfb4b4b140f5e7cabed6a33d612582b3cd441c37a1431e3958f473a",
+    "verify_pool_compare.py": "3b4d907aad689a934cfd6f074c711dfbabf89cd0b59592195c9f4c2c44d39480"
+  }
+}

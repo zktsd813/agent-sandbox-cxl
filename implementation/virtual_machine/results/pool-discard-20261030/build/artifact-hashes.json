@@ -1,0 +1,102 @@
+[
+  {
+    "file": "README.md",
+    "sha256": "120a513157f80d3d5caa6ddf8a74384cd263a01ca3f06bb8414633a813960b78",
+    "bytes": 7870
+  },
+  {
+    "file": "pilot-audit.md",
+    "sha256": "69a983705039feb97954e4ea2f023e34b301538a7412d2b87920c8807269b877",
+    "bytes": 6636
+  },
+  {
+    "file": "pool-discard-balloon-regression.log",
+    "sha256": "af13744972e6a3ee52283a2ad4aaf243e8c97215122ca7c48141f8c93feaf529",
+    "bytes": 2572
+  },
+  {
+    "file": "pool-discard-build-provenance.json",
+    "sha256": "8e1f416aae74a68a229be76a3a0b3e00c95790289a8742caf6fcd28b62e24da2",
+    "bytes": 5569
+  },
+  {
+    "file": "pool-discard-io-regression.log",
+    "sha256": "4b683101e2cc68807d50d1dea71ba84a1a9fae655a0ae78aa5771655292c5758",
+    "bytes": 246
+  },
+  {
+    "file": "pool-discard-persist-regression.log",
+    "sha256": "5717dd9018654d6ba9ffaf998179cf15f8043d484bc09ac8ec600e97a823aa86",
+    "bytes": 6368
+  },
+  {
+    "file": "pool-discard-privileged-regression.log",
+    "sha256": "c9bdbafa219a40b702536e0404441fdceb1096b56e78d84600a7ce12214ffbb4",
+    "bytes": 1188
+  },
+  {
+    "file": "pool-discard-release-build-snapshot-cut.log",
+    "sha256": "9e054f9f32c5225bae4bc066bb6d9eadb625fb61cf5ed560d708ea1789a48b36",
+    "bytes": 174
+  },
+  {
+    "file": "pool-discard-release-build.log",
+    "sha256": "c1f958549342b40e4a312f242baee8da463aa7ca6af3002f2653225845a16f55",
+    "bytes": 174
+  },
+  {
+    "file": "pool-discard-save-regression.log",
+    "sha256": "57cd565e1176525010c44d806488a810d3e0d18519f61eeeb5c3804a0738eb40",
+    "bytes": 1651
+  },
+  {
+    "file": "pool-discard-snapshot-cut-balloon-tests.log",
+    "sha256": "48ba3acdf05b4e20d57627f95f7d050cf49f03de4aca566f847f5a91d824d032",
+    "bytes": 2572
+  },
+  {
+    "file": "pool-discard-snapshot-cut-build-provenance.json",
+    "sha256": "ef5381e929ae23e6604fdb55942aa3eca2ddb22793fe74ae4aae510415fde834",
+    "bytes": 5371
+  },
+  {
+    "file": "pool-discard-snapshot-cut-device-tests.log",
+    "sha256": "ba936fad98e34c9e3bc087eaf760babd4eee971937d40ac607e131b333b90d79",
+    "bytes": 1319
+  },
+  {
+    "file": "pool-discard-snapshot-cut-pool-tests.log",
+    "sha256": "f42ca426b177d13ac11d00882b572f43f9797dcc723fd9f28fd2dff1f9494e17",
+    "bytes": 907
+  },
+  {
+    "file": "pool-discard-test-build-final.log",
+    "sha256": "f7b8d74dbfc26873423f1c18e17768df20c01d499555e6b8e77c21648f7d84fd",
+    "bytes": 2493
+  },
+  {
+    "file": "pool-discard-test-build-final2.log",
+    "sha256": "53abb12dd9b22041eb5d05df8199d7cb792102541f6fa44568e20b34159e2e87",
+    "bytes": 1864
+  },
+  {
+    "file": "pool-discard-test-build-final3.log",
+    "sha256": "53abb12dd9b22041eb5d05df8199d7cb792102541f6fa44568e20b34159e2e87",
+    "bytes": 1864
+  },
+  {
+    "file": "pool-discard-test-build-snapshot-cut.log",
+    "sha256": "ddd5be4cf7754e71836d6d8da2cc1ef0a15481049ab62a0d5ae27ccfae8e412d",
+    "bytes": 1864
+  },
+  {
+    "file": "pool-discard-tests-final2.log",
+    "sha256": "f42ca426b177d13ac11d00882b572f43f9797dcc723fd9f28fd2dff1f9494e17",
+    "bytes": 907
+  },
+  {
+    "file": "pool-discard-tests-final3.log",
+    "sha256": "f42ca426b177d13ac11d00882b572f43f9797dcc723fd9f28fd2dff1f9494e17",
+    "bytes": 907
+  }
+]

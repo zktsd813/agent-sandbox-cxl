@@ -1,0 +1,47 @@
+{
+  "schema": "pool-discard-independent-source-review-v1",
+  "result": "no_remaining_blocking_finding_in_reviewed_scope",
+  "binary_sha256": "a4d6f75f0cad5885009097221e464952a1706e3d1792826c14a0dfa84c8a6023",
+  "patch_sha256": "9628533ab209586480b61180a29149ab96f6bca9666725be210c56890c8e06c3",
+  "reviewed_sources": {
+    "src/vmm/src/pool_cache.rs": "ed74fb61518cb3e5428fd6a09d3bca8df9d0d8e70e08278b51d7c4ff38e25eb7",
+    "src/vmm/src/devices/virtio/balloon/device.rs": "b35e8dacbaca792c50b5971b2132da69e3c4a4207081772c3ef526088a9a04e4",
+    "src/vmm/src/devices/virtio/balloon/persist.rs": "9d874a83fb1f26763efb6b2b8dbf4815f25e6c17410ddc201f158bd92c8b4fc5",
+    "src/vmm/src/devices/virtio/block/virtio/request.rs": "f63ffd9f0136ee7189ce4ef98539e3e9e29f5156bc0926db763f47182a24df0b",
+    "src/vmm/src/devices/virtio/block/virtio/io/async_io.rs": "2c2bfcce92e9696006dd28d6b2cdc6e8f635fb4e1a007daea70223c061257411",
+    "src/vmm/src/builder.rs": "99feb905b6a638d467a7a5b74e1c1c106182dfec35b2d2293e7630071f28638c",
+    "src/vmm/src/persist.rs": "73335e71520061a0c41e9b51441627ed6140896b06e13e487a5a18182da345d7"
+  },
+  "checks": [
+    "Guest stock reporter isolates buddy pages until virtqueue_get_buf; trace only, no allocator modification.",
+    "All guest descriptor ranges are frozen and prevalidated before any remap, including raw NEXT exhaustion/cycles, flags, whole-page bounds, overlap, own ring metadata.",
+    "Only prior pooled GPA aliases are selected; canonical bytes are never read/copied/written by detach. Anonymous backing is lazy.",
+    "Exact block I/O range guards are acquired before submission and retained through completion/drop; busy overlay pages are skipped with safe no-op ACK.",
+    "File-engine replacement drains all old kernel operations before old request guards can drop; no dedicated new hot-file-replacement stress claim.",
+    "Invalid requests receive no ACK. A possible MAP_FIXED-created mapping hole causes process abort, not resume.",
+    "Dirty bitmap is marked after replacement; anonymous overlays retain state-only snapshot rejection.",
+    "Reporting-only config is checked at construction, restore final state, runtime use and DAX restore builder path.",
+    "Successful-snapshot marker is emitted after state/RAM save on the same event loop and binds discard sequence; later paused-source ACKs are outside saved state.",
+    "Lossless host evidence uses opt-in unrestricted logger; ordinary info rate limiting was unsuitable and was fixed.",
+    "Host default logger and guest serial both use stdout. Lossless export additionally requires a dedicated --log-path, now set by the revised harness; stdout/stderr redirection alone is insufficient."
+  ],
+  "limits": [
+    "No forced pending-report snapshot boundary injection in ordinary lifecycle test.",
+    "No dedicated hot-file-replacement versus reporting concurrency workload.",
+    "No malicious-kernel safety claim for guest self-corruption; canonical peer isolation remains enforced by private mappings.",
+    "Report ACK may be no-op; only actual discarded intervals count toward reuse evidence.",
+    "No global canonical reclamation, DAX reservation reclaim, direct pooling handoff or real noncoherent-CXL hardware claim."
+  ],
+  "protocol_unit_tests": {
+    "passed": 20,
+    "log": "/tmp/pool-discard-independent-unit-tests.log"
+  },
+  "separate_diagnostic_review": {
+    "artifact": "cow-diagnostic-independent-audit.json",
+    "result": "passed",
+    "helper_sha256": "f9297bae2266ef0dc3b17b3229fb226c468d4a9fe6a1544b90276bb0510711d2",
+    "trace_entries": 327682,
+    "checked": "All4 CPU stats, header counts, matched vCPU entry/returns, raw inclusive durations,160MiB canonical PFN changes, private identities, canonical byte comparison. Broad fault and write-protect paths are distinct.",
+    "limits": "Separate instrumented224MiB aggregate. Function durations include nesting/preemption/probe overhead, and the host trace window spans the serial round trip. The arithmetic difference is unattributed, not a measured cause. No pure copy latency claim. Diagnostic archives four measured source files, not every imported Python module. VMM hash is independently observed in /proc/exe; fixture manifest supplied separately and hash-bound here."
+  }
+}

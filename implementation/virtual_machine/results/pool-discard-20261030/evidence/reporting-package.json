@@ -1,0 +1,18 @@
+{
+  "file": "reporting-evidence.tar.xz",
+  "format": "tar.xz",
+  "compression": "xz -3 -T2",
+  "bytes": 40286084,
+  "sha256": "6768baacd69cb5707214f7617a2fa91455a09e194f37bbb9c9532995daf659a9",
+  "source_directory": "/tmp/pool-discard-formal-staging-20261030/reporting",
+  "report_member": "reporting/report.json",
+  "report_sha256": "afde0ed510d9d1109b0d4878cfaa2e33ff2f563489efdc31d7c5c67e9fc48d8d",
+  "member_count": 2019,
+  "regular_file_count": 2016,
+  "directory_count": 3,
+  "uncompressed_file_bytes": 555469226,
+  "member_names_sizes_sha256_manifest_digest": "04f6bf89346e1579d830b9969ade53a125095b0d2cac72cd24b1271bfde6aa12",
+  "verified": "Exact member set, type, length, and SHA256 of every regular file compared with the source directory.",
+  "old_gzip_verified_identical": false,
+  "seconds": 46.45270879007876
+}
