@@ -67,6 +67,36 @@ class AllocationTests(unittest.TestCase):
         with self.assertRaises(RegistrationError):
             validate_export(self.a, "v1", old, 4 * PAGE, 100 * PAGE, PAGE)
 
+    def test_extent_allocator_matches_page_model_under_fragmentation(self):
+        import random
+        rng = random.Random(1102)
+        free = set(range(PAGE, 33*PAGE, PAGE))
+        live = {}
+        for step in range(500):
+            if live and (not free or rng.randrange(3) == 0):
+                owner = rng.choice(list(live))
+                returned = self.a.release(owner, fenced=True, detached=True)
+                self.assertEqual(set(returned), live.pop(owner))
+                free.update(returned)
+            else:
+                owner = 'owner-' + str(step)
+                count = rng.randrange(1, min(len(free), 5)+1)
+                wanted = sorted(free)[:count]
+                self.assertEqual(self.a.allocate(owner, count), wanted)
+                free.difference_update(wanted)
+                live[owner] = set(wanted)
+            self.assertEqual(self.a.free_pages, len(free))
+            self.a.check()  # Explicit test audit, absent from runtime operations.
+
+    def test_handoff_never_enumerates_granted_frames(self):
+        self.a.allocate('v1', 4)
+        class NoIteration(set):
+            def __iter__(self):
+                raise AssertionError('handoff scanned allocation')
+        self.a.grants['v1'].frames = NoIteration(self.a.grants['v1'].frames)
+        self.a.transfer('v1', 'v2')
+        self.assertEqual(len(self.a.grants['v2'].frames), 4)
+
 
 if __name__ == "__main__":
     unittest.main()

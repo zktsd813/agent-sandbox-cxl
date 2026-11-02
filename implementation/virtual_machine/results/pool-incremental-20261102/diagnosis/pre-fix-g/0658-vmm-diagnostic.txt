@@ -1,0 +1,8 @@
+
+/ # (
+> set -e
+> tail -n 100 /run/pool-be9da7facb5aa40a/vm1-epoch3/fc.log 2>/dev/null || true
+> )
+/ # printf '\nLAB_COMMAND_DONE_f75a9c20f930c7c7:%s\n' "$?"
+
+LAB_COMMAND_DONE_f75a9c20f930c7c7:0

@@ -1,0 +1,86 @@
+
+/ # (
+> set -e
+> tail -n 100 /run/pool-be9da7facb5aa40a/vm1-epoch2/vmm.log 2>/dev/null || true
+> )
+2026-11-02T05:36:07.283867088 [anonymous-instance:main] Running Firecracker v1.17.0
+2026-11-02T05:36:07.284122987 [anonymous-instance:main] Listening on API socket ("/run/pool-be9da7facb5aa40a/vm1-epoch2/api.sock").
+2026-11-02T05:36:07.284401081 [anonymous-instance:fc_api] API server started.
+2026-11-02T05:36:07.661502433 [anonymous-instance:fc_api] The API server received a Put request on "/actions" with body "{\"action_type\": \"InstanceStart\"}".
+2026-11-02T05:36:07.664917448 [anonymous-instance:main] [DevPreview] Async file IO is in development preview.
+2026-11-02T05:36:07.665626510 [anonymous-instance:main] DIRECT_HANDOFF_JSON {"event":"import","memory_manifest_sha256":"ae533983fd957d96b60a00a891ecefd65194879b94bfcd6b0d85896dd4a70a2f","ram_transfer_bytes":0,"snapshot_bytes":0,"token":{"binding_ns":176707,"ept_page_count":256,"ept_root_offset":475136,"flags":1,"generation":2,"kernel_ns":248834,"mmu_drain_ns":1763,"node":1,"pool_used":2625568,"quiesce_ns":4575,"ram_bytes":536870912,"ram_hva":70368744177664,"run_offset":90112,"vcpu_creates":1,"vcpu_offset":76928,"vm_creates":1,"vm_offset":8192,"vmcs_offset":118784}}
+2026-11-02T05:36:07.665839533 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-11-02T05:36:07.835052037 [anonymous-instance:fc_api] The API server received a Put request on "/actions" with body "{\"action_type\": \"PoolCache\"}".
+2026-11-02T05:36:07.835808236 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-11-02T05:36:08.615031528 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Resumed\"}".
+2026-11-02T05:36:08.615189128 [anonymous-instance:main] Artificially kick devices
+2026-11-02T05:36:08.615228800 [anonymous-instance:main] [Balloon:balloon] notifying queues
+2026-11-02T05:36:08.615245805 [anonymous-instance:main] [Block:data] notifying queues
+2026-11-02T05:36:08.615337657 [anonymous-instance:fc_vcpu 0] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-11-02T05:36:08.615411407 [anonymous-instance:main] 'resume vm' VMM action took 269 us.
+2026-11-02T05:36:08.615489667 [anonymous-instance:main] Got a spurious notification from api thread
+2026-11-02T05:36:08.615508485 [anonymous-instance:main] Got a spurious notification from api thread
+2026-11-02T05:36:08.615530074 [anonymous-instance:main] PoolDiscard("inflation is disabled for pool reporting")
+2026-11-02T05:36:08.615563464 [anonymous-instance:main] PoolDiscard("deflation is disabled for pool reporting")
+2026-11-02T05:36:08.615583116 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-11-02T05:36:08.615611912 [anonymous-instance:fc_api] 'resume vm' API request took 592 us.
+2026-11-02T05:36:08.639658574 [anonymous-instance:main] POOL_DISCARD_JSON {"phase":"mapped","vm_id":"1","run_epoch":"2","batch":1,"queue_head":0,"requested":[{"gpa":390070272,"bytes":4194304},{"gpa":385875968,"bytes":4194304},{"gpa":381681664,"bytes":4194304},{"gpa":377487360,"bytes":4194304},{"gpa":373293056,"bytes":4194304},{"gpa":369098752,"bytes":4194304},{"gpa":364904448,"bytes":4194304},{"gpa":113246208,"bytes":4194304},{"gpa":310378496,"bytes":4194304},{"gpa":306184192,"bytes":4194304},{"gpa":119537664,"bytes":2097152},{"gpa":301989888,"bytes":2097152},{"gpa":118489088,"bytes":1048576},{"gpa":305135616,"bytes":1048576},{"gpa":477102080,"bytes":1048576},{"gpa":304087040,"bytes":524288},{"gpa":118226944,"bytes":262144},{"gpa":304611328,"bytes":262144},{"gpa":118095872,"bytes":131072},{"gpa":117833728,"bytes":131072},{"gpa":304873472,"bytes":131072},{"gpa":118030336,"bytes":65536},{"gpa":477036544,"bytes":65536},{"gpa":117800960,"bytes":32768},{"gpa":305102848,"bytes":32768},{"gpa":477003776,"bytes":32768},{"gpa":476987392,"bytes":16384},{"gpa":305086464,"bytes":16384},{"gpa":305078272,"bytes":8192},{"gpa":305004544,"bytes":8192},{"gpa":476983296,"bytes":4096},{"gpa":305012736,"bytes":4096}],"discarded":[],"requested_pages":12454,"discarded_pages":0,"skipped_busy_pages":0,"hints_removed":0,"copied_bytes":0,"host_work_ns":323942}
+2026-11-02T05:36:08.639815296 [anonymous-instance:main] POOL_DISCARD_JSON {"phase":"ack","vm_id":"1","run_epoch":"2","batch":1,"queue_head":0,"requested":[{"gpa":390070272,"bytes":4194304},{"gpa":385875968,"bytes":4194304},{"gpa":381681664,"bytes":4194304},{"gpa":377487360,"bytes":4194304},{"gpa":373293056,"bytes":4194304},{"gpa":369098752,"bytes":4194304},{"gpa":364904448,"bytes":4194304},{"gpa":113246208,"bytes":4194304},{"gpa":310378496,"bytes":4194304},{"gpa":306184192,"bytes":4194304},{"gpa":119537664,"bytes":2097152},{"gpa":301989888,"bytes":2097152},{"gpa":118489088,"bytes":1048576},{"gpa":305135616,"bytes":1048576},{"gpa":477102080,"bytes":1048576},{"gpa":304087040,"bytes":524288},{"gpa":118226944,"bytes":262144},{"gpa":304611328,"bytes":262144},{"gpa":118095872,"bytes":131072},{"gpa":117833728,"bytes":131072},{"gpa":304873472,"bytes":131072},{"gpa":118030336,"bytes":65536},{"gpa":477036544,"bytes":65536},{"gpa":117800960,"bytes":32768},{"gpa":305102848,"bytes":32768},{"gpa":477003776,"bytes":32768},{"gpa":476987392,"bytes":16384},{"gpa":305086464,"bytes":16384},{"gpa":305078272,"bytes":8192},{"gpa":305004544,"bytes":8192},{"gpa":476983296,"bytes":4096},{"gpa":305012736,"bytes":4096}],"discarded":[],"requested_pages":12454,"discarded_pages":0,"skipped_busy_pages":0,"hints_removed":0,"copied_bytes":0,"host_work_ns":323942}
+2026-11-02T05:36:08.641955760 [anonymous-instance:main] POOL_DISCARD_JSON {"phase":"mapped","vm_id":"1","run_epoch":"2","batch":2,"queue_head":0,"requested":[{"gpa":469762048,"bytes":4194304},{"gpa":465567744,"bytes":4194304},{"gpa":255852544,"bytes":4194304},{"gpa":327155712,"bytes":4194304},{"gpa":289406976,"bytes":4194304},{"gpa":285212672,"bytes":4194304},{"gpa":281018368,"bytes":4194304},{"gpa":276824064,"bytes":4194304},{"gpa":272629760,"bytes":4194304},{"gpa":268435456,"bytes":4194304},{"gpa":264241152,"bytes":4194304},{"gpa":260046848,"bytes":4194304},{"gpa":461373440,"bytes":4194304},{"gpa":457179136,"bytes":4194304},{"gpa":452984832,"bytes":4194304},{"gpa":448790528,"bytes":4194304},{"gpa":444596224,"bytes":4194304},{"gpa":440401920,"bytes":4194304},{"gpa":436207616,"bytes":4194304},{"gpa":432013312,"bytes":4194304},{"gpa":427819008,"bytes":4194304},{"gpa":423624704,"bytes":4194304},{"gpa":419430400,"bytes":4194304},{"gpa":415236096,"bytes":4194304},{"gpa":411041792,"bytes":4194304},{"gpa":406847488,"bytes":4194304},{"gpa":402653184,"bytes":4194304},{"gpa":398458880,"bytes":4194304},{"gpa":394264576,"bytes":4194304}],"discarded":[],"requested_pages":29696,"discarded_pages":0,"skipped_busy_pages":0,"hints_removed":0,"copied_bytes":0,"host_work_ns":231422}
+2026-11-02T05:36:08.642028104 [anonymous-instance:main] POOL_DISCARD_JSON {"phase":"ack","vm_id":"1","run_epoch":"2","batch":2,"queue_head":0,"requested":[{"gpa":469762048,"bytes":4194304},{"gpa":465567744,"bytes":4194304},{"gpa":255852544,"bytes":4194304},{"gpa":327155712,"bytes":4194304},{"gpa":289406976,"bytes":4194304},{"gpa":285212672,"bytes":4194304},{"gpa":281018368,"bytes":4194304},{"gpa":276824064,"bytes":4194304},{"gpa":272629760,"bytes":4194304},{"gpa":268435456,"bytes":4194304},{"gpa":264241152,"bytes":4194304},{"gpa":260046848,"bytes":4194304},{"gpa":461373440,"bytes":4194304},{"gpa":457179136,"bytes":4194304},{"gpa":452984832,"bytes":4194304},{"gpa":448790528,"bytes":4194304},{"gpa":444596224,"bytes":4194304},{"gpa":440401920,"bytes":4194304},{"gpa":436207616,"bytes":4194304},{"gpa":432013312,"bytes":4194304},{"gpa":427819008,"bytes":4194304},{"gpa":423624704,"bytes":4194304},{"gpa":419430400,"bytes":4194304},{"gpa":415236096,"bytes":4194304},{"gpa":411041792,"bytes":4194304},{"gpa":406847488,"bytes":4194304},{"gpa":402653184,"bytes":4194304},{"gpa":398458880,"bytes":4194304},{"gpa":394264576,"bytes":4194304}],"discarded":[],"requested_pages":29696,"discarded_pages":0,"skipped_busy_pages":0,"hints_removed":0,"copied_bytes":0,"host_work_ns":231422}
+2026-11-02T05:36:10.045437333 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Paused\"}".
+2026-11-02T05:36:10.046141531 [anonymous-instance:main] 'pause vm' VMM action took 498 us.
+2026-11-02T05:36:10.046214228 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-11-02T05:36:10.046231875 [anonymous-instance:fc_api] 'pause vm' API request took 806 us.
+2026-11-02T05:36:10.223527820 [anonymous-instance:fc_api] The API server received a Put request on "/actions" with body "{\"action_type\": \"PoolCache\"}".
+2026-11-02T05:36:10.224091685 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-11-02T05:36:11.003302597 [anonymous-instance:fc_api] The API server received a Put request on "/actions" with body "{\"action_type\": \"PoolCache\"}".
+2026-11-02T05:36:11.474598738 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-11-02T05:36:11.961817135 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Resumed\"}".
+2026-11-02T05:36:11.961974126 [anonymous-instance:main] Artificially kick devices
+2026-11-02T05:36:11.962010209 [anonymous-instance:main] [Balloon:balloon] notifying queues
+2026-11-02T05:36:11.962031751 [anonymous-instance:main] [Block:data] notifying queues
+2026-11-02T05:36:11.962151389 [anonymous-instance:fc_vcpu 0] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-11-02T05:36:11.962213191 [anonymous-instance:main] 'resume vm' VMM action took 259 us.
+2026-11-02T05:36:11.962250936 [anonymous-instance:main] Got a spurious notification from api thread
+2026-11-02T05:36:11.962263603 [anonymous-instance:main] PoolDiscard("inflation is disabled for pool reporting")
+2026-11-02T05:36:11.962272179 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-11-02T05:36:11.962277499 [anonymous-instance:main] PoolDiscard("deflation is disabled for pool reporting")
+2026-11-02T05:36:11.962288434 [anonymous-instance:fc_api] 'resume vm' API request took 483 us.
+2026-11-02T05:36:11.962320060 [anonymous-instance:main] Got a spurious notification from api thread
+2026-11-02T05:36:11.962334939 [anonymous-instance:main] Got a spurious notification from api thread
+2026-11-02T05:36:17.359432017 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Paused\"}".
+2026-11-02T05:36:17.359861676 [anonymous-instance:main] 'pause vm' VMM action took 330 us.
+2026-11-02T05:36:17.360039230 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-11-02T05:36:17.360072313 [anonymous-instance:fc_api] 'pause vm' API request took 652 us.
+2026-11-02T05:36:18.900760406 [anonymous-instance:fc_api] The API server received a Put request on "/actions" with body "{\"action_type\": \"PoolCache\"}".
+2026-11-02T05:36:19.370113347 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-11-02T05:36:19.902096577 [anonymous-instance:fc_api] The API server received a Put request on "/actions" with body "{\"action_type\": \"PoolCache\"}".
+2026-11-02T05:36:19.902808427 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-11-02T05:36:20.604126355 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Resumed\"}".
+2026-11-02T05:36:20.604255919 [anonymous-instance:main] Artificially kick devices
+2026-11-02T05:36:20.604306319 [anonymous-instance:main] [Balloon:balloon] notifying queues
+2026-11-02T05:36:20.604328019 [anonymous-instance:main] [Block:data] notifying queues
+2026-11-02T05:36:20.604410361 [anonymous-instance:fc_vcpu 0] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-11-02T05:36:20.604458749 [anonymous-instance:main] 'resume vm' VMM action took 237 us.
+2026-11-02T05:36:20.604498364 [anonymous-instance:main] Got a spurious notification from api thread
+2026-11-02T05:36:20.604522469 [anonymous-instance:main] PoolDiscard("inflation is disabled for pool reporting")
+2026-11-02T05:36:20.604516952 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-11-02T05:36:20.604542818 [anonymous-instance:main] PoolDiscard("deflation is disabled for pool reporting")
+2026-11-02T05:36:20.604547574 [anonymous-instance:fc_api] 'resume vm' API request took 432 us.
+2026-11-02T05:36:20.604603961 [anonymous-instance:main] Got a spurious notification from api thread
+2026-11-02T05:36:20.604617209 [anonymous-instance:main] Got a spurious notification from api thread
+2026-11-02T05:36:22.387315901 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Paused\"}".
+2026-11-02T05:36:22.387857172 [anonymous-instance:main] 'pause vm' VMM action took 450 us.
+2026-11-02T05:36:22.387940647 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-11-02T05:36:22.387955311 [anonymous-instance:fc_api] 'pause vm' API request took 651 us.
+2026-11-02T05:36:22.607579457 [anonymous-instance:fc_api] The API server received a Put request on "/actions" with body "{\"action_type\": \"PoolCache\"}".
+2026-11-02T05:36:22.608104531 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-11-02T05:36:23.166849207 [anonymous-instance:fc_api] The API server received a Put request on "/actions" with body "{\"action_type\": \"DirectExport\"}".
+2026-11-02T05:36:23.167961224 [anonymous-instance:main] DAX_DIRECT attach=false generation=3 vm=8192 vcpu=76928 vmcs=118784 vm_creates=1 vcpu_creates=1 kernel_us=133.763
+2026-11-02T05:36:23.168204816 [anonymous-instance:main] DIRECT_HANDOFF_JSON {"device_state_bytes":4258,"elapsed_ns":1192681,"event":"export","memory_manifest_sha256":"1509d2d2ee1fa8da3ab9dea0e94d6406bf278800c2636f4216f9a20612446ecc","ram_transfer_bytes":0,"snapshot_bytes":0,"token":{"binding_ns":54016,"ept_page_count":256,"ept_root_offset":475136,"flags":2,"generation":3,"kernel_ns":133565,"mmu_drain_ns":8027,"node":1,"pool_used":2630688,"quiesce_ns":4125,"ram_bytes":536870912,"ram_hva":70368744177664,"run_offset":90112,"vcpu_creates":1,"vcpu_offset":76928,"vm_creates":1,"vm_offset":8192,"vmcs_offset":118784}}
+2026-11-02T05:36:23.168483916 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+/ # printf '\nLAB_COMMAND_DONE_10ca1f72741f7151:%s\n' "$?"
+
+LAB_COMMAND_DONE_10ca1f72741f7151:0
+/ # [6n

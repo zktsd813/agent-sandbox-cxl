@@ -41,7 +41,7 @@ def main():
     output = a.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     sources = ("pool_handoff_run.py", "pool_handoff_bench.py", "pool_handoff_control.py",
-               "guest_pool_protocol.py", "verify_pool_handoff.py", "lab.py",
+               "guest_pool_protocol.py", "verify_pool_handles.py", "lab.py",
                "firecracker.patch", "kvm-dax-state.patch", "kvm-dax-source.json")
     (output / "measured-sources").mkdir()
     for name in sources:
@@ -82,7 +82,7 @@ def main():
             if mode == "direct":
                 start.append("--dax-handoff")
             bench = prefix + [str(HERE / "pool_handoff_bench.py"), "--mode", mode,
-                "--sandboxes", "3", "--cycles", str(a.cycles), "--kvm-memory-smoke", str(smoke)]
+                "--full-audit", "--sandboxes", "3", "--cycles", str(a.cycles), "--kvm-memory-smoke", str(smoke)]
             arm["commands"] = {"start": start, "bench": bench}
             try:
                 command(start, env, output / (mode + "-start.log"))
@@ -108,7 +108,7 @@ def main():
                 raise RuntimeError("Lab resources remain for " + mode)
             if "report_file" not in arm:
                 raise RuntimeError("Expected exactly one handoff report for " + mode)
-            command([sys.executable, str(HERE / "verify_pool_handoff.py"), str(output / arm["report_file"]),
+            command([sys.executable, str(HERE / "verify_pool_handles.py"), str(output / arm["report_file"]),
                      "--output", str(output / (mode + "-verification.json"))], env,
                     output / (mode + "-verification.log"))
             arm["result"] = "passed"

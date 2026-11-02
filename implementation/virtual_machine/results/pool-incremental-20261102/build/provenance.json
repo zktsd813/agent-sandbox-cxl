@@ -1,0 +1,42 @@
+{
+  "artifacts": {
+    "implementation/virtual_machine/.local/kernel-fast/arch/x86/boot/bzImage": {
+      "bytes": 13340800,
+      "sha256": "8a745327e7938a46028b4101d907035414b4bc3b98e1891ce3761b015d9b676c"
+    },
+    "implementation/virtual_machine/.local/kernel-fast/arch/x86/kvm/kvm.ko": {
+      "bytes": 2468904,
+      "sha256": "fc9ada08d101941b2e19ef686ad1d0fd69329c5cc413cda53ac4b5d0aa73812f"
+    },
+    "implementation/virtual_machine/.local/kernel-fast/arch/x86/kvm/kvm-intel.ko": {
+      "bytes": 637488,
+      "sha256": "2f4aa18a80f499eed0211cbddf4658cd9c30ce4e2a907722b890f3790a343776"
+    },
+    "implementation/virtual_machine/.local/mapper-fast/pool_memory_module.ko": {
+      "bytes": 32696,
+      "sha256": "7bb83078e7133cdd28fbe923788e4183d333008ba5988bfb757c21cd46590901"
+    },
+    "firecracker/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker": {
+      "bytes": 6836224,
+      "sha256": "ea5afc8c5647b75fb3e189bc43cf4bcfc25aee5e3bd10662f2185b0f7e6f85c8"
+    },
+    "implementation/virtual_machine/.local/guest-build-fast/vmlinux": {
+      "bytes": 51638584,
+      "sha256": "db5a39f057ff80bc0d038b8240a40f6a782135d6d53a77651f03a7ede4dcc587"
+    }
+  },
+  "firecracker_base": "95f868c8e345b1cc8faccd1a3c910b4989dc3f58",
+  "firecracker_toolchain_image": "public.ecr.aws/firecracker/fcuvm:v93",
+  "build_network": "none",
+  "kernel_cumulative_patch_sha256": "2f52a8de0f0d69c50266b6f8e9adc389a5444db53a5de83d43eba57a7a002854",
+  "firecracker_cumulative_patch_sha256": "13753f4d9f0dc6abd37e7a8d48b5a4a41233c5b21a0a8740366876e5c54a41fd",
+  "kernel_patch_check": "clean application from saved base; 26 final source hashes matched",
+  "rust_tests": {
+    "device_prepare_save": 4,
+    "direct_contract": 3,
+    "pool_memory": 15
+  },
+  "python_tests": 63,
+  "guest_changes_this_revision": false,
+  "scope": "These logs include incremental rebuilds. Measured fixture hashes identify the final binaries."
+}

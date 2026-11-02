@@ -1247,6 +1247,22 @@ index 689a446be..658781d50 100644
      /// Create a new manager for virtio devices using the MMIO transport.
      pub fn new() -> MMIOVirtioDevices {
          Default::default()
+diff --git a/src/vmm/src/device_manager/mod.rs b/src/vmm/src/device_manager/mod.rs
+index 37d00db6d..7e38a1a97 100644
+--- a/src/vmm/src/device_manager/mod.rs
++++ b/src/vmm/src/device_manager/mod.rs
+@@ -431,6 +431,11 @@ impl DeviceManager {
+     }
+ 
+     /// Run fn `f()` on all virtio devices
++    /// Quiesce memory-writing devices without allocating serialized device state.
++    pub(crate) fn prepare_memory_remap(&mut self) {
++        self.for_each_virtio_device_mut(|_, device| device.prepare_save());
++    }
++
+     pub fn for_each_virtio_device(&self, mut f: impl FnMut(VirtioDeviceType, &dyn VirtioDevice)) {
+         match &self.virtio_devices {
+             VirtioDevices::Mmio(mmio_devices) => mmio_devices.for_each_virtio_device(&mut f),
 diff --git a/src/vmm/src/device_manager/persist.rs b/src/vmm/src/device_manager/persist.rs
 index 82518eb6f..b2ab128f8 100644
 --- a/src/vmm/src/device_manager/persist.rs
@@ -1650,7 +1666,7 @@ index 6637d196e..ca675b88e 100644
          if state.virtio_state.activated && balloon.stats_enabled() {
              // Restore the stats descriptor.
 diff --git a/src/vmm/src/devices/virtio/block/virtio/device.rs b/src/vmm/src/devices/virtio/block/virtio/device.rs
-index 78c1adde8..3088ad681 100644
+index 78c1adde8..0d0a473ca 100644
 --- a/src/vmm/src/devices/virtio/block/virtio/device.rs
 +++ b/src/vmm/src/devices/virtio/block/virtio/device.rs
 @@ -59,6 +59,7 @@ pub enum FileEngineType {
@@ -1694,7 +1710,7 @@ index 78c1adde8..3088ad681 100644
              metrics: BlockMetricsPerDevice::alloc(config.drive_id),
          })
      }
-@@ -744,11 +750,17 @@ impl VirtioBlock {
+@@ -744,11 +750,23 @@ impl VirtioBlock {
  
      /// Prepare device for being snapshotted.
      pub fn prepare_save(&mut self) {
@@ -1706,14 +1722,20 @@ index 78c1adde8..3088ad681 100644
 -        self.drain_and_flush(false);
 +        // Persist::save is infallible. Retain a failure so Vmm::save_state can
 +        // reject the checkpoint before serializing it or collecting CPU state.
-+        if let Err(err) = self.disk.file_engine.drain_and_flush(false) {
++        let prepared = if self.read_only {
++            // Complete reads and publish used rings; an immutable disk has no data to flush.
++            self.disk.file_engine.drain(false)
++        } else {
++            self.disk.file_engine.drain_and_flush(false)
++        };
++        if let Err(err) = prepared {
 +            self.snapshot_prepare_error = Some(err.to_string());
 +            return;
 +        }
          if let FileEngine::Async(ref _engine) = self.disk.file_engine {
              self.process_async_completion_queue();
          }
-@@ -1968,6 +1980,29 @@ mod tests {
+@@ -1968,6 +1986,29 @@ mod tests {
          }
      }
  
@@ -1743,7 +1765,7 @@ index 78c1adde8..3088ad681 100644
      #[test]
      fn test_prepare_save() {
          for engine in [FileEngineType::Sync, FileEngineType::Async] {
-@@ -1983,6 +2018,7 @@ mod tests {
+@@ -1983,6 +2024,7 @@ mod tests {
              add_flush_requests_batch(&mut block, &vq, 5);
              simulate_queue_event(&mut block, None);
              block.prepare_save();
@@ -1866,7 +1888,7 @@ index a6f5813ce..18bed9cca 100644
                  status_addr: Default::default(),
 diff --git a/src/vmm/src/direct.rs b/src/vmm/src/direct.rs
 new file mode 100644
-index 000000000..643a8098b
+index 000000000..d7016aa9b
 --- /dev/null
 +++ b/src/vmm/src/direct.rs
 @@ -0,0 +1,504 @@
@@ -2073,7 +2095,7 @@ index 000000000..643a8098b
 +        let devices = self.device_manager.save(); // Drains async I/O and captures resulting used rings.
 +        self.check_block_snapshot_preparation()
 +            .map_err(|e| VmmError::DaxHandoff(io::Error::other(e.to_string())))?;
-+        crate::pool_memory::checkpoint_ready(vm.guest_memory()).map_err(VmmError::DaxHandoff)?;
++        crate::pool_memory::seal_for_handoff(vm.guest_memory()).map_err(VmmError::DaxHandoff)?;
 +        let manifest =
 +            bounded_read(&env_path("FC_POOL_MEMORY_MANIFEST").map_err(VmmError::DaxHandoff)?)
 +                .map_err(VmmError::DaxHandoff)?;
@@ -2375,7 +2397,7 @@ index 000000000..643a8098b
 +    }
 +}
 diff --git a/src/vmm/src/lib.rs b/src/vmm/src/lib.rs
-index 41b7b8d69..a82896bbe 100644
+index 41b7b8d69..a4123c7e7 100644
 --- a/src/vmm/src/lib.rs
 +++ b/src/vmm/src/lib.rs
 @@ -78,6 +78,9 @@ pub mod builder;
@@ -2436,10 +2458,11 @@ index 41b7b8d69..a82896bbe 100644
  
      /// VM object.
      pub vm: Vm,
-@@ -461,23 +484,149 @@ impl Vmm {
+@@ -461,23 +484,150 @@ impl Vmm {
  
      /// Sends a resume command to the vCPUs.
      pub fn resume_vm(&mut self) -> Result<(), VmmError> {
++        crate::pool_memory::check_execution_owner().map_err(VmmError::PoolCache)?;
 +        if pool_cache::mapping_failed() {
 +            return Err(VmmError::PoolCache(io::Error::other("failed pool mapping: this process cannot resume")));
 +        }
@@ -2536,12 +2559,12 @@ index 41b7b8d69..a82896bbe 100644
 +            return Err(VmmError::PoolCache(io::Error::other(
 +                "PoolCache allows only reporting-only opt-in balloon, no memory hotplug or pmem")));
 +        }
-+        // Saving devices drains asynchronous block writes and publishes completion
++        // Preparing devices drains asynchronous block writes and publishes completion
 +        // rings before any host address is remapped. The main event loop is locked
 +        // throughout this action, so no net/balloon event can mutate RAM here.
 +        self.check_unsnapshottable_devices()
 +            .map_err(|e| VmmError::PoolCache(io::Error::other(e.to_string())))?;
-+        let _ = self.device_manager.save();
++        self.device_manager.prepare_memory_remap();
 +        self.check_block_snapshot_preparation()
 +            .map_err(|e| VmmError::PoolCache(io::Error::other(e.to_string())))?;
 +        let vm = self.vm.as_kvm()
@@ -2588,7 +2611,7 @@ index 41b7b8d69..a82896bbe 100644
          self.instance_info.state = VmState::Paused;
          Ok(())
      }
-@@ -498,6 +647,15 @@ impl Vmm {
+@@ -498,6 +648,15 @@ impl Vmm {
  
      /// Saves the state of a paused Microvm.
      pub fn save_state(&mut self, vm_info: &VmInfo) -> Result<MicrovmState, MicrovmStateError> {
@@ -2604,7 +2627,7 @@ index 41b7b8d69..a82896bbe 100644
          self.check_unsnapshottable_devices()?;
  
          // We need to save device state before saving KVM state.
-@@ -506,11 +664,18 @@ impl Vmm {
+@@ -506,11 +665,18 @@ impl Vmm {
          // state before we save device state, that interrupt will never be delivered to the guest
          // upon resuming from the snapshot.
          let device_states = self.device_manager.save();
@@ -2624,7 +2647,7 @@ index 41b7b8d69..a82896bbe 100644
          let kvm_state = kvm_vm.kvm().save_state();
          let vm_state = {
              #[cfg(target_arch = "x86_64")]
-@@ -528,6 +693,8 @@ impl Vmm {
+@@ -528,6 +694,8 @@ impl Vmm {
                      .map_err(MicrovmStateError::SaveVmState)?
              }
          };
@@ -2634,7 +2657,7 @@ index 41b7b8d69..a82896bbe 100644
          Ok(MicrovmState {
              vm_info: vm_info.clone(),
 diff --git a/src/vmm/src/persist.rs b/src/vmm/src/persist.rs
-index 71a0345cb..2e21ce3aa 100644
+index 71a0345cb..e02ee98cc 100644
 --- a/src/vmm/src/persist.rs
 +++ b/src/vmm/src/persist.rs
 @@ -7,14 +7,17 @@ use std::fmt::Debug;
@@ -2790,7 +2813,7 @@ index 71a0345cb..2e21ce3aa 100644
          .map_err(CreateSnapshotError::MicrovmState)?;
 +    if dax_offset.is_some() && crate::pool_memory::active() {
 +        let vm=vmm.vm.as_kvm().ok_or_else(||MemoryError::Dax("requires KVM".into()))?;
-+        crate::pool_memory::checkpoint_ready(vm.guest_memory())
++        crate::pool_memory::seal_for_handoff(vm.guest_memory())
 +            .map_err(|e|MemoryError::Dax(e.to_string()))?;
 +    }
 +    timing.mark("state_collection");
@@ -2986,10 +3009,10 @@ index 71a0345cb..2e21ce3aa 100644
          let mut vmm = default_vmm();
 diff --git a/src/vmm/src/pool_cache.rs b/src/vmm/src/pool_cache.rs
 new file mode 100644
-index 000000000..e2bb9ddb8
+index 000000000..bcb56bda7
 --- /dev/null
 +++ b/src/vmm/src/pool_cache.rs
-@@ -0,0 +1,805 @@
+@@ -0,0 +1,813 @@
 +// Copyright 2026
 +// SPDX-License-Identifier: Apache-2.0
 +
@@ -3104,6 +3127,11 @@ index 000000000..e2bb9ddb8
 +
 +/// Only an explicitly identified read-only drive can contribute hints.
 +pub(crate) fn disk_identity(path: &str, read_only: bool) -> Option<String> {
++    // Guest authority and the mapper own admission in this mode. Historical
++    // block-read hints have no consumer; pending I/O protection is independent.
++    if crate::pool_memory::enabled() {
++        return None;
++    }
 +    if !read_only || std::env::var("FC_POOL_IMAGE_PATH").as_deref() != Ok(path) {
 +        return None;
 +    }
@@ -3274,7 +3302,10 @@ index 000000000..e2bb9ddb8
 +    let mut selected = BTreeSet::new();
 +    let mut busy = 0;
 +    for r in ranges {
-+        for &gpa in s.pooled_gpas.range(r.gpa..r.gpa + r.bytes) {
++        let current = crate::pool_memory::reported_lineage(r.gpa, r.bytes)?;
++        let candidates: Vec<u64> = current.unwrap_or_else(||
++            s.pooled_gpas.range(r.gpa..r.gpa+r.bytes).copied().collect());
++        for gpa in candidates {
 +            if s.pending_io.values().flatten().any(|&v| overlaps((gpa, gpa + PAGE as u64), v)) {
 +                busy += 1;
 +            } else {
@@ -3797,10 +3828,10 @@ index 000000000..e2bb9ddb8
 +}
 diff --git a/src/vmm/src/pool_memory.rs b/src/vmm/src/pool_memory.rs
 new file mode 100644
-index 000000000..9ca10d138
+index 000000000..ea0770390
 --- /dev/null
 +++ b/src/vmm/src/pool_memory.rs
-@@ -0,0 +1,1009 @@
+@@ -0,0 +1,1088 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Guest-authorized pooling and persistent CXL logical RAM. Control plans are
 +//! private, trusted controller files. Only the kernel-owned ACTIVE registration
@@ -3875,6 +3906,20 @@ index 000000000..9ca10d138
 +    credit_count: u64,
 +    credits: u64,
 +}
++#[repr(C)]
++#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
++#[serde(deny_unknown_fields)]
++struct Handle {
++    abi: u64, phys_base: u64, device_bytes: u64, metadata_offset: u64, metadata_bytes: u64,
++    cookie_lo: u64, cookie_hi: u64, owner_epoch: u64, generation: u64, allocation_generation: u64,
++    count: u64, credit_count: u64, shared_pages: u64, cow_pages: u64, discard_pages: u64,
++    faults: u64, exhausted: u64, full_scan_pages: u64, state: u64,
++}
++#[repr(C)]
++struct Create { config: Config, metadata_offset: u64, metadata_bytes: u64,
++    owner_epoch: u64, allocation_generation: u64 }
++#[repr(C)]
++struct Select { first: u64, count: u64, selected: u64 }
 +#[repr(C)]
 +#[derive(Debug, Default)]
 +struct Query {
@@ -3997,8 +4042,12 @@ index 000000000..9ca10d138
 +    device_bytes: u64,
 +    canonical_start: u64,
 +    canonical_bytes: u64,
++    #[serde(default, skip_serializing_if = "Vec::is_empty")]
 +    mappings: Vec<Mapping>,
++    #[serde(default, skip_serializing_if = "Vec::is_empty")]
 +    credits: Vec<u64>,
++    #[serde(default)]
++    handle: Option<Handle>,
 +    generation: u64,
 +    cow_pages: u64,
 +    discard_pages: u64,
@@ -4154,23 +4203,12 @@ index 000000000..9ca10d138
 +            "pool mapper v1 requires one contiguous logical RAM region",
 +        ));
 +    }
-+    if m.version != 1 || m.mappings.len() > MAX_PAGES || m.credits.len() > MAX_PAGES {
++    if m.version != 2 || m.mappings.len() > MAX_PAGES || m.credits.len() > MAX_PAGES {
 +        return Err(invalid("manifest version/size"));
 +    }
-+    let mut expected = Vec::new();
-+    for (base, size) in regions {
-+        if size % PAGE as usize != 0 {
-+            return Err(invalid("unaligned RAM region"));
-+        }
-+        expected.extend(
-+            (0..*size as u64)
-+                .step_by(PAGE as usize)
-+                .map(|n| base.raw_value() + n),
-+        );
-+    }
-+    if expected.len() != m.mappings.len()
-+        || expected.iter().zip(&m.mappings).any(|(g, p)| *g != p.gpa)
-+    {
++    let (base, size) = regions[0];
++    if base.raw_value() != 0 || size % PAGE as usize != 0 || size/PAGE as usize != m.mappings.len()
++        || m.mappings.iter().enumerate().any(|(i,p)|p.gpa != i as u64*PAGE) {
 +        return Err(invalid("manifest does not cover exact RAM geometry"));
 +    }
 +    Ok(())
@@ -4202,7 +4240,7 @@ index 000000000..9ca10d138
 +        parse(&format!("{base}/size"))?,
 +    ))
 +}
-+fn configure(m: &Manifest) -> io::Result<Arc<File>> {
++fn configure(m: &mut Manifest) -> io::Result<Arc<File>> {
 +    if dax_geometry(&m.pool_path)? != (m.phys_base, m.device_bytes) {
 +        return Err(invalid("DAX physical geometry changed"));
 +    }
@@ -4218,7 +4256,7 @@ index 000000000..9ca10d138
 +            flags: if p.shared { SHARED } else { 0 },
 +        })
 +        .collect();
-+    let mut config = Config {
++    let config = Config {
 +        abi: 1,
 +        phys_base: m.phys_base,
 +        device_bytes: m.device_bytes,
@@ -4229,44 +4267,84 @@ index 000000000..9ca10d138
 +        credit_count: m.credits.len() as u64,
 +        credits: m.credits.as_ptr() as u64,
 +    };
-+    ioctl(&file, 0x70, false, &mut config)?;
++    let mut create = Create { config,
++        metadata_offset: env("FC_POOL_MEMORY_METADATA_OFFSET")?.parse().map_err(io::Error::other)?,
++        metadata_bytes: 64 * 1024 * 1024,
++        owner_epoch: m.run_epoch.parse().map_err(io::Error::other)?,
++        allocation_generation: m.allocation_generation,
++    };
++    ioctl(&file, 0x75, false, &mut create)?;
++    let mut handle = Handle::default();
++    ioctl(&file, 0x76, true, &mut handle)?;
++    m.handle = Some(handle);
 +    Ok(file)
 +}
 +fn query(a: &mut Active) -> io::Result<()> {
-+    let mut entries = vec![Entry::default(); a.manifest.mappings.len()];
-+    let mut credits = vec![0u64; MAX_PAGES];
-+    let mut q = Query {
-+        count: entries.len() as u64,
-+        entries: entries.as_mut_ptr() as u64,
-+        credit_count: credits.len() as u64,
-+        credits: credits.as_mut_ptr() as u64,
-+        ..Default::default()
-+    };
-+    ioctl(&a.file, 0x71, true, &mut q)?;
-+    for (p, e) in a.manifest.mappings.iter_mut().zip(entries) {
-+        p.offset = e.offset;
-+        p.shared = e.flags & SHARED != 0;
-+    }
-+    credits.truncate(q.credit_count as usize);
-+    a.manifest.credits = credits;
-+    a.manifest.generation = q.generation;
-+    a.manifest.cow_pages = q.cow_pages;
-+    a.manifest.discard_pages = q.discard_pages;
-+    a.manifest.faults = q.faults;
-+    a.manifest.exhausted = q.exhausted;
++    let mut h = a.manifest.handle.ok_or_else(|| invalid("persistent handle required"))?;
++    ioctl(&a.file, 0x76, true, &mut h)?;
++    a.manifest.generation = h.generation;
++    a.manifest.cow_pages = h.cow_pages;
++    a.manifest.discard_pages = h.discard_pages;
++    a.manifest.faults = h.faults;
++    a.manifest.exhausted = h.exhausted;
++    a.manifest.handle = Some(h);
 +    Ok(())
 +}
-+
-+pub(crate) fn checkpoint_ready(mem: &GuestMemoryMmap) -> io::Result<()> {
-+    let mut guard = state().lock().unwrap();
-+    let a = guard
-+        .as_mut()
-+        .ok_or_else(|| invalid("no persistent CXL pool mapping"))?;
++fn full_query(a: &mut Active) -> io::Result<()> {
++    if std::env::var("FC_POOL_FULL_AUDIT").as_deref() != Ok("1") {
++        return Err(invalid("full mapping scan requires explicit audit opt-in"));
++    }
 +    query(a)?;
-+    validate_geometry(&a.manifest, &geometry(mem))?;
++    let h = a.manifest.handle.unwrap();
++    let mut entries = vec![Entry::default(); h.count as usize];
++    let mut credits = vec![0u64; h.credit_count as usize];
++    let mut q = Query { count:h.count, entries:entries.as_mut_ptr() as u64,
++        credit_count:h.credit_count, credits:credits.as_mut_ptr() as u64, ..Default::default() };
++    ioctl(&a.file, 0x71, true, &mut q)?;
++    a.manifest.mappings = entries.into_iter().enumerate().map(|(i,e)| Mapping {
++        gpa:i as u64*PAGE, offset:e.offset, shared:e.flags & SHARED != 0 }).collect();
++    credits.truncate(q.credit_count as usize);
++    a.manifest.credits = credits;
++    Ok(())
++}
++fn validate_handle_geometry(m: &Manifest, regions: &[(GuestAddress, usize)]) -> io::Result<()> {
++    let h = m.handle.ok_or_else(|| invalid("persistent mapping handle missing"))?;
++    if m.version != 2 || h.abi != 2 || h.count == 0 || h.count > MAX_PAGES as u64 ||
++        h.phys_base != m.phys_base || h.device_bytes != m.device_bytes ||
++        h.allocation_generation != m.allocation_generation ||
++        regions.len() != 1 || regions[0].0.raw_value() != 0 || regions[0].1 as u64 != h.count*PAGE {
++        return Err(invalid("persistent mapping geometry/lease"));
++    }
++    Ok(())
++}
++fn checkpoint(mem: &GuestMemoryMmap, seal: bool) -> io::Result<()> {
++    let mut guard = state().lock().unwrap();
++    let Some(a) = guard.as_mut() else { return Ok(()); };
++    query(a)?;
++    validate_handle_geometry(&a.manifest, &geometry(mem))?;
++    if seal {
++        let mut h = a.manifest.handle.unwrap();
++        ioctl(&a.file, 0x77, true, &mut h)?;
++        a.manifest.handle = Some(h);
++    }
++    // Full evidence is explicit. Drop the allocation as well as its contents;
++    // a 2GiB VM must not retain a spare 524288-entry userspace table.
++    a.manifest.mappings = Vec::new(); a.manifest.credits = Vec::new();
 +    a.manifest.state_sha256 = None;
 +    write_json(&env("FC_POOL_MEMORY_MANIFEST")?, &a.manifest)
 +}
++pub(crate) fn check_execution_owner() -> io::Result<()> {
++    let mut guard = state().lock().unwrap();
++    if let Some(a) = guard.as_mut() {
++        query(a)?;
++        if a.manifest.handle.unwrap().state != 1 {
++            return Err(invalid("sealed mapper cannot resume on the source"));
++        }
++    }
++    Ok(())
++}
++pub(crate) fn checkpoint_ready(mem: &GuestMemoryMmap) -> io::Result<()> { checkpoint(mem, false) }
++pub(crate) fn seal_for_handoff(mem: &GuestMemoryMmap) -> io::Result<()> { checkpoint(mem, true) }
 +
 +pub(crate) fn bind_state(path: &Path) -> io::Result<()> {
 +    let bytes = std::fs::read(path)?;
@@ -4303,7 +4381,7 @@ index 000000000..9ca10d138
 +        if !enabled() || active() {
 +            return Err(invalid("pool restore configuration"));
 +        }
-+        let m: Manifest = read_json(&path)?;
++        let mut m: Manifest = read_json(&path)?;
 +        if m.vm_id != env("FC_POOL_VM_ID")? {
 +            return Err(invalid("pool restore VM identity"));
 +        }
@@ -4320,8 +4398,18 @@ index 000000000..9ca10d138
 +        {
 +            return Err(invalid("stale placement epoch or allocation lease"));
 +        }
-+        validate_geometry(&m, regions)?;
-+        let file = configure(&m)?;
++        validate_handle_geometry(&m, regions)?;
++        if dax_geometry(&m.pool_path)? != (m.phys_base, m.device_bytes) {
++            return Err(invalid("DAX physical geometry changed"));
++        }
++        let file = Arc::new(OpenOptions::new().read(true).write(true)
++            .open(env("FC_POOL_MEMORY_DEVICE")?)?);
++        let mut h = m.handle.unwrap();
++        if h.owner_epoch != old || h.state != 2 { return Err(invalid("unsealed/stale mapper")); }
++        ioctl(&file, 0x78, true, &mut h)?;
++        if h.owner_epoch != new { return Err(invalid("mapper owner epoch mismatch")); }
++        m.handle = Some(h);
++        m.mappings = Vec::new(); m.credits = Vec::new();
 +        Ok((file, m))
 +    };
 +    let (file, mut m) = load().map_err(|e| MemoryError::Dax(e.to_string()))?;
@@ -4352,7 +4440,7 @@ index 000000000..9ca10d138
 +        fixed = fixed.map(|p| p + size);
 +    }
 +    m.run_epoch = env("FC_POOL_RUN_EPOCH").map_err(|e| MemoryError::Dax(e.to_string()))?;
-+    crate::pool_cache::set_pool_lineage(m.mappings.iter().filter(|p| p.shared).map(|p| p.gpa));
++    crate::pool_cache::set_pool_lineage(std::iter::empty());
 +    *state().lock().unwrap() = Some(Active { file, manifest: m });
 +    Ok(Some(out))
 +}
@@ -4449,8 +4537,9 @@ index 000000000..9ca10d138
 +            let status = validate_registration(mem, &p)?;
 +            registration_status_hex = Some(status.iter().map(|b| format!("{b:02x}")).collect());
 +            let (phys_base, device_bytes) = dax_geometry(&p.pool_path)?;
-+            let m = Manifest {
-+                version: 1,
++            let mut m = Manifest {
++                version: 2,
++                handle: None,
 +                vm_id: p.vm_id.clone(),
 +                run_epoch: p.run_epoch.clone(),
 +                pool_path: p.pool_path.clone(),
@@ -4469,30 +4558,30 @@ index 000000000..9ca10d138
 +                allocation_generation: p.allocation_generation,
 +            };
 +            validate_geometry(&m, &geometry(mem))?;
-+            let file = configure(&m)?; // structural/duplicate allocation preflight before copying
++            let file = configure(&mut m)?; // structural/duplicate allocation preflight before copying
 +            let dax = OpenOptions::new()
 +                .read(true)
 +                .write(true)
 +                .open(&m.pool_path)?;
 +            let target = view(&dax, device_bytes as usize)?;
-+            for page in &m.mappings {
-+                if page.shared {
-+                    shared += PAGE;
-+                    continue;
++            let mut index = 0;
++            while index < m.mappings.len() {
++                let page = &m.mappings[index];
++                if page.shared { shared += PAGE; index += 1; continue; }
++                let mut end = index + 1;
++                while end < m.mappings.len() && !m.mappings[end].shared
++                    && m.mappings[end].offset == page.offset + (end-index) as u64*PAGE {
++                    end += 1;
 +                }
-+                let source = mem
-+                    .get_host_address(GuestAddress(page.gpa))
-+                    .map_err(io::Error::other)?;
-+                // SAFETY: source is paused logical RAM; destination is a validated
-+                // exclusive private CXL allocation and cannot overlap source DRAM.
-+                unsafe {
-+                    std::ptr::copy_nonoverlapping(
-+                        source,
-+                        target.ptr.cast::<u8>().add(page.offset as usize),
-+                        PAGE as usize,
-+                    );
-+                }
-+                copied += PAGE;
++                let bytes = (end-index)*PAGE as usize;
++                mem.get_slice(GuestAddress(page.gpa), bytes).map_err(io::Error::other)?;
++                let source = mem.get_host_address(GuestAddress(page.gpa)).map_err(io::Error::other)?;
++                // SAFETY: the admitted exclusive extent and paused logical region
++                // cover this run; no payload comparison or per-page syscall.
++                unsafe { std::ptr::copy_nonoverlapping(source,
++                    target.ptr.cast::<u8>().add(page.offset as usize), bytes); }
++                copied += bytes as u64;
++                index = end;
 +            }
 +            let mut offset = 0;
 +            for region in mem.iter() {
@@ -4515,9 +4604,7 @@ index 000000000..9ca10d138
 +                offset += region.len() as i64;
 +            }
 +            crate::pool_cache::set_mapping_failed(false);
-+            crate::pool_cache::set_pool_lineage(
-+                m.mappings.iter().filter(|p| p.shared).map(|p| p.gpa),
-+            );
++            crate::pool_cache::set_pool_lineage(std::iter::empty());
 +            *state().lock().unwrap() = Some(Active { file, manifest: m });
 +            checkpoint_ready(mem)?;
 +        }
@@ -4533,7 +4620,7 @@ index 000000000..9ca10d138
 +            let a = guard
 +                .as_mut()
 +                .ok_or_else(|| invalid("audit requires CXL mapping"))?;
-+            query(a)?;
++            full_query(a)?;
 +            let mut rows = Vec::new();
 +            for region in mem.iter() {
 +                let mut ptes = vec![Pte::default(); region.len() as usize / PAGE as usize];
@@ -4556,6 +4643,8 @@ index 000000000..9ca10d138
 +                "present":pte.flags&1!=0,"writable":pte.flags&2!=0})
 +                })
 +                .collect();
++            a.manifest.mappings = Vec::new();
++            a.manifest.credits = Vec::new();
 +            return write_json(
 +                &env("FC_POOL_MEMORY_REPORT")?,
 +                &serde_json::json!({"version":1,"operation":"audit",
@@ -4620,7 +4709,13 @@ index 000000000..9ca10d138
 +                }
 +                copy.bytes = 0; // ownership moved into the existing GuestMemory VMA
 +            }
-+            *state().lock().unwrap() = None;
++            {
++                let mut guard = state().lock().unwrap();
++                let a = guard.as_ref().ok_or_else(||invalid("demote without mapper"))?;
++                let mut h = a.manifest.handle.unwrap();
++                ioctl(&a.file, 0x7a, true, &mut h)?;
++                *guard = None;
++            }
 +            crate::pool_cache::set_pool_lineage(std::iter::empty());
 +            crate::pool_cache::set_mapping_failed(false);
 +            dram_vmas = dram_evidence(mem)?;
@@ -4629,8 +4724,8 @@ index 000000000..9ca10d138
 +    }
 +    let summary=state().lock().unwrap().as_ref().map(|a|serde_json::json!({
 +        "generation":a.manifest.generation,"cow_pages":a.manifest.cow_pages,
-+        "discard_pages":a.manifest.discard_pages,"credit_pages":a.manifest.credits.len(),
-+        "shared_pages":a.manifest.mappings.iter().filter(|p|p.shared).count(),"exhausted":a.manifest.exhausted}));
++        "discard_pages":a.manifest.discard_pages,"credit_pages":a.manifest.handle.map(|h|h.credit_count).unwrap_or(0),
++        "shared_pages":a.manifest.handle.map(|h|h.shared_pages).unwrap_or(0),"exhausted":a.manifest.exhausted}));
 +    write_json(
 +        &env("FC_POOL_MEMORY_REPORT")?,
 +        &serde_json::json!({"version":1,"operation":p.operation,
@@ -4645,11 +4740,11 @@ index 000000000..9ca10d138
 +    let Some(a) = guard.as_ref() else {
 +        return Ok(false);
 +    };
-+    let first = a
-+        .manifest
-+        .mappings
-+        .binary_search_by_key(&gpa, |p| p.gpa)
-+        .map_err(|_| invalid("discard GPA"))?;
++    let h = a.manifest.handle.ok_or_else(||invalid("discard without mapper"))?;
++    if gpa % PAGE != 0 || bytes % PAGE != 0 || gpa/PAGE >= h.count || bytes/PAGE > h.count-gpa/PAGE {
++        return Err(invalid("discard GPA range"));
++    }
++    let first = gpa/PAGE;
 +    let mut range = Range {
 +        address: address as u64,
 +        first: first as u64,
@@ -4657,6 +4752,21 @@ index 000000000..9ca10d138
 +    };
 +    ioctl(&a.file, 0x72, false, &mut range)?;
 +    Ok(true)
++}
++
++/// Query only the guest-reported interval, never enumerate full RAM at restore.
++pub(crate) fn reported_lineage(gpa: u64, bytes: u64) -> io::Result<Option<Vec<u64>>> {
++    let guard = state().lock().unwrap();
++    let Some(a) = guard.as_ref() else { return Ok(None); };
++    let h = a.manifest.handle.ok_or_else(||invalid("missing mapper"))?;
++    if gpa%PAGE != 0 || bytes%PAGE != 0 || gpa/PAGE >= h.count || bytes/PAGE > h.count-gpa/PAGE {
++        return Err(invalid("lineage range"));
++    }
++    let mut flags = vec![0u8; (bytes/PAGE) as usize];
++    let mut r = Select {first:gpa/PAGE, count:bytes/PAGE, selected:flags.as_mut_ptr() as u64};
++    ioctl(&a.file,0x79,true,&mut r)?;
++    Ok(Some(flags.into_iter().enumerate().filter(|(_,f)| *f != 0)
++        .map(|(i,_)| gpa+i as u64*PAGE).collect()))
 +}
 +
 +#[cfg(test)]

@@ -20,6 +20,7 @@ import lab
 import nfs_bench as nfs
 from home_storage_bench import Controller, require, json_lines
 from pool_bench import Sandbox, MIB
+from pool_handoff_control import validate_handoff_handle
 from pool_handoff_bench import HandoffController
 from pool_handoff_control import FrameAllocator, promotion_layout
 from pool_control import PoolControl
@@ -33,6 +34,7 @@ class SWEController(HandoffController):
     def __init__(self, config, out, args):
         Controller.__init__(self, config, out, args.memory_mib, 1)
         self.args, self.mode = args, args.mode
+        self.metadata_base = 8192 * MIB
         self.fixture = json.loads((Path(config['assets']) / 'manifest.json').read_text())
         self.trace = self.fixture['traces'][args.name]
         self.root = '/run/swe-pool-' + os.urandom(8).hex()
@@ -133,6 +135,7 @@ class SWEController(HandoffController):
             self.shell(role, 'echo 2147483647 > /sys/module/kvm/parameters/dax_owner_pid\n'
                 'resource=$(cat /sys/bus/dax/devices/dax0.0/resource)\n'
                 'echo 3 > /sys/module/kvm/parameters/dax_handoff_mode\n'
+                'echo 1 > /sys/module/kvm/parameters/dax_nested_root_sync\n'
                 'echo 1 > /sys/module/kvm/parameters/dax_scattered\n'
                 'echo $resource > /sys/module/kvm/parameters/dax_data_base\n'
                 f'echo {8192*MIB} > /sys/module/kvm/parameters/dax_data_bytes\n'
@@ -221,8 +224,9 @@ class SWEController(HandoffController):
         require(value['registered_bytes'] > 0, 'No naturally resident lower pages in selected whitelist')
         keys = {p['image_offset'] for p in value['pages']}
         hits, probe = self.pool._bloom(s, 'probe', keys, s.vm)
+        shared_hits = hits & self.ready_keys
         selected = [dict(p, pool_offset=self.pool_offset+p['image_offset']) for p in value['pages']
-                    if p['image_offset'] not in self.ready_keys or p['image_offset'] in hits & self.ready_keys]
+                    if p['image_offset'] not in self.ready_keys or p['image_offset'] in shared_hits]
         self.pool._bloom(s, 'build', keys, s.vm)
         self.pause(s)
         owner = f'vm{s.vm}:allocation{authority["token"]}'
@@ -293,8 +297,7 @@ class SWEController(HandoffController):
         load = self.api(destination, s.directory, '/snapshot/load', 'PUT', {'snapshot_path': target+'/state-only.bin',
             'mem_backend': {'backend_type': 'File', 'backend_path': '/dev/dax0.0'}, 'resume_vm': False})
         restored = self.export(s)
-        require(restored['manifest']['mappings'] == parsed['mappings'] and
-                set(restored['manifest']['credits']) == set(parsed['credits']), 'Physical mapping changed at restore')
+        validate_handoff_handle(parsed, restored['manifest'])
         self.resume(s)
         after = self.command_vm(s, 'check')
         self.same_identity(before, after)
@@ -321,6 +324,7 @@ def main():
     parser.add_argument('--name', required=True)
     parser.add_argument('--memory-mib', type=int, default=2048)
     parser.add_argument('--credit-mib', type=int, default=256)
+    parser.add_argument("--full-audit", action="store_true")
     args = parser.parse_args()
     require(args.memory_mib == 2048 and args.credit_mib == 256, 'Use the bounded 2GiB/256MiB workload layout')
     run, config = lab.current_run()
@@ -369,7 +373,7 @@ def main():
                     c.promote(s)
                     (c.direct_handoff if s.direct else c.state_handoff)(s,'B')
                 else:
-                    c.audit_cache(s)
+                    if args.full_audit: c.audit_cache(s)
                     (c.direct_handoff if s.direct else c.state_handoff)(s,'A')
                     c.demote(s)
                 save()
@@ -386,7 +390,7 @@ def main():
             save()
         if args.mode != 'baseline':
             c.promote(s)
-            c.audit_cache(s)
+            if args.full_audit: c.audit_cache(s)
             c.demote(s)
         report['final_identity'] = c.command_vm(s,'identity')
         exported = c.trace_command(s,'export',event='trace_export',timeout=180)

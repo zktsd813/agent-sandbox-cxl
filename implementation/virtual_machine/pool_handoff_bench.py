@@ -20,7 +20,7 @@ import nfs_bench as nfs
 from home_storage_bench import setup, require, json_lines
 from pool_bench import PoolController, HERE, MIB
 from pool_control import PoolControl
-from pool_handoff_control import FrameAllocator, promotion_layout, validate_export, offset_ranges
+from pool_handoff_control import FrameAllocator, promotion_layout, validate_export, offset_ranges, validate_handoff_handle
 from guest_pool_protocol import PAGE, parse_registration
 from trace_bench import source_fence_script
 from pool_compare_bench import parse_maps
@@ -67,6 +67,8 @@ class HandoffController(PoolController):
             "FC_POOL_VM_ID": str(s.vm), "FC_POOL_RUN_EPOCH": str(s.epoch),
             "FC_POOL_IMAGE_ID": self.image_id, "FC_POOL_IMAGE_PATH": "/disk/sandbox.raw",
             "FC_POOL_MEMORY_PLAN": s.plan, "FC_POOL_MEMORY_REPORT": s.report,
+            "FC_POOL_MEMORY_METADATA_OFFSET": str(getattr(self, "metadata_base", 3072 * MIB) + s.vm * 64 * MIB),
+            "FC_POOL_FULL_AUDIT": "1" if getattr(self.args, "full_audit", False) else "0",
             "FC_POOL_MEMORY_MANIFEST": s.manifest_path, "FC_POOL_MEMORY_DEVICE": "/dev/cxl_pool",
             "FC_DAX_FIXED_HVA": "0x400000000000", "FC_DAX_SNAPSHOT": "1",
             "FC_POOL_DISCARD": "1", "FC_POOL_DISCARD_TRACE": "1"}
@@ -112,6 +114,8 @@ class HandoffController(PoolController):
     def configure_direct(self):
         for role, node, mode in (("A", 1, 1), ("B", 2, 2)):
             self.shell(role, "echo 2147483647 > /sys/module/kvm/parameters/dax_owner_pid\n"
+                "echo 1 > /sys/module/kvm_intel/parameters/dump_invalid_vmcs\n"
+                "echo 1 > /sys/module/kvm/parameters/dax_nested_root_sync\n"
                 "resource=$(cat /sys/bus/dax/devices/dax0.0/resource)\n"
                 "echo 3 > /sys/module/kvm/parameters/dax_handoff_mode\n"
                 "echo 1 > /sys/module/kvm/parameters/dax_scattered\n"
@@ -175,12 +179,13 @@ class HandoffController(PoolController):
                 "pool_path": "/dev/dax0.0", "canonical_start": self.pool_offset,
                 "canonical_bytes": self.image_bytes, **fields}
         self.write_json(s.role, s.plan, plan, "memory-plan")
+        plan_file = self.raw("memory-plan-json", json.dumps(plan, separators=(",", ":")))
         before = len(self.api_events)
         self.api(s.role, s.directory, "/actions", "PUT", {"action_type": "PoolCache"})
         result = self.fetch_json(s.role, s.report, "memory-operation")
         event = {"vm": s.vm, "epoch": s.epoch, "role": s.role, "operation": operation,
                  "report": {k: v for k, v in result.items() if k != "pages"},
-                 "file": self.receipts[-1]["file"], "apis": self.api_events[before:]}
+                 "file": self.receipts[-1]["file"], "plan_file": plan_file, "apis": self.api_events[before:]}
         self.memory_events.append(event)
         return result, event
 
@@ -333,9 +338,7 @@ class HandoffController(PoolController):
         self.start_vm(s, restore_manifest=target_manifest)
         load = self.api(destination, s.directory, "/snapshot/load", "PUT", load_request)
         restored = self.export(s)
-        require(restored["manifest"]["mappings"] == parsed["mappings"]
-                and set(restored["manifest"]["credits"]) == set(parsed["credits"]),
-                "State-only handoff changed physical placement or credits")
+        validate_handoff_handle(parsed, restored["manifest"])
         self.resume(s)
         after = self.command_vm(s, "check", require_cache=True)
         self.same_identity(before, after)
@@ -392,9 +395,7 @@ class HandoffController(PoolController):
         self.start_vm(s, restore_manifest=target_manifest, direct_import=target_state)
         attach = self.api(destination, s.directory, "/actions", "PUT", {"action_type": "InstanceStart"})
         restored = self.export(s)
-        require(restored["manifest"]["mappings"] == parsed["mappings"]
-                and set(restored["manifest"]["credits"]) == set(parsed["credits"]),
-                "Direct attach changed physical CXL backing")
+        validate_handoff_handle(parsed, restored["manifest"])
         log = self.fetch_bytes(destination, s.directory + "/vmm.log", "direct-import-log")
         import_rows = [json.loads(line.split("DIRECT_HANDOFF_JSON ", 1)[1]) for line in log.decode().splitlines()
                        if "DIRECT_HANDOFF_JSON " in line]
@@ -653,11 +654,14 @@ def arguments():
     p.add_argument("--firecracker", type=Path)
     p.add_argument("--memory-smoke", type=Path)
     p.add_argument("--kvm-memory-smoke", type=Path)
+    p.add_argument("--full-audit", action="store_true", help="Explicit full PTE evidence for stress verification")
     return p.parse_args()
 
 
 def main():
     args = arguments()
+    require(args.mode == "guest-smoke" or args.full_audit,
+            "This stress suite includes explicit PTE evidence: pass --full-audit; SWE replay defaults to no full audit")
     require(args.sandboxes in (1, 3) and args.memory_mib == 512 and args.vcpus == 1,
             "Current lab supports one smoke or three 512MiB/1vCPU sandboxes")
     run, config = lab.current_run()
@@ -708,6 +712,9 @@ def main():
         smoke, name = c.shell("A", "/lab/pool-memory-smoke-20261030", "memory-module-smoke", 120)
         report["mapper_smoke"] = {"file": name, "records": json_lines(smoke, "POOL_MEMORY_SMOKE_JSON ")}
         require(len(report["mapper_smoke"]["records"]) == 1, "Mapper smoke did not finish")
+        handle, name = c.shell("A", "/lab/pool-memory-handle-smoke", "persistent-handle-smoke", 120)
+        report["handle_smoke"] = {"file":name,"records":json_lines(handle,"POOL_HANDLE_SMOKE_JSON ")}
+        require(len(report["handle_smoke"]["records"]) == 1, "Handle smoke did not finish")
         if args.kvm_memory_smoke:
             smoke, name = c.shell("A", "/lab/pool-memory-kvm-smoke-20261030 OWNED_POOL_TEST", "kvm-memory-smoke", 100)
             report["kvm_mapper_smoke"] = {"file": name, "records": json_lines(smoke, "POOL_MEMORY_KVM_SMOKE_JSON ")}
@@ -834,6 +841,22 @@ def main():
         report.update(result="failed", error=repr(exc))
         raise
     finally:
+        report["diagnostics"] = []
+        # Capture before owned L1 shutdown, also when a VMM has already died.
+        # These reads are outside all handoff timing windows.
+        for role in ("A", "B"):
+            try:
+                _, name = c.shell(role, "dmesg | tail -n 300", "host-kernel-diagnostic")
+                report["diagnostics"].append({"role":role,"file":name})
+            except BaseException as exc:
+                report["diagnostics"].append({"role":role,"error":repr(exc)})
+        for role, directory in c.active:
+            for log in ("fc.log", "vmm.log", "stderr.log"):
+                try:
+                    _, name = c.shell(role, f"tail -n 100 {directory}/{log} 2>/dev/null || true", "vmm-diagnostic")
+                    report["diagnostics"].append({"role":role,"directory":directory,"log":log,"file":name})
+                except BaseException as exc:
+                    report["diagnostics"].append({"role":role,"directory":directory,"error":repr(exc)})
         report["cleanup"] = []
         for role, directory in reversed(c.active):
             try:

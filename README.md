@@ -2,6 +2,8 @@
 
 처음 읽는 경우 [CXL microVM 연구와 구현 전체 정리](docs/cxl-microvm-overview.md)부터 본다. Workload 관측부터 실행 이전 구현, PML·MPTCP 검증, 파일 공유 설계와 후속 계획을 연결했다. 구현·실측·시뮬레이션·설계 중인 내용을 구분한다.
 
+2026-11-02 후속 구현은 [handoff의 RAM 전수 순회 제거](docs/cxl-pool-incremental-handoff.md)다. VM별 mapper를 CXL에 유지하고 작은 소유권 handle로 인계하여 반복 GPA/PFN 조회와 전체 mapping JSON을 없앴다. 필요한 최초 admission·실제 promotion/demotion 복사와 명시적 stress audit를 구분한다. [검증·성능·재현 자료](implementation/virtual_machine/results/pool-incremental-20261102/README.md)는 과거 API 측정과 같은 범위로 비교하며, nested KVM 보완과 실제 물리 CXL의 미검증 범위를 명시한다.
+
 2026-10-30의 후속 [guest metadata 기반 pooling](docs/cxl-guest-pool-handoff.md)은 현재 clean lower ext4 page cache를 확인해 promotion 시 데이터 backing만 공유한다. Private CoW도 CXL에 유지하고, demotion에서 현재 내용을 DRAM으로 복사해 할당을 반환한다. Direct와 state-only handoff, host NFS, 실제 OverlayFS와 ACK 이후 재사용의 [검증 결과](implementation/virtual_machine/results/guest-pool-handoff-20261030/README.md)를 별도로 보관한다. 기존 [virtio-blk 관측 기반 prototype](docs/cxl-data-pooling.md)과 full-RAM snapshot 결과는 이전 단계의 기록이다.
 
 이를 [실제 SWE trace 3개에 적용](docs/cxl-swe-pool-traces.md)해 DRAM·state-only·direct **9개 조건, 315개 명령과 36회 전환**을 검증했다. 자연 발생한 clean lower cache 20.6~49.4MiB를 canonical backing에 연결하고, A↔B 및 DRAM↔CXL 왕복 후에도 원본 작업 결과를 유지했다. [실측·원시 증거와 독립 재검증](implementation/virtual_machine/results/swe-pool-traces-20261030/README.md)을 함께 보관한다.

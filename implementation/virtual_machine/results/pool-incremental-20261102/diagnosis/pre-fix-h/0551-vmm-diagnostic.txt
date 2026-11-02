@@ -1,0 +1,32 @@
+
+/ # (
+> set -e
+> tail -n 100 /run/pool-a442d3e5550c6a1b/vm1-epoch2/fc.log 2>/dev/null || true
+> )
+POOL_GUEST_FATAL file word mismatch: Invalid argument
+POOL_GUEST_FATAL_init
+[   93.682877] Kernel panic - not syncing: Attempted to kill init! exitcode=0x00000100
+[   93.683149] CPU: 0 PID: 1 Comm: sh Not tainted 6.6.0-rc6-dcd-v3 #1
+[   93.683149] Call Trace:
+[   93.683149]  <TASK>
+[   93.683149]  dump_stack_lvl+0x37/0x50
+[   93.683149]  panic+0x225/0x320
+[   93.683149]  do_exit+0x95c/0xb00
+[   93.683149]  do_group_exit+0x2c/0x80
+[   93.683149]  __x64_sys_exit_group+0x13/0x20
+[   93.683149]  do_syscall_64+0x3c/0x90
+[   93.683149]  entry_SYSCALL_64_after_hwframe+0x6e/0xd8
+[   93.683149] RIP: 0033:0x4669e1
+[   93.683149] Code: e0 ff ff ff be e7 00 00 00 ba 3c 00 00 00 eb 16 66 0f 1f 84 00 00 00 00 00 89 d0 0f 05 48 3d 00 f0 ff ff 77 1c f4 89 f0 0f 05 <48> 3d 00 f0 ff ff 76 e7 f7 d8 64 41 89 00 eb df 0f 1f 80 00 00 00
+[   93.683149] RSP: 002b:00007ffc224aa848 EFLAGS: 00000202 ORIG_RAX: 00000000000000e7
+[   93.683149] RAX: ffffffffffffffda RBX: 0000000000616904 RCX: 00000000004669e1
+[   93.683149] RDX: 000000000000003c RSI: 00000000000000e7 RDI: 0000000000000001
+[   93.683149] RBP: 0000000000000001 R08: ffffffffffffffe0 R09: 0000000000a024f0
+[   93.683149] R10: 0000000000000000 R11: 0000000000000202 R12: 00007ffc224aacb8
+[   93.683149] R13: 00007ffc224aacb8 R14: 0000000000000002 R15: 0000000000000000
+[   93.683149]  </TASK>
+[   93.683149] Kernel Offset: disabled
+[   93.683149] Rebooting in 1 seconds..
+/ # printf '\nLAB_COMMAND_DONE_e4d406324899fd09:%s\n' "$?"
+
+LAB_COMMAND_DONE_e4d406324899fd09:0

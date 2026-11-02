@@ -1,0 +1,9 @@
+
+/ # (
+> set -e
+> tail -n 100 /run/pool-be9da7facb5aa40a/vm1-epoch0/stderr.log 2>/dev/null || tr
+ue
+> )
+/ # printf '\nLAB_COMMAND_DONE_a9129f8b8c3bf22d:%s\n' "$?"
+
+LAB_COMMAND_DONE_a9129f8b8c3bf22d:0

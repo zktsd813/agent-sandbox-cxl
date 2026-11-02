@@ -146,7 +146,7 @@ class PoolController(Controller):
     def command_vm(self, s, op, *args, require_cache=False):
         label = f"v{s.vm}e{s.epoch}c{len(self.commands)}"
         cmd = " ".join([op,label,*map(str,args)])
-        self.shell(s.role, f"printf '%s\\n' {shlex.quote(cmd)} > {s.directory}/input", "guest-input")
+        self.shell(s.role, f"exec 3<>{s.directory}/input\nprintf '%s\\n' {shlex.quote(cmd)} >&3", "guest-input")
         row = self.event(s,"pool_guest",label)
         row.update(operation=op, arguments=list(args))
         data = row["receipt"]

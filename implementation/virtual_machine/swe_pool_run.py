@@ -22,7 +22,7 @@ NAMES = ("gin-gonic__gin-3741", "php-cs-fixer__php-cs-fixer-8331",
          "micropython__micropython-13039")
 MODES = ("baseline", "state-only", "direct")
 SOURCES = ("swe_pool_run.py", "swe_pool_bench.py", "swe_pool_prepare.py",
-           "swe_pool_protocol.py", "verify_swe_pool.py", "swe-pool-l2-init.sh",
+           "swe_pool_protocol.py", "verify_swe_pool.py", "verify_pool_handles.py", "swe-pool-l2-init.sh",
            "swe-pool-guest-run.sh", "guest-pool-cli.c", "guest-pool-uapi.h",
            "guest-pool.c", "guest_pool_protocol.py", "pool_handoff_bench.py",
            "pool_handoff_control.py", "pool_memory_module.c", "pool_memory_uapi.h",

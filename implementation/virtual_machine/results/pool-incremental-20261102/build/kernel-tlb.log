@@ -1,0 +1,12 @@
+make: Entering directory '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/linux'
+make[1]: Entering directory '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/kernel-fast'
+  GEN     Makefile
+  DESCEND objtool
+  CALL    /tmp/agent-sandbox-cxl-incremental-20261102/implementation/linux/scripts/checksyscalls.sh
+  INSTALL libsubcmd_headers
+  CC [M]  arch/x86/kvm/vmx/vmx.o
+  LD [M]  arch/x86/kvm/kvm-intel.o
+  MODPOST Module.symvers
+  LD [M]  arch/x86/kvm/kvm-intel.ko
+make[1]: Leaving directory '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/kernel-fast'
+make: Leaving directory '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/linux'

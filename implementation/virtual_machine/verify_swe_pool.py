@@ -200,8 +200,19 @@ def status_proof(raw, authority):
          and data[128:136] == bytes(8) and data[144:] == bytes(64), "live authority digest/reserved")
 
 
-def placement(e, name, memory, plan):
+def placement(e, name, memory, plan, requested=None):
     value = e.json(name)
+    original = value
+    if value.get("version") == 2:
+        from verify_pool_handles import handle
+        handle(value, memory)
+        need(value["canonical_start"] == CANONICAL_START and value["canonical_bytes"] == plan["image_bytes"], "canonical image geometry")
+        if requested is None:
+            return value, None, None, None
+        # Admission plan is recorded separately from the constant-size handle.
+        need(value["handle"]["generation"] == 1 and value["handle"]["cow_pages"] == 0,
+             "promotion admission already mutated")
+        value = dict(value, version=1, mappings=requested["mappings"], credits=requested["credits"])
     need(value["version"] == 1 and len(value["mappings"]) == memory // PAGE and value["exhausted"] == 0,
          "incomplete/exhausted placement")
     need(value["canonical_start"] == CANONICAL_START and value["canonical_bytes"] == plan["image_bytes"],
@@ -220,7 +231,11 @@ def placement(e, name, memory, plan):
     credits = set(value["credits"])
     need(len(credits) == len(value["credits"]) and not (credits & private), "credit alias")
     need(all(type(p) is int and p % PAGE == 0 and PRIVATE_START <= p < PRIVATE_END for p in credits), "credit bounds")
-    return value, private, shared, credits
+    if original.get("version") == 2:
+        h = original["handle"]
+        need(h["shared_pages"] == len(shared) and h["credit_count"] == len(credits)
+             and requested["allocation_generation"] == h["allocation_generation"], "admission handle mismatch")
+    return original, private, shared, credits
 
 
 def nfs_reads(e, name):
@@ -441,7 +456,8 @@ def verify(path):
             if kind == "promotion":
                 authority = authorities[transition["authority"]["file"]]
                 status_proof(raw, authority)
-                value, private, shared, credits = placement(e, transition["export"]["file"], memory, plan)
+                value, private, shared, credits = placement(e, transition["export"]["file"], memory, plan,
+                    e.json(operation["plan_file"]) if e.json(transition["export"]["file"]).get("version") == 2 else None)
                 need(value["vm_id"] == str(transition["vm"]) and value["run_epoch"] == str(transition["epoch"]),
                      "promotion placement identity changed")
                 need(private | credits == initial[value["allocation_generation"]], "promotion outside grant")
@@ -465,8 +481,14 @@ def verify(path):
                 lines = e.text(transition["dram_maps_file"]).splitlines()
                 need(all(line in lines for vma in raw["dram_vmas"] for line in vma["maps"]), "demotion raw proc maps mismatch")
                 value, private, _, credits = placement(e, transition["previous"]["file"], memory, plan)
-                need(ranges(transition["returned_ranges"]) == private | credits == released[value["allocation_generation"]],
-                     "demotion returned wrong grant")
+                returned = ranges(transition["returned_ranges"])
+                if value.get("version") == 2:
+                    h = value["handle"]
+                    need(returned == released[h["allocation_generation"]] and
+                         len(returned) == h["count"]-h["shared_pages"]+h["credit_count"], "demotion returned wrong handle grant")
+                else:
+                    need(returned == private | credits == released[value["allocation_generation"]],
+                         "demotion returned wrong grant")
                 identity_pair(e, transition["before"], transition["after"])
         elif kind in ("state-only", "direct"):
             need(kind == report["mode"] and transition["destination_epoch"] == transition["source_epoch"] + 1
@@ -481,8 +503,15 @@ def verify(path):
             need(incoming["run_epoch"] == str(transition["source_epoch"]) and target["run_epoch"] == str(transition["destination_epoch"])
                  and incoming["vm_id"] == target["vm_id"] == str(transition["vm"])
                  and incoming["allocation_generation"] == target["allocation_generation"], "placement lease/epoch changed")
-            need(incoming["mappings"] == target["mappings"] and set(incoming["credits"]) == set(target["credits"])
-                 and private | credits == lifetime[target["allocation_generation"]], "handoff changed backing")
+            if target.get("version") == 2:
+                a, b = incoming["handle"], target["handle"]
+                for key in ("abi", "phys_base", "device_bytes", "metadata_offset", "metadata_bytes", "cookie_lo", "cookie_hi", "allocation_generation", "count", "full_scan_pages"):
+                    need(a[key] == b[key], "handoff changed mapper identity/scan " + key)
+                need(a["state"] == 2 and b["state"] == 1 and b["owner_epoch"] == a["owner_epoch"]+1 and b["generation"] >= a["generation"], "sealed ownership transition")
+                need(len(lifetime[b["allocation_generation"]]) == b["count"]-b["shared_pages"]+b["credit_count"], "handoff grant accounting")
+            else:
+                need(incoming["mappings"] == target["mappings"] and set(incoming["credits"]) == set(target["credits"])
+                     and private | credits == lifetime[target["allocation_generation"]], "handoff changed backing")
             need(e.order[transition["manifest_file"]] < e.order[transition["source_fence_file"]]
                  < e.order[transition["destination_placement"]["file"]] < e.order[transition["after"]["file"]], "handoff ownership order")
             if kind == "state-only":
@@ -562,6 +591,18 @@ def verify(path):
             continue
         current, private, shared, credits = placement(e, name, memory, plan)
         generation = current["allocation_generation"]
+        if current.get("version") == 2:
+            h = current["handle"]
+            need(len(lifetime[generation]) == h["count"]-h["shared_pages"]+h["credit_count"], "persistent grant accounting")
+            prior = previous_exports.get(generation)
+            if prior:
+                old = prior[0]["handle"]
+                need(h["generation"] >= old["generation"] and h["cow_pages"] >= old["cow_pages"] and h["discard_pages"] >= old["discard_pages"], "mapper counters went backwards")
+                need(old["shared_pages"]-h["shared_pages"] == old["credit_count"]-h["credit_count"] >= 0, "detach credit accounting")
+                if old["shared_pages"] != h["shared_pages"]:
+                    detachments.append({"file":name,"detached_pages":old["shared_pages"]-h["shared_pages"],"proof":"kernel handle counters", "cow_pages":h["cow_pages"],"discard_pages":h["discard_pages"],"epoch":current["run_epoch"]})
+            previous_exports[generation] = current, None
+            continue
         need(private | credits == lifetime[generation], "export lost/borrowed allocation credits")
         previous = previous_exports.get(generation)
         if previous:
@@ -590,7 +631,9 @@ def verify(path):
     else:
         need(counts == {"promotion": 2, "demotion": 2, report["mode"]: 2}, "required lifecycle incomplete")
         need(shared_bytes and max(shared_bytes) > 0, "no naturally resident eligible lower data")
-        need(len(report["audits"]) == 2, "missing current guest cache PTE audits")
+        compact = all(e.json(t["export"]["file"]).get("version") == 2 for t in report["transitions"] if t["kind"] == "promotion")
+        expected_audits = 2 if not compact or report["arguments"].get("full_audit", False) else 0
+        need(len(report["audits"]) == expected_audits, "explicit PTE audit coverage mismatch")
         sequence = [row["kind"] for row in report["transitions"]]
         need(sequence == ["promotion", report["mode"], report["mode"], "demotion", "promotion", "demotion"],
              "unexpected lifecycle ordering")

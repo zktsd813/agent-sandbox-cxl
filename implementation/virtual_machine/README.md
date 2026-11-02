@@ -22,9 +22,15 @@ DAX 공유 영역은 기본 2GiB다. 기본 microVM은 1 vCPU·128MiB이고 RAM 
 
 <a id="session-handoff"></a>
 
-## 다음 세션 인계: 2026-10-30
+## 다음 세션 인계: 2026-11-02
 
-최신 구현은 [guest metadata 기반 pooling과 두 handoff](../../docs/cxl-guest-pool-handoff.md)다.
+최신 변경은 [pooling handoff의 반복 RAM 순회 제거](../../docs/cxl-pool-incremental-handoff.md)다.
+정상 direct/state-only 인계는 ABI 2의 VM-private CXL mapper와 고정 크기 handle을 사용한다.
+전체 mapping/PTE 조회는 `FC_POOL_FULL_AUDIT=1`을 명시한 audit에서만 실행하며, SWE replay의 기본값은 꺼짐이다.
+Nested lab direct 설정에는 `kvm.dax_nested_root_sync=1`이 추가되었다. 이는 외부 KVM의 오래된 nested EPT 갱신용이며 물리 CXL coherence 처리가 아니다.
+[최종 결과와 재현 명령](results/pool-incremental-20261102/README.md)을 먼저 확인한다.
+
+기반 설계는 [guest metadata 기반 pooling과 두 handoff](../../docs/cxl-guest-pool-handoff.md)다.
 현재 guest의 clean lower ext4 folio를 등록해 promotion 때 중복 backing을 공유하고,
 private CXL CoW와 현재 mapping을 direct/state-only에서 유지한다. Demotion은 논리 RAM을
 anonymous private RAM으로 복사하고 grant를 반환한다. 두 모드의 3개 독립 VM·160MiB cache,

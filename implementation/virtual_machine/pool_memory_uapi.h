@@ -27,4 +27,24 @@ struct cpm_audit { __u64 address, count, ptes; };
 #define CPM_DISCARD _IOW('P', 0x72, struct cpm_range)
 #define CPM_ADD_CREDITS _IOW('P', 0x73, struct cpm_credits)
 #define CPM_AUDIT _IOWR('P', 0x74, struct cpm_audit)
+/* ABI 2 keeps this VM's authoritative mapper in a reserved CXL extent.
+ * Handles contain no per-page arrays. Import consumes a sealed owner epoch;
+ * callers must fence the source process and drain every writer first. */
+struct cpm_handle {
+    __u64 abi, phys_base, device_bytes, metadata_offset, metadata_bytes;
+    __u64 cookie_lo, cookie_hi, owner_epoch, generation, allocation_generation;
+    __u64 count, credit_count, shared_pages, cow_pages, discard_pages;
+    __u64 faults, exhausted, full_scan_pages, state;
+};
+struct cpm_create {
+    struct cpm_config config;
+    __u64 metadata_offset, metadata_bytes, owner_epoch, allocation_generation;
+};
+struct cpm_select { __u64 first, count, selected; };
+#define CPM_CREATE _IOW('P', 0x75, struct cpm_create)
+#define CPM_STATUS _IOWR('P', 0x76, struct cpm_handle)
+#define CPM_SEAL _IOWR('P', 0x77, struct cpm_handle)
+#define CPM_IMPORT _IOWR('P', 0x78, struct cpm_handle)
+#define CPM_SELECT _IOWR('P', 0x79, struct cpm_select)
+#define CPM_RETIRE _IOWR('P', 0x7a, struct cpm_handle)
 #endif

@@ -95,6 +95,7 @@ def parse_registration(text, *, label, vm, boot_id, cookie, epoch, token,
     pages, records = [], []
     gpas = set()
     previous_page = -1
+    extent_index = 0
     ranges = [r for r in rows if r["event"] == "guest_pool_range"]
     for row in ranges:
         first = integer(row.get("file_page"), "file_page")
@@ -112,15 +113,20 @@ def parse_registration(text, *, label, vm, boot_id, cookie, epoch, token,
             require(address not in gpas, "one GPA registered for multiple file pages")
             gpas.add(address)
             offset = file_page * PAGE
-            matches = [(disk + offset - logical) for logical, disk, size in checked_extents
-                       if logical <= offset and offset + PAGE <= logical + size]
-            require(len(matches) == 1, "registered page has no unique frozen extent")
-            require(disk_offset + index * PAGE == matches[0], "guest bmap and frozen image extent differ")
-            pages.append({"gpa": address, "image_id": image_id, "image_offset": matches[0],
+            # File pages and validated extents are ordered. Advance once through
+            # extents, rather than rescanning every extent for every guest page.
+            while extent_index < len(checked_extents) and offset >= sum((checked_extents[extent_index][0], checked_extents[extent_index][2])):
+                extent_index += 1
+            require(extent_index < len(checked_extents), "registered page has no frozen extent")
+            logical, disk, size = checked_extents[extent_index]
+            require(logical <= offset and offset + PAGE <= logical + size, "registered page lies in extent hole")
+            physical = disk + offset - logical
+            require(disk_offset + index * PAGE == physical, "guest bmap and frozen image extent differ")
+            pages.append({"gpa": address, "image_id": image_id, "image_offset": physical,
                           "file_page": file_page, "inode": summary["inode"],
                           "inode_generation": summary["inode_generation"]})
             records.append({"file_slot": 0, "flags": 63, "file_page": file_page,
-                            "gpa": address, "disk_offset": matches[0]})
+                            "gpa": address, "disk_offset": physical})
         previous_page = first + length - 1
     require(len(pages) == count, "registration ranges incomplete")
     file = {key: summary[key] for key in ("inode", "file_bytes", "start_page", "page_count",

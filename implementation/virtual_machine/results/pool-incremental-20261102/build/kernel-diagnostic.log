@@ -1,0 +1,57 @@
+make: Entering directory '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/linux'
+make[1]: Entering directory '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/kernel-fast'
+  GEN     Makefile
+  DESCEND objtool
+  CALL    /tmp/agent-sandbox-cxl-incremental-20261102/implementation/linux/scripts/checksyscalls.sh
+  INSTALL libsubcmd_headers
+  CC [M]  arch/x86/kvm/../../../virt/kvm/kvm_main.o
+  CC [M]  arch/x86/kvm/../../../virt/kvm/eventfd.o
+  CC [M]  arch/x86/kvm/../../../virt/kvm/binary_stats.o
+  CC [M]  arch/x86/kvm/../../../virt/kvm/dax_pool.o
+  CC [M]  arch/x86/kvm/../../../virt/kvm/vfio.o
+  CC [M]  arch/x86/kvm/../../../virt/kvm/coalesced_mmio.o
+  CC [M]  arch/x86/kvm/../../../virt/kvm/async_pf.o
+  CC [M]  arch/x86/kvm/../../../virt/kvm/irqchip.o
+  CC [M]  arch/x86/kvm/../../../virt/kvm/dirty_ring.o
+  CC [M]  arch/x86/kvm/../../../virt/kvm/pfncache.o
+  CC [M]  arch/x86/kvm/x86.o
+  CC [M]  arch/x86/kvm/emulate.o
+  CC [M]  arch/x86/kvm/i8259.o
+  CC [M]  arch/x86/kvm/irq.o
+  CC [M]  arch/x86/kvm/lapic.o
+  CC [M]  arch/x86/kvm/i8254.o
+  CC [M]  arch/x86/kvm/ioapic.o
+  CC [M]  arch/x86/kvm/irq_comm.o
+  CC [M]  arch/x86/kvm/cpuid.o
+  CC [M]  arch/x86/kvm/pmu.o
+  CC [M]  arch/x86/kvm/mtrr.o
+  CC [M]  arch/x86/kvm/hyperv.o
+  CC [M]  arch/x86/kvm/debugfs.o
+  CC [M]  arch/x86/kvm/mmu/mmu.o
+  CC [M]  arch/x86/kvm/mmu/page_track.o
+  CC [M]  arch/x86/kvm/mmu/spte.o
+  CC [M]  arch/x86/kvm/mmu/tdp_iter.o
+  CC [M]  arch/x86/kvm/mmu/tdp_mmu.o
+  CC [M]  arch/x86/kvm/smm.o
+  CC [M]  arch/x86/kvm/vmx/vmx.o
+  CC [M]  arch/x86/kvm/kvm-asm-offsets.s
+  CC [M]  arch/x86/kvm/vmx/pmu_intel.o
+  CC [M]  arch/x86/kvm/vmx/vmcs12.o
+  CC [M]  arch/x86/kvm/vmx/hyperv.o
+  CC [M]  arch/x86/kvm/vmx/nested.o
+  CC [M]  arch/x86/kvm/vmx/posted_intr.o
+  CC [M]  arch/x86/kvm/svm/svm.o
+  CC [M]  arch/x86/kvm/svm/pmu.o
+  CC [M]  arch/x86/kvm/svm/nested.o
+  CC [M]  arch/x86/kvm/svm/avic.o
+  CC [M]  arch/x86/kvm/svm/sev.o
+  CC [M]  arch/x86/kvm/svm/hyperv.o
+  LD [M]  arch/x86/kvm/kvm-amd.o
+  LD [M]  arch/x86/kvm/kvm-intel.o
+  LD [M]  arch/x86/kvm/kvm.o
+  MODPOST Module.symvers
+  LD [M]  arch/x86/kvm/kvm.ko
+  LD [M]  arch/x86/kvm/kvm-intel.ko
+  LD [M]  arch/x86/kvm/kvm-amd.ko
+make[1]: Leaving directory '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/kernel-fast'
+make: Leaving directory '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/linux'
