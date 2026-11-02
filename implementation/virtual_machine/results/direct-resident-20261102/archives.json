@@ -1,0 +1,17 @@
+[
+  {
+    "file": "final.tar.xz",
+    "bytes": 3407160,
+    "sha256": "6d9cd5a2105a4c68349992e5a6887eb367531df9b515645edd79ace4646c927a"
+  },
+  {
+    "file": "diagnostic.tar.xz",
+    "bytes": 3268920,
+    "sha256": "003ecabee41bc7bf1489df6ada7c0fc6361c7f9c0e20d3e65dcb7e244589cfb9"
+  },
+  {
+    "file": "fresh.tar.xz",
+    "bytes": 2981920,
+    "sha256": "e4beac12afccd0ac5d28cd0b979b3f8290816c2d88439713823f6cce27b5bfa5"
+  }
+]

@@ -2,7 +2,9 @@
 
 처음 읽는 경우 [CXL microVM 연구와 구현 전체 정리](docs/cxl-microvm-overview.md)부터 본다. Workload 관측부터 실행 이전 구현, PML·MPTCP 검증, 파일 공유 설계와 후속 계획을 연결했다. 구현·실측·시뮬레이션·설계 중인 내용을 구분한다.
 
-2026-11-02 최신 분석은 [Direct API 계측·최적화와 과거 1ms 미만 결과 비교](docs/cxl-direct-api-latency.md)다. NFS 이미지 metadata 조회, mapper 연결, 장치/스레드 준비와 커널 시간을 분리한다. [원시 증거와 결과](implementation/virtual_machine/results/direct-api-20261102/README.md)에서 코드 최적화와 immutable NFS 캐시 효과를 따로 확인할 수 있다.
+2026-11-02 최신 구현은 [목적지 FD·장치 실행 환경을 유지하는 resident direct](docs/cxl-resident-direct.md)다. 목적지 준비를 source 실행 중에 끝내고, 왕복 때 같은 VMM·디스크 FD·io_uring·vCPU thread를 사용한다. [검증 결과](implementation/virtual_machine/results/direct-resident-20261102/README.md)는 준비 비용, Export/Import API와 TCP로 측정한 실제 pause→guest 응답 시간을 구분한다.
+
+직전 분석은 [Direct API 계측·최적화와 과거 1ms 미만 결과 비교](docs/cxl-direct-api-latency.md)다. NFS 이미지 metadata 조회, mapper 연결, 장치/스레드 준비와 커널 시간을 분리한다. [원시 증거와 결과](implementation/virtual_machine/results/direct-api-20261102/README.md)에서 코드 최적화와 immutable NFS 캐시 효과를 따로 확인할 수 있다.
 
 직전 구현은 [handoff의 RAM 전수 순회 제거](docs/cxl-pool-incremental-handoff.md)다. VM별 mapper를 CXL에 유지하고 작은 소유권 handle로 인계하여 반복 GPA/PFN 조회와 전체 mapping JSON을 없앴다. 필요한 최초 admission·실제 promotion/demotion 복사와 명시적 stress audit를 구분한다. [검증·성능·재현 자료](implementation/virtual_machine/results/pool-incremental-20261102/README.md)는 과거 API 측정과 같은 범위로 비교하며, nested KVM 보완과 실제 물리 CXL의 미검증 범위를 명시한다.
 

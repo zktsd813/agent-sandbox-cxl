@@ -1,0 +1,59 @@
+{
+  "firecracker": {
+    "path": "/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/swe-resident6/firecracker",
+    "sha256": "7a371e503d46a95836cae270594c43c03f64e577d58ea53c1742a14408337d1c"
+  },
+  "fixture_sha256": "77d02227cf177924318ba5bc999f18679c11353ba057a1b6f1d5fc342a58298a",
+  "controller": {
+    "source_sha256": "e0c9de591fa9729a2d4b318ca42c78f9ace46b7d8a608c33a44c9f0c6b534fa8",
+    "binary_sha256": "a2efac05246666a1ffc83f2ec3ea171033fc484f03247dfd3e68b958a99ba7ba",
+    "build_argv": [
+      "gcc",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-static",
+      "/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/resident_control.c",
+      "-o",
+      "/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/swe-resident6/resident-control"
+    ],
+    "compiler": "gcc (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0"
+  },
+  "guest_helper_sha256": "ff6c86f2a3c7317720057d3519f6cd42306fd0bf521886c3e74e0845cc2acaa5",
+  "kernel_inputs": {
+    "l1_kernel": {
+      "path": "/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/kernel-fast/arch/x86/boot/bzImage",
+      "sha256": "8a745327e7938a46028b4101d907035414b4bc3b98e1891ce3761b015d9b676c"
+    },
+    "l2_kernel": {
+      "path": "/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/guest-build-fast/vmlinux",
+      "sha256": "db5a39f057ff80bc0d038b8240a40f6a782135d6d53a77651f03a7ede4dcc587"
+    },
+    "kernel_config": {
+      "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/kernel-build-mptcp-20261022/.config",
+      "sha256": "93cfac458421771f92ca4d65b766e5c80317c606bc29c45490039dac2aeb4853"
+    },
+    "kernel_source_metadata": {
+      "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/kernel-source.json",
+      "sha256": "fc8f0898843496dbd724969fc06bcd4766075cac5218fd19763b9156901000de"
+    },
+    "kernel_local_patch": {
+      "path": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/cxl-static-capacity.patch",
+      "sha256": "86e1aaef0b7892ffccc0e37cea1bcd1e9d6e2565f3c5ed6a973b07e7b95c29f6"
+    },
+    "kernel_cxl_hdm": {
+      "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/drivers/cxl/core/hdm.c",
+      "sha256": "fade64577a222eaa8065b94e4fbe228512a345d17416160dee31d79760e45545"
+    },
+    "kernel_cxl_mbox": {
+      "path": "/home/ijkim/agent-sandbox-cxl/implementation/linux/drivers/cxl/core/mbox.c",
+      "sha256": "ec6afb4fe14fdbcad73558df7e4eabf49f35391211732c6b4856aee31e70d559"
+    },
+    "pool_kernel_modules": {
+      "kvm.ko": "fc9ada08d101941b2e19ef686ad1d0fd69329c5cc413cda53ac4b5d0aa73812f",
+      "kvm-intel.ko": "2f4aa18a80f499eed0211cbddf4658cd9c30ce4e2a907722b890f3790a343776"
+    }
+  },
+  "image_sha256": "bf8b609079dab5e605e065fbce35484358902af4ba31eeb7aca5b3000a12a4dc"
+}

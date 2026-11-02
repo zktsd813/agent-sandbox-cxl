@@ -103,6 +103,18 @@ def serial_proof(e, report):
                      for launch in sorted(report["launches"], key=lambda row: row["epoch"]))
     need(not FATAL_KERNEL.search(text) and "TRACE_FATAL" not in text, "fatal guest error in full serial log")
     rows = [json.loads(line) for line in text.splitlines() if line.startswith('{"event":')]
+    if report["arguments"].get("resident_direct", False):
+        # Each resident serial file contains disjoint visits. Validate ordering inside
+        # every file, then merge using the controller's unique command sequence labels.
+        def serial_order(row):
+            if row["event"] == "trace_ready": return (-1, 0)
+            match = re.fullmatch(r"v1e([0-9]+)c([0-9]+)", row.get("label", ""))
+            need(match is not None, "resident serial command label missing")
+            return (int(match[2]), 0 if row["event"] == "trace_start" else 1)
+        for name in logs.values():
+            local = [json.loads(line) for line in e.text(name).splitlines() if line.startswith('{"event":')]
+            need([serial_order(r) for r in local] == sorted(serial_order(r) for r in local), "resident serial reordered locally")
+        rows.sort(key=serial_order)
     need(not any(row["event"] in ("trace_error", "trace_protocol_error") for row in rows), "guest protocol error")
     ready = [row for row in rows if row["event"] == "trace_ready"]
     need(ready == [guest(e, report["boot"], "trace_ready")], "guest reboot/missing ready event")
@@ -418,6 +430,15 @@ def verify(path):
     for api in report["api_events"]:
         need(e.record(api["file"], "LAB_API_JSON ") == api["response"] and api["response"]["status"] in (200, 204),
              "API response altered/failed")
+        if "coordinator_file" in api:
+            original = e.record(api["coordinator_file"], "RESIDENT_FAST_JSON ")
+            need(original["apis"][api["coordinator_stage"]] == api["response"], "coordinator API extraction changed")
+            routes = {"pause":("/vm", "PATCH", {"state":"Paused"}),
+                      "export":("/actions", "PUT", {"action_type":"DirectExport"}),
+                      "checkpoint":("/actions", "PUT", {"action_type":"PoolCache"}),
+                      "resume":("/vm", "PATCH", {"state":"Resumed"})}
+            if api["coordinator_stage"] in routes:
+                need((api["path"],api["method"],api["request"]) == routes[api["coordinator_stage"]], "coordinator API stage changed")
         echo = e.text(api["file"]).split("LAB_API_JSON ", 1)[0].replace("\r", "").replace("\n", "")
         need(api["path"] in echo and json.dumps(api["request"]) in echo, "API request altered")
         if api["path"] == "/snapshot/create":
@@ -508,10 +529,27 @@ def verify(path):
             need(kind == report["mode"] and transition["destination_epoch"] == transition["source_epoch"] + 1
                  and transition["ram_snapshot_bytes"] == transition["ram_transfer_bytes"] == 0, "handoff mode/epoch/RAM copy")
             identity_pair(e, transition["before"], transition["after"])
-            sources = [x for x in report["launches"] if x["vm"] == transition["vm"] and x["epoch"] == transition["source_epoch"]]
+            resident = report["arguments"].get("resident_direct", False)
+            sources = [x for x in report["launches"] if x["vm"] == transition["vm"] and
+                       (x["directory"] == transition.get("source_directory") if resident else x["epoch"] == transition["source_epoch"])]
             need(len(sources) == 1 and sources[0]["role"] == transition["source"], "source incarnation missing")
-            fence = re.findall(r"^FENCED (\d+) (\d+)\s*$", e.text(transition["source_fence_file"]), re.M)
+            fence_text = e.text(transition["source_fence_file"])
+            fence = re.findall(r"^" + ("PARKED" if resident else "FENCED") + r" (\d+) (\d+)\s*$", fence_text, re.M)
             need(fence == [incarnations[sources[0]["directory"]][0]], "wrong source fence")
+            if resident:
+                need(kind == "direct" and transition.get("resident") is True and len(incarnations)==2,
+                     "resident mode did not retain two processes")
+                parked = e.record(transition["source_fence_file"], "DIRECT_RESIDENT_JSON ")
+                token = transition["token"]
+                need(parked["event"] == "park" and parked["generation"] == token["generation"]
+                     and parked["pid"] == int(fence[0][0]) and parked["ram_access_revoked"] is True
+                     and parked["devices_unsubscribed"] is True and parked["io_drained"] is True, "incomplete resident fence")
+                need(re.search(rf'^{token["ram_hva"]:x}-{token["ram_hva"]+token["ram_bytes"]:x} ---p ', fence_text, re.M),
+                     "parked mapping still accessible")
+                prep = transition["preparation"]
+                need(prep["source_paused"] is False and prep["destination"] == transition["destination"]
+                     and prep["directory"] == transition["destination_directory"]
+                     and e.order[prep["api"]["file"]] < e.order[transition["before"]["file"]], "preparation was on paused path")
             incoming = e.json(transition["manifest_file"])
             target, private, _, credits = placement(e, transition["destination_placement"]["file"], memory, plan)
             need(incoming["run_epoch"] == str(transition["source_epoch"]) and target["run_epoch"] == str(transition["destination_epoch"])
@@ -558,6 +596,72 @@ def verify(path):
                 direct_previous = token
         else:
             raise ValueError("unsupported transition")
+    if report["arguments"].get("resident_direct", False):
+        need(report["arguments"].get("immutable_nfs_cache") is True, "resident image was not immutable")
+        need(len(report["launches"]) == 2 and {v["role"] for v in report["launches"]} == {"A", "B"}, "resident VMM relaunch")
+        for n in report.get("resident_negatives", []):
+            need(e.record(n["file"], "LAB_API_JSON ") == n["response"] and n["response"]["status"] == 400,
+                 "resident negative did not reject")
+        hops = [t for t in report["transitions"] if t.get("resident")]
+        need(sum(t["preparation"]["fresh"] for t in hops)==1, "resident repeated initial preparation")
+        fast_hops = [t for t in hops if t.get("fast_control")]
+        need(len(report.get("resident_negatives", [])) >= 4*len(hops)-2*len(fast_hops), "missing parked operation rejection coverage")
+        for t in fast_hops:
+            original = e.record(t["fast_file"], "RESIDENT_FAST_JSON ")
+            need(original == t["fast"] and original["ack"] == guest(e,t["ping"],"trace_ping"), "TCP timing/ACK altered")
+            need(original["state_bytes"] == t["device_state_bytes"] and original["manifest_bytes"] == t["manifest_bytes"], "TCP payload changed")
+            need(original["handoff_ns"] == t["controller_pause_to_ack_ns"]
+                 and original["handoff_ns"] >= sum(a["duration_us"] for a in original["apis"].values())*1000 + original["guest_ack_ns"],
+                 "TCP interval excludes measured work")
+            need(set(original["apis"]) == {"pause","export","attach","checkpoint","resume"}
+                 and all(a["status"]==204 and math.isfinite(a["duration_us"]) and a["duration_us"]>0 for a in original["apis"].values()), "TCP API failed")
+            need(all(a.get("coordinator_file")==t["fast_file"] for a in t["critical_apis"]), "TCP APIs lack original receipt")
+        if fast_hops:
+            need(report["arguments"].get("resident_fast_control") is True, "unrequested TCP mode")
+            need(len(report["controller_cleanup"])==2, "TCP controllers not cleaned")
+            for server in report["controller_cleanup"]:
+                need(server["fenced"] is True and re.search(r'^FENCED [0-9]+ [0-9]+\s*$',e.text(server["file"]),re.M), "TCP controller not fenced")
+                need(server["sha256"]==report["fixture"]["artifacts"]["resident-control"]
+                    and server["sha256"]+'  /lab/resident-control' in e.text(server["prepare_file"]), "TCP coordinator input changed")
+        for t in hops[1:]:
+            event = t["import_event"]
+            need(event.get("resident") is True and all(event[k] == 0 for k in ("thread_creates", "disk_opens", "io_engine_creates")),
+                 "resident reconstructed resources")
+            need(event["pid"] == int(incarnations[t["destination_directory"]][0][0]), "resident PID changed")
+        if report["arguments"].get("resident_repromote_handoff"):
+            cases = collections.Counter(n["kind"] for n in report["resident_negatives"])
+            need(all(cases[k] == 2 for k in ("stale-generation","foreign-graph","wrong-manifest-digest")), "missing invalid import cases")
+            for n in report["resident_negatives"]:
+                if "candidate_file" not in n: continue
+                bad, valid = e.json(n["candidate_file"]), e.json(n["valid_state_file"])
+                expected = json.loads(json.dumps(valid))
+                if n["kind"] == "stale-generation": expected["token"]["generation"] -= 1
+                elif n["kind"] == "foreign-graph": expected["token"]["vm_offset"] += 4096
+                else: expected["memory_manifest_sha256"] = "0"*64
+                need(bad == expected, "invalid import did not test intended mismatch")
+            probes = report["resident_probes"]
+            need(len(probes) == 2*len(hops)-len(fast_hops), "parked probe coverage")
+            for p in probes:
+                got = e.record(p["file"], "DIRECT_RESIDENT_PROBE_JSON ")
+                need(got == p["receipt"] and got["memory_errno"] == 14 and got["kvm_errno"] > 0
+                    and got["pid"] == int(incarnations[p["directory"]][0][0]), "parked memory or KVM access allowed")
+            resources = collections.defaultdict(list)
+            for r in report["resident_resources"]:
+                raw = e.text(r["file"])
+                need(re.findall(r'^RESOURCE_PROCESS (\d+) (\d+)\s*$',raw,re.M)==[tuple(r["process"])], "resource process proof")
+                fds = {k:v.strip() for k,v in re.findall(r'^RESOURCE_FD (\d+) (.+)$',raw,re.M)}
+                tasks = {k:v.strip() for k,v in re.findall(r'^RESOURCE_TASK (\d+) (.+)$',raw,re.M)}
+                need(fds==r["fds"] and tasks==r["tasks"], "resource FD/thread evidence altered")
+                need(tuple(r["process"])==incarnations[r["directory"]][0], "resource process changed")
+                resources[r["role"]].append(r)
+            need(set(resources)=={"A","B"}, "missing resident resource evidence")
+            for role, rows in resources.items():
+                disks = [{k:v for k,v in r["fds"].items() if v.endswith('/sandbox.raw') or 'io_uring' in v} for r in rows]
+                need(disks[0] and all(d==disks[0] for d in disks), "disk FD/io_uring recreated")
+                running = [r for r in rows if r["phase"]=="active"]
+                tids = [{k:v for k,v in r["tasks"].items() if v.startswith('fc_vcpu')} for r in running]
+                need(tids[0] and all(t==tids[0] for t in tids), "vCPU thread recreated")
+                need(max(len(r["fds"]) for r in running)-min(len(r["fds"]) for r in running)<=2, "unbounded resident FD growth")
     audit_bytes = []
     for audit in report["audits"]:
         event = audit["authority"]
@@ -646,21 +750,22 @@ def verify(path):
         rounds = report["arguments"].get("direct_profile_roundtrips", 0)
         need(type(rounds) is int and 0 <= rounds <= 20 and
              (rounds == 0 or report["mode"] == "direct"), "invalid profile repetitions")
-        nhops = 2 + 2 * rounds
+        extra = 2 if report["arguments"].get("resident_repromote_handoff", False) else 0
+        nhops = 2 + 2 * rounds + extra
         need(counts == {"promotion": 2, "demotion": 2, report["mode"]: nhops}, "required lifecycle incomplete")
         need(shared_bytes and max(shared_bytes) > 0, "no naturally resident eligible lower data")
         compact = all(e.json(t["export"]["file"]).get("version") == 2 for t in report["transitions"] if t["kind"] == "promotion")
         expected_audits = 2 if not compact or report["arguments"].get("full_audit", False) else 0
         need(len(report["audits"]) == expected_audits, "explicit PTE audit coverage mismatch")
         sequence = [row["kind"] for row in report["transitions"]]
-        need(sequence == ["promotion"] + [report["mode"]] * nhops + ["demotion", "promotion", "demotion"],
+        need(sequence == ["promotion"] + [report["mode"]] * (nhops-extra) + ["demotion", "promotion"] + [report["mode"]]*extra + ["demotion"],
              "unexpected lifecycle ordering")
         hops = [row for row in report["transitions"] if row["kind"] == report["mode"]]
         need([(row["source"], row["destination"], row["source_epoch"], row["destination_epoch"]) for row in hops] ==
              [("A" if i % 2 == 0 else "B", "B" if i % 2 == 0 else "A", i, i+1)
               for i in range(nhops)], "unexpected ownership itinerary")
         need([row["before"]["receipt"]["next_index"] for row in hops] ==
-             [report["boundaries"][0]] * (nhops-1) + [report["boundaries"][1]], "handoff crossed command boundary")
+             [report["boundaries"][0]] * (nhops-extra-1) + [report["boundaries"][1]] + [report["trace"]["command_count"]]*extra, "handoff crossed command boundary")
         allocator = report["allocator_final"]
         need(allocator["allocated_bytes"] == 0 and allocator["owners"] == {} and
              allocator["capacity_bytes"] == allocator["free_bytes"] == PRIVATE_END - PRIVATE_START, "allocator not completely returned")

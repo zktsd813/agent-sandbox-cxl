@@ -18,7 +18,7 @@ POOL_PLAN=0
 POOL_IMAGE=$(cat /lab/pool-image-id)
 printf '%s 0\n' "$BOOT" > "$T/state"
 i=0
-while [ "$i" -lt 64 ]; do printf 'FD-%s-%s\n' "$BOOT" "$i"; i=$((i + 1)); done > "$T/fd-sentinel"
+while [ "$i" -lt 4096 ]; do printf 'FD-%s-%s\n' "$BOOT" "$i"; i=$((i + 1)); done > "$T/fd-sentinel"
 exec 9<"$T/fd-sentinel"
 rm "$T/fd-sentinel"
 printf '{"event":"trace_ready","boot_id":"%s","pid":%s,"command_count":%s}\n' "$BOOT" "$$" "$COUNT"
@@ -62,6 +62,10 @@ while read -r OP ARG TOKEN EXTRA; do
             printf '{"event":"trace_end","label":"%s","index":%s,"command_sha256":"%s","rc":%s,"start_s":%s,"end_s":%s,"output_sha256":"%s","next_index":%s,"timed_out":%s}\n' "$TOKEN" "$INDEX" "$CMD_SHA" "$RC" "$START" "$END" "$OUT_SHA" "$NEXT" "$TIMED_OUT" > "$R/$N.json"
             cat "$R/$N.json"
             if [ "$NEXT" -eq "$COUNT" ]; then printf '{"completed_commands":%s}\n' "$COUNT" > "$R/complete.json"; fi
+            ;;
+        ping)
+            # Only shell builtins: first execution ACK, no FD/hash/cache diagnostics.
+            printf '{"event":"trace_ping","label":"%s","boot_id":"%s","pid":%s,"next_index":%s}\n' "$TOKEN" "$BOOT" "$$" "$NEXT"
             ;;
         identity)
             READS_BEFORE=$(awk '{print $1}' /sys/class/block/vda/stat)

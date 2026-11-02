@@ -1,0 +1,17 @@
+[
+  {
+    "archive": "final.tar.xz",
+    "files": 1004,
+    "result": "exact-byte-match"
+  },
+  {
+    "archive": "diagnostic.tar.xz",
+    "files": 879,
+    "result": "exact-byte-match"
+  },
+  {
+    "archive": "fresh.tar.xz",
+    "files": 740,
+    "result": "exact-byte-match"
+  }
+]

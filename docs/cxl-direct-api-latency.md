@@ -1,5 +1,7 @@
 # Direct handoff의 API 비용과 과거 1ms 미만 결과
 
+이 문서는 매번 목적지 VMM을 생성하던 경로의 분석이다. 후속 [resident direct 구현](cxl-resident-direct.md)은 목적지 FD·io_uring을 미리 준비하고 왕복 때 실행 환경을 재사용한다. 아래 수치는 당시 조건을 그대로 보존한다.
+
 ## 측정 범위부터 구분하기
 
 직전 Gin 결과의 **11.66ms**는 `DirectExport`와 목적지 `InstanceStart`의 HTTP API 시간을 더한 값이다. **2.48ms**는 그 안에 포함된 KVM detach/attach 시간이다. 두 수치는 2회 handoff의 중앙값이었다.
@@ -60,7 +62,7 @@ API에는 source 장치 정리, mapper 봉인, 작은 장치 상태 파일 기�
 
 각 조건에서 최초 방문을 포함한 handoff 10회를 측정했다. 코드 변경만 적용하면 API 중앙값은 **11.882 → 10.861ms**, immutable NFS 캐시까지 적용하면 **8.986ms**였다. 이 세 값은 상세 계측을 켠 실행이다. 같은 최종 설정에서 상세 계측을 끈 별도 10회 실행은 **8.339ms 중앙값**, 평균 **8.655ms**였다. 두 실행의 차이를 전부 계측 비용으로 단정하지 않는다.
 
-IRQFD/export ioctl 구간에서 kernel detach를 뺀 평균은 **0.418 → 0.136ms**였다. 목적지 장치 복원 평균은 **3.385 → 2.847 → 1.515ms**였다. NFS 캐시 조건의 B에서는 warm open이 약 26µs였고, 최초 접근까지 포함한 open 평균은 **0.315ms**였다. 최초 접근을 빼서 평균 개선을 과장하지 않았다.
+IRQFD/export ioctl 구간에서 kernel detach를 뺀 평균은 **0.418 → 0.136ms**였다. 목적지 장치 복원 평균은 **3.385 → 2.847 → 1.515ms**였다. NFS 캐시 조건의 B에서는 warm open이 **30~50µs**였고, 최초 접근까지 포함한 open 평균은 **0.315ms**였다. 최초 접근을 빼서 평균 개선을 과장하지 않았다.
 
 Kernel 코드는 이번에 바꾸지 않았다. 기존 세부 타이머로 확인한 코드 최적화 실행의 kernel 합계 평균은 **1.749ms**, 그 중 attach의 architecture rebind 단계가 **1.425ms**였다. 이 단계에는 nested EPT root 동기화와 VMX/clock 등의 연결이 함께 들어간다. 1.425ms 전부가 root 동기화 단독 비용이라고 단정할 수는 없다. Kernel 시간은 첫 방문, 새 EPT 노드, 실제 실행 내용과 스케줄링에 따라 변하므로 직전 2회 중앙값 2.48ms와 곧바로 성능 개선율을 계산하지 않는다.
 

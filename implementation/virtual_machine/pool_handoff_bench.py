@@ -72,10 +72,15 @@ class HandoffController(PoolController):
             "FC_POOL_MEMORY_MANIFEST": s.manifest_path, "FC_POOL_MEMORY_DEVICE": "/dev/cxl_pool",
             "FC_DAX_FIXED_HVA": "0x400000000000", "FC_DAX_SNAPSHOT": "1",
             "FC_POOL_DISCARD": "1", "FC_POOL_DISCARD_TRACE": "1"}
+        resident = getattr(self.args, "resident_direct", False)
+        if resident:
+            env.update(FC_DAX_RESIDENT="1", FC_DAX_RESIDENT_IMPORT=s.directory+"/direct-import.json",
+                FC_DAX_RESIDENT_MANIFEST=s.directory+"/restore-manifest.json")
         if restore_manifest:
             local = s.directory + "/restore-manifest.json"
-            self.shell(s.role, f"mkdir -p {s.directory}\ncp {shlex.quote(restore_manifest)} {local}\n"
-                       f"cmp {shlex.quote(restore_manifest)} {local}", "local-memory-manifest", 120)
+            if purpose != "resident-prepare":
+                self.shell(s.role, f"mkdir -p {s.directory}\ncp {shlex.quote(restore_manifest)} {local}\n"
+                           f"cmp {shlex.quote(restore_manifest)} {local}", "local-memory-manifest", 120)
             env["FC_POOL_MEMORY_RESTORE"] = local
             env["FC_POOL_MEMORY_LEASE"] = str(self.allocator.grants[s.owner].generation)
         if s.direct:
@@ -109,6 +114,11 @@ class HandoffController(PoolController):
         require(hashes == [expected], "Running VMM executable does not match frozen input")
         self.launches.append({"vm": s.vm, "epoch": s.epoch, "role": s.role,
                               "file": executable_file, "sha256": expected, "directory": s.directory, "purpose": purpose})
+        if resident:
+            if not hasattr(self, "resident_workers"): self.resident_workers = {}
+            self.resident_workers[s.role] = {key: getattr(s, key) for key in
+                ("directory", "plan", "report", "manifest_path", "hints")}
+            self.resident_workers[s.role]["imported"] = purpose != "resident-prepare"
         if s.direct:
             self.shell(s.role, f"read p t < {s.directory}/fc.pid\necho $p > /sys/module/kvm/parameters/dax_owner_pid\n"
                        "cat /sys/module/kvm/parameters/dax_owner_pid", "select-direct-owner")
@@ -355,11 +365,83 @@ class HandoffController(PoolController):
         self.transitions.append(row)
         return row
 
+    def resident_resources(self, role, directory, epoch, phase):
+        raw, name = self.shell(role, f"read p t < {directory}/fc.pid\n"
+            "printf 'RESOURCE_PROCESS %s %s\\n' $p $t\n"
+            "for f in /proc/$p/fd/*; do\n"
+            "printf 'RESOURCE_FD %s %s\\n' ${f##*/} \"$(readlink $f)\"\ndone\n"
+            "for f in /proc/$p/task/*; do\n"
+            "printf 'RESOURCE_TASK %s %s\\n' ${f##*/} \"$(cat $f/comm)\"\ndone", "resident-resources")
+        process = re.findall(r'^RESOURCE_PROCESS (\d+) (\d+)\s*$', raw, re.M)
+        fds = dict(re.findall(r'^RESOURCE_FD (\d+) (.+)$',raw,re.M))
+        tasks = dict(re.findall(r'^RESOURCE_TASK (\d+) (.+)$',raw,re.M))
+        require(len(process)==1 and fds and tasks, "resident resource proof missing")
+        row = {"role":role,"directory":directory,"epoch":epoch,"phase":phase,"file":name,
+            "process":list(process[0]),"fds":{k:v.strip() for k,v in fds.items()},
+            "tasks":{k:v.strip() for k,v in tasks.items()}}
+        self.resident_resource_events.append(row)
+        return row
+
+    def prepare_resident_target(self, s, destination):
+        import copy
+        started = time.monotonic_ns()
+        fresh = destination not in self.resident_workers
+        if fresh:
+            target = copy.copy(s)
+            target.role, target.epoch = destination, s.epoch + 1
+            directory = f"{self.root}/vm{s.vm}-epoch{target.epoch}-resident-prepare"
+            self.start_vm(target, restore_manifest=directory+"/restore-manifest.json",
+                direct_import=directory+"/direct-import.json", purpose="resident-prepare")
+        worker = self.resident_workers[destination]
+        api = self.api(destination, worker["directory"], "/actions", "PUT", {"action_type":"DirectPrepare"})
+        row = {"source":s.role, "destination":destination, "before_epoch":s.epoch,
+            "fresh":fresh, "api":api, "controller_wall_ns":time.monotonic_ns()-started,
+            "source_paused":False, "directory":worker["directory"]}
+        if not hasattr(self, "resident_preparations"): self.resident_preparations=[]
+        self.resident_preparations.append(row)
+        if fresh: self.resident_resources(destination, worker["directory"], s.epoch+1, "prepared")
+        return row
+
+    def resident_fence(self, role, directory, generation):
+        raw, name = self.shell(role, f"read p t < {directory}/fc.pid\nkill -0 $p\n"
+            f"grep '400000000000-' /proc/$p/maps\n"
+            f"grep 'DIRECT_RESIDENT_JSON ' {directory}/vmm.log | tail -n 1\n"
+            "printf 'PARKED %s %s\\n' $p $t", "resident-fence")
+        require(re.search(r'^400000000000-[0-9a-f]+ ---p ',raw,re.M), "parked source still maps RAM")
+        rows = [json.loads(x) for x in re.findall(r'DIRECT_RESIDENT_JSON (\{.*\})', raw)]
+        require(len(rows)==1 and rows[0]['event']=='park' and rows[0]['generation']==generation
+            and rows[0]['ram_access_revoked'] and rows[0]['io_drained'] and rows[0]['devices_unsubscribed'], "park evidence missing")
+        for path, method, body in (("/vm","PATCH",{"state":"Resumed"}),
+                                   ("/actions","PUT",{"action_type":"PoolCache"})):
+            answer = nfs.shell(self.vms[role], f"/lab/shared-probe api {directory}/api.sock {method} {path} " + shlex.quote(json.dumps(body)) + " 400")
+            evidence = self.raw("resident-negative-api", answer)
+            values = json_lines(answer, "LAB_API_JSON ")
+            require(len(values)==1 and values[0]['status']==400, "parked source accepted mutation")
+            self.import_negatives.append({"kind":"parked-operation", "role":role, "file":evidence,
+                "request":body,"response":values[0],"generation":generation})
+        self.api(role, directory, "/actions", "PUT", {"action_type":"DirectPrepare"})
+        probe_raw, probe_file = self.shell(role, f"grep 'DIRECT_RESIDENT_PROBE_JSON ' {directory}/vmm.log | tail -n 1", "resident-probe")
+        probes = [json.loads(x) for x in re.findall(r'DIRECT_RESIDENT_PROBE_JSON (\{.*\})',probe_raw)]
+        require(len(probes)==1 and probes[0]["generation"]==generation and probes[0]["memory_errno"]==14
+            and probes[0]["kvm_errno"] != 0, "parked memory/KVM access not rejected")
+        self.resident_probes.append({"role":role,"directory":directory,"file":probe_file,"receipt":probes[0]})
+        return name
+
     def direct_handoff(self, s, destination):
+        if getattr(self.args, "resident_fast_control", False) and (
+            getattr(s, "direct_token", None) is None or all(w.get("negative_checked") for w in self.resident_workers.values())):
+            from resident_fast import handoff
+            return handoff(self,s,destination)
         require(self.mode == "direct" and s.direct and s.tier == "cxl" and destination != s.role,
                 "Direct handoff requires selected CXL VM and another host")
+        resident = getattr(self.args, "resident_direct", False)
+        if resident and not self.resident_resource_events:
+            self.resident_resources(s.role, s.directory, s.epoch, "active")
+        preparation = self.prepare_resident_target(s, destination) if resident else None
         before = self.command_vm(s, "identity", require_cache=True)
         source, old_directory, old_epoch = s.role, s.directory, s.epoch
+        critical_start = time.monotonic_ns()
+        api_begin = len(self.api_events)
         self.pause(s)
         self.export(s)
         api = self.api(source, old_directory, "/actions", "PUT", {"action_type": "DirectExport"})
@@ -383,22 +465,61 @@ class HandoffController(PoolController):
         parsed = json.loads(manifest)
         source_accounting = validate_export(self.allocator, s.owner, parsed, self.memory_mib * MIB,
                                              self.pool_offset, self.image_bytes)
-        nfs.stop_fc(self.vms[source], old_directory)
-        raw, fence = self.shell(source, source_fence_script(old_directory), "source-fence")
-        require("FENCED " in raw, "Detached source process not fenced")
+        if resident:
+            fence = self.resident_fence(source, old_directory, token["generation"])
+        else:
+            nfs.stop_fc(self.vms[source], old_directory)
+            raw, fence = self.shell(source, source_fence_script(old_directory), "source-fence")
+            require("FENCED " in raw, "Detached source process not fenced")
         self.shell(source, "echo 2147483647 > /sys/module/kvm/parameters/dax_owner_pid", "retire-direct-owner")
         s.epoch += 1
         s.role = destination
-        target = f"{self.root}/vm{s.vm}-epoch{s.epoch}"
-        self.shell(destination, f"mkdir -p {target}", "destination-directory")
-        target_state, target_manifest = target + "/direct-import.json", target + "/incoming-manifest.json"
+        if resident:
+            worker = self.resident_workers[destination]
+            for key in ("directory", "plan", "report", "manifest_path", "hints"): setattr(s,key,worker[key])
+            target = s.directory
+        else:
+            target = f"{self.root}/vm{s.vm}-epoch{s.epoch}"
+            self.shell(destination, f"mkdir -p {target}", "destination-directory")
+        target_state = target + "/direct-import.json"
+        target_manifest = target + ("/restore-manifest.json" if resident else "/incoming-manifest.json")
+        if resident and worker["imported"] and not worker.get("negative_checked"):
+            for case in ("stale-generation", "foreign-graph", "wrong-manifest-digest"):
+                invalid = json.loads(metadata)
+                if case == "stale-generation": invalid["token"]["generation"] -= 1
+                elif case == "foreign-graph": invalid["token"]["vm_offset"] += 4096
+                else: invalid["memory_manifest_sha256"] = "0"*64
+                bad = json.dumps(invalid,separators=(",",":")).encode()
+                self.write_bytes(destination,target_state,bad,"resident-invalid-transfer")
+                candidate = self.raw("resident-invalid-state",bad.decode())
+                self.write_bytes(destination,target_manifest,manifest,"resident-invalid-manifest-transfer")
+                body = {"action_type":"DirectImport"}
+                answer = nfs.shell(self.vms[destination], f"/lab/shared-probe api {target}/api.sock PUT /actions " + shlex.quote(json.dumps(body)) + " 400")
+                evidence = self.raw("resident-negative-api", answer)
+                values = json_lines(answer,"LAB_API_JSON ")
+                require(len(values)==1 and values[0]["status"]==400,"resident invalid import accepted")
+                self.import_negatives.append({"kind":case,"role":destination,"candidate_file":candidate,
+                    "valid_state_file":metadata_file,"file":evidence,"request":body,"response":values[0]})
+            worker["negative_checked"] = True
         self.write_bytes(destination, target_state, metadata, "direct-device-transfer")
         self.write_bytes(destination, target_manifest, manifest, "direct-placement-transfer")
-        self.start_vm(s, restore_manifest=target_manifest, direct_import=target_state)
-        attach = self.api(destination, s.directory, "/actions", "PUT", {"action_type": "InstanceStart"})
+        if not resident:
+            self.start_vm(s, restore_manifest=target_manifest, direct_import=target_state)
+        else:
+            self.shell(destination, f"read p t < {target}/fc.pid\necho $p > /sys/module/kvm/parameters/dax_owner_pid", "select-resident-owner")
+        action = "DirectImport" if resident and worker["imported"] else "InstanceStart"
+        attach = self.api(destination, s.directory, "/actions", "PUT", {"action_type": action})
+        if resident: worker["imported"] = True
         restored = self.export(s)
         validate_handoff_handle(parsed, restored["manifest"])
-        log = self.fetch_bytes(destination, s.directory + "/vmm.log", "direct-import-log")
+        log = self.fetch_bytes(destination, s.directory + "/vmm.log", "resident-full-log" if resident else "direct-import-log")
+        if resident:
+            selected = [line for line in log.decode().splitlines() if "DIRECT_HANDOFF_JSON " in line
+                and json.loads(line.split("DIRECT_HANDOFF_JSON ",1)[1]).get("event") == "import"
+                and json.loads(line.split("DIRECT_HANDOFF_JSON ",1)[1])["token"]["generation"] == token["generation"]]
+            require(len(selected)==1, "resident import generation evidence")
+            log = (selected[0]+"\n").encode()
+            self.raw("direct-import-log", log.decode())
         import_rows = [json.loads(line.split("DIRECT_HANDOFF_JSON ", 1)[1]) for line in log.decode().splitlines()
                        if "DIRECT_HANDOFF_JSON " in line]
         imports = [r for r in import_rows if r["event"] == "import"]
@@ -423,6 +544,7 @@ class HandoffController(PoolController):
             kernel_profile = {"file": profile_file, "detach_ns": values[:8], "attach_ns": values[8:]}
         self.resume(s)
         after = self.command_vm(s, "check", require_cache=True)
+        critical_end = time.monotonic_ns()
         self.same_identity(before, after)
         require(after["receipt"]["block_read_ios"] == 0, "Direct handoff lost warm guest cache")
         row = {"kind": "direct", "vm": s.vm, "source": source, "destination": destination,
@@ -432,6 +554,13 @@ class HandoffController(PoolController):
             "manifest_bytes": len(manifest), "token": token, "import_event": imports[0],
             "ram_snapshot_bytes": 0, "ram_transfer_bytes": 0, "cpu_snapshot_bytes": 0,
             "source_accounting": source_accounting, "destination_placement": self.export_evidence(restored), "result": "passed"}
+        if resident:
+            row.update(resident=True, preparation=preparation, source_directory=old_directory,
+                destination_directory=s.directory, controller_pause_to_ack_ns=critical_end-critical_start,
+                critical_apis=self.api_events[api_begin:])
+            # Source remains parked while the destination is executing.
+            self.resident_fence(source, old_directory, token["generation"])
+            self.resident_resources(destination,s.directory,s.epoch,"active")
         if kernel_profile:
             row["kernel_profile"] = kernel_profile
         self.transitions.append(row)

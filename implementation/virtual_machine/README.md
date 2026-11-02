@@ -24,7 +24,12 @@ DAX 공유 영역은 기본 2GiB다. 기본 microVM은 1 vCPU·128MiB이고 RAM 
 
 ## 다음 세션 인계: 2026-11-02
 
-최신 변경은 [Direct API 단계별 계측과 NFS/IRQFD 최적화](../../docs/cxl-direct-api-latency.md)다.
+최신 변경은 [목적지 FD·장치 환경을 재사용하는 resident direct](../../docs/cxl-resident-direct.md)다.
+`--resident-direct --resident-fast-control --immutable-nfs-cache`를 명시해 활성화한다.
+최초 목적지의 이미지 FD·io_uring은 source 실행 중 준비하며, 재방문은 기존 VMM·vCPU thread·장치 객체를 재사용한다.
+[실험·재현 자료](results/direct-resident-20261102/README.md)는 준비, API service, 실제 pause→guest ACK를 분리한다.
+
+직전 변경은 [Direct API 단계별 계측과 NFS/IRQFD 최적화](../../docs/cxl-direct-api-latency.md)다.
 11.66ms API와 2.48ms kernel 수치의 차이, 예전 1ms 미만 executor 경로와의 차이를 설명한다.
 [원시 실험·재검증 자료](results/direct-api-20261102/README.md)에서 코드 변경과 immutable NFS 설정의 효과를 구분한다.
 

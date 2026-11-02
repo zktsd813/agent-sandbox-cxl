@@ -2,6 +2,8 @@
 
 정리 기준: 2026년 10월 30일. Host NFS와 고향 disk의 DRAM↔CXL 수명주기, virtio-blk 관측 prototype에 이어, 현재 guest metadata로 공유 자격을 확인하는 pooling과 direct/state-only handoff를 추가했다. 측정 날짜와 환경은 각 결과에 따로 표시한다.
 
+2026년 11월 2일 후속 구현은 [handoff의 반복 RAM 순회 제거](cxl-pool-incremental-handoff.md), [API·NFS 비용 분석](cxl-direct-api-latency.md), [목적지 FD·장치 실행 환경 재사용](cxl-resident-direct.md) 순서로 읽는다. 아래의 초기 direct executor 및 장치 제한 설명은 해당 시점의 기록이며, 최신 read-only block 지원과 측정 범위는 후속 문서에 정리했다.
+
 목표는 **sandbox의 메모리를 CXL에 유지하면서 실행을 담당하는 노드를 바꾸는 것**이다. RAM 전체를 옮기는 비용을 줄여, 이미 실행 중인 sandbox도 다른 노드의 여유 CPU를 사용할 수 있게 하려는 연구다.
 
 현재는 공유 RAM을 유지하는 실행 이전, PML을 이용한 캐시 처리, MPTCP 연결 유지까지 **각각 검증**했다. 파일 접근과 장치 소유권, 비일관 CXL의 가시성 보장을 포함하는 하나의 서비스 전환 경로로 통합하는 작업은 남아 있다.

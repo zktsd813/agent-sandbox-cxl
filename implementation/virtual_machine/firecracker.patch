@@ -42,15 +42,17 @@ index ecc11186d..672acecaf 100644
              && let Some((metric, action)) = metric_with_action
          {
 diff --git a/src/firecracker/src/api_server/request/actions.rs b/src/firecracker/src/api_server/request/actions.rs
-index a3b3f3f3a..01aa2232d 100644
+index a3b3f3f3a..f1a248a59 100644
 --- a/src/firecracker/src/api_server/request/actions.rs
 +++ b/src/firecracker/src/api_server/request/actions.rs
-@@ -16,8 +16,12 @@ use super::StatusCode;
+@@ -16,8 +16,14 @@ use super::StatusCode;
  #[derive(Debug, Deserialize, Serialize)]
  enum ActionType {
      FlushMetrics,
 +    PoolCache,
 +    DirectExport,
++    DirectPrepare,
++    DirectImport,
      InstanceStart,
      SendCtrlAltDel,
 +    #[cfg(target_arch = "x86_64")]
@@ -58,11 +60,13 @@ index a3b3f3f3a..01aa2232d 100644
  }
  
  // The model of the json body from a sync request. We use Serde to transform each associated
-@@ -35,8 +39,12 @@ pub(crate) fn parse_put_actions(body: &Body) -> Result<ParsedRequest, RequestErr
+@@ -35,8 +41,14 @@ pub(crate) fn parse_put_actions(body: &Body) -> Result<ParsedRequest, RequestErr
      })?;
  
      match action_body.action_type {
 +        ActionType::PoolCache => Ok(ParsedRequest::new_sync(VmmAction::PoolCache)),
++        ActionType::DirectPrepare => Ok(ParsedRequest::new_sync(VmmAction::DirectPrepare)),
++        ActionType::DirectImport => Ok(ParsedRequest::new_sync(VmmAction::DirectImport)),
 +        ActionType::DirectExport => Ok(ParsedRequest::new_sync(VmmAction::DirectExport)),
          ActionType::FlushMetrics => Ok(ParsedRequest::new_sync(VmmAction::FlushMetrics)),
          ActionType::InstanceStart => Ok(ParsedRequest::new_sync(VmmAction::StartMicroVm)),
@@ -71,7 +75,7 @@ index a3b3f3f3a..01aa2232d 100644
          ActionType::SendCtrlAltDel => {
              // SendCtrlAltDel not supported on aarch64.
              #[cfg(target_arch = "aarch64")]
-@@ -57,6 +65,11 @@ mod tests {
+@@ -57,6 +69,11 @@ mod tests {
  
      #[test]
      fn test_parse_put_actions_request() {
@@ -1236,13 +1240,25 @@ index bcb0e027a..512cbc743 100644
              device_manager,
          }
 diff --git a/src/vmm/src/device_manager/acpi.rs b/src/vmm/src/device_manager/acpi.rs
-index 53aba9be8..3f0af9055 100644
+index 53aba9be8..981786178 100644
 --- a/src/vmm/src/device_manager/acpi.rs
 +++ b/src/vmm/src/device_manager/acpi.rs
-@@ -32,6 +32,24 @@ pub struct ACPIDeviceManager {
+@@ -32,6 +32,36 @@ pub struct ACPIDeviceManager {
  }
  
  impl ACPIDeviceManager {
++    pub(crate) fn restore_direct_resident(&mut self, state: &super::persist::ACPIDeviceManagerState, mem: &GuestMemoryMmap) -> Result<(), ACPIDeviceError> {
++        use vm_memory::Bytes;
++        let genid = self.vmgenid.as_mut().unwrap();
++        let mut bytes = [0u8; 16];
++        mem.read_slice(&mut bytes, crate::vstate::memory::GuestAddress(state.vmgenid.addr)).expect("validated VMGenID");
++        genid.gen_id = u128::from_le_bytes(bytes);
++        let clock = self.vmclock.as_mut().unwrap();
++        clock.restore_reused(&state.vmclock);
++        clock.activate(mem)?;
++        Ok(())
++    }
++
 +    /// Restore the same device layout without allocating or registering IRQs again.
 +    pub(crate) fn restore_reused(
 +        &mut self,
@@ -1265,13 +1281,33 @@ index 53aba9be8..3f0af9055 100644
      pub fn new(vmgenid: VmGenId, vmclock: VmClock) -> Self {
          ACPIDeviceManager {
 diff --git a/src/vmm/src/device_manager/mmio.rs b/src/vmm/src/device_manager/mmio.rs
-index 689a446be..658781d50 100644
+index 689a446be..be039d1ab 100644
 --- a/src/vmm/src/device_manager/mmio.rs
 +++ b/src/vmm/src/device_manager/mmio.rs
-@@ -136,6 +136,21 @@ pub struct MMIOVirtioDevices {
+@@ -136,6 +136,41 @@ pub struct MMIOVirtioDevices {
  }
  
  impl MMIOVirtioDevices {
++    pub(crate) fn park_direct(&mut self, events: &mut EventManager) {
++        for device in self.virtio_devices.values_mut() {
++            if let Some(id) = device.sub_id.take() { events.remove_subscriber(id).expect("resident subscriber missing"); }
++        }
++    }
++    pub(crate) fn rebind_direct(&mut self, vm: &KvmVm, events: &mut EventManager) -> Result<(), MmioError> {
++        for device in self.virtio_devices.values_mut() {
++            let transport = device.inner.lock().unwrap();
++            {
++                let backend = transport.locked_device();
++                let addr = IoEventAddress::Mmio(device.resources.addr + u64::from(crate::devices::virtio::NOTIFY_REG_OFFSET));
++                for (i, event) in backend.queue_events().iter().enumerate() {
++                    vm.fd().register_ioevent(event, &addr, u32::try_from(i).unwrap()).map_err(MmioError::RegisterIoEvent)?;
++                }
++            }
++            device.sub_id = Some(events.add_subscriber(transport.device()));
++        }
++        Ok(())
++    }
++
 +    /// Remove node-local eventfd bindings after vCPUs and device I/O are quiesced.
 +    /// Device objects remain frozen in the source process until it is retired.
 +    pub(crate) fn unbind_direct_ioevents(&self, vm: &KvmVm) -> Result<(), MmioError> {
@@ -1307,7 +1343,7 @@ index 37d00db6d..7e38a1a97 100644
          match &self.virtio_devices {
              VirtioDevices::Mmio(mmio_devices) => mmio_devices.for_each_virtio_device(&mut f),
 diff --git a/src/vmm/src/device_manager/persist.rs b/src/vmm/src/device_manager/persist.rs
-index 82518eb6f..b2ab128f8 100644
+index 82518eb6f..e67ac82e8 100644
 --- a/src/vmm/src/device_manager/persist.rs
 +++ b/src/vmm/src/device_manager/persist.rs
 @@ -7,6 +7,7 @@ use std::fmt::{self, Debug};
@@ -1360,6 +1396,41 @@ index 82518eb6f..b2ab128f8 100644
  
          Ok(acpi_devices)
      }
+@@ -266,6 +276,34 @@ impl<'a> Persist<'a> for MMIOPlatformDevices {
+     }
+ }
+ 
++impl MMIOVirtioDevices {
++    pub(crate) fn restore_direct_resident(&mut self, mem: &GuestMemoryMmap, state: &DeviceStates) -> Result<(), String> {
++        if self.virtio_devices.len() != state.block_devices.len() + usize::from(state.balloon_device.is_some()) {
++            return Err("resident device count mismatch".into());
++        }
++        for s in &state.block_devices {
++            let device = self.virtio_devices.get(&(VirtioDeviceType::Block, s.device_id.clone())).ok_or("resident block missing")?;
++            if device.resources != s.device_info { return Err("resident MMIO layout changed".into()); }
++            let mut transport = device.inner.lock().unwrap();
++            {
++                let mut backend = transport.locked_device();
++                let Block::Virtio(block) = backend.as_mut_any().downcast_mut::<Block>().ok_or("resident block type")? else { return Err("vhost unsupported".into()); };
++                let BlockState::Virtio(saved) = &s.device_state else { return Err("vhost unsupported".into()); };
++                block.direct_restore(mem, saved)?;
++            }
++            transport.direct_restore(&s.transport_state);
++        }
++        if let Some(s) = &state.balloon_device {
++            let device = self.virtio_devices.get(&(VirtioDeviceType::Balloon, s.device_id.clone())).ok_or("resident balloon missing")?;
++            if device.resources != s.device_info { return Err("resident balloon layout changed".into()); }
++            let mut transport = device.inner.lock().unwrap();
++            transport.locked_device().as_mut_any().downcast_mut::<Balloon>().ok_or("resident balloon type")?.direct_restore(mem, &s.device_state)?;
++            transport.direct_restore(&s.transport_state);
++        }
++        Ok(())
++    }
++}
++
+ impl<'a> Persist<'a> for MMIOVirtioDevices {
+     type State = DeviceStates;
+     type ConstructorArgs = MMIODevManagerConstructorArgs<'a>;
 diff --git a/src/vmm/src/devices/acpi/vmclock.rs b/src/vmm/src/devices/acpi/vmclock.rs
 index a480d907f..1ddd42243 100644
 --- a/src/vmm/src/devices/acpi/vmclock.rs
@@ -1397,7 +1468,7 @@ index 2f1b6b95c..429214603 100644
      pub fn new(reset_evt: EventFd) -> Result<I8042Device, std::io::Error> {
          Ok(I8042Device {
 diff --git a/src/vmm/src/devices/legacy/serial.rs b/src/vmm/src/devices/legacy/serial.rs
-index e38480179..fb1e3396f 100644
+index e38480179..2bb278582 100644
 --- a/src/vmm/src/devices/legacy/serial.rs
 +++ b/src/vmm/src/devices/legacy/serial.rs
 @@ -265,6 +265,22 @@ impl<I: Read + AsRawFd + Send + Debug> SerialWrapper<EventFdTrigger, SerialEvent
@@ -1406,7 +1477,7 @@ index e38480179..fb1e3396f 100644
  impl SerialDevice {
 +    /// The experimental pool only permits output-only UARTs (no epoll input FDs).
 +    pub(crate) fn restore_reused(&mut self, state: &SerialState) -> io::Result<()> {
-+        assert!(self.input.is_none());
++        assert!(self.input.is_none() || crate::direct::resident_enabled());
 +        let interrupt = self.serial.interrupt_evt().try_clone()?;
 +        let buffer = self.serial.events().buffer_ready_event_fd.as_ref()
 +            .map(EventFdTrigger::try_clone).transpose()?;
@@ -1691,10 +1762,36 @@ index cf8da2cec..a7ea5541b 100644
      HintingNotEnabled,
      /// EventFd error: {0}
 diff --git a/src/vmm/src/devices/virtio/balloon/persist.rs b/src/vmm/src/devices/virtio/balloon/persist.rs
-index 6637d196e..ca675b88e 100644
+index 6637d196e..13a129b81 100644
 --- a/src/vmm/src/devices/virtio/balloon/persist.rs
 +++ b/src/vmm/src/devices/virtio/balloon/persist.rs
-@@ -185,6 +185,13 @@ impl Persist<'_> for Balloon {
+@@ -112,6 +112,25 @@ pub struct BalloonConstructorArgs {
+     pub mem: GuestMemoryMmap,
+ }
+ 
++impl Balloon {
++    pub(crate) fn direct_restore(&mut self, mem: &crate::vstate::memory::GuestMemoryMmap, state: &BalloonState) -> Result<(), String> {
++        if !self.pool_reporting_only() || state.stats_polling_interval_s != 0
++            || self.avail_features != state.virtio_state.avail_features
++            || self.acked_features != state.virtio_state.acked_features || !state.virtio_state.activated {
++            return Err("resident balloon contract mismatch".into());
++        }
++        let queues = state.virtio_state.build_queues_checked(mem, VirtioDeviceType::Balloon,
++            self.queues.len(), FIRECRACKER_MAX_QUEUE_SIZE).map_err(|e| e.to_string())?;
++        for event in &self.queue_evts { while event.read().is_ok() {} }
++        self.queues = queues;
++        self.latest_stats = state.latest_stats.create_stats();
++        self.config_space.num_pages = state.config_space.num_pages;
++        self.config_space.actual_pages = state.config_space.actual_pages;
++        self.hinting_state = state.hinting_state;
++        Ok(())
++    }
++}
++
+ impl Persist<'_> for Balloon {
+     type State = BalloonState;
+     type ConstructorArgs = BalloonConstructorArgs;
+@@ -185,6 +204,13 @@ impl Persist<'_> for Balloon {
              free_page_hint_cmd_id: FREE_PAGE_HINT_DONE,
          };
          balloon.hinting_state = state.hinting_state;
@@ -1709,10 +1806,10 @@ index 6637d196e..ca675b88e 100644
          if state.virtio_state.activated && balloon.stats_enabled() {
              // Restore the stats descriptor.
 diff --git a/src/vmm/src/devices/virtio/block/virtio/device.rs b/src/vmm/src/devices/virtio/block/virtio/device.rs
-index 78c1adde8..01c041f55 100644
+index 78c1adde8..dbdd2e435 100644
 --- a/src/vmm/src/devices/virtio/block/virtio/device.rs
 +++ b/src/vmm/src/devices/virtio/block/virtio/device.rs
-@@ -59,6 +59,7 @@ pub enum FileEngineType {
+@@ -59,13 +59,27 @@ pub enum FileEngineType {
  /// Helper object for setting up all `Block` fields derived from its backing file.
  #[derive(Debug)]
  pub struct DiskProperties {
@@ -1720,10 +1817,40 @@ index 78c1adde8..01c041f55 100644
      pub file_path: String,
      pub file_engine: FileEngine,
      pub nsectors: u64,
-@@ -100,14 +101,35 @@ impl DiskProperties {
+     pub image_id: [u8; VIRTIO_BLK_ID_BYTES as usize],
+ }
+ 
++fn prepared_disk() -> &'static std::sync::Mutex<Option<DiskProperties>> {
++    static DISK: std::sync::OnceLock<std::sync::Mutex<Option<DiskProperties>>> = std::sync::OnceLock::new();
++    DISK.get_or_init(|| std::sync::Mutex::new(None))
++}
++
+ impl DiskProperties {
++    pub(crate) fn prepare_direct() -> Result<(), VirtioBlockError> {
++        let path = std::env::var("FC_POOL_IMAGE_PATH").unwrap_or_default();
++        if prepared_disk().lock().unwrap().is_some() { return Ok(()); }
++        let disk = Self::new(path, true, FileEngineType::Async)?;
++        *prepared_disk().lock().unwrap() = Some(disk);
++        Ok(())
++    }
++
+     // Helper function that opens the file with the proper access permissions
+     fn open_file(disk_image_path: &str, is_disk_read_only: bool) -> Result<File, VirtioBlockError> {
+         OpenOptions::new()
+@@ -100,14 +114,45 @@ impl DiskProperties {
          is_disk_read_only: bool,
          file_engine_type: FileEngineType,
      ) -> Result<Self, VirtioBlockError> {
++        if crate::direct::resident_enabled() {
++            let mut prepared = prepared_disk().lock().unwrap();
++            if let Some(disk) = prepared.as_ref() {
++                if !is_disk_read_only || disk.file_path != disk_image_path || file_engine_type != FileEngineType::Async {
++                    return Err(VirtioBlockError::BackingFile(std::io::Error::other("prepared disk contract mismatch"), disk_image_path));
++                }
++                crate::logger::info_unrestricted!("DIRECT_DISK_PREPARED consumed=true");
++                return Ok(prepared.take().unwrap());
++            }
++        }
 +        let mut timing = crate::persist::RestoreTiming::new("disk_properties");
          let mut disk_image = Self::open_file(&disk_image_path, is_disk_read_only)?;
 -        let disk_size = Self::file_size(&disk_image_path, &mut disk_image)?;
@@ -1760,7 +1887,7 @@ index 78c1adde8..01c041f55 100644
              nsectors: disk_size >> SECTOR_SHIFT,
              image_id,
          })
-@@ -122,6 +144,7 @@ impl DiskProperties {
+@@ -122,6 +167,7 @@ impl DiskProperties {
          let mut disk_image = Self::open_file(&disk_image_path, is_disk_read_only)?;
          let disk_size = Self::file_size(&disk_image_path, &mut disk_image)?;
  
@@ -1768,7 +1895,7 @@ index 78c1adde8..01c041f55 100644
          self.image_id = Self::build_disk_image_id(&disk_image);
          self.file_engine
              .update_file_path(disk_image)
-@@ -162,6 +185,14 @@ impl DiskProperties {
+@@ -162,6 +208,14 @@ impl DiskProperties {
          }
          default_id
      }
@@ -1783,7 +1910,7 @@ index 78c1adde8..01c041f55 100644
  }
  
  /// Internal type to store attributes of the block device
-@@ -403,6 +434,8 @@ pub struct VirtioBlock {
+@@ -403,6 +457,8 @@ pub struct VirtioBlock {
      pub disk: DiskProperties,
      pub rate_limiter: RateLimiter,
      pub is_io_engine_throttled: bool,
@@ -1792,7 +1919,7 @@ index 78c1adde8..01c041f55 100644
      pub metrics: Arc<BlockDeviceMetrics>,
  }
  
-@@ -504,6 +537,7 @@ impl VirtioBlock {
+@@ -504,6 +560,7 @@ impl VirtioBlock {
              disk: disk_properties,
              rate_limiter,
              is_io_engine_throttled: false,
@@ -1800,7 +1927,7 @@ index 78c1adde8..01c041f55 100644
              metrics: BlockMetricsPerDevice::alloc(config.drive_id),
          })
      }
-@@ -744,11 +778,23 @@ impl VirtioBlock {
+@@ -744,11 +801,23 @@ impl VirtioBlock {
  
      /// Prepare device for being snapshotted.
      pub fn prepare_save(&mut self) {
@@ -1825,7 +1952,7 @@ index 78c1adde8..01c041f55 100644
          if let FileEngine::Async(ref _engine) = self.disk.file_engine {
              self.process_async_completion_queue();
          }
-@@ -985,8 +1031,9 @@ mod tests {
+@@ -985,8 +1054,9 @@ mod tests {
  
              assert_eq!(size, u64::from(SECTOR_SIZE) * num_sectors);
              assert_eq!(disk_properties.nsectors, num_sectors);
@@ -1837,7 +1964,7 @@ index 78c1adde8..01c041f55 100644
  
              let res = DiskProperties::new("invalid-disk-path".to_string(), true, engine);
              assert!(
-@@ -1968,6 +2015,29 @@ mod tests {
+@@ -1968,6 +2038,29 @@ mod tests {
          }
      }
  
@@ -1867,7 +1994,7 @@ index 78c1adde8..01c041f55 100644
      #[test]
      fn test_prepare_save() {
          for engine in [FileEngineType::Sync, FileEngineType::Async] {
-@@ -1983,6 +2053,7 @@ mod tests {
+@@ -1983,6 +2076,7 @@ mod tests {
              add_flush_requests_batch(&mut block, &vq, 5);
              simulate_queue_event(&mut block, None);
              block.prepare_save();
@@ -1892,10 +2019,36 @@ index 26a1f9aa9..c97e0a0f4 100644
              .map_err(AsyncIoError::IoUring)?;
  
 diff --git a/src/vmm/src/devices/virtio/block/virtio/persist.rs b/src/vmm/src/devices/virtio/block/virtio/persist.rs
-index 493c487bb..da8a7ae83 100644
+index 493c487bb..75154340f 100644
 --- a/src/vmm/src/devices/virtio/block/virtio/persist.rs
 +++ b/src/vmm/src/devices/virtio/block/virtio/persist.rs
-@@ -144,6 +144,7 @@ impl Persist<'_> for VirtioBlock {
+@@ -66,6 +66,25 @@ pub struct VirtioBlockState {
+     discard_sector_alignment: u32,
+ }
+ 
++impl VirtioBlock {
++    pub(crate) fn direct_restore(&mut self, mem: &crate::vstate::memory::GuestMemoryMmap, state: &VirtioBlockState) -> Result<(), String> {
++        let mut old = serde_json::to_value(self.save()).map_err(|e| e.to_string())?;
++        let mut new = serde_json::to_value(state).map_err(|e| e.to_string())?;
++        old.as_object_mut().unwrap().remove("virtio_state");
++        new.as_object_mut().unwrap().remove("virtio_state");
++        if old != new || !self.read_only || self.avail_features != state.virtio_state.avail_features
++            || self.acked_features != state.virtio_state.acked_features || !state.virtio_state.activated {
++            return Err("resident block contract mismatch".into());
++        }
++        let queues = state.virtio_state.build_queues_checked(mem, VirtioDeviceType::Block,
++            BLOCK_NUM_QUEUES, FIRECRACKER_MAX_QUEUE_SIZE).map_err(|e| e.to_string())?;
++        for event in &self.queue_evts { while event.read().is_ok() {} }
++        self.queues = queues;
++        self.is_io_engine_throttled = false;
++        Ok(())
++    }
++}
++
+ impl Persist<'_> for VirtioBlock {
+     type State = VirtioBlockState;
+     type ConstructorArgs = BlockConstructorArgs;
+@@ -144,6 +163,7 @@ impl Persist<'_> for VirtioBlock {
              disk: disk_properties,
              rate_limiter,
              is_io_engine_throttled: false,
@@ -1988,12 +2141,35 @@ index a6f5813ce..18bed9cca 100644
                  r#type: RequestType::In,
                  data_len: 0,
                  status_addr: Default::default(),
+diff --git a/src/vmm/src/devices/virtio/persist.rs b/src/vmm/src/devices/virtio/persist.rs
+index 2a75945f6..fe91a5d09 100644
+--- a/src/vmm/src/devices/virtio/persist.rs
++++ b/src/vmm/src/devices/virtio/persist.rs
+@@ -216,6 +216,18 @@ pub struct MmioTransportConstructorArgs {
+     pub is_vhost_user: bool,
+ }
+ 
++impl MmioTransport {
++    pub(crate) fn direct_restore(&mut self, state: &MmioTransportState) {
++        self.features_select = state.features_select;
++        self.acked_features_select = state.acked_features_select;
++        self.queue_select = state.queue_select;
++        self.device_status = state.device_status;
++        self.config_generation = state.config_generation;
++        while self.interrupt.irq_evt.read().is_ok() {}
++        self.interrupt.irq_status.store(state.interrupt_status, Ordering::SeqCst);
++    }
++}
++
+ impl Persist<'_> for MmioTransport {
+     type State = MmioTransportState;
+     type ConstructorArgs = MmioTransportConstructorArgs;
 diff --git a/src/vmm/src/direct.rs b/src/vmm/src/direct.rs
 new file mode 100644
-index 000000000..15277d2bf
+index 000000000..e400ea2a1
 --- /dev/null
 +++ b/src/vmm/src/direct.rs
-@@ -0,0 +1,530 @@
+@@ -0,0 +1,681 @@
 +// Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 +// SPDX-License-Identifier: Apache-2.0
 +
@@ -2065,6 +2241,25 @@ index 000000000..15277d2bf
 +    devices: DevicesState,
 +}
 +
++static PARKED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
++fn resident_token() -> &'static Mutex<Option<HandoffToken>> {
++    static TOKEN: std::sync::OnceLock<Mutex<Option<HandoffToken>>> = std::sync::OnceLock::new();
++    TOKEN.get_or_init(|| Mutex::new(None))
++}
++pub(crate) fn resident_enabled() -> bool {
++    io_enabled() && std::env::var("FC_DAX_RESIDENT").as_deref() == Ok("1")
++}
++pub(crate) fn resident_parked() -> bool { PARKED.load(std::sync::atomic::Ordering::Acquire) }
++pub(crate) fn prepare_resident() -> io::Result<()> {
++    if !resident_enabled() { return Err(invalid("resident mode not enabled")); }
++    let start = std::time::Instant::now();
++    crate::devices::virtio::block::virtio::device::DiskProperties::prepare_direct().map_err(io::Error::other)?;
++    crate::logger::info_unrestricted!("DIRECT_RESIDENT_JSON {}", serde_json::json!({
++        "event":"prepare", "pid":std::process::id(), "elapsed_ns":start.elapsed().as_nanos() as u64,
++        "guest_ram_access":false, "kernel_attach":false}));
++    Ok(())
++}
++
 +pub(crate) fn io_enabled() -> bool {
 +    std::env::var("FC_DAX_DIRECT_IO").as_deref() == Ok("1")
 +        && std::env::var("FC_DAX_DIRECT").as_deref() == Ok("1")
@@ -2122,21 +2317,19 @@ index 000000000..15277d2bf
 +    }
 +    // SAFETY: ioctl returned a newly owned FD for the retained shared VM.
 +    let vm = unsafe { kvm.fd.create_vmfd_from_rawfd(fd) }.map_err(io::Error::other)?;
-+    if token.vm_offset != original.vm_offset
-+        || token.vcpu_offset != original.vcpu_offset
-+        || token.vmcs_offset != original.vmcs_offset
-+        || token.run_offset != original.run_offset
-+        || token.generation != original.generation
-+        || token.ram_hva != original.ram_hva
-+        || token.ram_bytes != original.ram_bytes
-+        || token.ept_root_offset != original.ept_root_offset
-+        || token.vm_creates != 1
-+        || token.vcpu_creates != 1
-+    {
++    if !attached_identity(&original, token) {
 +        crate::logger::error_unrestricted!("DIRECT_HANDOFF_FATAL attached identity mismatch");
 +        std::process::abort();
 +    }
 +    Ok(vm)
++}
++
++pub(crate) fn attached_identity(original: &HandoffToken, token: &HandoffToken) -> bool {
++    token.vm_offset == original.vm_offset && token.vcpu_offset == original.vcpu_offset
++        && token.vmcs_offset == original.vmcs_offset && token.run_offset == original.run_offset
++        && token.generation == original.generation && token.ram_hva == original.ram_hva
++        && token.ram_bytes == original.ram_bytes && token.ept_root_offset == original.ept_root_offset
++        && token.vm_creates == 1 && token.vcpu_creates == 1 && token.flags == 1
 +}
 +
 +pub(crate) fn validate_live(vmm: &Vmm) -> Result<(), VmmError> {
@@ -2169,7 +2362,7 @@ index 000000000..15277d2bf
 +impl Vmm {
 +    /// Transfer only device bindings and publish the retained kernel-object token.
 +    /// Ordinary Pause intentionally retains ownership, so pooling can run first.
-+    pub fn direct_export(&mut self) -> Result<(), VmmError> {
++    pub fn direct_export(&mut self, events: &mut EventManager) -> Result<(), VmmError> {
 +        let mut timing = crate::persist::RestoreTiming::new("direct_export");
 +        if !io_enabled()
 +            || self.instance_info.state != VmState::Paused
@@ -2200,6 +2393,10 @@ index 000000000..15277d2bf
 +        self.check_block_snapshot_preparation()
 +            .map_err(|e| VmmError::DaxHandoff(io::Error::other(e.to_string())))?;
 +        timing.mark("drain_and_save_devices");
++        if resident_enabled() {
++            let VirtioDevices::Mmio(mmio) = &mut self.device_manager.virtio_devices else { unreachable!() };
++            mmio.park_direct(events);
++        }
 +        crate::pool_memory::seal_for_handoff(vm.guest_memory()).map_err(VmmError::DaxHandoff)?;
 +        timing.mark("seal_mapper");
 +        let manifest =
@@ -2235,6 +2432,15 @@ index 000000000..15277d2bf
 +                return Err(io::Error::last_os_error());
 +            }
 +            timing.mark("peek_token");
++            if resident_enabled() {
++                crate::pool_memory::park_resident(vm.guest_memory())?;
++                *resident_token().lock().unwrap() = Some(state.token.clone());
++                PARKED.store(true, std::sync::atomic::Ordering::Release);
++                crate::logger::info_unrestricted!("DIRECT_RESIDENT_JSON {}", serde_json::json!({
++                    "event":"park", "pid":std::process::id(), "generation":state.token.generation,
++                    "ram_access_revoked":true, "io_drained":true, "devices_unsubscribed":true}));
++                timing.mark("park_resident");
++            }
 +            let bytes = serde_json::to_vec(&state).map_err(io::Error::other)?;
 +            timing.mark("serialize_devices");
 +            output.write_all(&bytes)?;
@@ -2262,6 +2468,96 @@ index 000000000..15277d2bf
 +        timing.finish();
 +        Ok(())
 +    }
++}
++
++impl Vmm {
++    pub(crate) fn probe_resident(&self) -> Result<(), VmmError> {
++        use std::os::fd::AsRawFd;
++        if !resident_enabled() || !resident_parked() { return Err(VmmError::DaxPreflight("resident is not parked")); }
++        let token = resident_token().lock().unwrap().clone().unwrap();
++        let mut byte = 0u8;
++        let local = libc::iovec { iov_base: (&mut byte as *mut u8).cast(), iov_len: 1 };
++        let remote = libc::iovec { iov_base: token.ram_hva as *mut libc::c_void, iov_len: 1 };
++        // SAFETY: self-read syscall reports EFAULT for the revoked mapping, without dereferencing it in userspace.
++        let copied = unsafe { libc::process_vm_readv(libc::getpid(), &local, 1, &remote, 1, 0) };
++        let memory_errno = io::Error::last_os_error().raw_os_error();
++        if copied != -1 || memory_errno != Some(libc::EFAULT) { return Err(VmmError::DaxPreflight("parked RAM still accessible")); }
++        let handles = self.vm.as_kvm().unwrap().vcpus_handles();
++        let fd = handles[0].vcpu_fd.as_raw_fd();
++        let mut regs = [0u64; 18];
++        // SAFETY: KVM_GET_REGS is read-only and uses a 144-byte output. Stale-owner kernel gating must reject it.
++        let rc = unsafe { libc::ioctl(fd, 0x8090ae81u32 as _, regs.as_mut_ptr()) };
++        let kvm_errno = io::Error::last_os_error().raw_os_error();
++        if rc != -1 { return Err(VmmError::DaxPreflight("parked vCPU FD still authorized")); }
++        crate::logger::info_unrestricted!("DIRECT_RESIDENT_PROBE_JSON {}", serde_json::json!({
++            "pid":std::process::id(), "generation":token.generation, "memory_errno":memory_errno,
++            "kvm_errno":kvm_errno, "vm_fd":self.vm.as_kvm().unwrap().fd().as_raw_fd(), "vcpu_fd":fd}));
++        Ok(())
++    }
++
++    pub(crate) fn import_resident(&mut self, events: &mut EventManager) -> Result<(), VmmError> {
++        let err = |e: io::Error| VmmError::DaxHandoff(e);
++        if !resident_enabled() || !resident_parked() || self.reuse_restore_failed {
++            return Err(VmmError::DaxPreflight("resident import requires a healthy parked owner"));
++        }
++        let mut timing = crate::persist::RestoreTiming::new("direct_resident_import");
++        let input = bounded_read(&env_path("FC_DAX_RESIDENT_IMPORT").map_err(err)?).map_err(err)?;
++        let mut state: DirectState = serde_json::from_slice(&input).map_err(|e| err(io::Error::other(e)))?;
++        validate_state(&state).map_err(err)?;
++        let previous = resident_token().lock().unwrap().clone().ok_or_else(|| err(invalid("resident token absent")))?;
++        validate_resident_token(&previous, &state.token).map_err(err)?;
++        if serde_json::to_value(&state.machine_config).unwrap() != serde_json::to_value(&self.machine_config).unwrap()
++            || serde_json::to_value(&state.boot_source).unwrap() != serde_json::to_value(&self.boot_source_config).unwrap() {
++            return Err(err(invalid("resident machine contract changed")));
++        }
++        let manifest = bounded_read(&env_path("FC_DAX_RESIDENT_MANIFEST").map_err(err)?).map_err(err)?;
++        if sha256(&manifest) != state.memory_manifest_sha256 { return Err(err(invalid("resident manifest checksum mismatch"))); }
++        let local_acpi = self.device_manager.acpi_devices.save();
++        if local_acpi.vmgenid.addr != state.devices.acpi_state.vmgenid.addr
++            || local_acpi.vmgenid.gsi != state.devices.acpi_state.vmgenid.gsi
++            || local_acpi.vmclock.guest_address != state.devices.acpi_state.vmclock.guest_address
++            || local_acpi.vmclock.gsi != state.devices.acpi_state.vmclock.gsi {
++            return Err(err(invalid("resident ACPI layout changed")));
++        }
++        timing.mark("read_validate_metadata");
++        self.reuse_restore_failed = true; // Any failure from here is permanently fail-closed.
++        let vm = self.vm.as_kvm().ok_or(VmmError::NotSupported)?;
++        crate::pool_memory::import_resident(vm.guest_memory(), &manifest).map_err(err)?;
++        timing.mark("import_mapper");
++        vm.attach_resident(&mut state.token).map_err(err)?;
++        timing.mark("attach");
++        let (VirtioDevices::Mmio(devices), VirtioDevicesState::Mmio(saved)) =
++            (&mut self.device_manager.virtio_devices, &state.devices.virtio_state) else { unreachable!() };
++        devices.restore_direct_resident(vm.guest_memory(), saved).map_err(|e| err(invalid(e)))?;
++        self.device_manager.legacy_devices.as_ref().unwrap().stdio_serial.lock().unwrap()
++            .restore_reused(&state.devices.serial_state.as_ref().ok_or_else(|| err(invalid("serial state absent")))?.into()).map_err(err)?;
++        self.device_manager.legacy_devices.as_ref().unwrap().i8042.lock().unwrap().reset_reused();
++        self.device_manager.acpi_devices.restore_direct_resident(&state.devices.acpi_state, vm.guest_memory())
++            .map_err(|e| err(io::Error::other(e)))?;
++        devices.rebind_direct(vm, events).map_err(|e| err(io::Error::other(e)))?;
++        timing.mark("restore_devices");
++        // A fresh export will create a new file; old generations are archived by the controller.
++        std::fs::remove_file(env_path("FC_DAX_DIRECT_EXPORT").map_err(err)?).map_err(err)?;
++        PARKED.store(false, std::sync::atomic::Ordering::Release);
++        self.reuse_restore_failed = false;
++        crate::logger::info_unrestricted!("DIRECT_HANDOFF_JSON {}", serde_json::json!({
++            "event":"import", "token":state.token, "snapshot_bytes":0, "ram_transfer_bytes":0,
++            "memory_manifest_sha256":state.memory_manifest_sha256, "resident":true,
++            "pid":std::process::id(), "vm_fd":std::os::fd::AsRawFd::as_raw_fd(vm.fd()),
++            "vcpu_fd":std::os::fd::AsRawFd::as_raw_fd(&vm.vcpus_handles()[0].vcpu_fd),
++            "thread_creates":0, "disk_opens":0, "io_engine_creates":0}));
++        timing.finish();
++        Ok(())
++    }
++}
++fn validate_resident_token(previous: &HandoffToken, next: &HandoffToken) -> io::Result<()> {
++    if next.generation <= previous.generation || next.vm_offset != previous.vm_offset
++        || next.vcpu_offset != previous.vcpu_offset || next.vmcs_offset != previous.vmcs_offset
++        || next.run_offset != previous.run_offset || next.ram_hva != previous.ram_hva
++        || next.ram_bytes != previous.ram_bytes || next.ept_root_offset != previous.ept_root_offset {
++        return Err(invalid("stale or foreign resident token"));
++    }
++    Ok(())
 +}
 +
 +fn validate_state(state: &DirectState) -> io::Result<()> {
@@ -2509,6 +2805,37 @@ index 000000000..15277d2bf
 +        let mut unknown = value;
 +        unknown["vcpu_states"] = serde_json::json!([]);
 +        assert!(serde_json::from_value::<DirectState>(unknown).is_err());
++    }
++
++    #[test]
++    fn attach_output_must_keep_identity_and_activate_owner() {
++        let original = valid_state().token;
++        let mut attached = original.clone(); attached.flags = 1;
++        assert!(attached_identity(&original, &attached));
++        assert!(!attached_identity(&original, &original));
++        attached.generation += 1;
++        assert!(!attached_identity(&original, &attached));
++    }
++
++    #[test]
++    fn resident_rejects_replays_and_foreign_graphs() {
++        let first = valid_state().token;
++        let mut next = first.clone(); next.generation += 2;
++        assert!(validate_resident_token(&first, &next).is_ok());
++        assert!(validate_resident_token(&first, &first).is_err());
++        for mutate in [
++            |t: &mut HandoffToken| t.generation = 0,
++            |t: &mut HandoffToken| t.vm_offset += 4096,
++            |t: &mut HandoffToken| t.vcpu_offset += 4096,
++            |t: &mut HandoffToken| t.vmcs_offset += 4096,
++            |t: &mut HandoffToken| t.run_offset += 4096,
++            |t: &mut HandoffToken| t.ram_hva += 4096,
++            |t: &mut HandoffToken| t.ram_bytes += 4096,
++            |t: &mut HandoffToken| t.ept_root_offset += 4096,
++        ] {
++            let mut bad = next.clone(); mutate(&mut bad);
++            assert!(validate_resident_token(&first, &bad).is_err());
++        }
 +    }
 +
 +    #[test]
@@ -3956,10 +4283,10 @@ index 000000000..bcb56bda7
 +}
 diff --git a/src/vmm/src/pool_memory.rs b/src/vmm/src/pool_memory.rs
 new file mode 100644
-index 000000000..ea0770390
+index 000000000..0c389531a
 --- /dev/null
 +++ b/src/vmm/src/pool_memory.rs
-@@ -0,0 +1,1088 @@
+@@ -0,0 +1,1137 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Guest-authorized pooling and persistent CXL logical RAM. Control plans are
 +//! private, trusted controller files. Only the kernel-owned ACTIVE registration
@@ -3982,7 +4309,10 @@ index 000000000..ea0770390
 +fn invalid(s: impl Into<String>) -> io::Error {
 +    io::Error::new(io::ErrorKind::InvalidInput, s.into())
 +}
++static RESIDENT_EPOCH: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 +fn env(s: &str) -> io::Result<String> {
++    let epoch = RESIDENT_EPOCH.load(std::sync::atomic::Ordering::Acquire);
++    if s == "FC_POOL_RUN_EPOCH" && epoch != 0 { return Ok(epoch.to_string()); }
 +    std::env::var(s).map_err(|_| invalid(format!("{s} required")))
 +}
 +fn read_json<T: serde::de::DeserializeOwned>(path: &str) -> io::Result<T> {
@@ -4461,6 +4791,52 @@ index 000000000..ea0770390
 +    a.manifest.state_sha256 = None;
 +    write_json(&env("FC_POOL_MEMORY_MANIFEST")?, &a.manifest)
 +}
++/// Revoke every local RAM access after KVM detach, including already present PTEs.
++/// This changes VMAs, not guest contents, and performs no per-page userspace scan.
++pub(crate) fn park_resident(mem: &GuestMemoryMmap) -> io::Result<()> {
++    for region in mem.iter() {
++        // SAFETY: vCPUs paused, I/O drained, event subscribers removed, KVM detached.
++        let p = unsafe { libc::mmap(region.as_ptr().cast(), region.len() as usize, libc::PROT_NONE,
++            libc::MAP_PRIVATE | libc::MAP_ANONYMOUS | libc::MAP_FIXED, -1, 0) };
++        if p == libc::MAP_FAILED { return Err(io::Error::last_os_error()); }
++    }
++    Ok(())
++}
++
++pub(crate) fn import_resident(mem: &GuestMemoryMmap, bytes: &[u8]) -> io::Result<()> {
++    let mut m: Manifest = serde_json::from_slice(bytes).map_err(io::Error::other)?;
++    if !enabled() || m.vm_id != env("FC_POOL_VM_ID")? { return Err(invalid("resident mapper VM mismatch")); }
++    validate_handle_geometry(&m, &geometry(mem))?;
++    let old: u64 = m.run_epoch.parse().map_err(io::Error::other)?;
++    let new = old.checked_add(1).ok_or_else(|| invalid("owner epoch overflow"))?;
++    let mut guard = state().lock().unwrap();
++    if let Some(previous) = guard.as_ref() {
++        let prev_epoch: u64 = previous.manifest.run_epoch.parse().map_err(io::Error::other)?;
++        if old <= prev_epoch || m.allocation_generation < previous.manifest.allocation_generation {
++            return Err(invalid("resident mapper stale epoch/lease"));
++        }
++    }
++    if dax_geometry(&m.pool_path)? != (m.phys_base, m.device_bytes) { return Err(invalid("resident DAX geometry changed")); }
++    let file = Arc::new(OpenOptions::new().read(true).write(true).open(env("FC_POOL_MEMORY_DEVICE")?)?);
++    let mut h = m.handle.unwrap();
++    if h.owner_epoch != old || h.state != 2 { return Err(invalid("resident unsealed mapper")); }
++    ioctl(&file, 0x78, true, &mut h)?;
++    if h.owner_epoch != new { return Err(invalid("resident mapper epoch mismatch")); }
++    let mut offset = 0;
++    for region in mem.iter() {
++        // SAFETY: detached resident retains its logical region at exactly this HVA.
++        let p = unsafe { libc::mmap(region.as_ptr().cast(), region.len() as usize,
++            libc::PROT_READ | libc::PROT_WRITE, libc::MAP_SHARED | libc::MAP_FIXED, file.as_raw_fd(), offset) };
++        if p == libc::MAP_FAILED { return Err(io::Error::last_os_error()); }
++        offset += region.len() as i64;
++    }
++    m.handle = Some(h); m.run_epoch = new.to_string();
++    m.mappings = Vec::new(); m.credits = Vec::new();
++    RESIDENT_EPOCH.store(new, std::sync::atomic::Ordering::Release);
++    *guard = Some(Active {file, manifest:m});
++    Ok(())
++}
++
 +pub(crate) fn check_execution_owner() -> io::Result<()> {
 +    let mut guard = state().lock().unwrap();
 +    if let Some(a) = guard.as_mut() {
@@ -5807,10 +6183,10 @@ index 000000000..0f90a81c0
 +    }
 +}
 diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
-index ca743fa6f..be770d744 100644
+index ca743fa6f..8db4c5582 100644
 --- a/src/vmm/src/rpc_interface.rs
 +++ b/src/vmm/src/rpc_interface.rs
-@@ -100,6 +100,10 @@ pub enum VmmAction {
+@@ -100,6 +100,14 @@ pub enum VmmAction {
      PatchMMDS(Value),
      /// Pause the guest, by pausing the microVM VCPUs.
      Pause,
@@ -5818,10 +6194,14 @@ index ca743fa6f..be770d744 100644
 +    PoolCache,
 +    /// Hand over the retained KVM graph and device bindings without a CPU snapshot.
 +    DirectExport,
++    /// Prepare the immutable disk backend without guest memory access.
++    DirectPrepare,
++    /// Attach a new ownership epoch to a parked resident VMM.
++    DirectImport,
      /// Repopulate the MMDS contents.
      PutMMDS(Value),
      /// Configure the guest vCPU features.
-@@ -133,6 +137,9 @@ pub enum VmmAction {
+@@ -133,6 +141,9 @@ pub enum VmmAction {
      /// driver is listening on the guest end, this can be used to shut down the microVM gracefully.
      #[cfg(target_arch = "x86_64")]
      SendCtrlAltDel,
@@ -5831,7 +6211,7 @@ index ca743fa6f..be770d744 100644
      /// Update the balloon size, after microVM start.
      UpdateBalloon(BalloonUpdateConfig),
      /// Update the balloon statistics polling interval, after microVM start.
-@@ -313,6 +320,8 @@ impl fmt::Debug for PrebootApiController<'_> {
+@@ -313,6 +324,8 @@ impl fmt::Debug for PrebootApiController<'_> {
  /// Error type for [`PrebootApiController::load_snapshot`]
  #[derive(Debug, thiserror::Error, displaydoc::Display)]
  pub enum LoadSnapshotError {
@@ -5840,16 +6220,28 @@ index ca743fa6f..be770d744 100644
      /// Loading a microVM snapshot not allowed after configuring boot-specific resources.
      LoadSnapshotNotAllowed,
      /// Failed to restore from snapshot: {0}
-@@ -503,6 +512,8 @@ impl<'a> PrebootApiController<'a> {
+@@ -495,6 +508,10 @@ impl<'a> PrebootApiController<'a> {
+             SetBalloonDevice(config) => self.set_balloon_device(config),
+             SetVsockDevice(config) => self.set_vsock_device(config),
+             SetMmdsConfiguration(config) => self.set_mmds_config(config),
++            DirectPrepare => {
++                crate::direct::prepare_resident().map_err(|e| VmmActionError::InternalVmm(crate::VmmError::DaxHandoff(e)))?;
++                Ok(VmmData::Empty)
++            }
+             StartMicroVm => self.start_microvm(),
+             UpdateMachineConfiguration(config) => self.update_machine_config(config),
+             SetEntropyDevice(config) => self.set_entropy_device(config),
+@@ -503,6 +520,9 @@ impl<'a> PrebootApiController<'a> {
              CreateSnapshot(_)
              | FlushMetrics
              | Pause
 +            | PoolCache
 +            | DirectExport
++            | DirectImport
              | Resume
              | GetBalloonStats
              | GetMemoryHotplugStatus
-@@ -517,7 +528,7 @@ impl<'a> PrebootApiController<'a> {
+@@ -517,7 +537,7 @@ impl<'a> PrebootApiController<'a> {
              | StopFreePageHinting
              | HotUnplugDevice(_) => Err(VmmActionError::OperationNotSupportedPreBoot),
              #[cfg(target_arch = "x86_64")]
@@ -5858,10 +6250,14 @@ index ca743fa6f..be770d744 100644
          }
      }
  
-@@ -700,6 +711,14 @@ impl RuntimeApiController {
+@@ -700,6 +720,18 @@ impl RuntimeApiController {
          event_manager: &mut EventManager,
      ) -> Result<VmmData, VmmActionError> {
          use self::VmmAction::*;
++        if crate::direct::resident_parked() && !matches!(&request,
++            DirectImport | DirectPrepare | GetVmInstanceInfo | GetVmMachineConfig | GetVmmVersion) {
++            return Err(VmmActionError::NotSupported("parked resident rejects guest/device operations".into()));
++        }
 +        #[cfg(target_arch = "x86_64")]
 +        if self.vmm.lock().expect("Poisoned lock").reuse_prepared.is_some()
 +            && !matches!(&request, LoadSnapshot(_) | PrepareReuse | FlushMetrics
@@ -5873,7 +6269,7 @@ index ca743fa6f..be770d744 100644
          match request {
              // Supported operations allowed post-boot.
              CreateSnapshot(snapshot_create_cfg) => self.create_snapshot(&snapshot_create_cfg),
-@@ -786,6 +805,28 @@ impl RuntimeApiController {
+@@ -786,6 +818,36 @@ impl RuntimeApiController {
                  .hot_unplug_device(device_id, event_manager)
                  .map(|()| VmmData::Empty),
              Pause => self.pause(),
@@ -5881,8 +6277,16 @@ index ca743fa6f..be770d744 100644
 +                self.vmm.lock().expect("Poisoned lock").pool_cache()?;
 +                Ok(VmmData::Empty)
 +            }
++            DirectPrepare => {
++                self.vmm.lock().expect("Poisoned lock").probe_resident()?;
++                Ok(VmmData::Empty)
++            }
++            DirectImport => {
++                self.vmm.lock().expect("Poisoned lock").import_resident(event_manager)?;
++                Ok(VmmData::Empty)
++            }
 +            DirectExport => {
-+                self.vmm.lock().expect("Poisoned lock").direct_export()?;
++                self.vmm.lock().expect("Poisoned lock").direct_export(event_manager)?;
 +                Ok(VmmData::Empty)
 +            }
 +            #[cfg(target_arch = "x86_64")]
@@ -6555,7 +6959,7 @@ index 5af0b76dc..1c17787a1 100644
                  (NotAllowed(_), NotAllowed(_))
                  | (SavedState(_), SavedState(_))
 diff --git a/src/vmm/src/vstate/vm.rs b/src/vmm/src/vstate/vm.rs
-index dfedd6474..0156245a6 100644
+index dfedd6474..ab044b3b1 100644
 --- a/src/vmm/src/vstate/vm.rs
 +++ b/src/vmm/src/vstate/vm.rs
 @@ -7,9 +7,10 @@
@@ -6727,7 +7131,7 @@ index dfedd6474..0156245a6 100644
              handle
                  .send_event(crate::VcpuEvent::SaveState)
                  .map_err(MicrovmStateError::SignalVcpu)?;
-@@ -542,11 +603,157 @@ impl KvmVm {
+@@ -542,11 +603,176 @@ impl KvmVm {
          Ok(())
      }
  
@@ -6751,6 +7155,25 @@ index dfedd6474..0156245a6 100644
 +        let region = Arc::new(GuestRegionMmapExt::from_state(regions.remove(0), &state.regions[0], 0)?);
 +        self.common.guest_memory = self.common.guest_memory.insert_region(region)?;
 +        self.common.next_kvm_slot.store(1, Ordering::Relaxed);
++        Ok(())
++    }
++
++    pub(crate) fn attach_resident(&self, token: &mut crate::direct::HandoffToken) -> io::Result<()> {
++        if !self.direct_is_detached() { return Err(io::Error::other("resident already owns VM")); }
++        let original = token.clone();
++        let cmd = 0xc000_0000u64 | ((std::mem::size_of::<crate::direct::HandoffToken>() as u64) << 16) | 0xaef5;
++        // SAFETY: same validated graph and current sealed ownership token; kernel checks owner epoch.
++        if unsafe { libc::ioctl(self.fd().as_raw_fd(), cmd as _, token as *mut crate::direct::HandoffToken) } < 0 {
++            return Err(io::Error::last_os_error());
++        }
++        if !crate::direct::attached_identity(&original, token) {
++            return Err(io::Error::other("resident attach identity mismatch"));
++        }
++        for (event, gsi) in self.common.dax_irqs.lock().unwrap().iter() {
++            while event.read().is_ok() {}
++            self.fd().register_irqfd(event, *gsi).map_err(|e| io::Error::from_raw_os_error(e.errno()))?;
++        }
++        self.common.dax_detached.store(false, Ordering::Release);
 +        Ok(())
 +    }
 +
@@ -6885,7 +7308,7 @@ index dfedd6474..0156245a6 100644
      /// Gets a reference to this [`KvmVm`]'s [`GuestMemoryMmap`] object
      pub fn guest_memory(&self) -> &GuestMemoryMmap {
          &self.common.guest_memory
-@@ -666,6 +873,13 @@ impl KvmVm {
+@@ -666,6 +892,13 @@ impl KvmVm {
      /// Register a device IRQ
      pub fn register_irq(&self, fd: &EventFd, gsi: u32) -> Result<(), errno::Error> {
          self.common.fd.register_irqfd(fd, gsi)?;

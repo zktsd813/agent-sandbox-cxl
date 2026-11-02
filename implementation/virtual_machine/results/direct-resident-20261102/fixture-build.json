@@ -1,0 +1,23 @@
+{
+  "assets": "/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/swe-resident6",
+  "firecracker": {
+    "path": "/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/swe-resident6/firecracker",
+    "sha256": "7a371e503d46a95836cae270594c43c03f64e577d58ea53c1742a14408337d1c"
+  },
+  "controller": {
+    "source_sha256": "e0c9de591fa9729a2d4b318ca42c78f9ace46b7d8a608c33a44c9f0c6b534fa8",
+    "binary_sha256": "a2efac05246666a1ffc83f2ec3ea171033fc484f03247dfd3e68b958a99ba7ba",
+    "build_argv": [
+      "gcc",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-static",
+      "/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/resident_control.c",
+      "-o",
+      "/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/swe-resident6/resident-control"
+    ],
+    "compiler": "gcc (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0"
+  }
+}

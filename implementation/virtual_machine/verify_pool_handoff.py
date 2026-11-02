@@ -201,6 +201,12 @@ def manifest(e, name):
 
 def paused(e, vm, epoch, role, end_file, after_file=None):
     target = f"/vm{vm}-epoch{epoch}/api.sock"
+    if e.report.get("arguments", {}).get("resident_direct", False):
+        arrivals = [t for t in e.report["transitions"] if t.get("resident")
+                    and t["destination_epoch"] == epoch and t["destination"] == role]
+        if epoch:
+            need(len(arrivals)==1, "resident epoch has no arrival")
+            target = arrivals[0]["destination_directory"] + "/api.sock"
     relevant = [a for a in e.report["api_events"] if a["role"] == role and a["path"] == "/vm"
                 and target in e.text(a["file"]).replace("\r", "").replace("\n", "")
                 and e.order[a["file"]] < e.order[end_file]]
