@@ -547,9 +547,18 @@ def verify(path):
                 need(re.search(rf'^{token["ram_hva"]:x}-{token["ram_hva"]+token["ram_bytes"]:x} ---p ', fence_text, re.M),
                      "parked mapping still accessible")
                 prep = transition["preparation"]
+                if prep.get('cached'):
+                    ready = report['resident_readiness'][transition['destination']]
+                    need(report['arguments'].get('resident_ready_control') is True
+                         and prep['api'] is None and prep['fresh'] is False
+                         and prep['ready_file'] == ready['ready_file']
+                         and prep['directory'] == ready['directory'], 'cached readiness changed')
+                    ready_file = prep['ready_file']
+                else:
+                    ready_file = prep['api']['file']
                 need(prep["source_paused"] is False and prep["destination"] == transition["destination"]
                      and prep["directory"] == transition["destination_directory"]
-                     and e.order[prep["api"]["file"]] < e.order[transition["before"]["file"]], "preparation was on paused path")
+                     and e.order[ready_file] < e.order[transition["before"]["file"]], "preparation was on paused path")
             incoming = e.json(transition["manifest_file"])
             target, private, _, credits = placement(e, transition["destination_placement"]["file"], memory, plan)
             need(incoming["run_epoch"] == str(transition["source_epoch"]) and target["run_epoch"] == str(transition["destination_epoch"])
@@ -603,7 +612,35 @@ def verify(path):
             need(e.record(n["file"], "LAB_API_JSON ") == n["response"] and n["response"]["status"] == 400,
                  "resident negative did not reject")
         hops = [t for t in report["transitions"] if t.get("resident")]
-        need(sum(t["preparation"]["fresh"] for t in hops)==1, "resident repeated initial preparation")
+        if report['arguments'].get('resident_ready_control'):
+            preparations = report['resident_preparations']
+            need(len(preparations)==1 and preparations[0]['fresh'] is True
+                 and preparations[0]['phase']=='post-promotion-prewarm'
+                 and all(t['preparation'].get('cached') for t in hops), 'readiness repeated inside request')
+            prep=preparations[0];boot=e.record(prep['native_boot_file'],'RESIDENT_BOOT_JSON ')
+            need(boot==prep['native_boot'] and boot['native_ready_ns'] >= boot['fork_to_api_ready_ns']+boot['prepare_api_ns']
+                 and boot['fork_to_api_ready_ns'] >= boot['fork_ns'] > 0, 'native readiness timing changed')
+            need(boot['pid']==int(incarnations[prep['directory']][0][0])
+                 and boot['starttime']==int(incarnations[prep['directory']][0][1]), 'native prepared PID changed')
+            need(report['fixture']['artifacts']['resident-bootstrap']+'  /lab/resident-bootstrap' in e.text(prep['native_boot_file']),
+                 'native preparation executable changed')
+            need(report['fixture']['resident_bootstrap']['source_sha256']==report['source_hashes']['resident_bootstrap.c']
+                 and report['fixture']['resident_control']['source_sha256']==report['source_hashes']['resident_control.c'],
+                 'native controller sources changed')
+            need(len(boot['nfs_proc3_before'])==len(boot['nfs_proc3_after'])==22
+                 and all(a>=b for a,b in zip(boot['nfs_proc3_after'],boot['nfs_proc3_before'])), 'native NFS counters invalid')
+            if 'servers' in prep:
+                need(set(prep['servers'])=={'A','B'} and prep['full_prewarm_controller_ns'] >=
+                     prep['controller_wall_ns']+prep['control_server_prepare_ns'], 'prewarm interval excludes work')
+                for server in prep['servers'].values():
+                    boot=e.record(server['file'],'RESIDENT_SERVER_BOOT_JSON ')
+                    need(boot==server['native_boot'] and boot['native_ready_ns'] >= boot['fork_to_ready_ns'] > 0,
+                         'native server readiness changed')
+                    closed=[s for s in report['controller_cleanup'] if s['prepare_file']==server['file']]
+                    need(len(closed)==1 and re.search(r'^FENCED '+str(boot['pid'])+' '+str(boot['starttime'])+r'\s*$',
+                         e.text(closed[0]['file']),re.M), 'native control server identity changed')
+        else:
+            need(sum(t["preparation"]["fresh"] for t in hops)==1, "resident repeated initial preparation")
         fast_hops = [t for t in hops if t.get("fast_control")]
         need(len(report.get("resident_negatives", [])) >= 4*len(hops)-2*len(fast_hops), "missing parked operation rejection coverage")
         for t in fast_hops:
@@ -616,6 +653,14 @@ def verify(path):
             need(set(original["apis"]) == {"pause","export","attach","checkpoint","resume"}
                  and all(a["status"]==204 and math.isfinite(a["duration_us"]) and a["duration_us"]>0 for a in original["apis"].values()), "TCP API failed")
             need(all(a.get("coordinator_file")==t["fast_file"] for a in t["critical_apis"]), "TCP APIs lack original receipt")
+            if t.get('ready_control'):
+                need(report['arguments'].get('resident_ready_control') is True
+                     and t['preparation']['control_server_prepare_ns']==0, 'ready request created servers')
+                need(original['request_ns'] >= original['handoff_ns']+original['connection_prepare_ns']
+                     and original['request_ns'] >= original['request_to_resume_response_ns']
+                     >= original['pause_to_resume_response_ns'] > 0, 'request timing excludes connection/resume')
+                need(original['pause_to_resume_response_ns'] >= sum(a['duration_us'] for a in original['apis'].values())*1000,
+                     'resume interval excludes API work')
         if fast_hops:
             need(report["arguments"].get("resident_fast_control") is True, "unrequested TCP mode")
             need(len(report["controller_cleanup"])==2, "TCP controllers not cleaned")

@@ -1,0 +1,185 @@
+{
+  "result": "passed",
+  "trials": [
+    {
+      "result": "passed",
+      "mode": "direct",
+      "trace": "gin-gonic__gin-3741",
+      "report_sha256": "2e85740850389b6958bafa8089d2c66f5db39b1b61b36c141fc7d88a68bdc146",
+      "execution_inputs_sha256": "ac721d124e68067e18060b1d88554183d494e71710ce890e99f2e93fadeca89b",
+      "workload_inputs_sha256": "c977af59be7a6672eb37865de93ed9dabade500963ca1ffeaf39ced53cdd6e3a",
+      "receipts": 865,
+      "transitions": {
+        "promotion": 2,
+        "direct": 24,
+        "demotion": 2
+      },
+      "registered_cache_bytes": [
+        51376128,
+        51732480
+      ],
+      "shared_cache_bytes": [
+        51376128,
+        51732480
+      ],
+      "present_current_shared_bytes": [],
+      "shared_detachments": [],
+      "authority_metadata_read_ios": [
+        0,
+        0
+      ],
+      "commands": 27,
+      "returncodes": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        127,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "submission": {
+        "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+        "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151",
+        "startup_warning_count": 1
+      },
+      "tests": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "guest_command_seconds": 27.980000000000008,
+      "block_read_ios": 12305,
+      "remote_nfs_reads": 23,
+      "boot_id": "6d709aa5-5b22-4d27-bb93-aaa3340bdced",
+      "identity_observations": 58,
+      "limitations": [
+        "Single coherent physical host; selected naturally resident lower files only",
+        "Transitions occur between recorded commands; not inside a running command"
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "trace": "gin-gonic__gin-3741",
+      "mode": "direct",
+      "baseline_present": false,
+      "workload_results_match": null
+    }
+  ],
+  "execution_inputs_sha256": "ac721d124e68067e18060b1d88554183d494e71710ce890e99f2e93fadeca89b",
+  "coverage": {
+    "gin-gonic__gin-3741": [
+      "direct"
+    ]
+  },
+  "complete_three_mode_matrix": false,
+  "complete_nine_trial_matrix": false
+}

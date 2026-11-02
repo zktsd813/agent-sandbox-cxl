@@ -30,7 +30,8 @@ SOURCES = ("swe_pool_run.py", "swe_pool_bench.py", "swe_pool_prepare.py",
            "pool_compare_bench.py", "pool_discard_bench.py", "trace_bench.py",
            "trace_prepare.py", "trace-guest-run.sh", "verify_trace_results.py",
            "verify_pool_handoff.py", "verify_pool_discard_protocol.py", "lab.py",
-           "shared_probe.c", "resident_fast.py", "resident_control.c", "resident_prepare.py", "analyze_resident_direct.py",
+           "shared_probe.c", "resident_fast.py", "resident_control.c", "resident_bootstrap.c", "resident_prepare.py", "analyze_resident_direct.py",
+           "analyze_resident_preparation.py",
            "firecracker.patch", "kvm-dax-state.patch", "kvm-dax-source.json")
 
 
@@ -47,6 +48,7 @@ def arguments():
     parser.add_argument("--restore-timing", action="store_true")
     parser.add_argument("--resident-direct", action="store_true")
     parser.add_argument("--resident-fast-control", action="store_true")
+    parser.add_argument("--resident-ready-control", action="store_true")
     parser.add_argument("--immutable-nfs-cache", action="store_true",
                         help="Remount the image filesystem readonly and allow 60s NFS attribute caching/nocto")
     parser.add_argument("--direct-profile-roundtrips", type=int, default=0)
@@ -179,6 +181,8 @@ def main():
                               "--direct-profile-roundtrips", str(args.direct_profile_roundtrips)]
             if args.resident_fast_control:
                 bench.append("--resident-fast-control")
+            if args.resident_ready_control:
+                bench.append("--resident-ready-control")
             if args.resident_direct:
                 bench.extend(["--resident-direct", "--resident-repromote-handoff"])
             if args.restore_timing:

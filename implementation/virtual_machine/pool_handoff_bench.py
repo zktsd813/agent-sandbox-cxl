@@ -94,24 +94,35 @@ class HandoffController(PoolController):
         self.active.append((s.role, s.directory))
         # Upload a launch script: BusyBox interactive ash truncates very long
         # physical serial lines before execution. Keep console commands short.
-        self.shell(s.role, f"mkdir -p {s.directory}", "launch-directory")
+        native = purpose == 'resident-prepare' and getattr(self.args, 'resident_ready_control', False)
+        if not native:
+            self.shell(s.role, f"mkdir -p {s.directory}", "launch-directory")
         script = "set -e\n" + "\n".join("export " + shlex.quote(k + "=" + v)
             for k, v in env.items()) + "\n"
+        if native:
+            script += f"cat > {s.directory}/environment.json <<'RESIDENT_ENV_JSON'\n" + json.dumps(env) + "\nRESIDENT_ENV_JSON\n"
         script += (f"exec /lab/firecracker --no-seccomp --api-sock {s.directory}/api.sock "
                    f"--log-path {s.directory}/vmm.log\n")
-        self.write_bytes(s.role, s.directory + "/launch.sh", script.encode(), "launch-script")
-        self.shell(s.role, f"mkfifo {s.directory}/input\n"
-            f"(exec 3<>{s.directory}/input\nexec env -i /bin/sh {s.directory}/launch.sh "
-            f"<&3 > {s.directory}/fc.log 2> {s.directory}/stderr.log) &\n" + nfs.record_pid(s.directory) +
-            f"n=0\nwhile [ ! -S {s.directory}/api.sock ]; do\nread p t < {s.directory}/fc.pid\n"
-            "kill -0 \"$p\"\nn=$((n+1))\n[ $n -lt 1000 ]\nsleep .02\ndone", "start")
-        self.write_json(s.role, s.directory + "/environment.json", env, "launch-environment")
+        script_path = self.root + '/resident-launch-' + s.role + '.sh' if native else s.directory + '/launch.sh'
+        self.write_bytes(s.role, script_path, script.encode(), "launch-script")
+        if not native:
+            self.shell(s.role, f"mkfifo {s.directory}/input\n"
+                f"(exec 3<>{s.directory}/input\nexec env -i /bin/sh {s.directory}/launch.sh "
+                f"<&3 > {s.directory}/fc.log 2> {s.directory}/stderr.log) &\n" + nfs.record_pid(s.directory) +
+                f"n=0\nwhile [ ! -S {s.directory}/api.sock ]; do\nread p t < {s.directory}/fc.pid\n"
+                "kill -0 \"$p\"\nn=$((n+1))\n[ $n -lt 1000 ]\nsleep .02\ndone", "start")
+            self.write_json(s.role, s.directory + "/environment.json", env, "launch-environment")
         raw, executable_file = self.shell(s.role,
-            f"read p t < {s.directory}/fc.pid\nprintf 'EXEC_PROCESS %s %s\\n' $p $t\nsha256sum /proc/$p/exe",
-            "launch-executable")
+            (f'/lab/resident-bootstrap {s.directory} {script_path}\n' if native else '') +
+            f"read p t < {s.directory}/fc.pid\nprintf 'EXEC_PROCESS %s %s\\n' $p $t\nsha256sum /proc/$p/exe" +
+            ('\nsha256sum /lab/resident-bootstrap' if native else ''),
+            "native-prepare" if native else "launch-executable")
         expected = lab.sha256(self.args.firecracker) if getattr(self.args, "firecracker", None) else self.fixture["inputs"]["firecracker"]["sha256"]
         hashes = re.findall(r"^([0-9a-f]{64})  /proc/[0-9]+/exe\s*$", raw, re.M)
         require(hashes == [expected], "Running VMM executable does not match frozen input")
+        if native:
+            require(self.fixture['artifacts']['resident-bootstrap']+'  /lab/resident-bootstrap' in raw,
+                    'Wrong native preparation binary')
         self.launches.append({"vm": s.vm, "epoch": s.epoch, "role": s.role,
                               "file": executable_file, "sha256": expected, "directory": s.directory, "purpose": purpose})
         if resident:
@@ -119,7 +130,17 @@ class HandoffController(PoolController):
             self.resident_workers[s.role] = {key: getattr(s, key) for key in
                 ("directory", "plan", "report", "manifest_path", "hints")}
             self.resident_workers[s.role]["imported"] = purpose != "resident-prepare"
-        if s.direct:
+            if native:
+                from home_storage_bench import json_lines
+                boots = json_lines(raw, 'RESIDENT_BOOT_JSON ')
+                answers = json_lines(raw, 'LAB_API_JSON ')
+                require(len(boots) == len(answers) == 1 and answers[0]['status'] == 204, 'Native preparation failed')
+                api = {'file':executable_file, 'role':s.role, 'path':'/actions', 'method':'PUT',
+                    'request':{'action_type':'DirectPrepare'}, 'response':answers[0],
+                    'control_wall_ns':0, 'embedded_in':executable_file}
+                self.api_events.append(api)
+                self.resident_workers[s.role].update(prepared_api=api, native_boot=boots[0], native_boot_file=executable_file)
+        if s.direct and not native:
             self.shell(s.role, f"read p t < {s.directory}/fc.pid\necho $p > /sys/module/kvm/parameters/dax_owner_pid\n"
                        "cat /sys/module/kvm/parameters/dax_owner_pid", "select-direct-owner")
 
@@ -384,8 +405,16 @@ class HandoffController(PoolController):
 
     def prepare_resident_target(self, s, destination):
         import copy
-        started = time.monotonic_ns()
+        if getattr(self.args, 'resident_ready_control', False) and destination in getattr(self, 'resident_readiness', {}):
+            from resident_fast import prepared_target
+            return prepared_target(self, s, destination)
+        first_control = len(getattr(self, 'control_timings', []))
         fresh = destination not in self.resident_workers
+        nfs_before = None
+        if fresh and getattr(self.args, 'restore_timing', False):
+            _, nfs_before = self.shell(destination, 'cat /proc/net/rpc/nfs', 'prepare-nfs-before')
+            first_control = len(self.control_timings)
+        started = time.monotonic_ns()
         if fresh:
             target = copy.copy(s)
             target.role, target.epoch = destination, s.epoch + 1
@@ -393,10 +422,21 @@ class HandoffController(PoolController):
             self.start_vm(target, restore_manifest=directory+"/restore-manifest.json",
                 direct_import=directory+"/direct-import.json", purpose="resident-prepare")
         worker = self.resident_workers[destination]
-        api = self.api(destination, worker["directory"], "/actions", "PUT", {"action_type":"DirectPrepare"})
+        api = worker.get('prepared_api') if fresh else None
+        if api is None:
+            api = self.api(destination, worker["directory"], "/actions", "PUT", {"action_type":"DirectPrepare"})
         row = {"source":s.role, "destination":destination, "before_epoch":s.epoch,
             "fresh":fresh, "api":api, "controller_wall_ns":time.monotonic_ns()-started,
             "source_paused":False, "directory":worker["directory"]}
+        row['control_stages'] = getattr(self, 'control_timings', [])[first_control:]
+        row['api_control_wall_ns'] = self.api_events[-1]['control_wall_ns']
+        row['unattributed_control_ns'] = (row['controller_wall_ns'] - row['api_control_wall_ns']
+            - sum(stage['elapsed_ns'] for stage in row['control_stages']))
+        if nfs_before:
+            _, nfs_after = self.shell(destination, 'cat /proc/net/rpc/nfs', 'prepare-nfs-after')
+            row['nfs_counters'] = {'before_file':nfs_before, 'after_file':nfs_after}
+        if 'native_boot' in worker:
+            row.update(native_boot=worker['native_boot'], native_boot_file=worker['native_boot_file'])
         if not hasattr(self, "resident_preparations"): self.resident_preparations=[]
         self.resident_preparations.append(row)
         if fresh: self.resident_resources(destination, worker["directory"], s.epoch+1, "prepared")

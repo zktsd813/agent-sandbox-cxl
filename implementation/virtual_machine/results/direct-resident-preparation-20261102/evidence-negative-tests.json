@@ -1,0 +1,81 @@
+{
+  "result": "passed",
+  "baseline": "passed",
+  "cases": [
+    {
+      "case": "preparation_paused",
+      "result": "rejected",
+      "reason": "preparation was on paused path"
+    },
+    {
+      "case": "accessible_ram",
+      "result": "rejected",
+      "reason": "parked mapping still accessible"
+    },
+    {
+      "case": "unrevoked_kvm",
+      "result": "rejected",
+      "reason": "parked memory or KVM access allowed"
+    },
+    {
+      "case": "missing_probe",
+      "result": "rejected",
+      "reason": "parked probe coverage"
+    },
+    {
+      "case": "disk_reopened",
+      "result": "rejected",
+      "reason": "disk FD/io_uring recreated"
+    },
+    {
+      "case": "thread_recreated",
+      "result": "rejected",
+      "reason": "vCPU thread recreated"
+    },
+    {
+      "case": "omitted_elapsed",
+      "result": "rejected",
+      "reason": "TCP interval excludes measured work"
+    },
+    {
+      "case": "wrong_negative",
+      "result": "rejected",
+      "reason": "invalid import did not test intended mismatch"
+    },
+    {
+      "case": "omitted_request",
+      "result": "rejected",
+      "reason": "request timing excludes connection/resume"
+    },
+    {
+      "case": "preparation_pid_changed",
+      "result": "rejected",
+      "reason": "native prepared PID changed"
+    },
+    {
+      "case": "created_server_in_request",
+      "result": "rejected",
+      "reason": "ready request created servers"
+    },
+    {
+      "case": "cached_directory_changed",
+      "result": "rejected",
+      "reason": "cached readiness changed"
+    },
+    {
+      "case": "omitted_native_start",
+      "result": "rejected",
+      "reason": "native readiness timing changed"
+    },
+    {
+      "case": "server_pid_changed",
+      "result": "rejected",
+      "reason": "native control server identity changed"
+    },
+    {
+      "case": "omitted_prewarm",
+      "result": "rejected",
+      "reason": "prewarm interval excludes work"
+    }
+  ]
+}

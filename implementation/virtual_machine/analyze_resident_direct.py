@@ -53,6 +53,7 @@ def analyze(path):
     for hop in r['transitions']:
         if not hop.get('resident'): continue
         for a in (hop['export_api'],hop['attach_api'],hop['preparation']['api']):
+            if a is None: continue
             raw=read(a['file'])
             api=[json.loads(line.split('LAB_API_JSON ',1)[1]) for line in raw.splitlines()
                  if line.startswith('LAB_API_JSON ')]
@@ -67,13 +68,16 @@ def analyze(path):
                  if 'manifest' in hop['destination_placement'] else json.loads(read(hop['destination_placement']['file']))['allocation_generation'],
              'resident_import':hop['import_event'].get('resident',False), 'control_path':'tcp' if hop.get('fast_control') else 'serial-diagnostic',
              'prepare_fresh':hop['preparation']['fresh'],
-             'prepare_api_us':hop['preparation']['api']['response']['duration_us'],
+             'prepare_api_us':hop['preparation']['api']['response']['duration_us'] if hop['preparation']['api'] else 0,
              'prepare_controller_us':hop['preparation']['controller_wall_ns']/1000,
              'export_api_us':hop['export_api']['response']['duration_us'],
              'import_api_us':hop['attach_api']['response']['duration_us'],
              'export_import_api_us':api_us,'kernel_us':kernel_us,
              'pause_export_import_resume_api_us':api_us+pause[0]['response']['duration_us']+resume[0]['response']['duration_us'],
              'pause_to_ack_us':hop['controller_pause_to_ack_ns']/1000}
+        if hop.get('ready_control'):
+            row.update({k:hop['fast'][k.replace('_us','_ns')]/1000 for k in
+                ('request_us','request_to_resume_response_us','pause_to_resume_response_us')})
         if profiles:
             g=hop['token']['generation'];parts={}
             for event in ('export','import'):
@@ -91,9 +95,10 @@ def analyze(path):
     metrics=('prepare_api_us','prepare_controller_us','export_import_api_us','kernel_us',
              'pause_export_import_resume_api_us','pause_to_ack_us')
     def summary(group):
-        return {k:stats([x[k] for x in group]) for k in metrics}
+        return {k:stats([x[k] for x in group if k in x]) for k in (*metrics,
+            'request_us','request_to_resume_response_us','pause_to_resume_response_us') if any(k in x for x in group)}
     return {'schema':'resident-direct-profile-v1','report_sha256':hashlib.sha256(path.read_bytes()).hexdigest(),
-            'rows':rows,'preparation_vmm':preparations,'all':summary(rows),
+            'rows':rows,'preparation_vmm':preparations,'preparation_controller':r.get('resident_preparations',[]),'all':summary(rows),
             'first_import':summary([x for x in rows if not x['resident_import']]),
             'resident_imports':summary([x for x in rows if x['resident_import']]),
             'by_control_path':{kind:summary([x for x in rows if x['control_path']==kind]) for kind in sorted({x['control_path'] for x in rows})},
@@ -102,7 +107,8 @@ def analyze(path):
                      'The four-API sum includes pause/resume, but still excludes metadata transport and ACK.',
                      'Serial-diagnostic pause-to-ACK includes receipt checks/rejection tests. TCP pause-to-ACK is measured on the source host across pause, export, metadata transport, attach, checkpoint, resume and the remote guest ACK response.',
                      'Preparation occurs while source is running; fresh preparation includes process launch in controller time.',
-                     'Warm preparation validates revoked RAM/KVM access; it creates no disk or vCPU resources.',
+                     'Ready-control preparation occurs once after promotion. Cached readiness issues no API; parked RAM/KVM access is still probed after each handoff.',
+                     'Request timings include the local control connection and peer connection. Resume response means the VMM accepted Resume, not first guest execution; serial guest ACK remains separately measured.',
                      'Single coherent host with nested KVM; not a noncoherent multi-host CXL result.']}
 
 

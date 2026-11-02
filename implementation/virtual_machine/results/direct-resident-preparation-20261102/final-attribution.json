@@ -1,0 +1,940 @@
+{
+  "schema": "resident-direct-profile-v1",
+  "report_sha256": "2e85740850389b6958bafa8089d2c66f5db39b1b61b36c141fc7d88a68bdc146",
+  "rows": [
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 1,
+      "allocation_generation": 1,
+      "resident_import": false,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 11.6,
+      "export_api_us": 2803.491,
+      "import_api_us": 5748.037,
+      "export_import_api_us": 8551.528,
+      "kernel_us": 2280.945,
+      "pause_export_import_resume_api_us": 10007.776,
+      "pause_to_ack_us": 29502.552,
+      "request_us": 33611.664,
+      "request_to_resume_response_us": 16483.172,
+      "pause_to_resume_response_us": 12535.212
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 2,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "serial-diagnostic",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 11.058,
+      "export_api_us": 2800.083,
+      "import_api_us": 8031.944,
+      "export_import_api_us": 10832.027,
+      "kernel_us": 5593.622,
+      "pause_export_import_resume_api_us": 13206.598,
+      "pause_to_ack_us": 4874088.202
+    },
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 3,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "serial-diagnostic",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 8.695,
+      "export_api_us": 1986.096,
+      "import_api_us": 4220.234,
+      "export_import_api_us": 6206.33,
+      "kernel_us": 1566.245,
+      "pause_export_import_resume_api_us": 8584.501,
+      "pause_to_ack_us": 4737658.25
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 4,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 11.313,
+      "export_api_us": 1026.106,
+      "import_api_us": 4327.374,
+      "export_import_api_us": 5353.48,
+      "kernel_us": 1841.766,
+      "pause_export_import_resume_api_us": 6723.473,
+      "pause_to_ack_us": 24325.009,
+      "request_us": 28281.238,
+      "request_to_resume_response_us": 12742.947,
+      "pause_to_resume_response_us": 8899.492
+    },
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 5,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 9.192,
+      "export_api_us": 1138.515,
+      "import_api_us": 4116.32,
+      "export_import_api_us": 5254.835,
+      "kernel_us": 1722.985,
+      "pause_export_import_resume_api_us": 6682.05,
+      "pause_to_ack_us": 22798.784,
+      "request_us": 24120.083,
+      "request_to_resume_response_us": 10070.168,
+      "pause_to_resume_response_us": 8889.629
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 6,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 11.316,
+      "export_api_us": 940.621,
+      "import_api_us": 4350.288,
+      "export_import_api_us": 5290.909,
+      "kernel_us": 1910.218,
+      "pause_export_import_resume_api_us": 6621.871999999999,
+      "pause_to_ack_us": 24148.14,
+      "request_us": 25451.584,
+      "request_to_resume_response_us": 10137.308,
+      "pause_to_resume_response_us": 8880.445
+    },
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 7,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 8.973,
+      "export_api_us": 711.413,
+      "import_api_us": 4216.141,
+      "export_import_api_us": 4927.554,
+      "kernel_us": 1519.239,
+      "pause_export_import_resume_api_us": 6500.713000000001,
+      "pause_to_ack_us": 13191.623,
+      "request_us": 14325.022,
+      "request_to_resume_response_us": 9659.646,
+      "pause_to_resume_response_us": 8652.735
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 8,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 17.872,
+      "export_api_us": 681.692,
+      "import_api_us": 4168.719,
+      "export_import_api_us": 4850.411,
+      "kernel_us": 1806.459,
+      "pause_export_import_resume_api_us": 6056.901000000001,
+      "pause_to_ack_us": 23508.327,
+      "request_us": 24815.615,
+      "request_to_resume_response_us": 9490.643,
+      "pause_to_resume_response_us": 8213.489
+    },
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 9,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 9.147,
+      "export_api_us": 1473.589,
+      "import_api_us": 3927.902,
+      "export_import_api_us": 5401.491,
+      "kernel_us": 1413.218,
+      "pause_export_import_resume_api_us": 7189.027,
+      "pause_to_ack_us": 24399.798,
+      "request_us": 25664.838,
+      "request_to_resume_response_us": 10656.552,
+      "pause_to_resume_response_us": 9363.911
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 10,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 12.505,
+      "export_api_us": 845.798,
+      "import_api_us": 4607.171,
+      "export_import_api_us": 5452.969,
+      "kernel_us": 2098.049,
+      "pause_export_import_resume_api_us": 6718.854,
+      "pause_to_ack_us": 13762.875,
+      "request_us": 15118.085,
+      "request_to_resume_response_us": 10030.791,
+      "pause_to_resume_response_us": 8767.362
+    },
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 11,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 8.772,
+      "export_api_us": 843.467,
+      "import_api_us": 3923.935,
+      "export_import_api_us": 4767.402,
+      "kernel_us": 1295.14,
+      "pause_export_import_resume_api_us": 6110.647000000001,
+      "pause_to_ack_us": 23524.504,
+      "request_us": 24850.838,
+      "request_to_resume_response_us": 9814.853,
+      "pause_to_resume_response_us": 8564.574
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 12,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 12.285,
+      "export_api_us": 915.401,
+      "import_api_us": 4617.685,
+      "export_import_api_us": 5533.086,
+      "kernel_us": 1782.976,
+      "pause_export_import_resume_api_us": 6735.651000000001,
+      "pause_to_ack_us": 24326.139,
+      "request_us": 25678.868,
+      "request_to_resume_response_us": 10283.875,
+      "pause_to_resume_response_us": 8992.254
+    },
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 13,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 9.16,
+      "export_api_us": 1669.53,
+      "import_api_us": 3962.722,
+      "export_import_api_us": 5632.252,
+      "kernel_us": 1576.111,
+      "pause_export_import_resume_api_us": 6983.438000000001,
+      "pause_to_ack_us": 24128.569,
+      "request_us": 25428.719,
+      "request_to_resume_response_us": 10279.32,
+      "pause_to_resume_response_us": 9072.277
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 14,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 13.437,
+      "export_api_us": 1000.127,
+      "import_api_us": 4202.042,
+      "export_import_api_us": 5202.169,
+      "kernel_us": 1881.263,
+      "pause_export_import_resume_api_us": 6977.709999999999,
+      "pause_to_ack_us": 24457.74,
+      "request_us": 25700.814,
+      "request_to_resume_response_us": 10244.395,
+      "pause_to_resume_response_us": 9079.224
+    },
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 15,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 9.164,
+      "export_api_us": 806.635,
+      "import_api_us": 3817.303,
+      "export_import_api_us": 4623.938,
+      "kernel_us": 1345.079,
+      "pause_export_import_resume_api_us": 6033.735,
+      "pause_to_ack_us": 23642.044,
+      "request_us": 24757.571,
+      "request_to_resume_response_us": 9010.548,
+      "pause_to_resume_response_us": 7921.598
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 16,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 13.334,
+      "export_api_us": 756.041,
+      "import_api_us": 4493.045,
+      "export_import_api_us": 5249.086,
+      "kernel_us": 1802.656,
+      "pause_export_import_resume_api_us": 6711.705,
+      "pause_to_ack_us": 13721.725,
+      "request_us": 14834.141,
+      "request_to_resume_response_us": 9717.66,
+      "pause_to_resume_response_us": 8667.568
+    },
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 17,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 9.035,
+      "export_api_us": 1265.656,
+      "import_api_us": 4012.235,
+      "export_import_api_us": 5277.891,
+      "kernel_us": 1591.494,
+      "pause_export_import_resume_api_us": 6675.2519999999995,
+      "pause_to_ack_us": 24041.801,
+      "request_us": 25221.235,
+      "request_to_resume_response_us": 9824.043,
+      "pause_to_resume_response_us": 8762.376
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 18,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 14.017,
+      "export_api_us": 716.722,
+      "import_api_us": 4486.763,
+      "export_import_api_us": 5203.485,
+      "kernel_us": 1741.845,
+      "pause_export_import_resume_api_us": 6565.053,
+      "pause_to_ack_us": 22484.01,
+      "request_us": 23692.882,
+      "request_to_resume_response_us": 9816.206,
+      "pause_to_resume_response_us": 8669.82
+    },
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 19,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 9.304,
+      "export_api_us": 913.381,
+      "import_api_us": 3861.153,
+      "export_import_api_us": 4774.534,
+      "kernel_us": 1576.071,
+      "pause_export_import_resume_api_us": 6169.237,
+      "pause_to_ack_us": 23222.934,
+      "request_us": 24325.274,
+      "request_to_resume_response_us": 9439.446,
+      "pause_to_resume_response_us": 8386.607
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 20,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 12.356,
+      "export_api_us": 1079.435,
+      "import_api_us": 2999.568,
+      "export_import_api_us": 4079.003,
+      "kernel_us": 1159.425,
+      "pause_export_import_resume_api_us": 5344.848,
+      "pause_to_ack_us": 22429.882,
+      "request_us": 23549.094,
+      "request_to_resume_response_us": 8359.063,
+      "pause_to_resume_response_us": 7298.898
+    },
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 21,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 9.413,
+      "export_api_us": 965.229,
+      "import_api_us": 4530.04,
+      "export_import_api_us": 5495.269,
+      "kernel_us": 1756.22,
+      "pause_export_import_resume_api_us": 6834.666,
+      "pause_to_ack_us": 16201.888,
+      "request_us": 17404.173,
+      "request_to_resume_response_us": 10332.391,
+      "pause_to_resume_response_us": 9264.772
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 22,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 6.304,
+      "export_api_us": 1760.735,
+      "import_api_us": 3657.39,
+      "export_import_api_us": 5418.125,
+      "kernel_us": 1577.974,
+      "pause_export_import_resume_api_us": 6460.154,
+      "pause_to_ack_us": 21892.597,
+      "request_us": 22763.352,
+      "request_to_resume_response_us": 9157.699,
+      "pause_to_resume_response_us": 8351.658
+    },
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 23,
+      "allocation_generation": 2,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 20.446,
+      "export_api_us": 1111.263,
+      "import_api_us": 27612.818,
+      "export_import_api_us": 28724.081,
+      "kernel_us": 25183.665,
+      "pause_export_import_resume_api_us": 30183.91,
+      "pause_to_ack_us": 48540.387,
+      "request_us": 49881.213,
+      "request_to_resume_response_us": 33930.622,
+      "pause_to_resume_response_us": 32631.88
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 24,
+      "allocation_generation": 2,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 14.053,
+      "export_api_us": 659.785,
+      "import_api_us": 5875.377,
+      "export_import_api_us": 6535.162,
+      "kernel_us": 3116.614,
+      "pause_export_import_resume_api_us": 7758.282000000001,
+      "pause_to_ack_us": 25266.419,
+      "request_us": 26584.372,
+      "request_to_resume_response_us": 11305.434,
+      "pause_to_resume_response_us": 10000.075
+    }
+  ],
+  "preparation_vmm": [
+    {
+      "elapsed_ns": 2805289,
+      "event": "prepare",
+      "guest_ram_access": false,
+      "kernel_attach": false,
+      "pid": 174,
+      "role": "B"
+    }
+  ],
+  "preparation_controller": [
+    {
+      "source": "A",
+      "destination": "B",
+      "before_epoch": 0,
+      "fresh": true,
+      "api": {
+        "file": "0115-native-prepare.txt",
+        "role": "B",
+        "path": "/actions",
+        "method": "PUT",
+        "request": {
+          "action_type": "DirectPrepare"
+        },
+        "response": {
+          "status": 204,
+          "expected_status": 204,
+          "duration_us": 3667.118,
+          "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+        },
+        "control_wall_ns": 0,
+        "embedded_in": "0115-native-prepare.txt"
+      },
+      "controller_wall_ns": 334893583,
+      "source_paused": false,
+      "directory": "/run/swe-pool-07b7dbcb82492962/vm1-epoch1-resident-prepare",
+      "control_stages": [
+        {
+          "role": "B",
+          "kind": "scratch-resource",
+          "file": "0113-scratch-resource.txt",
+          "elapsed_ns": 37861828
+        },
+        {
+          "role": "B",
+          "kind": "launch-script",
+          "file": "0114-launch-script.txt",
+          "elapsed_ns": 80416490
+        },
+        {
+          "role": "B",
+          "kind": "native-prepare",
+          "file": "0115-native-prepare.txt",
+          "elapsed_ns": 214987036
+        }
+      ],
+      "api_control_wall_ns": 0,
+      "unattributed_control_ns": 1628229,
+      "native_boot": {
+        "pid": 174,
+        "starttime": 15406,
+        "fork_ns": 139829,
+        "fork_to_api_ready_ns": 4437041,
+        "prepare_api_ns": 3667118,
+        "native_ready_ns": 8305080,
+        "nfs_proc3_before": [
+          1,
+          2,
+          0,
+          1,
+          2,
+          0,
+          6144,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          2,
+          1,
+          0
+        ],
+        "nfs_proc3_after": [
+          1,
+          2,
+          0,
+          2,
+          4,
+          0,
+          6144,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          2,
+          1,
+          0
+        ]
+      },
+      "native_boot_file": "0115-native-prepare.txt",
+      "phase": "post-promotion-prewarm",
+      "control_server_prepare_ns": 176557289,
+      "servers": {
+        "A": {
+          "directory": "/run/swe-pool-07b7dbcb82492962/vm1-epoch0/control",
+          "file": "0117-resident-controller-prepare.txt",
+          "sha256": "0520c04619b01f19ce525af19da81e27ab44bb296da080440d5884fd661aac15",
+          "native_boot": {
+            "pid": 3600,
+            "starttime": 15430,
+            "fork_to_ready_ns": 674748,
+            "native_ready_ns": 728313
+          }
+        },
+        "B": {
+          "directory": "/run/swe-pool-07b7dbcb82492962/vm1-epoch1-resident-prepare/control",
+          "file": "0118-resident-controller-prepare.txt",
+          "sha256": "0520c04619b01f19ce525af19da81e27ab44bb296da080440d5884fd661aac15",
+          "native_boot": {
+            "pid": 198,
+            "starttime": 15445,
+            "fork_to_ready_ns": 559631,
+            "native_ready_ns": 593039
+          }
+        }
+      },
+      "full_prewarm_controller_ns": 774304978
+    }
+  ],
+  "all": {
+    "prepare_api_us": {
+      "n": 24,
+      "mean": 0,
+      "p50": 0.0,
+      "min": 0,
+      "max": 0
+    },
+    "prepare_controller_us": {
+      "n": 24,
+      "mean": 11.364625,
+      "p50": 11.185500000000001,
+      "min": 6.304,
+      "max": 20.446
+    },
+    "export_import_api_us": {
+      "n": 24,
+      "mean": 6609.875708333333,
+      "p50": 5322.1945,
+      "min": 4079.003,
+      "max": 28724.081
+    },
+    "kernel_us": {
+      "n": 24,
+      "mean": 2880.8032916666666,
+      "p50": 1749.0325,
+      "min": 1159.425,
+      "max": 25183.665
+    },
+    "pause_export_import_resume_api_us": {
+      "n": 24,
+      "mean": 8076.502208333333,
+      "p50": 6715.279500000001,
+      "min": 5344.848,
+      "max": 30183.91
+    },
+    "pause_to_ack_us": {
+      "n": 24,
+      "mean": 421886.0082916666,
+      "p50": 23841.9225,
+      "min": 13191.623,
+      "max": 4874088.202
+    },
+    "request_us": {
+      "n": 22,
+      "mean": 24820.939772727274,
+      "p50": 24833.2265,
+      "min": 14325.022,
+      "max": 49881.213
+    },
+    "request_to_resume_response_us": {
+      "n": 22,
+      "mean": 11399.399181818182,
+      "p50": 10050.4795,
+      "min": 8359.063,
+      "max": 33930.622
+    },
+    "pause_to_resume_response_us": {
+      "n": 22,
+      "mean": 9993.902545454546,
+      "p50": 8823.9035,
+      "min": 7298.898,
+      "max": 32631.88
+    }
+  },
+  "first_import": {
+    "prepare_api_us": {
+      "n": 1,
+      "mean": 0,
+      "p50": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prepare_controller_us": {
+      "n": 1,
+      "mean": 11.6,
+      "p50": 11.6,
+      "min": 11.6,
+      "max": 11.6
+    },
+    "export_import_api_us": {
+      "n": 1,
+      "mean": 8551.528,
+      "p50": 8551.528,
+      "min": 8551.528,
+      "max": 8551.528
+    },
+    "kernel_us": {
+      "n": 1,
+      "mean": 2280.945,
+      "p50": 2280.945,
+      "min": 2280.945,
+      "max": 2280.945
+    },
+    "pause_export_import_resume_api_us": {
+      "n": 1,
+      "mean": 10007.776,
+      "p50": 10007.776,
+      "min": 10007.776,
+      "max": 10007.776
+    },
+    "pause_to_ack_us": {
+      "n": 1,
+      "mean": 29502.552,
+      "p50": 29502.552,
+      "min": 29502.552,
+      "max": 29502.552
+    },
+    "request_us": {
+      "n": 1,
+      "mean": 33611.664,
+      "p50": 33611.664,
+      "min": 33611.664,
+      "max": 33611.664
+    },
+    "request_to_resume_response_us": {
+      "n": 1,
+      "mean": 16483.172,
+      "p50": 16483.172,
+      "min": 16483.172,
+      "max": 16483.172
+    },
+    "pause_to_resume_response_us": {
+      "n": 1,
+      "mean": 12535.212,
+      "p50": 12535.212,
+      "min": 12535.212,
+      "max": 12535.212
+    }
+  },
+  "resident_imports": {
+    "prepare_api_us": {
+      "n": 23,
+      "mean": 0,
+      "p50": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prepare_controller_us": {
+      "n": 23,
+      "mean": 11.354391304347827,
+      "p50": 11.058,
+      "min": 6.304,
+      "max": 20.446
+    },
+    "export_import_api_us": {
+      "n": 23,
+      "mean": 6525.456043478261,
+      "p50": 5290.909,
+      "min": 4079.003,
+      "max": 28724.081
+    },
+    "kernel_us": {
+      "n": 23,
+      "mean": 2906.884086956522,
+      "p50": 1741.845,
+      "min": 1159.425,
+      "max": 25183.665
+    },
+    "pause_export_import_resume_api_us": {
+      "n": 23,
+      "mean": 7992.533782608696,
+      "p50": 6711.705,
+      "min": 5344.848,
+      "max": 30183.91
+    },
+    "pause_to_ack_us": {
+      "n": 23,
+      "mean": 438946.1585652174,
+      "p50": 23642.044,
+      "min": 13191.623,
+      "max": 4874088.202
+    },
+    "request_us": {
+      "n": 21,
+      "mean": 24402.333857142858,
+      "p50": 24815.615,
+      "min": 14325.022,
+      "max": 49881.213
+    },
+    "request_to_resume_response_us": {
+      "n": 21,
+      "mean": 11157.314761904761,
+      "p50": 10030.791,
+      "min": 8359.063,
+      "max": 33930.622
+    },
+    "pause_to_resume_response_us": {
+      "n": 21,
+      "mean": 9872.88780952381,
+      "p50": 8767.362,
+      "min": 7298.898,
+      "max": 32631.88
+    }
+  },
+  "by_control_path": {
+    "serial-diagnostic": {
+      "prepare_api_us": {
+        "n": 2,
+        "mean": 0,
+        "p50": 0.0,
+        "min": 0,
+        "max": 0
+      },
+      "prepare_controller_us": {
+        "n": 2,
+        "mean": 9.8765,
+        "p50": 9.8765,
+        "min": 8.695,
+        "max": 11.058
+      },
+      "export_import_api_us": {
+        "n": 2,
+        "mean": 8519.1785,
+        "p50": 8519.1785,
+        "min": 6206.33,
+        "max": 10832.027
+      },
+      "kernel_us": {
+        "n": 2,
+        "mean": 3579.9335,
+        "p50": 3579.9335,
+        "min": 1566.245,
+        "max": 5593.622
+      },
+      "pause_export_import_resume_api_us": {
+        "n": 2,
+        "mean": 10895.549500000001,
+        "p50": 10895.549500000001,
+        "min": 8584.501,
+        "max": 13206.598
+      },
+      "pause_to_ack_us": {
+        "n": 2,
+        "mean": 4805873.226,
+        "p50": 4805873.226,
+        "min": 4737658.25,
+        "max": 4874088.202
+      }
+    },
+    "tcp": {
+      "prepare_api_us": {
+        "n": 22,
+        "mean": 0,
+        "p50": 0.0,
+        "min": 0,
+        "max": 0
+      },
+      "prepare_controller_us": {
+        "n": 22,
+        "mean": 11.49990909090909,
+        "p50": 11.3145,
+        "min": 6.304,
+        "max": 20.446
+      },
+      "export_import_api_us": {
+        "n": 22,
+        "mean": 6436.302727272727,
+        "p50": 5284.4,
+        "min": 4079.003,
+        "max": 28724.081
+      },
+      "kernel_us": {
+        "n": 22,
+        "mean": 2817.246,
+        "p50": 1749.0325,
+        "min": 1159.425,
+        "max": 25183.665
+      },
+      "pause_export_import_resume_api_us": {
+        "n": 22,
+        "mean": 7820.225181818182,
+        "p50": 6696.8775000000005,
+        "min": 5344.848,
+        "max": 30183.91
+      },
+      "pause_to_ack_us": {
+        "n": 22,
+        "mean": 23341.71577272727,
+        "p50": 23583.274,
+        "min": 13191.623,
+        "max": 48540.387
+      },
+      "request_us": {
+        "n": 22,
+        "mean": 24820.939772727274,
+        "p50": 24833.2265,
+        "min": 14325.022,
+        "max": 49881.213
+      },
+      "request_to_resume_response_us": {
+        "n": 22,
+        "mean": 11399.399181818182,
+        "p50": 10050.4795,
+        "min": 8359.063,
+        "max": 33930.622
+      },
+      "pause_to_resume_response_us": {
+        "n": 22,
+        "mean": 9993.902545454546,
+        "p50": 8823.9035,
+        "min": 7298.898,
+        "max": 32631.88
+      }
+    }
+  },
+  "notes": [
+    "No first visits or warmup samples discarded.",
+    "Export/import API excludes pause/resume, controller metadata transport and guest ACK.",
+    "The four-API sum includes pause/resume, but still excludes metadata transport and ACK.",
+    "Serial-diagnostic pause-to-ACK includes receipt checks/rejection tests. TCP pause-to-ACK is measured on the source host across pause, export, metadata transport, attach, checkpoint, resume and the remote guest ACK response.",
+    "Preparation occurs while source is running; fresh preparation includes process launch in controller time.",
+    "Ready-control preparation occurs once after promotion. Cached readiness issues no API; parked RAM/KVM access is still probed after each handoff.",
+    "Request timings include the local control connection and peer connection. Resume response means the VMM accepted Resume, not first guest execution; serial guest ACK remains separately measured.",
+    "Single coherent host with nested KVM; not a noncoherent multi-host CXL result."
+  ]
+}

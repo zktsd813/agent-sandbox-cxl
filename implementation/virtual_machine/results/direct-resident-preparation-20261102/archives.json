@@ -1,0 +1,26 @@
+{
+  "result": "passed",
+  "archives": [
+    {
+      "file": "baseline.tar.xz",
+      "bytes": 4350104,
+      "sha256": "51cb900d01869c76e56bf0202be77d244773abc89d10e4c7b459cfffedf8dece",
+      "root": "cxl-prep-audit",
+      "regular_files_byte_matched": 612
+    },
+    {
+      "file": "diagnostic.tar.xz",
+      "bytes": 4358800,
+      "sha256": "1d861569fbeebf33a5f6e228e032bf5349c2a49fde6d33e48a4e933c19de6b32",
+      "root": "cxl-ready-audit",
+      "regular_files_byte_matched": 590
+    },
+    {
+      "file": "final.tar.xz",
+      "bytes": 4709984,
+      "sha256": "26aa2f320ea6a2c692f088cbf50c8841ef2cb6de8e07722e24be5a8ab3159547",
+      "root": "cxl-ready-final",
+      "regular_files_byte_matched": 937
+    }
+  ]
+}

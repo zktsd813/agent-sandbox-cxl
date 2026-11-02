@@ -8,7 +8,9 @@ Guest RAM은 CXL에 그대로 있고 CPU register snapshot도 만들지 않는�
 
 실험 결과와 재현 입력은 [검증 자료](../implementation/virtual_machine/results/direct-resident-20261102/README.md)에 모았다. 이전 측정 범위와 NFS 병목은 [Direct API 비용 분석](cxl-direct-api-latency.md)을 참고한다.
 
-최종 시험은 **24회 handoff와 두 번씩 promotion/demotion**을 통과했다. 같은 바이너리의 기존 경로 10회와 비교한 Export+Import API 중앙값은 **9.190→5.316ms**였다. 별도로 측정한 TCP pause→guest 응답 중앙값은 **24.153ms**이며, 여기에 guest serial ping 응답 구간 약 15ms가 들어간다. 최초 B 준비 API는 **3.533ms**로 source 실행 중에 수행했다. 시간의 범위와 원시 표본은 검증 자료에서 구분한다.
+기존 resident 구현(`620e2d5`)의 시험은 **24회 handoff와 두 번씩 promotion/demotion**을 통과했다. 같은 바이너리의 기존 경로 10회와 비교한 Export+Import API 중앙값은 **9.190→5.316ms**였다. TCP pause→guest 응답 중앙값은 **24.153ms**였으며, 여기에 guest serial ping 응답 구간 약 15ms가 들어갔다.
+
+그때의 목적지 준비 controller 시간 **763.966ms**에는 여러 serial 명령, 파일 전달과 바이너리 hash 검증이 섞여 있었다. 이를 VMM 준비 자체의 비용으로 설명하면 안 된다. 이후 [준비 비용 재검증과 제어 경로 수정](../implementation/virtual_machine/results/direct-resident-preparation-20261102/README.md)에서 각 비용을 분해하고, 노드 내부 bootstrap과 미리 준비한 RPC 제어 경로를 추가했다. Firecracker·커널 바이너리는 동일하게 유지했다.
 
 ## 준비 단계와 handoff 단계
 
@@ -17,7 +19,7 @@ Guest RAM은 CXL에 그대로 있고 CPU register snapshot도 만들지 않는�
 1. B에 Firecracker API 프로세스를 띄운다.
 2. `DirectPrepare`로 B의 NFS 이미지 FD를 read-only로 열고, 이미지 크기·ID와 Async io_uring을 준비한다.
 3. A/B 사이의 작은 metadata 전달용 TCP 제어 프로세스를 준비한다.
-4. 실제 전환 요청 전에 TCP 연결을 맺고, 연결 비용을 별도 기록한다.
+4. 기존 제어기는 pause 전에 TCP 연결을 맺는다. 아래 ready-control 경로는 **연결 시간까지 handoff 요청 시간에 포함**한다.
 
 이때 B는 guest RAM에 접근하거나 KVM 소유권을 가져오지 않는다. **최초 방문의 VM/vCPU wrapper, vCPU 스레드와 나머지 장치 객체는 첫 attach에서 만든다.** 따라서 최초 handoff의 모든 준비 비용을 없앴다는 의미는 아니다. 먼저 준비한 디스크 FD와 io_uring은 첫 attach부터 사용한다.
 
@@ -47,7 +49,7 @@ Source process는 종료하지 않는다. 다만 virtio event subscriber를 제�
 
 A에는 원래 실행하던 VMM, VM/vCPU FD, vCPU thread, block 객체, 이미지 FD, io_uring, eventfd가 남아 있다. 새로운 token과 mapper handle을 확인한 뒤 같은 HVA에 현재 backing을 연결하고, 기존 kernel의 reuse-VM-FD attach ioctl을 사용한다.
 
-이후 B로 다시 갈 때도 같은 방법을 쓴다. FD를 다시 열거나 vCPU thread를 새로 만들지 않는다. 목적지 준비 API는 parked RAM/KVM 접근이 실제로 거절되는지 확인하는 probe로 동작한다.
+이후 B로 다시 갈 때도 같은 방법을 쓴다. FD를 다시 열거나 vCPU thread를 새로 만들지 않는다. 기존 제어기는 준비 API를 다시 호출하여 parked RAM/KVM 접근을 검사했다. Ready-control은 이 중복 호출을 생략하고, 매번 source를 넘긴 뒤 기존 fence/probe 검사로 접근 차단을 검증한다.
 
 Demotion으로 기존 CXL 할당을 반환한 뒤 다시 promotion하면 allocation generation과 mapper handle은 바뀐다. 과거 handle을 저장해 재사용하지 않고 **해당 전환에서 받은 최신 handle**을 검증·연결한다. KVM 객체 identity와 handoff generation 검증은 별도로 유지한다.
 
@@ -67,6 +69,18 @@ Demotion으로 기존 CXL 할당을 반환한 뒤 다시 promotion하면 allocat
 FD는 로컬 inode 또는 NFS의 열린 파일을 계속 참조한다. 실험에서는 A의 원본 ext4를 read-only로 remount하고 B는 immutable NFS cache 옵션을 쓴다. 실행 도중 같은 경로의 이미지를 교체하는 기능은 지원하지 않는다.
 
 ## 시간을 어떻게 쟀나
+
+### 명시적 준비와 상주 제어기 (`--resident-ready-control`)
+
+첫 promotion이 완료되면 B의 VMM을 준비하고 A/B 제어 서버를 띄운다. 이 과정의 전체 외부 제어 시간, VMM의 fork→API 연결 가능 시간, NFS FD·io_uring 준비 시간, 제어 서버 각각의 fork→listen 완료 시간을 별도 기록한다. 준비 단계는 source 실행 중이며, promotion의 데이터 복사 시간과도 구분한다.
+
+`resident_bootstrap.c`가 디렉터리·FIFO·PID 기록·프로세스 실행·API 대기·DirectPrepare를 한 번의 노드 내부 작업으로 처리한다. 고정 20ms shell polling을 없애고 실제 API 연결 가능 여부를 확인한다. 실행 바이너리 hash와 FD/TID 감사는 외부 제어 시간에 남긴다.
+
+준비된 상태의 handoff는 이미 실행 중인 source 제어 서버에 요청한다. 제어 서버는 peer에 연결하고 pause/export/상태 전송/import/checkpoint/resume를 수행한다. 목적지의 다음 checkpoint plan도 작은 요청 필드로 전달해 목적지에서 작성한다. 전환 직전 serial 파일 업로드, DirectPrepare 재호출이나 제어 서버 생성은 없다. 준비가 없으면 요청을 실패시키며 숨겨진 초기화를 수행하지 않는다.
+
+두 완료 시점을 측정한다. **요청→Resume 응답**은 API가 실행 재개를 수락한 시점이며 guest의 첫 instruction 실행 시각은 아니다. **요청→guest ACK**는 기존 serial ping의 실제 응답이 돌아온 시점이다. 두 값 모두 로컬 및 peer TCP 연결을 포함한다. 최초 B 방문에서 만드는 VM/vCPU wrapper와 장치 객체 비용도 포함한다. 원시 결과의 `controller_command_wall_ns`는 별도로 serial 실행·결과 회수 시간을 포함한다.
+
+### 기존 지표와의 관계
 
 시간 범위를 섞지 않기 위해 다음 값을 각각 기록한다.
 

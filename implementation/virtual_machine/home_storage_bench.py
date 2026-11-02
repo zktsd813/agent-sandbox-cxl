@@ -53,8 +53,15 @@ class Controller:
         return name
 
     def shell(self, role, body, kind, timeout=90):
+        import time
+        started = time.monotonic_ns()
         raw = nfs.shell(self.vms[role], body, timeout=timeout)
-        return raw, self.raw(kind, raw)
+        name = self.raw(kind, raw)
+        if not hasattr(self, 'control_timings'):
+            self.control_timings = []
+        self.control_timings.append({'role': role, 'kind': kind, 'file': name,
+                                     'elapsed_ns': time.monotonic_ns() - started})
+        return raw, name
 
     def api(self, role, directory, path, method, body):
         raw = nfs.api(self.vms[role], directory, path, method, body)

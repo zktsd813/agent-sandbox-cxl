@@ -7,6 +7,8 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <netinet/tcp.h>
+#include <poll.h>
+#include <sys/wait.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -21,10 +23,21 @@
 #define CAP (64*1024)
 #define PORT 19091
 #define MAGIC 0x43585231u
-struct request { uint32_t magic, state_len, manifest_len, first; char nonce[33], label[96]; };
+struct request {
+ uint32_t magic, state_len, manifest_len, first, operation;
+ uint64_t vm, epoch, canonical_start, canonical_bytes;
+ char nonce[33], label[96], peer[16];
+};
 struct api_result { double us; int status; char response[1024]; };
 struct reply { uint32_t magic, ack_len; struct api_result attach, checkpoint, resume; uint64_t ack_ns; };
+struct outcome {
+ struct api_result pause, export;
+ struct reply target;
+ uint64_t handoff_ns, connection_ns, pause_to_resume_ns;
+ uint32_t state_len, manifest_len;
+};
 static char directory[160], socket_path[192];
+static int readiness_pipe = -1;
 static void fail(const char *s) { perror(s); exit(1); }
 static uint64_t ns(void) { struct timespec t; if(clock_gettime(CLOCK_MONOTONIC,&t))fail("clock");return (uint64_t)t.tv_sec*1000000000+t.tv_nsec; }
 static void check(int ok,const char *s) { if(!ok){fprintf(stderr,"resident-control: %s\n",s);exit(1);} }
@@ -88,29 +101,113 @@ static int tcp(const char *ip,int listen_mode) {
 }
 static void json_string(const char *p) { putchar('"');for(;*p;p++){unsigned char c=*p;if(c=='"'||c=='\\')printf("\\%c",c);else if(c<32)printf("\\u%04x",c);else putchar(c);}putchar('"'); }
 static void print_api(const char *name,const struct api_result *a) { printf("\"%s\":{\"status\":%d,\"duration_us\":%.3f,\"response\":",name,a->status,a->us);json_string(a->response);putchar('}'); }
+
+static void validate_request(const struct request *q,const char *nonce) {
+ check(q->magic==MAGIC && q->nonce[32]==0 && !strcmp(q->nonce,nonce)
+       && q->label[95]==0 && q->label[0] && q->first<=1 && q->operation<=1,"request identity");
+ check(strlen(q->label)<90 && strspn(q->label,"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-:.")==strlen(q->label),"request label");
+ if(q->operation==1) {
+  struct in_addr address;
+  check(q->peer[15]==0 && inet_pton(AF_INET,q->peer,&address)==1 && q->epoch>0,"handoff peer/epoch");
+ }
+ if(q->epoch) check(q->canonical_start%4096==0 && q->canonical_bytes>0
+                  && q->canonical_bytes%4096==0 && q->canonical_start<=UINT64_MAX-q->canonical_bytes,"plan bounds");
+}
+static void checkpoint_plan(const struct request *q) {
+ if(!q->epoch)return; // Legacy controller already installed its plan.
+ char plan[512];int len=snprintf(plan,sizeof(plan),
+  "{\"operation\":\"export\",\"vm_id\":\"%"PRIu64"\",\"run_epoch\":\"%"PRIu64"\","
+  "\"pool_path\":\"/dev/dax0.0\",\"canonical_start\":%"PRIu64",\"canonical_bytes\":%"PRIu64"}\n",
+  q->vm,q->epoch,q->canonical_start,q->canonical_bytes);
+ check(len>0&&(size_t)len<sizeof(plan),"plan bound");write_file("memory-plan.json",plan,len);
+}
+static struct outcome handoff(struct request q,const char *peer,int client,char *ack) {
+ struct outcome o={0};uint64_t connect_start=ns();int fd=tcp(peer,0);o.connection_ns=ns()-connect_start;
+ uint64_t start=ns();o.pause=api("PATCH","/vm","{\"state\": \"Paused\"}");
+ o.export=api("PUT","/actions","{\"action_type\": \"DirectExport\"}");select_owner(2147483647);
+ char state[CAP],manifest[CAP];q.operation=0;
+ q.state_len=read_file("direct-export.json",state);q.manifest_len=read_file("memory-manifest.json",manifest);
+ o.state_len=q.state_len;o.manifest_len=q.manifest_len;
+ send_all(fd,&q,sizeof(q));send_all(fd,state,q.state_len);send_all(fd,manifest,q.manifest_len);
+ uint32_t marker;recv_all(fd,&marker,sizeof(marker));check(marker==MAGIC,"resume marker");o.pause_to_resume_ns=ns()-start;
+ if(client>=0)send_all(client,&marker,sizeof(marker));
+ recv_all(fd,&o.target,sizeof(o.target));check(o.target.magic==MAGIC&&o.target.ack_len>0&&o.target.ack_len<4096,"reply bounds");
+ recv_all(fd,ack,o.target.ack_len);ack[o.target.ack_len]=0;o.handoff_ns=ns()-start;close(fd);return o;
+}
+static void print_outcome(const struct outcome *o,const char *ack,uint64_t request_ns,uint64_t request_resume_ns) {
+ printf("RESIDENT_FAST_JSON {\"version\":1,\"handoff_ns\":%"PRIu64",\"connection_prepare_ns\":%"PRIu64
+        ",\"guest_ack_ns\":%"PRIu64",\"pause_to_resume_response_ns\":%"PRIu64
+        ",\"request_ns\":%"PRIu64",\"request_to_resume_response_ns\":%"PRIu64
+        ",\"state_bytes\":%u,\"manifest_bytes\":%u,\"ack\":%s,\"apis\":{",
+        o->handoff_ns,o->connection_ns,o->target.ack_ns,o->pause_to_resume_ns,request_ns,request_resume_ns,o->state_len,o->manifest_len,ack);
+ print_api("pause",&o->pause);putchar(',');print_api("export",&o->export);putchar(',');print_api("attach",&o->target.attach);
+ putchar(',');print_api("checkpoint",&o->target.checkpoint);putchar(',');print_api("resume",&o->target.resume);puts("}}");
+}
+static uint64_t number(const char *s) {
+ char *end;errno=0;unsigned long long n=strtoull(s,&end,10);
+ check(s[0] && strspn(s,"0123456789")==strlen(s) && !errno && !*end,"integer argument");return n;
+}
 int main(int argc,char **argv) {
- check(argc==5||argc==7,"usage: resident-control serve DIRECTORY IP NONCE | handoff DIRECTORY TARGET_IP NONCE FIRST LABEL");
+ check(argc==5||argc==7||argc==12,"usage: serve DIR IP NONCE | handoff DIR PEER NONCE FIRST LABEL | request DIR LOCAL_IP NONCE FIRST LABEL PEER VM EPOCH START BYTES");
  check(strlen(argv[2])<sizeof(directory)&&!strncmp(argv[2],"/run/swe-pool-",14),"owned directory required");strcpy(directory,argv[2]);path(socket_path,sizeof(socket_path),"api.sock");
  check(strlen(argv[4])==32&&strspn(argv[4],"0123456789abcdef")==32,"session nonce");signal(SIGPIPE,SIG_IGN);
+
+ if(!strcmp(argv[1],"launch")) {
+  check(argc==5,"launch arguments");uint64_t begin=ns();char control[256],log[256];
+  path(control,sizeof(control),"control");path(log,sizeof(log),"control/log");
+  if(mkdir(control,0700))fail("fresh controller directory");
+  int pipefd[2];if(pipe2(pipefd,O_CLOEXEC))fail("readiness pipe");uint64_t fork_start=ns();
+  int pid=fork();if(pid<0)fail("controller fork");
+  if(pid) {
+   close(pipefd[1]);unsigned long long identity=process_start(pid);char record[80];
+   int len=snprintf(record,sizeof(record),"%d %llu\n",pid,identity);write_file("control/fc.pid",record,len);
+   struct pollfd f={.fd=pipefd[0],.events=POLLIN};int polled;
+   do {polled=poll(&f,1,30000);}while(polled<0&&errno==EINTR);
+   if(polled<=0){kill(pid,SIGKILL);waitpid(pid,NULL,0);check(0,"controller readiness timeout");}
+   char ready;recv_all(pipefd[0],&ready,1);check(ready=='R',"controller readiness");close(pipefd[0]);uint64_t end=ns();
+   printf("RESIDENT_SERVER_BOOT_JSON {\"pid\":%d,\"starttime\":%llu,\"fork_to_ready_ns\":%"PRIu64",\"native_ready_ns\":%"PRIu64"}\n",
+          pid,identity,end-fork_start,end-begin);return 0;
+  }
+  close(pipefd[0]);readiness_pipe=pipefd[1];
+  int in=open("/dev/null",O_RDONLY),out=open(log,O_WRONLY|O_CREAT|O_EXCL,0600);
+  if(in<0||out<0||dup2(in,0)<0||dup2(out,1)<0||dup2(out,2)<0)_exit(121);
+  close(in);close(out);argv[1]="serve";
+ }
  if(!strcmp(argv[1],"serve")){
   check(argc==5,"serve arguments");int listener=tcp(argv[3],1);puts("RESIDENT_CONTROL_READY");fflush(stdout);
+  if(readiness_pipe>=0){write_all(readiness_pipe,"R",1);close(readiness_pipe);readiness_pipe=-1;}
   for(;;){int fd=accept4(listener,NULL,NULL,SOCK_CLOEXEC);if(fd<0){if(errno==EINTR)continue;fail("accept");}timeout(fd);int one=1;setsockopt(fd,IPPROTO_TCP,TCP_NODELAY,&one,sizeof(one));
-   struct request q;recv_all(fd,&q,sizeof(q));check(q.magic==MAGIC&&q.nonce[32]==0&&!strcmp(q.nonce,argv[4])&&q.label[95]==0,"request identity");check(strspn(q.label,"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-:.")==strlen(q.label),"request label");check(q.state_len>0&&q.state_len<CAP&&q.manifest_len>0&&q.manifest_len<CAP&&q.first<=1,"request bounds");
-   char state[CAP],manifest[CAP],ack[4096];recv_all(fd,state,q.state_len);recv_all(fd,manifest,q.manifest_len);
-   write_file("direct-import.json",state,q.state_len);write_file("restore-manifest.json",manifest,q.manifest_len);select_owner(owner_pid());
+   struct request q;recv_all(fd,&q,sizeof(q));validate_request(&q,argv[4]);
+   char ack[4096];
+   if(q.operation==1) {
+    check(q.state_len==0&&q.manifest_len==0,"trigger contains metadata");
+    struct outcome o=handoff(q,q.peer,fd,ack);send_all(fd,&o,sizeof(o));send_all(fd,ack,o.target.ack_len);close(fd);continue;
+   }
+   check(q.state_len>0&&q.state_len<CAP&&q.manifest_len>0&&q.manifest_len<CAP,"request bounds");
+   char state[CAP],manifest[CAP];recv_all(fd,state,q.state_len);recv_all(fd,manifest,q.manifest_len);
+   write_file("direct-import.json",state,q.state_len);write_file("restore-manifest.json",manifest,q.manifest_len);
+   checkpoint_plan(&q);select_owner(owner_pid());
    struct reply r={.magic=MAGIC};r.attach=api("PUT","/actions",q.first?"{\"action_type\": \"InstanceStart\"}":"{\"action_type\": \"DirectImport\"}");
    r.checkpoint=api("PUT","/actions","{\"action_type\": \"PoolCache\"}");
    char p[256];path(p,sizeof(p),"fc.log");struct stat st;if(stat(p,&st))fail("log offset");r.resume=api("PATCH","/vm","{\"state\": \"Resumed\"}");
+   uint32_t marker=MAGIC;send_all(fd,&marker,sizeof(marker));
    r.ack_len=guest_ack(q.label,ack,st.st_size,&r.ack_ns);send_all(fd,&r,sizeof(r));send_all(fd,ack,r.ack_len);close(fd);
   }
  }
- check(!strcmp(argv[1],"handoff")&&argc==7&&(!strcmp(argv[5],"0")||!strcmp(argv[5],"1")),"handoff arguments");
- uint64_t prepare=ns();int fd=tcp(argv[3],0);prepare=ns()-prepare;
- struct request q={.magic=MAGIC,.first=(uint32_t)atoi(argv[5])};strcpy(q.nonce,argv[4]);check(strlen(argv[6])<sizeof(q.label),"label length");strcpy(q.label,argv[6]);check(strspn(q.label,"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-:.")==strlen(q.label),"label characters");
- uint64_t start=ns();struct api_result pause=api("PATCH","/vm","{\"state\": \"Paused\"}");struct api_result export=api("PUT","/actions","{\"action_type\": \"DirectExport\"}");select_owner(2147483647);
- char state[CAP],manifest[CAP],ack[4096];q.state_len=read_file("direct-export.json",state);q.manifest_len=read_file("memory-manifest.json",manifest);
- send_all(fd,&q,sizeof(q));send_all(fd,state,q.state_len);send_all(fd,manifest,q.manifest_len);
- struct reply r;recv_all(fd,&r,sizeof(r));check(r.magic==MAGIC&&r.ack_len>0&&r.ack_len<sizeof(ack),"reply bounds");recv_all(fd,ack,r.ack_len);ack[r.ack_len]=0;uint64_t end=ns();close(fd);
- printf("RESIDENT_FAST_JSON {\"version\":1,\"handoff_ns\":%"PRIu64",\"connection_prepare_ns\":%"PRIu64",\"guest_ack_ns\":%"PRIu64",\"state_bytes\":%u,\"manifest_bytes\":%u,\"ack\":%s,\"apis\":{",end-start,prepare,r.ack_ns,q.state_len,q.manifest_len,ack);
- print_api("pause",&pause);putchar(',');print_api("export",&export);putchar(',');print_api("attach",&r.attach);putchar(',');print_api("checkpoint",&r.checkpoint);putchar(',');print_api("resume",&r.resume);puts("}}");return 0;
+ check((!strcmp(argv[1],"handoff")&&argc==7)||(!strcmp(argv[1],"request")&&argc==12),"command arguments");
+ check(!strcmp(argv[5],"0")||!strcmp(argv[5],"1"),"first import flag");
+ struct request q={.magic=MAGIC,.first=(uint32_t)atoi(argv[5])};strcpy(q.nonce,argv[4]);check(strlen(argv[6])<sizeof(q.label),"label length");strcpy(q.label,argv[6]);
+ char ack[4096];struct outcome o;
+ if(argc==12) {
+  q.operation=1;check(strlen(argv[7])<sizeof(q.peer),"peer length");strcpy(q.peer,argv[7]);
+  q.vm=number(argv[8]);q.epoch=number(argv[9]);q.canonical_start=number(argv[10]);q.canonical_bytes=number(argv[11]);validate_request(&q,argv[4]);
+  uint64_t start=ns();int fd=tcp(argv[3],0);send_all(fd,&q,sizeof(q));
+  uint32_t marker;recv_all(fd,&marker,sizeof(marker));check(marker==MAGIC,"request resume marker");uint64_t resumed=ns()-start;
+  recv_all(fd,&o,sizeof(o));check(o.target.magic==MAGIC&&o.target.ack_len>0&&o.target.ack_len<sizeof(ack),"request reply bounds");
+  recv_all(fd,ack,o.target.ack_len);ack[o.target.ack_len]=0;uint64_t elapsed=ns()-start;close(fd);
+  print_outcome(&o,ack,elapsed,resumed);
+ } else {
+  validate_request(&q,argv[4]);o=handoff(q,argv[3],-1,ack);print_outcome(&o,ack,0,0);
+ }
+ return 0;
 }
