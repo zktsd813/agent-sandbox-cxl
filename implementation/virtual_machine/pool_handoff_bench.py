@@ -81,6 +81,8 @@ class HandoffController(PoolController):
         if s.direct:
             env.update(FC_DAX_DIRECT="1", FC_DAX_DIRECT_IO="1",
                 FC_DAX_DIRECT_EXPORT=s.directory + "/direct-export.json")
+        if getattr(self.args, "restore_timing", False):
+            env["FC_RESTORE_TIMING"] = "1"
         if direct_import:
             env["FC_DAX_DIRECT_IMPORT"] = direct_import
             env["FC_DAX_RAM"] = "/dev/dax0.0"
@@ -408,6 +410,17 @@ class HandoffController(PoolController):
         require(imports[0]["token"]["flags"] == 1 and imports[0]["token"]["node"] == (1 if destination == "A" else 2),
                 "Direct target has wrong ownership flags/node")
         s.direct_token = token
+        kernel_profile = None
+        if getattr(self, "kernel_profile_offset", None) is not None:
+            # Read existing bounded kernel diagnostics after the API interval.
+            # This never touches guest RAM or participates in admission.
+            offsets = " ".join(str(self.kernel_profile_offset + i * 4) for i in range(32))
+            raw, profile_file = self.shell(destination, f"for offset in {offsets}; do\n"
+                f"/lab/shared-probe dax-word {destination} /dev/dax0.0 $offset\ndone", "kernel-handoff-profile")
+            words = [int(value, 16) for value in re.findall(r"^LAB_DAX_WORD=0x([0-9a-f]{8})\s*$", raw, re.M)]
+            require(len(words) == 32, "Incomplete kernel timing record")
+            values = [words[i] | words[i+1] << 32 for i in range(0, 32, 2)]
+            kernel_profile = {"file": profile_file, "detach_ns": values[:8], "attach_ns": values[8:]}
         self.resume(s)
         after = self.command_vm(s, "check", require_cache=True)
         self.same_identity(before, after)
@@ -419,6 +432,8 @@ class HandoffController(PoolController):
             "manifest_bytes": len(manifest), "token": token, "import_event": imports[0],
             "ram_snapshot_bytes": 0, "ram_transfer_bytes": 0, "cpu_snapshot_bytes": 0,
             "source_accounting": source_accounting, "destination_placement": self.export_evidence(restored), "result": "passed"}
+        if kernel_profile:
+            row["kernel_profile"] = kernel_profile
         self.transitions.append(row)
         return row
 

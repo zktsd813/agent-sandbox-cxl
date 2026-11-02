@@ -44,6 +44,10 @@ def arguments():
     parser.add_argument("--names", choices=NAMES, nargs="+", default=list(NAMES))
     parser.add_argument("--modes", choices=MODES, nargs="+", default=list(MODES))
     parser.add_argument("--memory-mib", type=int, default=2048)
+    parser.add_argument("--restore-timing", action="store_true")
+    parser.add_argument("--immutable-nfs-cache", action="store_true",
+                        help="Remount the image filesystem readonly and allow 60s NFS attribute caching/nocto")
+    parser.add_argument("--direct-profile-roundtrips", type=int, default=0)
     parser.add_argument("--keep-storage", action="store_true",
                         help="Retain each recorded private outer disk after its pair stops")
     parser.add_argument("--defer-verification", action="store_true",
@@ -56,6 +60,8 @@ def arguments():
         parser.error("Use a taskset CPU list such as 0-7")
     if args.memory_mib != 2048:
         parser.error("This workload fixture uses 2048MiB and one vCPU per sandbox")
+    if not 0 <= args.direct_profile_roundtrips <= 20 or (args.direct_profile_roundtrips and args.modes != ['direct']):
+        parser.error("Profile repetitions require only direct mode and 0..20 roundtrips")
     if len(set(args.names)) != len(args.names) or len(set(args.modes)) != len(args.modes):
         parser.error("Do not repeat trace names or modes")
     return args
@@ -167,7 +173,12 @@ def main():
             if mode == "direct":
                 start.append("--dax-handoff")
             bench = prefix + [str(HERE / "swe_pool_bench.py"), "--mode", mode, "--name", name,
-                              "--memory-mib", str(args.memory_mib)]
+                              "--memory-mib", str(args.memory_mib),
+                              "--direct-profile-roundtrips", str(args.direct_profile_roundtrips)]
+            if args.restore_timing:
+                bench.append("--restore-timing")
+            if args.immutable_nfs_cache:
+                bench.append("--immutable-nfs-cache")
             save()
             failure = None
             try:

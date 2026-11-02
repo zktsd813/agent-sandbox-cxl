@@ -1,0 +1,24 @@
+{
+  "archives": [
+    {
+      "file": "baseline.tar.xz",
+      "bytes": 3289516,
+      "sha256": "cf775c0beeee2ed323fc2d533e74911b0b9d4e66650e8e9725bf2725d69a2807"
+    },
+    {
+      "file": "codeopt.tar.xz",
+      "bytes": 3239564,
+      "sha256": "e86849e1a186da37c84e74d8bfc35bd991656f4e468f487c2991bc2742c65675"
+    },
+    {
+      "file": "cached.tar.xz",
+      "bytes": 3236000,
+      "sha256": "3d6794ad842ae966d5d358c9be82c15fb51f63fcf8ab955d9d7d00b72702feed"
+    },
+    {
+      "file": "final.tar.xz",
+      "bytes": 3314088,
+      "sha256": "4f611ce5f52c4579334eff56c28031847102e1878668352abb5c5e097944c1db"
+    }
+  ]
+}

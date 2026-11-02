@@ -52,6 +52,7 @@ class SWEController(HandoffController):
         self.ready_keys, self.registrations, self.owners = set(), {}, {}
         self.last_image_hashes = {}
         self.serial_number = 0
+        self.kernel_profile_offset = 12288 * MIB + 512 if args.restore_timing else None
 
     def image_hash(self, role):
         # Read the complete 3–4GiB image in large chunks. With actimeo=0,
@@ -104,8 +105,10 @@ class SWEController(HandoffController):
                 lab.snapshot_cleanup_script(include_boot_vm=True) +
                 f'\nmkdir -p {self.root} /storage /disk /remote', 'prepare')
         name = self.trace['name']
+        immutable_cache = getattr(self.args, 'immutable_nfs_cache', False)
         self.shell('A', f'mount -t ext4 -o rw,noatime {device} /storage\n'
             f'ln {shlex.quote("/storage/" + name + ".raw")} /storage/sandbox.raw\n'
+            + ('mount -o remount,ro /storage\n' if immutable_cache else '') +
             'mount -o bind /storage /disk\nexport PATH=/usr/sbin:/usr/bin:/bin:/sbin:/lab\n'
             'mkdir -p /var/lib/nfs /run/rpcbind /proc/fs/nfsd\nmount -t nfsd nfsd /proc/fs/nfsd\n'
             "printf '/storage 172.30.0.2(ro,sync,no_subtree_check,no_root_squash,fsid=19)\\n' > /etc/exports\n"
@@ -113,7 +116,8 @@ class SWEController(HandoffController):
             f'rpc.mountd --foreground --no-nfs-version 2 --no-nfs-version 4 --port 20048 > {self.root}/mountd.log 2>&1 &\n'
             'rpc.nfsd -V3 -N4 4\nexportfs -v\ncat /proc/mounts', 'home-storage')
         self.shell('B', '/usr/sbin/mount.nfs 172.30.0.1:/storage /remote '
-            '-o ro,vers=3,proto=tcp,mountproto=tcp,port=2049,mountport=20048,nolock,hard,timeo=50,retrans=2,actimeo=0\n'
+            '-o ro,vers=3,proto=tcp,mountproto=tcp,port=2049,mountport=20048,nolock,hard,timeo=50,retrans=2,'
+            + ('actimeo=60,nocto\n' if immutable_cache else 'actimeo=0\n') +
             'mount -o bind /remote /disk\ncat /proc/mounts', 'remote-storage')
         for role in ('A', 'B'):
             require(self.image_hash(role)['sha256'] == self.image_id, 'Wrong immutable trace image')
@@ -133,6 +137,7 @@ class SWEController(HandoffController):
     def configure_direct(self):
         for role, node, mode in (('A', 1, 1), ('B', 2, 2)):
             self.shell(role, 'echo 2147483647 > /sys/module/kvm/parameters/dax_owner_pid\n'
+                + ('echo 1 > /sys/module/kvm/parameters/dax_handoff_profile\n' if self.args.restore_timing else '') +
                 'resource=$(cat /sys/bus/dax/devices/dax0.0/resource)\n'
                 'echo 3 > /sys/module/kvm/parameters/dax_handoff_mode\n'
                 'echo 1 > /sys/module/kvm/parameters/dax_nested_root_sync\n'
@@ -325,7 +330,12 @@ def main():
     parser.add_argument('--memory-mib', type=int, default=2048)
     parser.add_argument('--credit-mib', type=int, default=256)
     parser.add_argument("--full-audit", action="store_true")
+    parser.add_argument("--restore-timing", action="store_true")
+    parser.add_argument("--immutable-nfs-cache", action="store_true")
+    parser.add_argument("--direct-profile-roundtrips", type=int, default=0)
     args = parser.parse_args()
+    require(0 <= args.direct_profile_roundtrips <= 20 and
+            (not args.direct_profile_roundtrips or args.mode == 'direct'), 'Invalid direct profile repetitions')
     require(args.memory_mib == 2048 and args.credit_mib == 256, 'Use the bounded 2GiB/256MiB workload layout')
     run, config = lab.current_run()
     require(config['cxl_mib'] == 16384 and bool(config.get('dax_handoff')) == (args.mode == 'direct'), 'Wrong fresh pair mode/capacity')
@@ -371,6 +381,10 @@ def main():
             if args.mode != 'baseline' and index in (first,second):
                 if index == first:
                     c.promote(s)
+                    for _ in range(args.direct_profile_roundtrips):
+                        c.direct_handoff(s, 'B')
+                        c.direct_handoff(s, 'A')
+                        save()
                     (c.direct_handoff if s.direct else c.state_handoff)(s,'B')
                 else:
                     if args.full_audit: c.audit_cache(s)

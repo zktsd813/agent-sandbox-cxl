@@ -1,3 +1,46 @@
+diff --git a/src/firecracker/src/api_server/mod.rs b/src/firecracker/src/api_server/mod.rs
+index ecc11186d..672acecaf 100644
+--- a/src/firecracker/src/api_server/mod.rs
++++ b/src/firecracker/src/api_server/mod.rs
+@@ -149,6 +149,13 @@ impl ApiServer {
+         vmm_action: Box<VmmAction>,
+         request_processing_start_us: u64,
+     ) -> Response {
++        let direct_profile = (std::env::var("FC_RESTORE_TIMING").as_deref() == Ok("1")
++            && std::env::var("FC_DAX_DIRECT_IO").as_deref() == Ok("1"))
++            .then(|| match *vmm_action {
++                VmmAction::DirectExport => Some("export"),
++                VmmAction::StartMicroVm => Some("import"),
++                _ => None,
++            }).flatten();
+         let metric_with_action = match *vmm_action {
+             VmmAction::CreateSnapshot(ref params) => match params.snapshot_type {
+                 SnapshotType::Full => Some((
+@@ -168,13 +175,24 @@ impl ApiServer {
+             _ => None,
+         };
+ 
++        let dispatch_us = direct_profile.map(|_| get_time_us(ClockType::Monotonic));
+         self.api_request_sender
+             .send(vmm_action)
+             .expect("Failed to send VMM message");
+         self.to_vmm_fd.write(1).expect("Cannot update send VMM fd");
+         let vmm_outcome = *(self.vmm_response_receiver.recv().expect("VMM disconnected"));
++        let returned_us = direct_profile.map(|_| get_time_us(ClockType::Monotonic));
+         let response = ParsedRequest::convert_to_response(&vmm_outcome);
+ 
++        if let (Some(event), Some(dispatch), Some(returned)) = (direct_profile, dispatch_us, returned_us) {
++            let end = get_time_us(ClockType::Monotonic);
++            info_unrestricted!("DIRECT_API_TIMING {}", json!({
++                "event": event, "parse_us": dispatch - request_processing_start_us,
++                "vmm_roundtrip_us": returned - dispatch, "response_us": end - returned,
++                "total_us": end - request_processing_start_us,
++            }));
++        }
++
+         if vmm_outcome.is_ok()
+             && let Some((metric, action)) = metric_with_action
+         {
 diff --git a/src/firecracker/src/api_server/request/actions.rs b/src/firecracker/src/api_server/request/actions.rs
 index a3b3f3f3a..01aa2232d 100644
 --- a/src/firecracker/src/api_server/request/actions.rs
@@ -1666,7 +1709,7 @@ index 6637d196e..ca675b88e 100644
          if state.virtio_state.activated && balloon.stats_enabled() {
              // Restore the stats descriptor.
 diff --git a/src/vmm/src/devices/virtio/block/virtio/device.rs b/src/vmm/src/devices/virtio/block/virtio/device.rs
-index 78c1adde8..0d0a473ca 100644
+index 78c1adde8..01c041f55 100644
 --- a/src/vmm/src/devices/virtio/block/virtio/device.rs
 +++ b/src/vmm/src/devices/virtio/block/virtio/device.rs
 @@ -59,6 +59,7 @@ pub enum FileEngineType {
@@ -1677,15 +1720,47 @@ index 78c1adde8..0d0a473ca 100644
      pub file_path: String,
      pub file_engine: FileEngine,
      pub nsectors: u64,
-@@ -105,6 +106,7 @@ impl DiskProperties {
-         let image_id = Self::build_disk_image_id(&disk_image);
+@@ -100,14 +101,35 @@ impl DiskProperties {
+         is_disk_read_only: bool,
+         file_engine_type: FileEngineType,
+     ) -> Result<Self, VirtioBlockError> {
++        let mut timing = crate::persist::RestoreTiming::new("disk_properties");
+         let mut disk_image = Self::open_file(&disk_image_path, is_disk_read_only)?;
+-        let disk_size = Self::file_size(&disk_image_path, &mut disk_image)?;
+-        let image_id = Self::build_disk_image_id(&disk_image);
++        timing.mark("open");
++        // A regular image needs only one fstat for size and ID. SEEK_END can
++        // revalidate NFS attributes, then the old ID path did another fstat.
++        // Keep SEEK_END for raw block devices (st_size is not their capacity).
++        let metadata = disk_image.metadata().map_err(VirtioBlockError::GetFileMetadata)?;
++        let disk_size = if metadata.is_file() {
++            if metadata.len() % u64::from(SECTOR_SIZE) != 0 {
++                warn!("Disk size {} is not a multiple of sector size {}; the remainder will not be visible to the guest.", metadata.len(), SECTOR_SIZE);
++            }
++            metadata.len()
++        } else {
++            Self::file_size(&disk_image_path, &mut disk_image)?
++        };
++        timing.mark("size");
++        let image_id = Self::image_id_from_metadata(&metadata);
++        timing.mark("image_id");
++        let pool_identity = crate::pool_cache::disk_identity(&disk_image_path, is_disk_read_only);
++        timing.mark("pool_identity");
++        let file_engine = FileEngine::from_file(disk_image, file_engine_type)
++            .map_err(VirtioBlockError::FileEngine)?;
++        timing.mark("file_engine");
++        timing.finish();
  
          Ok(Self {
-+            pool_identity: crate::pool_cache::disk_identity(&disk_image_path, is_disk_read_only),
++            pool_identity,
              file_path: disk_image_path,
-             file_engine: FileEngine::from_file(disk_image, file_engine_type)
-                 .map_err(VirtioBlockError::FileEngine)?,
-@@ -122,6 +124,7 @@ impl DiskProperties {
+-            file_engine: FileEngine::from_file(disk_image, file_engine_type)
+-                .map_err(VirtioBlockError::FileEngine)?,
++            file_engine,
+             nsectors: disk_size >> SECTOR_SHIFT,
+             image_id,
+         })
+@@ -122,6 +144,7 @@ impl DiskProperties {
          let mut disk_image = Self::open_file(&disk_image_path, is_disk_read_only)?;
          let disk_size = Self::file_size(&disk_image_path, &mut disk_image)?;
  
@@ -1693,7 +1768,22 @@ index 78c1adde8..0d0a473ca 100644
          self.image_id = Self::build_disk_image_id(&disk_image);
          self.file_engine
              .update_file_path(disk_image)
-@@ -403,6 +406,8 @@ pub struct VirtioBlock {
+@@ -162,6 +185,14 @@ impl DiskProperties {
+         }
+         default_id
+     }
++
++    fn image_id_from_metadata(metadata: &std::fs::Metadata) -> [u8; VIRTIO_BLK_ID_BYTES as usize] {
++        let id = format!("{}{}{}", metadata.st_dev(), metadata.st_rdev(), metadata.st_ino());
++        let mut bytes = [0; VIRTIO_BLK_ID_BYTES as usize];
++        let count = bytes.len().min(id.len());
++        bytes[..count].copy_from_slice(&id.as_bytes()[..count]);
++        bytes
++    }
+ }
+ 
+ /// Internal type to store attributes of the block device
+@@ -403,6 +434,8 @@ pub struct VirtioBlock {
      pub disk: DiskProperties,
      pub rate_limiter: RateLimiter,
      pub is_io_engine_throttled: bool,
@@ -1702,7 +1792,7 @@ index 78c1adde8..0d0a473ca 100644
      pub metrics: Arc<BlockDeviceMetrics>,
  }
  
-@@ -504,6 +509,7 @@ impl VirtioBlock {
+@@ -504,6 +537,7 @@ impl VirtioBlock {
              disk: disk_properties,
              rate_limiter,
              is_io_engine_throttled: false,
@@ -1710,7 +1800,7 @@ index 78c1adde8..0d0a473ca 100644
              metrics: BlockMetricsPerDevice::alloc(config.drive_id),
          })
      }
-@@ -744,11 +750,23 @@ impl VirtioBlock {
+@@ -744,11 +778,23 @@ impl VirtioBlock {
  
      /// Prepare device for being snapshotted.
      pub fn prepare_save(&mut self) {
@@ -1735,7 +1825,19 @@ index 78c1adde8..0d0a473ca 100644
          if let FileEngine::Async(ref _engine) = self.disk.file_engine {
              self.process_async_completion_queue();
          }
-@@ -1968,6 +1986,29 @@ mod tests {
+@@ -985,8 +1031,9 @@ mod tests {
+ 
+             assert_eq!(size, u64::from(SECTOR_SIZE) * num_sectors);
+             assert_eq!(disk_properties.nsectors, num_sectors);
+-            // Testing `backing_file.virtio_block_disk_image_id()` implies
+-            // duplicating that logic in tests, so skipping it.
++            // The single-metadata path must preserve the ID exposed by the
++            // existing disk-update path, including truncation to virtio's ID.
++            assert_eq!(disk_properties.image_id, DiskProperties::build_disk_image_id(f.as_file()));
+ 
+             let res = DiskProperties::new("invalid-disk-path".to_string(), true, engine);
+             assert!(
+@@ -1968,6 +2015,29 @@ mod tests {
          }
      }
  
@@ -1765,7 +1867,7 @@ index 78c1adde8..0d0a473ca 100644
      #[test]
      fn test_prepare_save() {
          for engine in [FileEngineType::Sync, FileEngineType::Async] {
-@@ -1983,6 +2024,7 @@ mod tests {
+@@ -1983,6 +2053,7 @@ mod tests {
              add_flush_requests_batch(&mut block, &vq, 5);
              simulate_queue_event(&mut block, None);
              block.prepare_save();
@@ -1888,10 +1990,10 @@ index a6f5813ce..18bed9cca 100644
                  status_addr: Default::default(),
 diff --git a/src/vmm/src/direct.rs b/src/vmm/src/direct.rs
 new file mode 100644
-index 000000000..d7016aa9b
+index 000000000..15277d2bf
 --- /dev/null
 +++ b/src/vmm/src/direct.rs
-@@ -0,0 +1,504 @@
+@@ -0,0 +1,530 @@
 +// Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 +// SPDX-License-Identifier: Apache-2.0
 +
@@ -2068,6 +2170,7 @@ index 000000000..d7016aa9b
 +    /// Transfer only device bindings and publish the retained kernel-object token.
 +    /// Ordinary Pause intentionally retains ownership, so pooling can run first.
 +    pub fn direct_export(&mut self) -> Result<(), VmmError> {
++        let mut timing = crate::persist::RestoreTiming::new("direct_export");
 +        if !io_enabled()
 +            || self.instance_info.state != VmState::Paused
 +            || crate::pool_cache::mapping_failed()
@@ -2092,10 +2195,13 @@ index 000000000..d7016aa9b
 +            .open(&path)
 +            .map_err(VmmError::DaxHandoff)?;
 +        let started = std::time::Instant::now();
++        timing.mark("validate_and_open");
 +        let devices = self.device_manager.save(); // Drains async I/O and captures resulting used rings.
 +        self.check_block_snapshot_preparation()
 +            .map_err(|e| VmmError::DaxHandoff(io::Error::other(e.to_string())))?;
++        timing.mark("drain_and_save_devices");
 +        crate::pool_memory::seal_for_handoff(vm.guest_memory()).map_err(VmmError::DaxHandoff)?;
++        timing.mark("seal_mapper");
 +        let manifest =
 +            bounded_read(&env_path("FC_POOL_MEMORY_MANIFEST").map_err(VmmError::DaxHandoff)?)
 +                .map_err(VmmError::DaxHandoff)?;
@@ -2108,12 +2214,15 @@ index 000000000..d7016aa9b
 +            memory_manifest_sha256: sha256(&manifest),
 +            devices,
 +        };
++        timing.mark("read_manifest_and_build_state");
 +        let result = (|| -> io::Result<usize> {
 +            let VirtioDevices::Mmio(mmio) = &self.device_manager.virtio_devices else {
 +                unreachable!()
 +            };
 +            mmio.unbind_direct_ioevents(vm).map_err(io::Error::other)?;
++            timing.mark("unbind_ioevents");
 +            vm.dax_direct_handoff(false)?;
++            timing.mark("export_detach_ioctls");
 +            // PEEK is a read-only global metadata operation; source VM ioctls are now revoked.
 +            if unsafe {
 +                libc::ioctl(
@@ -2125,9 +2234,13 @@ index 000000000..d7016aa9b
 +            {
 +                return Err(io::Error::last_os_error());
 +            }
++            timing.mark("peek_token");
 +            let bytes = serde_json::to_vec(&state).map_err(io::Error::other)?;
++            timing.mark("serialize_devices");
 +            output.write_all(&bytes)?;
++            timing.mark("write_devices");
 +            output.sync_all()?;
++            timing.mark("sync_devices");
 +            Ok(bytes.len())
 +        })();
 +        let bytes = match result {
@@ -2145,6 +2258,8 @@ index 000000000..d7016aa9b
 +                "memory_manifest_sha256":state.memory_manifest_sha256,
 +            })
 +        );
++        timing.mark("log_receipt");
++        timing.finish();
 +        Ok(())
 +    }
 +}
@@ -2217,6 +2332,7 @@ index 000000000..d7016aa9b
 +    events: &mut EventManager,
 +    filters: &BpfThreadMap,
 +) -> Result<Arc<Mutex<Vmm>>, StartMicrovmError> {
++    let mut timing = crate::persist::RestoreTiming::new("direct_import");
 +    fn error(e: impl std::fmt::Display) -> StartMicrovmError {
 +        StartMicrovmError::Internal(VmmError::DaxHandoff(io::Error::other(e.to_string())))
 +    }
@@ -2230,6 +2346,7 @@ index 000000000..d7016aa9b
 +    if sha256(&manifest) != state.memory_manifest_sha256 {
 +        return Err(error("direct memory manifest checksum mismatch"));
 +    }
++    timing.mark("read_validate_metadata");
 +    let dax = env_path("FC_DAX_RAM").map_err(error)?;
 +    let offset = std::env::var("FC_DAX_OFFSET")
 +        .unwrap_or_else(|_| "2097152".into())
@@ -2246,11 +2363,16 @@ index 000000000..d7016aa9b
 +    if regions.len() != 1 || regions[0].as_ptr() as u64 != state.token.ram_hva {
 +        return Err(error("direct destination HVA differs from retained slot"));
 +    }
++    timing.mark("import_mapper");
 +    let kvm = Kvm::new(Vec::new()).map_err(error)?;
++    timing.mark("kvm_capabilities");
 +    let mut vm = KvmVm::attach_direct(kvm, &mut state.token).map_err(error)?;
++    timing.mark("attach_and_vm_wrapper");
 +    vm.adopt_direct_memory(regions, &state.memory, &state.token)
 +        .map_err(error)?;
++    timing.mark("adopt_memory");
 +    let vcpus = vm.create_vcpus(1).map_err(error)?;
++    timing.mark("vcpu_wrapper");
 +    let vm = Arc::new(vm);
 +    let mut local_resources = VmResources::default();
 +    local_resources.machine_config = state.machine_config.clone();
@@ -2269,6 +2391,7 @@ index 000000000..d7016aa9b
 +        &state.devices,
 +    )
 +    .map_err(error)?;
++    timing.mark("restore_devices");
 +    let vmm = Vmm {
 +        instance_info: InstanceInfo {
 +            state: VmState::Paused,
@@ -2283,6 +2406,7 @@ index 000000000..d7016aa9b
 +        device_manager: devices,
 +    };
 +    validate_live(&vmm).map_err(error)?;
++    timing.mark("validate_vmm");
 +    vm.start_vcpus(
 +        vcpus,
 +        filters
@@ -2291,8 +2415,10 @@ index 000000000..d7016aa9b
 +            .clone(),
 +    )
 +    .map_err(error)?;
++    timing.mark("start_vcpu_thread");
 +    let vmm = Arc::new(Mutex::new(vmm));
 +    events.add_subscriber(vmm.clone());
++    timing.mark("register_events");
 +    crate::logger::info_unrestricted!(
 +        "DIRECT_HANDOFF_JSON {}",
 +        serde_json::json!({
@@ -2300,6 +2426,8 @@ index 000000000..d7016aa9b
 +            "memory_manifest_sha256":state.memory_manifest_sha256,
 +        })
 +    );
++    timing.mark("log_receipt");
++    timing.finish();
 +    Ok(vmm)
 +}
 +
@@ -6427,7 +6555,7 @@ index 5af0b76dc..1c17787a1 100644
                  (NotAllowed(_), NotAllowed(_))
                  | (SavedState(_), SavedState(_))
 diff --git a/src/vmm/src/vstate/vm.rs b/src/vmm/src/vstate/vm.rs
-index dfedd6474..2ee0ff108 100644
+index dfedd6474..0156245a6 100644
 --- a/src/vmm/src/vstate/vm.rs
 +++ b/src/vmm/src/vstate/vm.rs
 @@ -7,9 +7,10 @@
@@ -6599,7 +6727,7 @@ index dfedd6474..2ee0ff108 100644
              handle
                  .send_event(crate::VcpuEvent::SaveState)
                  .map_err(MicrovmStateError::SignalVcpu)?;
-@@ -542,11 +603,147 @@ impl KvmVm {
+@@ -542,11 +603,157 @@ impl KvmVm {
          Ok(())
      }
  
@@ -6708,12 +6836,22 @@ index dfedd6474..2ee0ff108 100644
 +            self.common.dax_detached.store(false, Ordering::Release);
 +        } else {
 +            let irq_start = std::time::Instant::now();
-+            if std::env::var("FC_DAX_IRQFD_BATCH").as_deref() == Ok("1") {
++            let mut batched = false;
++            if crate::direct::io_enabled()
++                || std::env::var("FC_DAX_IRQFD_BATCH").as_deref() == Ok("1") {
 +                // SAFETY: private no-payload ioctl; all vCPUs acknowledged Pause.
-+                if unsafe { libc::ioctl(self.fd().as_raw_fd(), 0xaef6 as _, 0) } < 0 {
-+                    return Err(std::io::Error::last_os_error());
++                if unsafe { libc::ioctl(self.fd().as_raw_fd(), 0xaef6 as _, 0) } == 0 {
++                    batched = true;
++                } else {
++                    let error = std::io::Error::last_os_error();
++                    // Unsupported IRQFD sets are rejected before list mutation.
++                    // Keep the ordinary, fully drained path for those devices.
++                    if error.raw_os_error() != Some(libc::EOPNOTSUPP) {
++                        return Err(error);
++                    }
 +                }
-+            } else { for (event, gsi) in self.common.dax_irqs.lock().unwrap().iter() {
++            }
++            if !batched { for (event, gsi) in self.common.dax_irqs.lock().unwrap().iter() {
 +                self.fd()
 +                    .unregister_irqfd(event, *gsi)
 +                    .map_err(|e| std::io::Error::from_raw_os_error(e.errno()))?;
@@ -6747,7 +6885,7 @@ index dfedd6474..2ee0ff108 100644
      /// Gets a reference to this [`KvmVm`]'s [`GuestMemoryMmap`] object
      pub fn guest_memory(&self) -> &GuestMemoryMmap {
          &self.common.guest_memory
-@@ -666,6 +863,13 @@ impl KvmVm {
+@@ -666,6 +873,13 @@ impl KvmVm {
      /// Register a device IRQ
      pub fn register_irq(&self, fd: &EventFd, gsi: u32) -> Result<(), errno::Error> {
          self.common.fd.register_irqfd(fd, gsi)?;

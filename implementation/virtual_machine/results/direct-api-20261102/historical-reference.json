@@ -1,0 +1,82 @@
+{
+  "model": "direct",
+  "memory_mib": 2048,
+  "report": "/home/ijkim/agent-sandbox-cxl/implementation/virtual_machine/.local/runs/20261020T061558Z-h4vyl7lo/direct-linux-handoff-1792476960803576017/report.json",
+  "report_sha256": "64c51a028fab2e6b94faae8207a405998ee7113918331eaa7239c1c12877a97e",
+  "measured_rounds": 20,
+  "warmup_rounds": 4,
+  "working_set": {
+    "bytes": 2016403456,
+    "available_bytes": 2033180672,
+    "fraction_of_memory": 0.9389610290527344,
+    "instance_id": 7233194868846079905
+  },
+  "retained_objects": {
+    "vm_vcpu_vmcs_offsets": [
+      8192,
+      76928,
+      118784
+    ],
+    "ept_root_offset": 475136,
+    "ept_page_count": 1016,
+    "vm_creates": 1,
+    "vcpu_creates": 1
+  },
+  "validation": {
+    "handoffs": 24,
+    "identical_object_offsets": [
+      8192,
+      76928,
+      118784
+    ],
+    "vm_creates": 1,
+    "vcpu_creates": 1,
+    "continuity_checks": "Linux heartbeat and retained dense working set",
+    "kernel_taint": 0,
+    "snapshot_api_calls": 0,
+    "duplicate_attach_rejected": true,
+    "old_owner_vcpu_access_revoked": true,
+    "dense_working_set_verified_every_round": true,
+    "primary_guest_instance_preserved": true,
+    "dense_scan_rounds": 24,
+    "identical_ept_root_offset": 475136,
+    "ept_page_count": 1016,
+    "boot_markers": 1,
+    "retained_heap_errors": 0,
+    "guest_clock_errors": 0,
+    "guest_tsc_errors": 0,
+    "raw_tsc_check_enabled": true,
+    "host_backwards_tsc_warnings": 0,
+    "firecracker_checks_scanned_full_log": true,
+    "changing_memory_mib": 0,
+    "guest_clocksource": "kvm-clock"
+  },
+  "metrics_ms": {
+    "destination.kernel_attach_ms": {
+      "n": 20,
+      "mean": 0.04524215,
+      "p50": 0.0451935,
+      "p95": 0.047286999999999996,
+      "min": 0.04273,
+      "max": 0.052276
+    },
+    "pause_to_first_ack_ms": {
+      "n": 20,
+      "mean": 0.34290505,
+      "p50": 0.336472,
+      "p95": 0.45254,
+      "min": 0.2309,
+      "max": 0.552056
+    },
+    "source.kernel_detach_ms": {
+      "n": 20,
+      "mean": 0.03821605,
+      "p50": 0.0309325,
+      "p95": 0.068077,
+      "min": 0.020126,
+      "max": 0.089561
+    }
+  },
+  "measurement_scope": "Prepared retained executor/FD path, no block/NFS device transfer; includes pause to guest heartbeat ACK",
+  "source": "implementation/virtual_machine/dax-size-comparison.json"
+}

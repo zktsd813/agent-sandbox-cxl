@@ -1,0 +1,167 @@
+{
+  "source_archive": "../pool-incremental-20261102/swe-gin.tar.xz",
+  "rows": [
+    {
+      "source": "A",
+      "destination": "B",
+      "source_epoch": 0,
+      "export_api": {
+        "file": "0121-api.txt",
+        "role": "A",
+        "path": "/actions",
+        "method": "PUT",
+        "request": {
+          "action_type": "DirectExport"
+        },
+        "response": {
+          "status": 204,
+          "expected_status": 204,
+          "duration_us": 2776.812,
+          "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+        }
+      },
+      "attach_api": {
+        "file": "0140-api.txt",
+        "role": "B",
+        "path": "/actions",
+        "method": "PUT",
+        "request": {
+          "action_type": "InstanceStart"
+        },
+        "response": {
+          "status": 204,
+          "expected_status": 204,
+          "duration_us": 10620.267,
+          "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+        }
+      },
+      "token": {
+        "vm_offset": 8192,
+        "vcpu_offset": 76928,
+        "vmcs_offset": 118784,
+        "run_offset": 90112,
+        "generation": 1,
+        "kernel_ns": 818606,
+        "pool_used": 3229984,
+        "vm_creates": 1,
+        "vcpu_creates": 1,
+        "ram_hva": 70368744177664,
+        "ram_bytes": 2147483648,
+        "node": 1,
+        "flags": 2,
+        "quiesce_ns": 4000,
+        "mmu_drain_ns": 570476,
+        "binding_ns": 191310,
+        "ept_root_offset": 479232,
+        "ept_page_count": 345
+      },
+      "import_event": {
+        "event": "import",
+        "memory_manifest_sha256": "52def9d00fae49822f5314783a02e6fc6b82c5f649def48a3892d4add3bb9121",
+        "ram_transfer_bytes": 0,
+        "snapshot_bytes": 0,
+        "token": {
+          "binding_ns": 191310,
+          "ept_page_count": 345,
+          "ept_root_offset": 479232,
+          "flags": 1,
+          "generation": 1,
+          "kernel_ns": 1335120,
+          "mmu_drain_ns": 570476,
+          "node": 2,
+          "pool_used": 3229984,
+          "quiesce_ns": 4000,
+          "ram_bytes": 2147483648,
+          "ram_hva": 70368744177664,
+          "run_offset": 90112,
+          "vcpu_creates": 1,
+          "vcpu_offset": 76928,
+          "vm_creates": 1,
+          "vm_offset": 8192,
+          "vmcs_offset": 118784
+        }
+      }
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "source_epoch": 1,
+      "export_api": {
+        "file": "0212-api.txt",
+        "role": "B",
+        "path": "/actions",
+        "method": "PUT",
+        "request": {
+          "action_type": "DirectExport"
+        },
+        "response": {
+          "status": 204,
+          "expected_status": 204,
+          "duration_us": 2257.878,
+          "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+        }
+      },
+      "attach_api": {
+        "file": "0231-api.txt",
+        "role": "A",
+        "path": "/actions",
+        "method": "PUT",
+        "request": {
+          "action_type": "InstanceStart"
+        },
+        "response": {
+          "status": 204,
+          "expected_status": 204,
+          "duration_us": 7670.517,
+          "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+        }
+      },
+      "token": {
+        "vm_offset": 8192,
+        "vcpu_offset": 76928,
+        "vmcs_offset": 118784,
+        "run_offset": 90112,
+        "generation": 2,
+        "kernel_ns": 202503,
+        "pool_used": 3839904,
+        "vm_creates": 1,
+        "vcpu_creates": 1,
+        "ram_hva": 70368744177664,
+        "ram_bytes": 2147483648,
+        "node": 2,
+        "flags": 2,
+        "quiesce_ns": 4490,
+        "mmu_drain_ns": 1786,
+        "binding_ns": 58477,
+        "ept_root_offset": 479232,
+        "ept_page_count": 424
+      },
+      "import_event": {
+        "event": "import",
+        "memory_manifest_sha256": "43c8de3ae4249ea3587ac62f109ed24c05979cfd98e9e7887234ba3394ddd0ac",
+        "ram_transfer_bytes": 0,
+        "snapshot_bytes": 0,
+        "token": {
+          "binding_ns": 58477,
+          "ept_page_count": 424,
+          "ept_root_offset": 479232,
+          "flags": 1,
+          "generation": 2,
+          "kernel_ns": 2601994,
+          "mmu_drain_ns": 1786,
+          "node": 1,
+          "pool_used": 3839904,
+          "quiesce_ns": 4490,
+          "ram_bytes": 2147483648,
+          "ram_hva": 70368744177664,
+          "run_offset": 90112,
+          "vcpu_creates": 1,
+          "vcpu_offset": 76928,
+          "vm_creates": 1,
+          "vm_offset": 8192,
+          "vmcs_offset": 118784
+        }
+      }
+    }
+  ]
+}

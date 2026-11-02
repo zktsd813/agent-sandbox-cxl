@@ -24,7 +24,11 @@ DAX 공유 영역은 기본 2GiB다. 기본 microVM은 1 vCPU·128MiB이고 RAM 
 
 ## 다음 세션 인계: 2026-11-02
 
-최신 변경은 [pooling handoff의 반복 RAM 순회 제거](../../docs/cxl-pool-incremental-handoff.md)다.
+최신 변경은 [Direct API 단계별 계측과 NFS/IRQFD 최적화](../../docs/cxl-direct-api-latency.md)다.
+11.66ms API와 2.48ms kernel 수치의 차이, 예전 1ms 미만 executor 경로와의 차이를 설명한다.
+[원시 실험·재검증 자료](results/direct-api-20261102/README.md)에서 코드 변경과 immutable NFS 설정의 효과를 구분한다.
+
+직전 변경은 [pooling handoff의 반복 RAM 순회 제거](../../docs/cxl-pool-incremental-handoff.md)다.
 정상 direct/state-only 인계는 ABI 2의 VM-private CXL mapper와 고정 크기 handle을 사용한다.
 전체 mapping/PTE 조회는 `FC_POOL_FULL_AUDIT=1`을 명시한 audit에서만 실행하며, SWE replay의 기본값은 꺼짐이다.
 Nested lab direct 설정에는 `kvm.dax_nested_root_sync=1`이 추가되었다. 이는 외부 KVM의 오래된 nested EPT 갱신용이며 물리 CXL coherence 처리가 아니다.

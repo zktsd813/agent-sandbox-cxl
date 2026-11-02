@@ -56,7 +56,9 @@ def execution_identity(report):
                                                        "shared_mib", "cxl_mib", "dax_guest", "dax_4k")},
         "storage_template_sha256": config["home_storage_image"]["template_sha256"],
         "memory_mib": report["arguments"]["memory_mib"], "vcpus": 1,
-        "credit_mib": report["arguments"]["credit_mib"]}
+        "credit_mib": report["arguments"]["credit_mib"],
+        "immutable_nfs_cache": report["arguments"].get("immutable_nfs_cache", False),
+        "restore_timing": report["arguments"].get("restore_timing", False)}
     workload = {key: plan[key] for key in ("name", "trace_sha256", "image_sha256", "image_bytes", "command_count",
         "commands", "handoff_before", "environment", "effective_environment", "pool_files", "pool_requested_pages")}
     workload["initramfs_sha256"] = fixture["artifacts"][plan["name"] + "-initramfs.cpio"]
@@ -389,6 +391,18 @@ def verify(path):
              "measured source differs")
     trace_result = verify_trace(e, report)
     runtime_inputs(e, report)
+    if report['arguments'].get('immutable_nfs_cache', False):
+        home = [r for r in report['receipts'] if r['kind'] == 'home-storage']
+        remote = [r for r in report['receipts'] if r['kind'] == 'remote-storage']
+        need(len(home) == len(remote) == 1, 'immutable mount evidence absent')
+        home_mounts = [line.split() for line in e.text(home[0]['file']).splitlines()]
+        remote_mounts = [line.split() for line in e.text(remote[0]['file']).splitlines()]
+        need(any(len(row) == 6 and row[1:3] == ['/storage', 'ext4'] and
+                 'ro' in row[3].split(',') for row in home_mounts), 'NFS cached image source is writable')
+        # Linux omits acregmax/acdirmax when they equal their 60s defaults.
+        need(any(len(row) == 6 and row[1:3] == ['/remote', 'nfs'] and
+                 {'ro', 'nocto', 'acregmin=60', 'acdirmin=60'} <=
+                 set(row[3].split(',')) for row in remote_mounts), 'immutable NFS cache mount differs')
     incarnations = {}
     expected_vmm = report.get("runtime_overrides", {}).get("firecracker", {}).get("sha256")
     if expected_vmm is None:
@@ -629,18 +643,24 @@ def verify(path):
     if report["mode"] == "baseline":
         need(not counts and not authorities and not report["allocator_events"] and not report["audits"], "baseline changed tier")
     else:
-        need(counts == {"promotion": 2, "demotion": 2, report["mode"]: 2}, "required lifecycle incomplete")
+        rounds = report["arguments"].get("direct_profile_roundtrips", 0)
+        need(type(rounds) is int and 0 <= rounds <= 20 and
+             (rounds == 0 or report["mode"] == "direct"), "invalid profile repetitions")
+        nhops = 2 + 2 * rounds
+        need(counts == {"promotion": 2, "demotion": 2, report["mode"]: nhops}, "required lifecycle incomplete")
         need(shared_bytes and max(shared_bytes) > 0, "no naturally resident eligible lower data")
         compact = all(e.json(t["export"]["file"]).get("version") == 2 for t in report["transitions"] if t["kind"] == "promotion")
         expected_audits = 2 if not compact or report["arguments"].get("full_audit", False) else 0
         need(len(report["audits"]) == expected_audits, "explicit PTE audit coverage mismatch")
         sequence = [row["kind"] for row in report["transitions"]]
-        need(sequence == ["promotion", report["mode"], report["mode"], "demotion", "promotion", "demotion"],
+        need(sequence == ["promotion"] + [report["mode"]] * nhops + ["demotion", "promotion", "demotion"],
              "unexpected lifecycle ordering")
         hops = [row for row in report["transitions"] if row["kind"] == report["mode"]]
         need([(row["source"], row["destination"], row["source_epoch"], row["destination_epoch"]) for row in hops] ==
-             [("A", "B", 0, 1), ("B", "A", 1, 2)], "unexpected ownership itinerary")
-        need([row["before"]["receipt"]["next_index"] for row in hops] == report["boundaries"], "handoff crossed command boundary")
+             [("A" if i % 2 == 0 else "B", "B" if i % 2 == 0 else "A", i, i+1)
+              for i in range(nhops)], "unexpected ownership itinerary")
+        need([row["before"]["receipt"]["next_index"] for row in hops] ==
+             [report["boundaries"][0]] * (nhops-1) + [report["boundaries"][1]], "handoff crossed command boundary")
         allocator = report["allocator_final"]
         need(allocator["allocated_bytes"] == 0 and allocator["owners"] == {} and
              allocator["capacity_bytes"] == allocator["free_bytes"] == PRIVATE_END - PRIVATE_START, "allocator not completely returned")
