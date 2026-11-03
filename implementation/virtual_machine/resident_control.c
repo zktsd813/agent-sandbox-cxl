@@ -112,11 +112,11 @@ static void print_api(const char *name,const struct api_result *a) {
 
 static void validate_request(const struct request *q,const char *nonce) {
  check(q->magic==MAGIC && q->nonce[32]==0 && !strcmp(q->nonce,nonce)
-       && q->label[95]==0 && q->label[0] && q->first<=1 && q->operation<=1 && q->observe<=1 && q->persistent<=1,"request identity");
+       && q->label[95]==0 && q->label[0] && q->first<=1 && q->operation<=2 && q->observe<=1 && q->persistent<=1,"request identity");
  check(strlen(q->label)<90 && strspn(q->label,"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-:.")==strlen(q->label),"request label");
- if(q->operation==1) {
+ if(q->operation==1 || q->operation==2) {
   struct in_addr address;
-  check(q->peer[15]==0 && inet_pton(AF_INET,q->peer,&address)==1 && q->epoch>0,"handoff peer/epoch");
+  check(q->peer[15]==0 && inet_pton(AF_INET,q->peer,&address)==1 && (q->operation==2 || q->epoch>0),"handoff peer/epoch");
  }
  if(q->epoch) check(q->canonical_start%4096==0 && q->canonical_bytes>0
                   && q->canonical_bytes%4096==0 && q->canonical_start<=UINT64_MAX-q->canonical_bytes,"plan bounds");
@@ -153,12 +153,12 @@ static uint64_t number(const char *s) {
  check(s[0] && strspn(s,"0123456789")==strlen(s) && !errno && !*end,"integer argument");return n;
 }
 int main(int argc,char **argv) {
- check(argc==5||argc==7||argc==12||argc==13,"usage: serve DIR IP NONCE | handoff DIR PEER NONCE FIRST LABEL | request DIR LOCAL_IP NONCE FIRST LABEL PEER VM EPOCH START BYTES [OBSERVE]");
+ check(argc==5||argc==6||argc==7||argc==12||argc==13,"usage: serve DIR IP NONCE | handoff DIR PEER NONCE FIRST LABEL | request DIR LOCAL_IP NONCE FIRST LABEL PEER VM EPOCH START BYTES [OBSERVE]");
  check(strlen(argv[2])<sizeof(directory)&&!strncmp(argv[2],"/run/swe-pool-",14),"owned directory required");strcpy(directory,argv[2]);path(socket_path,sizeof(socket_path),"api.sock");
  check(strlen(argv[4])==32&&strspn(argv[4],"0123456789abcdef")==32,"session nonce");signal(SIGPIPE,SIG_IGN);
 
  if(!strcmp(argv[1],"launch")) {
-  check(argc==5,"launch arguments");uint64_t begin=ns();char control[256],log[256];
+  check(argc==5||argc==6,"launch arguments");uint64_t begin=ns();char control[256],log[256];
   path(control,sizeof(control),"control");path(log,sizeof(log),"control/log");
   if(mkdir(control,0700))fail("fresh controller directory");
   int pipefd[2];if(pipe2(pipefd,O_CLOEXEC))fail("readiness pipe");uint64_t fork_start=ns();
@@ -179,7 +179,17 @@ int main(int argc,char **argv) {
   close(in);close(out);argv[1]="serve";
  }
  if(!strcmp(argv[1],"serve")){
-  check(argc==5,"serve arguments");int listener=tcp(argv[3],1),local=local_socket(1);puts("RESIDENT_CONTROL_READY");fflush(stdout);
+  check(argc==5||argc==6,"serve arguments");int listener=tcp(argv[3],1),local=local_socket(1);
+  if(argc==6) {
+   // Destination launch follows source readiness. Warm TCP/ARP while the VM
+   // still runs on its source; this message never selects an execution owner.
+   uint64_t begin=ns();struct request q={.magic=MAGIC,.operation=2,.persistent=1};
+   check(strlen(argv[5])<sizeof(q.peer),"prepare peer length");strcpy(q.peer,argv[5]);strcpy(q.nonce,argv[4]);strcpy(q.label,"prepare");
+   validate_request(&q,argv[4]);peer_fd=tcp(q.peer,0);strcpy(peer_ip,q.peer);send_all(peer_fd,&q,sizeof(q));
+   uint32_t marker;recv_all(peer_fd,&marker,sizeof(marker));check(marker==MAGIC,"peer preparation acknowledgement");
+   printf("RESIDENT_PEER_READY_JSON {\"connection_prepare_ns\":%"PRIu64",\"owner_changed\":false}\n",ns()-begin);
+  }
+  puts("RESIDENT_CONTROL_READY");fflush(stdout);
   if(readiness_pipe>=0){write_all(readiness_pipe,"R",1);close(readiness_pipe);readiness_pipe=-1;}
   for(;;){
    struct pollfd watched[3]={{.fd=listener,.events=POLLIN},{.fd=local,.events=POLLIN},{.fd=peer_fd,.events=POLLIN}};
@@ -189,6 +199,13 @@ int main(int argc,char **argv) {
    else {fd=accept4(trigger?local:listener,NULL,NULL,SOCK_CLOEXEC);if(fd<0)fail("accept");timeout(fd);
     if(!trigger){int one=1;if(setsockopt(fd,IPPROTO_TCP,TCP_NODELAY,&one,sizeof(one)))fail("accepted TCP_NODELAY");}}
    struct request q;recv_all(fd,&q,sizeof(q));validate_request(&q,argv[4]);
+   if(q.operation==2) {
+    check(!trigger && peer_fd<0 && q.persistent && !q.state_len && !q.manifest_len && !q.epoch && !q.observe,
+          "invalid peer preparation");
+    struct sockaddr_in address;socklen_t size=sizeof(address);
+    if(getpeername(fd,(void*)&address,&size)||!inet_ntop(AF_INET,&address.sin_addr,peer_ip,sizeof(peer_ip)))fail("prepared peer identity");
+    peer_fd=fd;uint32_t marker=MAGIC;send_all(fd,&marker,sizeof(marker));continue;
+   }
    check(q.operation==(unsigned)trigger,"wrong request channel");
    char ack[4096];
    if(q.operation==1) {

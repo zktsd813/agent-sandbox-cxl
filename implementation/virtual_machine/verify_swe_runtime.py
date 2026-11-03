@@ -110,6 +110,15 @@ def verify(path):
                 identity_pair(e,transition['before'],transition['after'])
             handoffs.append(transition)
         else:raise ValueError('Unknown transition')
+    for preparation in r.get('resident_preparations',[]):
+        server=preparation.get('servers',{}).get('B',{})
+        if 'peer_ready' in server:
+            peer=e.record(server['file'],'RESIDENT_PEER_READY_JSON ')
+            need(peer==server['peer_ready'] and peer['owner_changed'] is False and
+                 0<peer['connection_prepare_ns']<=server['native_boot']['native_ready_ns'],
+                 'Peer connection preparation changed')
+            need(all(hop['fast']['connection_prepare_ns']==0 for hop in handoffs),
+                 'Prepared peer reconnected during handoff')
     events = {}
     for name,item in e.items.items():
         if item['kind'] != 'final-vmm-log':continue

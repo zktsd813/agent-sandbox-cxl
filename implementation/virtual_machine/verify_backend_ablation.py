@@ -133,6 +133,14 @@ def trial(path):
     need(len(r['negative_apis'])==expected_apis,'Missing parked-owner rejection checks')
     for row in r['negative_apis']:
         need(receipt_record(row,'LAB_API_JSON ')['status']==400,'Parked owner operation accepted')
+    servers=r['preparation'].get('servers',{})
+    if servers.get('B',{}).get('peer_ready') is not None:
+        server=servers['B'];peer=server['peer_ready']
+        need(records(read(server['file']),'RESIDENT_PEER_READY_JSON ')==[peer] and
+             peer['owner_changed'] is False and 0<peer['connection_prepare_ns']<=server['native_boot']['native_ready_ns'],
+             'Peer connection preparation changed')
+        need(all(h['timing']['connection_prepare_ns']==0 for h in r['hops']),
+             'Prepared peer reconnected during handoff')
     boot=r['preparation']['worker']['native_boot']
     need(records(read(r['preparation']['worker']['native_boot_file']),'RESIDENT_BOOT_JSON ')==[boot],'Preparation summary changed')
     if r['arm'] in ('none','nfs-unprepared'):

@@ -157,6 +157,7 @@ class Controller(HandoffController):
         cold={'wall_ns':time.monotonic_ns()-begin,'stages':self.control_timings[first:],
             'worker':dict(self.resident_workers['B'])}
         cold['server_wall_ns']=resident_fast.prepare_servers(self)
+        cold['servers']={role:dict(server) for role,server in self.resident_servers.items()}
         return cold
 
     def hop(self,s):

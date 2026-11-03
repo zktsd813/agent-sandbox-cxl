@@ -34,12 +34,16 @@ def prepare_servers(c):
         c.resident_servers = {}
         c.resident_control_nonce = secrets.token_hex(16)
     started=time.monotonic_ns()
-    for role, worker in c.resident_workers.items():
+    for role in ('A','B'):
+        worker=c.resident_workers[role]
         if role in c.resident_servers: continue
         directory=worker['directory'];control=directory+'/control'
         ip='172.30.0.1' if role=='A' else '172.30.0.2'
         if getattr(c.args,'resident_ready_control',False):
             command=f'/lab/resident-control launch {directory} {ip} {c.resident_control_nonce}'
+            if role == 'B':
+                command += ' 172.30.0.1'
+                command += f'\ncat {control}/log'
         else:
             command=(f'mkdir -p {control}\n'
                 f'/lab/resident-control serve {directory} {ip} {c.resident_control_nonce} > {control}/log 2>&1 &\n'
@@ -53,6 +57,11 @@ def prepare_servers(c):
             boots=json_lines(raw,'RESIDENT_SERVER_BOOT_JSON ')
             require(len(boots)==1,'Native controller readiness missing')
             c.resident_servers[role]['native_boot']=boots[0]
+            if role == 'B':
+                peers=json_lines(raw,'RESIDENT_PEER_READY_JSON ')
+                require(len(peers)==1 and peers[0]['connection_prepare_ns']>0 and peers[0]['owner_changed'] is False,
+                        'Peer preparation did not complete')
+                c.resident_servers[role]['peer_ready']=peers[0]
     return time.monotonic_ns()-started
 
 
