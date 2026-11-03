@@ -1,0 +1,135 @@
+[
+ {
+  "run": "20261027T014343Z-pilot-k96-none-g8-sync5-v1-ssync1-z7fltng_",
+  "condition": "sync-s015-k96-iso-pack",
+  "pool": "none",
+  "placement": "pack",
+  "gap_scale": 0.15,
+  "cores": 30,
+  "mean_step_slowdown": 0.9412,
+  "mean_clean_step_slowdown": 1.0594,
+  "mean_step_s": 595.68,
+  "mean_utilization": 0.4757,
+  "mean_wait_over_run": 0.0782,
+  "mean_tail_fraction": 0.2348,
+  "wait_share_first": {
+   "10s": 0.2226,
+   "30s": 0.2858,
+   "60s": 0.3489
+  }
+ },
+ {
+  "run": "20261027T023444Z-pilot-k96-all-g8-sync5-v1-ssync1-geseez8h",
+  "condition": "sync-s015-k96-pool",
+  "pool": "all",
+  "placement": "pack",
+  "gap_scale": 0.15,
+  "cores": 30,
+  "mean_step_slowdown": 0.9272,
+  "mean_clean_step_slowdown": 1.032,
+  "mean_step_s": 592.68,
+  "mean_utilization": 0.494,
+  "mean_wait_over_run": 0.0438,
+  "mean_tail_fraction": 0.2254,
+  "wait_share_first": {
+   "10s": 0.3165,
+   "30s": 0.3963,
+   "60s": 0.4786
+  }
+ },
+ {
+  "run": "20261027T032525Z-pilot-k96-none-g8-sync4-v1-ssync1-_qnk3oq2",
+  "condition": "sync-s025-k96-iso-pack",
+  "pool": "none",
+  "placement": "pack",
+  "gap_scale": 0.25,
+  "cores": 30,
+  "mean_step_slowdown": 0.9153,
+  "mean_clean_step_slowdown": 1.0248,
+  "mean_step_s": 831.575,
+  "mean_utilization": 0.3582,
+  "mean_wait_over_run": 0.0432,
+  "mean_tail_fraction": 0.1782,
+  "wait_share_first": {
+   "10s": 0.3744,
+   "30s": 0.4511,
+   "60s": 0.54
+  }
+ },
+ {
+  "run": "20261027T042202Z-pilot-k96-all-g8-sync4-v1-ssync1-l_e7qlqr",
+  "condition": "sync-s025-k96-pool",
+  "pool": "all",
+  "placement": "pack",
+  "gap_scale": 0.25,
+  "cores": 30,
+  "mean_step_slowdown": 0.9247,
+  "mean_clean_step_slowdown": 1.0107,
+  "mean_step_s": 838.725,
+  "mean_utilization": 0.3596,
+  "mean_wait_over_run": 0.0315,
+  "mean_tail_fraction": 0.1835,
+  "wait_share_first": {
+   "10s": 0.409,
+   "30s": 0.4748,
+   "60s": 0.5632
+  }
+ },
+ {
+  "run": "20261027T051904Z-pilot-k96-none-g8-sync5-v1-ssync1-cuuj71pp",
+  "condition": "sync-s015-k96-iso-spread",
+  "pool": "none",
+  "placement": "spread",
+  "gap_scale": 0.15,
+  "cores": 30,
+  "mean_step_slowdown": 0.9824,
+  "mean_clean_step_slowdown": 1.073,
+  "mean_step_s": 631.32,
+  "mean_utilization": 0.4722,
+  "mean_wait_over_run": 0.0557,
+  "mean_tail_fraction": 0.2602,
+  "wait_share_first": {
+   "10s": 0.2522,
+   "30s": 0.3121,
+   "60s": 0.3744
+  }
+ },
+ {
+  "run": "20261027T061304Z-pilot-k96-none-g8-sync2-v1-ssync1-__rw1dy3",
+  "condition": "sync-s1-k96-iso-pack",
+  "pool": "none",
+  "placement": "pack",
+  "gap_scale": 1.0,
+  "cores": 30,
+  "mean_step_slowdown": 1.004,
+  "mean_clean_step_slowdown": 1.004,
+  "mean_step_s": 2978.35,
+  "mean_utilization": 0.1063,
+  "mean_wait_over_run": 0.0401,
+  "mean_tail_fraction": 0.166,
+  "wait_share_first": {
+   "10s": 0.3879,
+   "30s": 0.4462,
+   "60s": 0.4954
+  }
+ },
+ {
+  "run": "20261027T075321Z-pilot-k96-all-g8-sync2-v1-ssync1-s3dl4wnx",
+  "condition": "sync-s1-k96-pool",
+  "pool": "all",
+  "placement": "pack",
+  "gap_scale": 1.0,
+  "cores": 30,
+  "mean_step_slowdown": 1.0055,
+  "mean_clean_step_slowdown": 1.0055,
+  "mean_step_s": 2982.75,
+  "mean_utilization": 0.1073,
+  "mean_wait_over_run": 0.029,
+  "mean_tail_fraction": 0.1655,
+  "wait_share_first": {
+   "10s": 0.4182,
+   "30s": 0.4592,
+   "60s": 0.493
+  }
+ }
+]

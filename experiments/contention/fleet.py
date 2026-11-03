@@ -304,8 +304,16 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
               place_k, floating, steps, begin_step, gap_steps, timeout_steps,
               mech_kind, pause, latency_steps, handoff_cpu_s, dump_s_per_gib, xfer_s_per_gib,
               detect_steps, threshold, hold_steps, max_batch, job_size, train_steps, jitter, gap_scale,
-              cfs, sleeper_credit_s, inflation, carry, bernoulli, kw_a, kw_b, kw_latency):
+              cfs, sleeper_credit_s, inflation, carry, bernoulli, kw_a, kw_b, kw_latency,
+              img_of_trace, n_images, place_mode, loc_bonus, retention_steps):
     n_slots = slot_home.shape[0]
+    # image residency per node (a sandbox of the image is there, or one left within the retention time), for the
+    # locality-aware placements and the page-cache replay (events: step, node, image, kind 0 start/1 end/2 in/3 out)
+    res_count = np.zeros((n_nodes, max(1, n_images)), np.int64)
+    res_last = np.full((n_nodes, max(1, n_images)), -(10 ** 12), np.int64)
+    max_ev = 4_000_000
+    ev = np.zeros((max_ev, 4), np.int64)
+    n_ev = 0
     vrun = np.zeros(n_slots)      # CFS virtual runtime per sandbox (seconds of CPU per thread)
     was_runnable = np.zeros(n_slots, np.bool_)
     task_v = np.zeros(200000)
@@ -368,11 +376,35 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
             if not active[s] and next_start[s] >= 0 and step >= next_start[s]:
                 t = choices[s, choice_i[s] % choices.shape[1]]
                 if floating:
+                    # 0: less loaded of k sampled nodes (DSec power-of-k); 1: locality first (least loaded node that
+                    # holds the image, else power-of-k); 2: power-of-k score with a bonus for holding the image;
+                    # 3: fixed image home (image index mod N)
+                    img = img_of_trace[t]
                     best = -1
-                    for j in range(place_k):
-                        cand = int(place_rand[s, choice_i[s] % place_rand.shape[1], j] * n_nodes)
-                        if best < 0 or live[cand] < live[best]:
-                            best = cand
+                    if place_mode == 1:
+                        for n in range(n_nodes):
+                            if (res_count[n, img] > 0 or step - res_last[n, img] <= retention_steps) \
+                                    and (best < 0 or live[n] < live[best]):
+                                best = n
+                    elif place_mode == 3:
+                        best = img % n_nodes
+                    if best < 0:
+                        best_score = 1e300
+                        for j in range(place_k):
+                            cand = int(place_rand[s, choice_i[s] % place_rand.shape[1], j] * n_nodes)
+                            sc = float(live[cand])
+                            if place_mode == 2 and (res_count[cand, img] > 0 or step - res_last[cand, img] <= retention_steps):
+                                sc -= loc_bonus
+                            if sc < best_score:
+                                best_score = sc
+                                best = cand
+                        if place_mode == 2:
+                            for n in range(n_nodes):
+                                if res_count[n, img] > 0 or step - res_last[n, img] <= retention_steps:
+                                    sc = live[n] - loc_bonus
+                                    if sc < best_score:
+                                        best_score = sc
+                                        best = n
                     node[s] = best
                 else:
                     node[s] = slot_home[s]
@@ -391,6 +423,11 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                 recent[s] = 0.0
                 next_start[s] = -1
                 live[node[s]] += 1
+                img = img_of_trace[t]
+                res_count[node[s], img] += 1
+                if n_ev < max_ev:
+                    ev[n_ev, 0] = step; ev[n_ev, 1] = node[s]; ev[n_ev, 2] = img; ev[n_ev, 3] = 0
+                    n_ev += 1
                 if job_size > 0:
                     j = s // job_size
                     ideal = trace_expected[t] + (step - job_begin[j]) * 0.01
@@ -399,6 +436,14 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
         # 2. moves that complete now
         for s in range(n_slots):
             if active[s] and move_eff[s] >= 0 and step >= move_eff[s]:
+                img = img_of_trace[tr[s]]
+                res_count[node[s], img] -= 1
+                res_last[node[s], img] = step
+                res_count[move_dest[s], img] += 1
+                if n_ev + 1 < max_ev:
+                    ev[n_ev, 0] = step; ev[n_ev, 1] = node[s]; ev[n_ev, 2] = img; ev[n_ev, 3] = 3
+                    ev[n_ev + 1, 0] = step; ev[n_ev + 1, 1] = move_dest[s]; ev[n_ev + 1, 2] = img; ev[n_ev + 1, 3] = 2
+                    n_ev += 2
                 live[node[s]] -= 1
                 vrun[s] += min_v[pool_of_node[move_dest[s]]] - min_v[pool_of_node[node[s]]]
                 node[s] = move_dest[s]
@@ -588,6 +633,12 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                     n_finished += 1
                 active[s] = False
                 live[node[s]] -= 1
+                img = img_of_trace[tr[s]]
+                res_count[node[s], img] -= 1
+                res_last[node[s], img] = step
+                if n_ev < max_ev:
+                    ev[n_ev, 0] = step; ev[n_ev, 1] = node[s]; ev[n_ev, 2] = img; ev[n_ev, 3] = 1
+                    n_ev += 1
                 if job_size == 0:
                     next_start[s] = step + 1 + gap_steps
                 else:
@@ -675,7 +726,120 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                 if done > 0:
                     cooldown[p] = last_eff + hold_steps
     return wait, run, overhead, paused_want, moves, blocked, finished[:n_finished], step_secs[:n_steps_done], \
-        step_ratio[:n_steps_done]
+        step_ratio[:n_steps_done], ev[:n_ev]
+
+
+_BLOCKS = {}
+
+
+def image_blocks(path, images, seed=0):
+    """Per image index: its working set as global 4 KiB block ids (image_blocks.py merge output), in a fixed random
+    order so that a prefix is a random subset. Images without a measured set get unique blocks of the median size."""
+    key = (str(path), tuple(images))
+    if key not in _BLOCKS:
+        with np.load(path) as data:
+            sets = {name: data[name] for name in data.files}
+        known = [sets[i] for i in images if i in sets and len(sets[i])]
+        median = int(np.median([len(s) for s in known])) if known else 1
+        universe = np.unique(np.concatenate(known)) if known else np.array([], np.uint64)
+        rng = np.random.default_rng(seed)
+        out, extra = [], len(universe)
+        for name in images:
+            if name in sets and len(sets[name]):
+                ids = np.searchsorted(universe, sets[name]).astype(np.int64)
+            else:
+                ids = np.arange(extra, extra + median, dtype=np.int64)
+                extra += median
+            out.append(rng.permutation(ids))
+        _BLOCKS[key] = (out, extra, sum(1 for i in images if i in sets and len(sets[i])))
+    return _BLOCKS[key]
+
+
+def cache_replay(events, blocks, n_blocks, n_nodes, retention_steps, begin, end, rho):
+    """Replay image residency on per-node host page caches and on one cache shared by all nodes (a CXL-resident
+    page cache). A start fills the image's whole working set on that node, a move-in fills a rho fraction (reads the
+    moved sandbox still makes); a node drops an image retention_steps after its last sandbox of it leaves.
+    Returns mean / peak resident GiB and fetched (missed) GiB inside [begin, end)."""
+    import heapq
+    units = n_nodes + 1  # the last unit is the shared cache
+    count = np.zeros((units, n_blocks), np.int32)
+    filled = {}  # (unit, image) -> filled fraction
+    active = {}
+    version = {}
+    resident = np.zeros(units)
+    peak = np.zeros(units)
+    area = np.zeros(units)
+    last = np.full(units, float(begin))
+    missed = np.zeros(units)
+    pending = []
+
+    def advance(u, now):
+        lo = max(last[u], begin)
+        hi = min(now, end)
+        if hi > lo:
+            area[u] += resident[u] * (hi - lo)
+            peak[u] = max(peak[u], resident[u])
+        last[u] = max(last[u], now)
+
+    def evict(u, img, now):
+        f = filled.get((u, img), 0.0)
+        if f <= 0.0:
+            return
+        idx = blocks[img][:int(round(f * len(blocks[img])))]
+        advance(u, now)
+        c = count[u]
+        c[idx] -= 1
+        resident[u] -= np.count_nonzero(c[idx] == 0)
+        filled[(u, img)] = 0.0
+
+    def fill(u, img, target, now):
+        f = filled.get((u, img), 0.0)
+        if f >= target:
+            return
+        n = len(blocks[img])
+        idx = blocks[img][int(round(f * n)):int(round(target * n))]
+        advance(u, now)
+        c = count[u]
+        c[idx] += 1
+        new = np.count_nonzero(c[idx] == 1)
+        resident[u] += new
+        if begin <= now < end:
+            missed[u] += new
+            peak[u] = max(peak[u], resident[u])
+        filled[(u, img)] = target
+
+    order = np.argsort(events[:, 0], kind="stable")
+    for step, node, img, kind in events[order]:
+        while pending and pending[0][0] <= step:
+            when, u, i, ver = heapq.heappop(pending)
+            if version.get((u, i)) == ver and active.get((u, i), 0) == 0:
+                evict(u, i, when)
+        for u in (node, n_nodes):
+            key = (u, img)
+            if kind in (0, 2):
+                active[key] = active.get(key, 0) + 1
+                version[key] = version.get(key, 0) + 1
+                fill(u, img, 1.0 if (kind == 0 or u == n_nodes) else rho, step)
+            else:
+                active[key] = active.get(key, 0) - 1
+                if active[key] == 0:
+                    version[key] = version.get(key, 0) + 1
+                    heapq.heappush(pending, (step + retention_steps, u, img, version[key]))
+    while pending and pending[0][0] < end:
+        when, u, i, ver = heapq.heappop(pending)
+        if version.get((u, i)) == ver and active.get((u, i), 0) == 0:
+            evict(u, i, when)
+    for u in range(units):
+        advance(u, end)
+    gib = 4096 / 2 ** 30
+    hours = (end - begin) * DT / 3600
+    node_mean = area[:n_nodes] / (end - begin) * gib
+    return {"cache_mean_gib_per_node": float(node_mean.mean()), "cache_total_mean_gib": float(node_mean.sum()),
+            "cache_peak_gib_per_node": float(peak[:n_nodes].max() * gib),
+            "cache_fetch_gib_per_hour": float(missed[:n_nodes].sum() * gib / hours) if hours else None,
+            "shared_cache_mean_gib": float(area[n_nodes] / (end - begin) * gib),
+            "shared_cache_peak_gib": float(peak[n_nodes] * gib),
+            "shared_fetch_gib_per_hour": float(missed[n_nodes] * gib / hours) if hours else None}
 
 
 def simulate(job):
@@ -703,15 +867,22 @@ def simulate(job):
         if n_slots % job_size:
             raise ValueError("per_node x nodes must be a multiple of batch x group")
         if not config["floating"]:
-            slot_home = (np.arange(n_slots) % nodes).astype(np.int64)  # rollout i on node i mod N, as in the pilot
+            if config.get("placement") == "pack":  # each group of G rollouts on one node (image/snapshot locality)
+                slot_home = ((np.arange(n_slots) // config["group"]) % nodes).astype(np.int64)
+            else:
+                slot_home = (np.arange(n_slots) % nodes).astype(np.int64)  # rollout i on node i mod N, as in the pilot
+        real_groups = job.get("groups") or []
         for j in range(n_slots // job_size):
             rng = random.Random(f"{config['seed']}-group-{j}")  # same draw order as the pilot's group mode
             offset = rng.uniform(0, config["ramp_s"])
             for k in range(width):
-                tasks = [rng.choice(entries) for _ in range(config["batch"])]
+                if real_groups:  # RL rollouts: G different samples of one task, not one trace replicated
+                    tasks = [rng.choice(real_groups) for _ in range(config["batch"])]
+                else:
+                    tasks = [[rng.choice(entries)] * config["group"] for _ in range(config["batch"])]
                 for i in range(job_size):
                     s = j * job_size + i
-                    choices[s, k] = tasks[i // config["group"]]
+                    choices[s, k] = tasks[i // config["group"]][i % config["group"]]
                     jitter[s, k] = int(round(rng.uniform(0, config["jitter_s"]) / DT))
             for i in range(job_size):
                 s = j * job_size + i
@@ -725,8 +896,12 @@ def simulate(job):
     place = np.random.default_rng(abs(hash(("place", config["seed"]))) % 2**32).random((n_slots, width, max(1, config["place_k"])))
     mech = MECHANISMS[config["mechanism"]]
     scale = 37.0 / config.get("nic_gbps", mech.get("nic_gbps", 37.0)) if mech["kind"] == 2 else 1.0
+    images = job.get("images") or ["?"] * len(names)
+    image_names = sorted(set(images))
+    img_of_trace = np.array([image_names.index(i) for i in images], np.int64)
+    retention_steps = int(round(config["retention_s"] / DT))
     started = time.time()
-    wait, run, overhead, paused_want, moves, blocked, finished, step_secs, step_ratio = run_fleet(
+    wait, run, overhead, paused_want, moves, blocked, finished, step_secs, step_ratio, events = run_fleet(
         arrays["slot_demand"], arrays["seg_kind"], arrays["seg_start"], arrays["seg_len"], arrays["trace_first"],
         arrays["trace_count"], arrays["trace_vcpus"], arrays["trace_mem"],
         arrays["trace_cpu_s"] + arrays["trace_gap_s"] * config["gap_scale"],
@@ -744,7 +919,15 @@ def simulate(job):
                                        else np.ones(n_pools))),
         float(config["kernel_wait_b"] if config["kernel_wait_b"] is not None
               else KERNEL_WAIT[config["kernel_wait_mode"]]["b"]),
-        config["kernel_wait_mode"] == "latency")
+        config["kernel_wait_mode"] == "latency", img_of_trace, len(image_names), int(config["place_mode"]),
+        float(config["loc_bonus"]), retention_steps)
+    cache = {}
+    if job.get("blocks"):
+        blocks, n_blocks, measured = image_blocks(job["blocks"], image_names)
+        for rho in config["rho"]:
+            stats = cache_replay(events, blocks, n_blocks, nodes, retention_steps, ramp_steps, steps, rho)
+            cache.update({f"{k}_rho{rho:g}": v for k, v in stats.items()})
+        cache["images_with_measured_blocks"] = measured
     q = lambda x: float(np.percentile(finished, x)) if len(finished) else None
     return {**{k: v for k, v in config.items()}, "wait_over_run": wait / run if run else None,
             "run_cores_per_node": run / config["duration_s"] / nodes, "move_cpu_over_run": overhead / run if run else None,
@@ -757,7 +940,7 @@ def simulate(job):
             "step_s_mean": float(step_secs.mean()) if len(step_secs) else None,
             "step_slowdown_p50": float(np.percentile(step_ratio, 50)) if len(step_ratio) else None,
             "step_slowdown_mean": float(step_ratio.mean()) if len(step_ratio) else None,
-            "wall_s": round(time.time() - started, 2)}
+            "events": int(len(events)), **cache, "wall_s": round(time.time() - started, 2)}
 
 
 DEFAULTS = dict(nodes=4, cores=5, pool="none", per_node=14, seed="1", ramp_s=60, duration_s=600, mechanism="none",
@@ -765,7 +948,8 @@ DEFAULTS = dict(nodes=4, cores=5, pool="none", per_node=14, seed="1", ramp_s=60,
                 rl=False, batch=8, group=8, train_s=30.0, jitter_s=2.0, gap_scale=1.0,
                 sched="share", sleeper_credit_ms=12.0, cpu_inflation=1.0, carry=False,
                 kernel_wait="none", kernel_wait_a=0.0, kernel_wait_b=None, kernel_wait_mode="capacity",
-                kernel_wait_size="pool")
+                kernel_wait_size="pool", placement="spread", place_mode=0, loc_bonus=0.0, retention_s=600.0,
+                rho=[0.25])
 
 
 def main():
@@ -776,6 +960,7 @@ def main():
     parser.add_argument("--grid", type=Path, help="JSON list of config overrides (see DEFAULTS)")
     parser.add_argument("--jobs", type=int, default=24)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--blocks", type=Path, help="Per-image page-cache working sets (image_blocks.py merge)")
     args = parser.parse_args()
     if args.test:
         self_test()
@@ -784,7 +969,16 @@ def main():
     names = [t["name"] for t in json.loads(args.candidates.read_text())["traces"] if t["name"] in programs]
     arrays = flatten(programs, names)
     configs = [DEFAULTS | c for c in json.loads(args.grid.read_text())]
-    jobs = [{"arrays": arrays, "names": names, "config": c} for c in configs]
+    members = {}
+    for t in json.loads(args.candidates.read_text())["traces"]:
+        if t.get("group") and t["name"] in programs:
+            members.setdefault(t["group"], []).append(names.index(t["name"]))
+    sizes = {c["group"] for c in configs if c.get("rl")}
+    groups = [sorted(v) for _, v in sorted(members.items()) if len(v) in sizes]
+    image_of = {t["name"]: t.get("image_key", t["name"]) for t in json.loads(args.candidates.read_text())["traces"]}
+    images = [image_of[n] for n in names]
+    jobs = [{"arrays": arrays, "names": names, "config": c, "groups": groups, "images": images,
+             "blocks": str(args.blocks) if args.blocks else None} for c in configs]
     with ProcessPoolExecutor(args.jobs) as pool:
         results = list(pool.map(simulate, jobs))
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -830,7 +1024,7 @@ def self_test():
                          int(round(mech.get("latency_s", 0) / DT)), float(mech.get("cpu_s", 0)),
                          float(mech.get("dump_s_per_gib", 0)), float(mech.get("xfer_s_per_gib", 0)), detect, 0.1, hold, 1,
                          job, train, np.zeros((n_slots, 4), np.int64), 1.0, cfs, 0.012, 1.0, True, False,
-                         np.full(nodes, kw[0]), kw[1], latency)
+                         np.full(nodes, kw[0]), kw[1], latency, np.zeros(len(names), np.int64), 1, 0, 0.0, 0)
 
     # two 1-core sandboxes of 1 s each on one core: both run at 0.5 for 2 s -> 2 s of wait in total
     wait, run, *_ = go({"a": program(("cpu", 100, 1.0))}, nodes=1, cores=1, per_node=2, steps=200)
@@ -878,6 +1072,19 @@ def self_test():
     out = go({"a": program(("cpu", 100, 1.0))}, nodes=1, cores=1, per_node=2, steps=1000, job=2, train=100)
     step_secs = out[7]
     assert len(step_secs) == 3 and np.allclose(step_secs, 2.0, atol=0.02), step_secs  # steps begin at 0, 3, 6 s
+    # page-cache replay: images {0,1,2,3} and {2,3,4,5} on two nodes from 0 to 100, dropped 50 steps later;
+    # per node 4 blocks for 150 of 200 steps (8 fetched), shared cache 6 blocks for 150 steps (6 fetched)
+    ev = np.array([[0, 0, 0, 0], [0, 1, 1, 0], [100, 0, 0, 1], [100, 1, 1, 1]], np.int64)
+    blocks = [np.array([0, 1, 2, 3]), np.array([2, 3, 4, 5])]
+    gib = 4096 / 2 ** 30
+    got = cache_replay(ev, blocks, 6, 2, 50, 0, 200, 0.25)
+    assert abs(got["cache_mean_gib_per_node"] - 3 * gib) < 1e-12 and abs(got["shared_cache_mean_gib"] - 4.5 * gib) < 1e-12, got
+    hours = 200 * DT / 3600
+    assert abs(got["cache_fetch_gib_per_hour"] - 8 * gib / hours) < 1e-9 and abs(got["shared_fetch_gib_per_hour"] - 6 * gib / hours) < 1e-9, got
+    # a move-in fills a quarter of the image on the destination; a later start there fills the rest
+    ev = np.array([[0, 0, 0, 0], [10, 0, 0, 3], [10, 1, 0, 2], [20, 1, 0, 0]], np.int64)
+    got = cache_replay(ev, [np.arange(8)], 8, 2, 10 ** 6, 0, 30, 0.25)
+    assert abs(got["cache_fetch_gib_per_hour"] * (30 * DT / 3600) / gib - 16) < 1e-9, got  # 8 + 2 + 6
     print("self-test passed")
 
 

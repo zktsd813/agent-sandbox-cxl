@@ -24,6 +24,25 @@ if [ -f $J/net ]; then
   for d in $(echo "$DNS" | $B tr ',' ' '); do echo "nameserver $d"; done > /etc/resolv.conf
 fi
 read COUNT TIMEOUT SCALE < $J/meta
+# Optional memory sampler (job file `memsample` = interval in s): guest page cache vs anonymous memory and
+# per-disk I/O (vda base image, vdb job disk, vdc writable upper) as serial lines
+# SWE_MEM uptime MemFree Cached Buffers AnonPages Shmem Dirty (KiB) then read and written sectors of vda vdb vdc
+# (block mode: vda base, vdb job, vdc upper; --base-pmem: vda job, vdb upper, the DAX base has no block I/O)
+if [ -f $J/memsample ]; then
+  MS=$($B cat $J/memsample)
+  (
+    while true; do
+      m=$($B awk '/^(MemFree|Cached|Buffers|AnonPages|Shmem|Dirty):/ { v[$1] = $2 }
+                  END { printf "%s %s %s %s %s %s", v["MemFree:"], v["Cached:"], v["Buffers:"], v["AnonPages:"], v["Shmem:"], v["Dirty:"] }' /proc/meminfo)
+      d=""
+      for dev in vda vdb vdc; do
+        d="$d $($B awk '{ printf "%s %s", $3, $7 }' /sys/block/$dev/stat 2>/dev/null || echo 0 0)"
+      done
+      echo "SWE_MEM $($B cut -d' ' -f1 /proc/uptime) $m$d"
+      $B sleep "$MS"
+    done
+  ) &
+fi
 $B uname -a > $J/out/uname.txt
 $B cat /proc/meminfo > $J/out/meminfo-start.txt
 cd "$($B cat $J/cwd)" || { echo SWE_CWD_FAILED; $B poweroff -f; }

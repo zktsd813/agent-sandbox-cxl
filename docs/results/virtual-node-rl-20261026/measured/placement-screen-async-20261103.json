@@ -1,0 +1,199 @@
+[
+ {
+  "run": "20261103T011815Z-pilot-k48-none-g8-v1-sasync-fpk_tt24",
+  "condition": "async-p2c-none",
+  "moves": 0,
+  "groups_completed": 136,
+  "rollouts_per_hour": 1222.9,
+  "wait_over_run_per_node": [
+   0.0556,
+   0.0736,
+   0.0679,
+   0.0583
+  ],
+  "demand_p99_per_node": [
+   7.93,
+   7.96,
+   7.95,
+   7.93
+  ],
+  "pulls": 184,
+  "images": 47,
+  "eager_gib": 450.7,
+  "eager_pull_s_max_node_1g": 977,
+  "eager_pull_s_max_node_10g": 98,
+  "lazy_pull_s_max_node_1g": 52.9
+ },
+ {
+  "run": "20261103T021822Z-pilot-k48-none-g8-v1-sasync-cjvxd27a",
+  "condition": "async-least-none",
+  "moves": 0,
+  "groups_completed": 136,
+  "rollouts_per_hour": 1222.9,
+  "wait_over_run_per_node": [
+   0.1102,
+   0.0566,
+   0.1539,
+   0.1088
+  ],
+  "demand_p99_per_node": [
+   8.01,
+   7.96,
+   8.0,
+   8.0
+  ],
+  "pulls": 104,
+  "images": 47,
+  "eager_gib": 256.8,
+  "eager_pull_s_max_node_1g": 577,
+  "eager_pull_s_max_node_10g": 58,
+  "lazy_pull_s_max_node_1g": 34.9,
+  "paired_groups": 136,
+  "group_latency_ratio_p50_p90_max": [
+   1.0,
+   1.017,
+   1.07
+  ],
+  "slowest10pct_group_latency_ratio_mean": 0.999,
+  "rollout_latency_ratio_p50_p99_max": [
+   1.0,
+   1.152,
+   1.304
+  ],
+  "exec_ratio_by_corunners": {
+   "15-29": [
+    15,
+    1.006,
+    1.461
+   ],
+   "30-44": [
+    902,
+    0.999,
+    1.206
+   ],
+   "45-59": [
+    1,
+    1.36,
+    1.36
+   ]
+  }
+ },
+ {
+  "run": "20261103T031827Z-pilot-k48-none-g8-v1-sasync-hsn552d1",
+  "condition": "async-home-none",
+  "moves": 0,
+  "groups_completed": 134,
+  "rollouts_per_hour": 1208.7,
+  "wait_over_run_per_node": [
+   0.1649,
+   0.3375,
+   0.4167,
+   0.0342
+  ],
+  "demand_p99_per_node": [
+   8.03,
+   7.99,
+   8.01,
+   5.0
+  ],
+  "pulls": 47,
+  "images": 47,
+  "eager_gib": 115.1,
+  "eager_pull_s_max_node_1g": 306,
+  "eager_pull_s_max_node_10g": 31,
+  "lazy_pull_s_max_node_1g": 22.3,
+  "paired_groups": 134,
+  "group_latency_ratio_p50_p90_max": [
+   1.004,
+   1.055,
+   1.119
+  ],
+  "slowest10pct_group_latency_ratio_mean": 1.019,
+  "rollout_latency_ratio_p50_p99_max": [
+   1.002,
+   1.168,
+   1.231
+  ],
+  "exec_ratio_by_corunners": {
+   "0-14": [
+    37,
+    0.845,
+    0.993
+   ],
+   "15-29": [
+    87,
+    0.983,
+    1.343
+   ],
+   "30-44": [
+    283,
+    1.0,
+    1.18
+   ],
+   "45-59": [
+    385,
+    1.123,
+    1.476
+   ],
+   "60+": [
+    110,
+    1.435,
+    2.163
+   ]
+  }
+ },
+ {
+  "run": "20261103T041833Z-pilot-k48-none-g8-mhand-off-v1-sasync-p9dxqn_0",
+  "condition": "async-home-hand-off",
+  "moves": 4425,
+  "groups_completed": 136,
+  "rollouts_per_hour": 1217.5,
+  "wait_over_run_per_node": [
+   0.0419,
+   0.0578,
+   0.0544,
+   0.0349
+  ],
+  "demand_p99_per_node": [
+   7.88,
+   7.79,
+   7.81,
+   7.79
+  ],
+  "pulls": 47,
+  "images": 47,
+  "eager_gib": 115.1,
+  "eager_pull_s_max_node_1g": 306,
+  "eager_pull_s_max_node_10g": 31,
+  "lazy_pull_s_max_node_1g": 21.1,
+  "paired_groups": 136,
+  "group_latency_ratio_p50_p90_max": [
+   1.0,
+   1.015,
+   1.078
+  ],
+  "slowest10pct_group_latency_ratio_mean": 0.994,
+  "rollout_latency_ratio_p50_p99_max": [
+   1.0,
+   1.08,
+   1.216
+  ],
+  "exec_ratio_by_corunners": {
+   "15-29": [
+    112,
+    0.991,
+    1.166
+   ],
+   "30-44": [
+    769,
+    1.0,
+    1.139
+   ],
+   "45-59": [
+    37,
+    1.02,
+    1.201
+   ]
+  }
+ }
+]

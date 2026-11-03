@@ -1,0 +1,169 @@
+{
+ "run": "20261029T073640Z-pilot-k96-none-g8-plan0-1-v1-splan-seg0-1ntqgtv4",
+ "condition": "val-x1-least",
+ "pool": "none",
+ "placement": "least",
+ "gap_scale": 1.0,
+ "cores": 30,
+ "steps": [
+  {
+   "step": 0,
+   "complete": true,
+   "duration_s": 4148.4,
+   "solo_max_s": 4139.6,
+   "slowdown": 1.002,
+   "clean_members": 173,
+   "clean_end_s": 4148.4,
+   "clean_solo_max_s": 4139.6,
+   "clean_slowdown": 1.002,
+   "prepare_s": 6.246,
+   "p50_member_end_s": 1721.4,
+   "p90_member_end_s": 3760.7,
+   "tail_fraction": 0.093,
+   "utilization": 0.05,
+   "wait_over_run": 0.022,
+   "wait_share_first": {
+    "10s": 0.0,
+    "30s": 0.0207,
+    "60s": 0.0944
+   },
+   "waves": [
+    {
+     "wave": 0,
+     "launch_s": 0.0,
+     "members": 96,
+     "end_s": 1418.2,
+     "p50_end_s": 643.0,
+     "p90_end_s": 1111.9,
+     "tail_fraction": 0.216
+    },
+    {
+     "wave": 1,
+     "launch_s": 1211.3,
+     "members": 96,
+     "end_s": 2937.1,
+     "p50_end_s": 2132.8,
+     "p90_end_s": 2755.5,
+     "tail_fraction": 0.062
+    }
+   ],
+   "live_by_twentieth": [
+    91,
+    85,
+    63,
+    43,
+    21,
+    7,
+    92,
+    96,
+    94,
+    91,
+    87,
+    79,
+    75,
+    68,
+    64,
+    55,
+    40,
+    23,
+    16,
+    3
+   ],
+   "boot_s_p50_p90": [
+    0.41,
+    0.42
+   ],
+   "first_cmd_s_p50_p90": [
+    0.03,
+    0.05
+   ],
+   "base_read_gib": 11.631,
+   "images": 24
+  },
+  {
+   "step": 1,
+   "complete": true,
+   "duration_s": 3823.7,
+   "solo_max_s": 3811.1,
+   "slowdown": 1.003,
+   "clean_members": 182,
+   "clean_end_s": 3823.7,
+   "clean_solo_max_s": 3811.1,
+   "clean_slowdown": 1.003,
+   "prepare_s": 10.076,
+   "p50_member_end_s": 2558.8,
+   "p90_member_end_s": 3470.8,
+   "tail_fraction": 0.092,
+   "utilization": 0.0845,
+   "wait_over_run": 0.0192,
+   "wait_share_first": {
+    "10s": 0.0,
+    "30s": 0.0001,
+    "60s": 0.0001
+   },
+   "waves": [
+    {
+     "wave": 0,
+     "launch_s": 0.0,
+     "members": 96,
+     "end_s": 3099.8,
+     "p50_end_s": 1480.7,
+     "p90_end_s": 2839.9,
+     "tail_fraction": 0.084
+    },
+    {
+     "wave": 1,
+     "launch_s": 829.5,
+     "members": 96,
+     "end_s": 2994.2,
+     "p50_end_s": 2291.4,
+     "p90_end_s": 2806.4,
+     "tail_fraction": 0.063
+    }
+   ],
+   "live_by_twentieth": [
+    4,
+    96,
+    92,
+    77,
+    80,
+    154,
+    149,
+    144,
+    140,
+    136,
+    133,
+    120,
+    102,
+    94,
+    76,
+    67,
+    46,
+    31,
+    18,
+    2
+   ],
+   "boot_s_p50_p90": [
+    0.4,
+    0.42
+   ],
+   "first_cmd_s_p50_p90": [
+    0.03,
+    0.05
+   ],
+   "base_read_gib": 16.784,
+   "images": 24
+  }
+ ],
+ "mean_step_slowdown": 1.0025,
+ "mean_clean_step_slowdown": 1.0025,
+ "mean_step_s": 3986.05,
+ "mean_utilization": 0.0673,
+ "mean_wait_over_run": 0.0206,
+ "mean_tail_fraction": 0.0925,
+ "wait_share_first": {
+  "10s": 0.0,
+  "30s": 0.0104,
+  "60s": 0.0473
+ }
+}
