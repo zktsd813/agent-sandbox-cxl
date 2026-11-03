@@ -1,0 +1,376 @@
+{
+  "checked_on": "2026-10-07",
+  "scope": "Read-only official source and paper inspection; no install, model calls, integration runs or worker deployment. Audited commits are current upstream, not asserted paper experiment commits.",
+  "papers": [
+    {
+      "title": "CPU-Centric Perspective (v3)",
+      "url": "https://arxiv.org/html/2511.00739v3",
+      "harness_evidence": "Figure 2 labels the coding workload Mini-SWE-Agent."
+    },
+    {
+      "title": "The Cost of Dynamic Reasoning (v2)",
+      "url": "https://arxiv.org/html/2506.04301v2",
+      "harness_evidence": "Paper links VIA-Research/AgentBench; ReAct, Reflexion, LATS, LLMCompiler."
+    },
+    {
+      "title": "DeepSeek Elastic Compute",
+      "url": "https://arxiv.org/html/2609.22978v1",
+      "harness_evidence": "Section 6.2 names DeepSeek Harness as a scaffold example in the agent sandbox."
+    },
+    {
+      "title": "Memory Compression for High-Fanout Agent Sandboxes",
+      "url": "https://arxiv.org/html/2609.11294v1",
+      "harness_evidence": "Sections 5.2 and 5.3 describe R2E-Gym workloads and recorded tool-action replay; exact trajectory-generating harness not identified."
+    },
+    {
+      "title": "SWE-agent",
+      "url": "https://arxiv.org/abs/2405.15793"
+    },
+    {
+      "title": "R2E-Gym",
+      "url": "https://arxiv.org/abs/2504.07164"
+    },
+    {
+      "title": "OpenHands Software Agent SDK",
+      "url": "https://arxiv.org/abs/2511.03690"
+    }
+  ],
+  "repositories": [
+    {
+      "repository": "OpenHands/software-agent-sdk",
+      "url": "https://github.com/OpenHands/software-agent-sdk",
+      "branch": "main",
+      "audited_commit": "8ba966d1d3af49f08e04349c055009e1614b48d6",
+      "license_spdx": "MIT",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "files_read": [
+        {
+          "path": "LICENSE",
+          "source_url": "https://github.com/OpenHands/software-agent-sdk/blob/8ba966d1d3af49f08e04349c055009e1614b48d6/LICENSE",
+          "sha256": "14a9b631c658eee682c6c2973525fbdf808c3457176bc47513052c559cc5ce86"
+        },
+        {
+          "path": "README.md",
+          "source_url": "https://github.com/OpenHands/software-agent-sdk/blob/8ba966d1d3af49f08e04349c055009e1614b48d6/README.md",
+          "sha256": "95094c9745c7cc58136d4eaa1688fb6038aafefec2be05344293f6df7e55dbf8"
+        },
+        {
+          "path": "examples/02_remote_agent_server/14_client_defined_tools.py",
+          "source_url": "https://github.com/OpenHands/software-agent-sdk/blob/8ba966d1d3af49f08e04349c055009e1614b48d6/examples/02_remote_agent_server/14_client_defined_tools.py",
+          "sha256": "56d67a475dd2589e3ef53434a69c3922f86058e4429823533abddbf47298cf69"
+        },
+        {
+          "path": "openhands-sdk/openhands/sdk/tool/tool.py",
+          "source_url": "https://github.com/OpenHands/software-agent-sdk/blob/8ba966d1d3af49f08e04349c055009e1614b48d6/openhands-sdk/openhands/sdk/tool/tool.py",
+          "sha256": "b810003d596a98fc369fbb80c0159991f2529660d62e1ec9b5019220d1b586e7"
+        },
+        {
+          "path": "openhands-sdk/openhands/sdk/workspace/base.py",
+          "source_url": "https://github.com/OpenHands/software-agent-sdk/blob/8ba966d1d3af49f08e04349c055009e1614b48d6/openhands-sdk/openhands/sdk/workspace/base.py",
+          "sha256": "0c41c50b4542af180c930c89c451189196993af09fbfdd9c74c3519136291602"
+        },
+        {
+          "path": "openhands-sdk/openhands/sdk/workspace/remote/base.py",
+          "source_url": "https://github.com/OpenHands/software-agent-sdk/blob/8ba966d1d3af49f08e04349c055009e1614b48d6/openhands-sdk/openhands/sdk/workspace/remote/base.py",
+          "sha256": "8b6ad76eb79929a334d1b263b296f2bbe220af644acd1e0f684a1e026a8e2739"
+        },
+        {
+          "path": "openhands-tools/openhands/tools/terminal/impl.py",
+          "source_url": "https://github.com/OpenHands/software-agent-sdk/blob/8ba966d1d3af49f08e04349c055009e1614b48d6/openhands-tools/openhands/tools/terminal/impl.py",
+          "sha256": "60e668d8b75d52907568eff55f9ef81bac1f62727a37c9c722979dc45bb16245"
+        }
+      ]
+    },
+    {
+      "repository": "R2E-Gym/R2E-Gym",
+      "url": "https://github.com/R2E-Gym/R2E-Gym",
+      "branch": "main",
+      "audited_commit": "0d94c4eb9431cd195c55a7ea3abd54006c9a1735",
+      "license_spdx": "Apache-2.0",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "files_read": [
+        {
+          "path": "LICENSE",
+          "source_url": "https://github.com/R2E-Gym/R2E-Gym/blob/0d94c4eb9431cd195c55a7ea3abd54006c9a1735/LICENSE",
+          "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+        },
+        {
+          "path": "README.md",
+          "source_url": "https://github.com/R2E-Gym/R2E-Gym/blob/0d94c4eb9431cd195c55a7ea3abd54006c9a1735/README.md",
+          "sha256": "d8726b70e8e05e375120f481bb2fd0e565f3ede43d1662f3d3aa029282ca2218"
+        },
+        {
+          "path": "src/r2egym/agenthub/agent/agent.py",
+          "source_url": "https://github.com/R2E-Gym/R2E-Gym/blob/0d94c4eb9431cd195c55a7ea3abd54006c9a1735/src/r2egym/agenthub/agent/agent.py",
+          "sha256": "adcfbe140e25a5663a96b9725a66ede652e9b15a01a1af775d45bbb1bdc0a6de"
+        },
+        {
+          "path": "src/r2egym/agenthub/environment/env.py",
+          "source_url": "https://github.com/R2E-Gym/R2E-Gym/blob/0d94c4eb9431cd195c55a7ea3abd54006c9a1735/src/r2egym/agenthub/environment/env.py",
+          "sha256": "5098d5237f3e761151285f4a9bb3d80fdd0cea2d34d1065d83ac1214f86ac718"
+        },
+        {
+          "path": "src/r2egym/agenthub/runtime/base.py",
+          "source_url": "https://github.com/R2E-Gym/R2E-Gym/blob/0d94c4eb9431cd195c55a7ea3abd54006c9a1735/src/r2egym/agenthub/runtime/base.py",
+          "sha256": "5681ccd5486698a55769f76de77e1fd1a0021a724e318094b880607a79df8132"
+        },
+        {
+          "path": "src/r2egym/agenthub/runtime/docker.py",
+          "source_url": "https://github.com/R2E-Gym/R2E-Gym/blob/0d94c4eb9431cd195c55a7ea3abd54006c9a1735/src/r2egym/agenthub/runtime/docker.py",
+          "sha256": "a83b1d1daea4181e97bce2a3ea19f85144b7776403792783dc0b977adc69eb0a"
+        }
+      ]
+    },
+    {
+      "repository": "SWE-agent/SWE-ReX",
+      "url": "https://github.com/SWE-agent/SWE-ReX",
+      "branch": "main",
+      "audited_commit": "5c995c365dfb1fd5bc56fda688be5d8538f9931f",
+      "license_spdx": "MIT",
+      "license_paths": [
+        "LICENSE.txt"
+      ],
+      "files_read": [
+        {
+          "path": "LICENSE.txt",
+          "source_url": "https://github.com/SWE-agent/SWE-ReX/blob/5c995c365dfb1fd5bc56fda688be5d8538f9931f/LICENSE.txt",
+          "sha256": "715151ae2995d2e1eb3c39503d13f77d0f52cafb7bbe1a7dbf6a06911230879a"
+        },
+        {
+          "path": "README.md",
+          "source_url": "https://github.com/SWE-agent/SWE-ReX/blob/5c995c365dfb1fd5bc56fda688be5d8538f9931f/README.md",
+          "sha256": "7fa51197d22214308ee18e12b8042b03e8a8c2442766110e3fadf975391a17ca"
+        },
+        {
+          "path": "src/swerex/deployment/remote.py",
+          "source_url": "https://github.com/SWE-agent/SWE-ReX/blob/5c995c365dfb1fd5bc56fda688be5d8538f9931f/src/swerex/deployment/remote.py",
+          "sha256": "4854ff56db0349f097e74d20f6f7fe2ccd1adb256fa7672eb2544f981cfc15b1"
+        },
+        {
+          "path": "src/swerex/runtime/abstract.py",
+          "source_url": "https://github.com/SWE-agent/SWE-ReX/blob/5c995c365dfb1fd5bc56fda688be5d8538f9931f/src/swerex/runtime/abstract.py",
+          "sha256": "6469d5057ecf677e366b7dd9b894e023aba18d67ffbe743571b0919cff052227"
+        },
+        {
+          "path": "src/swerex/runtime/remote.py",
+          "source_url": "https://github.com/SWE-agent/SWE-ReX/blob/5c995c365dfb1fd5bc56fda688be5d8538f9931f/src/swerex/runtime/remote.py",
+          "sha256": "21d1639db4872a33f00d1d2cad2d967a3cc97cb7d5f33bdc2fc3cf7f79adcbf9"
+        }
+      ]
+    },
+    {
+      "repository": "SWE-agent/SWE-agent",
+      "url": "https://github.com/SWE-agent/SWE-agent",
+      "branch": "main",
+      "audited_commit": "3ea751c087f32b16e039a2233dd6eefecef325d5",
+      "license_spdx": "MIT",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "files_read": [
+        {
+          "path": "LICENSE",
+          "source_url": "https://github.com/SWE-agent/SWE-agent/blob/3ea751c087f32b16e039a2233dd6eefecef325d5/LICENSE",
+          "sha256": "7610ed3916f6674e34b78417894abd57ff538b3cfdda3085e3643d82acbaf31f"
+        },
+        {
+          "path": "README.md",
+          "source_url": "https://github.com/SWE-agent/SWE-agent/blob/3ea751c087f32b16e039a2233dd6eefecef325d5/README.md",
+          "sha256": "dcd880557720efbab0f5c0e68f2bc742309efecfce83244c9e670ec1f1adf76f"
+        },
+        {
+          "path": "docs/config/environments.md",
+          "source_url": "https://github.com/SWE-agent/SWE-agent/blob/3ea751c087f32b16e039a2233dd6eefecef325d5/docs/config/environments.md",
+          "sha256": "5c6ef669cc33ed3a3949cba09a9b3c2863831318aac3af1f95519e31731f62c9"
+        },
+        {
+          "path": "sweagent/environment/swe_env.py",
+          "source_url": "https://github.com/SWE-agent/SWE-agent/blob/3ea751c087f32b16e039a2233dd6eefecef325d5/sweagent/environment/swe_env.py",
+          "sha256": "cc2631890aaba56a648a2bdeef6019b7c2f29a171daba6e704adbfb57ff99c7a"
+        }
+      ]
+    },
+    {
+      "repository": "SWE-agent/mini-swe-agent",
+      "url": "https://github.com/SWE-agent/mini-swe-agent",
+      "branch": "main",
+      "audited_commit": "04d809ceab9df28f9adaed044884180159172930",
+      "license_spdx": "MIT",
+      "license_paths": [
+        "LICENSE.md"
+      ],
+      "files_read": [
+        {
+          "path": "LICENSE.md",
+          "source_url": "https://github.com/SWE-agent/mini-swe-agent/blob/04d809ceab9df28f9adaed044884180159172930/LICENSE.md",
+          "sha256": "0f796e58f91d1c07bb2c1b1d0f8bf3a83017c3a5dec1bdc6fae733b2cd2e875b"
+        },
+        {
+          "path": "README.md",
+          "source_url": "https://github.com/SWE-agent/mini-swe-agent/blob/04d809ceab9df28f9adaed044884180159172930/README.md",
+          "sha256": "9982d90b7566f2f3fa5e9811b475d5e8e2a84e2df80cf3f1e4be6e820b129835"
+        },
+        {
+          "path": "docs/advanced/environments.md",
+          "source_url": "https://github.com/SWE-agent/mini-swe-agent/blob/04d809ceab9df28f9adaed044884180159172930/docs/advanced/environments.md",
+          "sha256": "748797bc1a9fc2e637ba0878bbc4b2207a0a12ae15a68836b1b15bba5f78be9d"
+        },
+        {
+          "path": "pyproject.toml",
+          "source_url": "https://github.com/SWE-agent/mini-swe-agent/blob/04d809ceab9df28f9adaed044884180159172930/pyproject.toml",
+          "sha256": "c176ff37a89ee88a2ea2ce746b9b7e723ea3175e53be5336ab99f5aba0d59ddf"
+        },
+        {
+          "path": "src/minisweagent/__init__.py",
+          "source_url": "https://github.com/SWE-agent/mini-swe-agent/blob/04d809ceab9df28f9adaed044884180159172930/src/minisweagent/__init__.py",
+          "sha256": "0a708308b1b62cc020b60799c3d54f665845f795b3f0c4fdac787c96a38d12c7"
+        },
+        {
+          "path": "src/minisweagent/agents/default.py",
+          "source_url": "https://github.com/SWE-agent/mini-swe-agent/blob/04d809ceab9df28f9adaed044884180159172930/src/minisweagent/agents/default.py",
+          "sha256": "e8ef8aa365942d739c2ec5cb0879f60f377d2dc2de8ec670aaedf3bafb45a4c2"
+        },
+        {
+          "path": "src/minisweagent/environments/docker.py",
+          "source_url": "https://github.com/SWE-agent/mini-swe-agent/blob/04d809ceab9df28f9adaed044884180159172930/src/minisweagent/environments/docker.py",
+          "sha256": "21d389122b008e7b743d1e640207fda0b08d9010cf6323ddd02f0742b33b96a6"
+        },
+        {
+          "path": "src/minisweagent/environments/local.py",
+          "source_url": "https://github.com/SWE-agent/mini-swe-agent/blob/04d809ceab9df28f9adaed044884180159172930/src/minisweagent/environments/local.py",
+          "sha256": "01dd33ae6be897458611911cc0eee1389092ea9fc6788c7eb24773e7c6342b1c"
+        }
+      ]
+    },
+    {
+      "repository": "VIA-Research/AgentBench",
+      "url": "https://github.com/VIA-Research/AgentBench",
+      "branch": "main",
+      "audited_commit": "ef5b195f69048865abceed472971237805bb9bc8",
+      "license_spdx": "MIT",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "files_read": [
+        {
+          "path": "LICENSE",
+          "source_url": "https://github.com/VIA-Research/AgentBench/blob/ef5b195f69048865abceed472971237805bb9bc8/LICENSE",
+          "sha256": "f37af2dde57788d773a5dadc37cb47aae391f65d2c0f1414e649f6089170460b"
+        },
+        {
+          "path": "README.md",
+          "source_url": "https://github.com/VIA-Research/AgentBench/blob/ef5b195f69048865abceed472971237805bb9bc8/README.md",
+          "sha256": "5a5fd60f4a156558a4c188c2f5e9fc1077ed59b4961e8208e88936273a322ed2"
+        },
+        {
+          "path": "src/agents/ReAct/react.py",
+          "source_url": "https://github.com/VIA-Research/AgentBench/blob/ef5b195f69048865abceed472971237805bb9bc8/src/agents/ReAct/react.py",
+          "sha256": "65d75c4036f133eb857c9c965618594a91ba93abbe3494a08880013c2ca938b9"
+        },
+        {
+          "path": "src/tools/humaneval_tools/coding_tools.py",
+          "source_url": "https://github.com/VIA-Research/AgentBench/blob/ef5b195f69048865abceed472971237805bb9bc8/src/tools/humaneval_tools/coding_tools.py",
+          "sha256": "a1749281d59e04f45079e83db37a99ba560dedb969e6b8f7abbe7370c6549b42"
+        },
+        {
+          "path": "src/tools/humaneval_tools/executors/py_executor.py",
+          "source_url": "https://github.com/VIA-Research/AgentBench/blob/ef5b195f69048865abceed472971237805bb9bc8/src/tools/humaneval_tools/executors/py_executor.py",
+          "sha256": "93f40a6f7cf903f62ca08aa7d37724dc3f342e08f574853747b08b6882ac498b"
+        },
+        {
+          "path": "src/tools/math_tools/math_tools.py",
+          "source_url": "https://github.com/VIA-Research/AgentBench/blob/ef5b195f69048865abceed472971237805bb9bc8/src/tools/math_tools/math_tools.py",
+          "sha256": "1f5a88a722c653477ee76d9beb71968e00b7c2c0f10f3466221e76230e2eca6b"
+        }
+      ]
+    },
+    {
+      "repository": "anthropics/claude-code",
+      "url": "https://github.com/anthropics/claude-code",
+      "branch": "main",
+      "audited_commit": "765f236fe1bfcc678e0ec59af9170fb7d6771a3a",
+      "license_spdx": null,
+      "license_paths": [
+        "LICENSE.md"
+      ],
+      "files_read": [
+        {
+          "path": "LICENSE.md",
+          "source_url": "https://github.com/anthropics/claude-code/blob/765f236fe1bfcc678e0ec59af9170fb7d6771a3a/LICENSE.md",
+          "sha256": "728158fd1037143fad6907e8fa34804177e598b7326519503fe83cafdef849e6"
+        },
+        {
+          "path": "README.md",
+          "source_url": "https://github.com/anthropics/claude-code/blob/765f236fe1bfcc678e0ec59af9170fb7d6771a3a/README.md",
+          "sha256": "aa0d8b80ac083e1591be0789273f447058cc9187b4331634a5614155da27778d"
+        }
+      ]
+    },
+    {
+      "repository": "deepseek-ai/deepseek-harness",
+      "url": "https://github.com/deepseek-ai/deepseek-harness",
+      "branch": "master",
+      "audited_commit": "5badb15009ae1756c3afe0ae0cef1faafc290ccc",
+      "license_spdx": "MIT",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "files_read": [
+        {
+          "path": "LICENSE",
+          "source_url": "https://github.com/deepseek-ai/deepseek-harness/blob/5badb15009ae1756c3afe0ae0cef1faafc290ccc/LICENSE",
+          "sha256": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be"
+        },
+        {
+          "path": "README.md",
+          "source_url": "https://github.com/deepseek-ai/deepseek-harness/blob/5badb15009ae1756c3afe0ae0cef1faafc290ccc/README.md",
+          "sha256": "0f5516be2acde776f05572cbc8c3093c90549afe04ce118e11157d073d5d15f4"
+        },
+        {
+          "path": "docs/architecture.md",
+          "source_url": "https://github.com/deepseek-ai/deepseek-harness/blob/5badb15009ae1756c3afe0ae0cef1faafc290ccc/docs/architecture.md",
+          "sha256": "925aee7c59d0929968698572266bbc3dba8edd38b0befe3f6875b4a7b554cfda"
+        },
+        {
+          "path": "docs/capability-seams.md",
+          "source_url": "https://github.com/deepseek-ai/deepseek-harness/blob/5badb15009ae1756c3afe0ae0cef1faafc290ccc/docs/capability-seams.md",
+          "sha256": "e5e7d71049394398eeaa8d85ebc2f93172f25a4502c2f6d12a59b2a689f85663"
+        },
+        {
+          "path": "packages/README.md",
+          "source_url": "https://github.com/deepseek-ai/deepseek-harness/blob/5badb15009ae1756c3afe0ae0cef1faafc290ccc/packages/README.md",
+          "sha256": "157748385278efbd1d6f4c1681be9c259dddfb58ff1db8b8eff063fbba0ed689"
+        },
+        {
+          "path": "packages/shell/bash-local/src/index.ts",
+          "source_url": "https://github.com/deepseek-ai/deepseek-harness/blob/5badb15009ae1756c3afe0ae0cef1faafc290ccc/packages/shell/bash-local/src/index.ts",
+          "sha256": "03f7d8c0a6162aec6c71c719c937ab8b6b7fa011b7fcdc386e513c4d0aeab353"
+        },
+        {
+          "path": "packages/shell/shell/src/types.ts",
+          "source_url": "https://github.com/deepseek-ai/deepseek-harness/blob/5badb15009ae1756c3afe0ae0cef1faafc290ccc/packages/shell/shell/src/types.ts",
+          "sha256": "32a710e1000dae0a7c47efbd9f970e5495ac3bad5e0a0e2298388f42ef03c089"
+        },
+        {
+          "path": "packages/shell/tool-bash/src/index.ts",
+          "source_url": "https://github.com/deepseek-ai/deepseek-harness/blob/5badb15009ae1756c3afe0ae0cef1faafc290ccc/packages/shell/tool-bash/src/index.ts",
+          "sha256": "53b18db95b1f2fc0bd82a5560756f8644ba8898197534b4915f96f7e3e450956"
+        },
+        {
+          "path": "packages/subprocess/subprocess/src/index.ts",
+          "source_url": "https://github.com/deepseek-ai/deepseek-harness/blob/5badb15009ae1756c3afe0ae0cef1faafc290ccc/packages/subprocess/subprocess/src/index.ts",
+          "sha256": "19e3fde571d0cd1f76e95696477a7d38677529aaf51b07c429965f2e4330065f"
+        },
+        {
+          "path": "packages/subprocess/subprocess/src/types.ts",
+          "source_url": "https://github.com/deepseek-ai/deepseek-harness/blob/5badb15009ae1756c3afe0ae0cef1faafc290ccc/packages/subprocess/subprocess/src/types.ts",
+          "sha256": "e65166444ff791994a7198a86ac4a821e8329120bd551f342913623c87e5a715"
+        }
+      ]
+    }
+  ]
+}

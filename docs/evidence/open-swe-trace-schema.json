@@ -1,0 +1,427 @@
+{
+  "checked_on": "2026-10-07",
+  "source": "https://datasets-server.huggingface.co/info?dataset=nvidia%2FOpen-SWE-Traces",
+  "pending": [],
+  "failed": [],
+  "partial": false,
+  "configurations": {
+    "v1.0": {
+      "splits": [
+        "openhands",
+        "sweagent"
+      ],
+      "features": {
+        "instance_id": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "repo": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "license": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "language": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "trajectory_id": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "messages": [
+          {
+            "role": {
+              "dtype": "string",
+              "_type": "Value"
+            },
+            "content": {
+              "dtype": "string",
+              "_type": "Value"
+            },
+            "reasoning_content": {
+              "dtype": "string",
+              "_type": "Value"
+            },
+            "tool_calls": [
+              {
+                "function": {
+                  "arguments": {
+                    "dtype": "string",
+                    "_type": "Value"
+                  },
+                  "name": {
+                    "dtype": "string",
+                    "_type": "Value"
+                  }
+                },
+                "id": {
+                  "dtype": "string",
+                  "_type": "Value"
+                },
+                "type": {
+                  "dtype": "string",
+                  "_type": "Value"
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "dtype": "string",
+            "_type": "Value"
+          }
+        ],
+        "resolved": {
+          "dtype": "int32",
+          "_type": "Value"
+        },
+        "metadata": {
+          "category": {
+            "dtype": "string",
+            "_type": "Value"
+          },
+          "teacher_model": {
+            "name": {
+              "dtype": "string",
+              "_type": "Value"
+            },
+            "enable_thinking": {
+              "dtype": "bool",
+              "_type": "Value"
+            },
+            "reasoning_effort": {
+              "dtype": "string",
+              "_type": "Value"
+            }
+          },
+          "reference_patch": {
+            "patch": {
+              "dtype": "string",
+              "_type": "Value"
+            },
+            "num_modified_files": {
+              "dtype": "int64",
+              "_type": "Value"
+            },
+            "num_modified_lines": {
+              "dtype": "int64",
+              "_type": "Value"
+            }
+          },
+          "model_patch": {
+            "patch": {
+              "dtype": "string",
+              "_type": "Value"
+            },
+            "num_modified_files": {
+              "dtype": "int64",
+              "_type": "Value"
+            },
+            "num_modified_lines": {
+              "dtype": "int64",
+              "_type": "Value"
+            }
+          }
+        },
+        "hf_dataset_name": {
+          "dtype": "string",
+          "_type": "Value"
+        }
+      }
+    },
+    "v1.1": {
+      "splits": [
+        "openhands",
+        "sweagent",
+        "minisweagent"
+      ],
+      "features": {
+        "instance_id": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "repo": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "license": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "language": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "trajectory_id": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "messages": [
+          {
+            "role": {
+              "dtype": "string",
+              "_type": "Value"
+            },
+            "content": {
+              "dtype": "string",
+              "_type": "Value"
+            },
+            "reasoning_content": {
+              "dtype": "string",
+              "_type": "Value"
+            },
+            "tool_calls": [
+              {
+                "function": {
+                  "arguments": {
+                    "dtype": "string",
+                    "_type": "Value"
+                  },
+                  "name": {
+                    "dtype": "string",
+                    "_type": "Value"
+                  }
+                },
+                "id": {
+                  "dtype": "string",
+                  "_type": "Value"
+                },
+                "type": {
+                  "dtype": "string",
+                  "_type": "Value"
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "dtype": "string",
+            "_type": "Value"
+          }
+        ],
+        "resolved": {
+          "dtype": "int32",
+          "_type": "Value"
+        },
+        "metadata": {
+          "category": {
+            "dtype": "string",
+            "_type": "Value"
+          },
+          "teacher_model": {
+            "name": {
+              "dtype": "string",
+              "_type": "Value"
+            },
+            "enable_thinking": {
+              "dtype": "bool",
+              "_type": "Value"
+            },
+            "reasoning_effort": {
+              "dtype": "string",
+              "_type": "Value"
+            }
+          },
+          "reference_patch": {
+            "patch": {
+              "dtype": "string",
+              "_type": "Value"
+            },
+            "num_modified_files": {
+              "dtype": "int64",
+              "_type": "Value"
+            },
+            "num_modified_lines": {
+              "dtype": "int64",
+              "_type": "Value"
+            }
+          },
+          "model_patch": {
+            "patch": {
+              "dtype": "string",
+              "_type": "Value"
+            },
+            "num_modified_files": {
+              "dtype": "int64",
+              "_type": "Value"
+            },
+            "num_modified_lines": {
+              "dtype": "int64",
+              "_type": "Value"
+            }
+          }
+        },
+        "hf_dataset_name": {
+          "dtype": "string",
+          "_type": "Value"
+        }
+      }
+    },
+    "v1.2": {
+      "splits": [
+        "minisweagent"
+      ],
+      "features": {
+        "instance_id": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "repo": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "license": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "language": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "trajectory_id": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "messages": [
+          {
+            "role": {
+              "dtype": "string",
+              "_type": "Value"
+            },
+            "content": {
+              "dtype": "string",
+              "_type": "Value"
+            },
+            "reasoning_content": {
+              "dtype": "string",
+              "_type": "Value"
+            },
+            "tool_calls": [
+              {
+                "function": {
+                  "arguments": {
+                    "dtype": "string",
+                    "_type": "Value"
+                  },
+                  "name": {
+                    "dtype": "string",
+                    "_type": "Value"
+                  }
+                },
+                "id": {
+                  "dtype": "string",
+                  "_type": "Value"
+                },
+                "type": {
+                  "dtype": "string",
+                  "_type": "Value"
+                }
+              }
+            ]
+          }
+        ],
+        "tools": [
+          {
+            "dtype": "string",
+            "_type": "Value"
+          }
+        ],
+        "resolved": {
+          "dtype": "int32",
+          "_type": "Value"
+        },
+        "metadata": {
+          "category": {
+            "dtype": "string",
+            "_type": "Value"
+          },
+          "teacher_model": {
+            "name": {
+              "dtype": "string",
+              "_type": "Value"
+            },
+            "enable_thinking": {
+              "dtype": "bool",
+              "_type": "Value"
+            },
+            "reasoning_effort": {
+              "dtype": "string",
+              "_type": "Value"
+            }
+          },
+          "reference_patch": {
+            "patch": {
+              "dtype": "string",
+              "_type": "Value"
+            },
+            "num_modified_files": {
+              "dtype": "int64",
+              "_type": "Value"
+            },
+            "num_modified_lines": {
+              "dtype": "int64",
+              "_type": "Value"
+            }
+          },
+          "model_patch": {
+            "patch": {
+              "dtype": "string",
+              "_type": "Value"
+            },
+            "num_modified_files": {
+              "dtype": "int64",
+              "_type": "Value"
+            },
+            "num_modified_lines": {
+              "dtype": "int64",
+              "_type": "Value"
+            }
+          }
+        },
+        "hf_dataset_name": {
+          "dtype": "string",
+          "_type": "Value"
+        }
+      }
+    }
+  },
+  "sample": {
+    "config": "v1.2",
+    "split": "minisweagent",
+    "offset": 0,
+    "instance_id": "python-distro_distro_pr145",
+    "trajectory_id": "b82d4956-5621-438a-957e-f5d43f94245f",
+    "message_count": 41,
+    "message_roles": {
+      "system": 1,
+      "user": 1,
+      "assistant": 16,
+      "tool": 23
+    },
+    "tool_call_count": 24,
+    "first_call": {
+      "function": {
+        "arguments": "{\"command\": \"ls -la /testbed\"}",
+        "name": "bash"
+      },
+      "id": "chatcmpl-tool-93e7f0ae3296738a",
+      "type": "function"
+    },
+    "first_tool_content_parsed_fields": [
+      "returncode",
+      "output"
+    ],
+    "last_message_role": "assistant",
+    "last_call_has_following_tool_observation": false
+  },
+  "limitations": [
+    "No structured timestamps, tool duration, model inference duration, or resource measurements in the inspected schemas.",
+    "The exported tool message schema has no tool_call_id field.",
+    "Task image and initial commit are not columns in these schemas."
+  ]
+}

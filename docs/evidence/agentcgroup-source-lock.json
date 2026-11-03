@@ -1,0 +1,44 @@
+{
+  "repository": "https://github.com/eunomia-bpf/agentcgroup",
+  "commit": "551ca1689b7d2d30db6b8a8613414750103cc68b",
+  "commit_date": "2026-07-22T01:30:52-07:00",
+  "retrieved_at_utc": "2026-10-06T09:55:03.443965+00:00",
+  "checkout": "docs/archive/agentcgroup",
+  "clone_depth": 1,
+  "submodules": [
+    {
+      "path": "agentsight",
+      "commit": "eba04def09d44367eb28ef61ea5596b51d3144c7",
+      "initialized": false
+    },
+    {
+      "path": "paper-repo",
+      "commit": "cb94d70f4eb22b91f0808628fd6500d8226ebda7",
+      "initialized": false
+    },
+    {
+      "path": "third_party/bpftool",
+      "commit": "9de83a18d4029a67a7dc1d87e786e71ea138d54b",
+      "initialized": false
+    },
+    {
+      "path": "third_party/scx",
+      "commit": "30f3260e94ed975a4ae771f50e2351fa34c597bd",
+      "initialized": false
+    }
+  ],
+  "shared_chat": "https://chatgpt.com/share/6ac4c151-4740-83ec-bf26-6be02806d74c",
+  "validation": {
+    "python_unit_tests": {
+      "command": "python3 -m unittest test_agentcgroupd -v",
+      "working_directory": "reference/agentcgroup/agentcg",
+      "passed": 43,
+      "failed": 0,
+      "scope": "unit tests with mocked or ordinary-file cgroup backends; not kernel enforcement",
+      "current_working_directory": "docs/archive/agentcgroup/agentcg"
+    },
+    "bpf_build_or_attach": false,
+    "worker_implemented": false,
+    "host_inspection": "read only"
+  }
+}

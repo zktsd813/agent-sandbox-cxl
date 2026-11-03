@@ -1,0 +1,73 @@
+{
+  "checked_on": "2026-10-07",
+  "validation_scope": "Source, dataset schema, and sampled rows inspected; no image pull or live replay.",
+  "open_swe_sample": {
+    "dataset": "nvidia/Open-SWE-Traces",
+    "config": "v1.2",
+    "split": "minisweagent",
+    "row": 0,
+    "instance_id": "python-distro_distro_pr145",
+    "repo": "python-distro/distro",
+    "source_task_dataset": "AweAI-Team/Scale-SWE",
+    "messages": 41,
+    "tool_calls": 24,
+    "tool_names": [
+      "bash"
+    ],
+    "multiple_tool_call_messages": 8,
+    "schema_fields": [
+      "instance_id",
+      "repo",
+      "license",
+      "language",
+      "trajectory_id",
+      "messages",
+      "tools",
+      "resolved",
+      "metadata",
+      "hf_dataset_name"
+    ],
+    "source_task_image_and_commit_matched": false,
+    "source_task_query_result": "Scale-SWE filter/search service requests failed; task schema inspected separately."
+  },
+  "terminal_sample": {
+    "dataset": "yoonholee/terminalbench-trajectories",
+    "config": "default",
+    "split": "train",
+    "row": 10000,
+    "task_name": "crack-7z-hash",
+    "agent": "terminus-2",
+    "steps": 23,
+    "duration_seconds": 279.8389892578125,
+    "observations_truncated_in_source": true
+  },
+  "replay_code": {
+    "repository": "https://github.com/open-agent-infra/crab",
+    "commit": "9607d61a41dc44358cf078c4b438bfd971c8ee9d",
+    "files_inspected": [
+      "docs/sdk-iflow-replay.md",
+      "examples/sdk/02_iflow_replay.py",
+      "scripts/tbench_trace_downloader.py",
+      "benchmarks/download_claude_code_traces.py",
+      "integrations/llm_services/mini_swe_trace_replay/service.py"
+    ]
+  },
+  "browser_traces": {
+    "dataset": "agentlabtraces/agentlabtraces",
+    "archive_files": [
+      "tmlr_traces_part_aa",
+      "tmlr_traces_part_ab",
+      "tmlr_traces_part_ac",
+      "tmlr_traces_part_ad",
+      "tmlr_traces_part_ae"
+    ],
+    "archive_bytes": 207028769008,
+    "downloaded": false,
+    "actions_reexecuted": false
+  },
+  "task_schema_sources": [
+    "https://huggingface.co/datasets/AweAI-Team/Scale-SWE",
+    "https://huggingface.co/datasets/nebius/SWE-rebench-V2",
+    "https://github.com/SWE-rebench/SWE-rebench-V2"
+  ]
+}

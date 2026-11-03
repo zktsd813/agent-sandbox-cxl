@@ -1,0 +1,36 @@
+{
+  "downloaded_on": "2026-10-07",
+  "checkouts": [
+    {
+      "directory": "/home/ijkim/agent-sandbox-cxl/harness/mini-swe-agent",
+      "repository_url": "https://github.com/SWE-agent/mini-swe-agent.git",
+      "commit": "04d809ceab9df28f9adaed044884180159172930",
+      "branch": "main",
+      "shallow": true,
+      "license": "MIT",
+      "working_tree_clean": true
+    },
+    {
+      "directory": "/home/ijkim/agent-sandbox-cxl/harness/SWE-agent",
+      "repository_url": "https://github.com/SWE-agent/SWE-agent.git",
+      "commit": "3ea751c087f32b16e039a2233dd6eefecef325d5",
+      "branch": "main",
+      "shallow": true,
+      "license": "MIT",
+      "working_tree_clean": true
+    }
+  ],
+  "validation": {
+    "git_working_trees_clean": true,
+    "source_inspected": [
+      "harness/SWE-agent/sweagent/run/run_replay.py",
+      "harness/SWE-agent/sweagent/agent/models.py:ReplayModel",
+      "harness/mini-swe-agent/src/minisweagent/models/test_models.py:DeterministicModel"
+    ],
+    "compatible_test_trace": "harness/SWE-agent/tests/test_data/trajectories/gpt4__swe-agent-test-repo__default_from_url__t-0.00__p-0.95__c-3.00__install-1/6e44b9__sweagenttestrepo-1c2844.traj",
+    "test_trace_steps": 5,
+    "dependencies_installed": false,
+    "replay_executed": false,
+    "model_calls_made": false
+  }
+}

@@ -1,6 +1,6 @@
 # agent-sandbox-cxl
 
-처음 읽는 경우 [CXL microVM 연구와 구현 전체 정리](docs/cxl-microvm-overview.md)부터 본다. Workload 관측부터 실행 이전 구현, PML·MPTCP 검증, 파일 공유 설계와 후속 계획을 연결했다. 구현·실측·시뮬레이션·설계 중인 내용을 구분한다.
+문서 색인과 현재 방향(2026-11-03)은 [docs/README.md](docs/README.md)에 있다. 처음 읽는 경우 [CXL microVM 연구와 구현 전체 정리](docs/cxl-microvm-overview.md)부터 본다. Workload 관측부터 실행 이전 구현, PML·MPTCP 검증, 파일 공유 설계와 후속 계획을 연결했다. 구현·실측·시뮬레이션·설계 중인 내용을 구분한다.
 
 mini-swe-agent의 기록된 명령을 Docker에서 재실행하고 CPU·메모리·동시성·LLC MPKI를 측정한다. Trace replay는 CPU NUMA node 0과 DRAM(node 0) / CXL(node 2) 메모리 비교를 지원한다. 별도 microVM 실험은 공유 DAX RAM 위의 상태 복원·KVM worker 재사용·direct handoff와 PML/cache 처리 비용을 검증한다. GPU, 모델 가중치, LLM API key는 사용하지 않는다.
 
