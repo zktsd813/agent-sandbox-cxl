@@ -1,0 +1,3483 @@
+{
+  "result": "passed",
+  "trials": [
+    {
+      "id": "00-nfs",
+      "arm": "nfs",
+      "result": "passed",
+      "hops": [
+        {
+          "generation": 1,
+          "destination": "B",
+          "first": true,
+          "request_resume_ms": 12.704336,
+          "request_complete_ms": 12.705819,
+          "external_command_ms": 13.214505,
+          "export_attach_api_ms": 8.596530999999999,
+          "kernel_ms": 1.957844,
+          "kernel_profile": {
+            "file": "0052-kernel-stage-profile.txt",
+            "generation": 1,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              674776,
+              174077,
+              34945,
+              1963,
+              7590,
+              13372,
+              346,
+              0
+            ],
+            "attach_ns": [
+              13769,
+              266265,
+              21303,
+              16882,
+              25390,
+              702144,
+              5094,
+              763
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 51.026,
+              "export_detach_ioctls": 1035.666,
+              "log_receipt": 108.12299999999999,
+              "park_resident": 390.28700000000003,
+              "peek_token": 3.852,
+              "read_manifest_and_build_state": 92.723,
+              "seal_mapper": 186.145,
+              "serialize_devices": 185.56,
+              "unbind_ioevents": 144.874,
+              "validate_and_open": 54.071,
+              "write_devices": 14.572000000000001
+            },
+            "total_us": 2267.949
+          },
+          "import_profile": {
+            "scope": "direct_import",
+            "stages_us": {
+              "adopt_memory": 35.242,
+              "attach_and_vm_wrapper": 1255.082,
+              "import_mapper": 881.163,
+              "kvm_capabilities": 251.028,
+              "log_receipt": 298.308,
+              "read_validate_metadata": 865.008,
+              "register_events": 13.531,
+              "restore_devices": 969.809,
+              "start_vcpu_thread": 249.442,
+              "validate_vmm": 43.509,
+              "vcpu_wrapper": 37.864999999999995
+            },
+            "total_us": 4900.425
+          }
+        },
+        {
+          "generation": 2,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 12.359164,
+          "request_complete_ms": 12.362986,
+          "external_command_ms": 13.551802,
+          "export_attach_api_ms": 10.619529,
+          "kernel_ms": 4.98345,
+          "kernel_profile": {
+            "file": "0068-kernel-stage-profile.txt",
+            "generation": 2,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              62220,
+              1306,
+              51794,
+              500,
+              6146,
+              12630,
+              355,
+              0
+            ],
+            "attach_ns": [
+              14840,
+              304,
+              9096,
+              27309,
+              1585,
+              4793846,
+              1562,
+              732
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 66.257,
+              "export_detach_ioctls": 246.15200000000002,
+              "log_receipt": 108.91399999999999,
+              "park_resident": 173.602,
+              "peek_token": 2.4099999999999997,
+              "read_manifest_and_build_state": 92.766,
+              "seal_mapper": 177.371,
+              "serialize_devices": 195.44500000000002,
+              "unbind_ioevents": 325.314,
+              "validate_and_open": 50.043,
+              "write_devices": 13.212
+            },
+            "total_us": 1452.052
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 4936.8,
+              "import_mapper": 626.072,
+              "read_validate_metadata": 730.648,
+              "restore_devices": 738.538
+            },
+            "total_us": 7378.32
+          }
+        },
+        {
+          "generation": 3,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 8.38708,
+          "request_complete_ms": 8.391163,
+          "external_command_ms": 9.828333,
+          "export_attach_api_ms": 6.441194,
+          "kernel_ms": 1.29983,
+          "kernel_profile": {
+            "file": "0084-kernel-stage-profile.txt",
+            "generation": 3,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              154276,
+              937,
+              40541,
+              184,
+              3979,
+              5236,
+              111,
+              0
+            ],
+            "attach_ns": [
+              14555,
+              320,
+              9548,
+              24725,
+              2227,
+              1041274,
+              1809,
+              740
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 12.668,
+              "export_detach_ioctls": 275.932,
+              "log_receipt": 43.455000000000005,
+              "park_resident": 162.564,
+              "peek_token": 1.605,
+              "read_manifest_and_build_state": 34.978,
+              "seal_mapper": 88.488,
+              "serialize_devices": 66.488,
+              "unbind_ioevents": 239.001,
+              "validate_and_open": 26.721999999999998,
+              "write_devices": 5.800000000000001
+            },
+            "total_us": 958.0889999999999
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 1189.781,
+              "import_mapper": 552.024,
+              "read_validate_metadata": 421.52599999999995,
+              "restore_devices": 769.398
+            },
+            "total_us": 3274.991
+          }
+        },
+        {
+          "generation": 4,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 5.012356,
+          "request_complete_ms": 5.016176,
+          "external_command_ms": 6.230241,
+          "export_attach_api_ms": 3.8123720000000003,
+          "kernel_ms": 0.875981,
+          "kernel_profile": {
+            "file": "0098-kernel-stage-profile.txt",
+            "generation": 4,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              61837,
+              1120,
+              51246,
+              224,
+              5129,
+              9230,
+              317,
+              0
+            ],
+            "attach_ns": [
+              7100,
+              137,
+              5763,
+              16073,
+              1828,
+              714873,
+              1268,
+              391
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 15.6,
+              "export_detach_ioctls": 198.04299999999998,
+              "log_receipt": 97.861,
+              "park_resident": 109.833,
+              "peek_token": 2.357,
+              "read_manifest_and_build_state": 62.71,
+              "seal_mapper": 140.865,
+              "serialize_devices": 92.723,
+              "unbind_ioevents": 190.64700000000002,
+              "validate_and_open": 36.093999999999994,
+              "write_devices": 8.566
+            },
+            "total_us": 955.908
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 798.033,
+              "import_mapper": 222.628,
+              "read_validate_metadata": 175.172,
+              "restore_devices": 257.968
+            },
+            "total_us": 1557.271
+          }
+        },
+        {
+          "generation": 5,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 5.809303,
+          "request_complete_ms": 5.813016,
+          "external_command_ms": 6.978308,
+          "export_attach_api_ms": 4.285095999999999,
+          "kernel_ms": 0.728601,
+          "kernel_profile": {
+            "file": "0112-kernel-stage-profile.txt",
+            "generation": 5,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              145365,
+              1315,
+              51175,
+              454,
+              5985,
+              12500,
+              511,
+              0
+            ],
+            "attach_ns": [
+              6695,
+              94,
+              3727,
+              11889,
+              1251,
+              486576,
+              1416,
+              172
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 21.256,
+              "export_detach_ioctls": 305.21299999999997,
+              "log_receipt": 104.931,
+              "park_resident": 180.19400000000002,
+              "peek_token": 2.52,
+              "read_manifest_and_build_state": 89.53,
+              "seal_mapper": 183.859,
+              "serialize_devices": 134.952,
+              "unbind_ioevents": 291.776,
+              "validate_and_open": 35.201,
+              "write_devices": 13.24
+            },
+            "total_us": 1363.252
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 549.681,
+              "import_mapper": 191.57899999999998,
+              "read_validate_metadata": 151.278,
+              "restore_devices": 379.53200000000004
+            },
+            "total_us": 1372.964
+          }
+        },
+        {
+          "generation": 6,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 6.421178,
+          "request_complete_ms": 6.42497,
+          "external_command_ms": 7.598224,
+          "export_attach_api_ms": 5.059937,
+          "kernel_ms": 1.031601,
+          "kernel_profile": {
+            "file": "0126-kernel-stage-profile.txt",
+            "generation": 6,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              127473,
+              713,
+              43052,
+              116,
+              2687,
+              4425,
+              234,
+              0
+            ],
+            "attach_ns": [
+              13317,
+              296,
+              8177,
+              65230,
+              1662,
+              762876,
+              1371,
+              729
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 11.7,
+              "export_detach_ioctls": 223.973,
+              "log_receipt": 31.371999999999996,
+              "park_resident": 121.785,
+              "peek_token": 1.229,
+              "read_manifest_and_build_state": 26.68,
+              "seal_mapper": 72.186,
+              "serialize_devices": 60.038,
+              "unbind_ioevents": 222.119,
+              "validate_and_open": 19.877,
+              "write_devices": 4.964
+            },
+            "total_us": 796.039
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 932.661,
+              "import_mapper": 515.959,
+              "read_validate_metadata": 357.805,
+              "restore_devices": 486.491
+            },
+            "total_us": 2617.1380000000004
+          }
+        },
+        {
+          "generation": 7,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 5.843826,
+          "request_complete_ms": 5.847669,
+          "external_command_ms": 7.035314,
+          "export_attach_api_ms": 4.217674,
+          "kernel_ms": 0.626702,
+          "kernel_profile": {
+            "file": "0140-kernel-stage-profile.txt",
+            "generation": 7,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              120759,
+              1044,
+              133453,
+              127,
+              2938,
+              21577,
+              184,
+              0
+            ],
+            "attach_ns": [
+              7162,
+              77,
+              4037,
+              11540,
+              1082,
+              321658,
+              1168,
+              342
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 12.785,
+              "export_detach_ioctls": 362.60699999999997,
+              "log_receipt": 37.339999999999996,
+              "park_resident": 127.122,
+              "peek_token": 1.2169999999999999,
+              "read_manifest_and_build_state": 33.571,
+              "seal_mapper": 81.622,
+              "serialize_devices": 49.944,
+              "unbind_ioevents": 210.125,
+              "validate_and_open": 22.662000000000003,
+              "write_devices": 5.012
+            },
+            "total_us": 944.342
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 381.087,
+              "import_mapper": 271.489,
+              "read_validate_metadata": 159.728,
+              "restore_devices": 462.265
+            },
+            "total_us": 1623.606
+          }
+        },
+        {
+          "generation": 8,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 3.538608,
+          "request_complete_ms": 3.541933,
+          "external_command_ms": 4.273564,
+          "export_attach_api_ms": 2.482911,
+          "kernel_ms": 0.466581,
+          "kernel_profile": {
+            "file": "0154-kernel-stage-profile.txt",
+            "generation": 8,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              43858,
+              662,
+              27333,
+              147,
+              2925,
+              5118,
+              125,
+              0
+            ],
+            "attach_ns": [
+              4906,
+              85,
+              3919,
+              12591,
+              1116,
+              363126,
+              712,
+              162
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 12.504999999999999,
+              "export_detach_ioctls": 122.32000000000001,
+              "log_receipt": 39.344,
+              "park_resident": 49.315,
+              "peek_token": 1.158,
+              "read_manifest_and_build_state": 35.364999999999995,
+              "seal_mapper": 82.67,
+              "serialize_devices": 53.574,
+              "unbind_ioevents": 156.17499999999998,
+              "validate_and_open": 22.361,
+              "write_devices": 6.182
+            },
+            "total_us": 581.265
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 411.23499999999996,
+              "import_mapper": 203.003,
+              "read_validate_metadata": 116.10000000000001,
+              "restore_devices": 183.1
+            },
+            "total_us": 1008.402
+          }
+        },
+        {
+          "generation": 9,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 3.994425,
+          "request_complete_ms": 3.997795,
+          "external_command_ms": 5.090053,
+          "export_attach_api_ms": 2.9596270000000002,
+          "kernel_ms": 0.378346,
+          "kernel_profile": {
+            "file": "0168-kernel-stage-profile.txt",
+            "generation": 9,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              49273,
+              883,
+              36971,
+              253,
+              3907,
+              6973,
+              317,
+              0
+            ],
+            "attach_ns": [
+              5594,
+              48,
+              2996,
+              9886,
+              912,
+              259230,
+              1316,
+              278
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 15.911999999999999,
+              "export_detach_ioctls": 159.757,
+              "log_receipt": 56.296,
+              "park_resident": 65.677,
+              "peek_token": 1.7469999999999999,
+              "read_manifest_and_build_state": 38.415,
+              "seal_mapper": 130.581,
+              "serialize_devices": 93.718,
+              "unbind_ioevents": 224.389,
+              "validate_and_open": 37.037,
+              "write_devices": 8.726
+            },
+            "total_us": 832.615
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 302.371,
+              "import_mapper": 196.436,
+              "read_validate_metadata": 132.792,
+              "restore_devices": 255.284
+            },
+            "total_us": 976.613
+          }
+        },
+        {
+          "generation": 10,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 5.716376,
+          "request_complete_ms": 5.720303,
+          "external_command_ms": 6.8253,
+          "export_attach_api_ms": 4.487109,
+          "kernel_ms": 0.791951,
+          "kernel_profile": {
+            "file": "0182-kernel-stage-profile.txt",
+            "generation": 10,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              43760,
+              542,
+              41639,
+              102,
+              1993,
+              4151,
+              93,
+              0
+            ],
+            "attach_ns": [
+              12796,
+              147,
+              8317,
+              24660,
+              1653,
+              650634,
+              1377,
+              655
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 9.18,
+              "export_detach_ioctls": 136.092,
+              "log_receipt": 29.032,
+              "park_resident": 119.95200000000001,
+              "peek_token": 1.0150000000000001,
+              "read_manifest_and_build_state": 25.371000000000002,
+              "seal_mapper": 60.583,
+              "serialize_devices": 42.486,
+              "unbind_ioevents": 253.746,
+              "validate_and_open": 16.753999999999998,
+              "write_devices": 4.087
+            },
+            "total_us": 698.48
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 773.189,
+              "import_mapper": 571.979,
+              "read_validate_metadata": 328.276,
+              "restore_devices": 454.329
+            },
+            "total_us": 2425.972
+          }
+        },
+        {
+          "generation": 11,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 3.869712,
+          "request_complete_ms": 3.873214,
+          "external_command_ms": 4.7773,
+          "export_attach_api_ms": 2.6814350000000005,
+          "kernel_ms": 0.393415,
+          "kernel_profile": {
+            "file": "0196-kernel-stage-profile.txt",
+            "generation": 11,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              46620,
+              872,
+              38707,
+              288,
+              2816,
+              5094,
+              285,
+              0
+            ],
+            "attach_ns": [
+              6225,
+              58,
+              3897,
+              10095,
+              1055,
+              276710,
+              901,
+              569
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 11.089,
+              "export_detach_ioctls": 140.441,
+              "log_receipt": 28.723,
+              "park_resident": 47.205,
+              "peek_token": 1.189,
+              "read_manifest_and_build_state": 23.599,
+              "seal_mapper": 79.11500000000001,
+              "serialize_devices": 46.293,
+              "unbind_ioevents": 136.20000000000002,
+              "validate_and_open": 25.117,
+              "write_devices": 4.633
+            },
+            "total_us": 543.8520000000001
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 321.502,
+              "import_mapper": 215.253,
+              "read_validate_metadata": 146.83700000000002,
+              "restore_devices": 257.941
+            },
+            "total_us": 1026.4180000000001
+          }
+        },
+        {
+          "generation": 12,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 4.350451,
+          "request_complete_ms": 4.354515,
+          "external_command_ms": 5.415984,
+          "export_attach_api_ms": 3.087615,
+          "kernel_ms": 0.412359,
+          "kernel_profile": {
+            "file": "0210-kernel-stage-profile.txt",
+            "generation": 12,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              27763,
+              633,
+              24044,
+              240,
+              2377,
+              3847,
+              232,
+              0
+            ],
+            "attach_ns": [
+              5273,
+              53,
+              4083,
+              11981,
+              956,
+              330393,
+              629,
+              296
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 9.285,
+              "export_detach_ioctls": 98.173,
+              "log_receipt": 22.317,
+              "park_resident": 116.223,
+              "peek_token": 1.0470000000000002,
+              "read_manifest_and_build_state": 19.443,
+              "seal_mapper": 53.517,
+              "serialize_devices": 47.379999999999995,
+              "unbind_ioevents": 126.42,
+              "validate_and_open": 12.347999999999999,
+              "write_devices": 4.364999999999999
+            },
+            "total_us": 510.59
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 377.56399999999996,
+              "import_mapper": 264.437,
+              "read_validate_metadata": 124.077,
+              "restore_devices": 318.772
+            },
+            "total_us": 1168.695
+          }
+        },
+        {
+          "generation": 13,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 5.274806,
+          "request_complete_ms": 5.278666,
+          "external_command_ms": 6.39644,
+          "export_attach_api_ms": 3.988736,
+          "kernel_ms": 0.495592,
+          "kernel_profile": {
+            "file": "0224-kernel-stage-profile.txt",
+            "generation": 13,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              58905,
+              1118,
+              142573,
+              364,
+              5148,
+              11128,
+              384,
+              0
+            ],
+            "attach_ns": [
+              5656,
+              94,
+              3558,
+              10342,
+              652,
+              255093,
+              785,
+              278
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 16.246,
+              "export_detach_ioctls": 300.29699999999997,
+              "log_receipt": 86.448,
+              "park_resident": 110.53299999999999,
+              "peek_token": 2.347,
+              "read_manifest_and_build_state": 70.33399999999999,
+              "seal_mapper": 172.571,
+              "serialize_devices": 133.772,
+              "unbind_ioevents": 312.964,
+              "validate_and_open": 42.937,
+              "write_devices": 12.001999999999999
+            },
+            "total_us": 1260.895
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 298.27,
+              "import_mapper": 274.687,
+              "read_validate_metadata": 107.64699999999999,
+              "restore_devices": 357.296
+            },
+            "total_us": 1117.55
+          }
+        },
+        {
+          "generation": 14,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 7.097495,
+          "request_complete_ms": 7.101572,
+          "external_command_ms": 8.292669,
+          "export_attach_api_ms": 5.465272000000001,
+          "kernel_ms": 1.18817,
+          "kernel_profile": {
+            "file": "0238-kernel-stage-profile.txt",
+            "generation": 14,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              47337,
+              1195,
+              19842,
+              150,
+              2954,
+              5085,
+              352,
+              0
+            ],
+            "attach_ns": [
+              14954,
+              203,
+              8551,
+              26194,
+              2195,
+              1057788,
+              1510,
+              922
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 13.782,
+              "export_detach_ioctls": 120.507,
+              "log_receipt": 24.518,
+              "park_resident": 48.946000000000005,
+              "peek_token": 1.406,
+              "read_manifest_and_build_state": 24.186,
+              "seal_mapper": 80.109,
+              "serialize_devices": 45.117000000000004,
+              "unbind_ioevents": 146.901,
+              "validate_and_open": 25.168,
+              "write_devices": 4.5600000000000005
+            },
+            "total_us": 535.548
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 1407.285,
+              "import_mapper": 643.153,
+              "read_validate_metadata": 404.532,
+              "restore_devices": 528.699
+            },
+            "total_us": 3310.574
+          }
+        },
+        {
+          "generation": 15,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 5.024562,
+          "request_complete_ms": 5.028835,
+          "external_command_ms": 6.218354,
+          "export_attach_api_ms": 3.441592,
+          "kernel_ms": 0.523605,
+          "kernel_profile": {
+            "file": "0252-kernel-stage-profile.txt",
+            "generation": 15,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              138251,
+              924,
+              4643,
+              101,
+              2621,
+              5717,
+              246,
+              0
+            ],
+            "attach_ns": [
+              8852,
+              113,
+              4466,
+              12252,
+              1750,
+              342655,
+              1149,
+              386
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 14.112,
+              "export_detach_ioctls": 179.126,
+              "log_receipt": 28.243000000000002,
+              "park_resident": 129.369,
+              "peek_token": 2.179,
+              "read_manifest_and_build_state": 25.384,
+              "seal_mapper": 85.821,
+              "serialize_devices": 47.391,
+              "unbind_ioevents": 27.026,
+              "validate_and_open": 26.458,
+              "write_devices": 5.019
+            },
+            "total_us": 570.466
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 401.661,
+              "import_mapper": 312.825,
+              "read_validate_metadata": 159.887,
+              "restore_devices": 209.18099999999998
+            },
+            "total_us": 1174.292
+          }
+        },
+        {
+          "generation": 16,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 4.922465,
+          "request_complete_ms": 4.926536,
+          "external_command_ms": 6.181058,
+          "export_attach_api_ms": 3.402071,
+          "kernel_ms": 0.770703,
+          "kernel_profile": {
+            "file": "0266-kernel-stage-profile.txt",
+            "generation": 16,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              159203,
+              918,
+              36407,
+              147,
+              2901,
+              5254,
+              335,
+              0
+            ],
+            "attach_ns": [
+              6522,
+              117,
+              5524,
+              15930,
+              1620,
+              534892,
+              1191,
+              169
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 12.854,
+              "export_detach_ioctls": 246.05200000000002,
+              "log_receipt": 26.697,
+              "park_resident": 150.465,
+              "peek_token": 1.3430000000000002,
+              "read_manifest_and_build_state": 25.186,
+              "seal_mapper": 100.022,
+              "serialize_devices": 43.305,
+              "unbind_ioevents": 132.361,
+              "validate_and_open": 24.76,
+              "write_devices": 5.3469999999999995
+            },
+            "total_us": 768.4970000000001
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 612.081,
+              "import_mapper": 291.921,
+              "read_validate_metadata": 146.344,
+              "restore_devices": 89.729
+            },
+            "total_us": 1243.636
+          }
+        },
+        {
+          "generation": 17,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 5.72692,
+          "request_complete_ms": 5.730886,
+          "external_command_ms": 7.156619,
+          "export_attach_api_ms": 4.336144,
+          "kernel_ms": 0.691873,
+          "kernel_profile": {
+            "file": "0280-kernel-stage-profile.txt",
+            "generation": 17,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              144053,
+              1123,
+              154888,
+              380,
+              4673,
+              11712,
+              313,
+              0
+            ],
+            "attach_ns": [
+              6898,
+              181,
+              4167,
+              11826,
+              1198,
+              349458,
+              1169,
+              165
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 18.979,
+              "export_detach_ioctls": 401.27000000000004,
+              "log_receipt": 100.307,
+              "park_resident": 174.64100000000002,
+              "peek_token": 2.7920000000000003,
+              "read_manifest_and_build_state": 61.424,
+              "seal_mapper": 172.793,
+              "serialize_devices": 124.113,
+              "unbind_ioevents": 364.833,
+              "validate_and_open": 32.480000000000004,
+              "write_devices": 13.013
+            },
+            "total_us": 1467.1809999999998
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 413.502,
+              "import_mapper": 316.37800000000004,
+              "read_validate_metadata": 146.93900000000002,
+              "restore_devices": 224.774
+            },
+            "total_us": 1192.826
+          }
+        },
+        {
+          "generation": 18,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 7.242303,
+          "request_complete_ms": 7.246267,
+          "external_command_ms": 8.433118,
+          "export_attach_api_ms": 5.411696,
+          "kernel_ms": 1.109157,
+          "kernel_profile": {
+            "file": "0294-kernel-stage-profile.txt",
+            "generation": 18,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              56770,
+              754,
+              158955,
+              270,
+              2703,
+              23829,
+              498,
+              0
+            ],
+            "attach_ns": [
+              13657,
+              319,
+              8986,
+              29994,
+              1686,
+              809487,
+              1514,
+              755
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 12.366,
+              "export_detach_ioctls": 290.899,
+              "log_receipt": 25.68,
+              "park_resident": 146.00400000000002,
+              "peek_token": 1.5910000000000002,
+              "read_manifest_and_build_state": 20.902,
+              "seal_mapper": 69.636,
+              "serialize_devices": 46.185,
+              "unbind_ioevents": 226.714,
+              "validate_and_open": 18.879,
+              "write_devices": 6.148000000000001
+            },
+            "total_us": 865.354
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 953.129,
+              "import_mapper": 590.891,
+              "read_validate_metadata": 354.397,
+              "restore_devices": 475.839
+            },
+            "total_us": 2694.212
+          }
+        },
+        {
+          "generation": 19,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 5.129235,
+          "request_complete_ms": 5.133539,
+          "external_command_ms": 5.959083,
+          "export_attach_api_ms": 3.7782839999999998,
+          "kernel_ms": 0.487774,
+          "kernel_profile": {
+            "file": "0308-kernel-stage-profile.txt",
+            "generation": 19,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              54888,
+              880,
+              33643,
+              456,
+              4523,
+              7889,
+              862,
+              0
+            ],
+            "attach_ns": [
+              8127,
+              195,
+              3992,
+              11555,
+              1386,
+              359028,
+              1109,
+              176
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 15.611999999999998,
+              "export_detach_ioctls": 175.988,
+              "log_receipt": 45.708,
+              "park_resident": 143.39999999999998,
+              "peek_token": 1.5710000000000002,
+              "read_manifest_and_build_state": 40.080999999999996,
+              "seal_mapper": 123.504,
+              "serialize_devices": 73.389,
+              "unbind_ioevents": 184.014,
+              "validate_and_open": 40.417,
+              "write_devices": 8.06
+            },
+            "total_us": 852.147
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 423.954,
+              "import_mapper": 184.28,
+              "read_validate_metadata": 162.738,
+              "restore_devices": 376.702
+            },
+            "total_us": 1238.025
+          }
+        },
+        {
+          "generation": 20,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 4.747758,
+          "request_complete_ms": 4.751793,
+          "external_command_ms": 5.51612,
+          "export_attach_api_ms": 3.328411,
+          "kernel_ms": 0.601531,
+          "kernel_profile": {
+            "file": "0322-kernel-stage-profile.txt",
+            "generation": 20,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              51688,
+              941,
+              29371,
+              148,
+              2886,
+              4970,
+              348,
+              0
+            ],
+            "attach_ns": [
+              7518,
+              207,
+              5972,
+              18639,
+              1323,
+              476433,
+              1326,
+              425
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 12.347000000000001,
+              "export_detach_ioctls": 131.543,
+              "log_receipt": 23.907999999999998,
+              "park_resident": 131.851,
+              "peek_token": 1.334,
+              "read_manifest_and_build_state": 22.223,
+              "seal_mapper": 76.94500000000001,
+              "serialize_devices": 44.440000000000005,
+              "unbind_ioevents": 147.349,
+              "validate_and_open": 24.705000000000002,
+              "write_devices": 4.777
+            },
+            "total_us": 621.6550000000001
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 553.771,
+              "import_mapper": 184.663,
+              "read_validate_metadata": 153.19,
+              "restore_devices": 346.28700000000003
+            },
+            "total_us": 1340.195
+          }
+        },
+        {
+          "generation": 21,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 6.163706,
+          "request_complete_ms": 6.167664,
+          "external_command_ms": 7.286203,
+          "export_attach_api_ms": 4.754233,
+          "kernel_ms": 0.710528,
+          "kernel_profile": {
+            "file": "0336-kernel-stage-profile.txt",
+            "generation": 21,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              145668,
+              1141,
+              158528,
+              380,
+              6030,
+              12150,
+              494,
+              0
+            ],
+            "attach_ns": [
+              7395,
+              151,
+              4158,
+              12102,
+              1182,
+              360261,
+              1183,
+              362
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 21.291999999999998,
+              "export_detach_ioctls": 416.907,
+              "log_receipt": 85.943,
+              "park_resident": 193.512,
+              "peek_token": 2.7800000000000002,
+              "read_manifest_and_build_state": 66.302,
+              "seal_mapper": 185.543,
+              "serialize_devices": 164.879,
+              "unbind_ioevents": 383.094,
+              "validate_and_open": 35.625,
+              "write_devices": 13.812
+            },
+            "total_us": 1570.2489999999998
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 426.65900000000005,
+              "import_mapper": 320.498,
+              "read_validate_metadata": 155.843,
+              "restore_devices": 366.031
+            },
+            "total_us": 1373.127
+          }
+        },
+        {
+          "generation": 22,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 7.261614,
+          "request_complete_ms": 7.265497,
+          "external_command_ms": 8.384209,
+          "export_attach_api_ms": 5.47799,
+          "kernel_ms": 1.202742,
+          "kernel_profile": {
+            "file": "0350-kernel-stage-profile.txt",
+            "generation": 22,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              53088,
+              848,
+              176771,
+              128,
+              3163,
+              27760,
+              217,
+              0
+            ],
+            "attach_ns": [
+              14731,
+              297,
+              8810,
+              29420,
+              2428,
+              883386,
+              1706,
+              728
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 13.334,
+              "export_detach_ioctls": 310.453,
+              "log_receipt": 25.952,
+              "park_resident": 134.595,
+              "peek_token": 1.2109999999999999,
+              "read_manifest_and_build_state": 21.770999999999997,
+              "seal_mapper": 82.734,
+              "serialize_devices": 45.301,
+              "unbind_ioevents": 232.894,
+              "validate_and_open": 26.983,
+              "write_devices": 5.8340000000000005
+            },
+            "total_us": 901.4300000000001
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 1017.3980000000001,
+              "import_mapper": 592.608,
+              "read_validate_metadata": 365.602,
+              "restore_devices": 555.9300000000001
+            },
+            "total_us": 2833.361
+          }
+        },
+        {
+          "generation": 23,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 5.657029,
+          "request_complete_ms": 5.660981,
+          "external_command_ms": 6.89068,
+          "export_attach_api_ms": 3.967272,
+          "kernel_ms": 0.555093,
+          "kernel_profile": {
+            "file": "0364-kernel-stage-profile.txt",
+            "generation": 23,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              139946,
+              1120,
+              8060,
+              306,
+              4151,
+              7973,
+              414,
+              0
+            ],
+            "attach_ns": [
+              8193,
+              191,
+              3737,
+              12953,
+              1467,
+              365170,
+              1706,
+              375
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 18.043,
+              "export_detach_ioctls": 204.48499999999999,
+              "log_receipt": 62.97299999999999,
+              "park_resident": 175.52,
+              "peek_token": 2.3240000000000003,
+              "read_manifest_and_build_state": 49.507,
+              "seal_mapper": 141.50400000000002,
+              "serialize_devices": 105.239,
+              "unbind_ioevents": 41.81,
+              "validate_and_open": 35.639,
+              "write_devices": 9.717
+            },
+            "total_us": 847.264
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 437.687,
+              "import_mapper": 189.407,
+              "read_validate_metadata": 178.66400000000002,
+              "restore_devices": 417.147
+            },
+            "total_us": 1319.361
+          }
+        },
+        {
+          "generation": 24,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 5.69724,
+          "request_complete_ms": 5.701376,
+          "external_command_ms": 6.945769,
+          "export_attach_api_ms": 3.850866,
+          "kernel_ms": 0.600151,
+          "kernel_profile": {
+            "file": "0378-kernel-stage-profile.txt",
+            "generation": 24,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              39679,
+              1087,
+              20777,
+              158,
+              3181,
+              4892,
+              347,
+              0
+            ],
+            "attach_ns": [
+              7602,
+              104,
+              5342,
+              31084,
+              1474,
+              483422,
+              1277,
+              402
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 12.586,
+              "export_detach_ioctls": 113.967,
+              "log_receipt": 25.862000000000002,
+              "park_resident": 130.667,
+              "peek_token": 1.235,
+              "read_manifest_and_build_state": 23.281,
+              "seal_mapper": 80.233,
+              "serialize_devices": 46.846,
+              "unbind_ioevents": 406.478,
+              "validate_and_open": 24.233999999999998,
+              "write_devices": 5.6579999999999995
+            },
+            "total_us": 871.378
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 561.9899999999999,
+              "import_mapper": 319.206,
+              "read_validate_metadata": 169.18099999999998,
+              "restore_devices": 102.285
+            },
+            "total_us": 1251.64
+          }
+        }
+      ],
+      "preparation": {
+        "wall_ns": 12890576,
+        "stages": [
+          {
+            "role": "B",
+            "kind": "native-prepare",
+            "file": "0047-native-prepare.txt",
+            "elapsed_ns": 12664294,
+            "rpc": {
+              "wall_ns": 12220128,
+              "native_ns": 11722834,
+              "request_bytes": 3588,
+              "response_bytes": 300
+            }
+          }
+        ],
+        "worker": {
+          "directory": "/run/swe-pool-8b5e1f771a76dccb/vm1-epoch1-resident-prepare",
+          "plan": "/run/swe-pool-8b5e1f771a76dccb/vm1-epoch1-resident-prepare/memory-plan.json",
+          "report": "/run/swe-pool-8b5e1f771a76dccb/vm1-epoch1-resident-prepare/memory-report.json",
+          "manifest_path": "/run/swe-pool-8b5e1f771a76dccb/vm1-epoch1-resident-prepare/memory-manifest.json",
+          "hints": "/run/swe-pool-8b5e1f771a76dccb/vm1-epoch1-resident-prepare/unused-read-history.json",
+          "imported": false,
+          "prepared_api": {
+            "file": "0047-native-prepare.txt",
+            "role": "B",
+            "path": "/actions",
+            "method": "PUT",
+            "request": {
+              "action_type": "DirectPrepare"
+            },
+            "response": {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 4028.329
+            },
+            "control_wall_ns": 0,
+            "embedded_in": "0047-native-prepare.txt"
+          },
+          "native_boot": {
+            "pid": 140,
+            "starttime": 1593,
+            "fork_ns": 104533,
+            "fork_to_api_ready_ns": 4333925,
+            "prepare_api_ns": 4028329,
+            "native_ready_ns": 8510722
+          },
+          "native_boot_file": "0047-native-prepare.txt"
+        },
+        "server_wall_ns": 8165960
+      },
+      "prepares": [
+        {
+          "role": "B",
+          "elapsed_ns": 3184401,
+          "event": "prepare",
+          "guest_ram_access": false,
+          "kernel_attach": false,
+          "pid": 140
+        }
+      ],
+      "disk_profiles": [
+        {
+          "role": "A",
+          "scope": "disk_properties",
+          "stages_us": {
+            "file_engine": 197.814,
+            "image_id": 16.967,
+            "open": 1062.928,
+            "pool_identity": 2.84,
+            "size": 4.723000000000001
+          },
+          "total_us": 1293.871
+        },
+        {
+          "role": "B",
+          "scope": "disk_properties",
+          "stages_us": {
+            "file_engine": 248.13199999999998,
+            "image_id": 22.713,
+            "open": 2713.694,
+            "pool_identity": 3.777,
+            "size": 7.438
+          },
+          "total_us": 3003.459
+        }
+      ],
+      "first": {
+        "generation": 1,
+        "destination": "B",
+        "first": true,
+        "request_resume_ms": 12.704336,
+        "request_complete_ms": 12.705819,
+        "external_command_ms": 13.214505,
+        "export_attach_api_ms": 8.596530999999999,
+        "kernel_ms": 1.957844,
+        "kernel_profile": {
+          "file": "0052-kernel-stage-profile.txt",
+          "generation": 1,
+          "offset": 12884902400,
+          "bytes": 128,
+          "detach_ns": [
+            674776,
+            174077,
+            34945,
+            1963,
+            7590,
+            13372,
+            346,
+            0
+          ],
+          "attach_ns": [
+            13769,
+            266265,
+            21303,
+            16882,
+            25390,
+            702144,
+            5094,
+            763
+          ]
+        },
+        "export_profile": {
+          "scope": "direct_export",
+          "stages_us": {
+            "drain_and_save_devices": 51.026,
+            "export_detach_ioctls": 1035.666,
+            "log_receipt": 108.12299999999999,
+            "park_resident": 390.28700000000003,
+            "peek_token": 3.852,
+            "read_manifest_and_build_state": 92.723,
+            "seal_mapper": 186.145,
+            "serialize_devices": 185.56,
+            "unbind_ioevents": 144.874,
+            "validate_and_open": 54.071,
+            "write_devices": 14.572000000000001
+          },
+          "total_us": 2267.949
+        },
+        "import_profile": {
+          "scope": "direct_import",
+          "stages_us": {
+            "adopt_memory": 35.242,
+            "attach_and_vm_wrapper": 1255.082,
+            "import_mapper": 881.163,
+            "kvm_capabilities": 251.028,
+            "log_receipt": 298.308,
+            "read_validate_metadata": 865.008,
+            "register_events": 13.531,
+            "restore_devices": 969.809,
+            "start_vcpu_thread": 249.442,
+            "validate_vmm": 43.509,
+            "vcpu_wrapper": 37.864999999999995
+          },
+          "total_us": 4900.425
+        }
+      },
+      "inline_guest_ack": false,
+      "profiled": true,
+      "warm": {
+        "request_resume_ms": {
+          "n": 23,
+          "p50": 5.69724,
+          "min": 3.538608,
+          "max": 12.359164
+        },
+        "request_complete_ms": {
+          "n": 23,
+          "p50": 5.701376,
+          "min": 3.541933,
+          "max": 12.362986
+        },
+        "external_command_ms": {
+          "n": 23,
+          "p50": 6.89068,
+          "min": 4.273564,
+          "max": 13.551802
+        },
+        "export_attach_api_ms": {
+          "n": 23,
+          "p50": 3.988736,
+          "min": 2.482911,
+          "max": 10.619529
+        },
+        "kernel_ms": {
+          "n": 23,
+          "p50": 0.691873,
+          "min": 0.378346,
+          "max": 4.98345
+        }
+      },
+      "to_b": {
+        "request_resume_ms": {
+          "n": 11,
+          "p50": 5.657029,
+          "min": 3.869712,
+          "max": 8.38708
+        },
+        "export_attach_api_ms": {
+          "n": 11,
+          "p50": 3.988736,
+          "min": 2.6814350000000005,
+          "max": 6.441194
+        },
+        "kernel_ms": {
+          "n": 11,
+          "p50": 0.555093,
+          "min": 0.378346,
+          "max": 1.29983
+        }
+      },
+      "source_fault_probes": 24,
+      "parked_rejections": 72
+    },
+    {
+      "id": "01-local",
+      "arm": "local",
+      "result": "passed",
+      "hops": [
+        {
+          "generation": 1,
+          "destination": "B",
+          "first": true,
+          "request_resume_ms": 14.347029,
+          "request_complete_ms": 14.351337,
+          "external_command_ms": 15.124249,
+          "export_attach_api_ms": 9.356899000000002,
+          "kernel_ms": 2.005587,
+          "kernel_profile": {
+            "file": "0053-kernel-stage-profile.txt",
+            "generation": 1,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              637964,
+              168277,
+              70477,
+              1778,
+              8596,
+              14380,
+              346,
+              0
+            ],
+            "attach_ns": [
+              14668,
+              266984,
+              18260,
+              18468,
+              25552,
+              754475,
+              5419,
+              752
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 48.602,
+              "export_detach_ioctls": 1054.787,
+              "log_receipt": 108.04,
+              "park_resident": 353.716,
+              "peek_token": 3.4970000000000003,
+              "read_manifest_and_build_state": 92.935,
+              "seal_mapper": 208.989,
+              "serialize_devices": 211.519,
+              "unbind_ioevents": 266.95,
+              "validate_and_open": 53.888000000000005,
+              "write_devices": 14.295
+            },
+            "total_us": 2417.8630000000003
+          },
+          "import_profile": {
+            "scope": "direct_import",
+            "stages_us": {
+              "adopt_memory": 34.942,
+              "attach_and_vm_wrapper": 1308.9060000000002,
+              "import_mapper": 902.732,
+              "kvm_capabilities": 254.42299999999997,
+              "log_receipt": 298.483,
+              "read_validate_metadata": 858.481,
+              "register_events": 14.636000000000001,
+              "restore_devices": 1133.23,
+              "start_vcpu_thread": 300.65400000000005,
+              "validate_vmm": 43.377,
+              "vcpu_wrapper": 39.623000000000005
+            },
+            "total_us": 5189.918
+          }
+        },
+        {
+          "generation": 2,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 13.465179,
+          "request_complete_ms": 13.469645,
+          "external_command_ms": 14.632048,
+          "export_attach_api_ms": 11.340639999999999,
+          "kernel_ms": 5.167619,
+          "kernel_profile": {
+            "file": "0069-kernel-stage-profile.txt",
+            "generation": 2,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              145122,
+              1538,
+              155950,
+              555,
+              6842,
+              15604,
+              488,
+              0
+            ],
+            "attach_ns": [
+              15845,
+              287,
+              12365,
+              29320,
+              1912,
+              4780016,
+              1908,
+              757
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 65.359,
+              "export_detach_ioctls": 602.314,
+              "log_receipt": 129.004,
+              "park_resident": 253.30200000000002,
+              "peek_token": 2.66,
+              "read_manifest_and_build_state": 92.383,
+              "seal_mapper": 191.708,
+              "serialize_devices": 192.297,
+              "unbind_ioevents": 327.788,
+              "validate_and_open": 53.083,
+              "write_devices": 14.133000000000001
+            },
+            "total_us": 1924.5819999999999
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 4953.419,
+              "import_mapper": 653.03,
+              "read_validate_metadata": 781.555,
+              "restore_devices": 564.0699999999999
+            },
+            "total_us": 7314.528
+          }
+        },
+        {
+          "generation": 3,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 7.097154,
+          "request_complete_ms": 7.100966,
+          "external_command_ms": 8.274582,
+          "export_attach_api_ms": 5.4377070000000005,
+          "kernel_ms": 1.173761,
+          "kernel_profile": {
+            "file": "0085-kernel-stage-profile.txt",
+            "generation": 3,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              39499,
+              976,
+              20686,
+              159,
+              4039,
+              5292,
+              238,
+              0
+            ],
+            "attach_ns": [
+              15728,
+              155,
+              10580,
+              26852,
+              2213,
+              1045518,
+              1835,
+              757
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 11.898,
+              "export_detach_ioctls": 117.76400000000001,
+              "log_receipt": 38.259,
+              "park_resident": 84.522,
+              "peek_token": 1.315,
+              "read_manifest_and_build_state": 36.065,
+              "seal_mapper": 87.585,
+              "serialize_devices": 54.241,
+              "unbind_ioevents": 120.157,
+              "validate_and_open": 44.233000000000004,
+              "write_devices": 5.227
+            },
+            "total_us": 601.638
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 1180.646,
+              "import_mapper": 562.168,
+              "read_validate_metadata": 421.596,
+              "restore_devices": 562.511
+            },
+            "total_us": 3096.976
+          }
+        },
+        {
+          "generation": 4,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 4.293329,
+          "request_complete_ms": 4.297323,
+          "external_command_ms": 5.353417,
+          "export_attach_api_ms": 3.01405,
+          "kernel_ms": 0.715354,
+          "kernel_profile": {
+            "file": "0099-kernel-stage-profile.txt",
+            "generation": 4,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              54476,
+              1120,
+              5397,
+              303,
+              3666,
+              6641,
+              277,
+              0
+            ],
+            "attach_ns": [
+              6391,
+              103,
+              4376,
+              11274,
+              834,
+              619732,
+              850,
+              332
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 13.823,
+              "export_detach_ioctls": 112.812,
+              "log_receipt": 72.079,
+              "park_resident": 74.613,
+              "peek_token": 1.9939999999999998,
+              "read_manifest_and_build_state": 60.541000000000004,
+              "seal_mapper": 128.78900000000002,
+              "serialize_devices": 111.60600000000001,
+              "unbind_ioevents": 32.043,
+              "validate_and_open": 25.887,
+              "write_devices": 8.841000000000001
+            },
+            "total_us": 643.439
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 676.433,
+              "import_mapper": 209.198,
+              "read_validate_metadata": 144.791,
+              "restore_devices": 192.507
+            },
+            "total_us": 1315.974
+          }
+        },
+        {
+          "generation": 5,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 3.958406,
+          "request_complete_ms": 3.961897,
+          "external_command_ms": 4.769767,
+          "export_attach_api_ms": 2.836971,
+          "kernel_ms": 0.566973,
+          "kernel_profile": {
+            "file": "0113-kernel-stage-profile.txt",
+            "generation": 5,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              38905,
+              1270,
+              14780,
+              164,
+              4161,
+              5321,
+              291,
+              0
+            ],
+            "attach_ns": [
+              9078,
+              299,
+              6616,
+              17322,
+              1497,
+              466014,
+              1423,
+              185
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 15.332,
+              "export_detach_ioctls": 111.512,
+              "log_receipt": 33.29,
+              "park_resident": 55.615,
+              "peek_token": 1.44,
+              "read_manifest_and_build_state": 33.599000000000004,
+              "seal_mapper": 106.78,
+              "serialize_devices": 46.558,
+              "unbind_ioevents": 83.62700000000001,
+              "validate_and_open": 33.541000000000004,
+              "write_devices": 5.718
+            },
+            "total_us": 527.385
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 562.922,
+              "import_mapper": 286.325,
+              "read_validate_metadata": 233.807,
+              "restore_devices": 115.713
+            },
+            "total_us": 1314.161
+          }
+        },
+        {
+          "generation": 6,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 5.817038,
+          "request_complete_ms": 5.821236,
+          "external_command_ms": 6.789934,
+          "export_attach_api_ms": 4.25436,
+          "kernel_ms": 0.884374,
+          "kernel_profile": {
+            "file": "0127-kernel-stage-profile.txt",
+            "generation": 6,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              35806,
+              912,
+              2965,
+              128,
+              3102,
+              3979,
+              317,
+              0
+            ],
+            "attach_ns": [
+              15057,
+              149,
+              10878,
+              29282,
+              2098,
+              778358,
+              1477,
+              686
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 10.481,
+              "export_detach_ioctls": 69.252,
+              "log_receipt": 29.358,
+              "park_resident": 38.409,
+              "peek_token": 1.407,
+              "read_manifest_and_build_state": 28.507,
+              "seal_mapper": 96.36500000000001,
+              "serialize_devices": 39.813,
+              "unbind_ioevents": 20.869999999999997,
+              "validate_and_open": 25.717000000000002,
+              "write_devices": 3.813
+            },
+            "total_us": 364.246
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 915.156,
+              "import_mapper": 634.9879999999999,
+              "read_validate_metadata": 389.515,
+              "restore_devices": 371.17900000000003
+            },
+            "total_us": 2640.302
+          }
+        },
+        {
+          "generation": 7,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 4.179018,
+          "request_complete_ms": 4.182816,
+          "external_command_ms": 5.379035,
+          "export_attach_api_ms": 2.903631,
+          "kernel_ms": 0.401914,
+          "kernel_profile": {
+            "file": "0141-kernel-stage-profile.txt",
+            "generation": 7,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              38490,
+              877,
+              20526,
+              248,
+              3520,
+              5825,
+              184,
+              0
+            ],
+            "attach_ns": [
+              6520,
+              108,
+              4964,
+              12890,
+              1328,
+              305562,
+              956,
+              242
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 12.303,
+              "export_detach_ioctls": 118.683,
+              "log_receipt": 52.553000000000004,
+              "park_resident": 58.053000000000004,
+              "peek_token": 1.311,
+              "read_manifest_and_build_state": 46.353,
+              "seal_mapper": 107.28399999999999,
+              "serialize_devices": 68.697,
+              "unbind_ioevents": 119.655,
+              "validate_and_open": 46.893,
+              "write_devices": 6.15
+            },
+            "total_us": 638.259
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 366.30899999999997,
+              "import_mapper": 312.99,
+              "read_validate_metadata": 204.663,
+              "restore_devices": 88.80199999999999
+            },
+            "total_us": 1070.2640000000001
+          }
+        },
+        {
+          "generation": 8,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 4.437766,
+          "request_complete_ms": 4.441661,
+          "external_command_ms": 5.418951,
+          "export_attach_api_ms": 3.0968410000000004,
+          "kernel_ms": 0.487895,
+          "kernel_profile": {
+            "file": "0155-kernel-stage-profile.txt",
+            "generation": 8,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              121649,
+              714,
+              2454,
+              91,
+              2159,
+              3363,
+              92,
+              0
+            ],
+            "attach_ns": [
+              6167,
+              56,
+              4024,
+              11439,
+              1437,
+              333368,
+              902,
+              332
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 8.645,
+              "export_detach_ioctls": 150.419,
+              "log_receipt": 28.11,
+              "park_resident": 114.304,
+              "peek_token": 0.9730000000000001,
+              "read_manifest_and_build_state": 25.991,
+              "seal_mapper": 59.595,
+              "serialize_devices": 40.073,
+              "unbind_ioevents": 33.964999999999996,
+              "validate_and_open": 16.803,
+              "write_devices": 3.742
+            },
+            "total_us": 482.72700000000003
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 379.34299999999996,
+              "import_mapper": 308.975,
+              "read_validate_metadata": 122.052,
+              "restore_devices": 173.638
+            },
+            "total_us": 1068.367
+          }
+        },
+        {
+          "generation": 9,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 4.183582,
+          "request_complete_ms": 4.187594,
+          "external_command_ms": 5.147119,
+          "export_attach_api_ms": 2.975314,
+          "kernel_ms": 0.372064,
+          "kernel_profile": {
+            "file": "0169-kernel-stage-profile.txt",
+            "generation": 9,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              39444,
+              886,
+              20706,
+              256,
+              3973,
+              5609,
+              351,
+              0
+            ],
+            "attach_ns": [
+              5519,
+              90,
+              4562,
+              12935,
+              964,
+              276045,
+              923,
+              443
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 13.152000000000001,
+              "export_detach_ioctls": 124.418,
+              "log_receipt": 49.135999999999996,
+              "park_resident": 139.54899999999998,
+              "peek_token": 1.6729999999999998,
+              "read_manifest_and_build_state": 40.114999999999995,
+              "seal_mapper": 127.52600000000001,
+              "serialize_devices": 85.58500000000001,
+              "unbind_ioevents": 227.73499999999999,
+              "validate_and_open": 25.380000000000003,
+              "write_devices": 6.95
+            },
+            "total_us": 841.53
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 324.24899999999997,
+              "import_mapper": 273.531,
+              "read_validate_metadata": 161.261,
+              "restore_devices": 82.27499999999999
+            },
+            "total_us": 934.323
+          }
+        },
+        {
+          "generation": 10,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 4.275408,
+          "request_complete_ms": 4.279168,
+          "external_command_ms": 5.236587,
+          "export_attach_api_ms": 2.8563959999999997,
+          "kernel_ms": 0.421944,
+          "kernel_profile": {
+            "file": "0183-kernel-stage-profile.txt",
+            "generation": 10,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              41036,
+              749,
+              2984,
+              94,
+              2206,
+              3741,
+              93,
+              0
+            ],
+            "attach_ns": [
+              7325,
+              51,
+              3114,
+              11407,
+              877,
+              347250,
+              1016,
+              354
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 8.717,
+              "export_detach_ioctls": 70.072,
+              "log_receipt": 28.767,
+              "park_resident": 116.52199999999999,
+              "peek_token": 1.0330000000000001,
+              "read_manifest_and_build_state": 26.166999999999998,
+              "seal_mapper": 64.011,
+              "serialize_devices": 39.95,
+              "unbind_ioevents": 48.79,
+              "validate_and_open": 17.024,
+              "write_devices": 4.234
+            },
+            "total_us": 425.527
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 393.377,
+              "import_mapper": 166.798,
+              "read_validate_metadata": 133.402,
+              "restore_devices": 283.92
+            },
+            "total_us": 1067.953
+          }
+        },
+        {
+          "generation": 11,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 4.303451,
+          "request_complete_ms": 4.307342,
+          "external_command_ms": 5.350703,
+          "export_attach_api_ms": 3.089661,
+          "kernel_ms": 0.395921,
+          "kernel_profile": {
+            "file": "0197-kernel-stage-profile.txt",
+            "generation": 11,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              47194,
+              998,
+              23056,
+              320,
+              4137,
+              8046,
+              304,
+              0
+            ],
+            "attach_ns": [
+              5619,
+              108,
+              4143,
+              11067,
+              796,
+              289776,
+              528,
+              280
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 13.26,
+              "export_detach_ioctls": 141.347,
+              "log_receipt": 56.553,
+              "park_resident": 72.92999999999999,
+              "peek_token": 1.973,
+              "read_manifest_and_build_state": 47.654,
+              "seal_mapper": 132.413,
+              "serialize_devices": 89.386,
+              "unbind_ioevents": 194.106,
+              "validate_and_open": 32.031,
+              "write_devices": 7.91
+            },
+            "total_us": 789.773
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 331.922,
+              "import_mapper": 270.764,
+              "read_validate_metadata": 125.31400000000001,
+              "restore_devices": 92.979
+            },
+            "total_us": 900.927
+          }
+        },
+        {
+          "generation": 12,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 3.604576,
+          "request_complete_ms": 3.608556,
+          "external_command_ms": 4.584454,
+          "export_attach_api_ms": 2.41434,
+          "kernel_ms": 0.432328,
+          "kernel_profile": {
+            "file": "0211-kernel-stage-profile.txt",
+            "generation": 12,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              45663,
+              652,
+              3542,
+              92,
+              2182,
+              3485,
+              149,
+              0
+            ],
+            "attach_ns": [
+              5291,
+              70,
+              3742,
+              10534,
+              744,
+              355449,
+              795,
+              303
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 7.768000000000001,
+              "export_detach_ioctls": 74.243,
+              "log_receipt": 22.492,
+              "park_resident": 115.53399999999999,
+              "peek_token": 0.9299999999999999,
+              "read_manifest_and_build_state": 20.367,
+              "seal_mapper": 58.328,
+              "serialize_devices": 39.004999999999995,
+              "unbind_ioevents": 14.871,
+              "validate_and_open": 15.879000000000001,
+              "write_devices": 3.49
+            },
+            "total_us": 372.997
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 399.111,
+              "import_mapper": 198.829,
+              "read_validate_metadata": 115.50200000000001,
+              "restore_devices": 170.05100000000002
+            },
+            "total_us": 965.873
+          }
+        },
+        {
+          "generation": 13,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 4.565294,
+          "request_complete_ms": 4.568831,
+          "external_command_ms": 5.652461,
+          "export_attach_api_ms": 3.312392,
+          "kernel_ms": 0.379877,
+          "kernel_profile": {
+            "file": "0225-kernel-stage-profile.txt",
+            "generation": 13,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              53984,
+              1231,
+              28242,
+              415,
+              5432,
+              11053,
+              347,
+              0
+            ],
+            "attach_ns": [
+              5183,
+              42,
+              3636,
+              10478,
+              1190,
+              258296,
+              531,
+              143
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 16.492,
+              "export_detach_ioctls": 206.19299999999998,
+              "log_receipt": 87.73,
+              "park_resident": 103.34,
+              "peek_token": 2.334,
+              "read_manifest_and_build_state": 66.363,
+              "seal_mapper": 174.10999999999999,
+              "serialize_devices": 132.6,
+              "unbind_ioevents": 183.909,
+              "validate_and_open": 40.117000000000004,
+              "write_devices": 12.092
+            },
+            "total_us": 1025.73
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 301.62899999999996,
+              "import_mapper": 262.645,
+              "read_validate_metadata": 112.878,
+              "restore_devices": 86.657
+            },
+            "total_us": 843.356
+          }
+        },
+        {
+          "generation": 14,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 5.108415,
+          "request_complete_ms": 5.112398,
+          "external_command_ms": 5.939966,
+          "export_attach_api_ms": 3.976302,
+          "kernel_ms": 0.742533,
+          "kernel_profile": {
+            "file": "0239-kernel-stage-profile.txt",
+            "generation": 14,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              48419,
+              528,
+              3147,
+              100,
+              1981,
+              3222,
+              132,
+              0
+            ],
+            "attach_ns": [
+              13377,
+              225,
+              8778,
+              24434,
+              1566,
+              635198,
+              1378,
+              677
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 8.249,
+              "export_detach_ioctls": 77.447,
+              "log_receipt": 23.187,
+              "park_resident": 43.922,
+              "peek_token": 0.823,
+              "read_manifest_and_build_state": 20.465,
+              "seal_mapper": 58.607000000000006,
+              "serialize_devices": 39.367,
+              "unbind_ioevents": 14.928,
+              "validate_and_open": 16.228,
+              "write_devices": 3.39
+            },
+            "total_us": 306.698
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 736.831,
+              "import_mapper": 539.513,
+              "read_validate_metadata": 327.653,
+              "restore_devices": 469.81600000000003
+            },
+            "total_us": 2364.8810000000003
+          }
+        },
+        {
+          "generation": 15,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 3.885449,
+          "request_complete_ms": 3.88892,
+          "external_command_ms": 5.084357,
+          "export_attach_api_ms": 2.5827020000000003,
+          "kernel_ms": 0.383505,
+          "kernel_profile": {
+            "file": "0253-kernel-stage-profile.txt",
+            "generation": 15,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              42757,
+              987,
+              18791,
+              183,
+              3627,
+              6391,
+              215,
+              0
+            ],
+            "attach_ns": [
+              6531,
+              75,
+              5028,
+              12927,
+              1246,
+              283732,
+              1140,
+              140
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 11.446,
+              "export_detach_ioctls": 116.32400000000001,
+              "log_receipt": 49.608,
+              "park_resident": 65.35600000000001,
+              "peek_token": 1.57,
+              "read_manifest_and_build_state": 28.549,
+              "seal_mapper": 112.026,
+              "serialize_devices": 57.348,
+              "unbind_ioevents": 127.10400000000001,
+              "validate_and_open": 27.822,
+              "write_devices": 5.984
+            },
+            "total_us": 603.4060000000001
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 335.029,
+              "import_mapper": 206.189,
+              "read_validate_metadata": 144.002,
+              "restore_devices": 91.04400000000001
+            },
+            "total_us": 863.976
+          }
+        },
+        {
+          "generation": 16,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 4.757554,
+          "request_complete_ms": 4.761417,
+          "external_command_ms": 5.740382,
+          "export_attach_api_ms": 3.2516040000000004,
+          "kernel_ms": 0.741242,
+          "kernel_profile": {
+            "file": "0267-kernel-stage-profile.txt",
+            "generation": 16,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              133590,
+              686,
+              3698,
+              138,
+              3255,
+              4740,
+              391,
+              0
+            ],
+            "attach_ns": [
+              6471,
+              101,
+              5188,
+              14424,
+              950,
+              566340,
+              1025,
+              902
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 12.735999999999999,
+              "export_detach_ioctls": 168.05499999999998,
+              "log_receipt": 24.174,
+              "park_resident": 77.042,
+              "peek_token": 1.029,
+              "read_manifest_and_build_state": 22.756,
+              "seal_mapper": 81.46499999999999,
+              "serialize_devices": 40.835,
+              "unbind_ioevents": 18.583000000000002,
+              "validate_and_open": 22.509,
+              "write_devices": 4.223999999999999
+            },
+            "total_us": 473.498
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 630.8349999999999,
+              "import_mapper": 281.276,
+              "read_validate_metadata": 141.696,
+              "restore_devices": 194.455
+            },
+            "total_us": 1338.531
+          }
+        },
+        {
+          "generation": 17,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 4.83737,
+          "request_complete_ms": 4.841601,
+          "external_command_ms": 6.228679,
+          "export_attach_api_ms": 3.147689,
+          "kernel_ms": 0.499559,
+          "kernel_profile": {
+            "file": "0281-kernel-stage-profile.txt",
+            "generation": 17,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              56189,
+              1153,
+              21992,
+              140,
+              3348,
+              6613,
+              251,
+              0
+            ],
+            "attach_ns": [
+              7332,
+              148,
+              5806,
+              14582,
+              1119,
+              379969,
+              1086,
+              166
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 15.748,
+              "export_detach_ioctls": 139.83499999999998,
+              "log_receipt": 33.262,
+              "park_resident": 63.243,
+              "peek_token": 1.9980000000000002,
+              "read_manifest_and_build_state": 47.663000000000004,
+              "seal_mapper": 97.528,
+              "serialize_devices": 54.731,
+              "unbind_ioevents": 109.214,
+              "validate_and_open": 29.732,
+              "write_devices": 6.3069999999999995
+            },
+            "total_us": 599.615
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 452.608,
+              "import_mapper": 320.0,
+              "read_validate_metadata": 151.122,
+              "restore_devices": 100.93499999999999
+            },
+            "total_us": 1115.747
+          }
+        },
+        {
+          "generation": 18,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 6.610347,
+          "request_complete_ms": 6.612803,
+          "external_command_ms": 7.702003,
+          "export_attach_api_ms": 4.921577999999999,
+          "kernel_ms": 1.116253,
+          "kernel_profile": {
+            "file": "0295-kernel-stage-profile.txt",
+            "generation": 18,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              175492,
+              944,
+              4003,
+              159,
+              3510,
+              36308,
+              179,
+              0
+            ],
+            "attach_ns": [
+              14805,
+              144,
+              8968,
+              26770,
+              1862,
+              841698,
+              1388,
+              772
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 11.722999999999999,
+              "export_detach_ioctls": 245.679,
+              "log_receipt": 22.918,
+              "park_resident": 73.297,
+              "peek_token": 2.101,
+              "read_manifest_and_build_state": 24.522,
+              "seal_mapper": 82.529,
+              "serialize_devices": 43.546,
+              "unbind_ioevents": 17.666,
+              "validate_and_open": 44.246,
+              "write_devices": 4.846
+            },
+            "total_us": 573.177
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 977.678,
+              "import_mapper": 654.03,
+              "read_validate_metadata": 402.068,
+              "restore_devices": 585.8839999999999
+            },
+            "total_us": 2923.0800000000004
+          }
+        },
+        {
+          "generation": 19,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 5.234554,
+          "request_complete_ms": 5.238762,
+          "external_command_ms": 6.587161,
+          "export_attach_api_ms": 3.743337,
+          "kernel_ms": 0.530517,
+          "kernel_profile": {
+            "file": "0309-kernel-stage-profile.txt",
+            "generation": 19,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              116553,
+              1447,
+              9808,
+              392,
+              5505,
+              10965,
+              350,
+              0
+            ],
+            "attach_ns": [
+              7505,
+              225,
+              5004,
+              12666,
+              1440,
+              357831,
+              1009,
+              528
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 18.88,
+              "export_detach_ioctls": 208.055,
+              "log_receipt": 85.68299999999999,
+              "park_resident": 206.02599999999998,
+              "peek_token": 2.853,
+              "read_manifest_and_build_state": 68.045,
+              "seal_mapper": 183.372,
+              "serialize_devices": 133.85999999999999,
+              "unbind_ioevents": 52.502,
+              "validate_and_open": 36.690999999999995,
+              "write_devices": 10.725
+            },
+            "total_us": 1007.2239999999999
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 426.94,
+              "import_mapper": 185.542,
+              "read_validate_metadata": 176.60399999999998,
+              "restore_devices": 152.727
+            },
+            "total_us": 1033.63
+          }
+        },
+        {
+          "generation": 20,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 4.875666,
+          "request_complete_ms": 4.879683,
+          "external_command_ms": 6.070618,
+          "export_attach_api_ms": 3.307853,
+          "kernel_ms": 0.556879,
+          "kernel_profile": {
+            "file": "0323-kernel-stage-profile.txt",
+            "generation": 20,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              63861,
+              999,
+              3051,
+              102,
+              3497,
+              4751,
+              488,
+              0
+            ],
+            "attach_ns": [
+              9004,
+              129,
+              5285,
+              13399,
+              1068,
+              450229,
+              1387,
+              442
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 10.413,
+              "export_detach_ioctls": 100.186,
+              "log_receipt": 23.608,
+              "park_resident": 132.684,
+              "peek_token": 1.565,
+              "read_manifest_and_build_state": 22.945,
+              "seal_mapper": 82.433,
+              "serialize_devices": 58.297000000000004,
+              "unbind_ioevents": 19.24,
+              "validate_and_open": 26.571,
+              "write_devices": 4.869000000000001
+            },
+            "total_us": 482.918
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 521.168,
+              "import_mapper": 190.21,
+              "read_validate_metadata": 157.75300000000001,
+              "restore_devices": 235.958
+            },
+            "total_us": 1201.699
+          }
+        },
+        {
+          "generation": 21,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 5.99108,
+          "request_complete_ms": 5.995275,
+          "external_command_ms": 7.355537,
+          "export_attach_api_ms": 4.176264999999999,
+          "kernel_ms": 0.523198,
+          "kernel_profile": {
+            "file": "0337-kernel-stage-profile.txt",
+            "generation": 21,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              64030,
+              1495,
+              35095,
+              360,
+              5680,
+              11505,
+              508,
+              0
+            ],
+            "attach_ns": [
+              7824,
+              91,
+              5795,
+              15847,
+              1383,
+              372312,
+              1616,
+              376
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 22.0,
+              "export_detach_ioctls": 178.611,
+              "log_receipt": 86.10600000000001,
+              "park_resident": 204.589,
+              "peek_token": 3.106,
+              "read_manifest_and_build_state": 120.738,
+              "seal_mapper": 189.932,
+              "serialize_devices": 135.282,
+              "unbind_ioevents": 57.445,
+              "validate_and_open": 48.092,
+              "write_devices": 12.317
+            },
+            "total_us": 1058.752
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 448.936,
+              "import_mapper": 321.056,
+              "read_validate_metadata": 171.893,
+              "restore_devices": 107.55900000000001
+            },
+            "total_us": 1143.534
+          }
+        },
+        {
+          "generation": 22,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 6.901501,
+          "request_complete_ms": 6.905857,
+          "external_command_ms": 8.107878,
+          "export_attach_api_ms": 5.01932,
+          "kernel_ms": 1.077968,
+          "kernel_profile": {
+            "file": "0351-kernel-stage-profile.txt",
+            "generation": 22,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              140219,
+              910,
+              3696,
+              101,
+              3491,
+              49676,
+              113,
+              0
+            ],
+            "attach_ns": [
+              15670,
+              168,
+              8140,
+              27225,
+              1883,
+              824813,
+              1780,
+              772
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 11.335,
+              "export_detach_ioctls": 223.96499999999997,
+              "log_receipt": 24.837999999999997,
+              "park_resident": 132.92100000000002,
+              "peek_token": 1.4360000000000002,
+              "read_manifest_and_build_state": 23.055,
+              "seal_mapper": 82.125,
+              "serialize_devices": 46.226,
+              "unbind_ioevents": 19.483999999999998,
+              "validate_and_open": 26.694,
+              "write_devices": 4.853999999999999
+            },
+            "total_us": 597.284
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 959.39,
+              "import_mapper": 598.6840000000001,
+              "read_validate_metadata": 382.565,
+              "restore_devices": 392.259
+            },
+            "total_us": 2641.518
+          }
+        },
+        {
+          "generation": 23,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 5.708283,
+          "request_complete_ms": 5.712299,
+          "external_command_ms": 6.936068,
+          "export_attach_api_ms": 3.75215,
+          "kernel_ms": 0.59225,
+          "kernel_profile": {
+            "file": "0365-kernel-stage-profile.txt",
+            "generation": 23,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              138169,
+              1086,
+              3747,
+              118,
+              3361,
+              5187,
+              351,
+              0
+            ],
+            "attach_ns": [
+              8236,
+              152,
+              6001,
+              16099,
+              1867,
+              406920,
+              1230,
+              162
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 15.591000000000001,
+              "export_detach_ioctls": 179.63899999999998,
+              "log_receipt": 30.497999999999998,
+              "park_resident": 175.65699999999998,
+              "peek_token": 1.616,
+              "read_manifest_and_build_state": 26.415,
+              "seal_mapper": 100.87899999999999,
+              "serialize_devices": 50.986000000000004,
+              "unbind_ioevents": 26.016,
+              "validate_and_open": 32.431999999999995,
+              "write_devices": 5.162
+            },
+            "total_us": 645.2330000000001
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 481.476,
+              "import_mapper": 216.88,
+              "read_validate_metadata": 182.594,
+              "restore_devices": 242.118
+            },
+            "total_us": 1222.944
+          }
+        },
+        {
+          "generation": 24,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 5.589839,
+          "request_complete_ms": 5.593994,
+          "external_command_ms": 6.762279,
+          "export_attach_api_ms": 3.64005,
+          "kernel_ms": 0.634217,
+          "kernel_profile": {
+            "file": "0379-kernel-stage-profile.txt",
+            "generation": 24,
+            "offset": 12884902400,
+            "bytes": 128,
+            "detach_ns": [
+              60550,
+              1033,
+              3881,
+              95,
+              3559,
+              5063,
+              199,
+              0
+            ],
+            "attach_ns": [
+              7024,
+              153,
+              5628,
+              16037,
+              1275,
+              528469,
+              1378,
+              359
+            ]
+          },
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 11.498999999999999,
+              "export_detach_ioctls": 99.112,
+              "log_receipt": 23.896,
+              "park_resident": 144.95600000000002,
+              "peek_token": 1.192,
+              "read_manifest_and_build_state": 24.301,
+              "seal_mapper": 84.954,
+              "serialize_devices": 44.529,
+              "unbind_ioevents": 50.471,
+              "validate_and_open": 29.996,
+              "write_devices": 4.786
+            },
+            "total_us": 519.797
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 591.1220000000001,
+              "import_mapper": 325.32,
+              "read_validate_metadata": 165.918,
+              "restore_devices": 102.38600000000001
+            },
+            "total_us": 1280.503
+          }
+        }
+      ],
+      "preparation": {
+        "wall_ns": 10510821,
+        "stages": [
+          {
+            "role": "B",
+            "kind": "native-prepare",
+            "file": "0048-native-prepare.txt",
+            "elapsed_ns": 10285884,
+            "rpc": {
+              "wall_ns": 9853943,
+              "native_ns": 9300621,
+              "request_bytes": 3588,
+              "response_bytes": 300
+            }
+          }
+        ],
+        "worker": {
+          "directory": "/run/swe-pool-5c491f1db2659860/vm1-epoch1-resident-prepare",
+          "plan": "/run/swe-pool-5c491f1db2659860/vm1-epoch1-resident-prepare/memory-plan.json",
+          "report": "/run/swe-pool-5c491f1db2659860/vm1-epoch1-resident-prepare/memory-report.json",
+          "manifest_path": "/run/swe-pool-5c491f1db2659860/vm1-epoch1-resident-prepare/memory-manifest.json",
+          "hints": "/run/swe-pool-5c491f1db2659860/vm1-epoch1-resident-prepare/unused-read-history.json",
+          "imported": false,
+          "prepared_api": {
+            "file": "0048-native-prepare.txt",
+            "role": "B",
+            "path": "/actions",
+            "method": "PUT",
+            "request": {
+              "action_type": "DirectPrepare"
+            },
+            "response": {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 1614.689
+            },
+            "control_wall_ns": 0,
+            "embedded_in": "0048-native-prepare.txt"
+          },
+          "native_boot": {
+            "pid": 151,
+            "starttime": 1740,
+            "fork_ns": 110730,
+            "fork_to_api_ready_ns": 4534442,
+            "prepare_api_ns": 1614689,
+            "native_ready_ns": 6305247
+          },
+          "native_boot_file": "0048-native-prepare.txt"
+        },
+        "server_wall_ns": 9520339
+      },
+      "prepares": [
+        {
+          "role": "B",
+          "elapsed_ns": 521404,
+          "event": "prepare",
+          "guest_ram_access": false,
+          "kernel_attach": false,
+          "pid": 151
+        }
+      ],
+      "disk_profiles": [
+        {
+          "role": "A",
+          "scope": "disk_properties",
+          "stages_us": {
+            "file_engine": 99.628,
+            "image_id": 8.914,
+            "open": 1264.446,
+            "pool_identity": 1.373,
+            "size": 3.702
+          },
+          "total_us": 1380.893
+        },
+        {
+          "role": "B",
+          "scope": "disk_properties",
+          "stages_us": {
+            "file_engine": 222.85999999999999,
+            "image_id": 16.465,
+            "open": 25.133000000000003,
+            "pool_identity": 2.287,
+            "size": 5.455
+          },
+          "total_us": 280.305
+        }
+      ],
+      "first": {
+        "generation": 1,
+        "destination": "B",
+        "first": true,
+        "request_resume_ms": 14.347029,
+        "request_complete_ms": 14.351337,
+        "external_command_ms": 15.124249,
+        "export_attach_api_ms": 9.356899000000002,
+        "kernel_ms": 2.005587,
+        "kernel_profile": {
+          "file": "0053-kernel-stage-profile.txt",
+          "generation": 1,
+          "offset": 12884902400,
+          "bytes": 128,
+          "detach_ns": [
+            637964,
+            168277,
+            70477,
+            1778,
+            8596,
+            14380,
+            346,
+            0
+          ],
+          "attach_ns": [
+            14668,
+            266984,
+            18260,
+            18468,
+            25552,
+            754475,
+            5419,
+            752
+          ]
+        },
+        "export_profile": {
+          "scope": "direct_export",
+          "stages_us": {
+            "drain_and_save_devices": 48.602,
+            "export_detach_ioctls": 1054.787,
+            "log_receipt": 108.04,
+            "park_resident": 353.716,
+            "peek_token": 3.4970000000000003,
+            "read_manifest_and_build_state": 92.935,
+            "seal_mapper": 208.989,
+            "serialize_devices": 211.519,
+            "unbind_ioevents": 266.95,
+            "validate_and_open": 53.888000000000005,
+            "write_devices": 14.295
+          },
+          "total_us": 2417.8630000000003
+        },
+        "import_profile": {
+          "scope": "direct_import",
+          "stages_us": {
+            "adopt_memory": 34.942,
+            "attach_and_vm_wrapper": 1308.9060000000002,
+            "import_mapper": 902.732,
+            "kvm_capabilities": 254.42299999999997,
+            "log_receipt": 298.483,
+            "read_validate_metadata": 858.481,
+            "register_events": 14.636000000000001,
+            "restore_devices": 1133.23,
+            "start_vcpu_thread": 300.65400000000005,
+            "validate_vmm": 43.377,
+            "vcpu_wrapper": 39.623000000000005
+          },
+          "total_us": 5189.918
+        }
+      },
+      "inline_guest_ack": false,
+      "profiled": true,
+      "warm": {
+        "request_resume_ms": {
+          "n": 23,
+          "p50": 4.83737,
+          "min": 3.604576,
+          "max": 13.465179
+        },
+        "request_complete_ms": {
+          "n": 23,
+          "p50": 4.841601,
+          "min": 3.608556,
+          "max": 13.469645
+        },
+        "external_command_ms": {
+          "n": 23,
+          "p50": 5.939966,
+          "min": 4.584454,
+          "max": 14.632048
+        },
+        "export_attach_api_ms": {
+          "n": 23,
+          "p50": 3.307853,
+          "min": 2.41434,
+          "max": 11.340639999999999
+        },
+        "kernel_ms": {
+          "n": 23,
+          "p50": 0.556879,
+          "min": 0.372064,
+          "max": 5.167619
+        }
+      },
+      "to_b": {
+        "request_resume_ms": {
+          "n": 11,
+          "p50": 4.565294,
+          "min": 3.885449,
+          "max": 7.097154
+        },
+        "export_attach_api_ms": {
+          "n": 11,
+          "p50": 3.147689,
+          "min": 2.5827020000000003,
+          "max": 5.4377070000000005
+        },
+        "kernel_ms": {
+          "n": 11,
+          "p50": 0.499559,
+          "min": 0.372064,
+          "max": 1.173761
+        }
+      },
+      "source_fault_probes": 24,
+      "parked_rejections": 72
+    }
+  ]
+}

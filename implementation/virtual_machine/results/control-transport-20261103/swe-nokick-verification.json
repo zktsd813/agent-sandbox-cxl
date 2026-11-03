@@ -1,0 +1,182 @@
+{
+  "result": "passed",
+  "trials": [
+    {
+      "result": "passed",
+      "mode": "direct",
+      "trace": "gin-gonic__gin-3741",
+      "report_sha256": "059e5675a8e03f2a66d15695093ea47b68515fdfa8a96f415e5b4684a3517d37",
+      "execution_inputs_sha256": "3e66e894cb95f27698473a228cb6ce5d9551c35006b835666b6046d8dd7e1db2",
+      "workload_inputs_sha256": "e5089ae09775be485ff530bf23804c9f90e98ab672c2d03239077e723358caef",
+      "commands": 27,
+      "returncodes": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        127,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "submission": {
+        "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+        "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151",
+        "startup_warning_count": 1
+      },
+      "tests": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "guest_command_seconds": 26.030000000000015,
+      "block_read_ios": 12483,
+      "remote_nfs_reads": null,
+      "boot_id": "15b37426-b501-4fc6-b59f-543a14ea2f27",
+      "identity_observations": 10,
+      "transitions": {
+        "promotion": 2,
+        "direct": 44,
+        "demotion": 2
+      },
+      "shared_cache_bytes": [
+        51511296,
+        51851264
+      ],
+      "registered_cache_bytes": [
+        51511296,
+        51851264
+      ],
+      "runtime_image_rehash": false,
+      "per_handoff_guest_probes": false,
+      "profiled_kernel_handoffs": 0,
+      "limitations": [
+        "Coherent nested lab; immutable fixture identity comes from build records, not runtime rehash",
+        "No per-handoff source fault probes; those are separate backend-ablation tests",
+        "Per-command NFS counter polling removed; NFS read count was not measured"
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "trace": "gin-gonic__gin-3741",
+      "mode": "direct",
+      "baseline_present": false,
+      "workload_results_match": null
+    }
+  ],
+  "execution_inputs_sha256": "3e66e894cb95f27698473a228cb6ce5d9551c35006b835666b6046d8dd7e1db2",
+  "coverage": {
+    "gin-gonic__gin-3741": [
+      "direct"
+    ]
+  },
+  "complete_three_mode_matrix": false,
+  "complete_nine_trial_matrix": false
+}

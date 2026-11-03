@@ -137,12 +137,32 @@ class SWEController(HandoffController):
     def trace_command(self, s, operation, *args, event=None, timeout=180):
         self.serial_number += 1
         token = f'v{s.vm}e{s.epoch}c{self.serial_number}'
-        command = f'run {args[0]} {token}' if operation == 'run' else ' '.join([operation, token, *map(str,args)])
+        command = f'{operation} {args[0]} {token}' if operation in ('run', 'run_async') else ' '.join([operation, token, *map(str,args)])
         self.shell(s.role, f"printf '%s\\n' {shlex.quote(command)} > {s.directory}/input", 'guest-input')
         row = self.wait_event(s.role, s.directory, event or 'trace_identity', token, timeout)
         row.update(vm=s.vm, role=s.role, tier=s.tier, epoch=s.epoch, operation=operation, arguments=list(args))
         self.commands.append(row)
         return row
+
+    def inflight_command(self, s, index, timeout):
+        require(s.direct and s.role == 'B' and s.tier == 'cxl', 'In-flight test requires remote CXL execution')
+        started = self.trace_command(s, 'run_async', index, event='trace_async_started')
+        expected = started['receipt']
+        observations, hops = [], []
+        for destination in ('A', 'B', None):
+            live = self.trace_command(s, 'running', event='trace_running')
+            value = live['receipt']
+            require(value['active'] and value['process_state'] not in ('Z','X','x') and
+                    all(value[key] == expected[key] for key in ('index','command_pid','start_ticks')),
+                    'Workload ended/replaced before the in-flight check')
+            observations.append(live)
+            if destination is not None:
+                hops.append(self.direct_handoff(s, destination))
+        ended = self.trace_command(s, 'collect', event='trace_end', timeout=timeout)
+        require(ended['receipt']['run_label'] == expected['label'], 'Collected another command')
+        ended['inflight'] = {'started':started, 'observations':observations,
+                            'handoff_files':[hop['fast_file'] for hop in hops]}
+        return ended
 
     def command_vm(self, s, op, *args, require_cache=False):
         require(op in ('identity', 'check'), 'Unexpected synthetic command in SWE workload')
@@ -288,6 +308,7 @@ def main():
     parser.add_argument("--restore-timing", action="store_true")
     parser.add_argument("--resume-nokick", action="store_true")
     parser.add_argument("--exec-request", action="store_true")
+    parser.add_argument("--inflight-handoff-index", type=int, help="Test two handoffs while this real command is alive")
     parser.add_argument("--alternate-request", action="store_true",help="Diagnostic comparison: alternate relay/exec every roundtrip")
     parser.add_argument("--resident-direct", action="store_true")
     parser.add_argument("--resident-fast-control", action="store_true")
@@ -304,6 +325,8 @@ def main():
             'Resident direct requires immutable NFS and direct mode')
     require(0 <= args.direct_profile_roundtrips <= 20 and
             (not args.direct_profile_roundtrips or args.mode == 'direct'), 'Invalid direct profile repetitions')
+    require(args.inflight_handoff_index is None or (args.mode == 'direct' and not args.full_audit),
+            'In-flight test requires direct runtime mode')
     require(args.memory_mib == 2048 and args.credit_mib == 256, 'Use the bounded 2GiB/256MiB workload layout')
     run, config = lab.current_run()
     require(config['cxl_mib'] == 16384 and bool(config.get('dax_handoff')) == (args.mode == 'direct'), 'Wrong fresh pair mode/capacity')
@@ -321,7 +344,7 @@ def main():
         'allocator_events': c.allocator.events, 'audits': c.audits,
         'layout': {'private_start': 2*MIB, 'private_end': 3072*MIB, 'bloom': 3072*MIB,
                    'canonical_start': 4096*MIB, 'canonical_bytes': c.image_bytes, 'kvm_arena': 12288*MIB},
-        'limitations': ['Coherent nested KVM; one run per trace/mode', 'Transitions between recorded commands',
+        'limitations': ['Coherent nested KVM; one run per trace/mode', ('Two extra handoffs inside a running command' if args.inflight_handoff_index is not None else 'Transitions between recorded commands'),
             'Same patched DRAM baseline, not pristine Firecracker', 'Natural resident pages in at most16 selected lower files',
             'One VM per trial: no multi-VM memory savings claim; full canonical image preloaded and counted']}
     sources = ('swe_pool_bench.py','swe_pool_protocol.py','swe-pool-l2-init.sh','swe-pool-guest-run.sh',
@@ -346,6 +369,8 @@ def main():
         report['initial_identity'] = c.command_vm(s,'identity')
         first, second = c.trace['handoff_before'], c.trace['command_count']-2
         report['boundaries'] = [first,second]
+        require(args.inflight_handoff_index is None or first <= args.inflight_handoff_index < second,
+                'In-flight command must run on remote CXL before demotion')
         started = time.monotonic_ns()
         for command in c.trace['commands']:
             index = command['index']
@@ -365,7 +390,9 @@ def main():
                     (c.direct_handoff if s.direct else c.state_handoff)(s,'A')
                     c.demote(s)
                 save()
-            row = c.trace_command(s,'run',index,event='trace_end',timeout=int(c.trace['environment'].get('timeout',60))+30)
+            timeout = int(c.trace['environment'].get('timeout',60))+30
+            row = (c.inflight_command(s,index,timeout) if index == args.inflight_handoff_index else
+                   c.trace_command(s,'run',index,event='trace_end',timeout=timeout))
             value = row['receipt']
             require(not value['timed_out'] and value['command_sha256'] == command['command_sha256'] and
                     value['rc'] == (command['expected_returncode'] if command['expected_returncode'] is not None else 0),

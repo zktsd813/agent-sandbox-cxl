@@ -1,0 +1,426 @@
+{
+  "result": "passed",
+  "stage": "incremental-ept-metadata-and-inflight-validation",
+  "archives": {
+    "backend-rpc4": {
+      "file": "backend-rpc4.tar.xz",
+      "sha256": "f9230b7c80658577cd55a79ef4b76feb116e3c8602b64319dbc6b689a11fd1db"
+    },
+    "swe-nokick": {
+      "file": "swe-nokick.tar.xz",
+      "sha256": "05990a7dcb66300bb2e91ca847248438f7c5553c9a62a681ff39baab816bca67"
+    },
+    "swe-inflight": {
+      "file": "swe-inflight.tar.xz",
+      "sha256": "f8c14ae1a8b418157ddea320c1d69ceeba2d768c84ee2f7ca544c49fa46505fc"
+    }
+  },
+  "coverage": {
+    "backend_handoffs": 48,
+    "swe_nokick_handoffs": 44,
+    "swe_inflight_handoffs": 6
+  },
+  "inflight": {
+    "command_index": 16,
+    "command": "go test ./...",
+    "observations": [
+      {
+        "event": "trace_running",
+        "label": "v1e1c25",
+        "index": 16,
+        "command_pid": 456,
+        "start_ticks": 6631,
+        "process_state": "R",
+        "active": true
+      },
+      {
+        "event": "trace_running",
+        "label": "v1e2c27",
+        "index": 16,
+        "command_pid": 456,
+        "start_ticks": 6631,
+        "process_state": "R",
+        "active": true
+      },
+      {
+        "event": "trace_running",
+        "label": "v1e3c29",
+        "index": 16,
+        "command_pid": 456,
+        "start_ticks": 6631,
+        "process_state": "R",
+        "active": true
+      }
+    ],
+    "handoff_files": [
+      "0092-resident-fast-run.txt",
+      "0095-resident-fast-run.txt"
+    ],
+    "duration_s": 5.219999999999999
+  },
+  "action_profiles": {
+    "disk_properties": [
+      {
+        "scope": "disk_properties",
+        "stages_us": {
+          "file_engine": 215.71,
+          "image_id": 16.95,
+          "open": 1821.575,
+          "pool_identity": 3.8550000000000004,
+          "size": 6.86
+        },
+        "total_us": 2072.862
+      },
+      {
+        "scope": "disk_properties",
+        "stages_us": {
+          "file_engine": 193.76,
+          "image_id": 11.5,
+          "open": 918.3900000000001,
+          "pool_identity": 2.532,
+          "size": 6.308000000000001
+        },
+        "total_us": 1140.772
+      }
+    ],
+    "vm_local_wrapper": [
+      {
+        "scope": "vm_local_wrapper",
+        "stages_us": {
+          "arch_fields": 0.102,
+          "msr_save_list": 10.05,
+          "set_tss_address": 0.052000000000000005,
+          "xsave_capability": 7.4479999999999995
+        },
+        "total_us": 18.057
+      },
+      {
+        "scope": "vm_local_wrapper",
+        "stages_us": {
+          "arch_fields": 0.5519999999999999,
+          "msr_save_list": 51.292,
+          "set_tss_address": 1.9879999999999998,
+          "xsave_capability": 20.683
+        },
+        "total_us": 74.8
+      }
+    ],
+    "direct_import": [
+      {
+        "scope": "direct_import",
+        "stages_us": {
+          "adopt_memory": 14.237,
+          "attach_and_vm_wrapper": 689.1519999999999,
+          "import_mapper": 303.74399999999997,
+          "kvm_capabilities": 89.556,
+          "log_receipt": 95.4,
+          "read_validate_metadata": 296.932,
+          "register_events": 5.607,
+          "restore_devices": 402.743,
+          "start_vcpu_thread": 180.614,
+          "validate_vmm": 13.389,
+          "vcpu_wrapper": 12.353
+        },
+        "total_us": 2103.9809999999998
+      }
+    ],
+    "direct_receive_first_action": [
+      {
+        "scope": "direct_receive_first_action",
+        "stages_us": {
+          "build_import": 2144.006,
+          "resume": 131.66799999999998
+        },
+        "total_us": 2275.756
+      }
+    ],
+    "direct_export": [
+      {
+        "scope": "direct_export",
+        "stages_us": {
+          "drain_and_save_devices": 63.314,
+          "export_detach_ioctls": 303.637,
+          "log_receipt": 108.85199999999999,
+          "park_resident": 5651.923,
+          "peek_token": 2.363,
+          "read_manifest_and_build_state": 90.562,
+          "seal_mapper": 174.73,
+          "serialize_devices": 220.815,
+          "unbind_ioevents": 230.56699999999998,
+          "validate_and_open": 44.288,
+          "write_devices": 15.15
+        },
+        "total_us": 6906.834
+      },
+      {
+        "scope": "direct_export",
+        "stages_us": {
+          "drain_and_save_devices": 7.515,
+          "export_detach_ioctls": 67.286,
+          "log_receipt": 29.748,
+          "park_resident": 269.74600000000004,
+          "peek_token": 1.0759999999999998,
+          "read_manifest_and_build_state": 26.169999999999998,
+          "seal_mapper": 59.803000000000004,
+          "serialize_devices": 45.196,
+          "unbind_ioevents": 15.231,
+          "validate_and_open": 18.072,
+          "write_devices": 4.174
+        },
+        "total_us": 544.26
+      },
+      {
+        "scope": "direct_export",
+        "stages_us": {
+          "drain_and_save_devices": 4.7219999999999995,
+          "export_detach_ioctls": 38.283,
+          "log_receipt": 23.320999999999998,
+          "park_resident": 35.58,
+          "peek_token": 0.912,
+          "read_manifest_and_build_state": 20.387999999999998,
+          "seal_mapper": 38.158,
+          "serialize_devices": 35.116,
+          "unbind_ioevents": 10.254,
+          "validate_and_open": 11.34,
+          "write_devices": 3.085
+        },
+        "total_us": 221.246
+      },
+      {
+        "scope": "direct_export",
+        "stages_us": {
+          "drain_and_save_devices": 48.516,
+          "export_detach_ioctls": 1100.063,
+          "log_receipt": 107.351,
+          "park_resident": 449.37,
+          "peek_token": 3.312,
+          "read_manifest_and_build_state": 87.75,
+          "seal_mapper": 181.964,
+          "serialize_devices": 186.387,
+          "unbind_ioevents": 232.752,
+          "validate_and_open": 47.204,
+          "write_devices": 14.144
+        },
+        "total_us": 2459.3900000000003
+      },
+      {
+        "scope": "direct_export",
+        "stages_us": {
+          "drain_and_save_devices": 12.644,
+          "export_detach_ioctls": 197.029,
+          "log_receipt": 32.224000000000004,
+          "park_resident": 44.1,
+          "peek_token": 1.22,
+          "read_manifest_and_build_state": 29.051000000000002,
+          "seal_mapper": 85.275,
+          "serialize_devices": 46.649,
+          "unbind_ioevents": 112.939,
+          "validate_and_open": 28.131,
+          "write_devices": 4.951
+        },
+        "total_us": 594.5600000000001
+      },
+      {
+        "scope": "direct_export",
+        "stages_us": {
+          "drain_and_save_devices": 15.245999999999999,
+          "export_detach_ioctls": 194.352,
+          "log_receipt": 86.885,
+          "park_resident": 456.614,
+          "peek_token": 2.33,
+          "read_manifest_and_build_state": 64.315,
+          "seal_mapper": 184.13899999999998,
+          "serialize_devices": 138.20499999999998,
+          "unbind_ioevents": 193.66500000000002,
+          "validate_and_open": 42.197,
+          "write_devices": 12.272
+        },
+        "total_us": 1390.6319999999998
+      }
+    ],
+    "direct_send_action": [
+      {
+        "scope": "direct_send_action",
+        "stages_us": {
+          "export": 7017.5109999999995,
+          "lock": 2.109,
+          "pause": 152.768
+        },
+        "total_us": 7172.726
+      },
+      {
+        "scope": "direct_send_action",
+        "stages_us": {
+          "export": 569.374,
+          "lock": 0.493,
+          "pause": 272.00199999999995
+        },
+        "total_us": 841.934
+      },
+      {
+        "scope": "direct_send_action",
+        "stages_us": {
+          "export": 240.54299999999998,
+          "lock": 0.10700000000000001,
+          "pause": 38.707
+        },
+        "total_us": 279.412
+      },
+      {
+        "scope": "direct_send_action",
+        "stages_us": {
+          "export": 2570.118,
+          "lock": 53.726,
+          "pause": 435.387
+        },
+        "total_us": 3059.4390000000003
+      },
+      {
+        "scope": "direct_send_action",
+        "stages_us": {
+          "export": 622.035,
+          "lock": 1.153,
+          "pause": 209.955
+        },
+        "total_us": 833.202
+      },
+      {
+        "scope": "direct_send_action",
+        "stages_us": {
+          "export": 1464.315,
+          "lock": 1.882,
+          "pause": 314.042
+        },
+        "total_us": 1780.533
+      }
+    ],
+    "direct_resident_import": [
+      {
+        "scope": "direct_resident_import",
+        "stages_us": {
+          "attach": 23360.167,
+          "import_mapper": 534.848,
+          "read_validate_metadata": 377.831,
+          "restore_devices": 657.81
+        },
+        "total_us": 25256.429
+      },
+      {
+        "scope": "direct_resident_import",
+        "stages_us": {
+          "attach": 8387.037999999999,
+          "import_mapper": 386.67699999999996,
+          "read_validate_metadata": 156.49699999999999,
+          "restore_devices": 73.15199999999999
+        },
+        "total_us": 9101.274
+      },
+      {
+        "scope": "direct_resident_import",
+        "stages_us": {
+          "attach": 4032.618,
+          "import_mapper": 630.4019999999999,
+          "read_validate_metadata": 820.229,
+          "restore_devices": 484.707
+        },
+        "total_us": 6332.236
+      },
+      {
+        "scope": "direct_resident_import",
+        "stages_us": {
+          "attach": 1658.977,
+          "import_mapper": 203.423,
+          "read_validate_metadata": 145.334,
+          "restore_devices": 151.86
+        },
+        "total_us": 2255.323
+      },
+      {
+        "scope": "direct_resident_import",
+        "stages_us": {
+          "attach": 1046.0420000000001,
+          "import_mapper": 284.45599999999996,
+          "read_validate_metadata": 116.935,
+          "restore_devices": 171.4
+        },
+        "total_us": 1703.45
+      }
+    ],
+    "direct_receive_action": [
+      {
+        "scope": "direct_receive_action",
+        "stages_us": {
+          "import": 25337.532,
+          "lock": 2.26,
+          "resume": 280.96700000000004
+        },
+        "total_us": 25621.003
+      },
+      {
+        "scope": "direct_receive_action",
+        "stages_us": {
+          "import": 9135.295999999998,
+          "lock": 0.362,
+          "resume": 61.222
+        },
+        "total_us": 9196.942
+      },
+      {
+        "scope": "direct_receive_action",
+        "stages_us": {
+          "import": 6416.242,
+          "lock": 2.0999999999999996,
+          "resume": 271.34400000000005
+        },
+        "total_us": 6689.964
+      },
+      {
+        "scope": "direct_receive_action",
+        "stages_us": {
+          "import": 2274.0809999999997,
+          "lock": 0.627,
+          "resume": 124.47099999999999
+        },
+        "total_us": 2399.239
+      },
+      {
+        "scope": "direct_receive_action",
+        "stages_us": {
+          "import": 1720.2730000000001,
+          "lock": 0.29,
+          "resume": 98.179
+        },
+        "total_us": 1818.8110000000001
+      }
+    ],
+    "vm_common": [
+      {
+        "scope": "vm_common",
+        "stages_us": {
+          "kvm_create_vm_ioctl": 631.493
+        },
+        "total_us": 666.816
+      }
+    ],
+    "vm_new": [
+      {
+        "scope": "vm_new",
+        "stages_us": {
+          "create_common": 746.5319999999999
+        },
+        "total_us": 860.1610000000001
+      }
+    ]
+  },
+  "conclusions": [
+    "Detach now records locally initialized EPT metadata; remote additions still rebind incrementally.",
+    "The original first-return 4-5ms architecture delay remains. No latency improvement claim is made for the EPT watermark change.",
+    "No-kick resumed successfully for 44 handoffs; separate-run variation prevents a causal performance claim.",
+    "The in-flight test checks the same non-zombie process before and after two handoffs, then verifies every original command and final submission.",
+    "Optional action profiles separate pause, export, import, and resume; they are disabled by default."
+  ],
+  "limitations": [
+    "Coherent nested KVM; nested root shadow synchronization remains required.",
+    "In-flight profile contains active workload and profiling overhead; do not use it as an idle latency baseline."
+  ]
+}

@@ -138,15 +138,39 @@ def verify(path):
         need(not counts and not grants and not authorities,'Baseline changed memory tier')
     else:
         extra=2 if r['arguments'].get('resident_repromote_handoff') else 0
+        if r['arguments'].get('inflight_handoff_index') is not None: extra += 2
         nhops=2+2*r['arguments'].get('direct_profile_roundtrips',0)+extra
         need(counts == {'promotion':2,'demotion':2,r['mode']:nhops},'Missing lifecycle case')
         need(shared and max(shared)>0,'No eligible guest cache shared')
         need([(x['source'],x['destination'],x['source_epoch'],x['destination_epoch']) for x in handoffs] ==
              [('A' if i%2==0 else 'B','B' if i%2==0 else 'A',i,i+1) for i in range(nhops)],'Wrong itinerary')
         need(r['allocator_final']['allocated_bytes'] == 0,'Allocator not empty')
+    inflight = [command for command in r['commands'] if 'inflight' in command]
+    requested = r['arguments'].get('inflight_handoff_index')
+    need(len(inflight) == (0 if requested is None else 1), 'Missing/extra in-flight command')
+    for command in inflight:
+        proof = command['inflight']; start = guest(e,proof['started'],'trace_async_started')
+        end = guest(e,command,'trace_end')
+        need(start['index'] == end['index'] == requested and end['run_label'] == start['label'],
+             'In-flight command identity mismatch')
+        observed = proof['observations']; files = proof['handoff_files']
+        need(len(observed) == 3 and len(files) == 2, 'Incomplete in-flight itinerary')
+        selected = [hop for hop in handoffs if hop['fast_file'] in files]
+        need([hop['fast_file'] for hop in selected] == files and
+             [(hop['source'],hop['destination']) for hop in selected] == [('B','A'),('A','B')],
+             'Wrong in-flight handoffs')
+        for i, observation in enumerate(observed):
+            live = guest(e,observation,'trace_running')
+            need(live['active'] is True and live['process_state'] not in ('Z','X','x','missing') and
+                 live['start_ticks'] > 0 and all(live[key] == start[key] for key in
+                    ('index','command_pid','start_ticks')) and observation['role'] == ('A' if i==1 else 'B'),
+                 'Command not alive across handoff')
+        order = [proof['started']['file'],observed[0]['file'],files[0],observed[1]['file'],
+                 files[1],observed[2]['file'],command['file']]
+        need([e.order[f] for f in order] == sorted(e.order[f] for f in order), 'In-flight evidence reordered')
     return {'result':'passed','mode':r['mode'],'trace':r['trace']['name'],
         'report_sha256':sha(path.read_bytes()),**execution_identity(r),**workload,
-        'transitions':dict(counts),'shared_cache_bytes':shared,
+        'transitions':dict(counts),'shared_cache_bytes':shared,'inflight_commands':len(inflight),
         'registered_cache_bytes':[x['count']*PAGE for x in authorities.values()],
         'runtime_image_rehash':False,'remote_nfs_reads':None,
         'per_handoff_guest_probes':any('before' in hop or 'after' in hop for hop in handoffs),

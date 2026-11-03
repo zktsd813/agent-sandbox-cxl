@@ -23,15 +23,54 @@ exec 9<"$T/fd-sentinel"
 rm "$T/fd-sentinel"
 printf '{"event":"trace_ready","boot_id":"%s","pid":%s,"command_count":%s}\n' "$BOOT" "$$" "$COUNT"
 
+RUNNING=0
+# Only used by the opt-in in-flight handoff test. Normal run still waits here.
+finish_command() {
+    RC=0
+    wait "$COMMAND_PID" || RC=$?
+    kill -KILL "-$WATCHDOG_PID" "$WATCHDOG_PID" 2>/dev/null || true
+    wait "$WATCHDOG_PID" 2>/dev/null || true
+    # A command that leaves children running is not allowed to contaminate the next command.
+    kill -KILL "-$COMMAND_PID" 2>/dev/null || true
+    read END _ < /proc/uptime
+    cat /sys/class/block/vda/stat > "$R/$N.block-after"
+    OUT_SHA=$(sha256sum "$R/$N.out"); OUT_SHA=${OUT_SHA%% *}
+    NEXT=$((NEXT + 1))
+    printf '%s %s %s\n' "$BOOT" "$NEXT" "$OUT_SHA" > "$T/state"
+    TIMED_OUT=false; [ ! -e "$R/$N.timeout" ] || TIMED_OUT=true
+    printf '{"event":"trace_end","label":"%s","run_label":"%s","index":%s,"command_sha256":"%s","rc":%s,"start_s":%s,"end_s":%s,"output_sha256":"%s","next_index":%s,"timed_out":%s}\n' "$TOKEN" "$RUN_TOKEN" "$INDEX" "$CMD_SHA" "$RC" "$START" "$END" "$OUT_SHA" "$NEXT" "$TIMED_OUT" > "$R/$N.json"
+    cat "$R/$N.json"
+    if [ "$NEXT" -eq "$COUNT" ]; then printf '{"completed_commands":%s}\n' "$COUNT" > "$R/complete.json"; fi
+    RUNNING=0
+}
+
+command_live() {
+    LIVE_STATE=missing
+    LIVE_START=0
+    if [ -r "/proc/$COMMAND_PID/stat" ]; then
+        read -r PROC_STAT < "/proc/$COMMAND_PID/stat" || PROC_STAT=
+        # Strip the parenthesized comm field; state and starttime are fields 3/22.
+        PROC_TAIL=${PROC_STAT##*) }
+        set -- $PROC_TAIL
+        if [ "$#" -ge 20 ]; then LIVE_STATE=$1; shift 19; LIVE_START=$1; fi
+    fi
+    LIVE=false
+    case "$LIVE_STATE" in missing|Z|X|x) ;; *)
+        [ "$LIVE_START" = "$COMMAND_START" ] && LIVE=true ;;
+    esac
+    return 0
+}
+
 while read -r OP ARG TOKEN EXTRA; do
     case "$OP" in
-        run) INDEX=$ARG ;;
+        run|run_async) INDEX=$ARG ;;
         pool_prepare) POOL_EPOCH=$TOKEN; POOL_PLAN=$EXTRA; TOKEN=$ARG ;;
         *) TOKEN=$ARG ;;
     esac
     case "$TOKEN" in ''|*[!a-zA-Z0-9_-]*) echo '{"event":"trace_protocol_error"}'; continue ;; esac
     case "$OP" in
-        run)
+        run|run_async)
+            [ "$RUNNING" -eq 0 ] || exit 1
             case "$INDEX" in ''|*[!0-9]*) exit 1 ;; esac
             if [ "$INDEX" -ne "$NEXT" ] || [ "$INDEX" -ge "$COUNT" ] || [ -n "$EXTRA" ]; then
                 printf '{"event":"trace_error","label":"%s","reason":"command_order","next_index":%s}\n' "$TOKEN" "$NEXT"
@@ -47,21 +86,23 @@ while read -r OP ARG TOKEN EXTRA; do
             COMMAND_PID=$!
             setsid "$B" sh -c 'sleep "$1"; echo timeout > "$2"; kill -TERM "-$3" 2>/dev/null || true; sleep 5; kill -KILL "-$3" 2>/dev/null || true' watchdog "$TIMEOUT" "$R/$N.timeout" "$COMMAND_PID" </dev/null >/dev/null 2>&1 &
             WATCHDOG_PID=$!
-            RC=0
-            wait "$COMMAND_PID" || RC=$?
-            kill -KILL "-$WATCHDOG_PID" "$WATCHDOG_PID" 2>/dev/null || true
-            wait "$WATCHDOG_PID" 2>/dev/null || true
-            # A command that leaves children running is not allowed to contaminate the next command.
-            kill -KILL "-$COMMAND_PID" 2>/dev/null || true
-            read END _ < /proc/uptime
-            cat /sys/class/block/vda/stat > "$R/$N.block-after"
-            OUT_SHA=$(sha256sum "$R/$N.out"); OUT_SHA=${OUT_SHA%% *}
-            NEXT=$((NEXT + 1))
-            printf '%s %s %s\n' "$BOOT" "$NEXT" "$OUT_SHA" > "$T/state"
-            TIMED_OUT=false; [ ! -e "$R/$N.timeout" ] || TIMED_OUT=true
-            printf '{"event":"trace_end","label":"%s","index":%s,"command_sha256":"%s","rc":%s,"start_s":%s,"end_s":%s,"output_sha256":"%s","next_index":%s,"timed_out":%s}\n' "$TOKEN" "$INDEX" "$CMD_SHA" "$RC" "$START" "$END" "$OUT_SHA" "$NEXT" "$TIMED_OUT" > "$R/$N.json"
-            cat "$R/$N.json"
-            if [ "$NEXT" -eq "$COUNT" ]; then printf '{"completed_commands":%s}\n' "$COUNT" > "$R/complete.json"; fi
+            RUN_TOKEN=$TOKEN
+            RUNNING=1
+            if [ "$OP" = run_async ]; then
+                COMMAND_START=$(awk '{print $22}' "/proc/$COMMAND_PID/stat")
+                printf '{"event":"trace_async_started","label":"%s","index":%s,"command_pid":%s,"start_ticks":%s}\n' "$TOKEN" "$INDEX" "$COMMAND_PID" "$COMMAND_START"
+            else
+                finish_command
+            fi
+            ;;
+        running)
+            [ "$RUNNING" -eq 1 ] || exit 1
+            command_live
+            printf '{"event":"trace_running","label":"%s","index":%s,"command_pid":%s,"start_ticks":%s,"process_state":"%s","active":%s}\n' "$TOKEN" "$INDEX" "$COMMAND_PID" "$LIVE_START" "$LIVE_STATE" "$LIVE"
+            ;;
+        collect)
+            [ "$RUNNING" -eq 1 ] || exit 1
+            finish_command
             ;;
         ping)
             # Only shell builtins: first execution ACK, no FD/hash/cache diagnostics.

@@ -43,7 +43,7 @@
       "base_sha256": "c60ba2cfdcb935509d37b861b3a65f6ccf7e43a328e6c671d32fba72975b2ed0"
     },
     "arch/x86/kvm/mmu/mmu.c": {
-      "patched_sha256": "ccd1ff582b8baae87a1f6f44d3a0b54c9d69fc49185cdc95fbc2620009a5845c",
+      "patched_sha256": "5bc7076ff542f744c1987d4f76bec284bcd239ad815cd3971d1b72fd6b54abb3",
       "base_sha256": "e687fdf436053dd0d41ffc403e89a82bc70663a519629da38ee4bd5a52d569a8"
     },
     "arch/x86/kvm/mmu/tdp_mmu.c": {

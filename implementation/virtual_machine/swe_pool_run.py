@@ -49,6 +49,7 @@ def arguments():
     parser.add_argument("--restore-timing", action="store_true")
     parser.add_argument("--resume-nokick", action="store_true")
     parser.add_argument("--exec-request", action="store_true")
+    parser.add_argument("--inflight-handoff-index", type=int)
     parser.add_argument("--alternate-request", action="store_true")
     parser.add_argument("--resident-direct", action="store_true")
     parser.add_argument("--resident-fast-control", action="store_true")
@@ -70,6 +71,8 @@ def arguments():
         parser.error("This workload fixture uses 2048MiB and one vCPU per sandbox")
     if not 0 <= args.direct_profile_roundtrips <= 20 or (args.direct_profile_roundtrips and args.modes != ['direct']):
         parser.error("Profile repetitions require only direct mode and 0..20 roundtrips")
+    if args.inflight_handoff_index is not None and (args.modes != ["direct"] or len(args.names) != 1):
+        parser.error("In-flight index requires one explicit trace and direct mode")
     if len(set(args.names)) != len(args.names) or len(set(args.modes)) != len(args.modes):
         parser.error("Do not repeat trace names or modes")
     return args
@@ -106,7 +109,7 @@ def main():
              "limitations": ["Coherent nested KVM on one physical host",
                              "One trial per trace/mode unless separately repeated",
                              "Baseline uses the same patched VMM in DRAM, not pristine Firecracker",
-                             "Transitions are between recorded commands"]}
+                             ("Includes two handoffs during a running command" if args.inflight_handoff_index is not None else "Transitions are between recorded commands")]}
 
     def save():
         lab.save_json(output / "report.json", suite)
@@ -187,6 +190,8 @@ def main():
                 bench.append('--resume-nokick')
             if args.exec_request and mode == 'direct':
                 bench.append('--exec-request')
+            if args.inflight_handoff_index is not None:
+                bench.extend(["--inflight-handoff-index", str(args.inflight_handoff_index)])
             if args.alternate_request and mode == 'direct':
                 bench.append('--alternate-request')
             if args.immutable_nfs_cache:

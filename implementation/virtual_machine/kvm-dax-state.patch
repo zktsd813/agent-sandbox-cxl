@@ -483,7 +483,7 @@
  	if (!page)
  		return -ENOMEM;
  
-@@ -6044,6 +6045,101 @@
+@@ -6044,6 +6045,106 @@
  	free_mmu_pages(&vcpu->arch.guest_mmu);
  	return ret;
  }
@@ -553,9 +553,14 @@
 +		u8 *root = (u8 *)__va(vcpu->arch.mmu->root.hpa) + 1;
 +		WRITE_ONCE(*root, READ_ONCE(*root));
 +	}
-+	if (attach)
-+		seen_head = s->ept_pages;
-+	else
++	/* Local allocations set their struct-page backlink in tdp_mmu_init_sp()
++	 * before publishing dax_next. Imported pages were rebound on attach.
++	 * Remember both sets when leaving: returning to their original node
++	 * must not repeat the already completed native metadata initialization.
++	 * Remote additions are still walked, and nested-root synchronization
++	 * above still runs on every attach. The arena never reuses EPT pages. */
++	seen_head = s->ept_pages;
++	if (!attach)
 +		s->ept_validated = 1;
 +	s->ept_root_hpa = vcpu->arch.mmu->root.hpa;
 +	if (attach)

@@ -21,6 +21,7 @@ def main():
     parser.add_argument('--firecracker',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--keep-guest-images',action='store_true',help='Only update L1 executables and init, preserving embedded L2 fixtures')
+    parser.add_argument('--kvm-module-dir',type=Path,help='Use rebuilt disposable-L1 kvm.ko and kvm-intel.ko from this directory')
     args=parser.parse_args()
     base=args.base_assets.resolve(strict=True);fc=args.firecracker.resolve(strict=True)
     dest=args.output.resolve()
@@ -44,6 +45,17 @@ def main():
         shutil.copy2(dest/'control-rpc',root/'lab/control-rpc')
         shutil.copy2(HERE/'guest-init.sh',root/'init')
         (root/'init').chmod(0o755)
+        if args.kvm_module_dir:
+            modules={}
+            for name in ('kvm.ko','kvm-intel.ko'):
+                source_module=(args.kvm_module_dir/name).resolve(strict=True)
+                shutil.copy2(source_module,root/'modules'/name)
+                modules[name]={'path':str(source_module),'sha256':lab.sha256(source_module)}
+                original['inputs']['pool_kernel_modules'][name]=modules[name]['sha256']
+                original['handoff']['inputs'][name]=modules[name]
+            original['kvm_module_override']={'modules':modules,
+                'source_patch_sha256':lab.sha256(HERE/'kvm-dax-state.patch'),
+                'source_metadata_sha256':lab.sha256(HERE/'kvm-dax-source.json')}
         for name in ([] if args.keep_guest_images else original['traces']):
             archive=name+'-initramfs.cpio'
             with tempfile.TemporaryDirectory(dir=dest.parent) as nested:

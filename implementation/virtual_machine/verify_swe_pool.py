@@ -125,7 +125,7 @@ def serial_proof(e, report):
     need([(row["event"], row["index"]) for row in rows if row["event"] in ("trace_start", "trace_end")] ==
          [(kind, i) for i in range(count) for kind in ("trace_start", "trace_end")], "raw command execution order")
     for end in [row for row in rows if row["event"] == "trace_end"]:
-        starts = [row for row in rows if row["event"] == "trace_start" and row["label"] == end["label"]]
+        starts = [row for row in rows if row["event"] == "trace_start" and row["label"] == end.get("run_label", end["label"])]
         need(len(starts) == 1 and all(starts[0][key] == end[key] for key in
              ("index", "command_sha256", "start_s")), "command start/end disagreement")
     export = guest(e, report["guest_export"], "trace_export")

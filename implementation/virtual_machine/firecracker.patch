@@ -6216,7 +6216,7 @@ index 000000000..0f90a81c0
 +    }
 +}
 diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
-index ca743fa6f..0eb537578 100644
+index ca743fa6f..f7b33116f 100644
 --- a/src/vmm/src/rpc_interface.rs
 +++ b/src/vmm/src/rpc_interface.rs
 @@ -100,6 +100,18 @@ pub enum VmmAction {
@@ -6257,7 +6257,7 @@ index ca743fa6f..0eb537578 100644
      /// Loading a microVM snapshot not allowed after configuring boot-specific resources.
      LoadSnapshotNotAllowed,
      /// Failed to restore from snapshot: {0}
-@@ -495,7 +512,19 @@ impl<'a> PrebootApiController<'a> {
+@@ -495,7 +512,23 @@ impl<'a> PrebootApiController<'a> {
              SetBalloonDevice(config) => self.set_balloon_device(config),
              SetVsockDevice(config) => self.set_vsock_device(config),
              SetMmdsConfiguration(config) => self.set_mmds_config(config),
@@ -6270,14 +6270,18 @@ index ca743fa6f..0eb537578 100644
 +                if !crate::direct::import_enabled() {
 +                    return Err(VmmActionError::NotSupported("direct import is not configured".into()));
 +                }
++                let mut timing = crate::persist::RestoreTiming::new("direct_receive_first_action");
 +                self.start_microvm()?;
++                timing.mark("build_import");
 +                self.built_vmm.as_ref().unwrap().lock().expect("Poisoned lock").resume_vm()?;
++                timing.mark("resume");
++                timing.finish();
 +                Ok(VmmData::Empty)
 +            }
              UpdateMachineConfiguration(config) => self.update_machine_config(config),
              SetEntropyDevice(config) => self.set_entropy_device(config),
              SetMemoryHotplugDevice(config) => self.set_memory_hotplug_device(config),
-@@ -503,6 +532,10 @@ impl<'a> PrebootApiController<'a> {
+@@ -503,6 +536,10 @@ impl<'a> PrebootApiController<'a> {
              CreateSnapshot(_)
              | FlushMetrics
              | Pause
@@ -6288,7 +6292,7 @@ index ca743fa6f..0eb537578 100644
              | Resume
              | GetBalloonStats
              | GetMemoryHotplugStatus
-@@ -517,7 +550,7 @@ impl<'a> PrebootApiController<'a> {
+@@ -517,7 +554,7 @@ impl<'a> PrebootApiController<'a> {
              | StopFreePageHinting
              | HotUnplugDevice(_) => Err(VmmActionError::OperationNotSupportedPreBoot),
              #[cfg(target_arch = "x86_64")]
@@ -6297,7 +6301,7 @@ index ca743fa6f..0eb537578 100644
          }
      }
  
-@@ -700,6 +733,18 @@ impl RuntimeApiController {
+@@ -700,6 +737,18 @@ impl RuntimeApiController {
          event_manager: &mut EventManager,
      ) -> Result<VmmData, VmmActionError> {
          use self::VmmAction::*;
@@ -6316,7 +6320,7 @@ index ca743fa6f..0eb537578 100644
          match request {
              // Supported operations allowed post-boot.
              CreateSnapshot(snapshot_create_cfg) => self.create_snapshot(&snapshot_create_cfg),
-@@ -786,6 +831,48 @@ impl RuntimeApiController {
+@@ -786,6 +835,58 @@ impl RuntimeApiController {
                  .hot_unplug_device(device_id, event_manager)
                  .map(|()| VmmData::Empty),
              Pause => self.pause(),
@@ -6337,15 +6341,25 @@ index ca743fa6f..0eb537578 100644
 +                Ok(VmmData::Empty)
 +            }
 +            DirectSend => {
++                let mut timing = crate::persist::RestoreTiming::new("direct_send_action");
 +                let mut vmm = self.vmm.lock().expect("Poisoned lock");
++                timing.mark("lock");
 +                vmm.pause_vm()?;
++                timing.mark("pause");
 +                vmm.direct_export(event_manager)?;
++                timing.mark("export");
++                timing.finish();
 +                Ok(VmmData::Empty)
 +            }
 +            DirectReceive => {
++                let mut timing = crate::persist::RestoreTiming::new("direct_receive_action");
 +                let mut vmm = self.vmm.lock().expect("Poisoned lock");
++                timing.mark("lock");
 +                vmm.import_resident(event_manager)?;
++                timing.mark("import");
 +                vmm.resume_vm()?;
++                timing.mark("resume");
++                timing.finish();
 +                Ok(VmmData::Empty)
 +            }
 +            #[cfg(target_arch = "x86_64")]
