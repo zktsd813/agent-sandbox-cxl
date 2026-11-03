@@ -35,3 +35,23 @@ __pycache__/
 
 # Contention experiment images, runs and copied binaries
 /experiments/contention/.local
+
+# Raw VM experiment evidence stays local; commit code and compact summaries only.
+/implementation/virtual_machine/results/**/*.tar
+/implementation/virtual_machine/results/**/*.tar.*
+/implementation/virtual_machine/results/**/*.tgz
+/implementation/virtual_machine/results/**/*.gz
+/implementation/virtual_machine/results/**/*.xz
+/implementation/virtual_machine/results/**/*.zip
+/implementation/virtual_machine/results/**/*.raw
+/implementation/virtual_machine/results/**/*.bin
+/implementation/virtual_machine/results/cache-pml-20261021/raw-epochs.jsonl
+/implementation/virtual_machine/results/home-storage-20261028/trace-report.json
+/implementation/virtual_machine/results/mode-compatibility-20261027/trace-report.json
+/implementation/virtual_machine/results/pool-discard-20261030/diagnostic/report.json
+/implementation/virtual_machine/results/pool-discard-20261030/failures/pilot1/arm-report.json
+/implementation/virtual_machine/results/pool-discard-20261030/failures/pilot3/baseline-arm-report.json
+/implementation/virtual_machine/results/pool-discard-20261030/failures/pilot3/reporting-arm-report.json
+/implementation/virtual_machine/results/pool-discard-20261030/preparatory/memory-smoke-report.json
+/implementation/virtual_machine/results/stock-comparison-20261030/evidence/manifest.json
+/implementation/virtual_machine/results/trace-nfs-20261027/report.json
