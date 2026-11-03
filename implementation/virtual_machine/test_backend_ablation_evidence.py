@@ -58,6 +58,12 @@ class EvidenceTest(unittest.TestCase):
     def test_missing_owner_rejection(self):
         self.check_edit(lambda r: r['negative_apis'].pop())
 
+    def test_missing_combined_send_rejections(self):
+        if not json.loads((self.source/'report.json').read_text()).get('parked_combined_action_test'):
+            self.skipTest('Historical evidence predates the combined send action test')
+        self.check_edit(lambda r: r.__setitem__('negative_apis',
+            [x for x in r['negative_apis'] if x['kind'] != 'parked-combined-send']))
+
     def test_fabricated_native_start(self):
         self.check_edit(lambda r: r['preparation']['worker']['native_boot'].__setitem__('native_ready_ns', 1))
 

@@ -110,7 +110,7 @@ def record_pid(directory):
 
 
 def stop_fc(vm, directory):
-    shell(vm, lab.snapshot_cleanup_script("/run/snapshot-bench-0000000000000000") +
+    return shell(vm, lab.snapshot_cleanup_script("/run/snapshot-bench-0000000000000000") +
           f"if [ -f {directory}/fc.pid ]; then\nread target_pid expected_start < {directory}/fc.pid\n"
           "case \"$target_pid:$expected_start\" in *[!0-9:]*|:|*:) exit 1 ;; esac\n"
           "[ \"$target_pid\" -gt 1 ]\nstop_snapshot_process\nfi\n")

@@ -88,7 +88,6 @@ def build(a):
 
 
 class Controller(HandoffController):
-    image_hash = SWEController.image_hash
     setup = SWEController.setup
     configure_direct = SWEController.configure_direct
 
@@ -163,7 +162,7 @@ class Controller(HandoffController):
         first=not worker['imported'];label=f'hop{epoch}'
         ip={'A':'172.30.0.1','B':'172.30.0.2'}
         raw,name=self.shell(source,f'/lab/resident-control request {old_dir} {ip[source]} '
-            f'{self.resident_control_nonce} {int(first)} {label} {ip[dest]} 1 {epoch} {self.pool_offset} {self.image_bytes}',
+            f'{self.resident_control_nonce} {int(first)} {label} {ip[dest]} 1 {epoch} {self.pool_offset} {self.image_bytes} 1',
             'handoff-request',120)
         rows=json_lines(raw,'RESIDENT_FAST_JSON ')
         require(len(rows)==1,'Missing native handoff receipt')
@@ -175,13 +174,23 @@ class Controller(HandoffController):
         sealed=json.loads(sealed_bytes);sealed_file=self.receipts[-1]['file']
         require(len(state_bytes)==timing['state_bytes'] and len(sealed_bytes)==timing['manifest_bytes']
             and hashlib.sha256(sealed_bytes).hexdigest()==state['memory_manifest_sha256'],'Transferred metadata mismatch')
-        manifest=self.fetch_json(dest,worker['manifest_path'],'handoff-manifest')
-        manifest_file=self.receipts[-1]['file']
+        log=self.fetch_bytes(dest,worker['directory']+'/vmm.log','handoff-import-log').decode()
+        imports=[json.loads(line.split('DIRECT_HANDOFF_JSON ',1)[1]) for line in log.splitlines() if 'DIRECT_HANDOFF_JSON ' in line]
+        imported=next(x for x in imports if x['event']=='import' and x['token']['generation']==state['token']['generation'])
+        manifest=imported['mapper']
+        manifest_file=self.raw('handoff-manifest',json.dumps(manifest))
         require(len(state['devices']['virtio_state']['Mmio']['block_devices']) == (0 if self.arm=='none' else 1),
                 'Unexpected block graph')
         validate_export(self.allocator,s.owner,manifest,self.memory_mib*MIB,self.pool_offset,self.image_bytes)
         validate_handoff_handle(sealed,manifest)
         self.resident_fence(source,old_dir,state['token']['generation'])
+        raw,negative=self.shell(source,
+            f'/lab/shared-probe api {old_dir}/api.sock PUT /actions '\
+            "'{\"action_type\": \"DirectSend\"}' 400",'parked-combined-send')
+        rejected=json_lines(raw,'LAB_API_JSON ')
+        require(len(rejected)==1 and rejected[0]['status']==400,'Parked source accepted DirectSend')
+        self.import_negatives.append({'kind':'parked-combined-send','role':source,'file':negative,
+            'request':{'action_type':'DirectSend'},'response':rejected[0],'generation':state['token']['generation']})
         for key in ('directory','plan','report','manifest_path','hints'): setattr(s,key,worker[key])
         s.role,s.epoch,s.manifest=dest,epoch,manifest
         worker['imported']=True
@@ -195,7 +204,7 @@ def bench(a):
     c=Controller(config,out,a.arm);s=c.sandboxes[0]
     report={'schema':'backend-ablation-trial-v1','arm':a.arm,'result':'running','fixture':c.fixture,
         'config':config,'receipts':c.receipts,'commands':c.commands,'api_events':c.api_events,
-        'launches':c.launches,'hops':[],'backend_reads':[],'logs':[],
+        'launches':c.launches,'hops':[],'backend_reads':[],'logs':[],'parked_combined_action_test':True,
         'memory_events':c.memory_events,'source_probes':c.resident_probes,'negative_apis':c.import_negatives}
     def save(): lab.save_json(out/'report.json',report)
     save()

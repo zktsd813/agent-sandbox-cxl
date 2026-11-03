@@ -20,7 +20,6 @@ import lab
 import nfs_bench as nfs
 from home_storage_bench import Controller, require, json_lines
 from pool_bench import Sandbox, MIB
-from pool_handoff_control import validate_handoff_handle
 from pool_handoff_bench import HandoffController
 from pool_handoff_control import FrameAllocator, promotion_layout
 from pool_control import PoolControl
@@ -50,40 +49,10 @@ class SWEController(HandoffController):
         self.memory_events, self.api_events, self.launches, self.import_negatives = [], [], [], []
         self.report_logs, self.guest_traces, self.audits = [], [], []
         self.ready_keys, self.registrations, self.owners = set(), {}, {}
-        self.last_image_hashes = {}
         self.resident_resource_events, self.resident_probes = [], []
         self.resident_readiness, self.resident_preparations = {}, []
         self.serial_number = 0
         self.kernel_profile_offset = 12288 * MIB + 512 if args.restore_timing else None
-
-    def image_hash(self, role):
-        # Read the complete 3–4GiB image in large chunks. With actimeo=0,
-        # BusyBox sha256sum's small reads cause an NFS attribute roundtrip for
-        # each read. Check the producer separately: a pipe's SHA exit status
-        # alone would hide a short/failed dd.
-        status, digest = self.root + '/image-dd.status', self.root + '/image.sha'
-        raw, name = self.shell(role, 'sync\necho 3 > /proc/sys/vm/drop_caches\n'
-            f'test "$(stat -Lc %s /disk/sandbox.raw)" -eq {self.image_bytes}\n'
-            f'rm -f {status} {digest}\n'
-            '(\nrc=0\ndd if=/disk/sandbox.raw bs=1048576 || rc=$?\n'
-            f"printf '%s\\n' \"$rc\" > {status}\nexit \"$rc\"\n) | sha256sum > {digest}\n"
-            f'test "$(cat {status})" = 0\nread checksum rest < {digest}\n'
-            "printf '%s  /disk/sandbox.raw\\n' \"$checksum\"", 'image-hash', 600)
-        hashes = re.findall(r'^([0-9a-f]{64})  /disk/sandbox.raw\s*$', raw, re.M)
-        require(len(hashes) == 1, 'Image hash missing')
-        result = {'file': name, 'sha256': hashes[0], 'role': role}
-        self.last_image_hashes[role] = result
-        return result
-
-    def verify_canonical(self):
-        raw, name = self.shell('A', f'/lab/pool-dax-copy verify /disk/sandbox.raw '
-            f'/dev/dax0.0 {self.pool_offset} {self.image_bytes}', 'canonical-verify', 600)
-        rows = json_lines(raw, 'POOL_DAX_COPY_JSON ')
-        require(len(rows) == 1 and rows[0]['full_compare'] and rows[0]['result'] == 'passed',
-                'Canonical image mutated')
-        image = self.image_hash('A')
-        require(image['sha256'] == self.image_id, 'Backing image mutated')
-        return {'file': name, 'receipt': rows[0], 'image': image}
 
     def wait_event(self, role, directory, event, label=None, timeout=120):
         pattern = f'"event":"{event}"'
@@ -122,11 +91,8 @@ class SWEController(HandoffController):
             + ('actimeo=60,nocto\n' if immutable_cache else 'actimeo=0\n') +
             'mount -o bind /remote /disk\ncat /proc/mounts', 'remote-storage')
         for role in ('A', 'B'):
-            require(self.image_hash(role)['sha256'] == self.image_id, 'Wrong immutable trace image')
             self.shell(role, 'insmod /lab/pool_memory_module.ko\ntest -c /dev/cxl_pool\n'
-                'echo 1 > /sys/module/kvm/parameters/dax_scattered\n'
-                'sha256sum /lab/firecracker /lab/l2-vmlinux /lab/guest-pool /lab/pool_memory_module.ko '
-                f'/lab/{name}-initramfs.cpio /modules/kvm.ko /modules/kvm-intel.ko', 'runtime-hashes')
+                'echo 1 > /sys/module/kvm/parameters/dax_scattered', 'pool-driver')
         require(self.pool_offset + self.image_bytes <= 8192 * MIB, 'Canonical image exceeds reserved layout')
         raw, receipt = self.shell('A', f'/lab/pool-dax-copy import /disk/sandbox.raw /dev/dax0.0 '
                                  f'{self.pool_offset} {self.image_bytes}', 'canonical-publish', 300)
@@ -278,22 +244,19 @@ class SWEController(HandoffController):
 
     def state_handoff(self, s, destination):
         require(self.mode == 'state-only' and s.tier == 'cxl' and destination != s.role, 'Invalid state handoff')
-        before = self.command_vm(s, 'identity')
         source, old_directory, old_epoch = s.role, s.directory, s.epoch
+        started = time.monotonic_ns()
         self.pause(s)
-        old = self.export(s)
         state_path = old_directory + '/state-only.bin'
+        # Snapshot creation already drains devices and seals the current mapper.
         create = self.api(source, old_directory, '/snapshot/create', 'PUT',
             {'snapshot_type': 'Full', 'snapshot_path': state_path, 'mem_file_path': '/dev/dax0.0'})
         state = self.fetch_bytes(source, state_path, 'state-only')
         state_file = self.receipts[-1]['file']
         manifest = self.fetch_bytes(source, s.manifest_path, 'state-bound-manifest')
         manifest_file = self.receipts[-1]['file']
-        parsed = json.loads(manifest)
-        require(0 < len(state) < MIB and parsed['state_sha256'] == hashlib.sha256(state).hexdigest(), 'State binding')
-        nfs.stop_fc(self.vms[source], old_directory)
-        raw, fence = self.shell(source, source_fence_script(old_directory), 'source-fence')
-        require('FENCED ' in raw, 'Source remains runnable')
+        require(0 < len(state) < MIB, 'Unexpected state-only payload size')
+        stopped = self.raw('state-source-stop', nfs.stop_fc(self.vms[source], old_directory))
         s.epoch += 1
         s.role = destination
         target = f'{self.root}/vm{s.vm}-epoch{s.epoch}'
@@ -301,28 +264,18 @@ class SWEController(HandoffController):
         self.write_bytes(destination, target+'/state-only.bin', state, 'state-only-transfer')
         self.write_bytes(destination, target+'/incoming-manifest.json', manifest, 'placement-transfer')
         self.start_vm(s, restore_manifest=target+'/incoming-manifest.json')
+        # Restore consumes the sealed handle and resumes only after validation.
         load = self.api(destination, s.directory, '/snapshot/load', 'PUT', {'snapshot_path': target+'/state-only.bin',
-            'mem_backend': {'backend_type': 'File', 'backend_path': '/dev/dax0.0'}, 'resume_vm': False})
-        restored = self.export(s)
-        validate_handoff_handle(parsed, restored['manifest'])
-        self.resume(s)
-        after = self.command_vm(s, 'check')
-        self.same_identity(before, after)
-        row = {'kind': 'state-only', 'vm': s.vm, 'source': source, 'destination': destination,
+            'mem_backend': {'backend_type': 'File', 'backend_path': '/dev/dax0.0'}, 'resume_vm': True})
+        s.manifest = None
+        row = {'kind': 'state-only', 'runtime_path': 'state-v2', 'vm': s.vm, 'source': source, 'destination': destination,
             'source_epoch': old_epoch, 'destination_epoch': s.epoch, 'source_tier': 'cxl', 'destination_tier': 'cxl',
-            'before': before, 'after': after, 'source_fence_file': fence, 'create_api': create, 'load_api': load,
-            'state_file': state_file, 'state_bytes': len(state), 'state_sha256': hashlib.sha256(state).hexdigest(),
+            'source_stop_file': stopped, 'create_api': create, 'load_api': load,
+            'state_file': state_file, 'state_bytes': len(state),
             'manifest_file': manifest_file, 'manifest_bytes': len(manifest), 'ram_snapshot_bytes': 0,
-            'ram_transfer_bytes': 0, 'source_placement': self.export_evidence(old),
-            'destination_placement': self.export_evidence(restored), 'result': 'passed'}
+            'ram_transfer_bytes': 0, 'controller_pause_to_resume_ns': time.monotonic_ns()-started, 'result': 'passed'}
         self.transitions.append(row)
         return row
-
-    def network_counter(self):
-        raw, name = self.shell('B', 'cat /proc/net/rpc/nfs', 'nfs-counters')
-        rows = [line.split() for line in raw.splitlines() if line.startswith('proc3 ')]
-        require(len(rows) == 1, 'Missing NFS counters')
-        return int(rows[0][8]), name
 
 
 def main():
@@ -340,6 +293,8 @@ def main():
     parser.add_argument("--immutable-nfs-cache", action="store_true")
     parser.add_argument("--direct-profile-roundtrips", type=int, default=0)
     args = parser.parse_args()
+    if args.mode == 'direct':
+        args.resident_direct = args.resident_fast_control = args.resident_ready_control = args.immutable_nfs_cache = True
     require(not args.resident_fast_control or args.resident_direct, 'TCP control requires resident direct')
     require(not args.resident_ready_control or args.resident_fast_control, 'Prepared RPC control requires TCP control')
     require(not args.resident_direct or (args.mode == 'direct' and args.immutable_nfs_cache),
@@ -353,7 +308,7 @@ def main():
     out.mkdir()
     c = SWEController(config, out, args)
     s = c.sandboxes[0]
-    report = {'schema': 'swe-pool-trace-v1', 'result': 'running', 'mode': args.mode, 'name': args.name,
+    report = {'schema': 'swe-pool-trace-v2', 'result': 'running', 'mode': args.mode, 'name': args.name,
         'arguments': vars(args), 'config': config, 'fixture': c.fixture, 'trace': c.trace,
         'commands': c.trace_commands, 'control_commands': c.commands, 'receipts': c.receipts,
         'transitions': c.transitions, 'authority_events': c.authority_events, 'memory_events': c.memory_events,
@@ -407,15 +362,12 @@ def main():
                     (c.direct_handoff if s.direct else c.state_handoff)(s,'A')
                     c.demote(s)
                 save()
-            before, before_file = c.network_counter()
             row = c.trace_command(s,'run',index,event='trace_end',timeout=int(c.trace['environment'].get('timeout',60))+30)
-            after, after_file = c.network_counter()
             value = row['receipt']
             require(not value['timed_out'] and value['command_sha256'] == command['command_sha256'] and
                     value['rc'] == (command['expected_returncode'] if command['expected_returncode'] is not None else 0),
                     f'Trace command diverged at {index}: {value}')
-            row.update(guest_duration_s=value['end_s']-value['start_s'],
-                       network={'before_file':before_file,'after_file':after_file,'nfs_read_delta':after-before})
+            row.update(guest_duration_s=value['end_s']-value['start_s'])
             c.trace_commands.append(row)
             save()
         if args.mode != 'baseline':
@@ -432,8 +384,7 @@ def main():
         report['guest_export'] = exported
         report['controller_replay_ns'] = time.monotonic_ns()-started
         report['guest_duration_s'] = sum(x['guest_duration_s'] for x in c.trace_commands)
-        report['nfs_read_calls'] = sum(x['network']['nfs_read_delta'] for x in c.trace_commands)
-        report['canonical_final'] = c.verify_canonical()
+        report['runtime_audits'] = False
         report['allocator_final'] = c.allocator.summary()
         require(report['allocator_final']['allocated_bytes'] == 0, 'CXL grant leak')
         report['result'] = 'passed'

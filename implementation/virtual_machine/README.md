@@ -22,12 +22,19 @@ DAX 공유 영역은 기본 2GiB다. 기본 microVM은 1 vCPU·128MiB이고 RAM 
 
 <a id="session-handoff"></a>
 
-## 다음 세션 인계: 2026-11-02
+## 다음 세션 인계: 2026-11-03
 
-최신 변경은 [목적지 FD·장치 환경을 재사용하는 resident direct](../../docs/cxl-resident-direct.md)다.
-`--resident-direct --resident-fast-control --immutable-nfs-cache`를 명시해 활성화한다.
-최초 목적지의 이미지 FD·io_uring은 source 실행 중 준비하며, 재방문은 기존 VMM·vCPU thread·장치 객체를 재사용한다.
-[실험·재현 자료](results/direct-resident-20261102/README.md)는 준비, API service, 실제 pause→guest ACK를 분리한다.
+최신 runtime은 실행 파일·이미지의 반복 해시, handoff별 FD/TID 감사·guest ping·실패 유도 시험·전체 로그 회수를 실행하지 않는다.
+SWE의 `direct` 모드는 상주 제어기를 기본 사용하며 `DirectSend`(pause+export)와 `DirectReceive`(import+resume) 두 API로 인계한다.
+중간 `PoolCache` checkpoint API도 제거했다. 디스크 FD·io_uring은 첫 방문 전에 준비하고, VM/vCPU 실행 자원은 첫 방문 이후 재사용한다.
+준비 시간, 최초 handoff, 반복 요청→Resume 응답은 서로 다른 측정 범위다. Promotion/demotion의 RAM 복사는 별도다.
+`--restore-timing`은 내부 계측을 명시적으로 켠다. 독립 검증은 종료 후 `verify_swe_pool.py`가 수행하며,
+source 접근 실패·guest ACK 시험은 별도 `backend_ablation.py`에서만 요청한다.
+시작 스크립트 전송과 실행은 한 serial 요청으로 묶었다. State-only도 snapshot 전후의 중복 checkpoint를 제거하고 load와 resume을 합쳤다.
+작은 state/mapper 파일의 결합, owner/epoch·범위 확인, I/O drain과 CoW/discard는 유지한다. 이미지·RAM 전체 재검증과는 별개다.
+[수정·실험 결과](results/runtime-overhead-20261103/summary.json): NFS 반복 요청→Resume 중앙값 9.562→4.298ms,
+목적지 프로세스·디스크와 양쪽 제어기 준비 합계 521.694→238.663ms다. 준비 합계는 각 fresh pair 한 번의 관측이며 serial 제어를 포함한다.
+최종 NFS/local 각 24회 handoff와 계측을 끈 baseline/state-only/direct의 Gin 27개 명령 replay를 통과했다. 원시 결과와 재검증 명령은 같은 디렉터리에 있다.
 
 직전 변경은 [Direct API 단계별 계측과 NFS/IRQFD 최적화](../../docs/cxl-direct-api-latency.md)다.
 11.66ms API와 2.48ms kernel 수치의 차이, 예전 1ms 미만 executor 경로와의 차이를 설명한다.

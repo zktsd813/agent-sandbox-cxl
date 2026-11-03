@@ -1,0 +1,6 @@
+{
+  "result": "passed",
+  "backend": "exact match",
+  "swe": "exact match",
+  "three_mode_matrix": true
+}

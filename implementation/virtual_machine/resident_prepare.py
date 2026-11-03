@@ -26,9 +26,6 @@ def main():
     if dest.exists(): raise FileExistsError(dest)
     source=HERE/'resident_control.c'
     original=json.loads((base/'manifest.json').read_text())
-    for name,digest in original['artifacts'].items():
-        if Path(name).name!=name or lab.sha256(base/name)!=digest:
-            raise ValueError('Base artifact changed: '+name)
     subprocess.run(['cp','-a','--reflink=auto',str(base),str(dest)],check=True)
     command=['gcc','-O2','-Wall','-Wextra','-Werror','-static',str(source),'-o',str(dest/'resident-control')]
     subprocess.run(command,check=True)

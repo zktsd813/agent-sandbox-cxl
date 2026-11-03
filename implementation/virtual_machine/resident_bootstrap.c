@@ -53,35 +53,6 @@ static void file(const char *name, const char *data) {
     write_all(fd, data, strlen(data));
     if (close(fd)) die("close owned file");
 }
-static void counters(uint64_t values[22]) {
-    char line[4096], *save = NULL;
-    FILE *f = fopen("/proc/net/rpc/nfs", "r");
-    need(f != NULL, "NFS client is not mounted");
-    int found = 0;
-    while (fgets(line, sizeof(line), f)) {
-        if (strncmp(line, "proc3 ", 6)) continue;
-        char *field = strtok_r(line + 6, " \n", &save);
-        need(field && strtoul(field, NULL, 10) == 22, "NFSv3 counter layout");
-        for (int i = 0; i < 22; ++i) {
-            field = strtok_r(NULL, " \n", &save);
-            need(field != NULL, "short NFS counter list");
-            values[i] = strtoull(field, NULL, 10);
-        }
-        found = 1; break;
-    }
-    fclose(f);
-    need(found, "NFSv3 counters absent");
-}
-static void json_string(const char *text) {
-    putchar('"');
-    for (; *text; ++text) {
-        unsigned char c = *text;
-        if (c == '"' || c == '\\') printf("\\%c", c);
-        else if (c < 32) printf("\\u%04x", c);
-        else putchar(c);
-    }
-    putchar('"');
-}
 int main(int argc, char **argv) {
     need(argc == 3 || (argc == 4 && !strcmp(argv[3], "--no-prepare")),
          "usage: resident-bootstrap DIRECTORY LAUNCH_SCRIPT [--no-prepare]");
@@ -89,7 +60,7 @@ int main(int argc, char **argv) {
     need(!strncmp(argv[1], "/run/swe-pool-", 14) && strlen(argv[1]) < 90,
          "owned bounded directory required");
     need(!strncmp(argv[2], "/run/swe-pool-", 14), "owned launch script required");
-    uint64_t begin = now(), nfs_before[22], nfs_after[22];
+    uint64_t begin = now();
     if (mkdir(argv[1], 0700)) die("fresh directory");
     char input[128], log[128], error[128], socket_name[108], pidfile[128];
     snprintf(input, sizeof(input), "%s/input", argv[1]);
@@ -150,7 +121,6 @@ int main(int argc, char **argv) {
                fork_end - fork_start, ready - fork_start, now() - begin);
         return 0;
     }
-    counters(nfs_before);
     uint64_t prepare_start = now();
     struct timeval timeout = {.tv_sec = 30};
     if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) ||
@@ -171,20 +141,14 @@ int main(int argc, char **argv) {
     }
     close(fd);
     uint64_t prepared = now();
-    counters(nfs_after);
     int status = 0;
     need(sscanf(response, "HTTP/1.1 %d", &status) == 1 && status == 204, "prepare API failed");
     printf("PREPARE_API PUT /actions %s\n", body);
-    printf("LAB_API_JSON {\"status\":204,\"expected_status\":204,\"duration_us\":%.3f,\"response\":",
+    printf("LAB_API_JSON {\"status\":204,\"expected_status\":204,\"duration_us\":%.3f}\n",
            (prepared - prepare_start) / 1000.);
-    json_string(response); puts("}");
     printf("RESIDENT_BOOT_JSON {\"pid\":%d,\"starttime\":%llu,\"fork_ns\":%"PRIu64
            ",\"fork_to_api_ready_ns\":%"PRIu64",\"prepare_api_ns\":%"PRIu64
-           ",\"native_ready_ns\":%"PRIu64",\"nfs_proc3_before\":[", pid, identity,
+           ",\"native_ready_ns\":%"PRIu64"}\n", pid, identity,
            fork_end - fork_start, ready - fork_start, prepared - prepare_start, prepared - begin);
-    for (int i = 0; i < 22; ++i) printf("%s%"PRIu64, i ? "," : "", nfs_before[i]);
-    printf("],\"nfs_proc3_after\":[");
-    for (int i = 0; i < 22; ++i) printf("%s%"PRIu64, i ? "," : "", nfs_after[i]);
-    puts("]}");
     return 0;
 }

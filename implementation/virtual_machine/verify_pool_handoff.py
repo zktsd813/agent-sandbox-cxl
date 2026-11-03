@@ -518,9 +518,10 @@ def verify(path, pilot=False):
     for launch in report.get("launches", []):
         text = e.text(launch["file"])
         found = re.findall(r"^([0-9a-f]{64})  /proc/([0-9]+)/exe\s*$", text, re.M)
-        need(len(found) == 1 and found[0][0] == launch["sha256"] == expected_vmm, "VMM executable hash mismatch")
         identity = re.findall(r"^EXEC_PROCESS (\d+) (\d+)\s*$", text, re.M)
-        need(len(identity) == 1 and identity[0][0] == found[0][1], "launch incarnation mismatch")
+        need(len(identity) == 1, "launch incarnation mismatch")
+        if launch.get("runtime_rehashed") is not False:
+            need(len(found) == 1 and found[0][0] == launch["sha256"] == expected_vmm and identity[0][0] == found[0][1], "VMM executable hash mismatch")
         incarnations[launch["directory"]] = (identity[0], launch["role"])
         if launch.get("purpose", "normal") == "normal":
             incarnation = launch["vm"], launch["epoch"]

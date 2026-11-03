@@ -1,0 +1,2117 @@
+{
+  "result": "passed",
+  "trials": [
+    {
+      "id": "00-nfs",
+      "arm": "nfs",
+      "result": "passed",
+      "hops": [
+        {
+          "generation": 1,
+          "destination": "B",
+          "first": true,
+          "request_resume_ms": 13.000402,
+          "request_ack_ms": 27.147262,
+          "export_attach_api_ms": 8.557038,
+          "kernel_ms": 1.664838,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 43.928,
+              "export_detach_ioctls": 900.853,
+              "log_receipt": 104.905,
+              "park_resident": 443.628,
+              "peek_token": 3.6279999999999997,
+              "read_manifest_and_build_state": 87.351,
+              "seal_mapper": 173.506,
+              "serialize_devices": 179.714,
+              "unbind_ioevents": 419.279,
+              "validate_and_open": 48.525,
+              "write_devices": 13.868
+            },
+            "total_us": 2419.652
+          },
+          "import_profile": {
+            "scope": "direct_import",
+            "stages_us": {
+              "adopt_memory": 19.262,
+              "attach_and_vm_wrapper": 1053.233,
+              "import_mapper": 527.8080000000001,
+              "kvm_capabilities": 146.692,
+              "log_receipt": 334.368,
+              "read_validate_metadata": 455.363,
+              "register_events": 30.354000000000003,
+              "restore_devices": 1247.628,
+              "start_vcpu_thread": 352.358,
+              "validate_vmm": 23.343999999999998,
+              "vcpu_wrapper": 21.438
+            },
+            "total_us": 4212.348
+          }
+        },
+        {
+          "generation": 2,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 15.163352,
+          "request_ack_ms": 30.150999,
+          "export_attach_api_ms": 10.054403,
+          "kernel_ms": 4.7781,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 57.086999999999996,
+              "export_detach_ioctls": 233.739,
+              "log_receipt": 102.643,
+              "park_resident": 236.594,
+              "peek_token": 2.116,
+              "read_manifest_and_build_state": 87.685,
+              "seal_mapper": 172.022,
+              "serialize_devices": 182.469,
+              "unbind_ioevents": 80.77499999999999,
+              "validate_and_open": 48.897000000000006,
+              "write_devices": 13.008
+            },
+            "total_us": 1217.54
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 4695.113,
+              "import_mapper": 569.21,
+              "read_validate_metadata": 728.016,
+              "restore_devices": 572.5129999999999
+            },
+            "total_us": 6916.741
+          }
+        },
+        {
+          "generation": 3,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 7.19942,
+          "request_ack_ms": 21.331647,
+          "export_attach_api_ms": 4.827082000000001,
+          "kernel_ms": 1.023287,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 9.966999999999999,
+              "export_detach_ioctls": 82.242,
+              "log_receipt": 30.664,
+              "park_resident": 69.099,
+              "peek_token": 0.9139999999999999,
+              "read_manifest_and_build_state": 28.377999999999997,
+              "seal_mapper": 100.53899999999999,
+              "serialize_devices": 40.022999999999996,
+              "unbind_ioevents": 18.436,
+              "validate_and_open": 24.461,
+              "write_devices": 4.6770000000000005
+            },
+            "total_us": 409.64000000000004
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 1036.455,
+              "import_mapper": 486.34200000000004,
+              "read_validate_metadata": 428.389,
+              "restore_devices": 611.241
+            },
+            "total_us": 2900.649
+          }
+        },
+        {
+          "generation": 4,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 5.40562,
+          "request_ack_ms": 29.557326,
+          "export_attach_api_ms": 3.4391270000000005,
+          "kernel_ms": 0.917181,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 10.784,
+              "export_detach_ioctls": 134.84400000000002,
+              "log_receipt": 29.361,
+              "park_resident": 35.867,
+              "peek_token": 1.508,
+              "read_manifest_and_build_state": 29.448,
+              "seal_mapper": 77.65100000000001,
+              "serialize_devices": 41.205999999999996,
+              "unbind_ioevents": 118.385,
+              "validate_and_open": 23.212,
+              "write_devices": 5.706
+            },
+            "total_us": 508.194
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 861.3530000000001,
+              "import_mapper": 303.481,
+              "read_validate_metadata": 140.035,
+              "restore_devices": 89.982
+            },
+            "total_us": 1492.901
+          }
+        },
+        {
+          "generation": 5,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 6.153897,
+          "request_ack_ms": 19.88999,
+          "export_attach_api_ms": 3.686189,
+          "kernel_ms": 0.462348,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 15.68,
+              "export_detach_ioctls": 142.554,
+              "log_receipt": 105.02199999999999,
+              "park_resident": 120.52000000000001,
+              "peek_token": 2.7310000000000003,
+              "read_manifest_and_build_state": 92.25699999999999,
+              "seal_mapper": 179.64200000000002,
+              "serialize_devices": 132.031,
+              "unbind_ioevents": 108.175,
+              "validate_and_open": 40.215,
+              "write_devices": 12.551
+            },
+            "total_us": 951.841
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 408.957,
+              "import_mapper": 325.465,
+              "read_validate_metadata": 142.86100000000002,
+              "restore_devices": 243.46200000000002
+            },
+            "total_us": 1222.1560000000002
+          }
+        },
+        {
+          "generation": 6,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 7.979892,
+          "request_ack_ms": 26.633098,
+          "export_attach_api_ms": 5.377295,
+          "kernel_ms": 1.135523,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 9.694,
+              "export_detach_ioctls": 174.87199999999999,
+              "log_receipt": 31.705000000000002,
+              "park_resident": 96.55499999999999,
+              "peek_token": 0.918,
+              "read_manifest_and_build_state": 26.078999999999997,
+              "seal_mapper": 69.757,
+              "serialize_devices": 40.876,
+              "unbind_ioevents": 288.682,
+              "validate_and_open": 26.239,
+              "write_devices": 5.821
+            },
+            "total_us": 771.4440000000001
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 1085.472,
+              "import_mapper": 515.271,
+              "read_validate_metadata": 418.022,
+              "restore_devices": 391.779
+            },
+            "total_us": 2734.232
+          }
+        },
+        {
+          "generation": 7,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 6.163225,
+          "request_ack_ms": 20.516199,
+          "export_attach_api_ms": 3.669859,
+          "kernel_ms": 0.602351,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 10.784999999999998,
+              "export_detach_ioctls": 166.304,
+              "log_receipt": 30.585,
+              "park_resident": 53.784,
+              "peek_token": 1.108,
+              "read_manifest_and_build_state": 27.311,
+              "seal_mapper": 80.217,
+              "serialize_devices": 40.013,
+              "unbind_ioevents": 18.177,
+              "validate_and_open": 25.889,
+              "write_devices": 3.7359999999999998
+            },
+            "total_us": 458.141
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 507.215,
+              "import_mapper": 312.399,
+              "read_validate_metadata": 157.35,
+              "restore_devices": 377.354
+            },
+            "total_us": 1459.0600000000002
+          }
+        },
+        {
+          "generation": 8,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 5.242075,
+          "request_ack_ms": 20.214639,
+          "export_attach_api_ms": 3.2191959999999997,
+          "kernel_ms": 0.697498,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 11.84,
+              "export_detach_ioctls": 107.07600000000001,
+              "log_receipt": 32.606,
+              "park_resident": 48.297000000000004,
+              "peek_token": 1.1760000000000002,
+              "read_manifest_and_build_state": 29.702,
+              "seal_mapper": 84.143,
+              "serialize_devices": 40.994,
+              "unbind_ioevents": 167.016,
+              "validate_and_open": 26.219,
+              "write_devices": 4.614
+            },
+            "total_us": 553.909
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 657.148,
+              "import_mapper": 289.796,
+              "read_validate_metadata": 138.149,
+              "restore_devices": 80.063
+            },
+            "total_us": 1259.671
+          }
+        },
+        {
+          "generation": 9,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 4.298148,
+          "request_ack_ms": 18.355034,
+          "export_attach_api_ms": 2.822663,
+          "kernel_ms": 0.334098,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 14.053,
+              "export_detach_ioctls": 152.752,
+              "log_receipt": 82.805,
+              "park_resident": 99.80900000000001,
+              "peek_token": 2.393,
+              "read_manifest_and_build_state": 63.737,
+              "seal_mapper": 162.387,
+              "serialize_devices": 132.251,
+              "unbind_ioevents": 86.55,
+              "validate_and_open": 32.049,
+              "write_devices": 11.987
+            },
+            "total_us": 841.141
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 248.97299999999998,
+              "import_mapper": 168.028,
+              "read_validate_metadata": 99.478,
+              "restore_devices": 195.439
+            },
+            "total_us": 789.844
+          }
+        },
+        {
+          "generation": 10,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 5.249893,
+          "request_ack_ms": 21.67386,
+          "export_attach_api_ms": 3.7684520000000004,
+          "kernel_ms": 0.752637,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 5.53,
+              "export_detach_ioctls": 77.338,
+              "log_receipt": 25.017,
+              "park_resident": 39.291000000000004,
+              "peek_token": 0.646,
+              "read_manifest_and_build_state": 21.09,
+              "seal_mapper": 50.874,
+              "serialize_devices": 32.230000000000004,
+              "unbind_ioevents": 97.897,
+              "validate_and_open": 13.567,
+              "write_devices": 3.1590000000000003
+            },
+            "total_us": 366.79900000000004
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 751.964,
+              "import_mapper": 554.482,
+              "read_validate_metadata": 295.636,
+              "restore_devices": 258.114
+            },
+            "total_us": 2147.2560000000003
+          }
+        },
+        {
+          "generation": 11,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 3.485113,
+          "request_ack_ms": 17.50872,
+          "export_attach_api_ms": 2.261578,
+          "kernel_ms": 0.297482,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 7.3919999999999995,
+              "export_detach_ioctls": 67.569,
+              "log_receipt": 22.932,
+              "park_resident": 41.478,
+              "peek_token": 0.781,
+              "read_manifest_and_build_state": 20.267,
+              "seal_mapper": 65.55199999999999,
+              "serialize_devices": 37.749,
+              "unbind_ioevents": 15.077,
+              "validate_and_open": 15.795,
+              "write_devices": 3.46
+            },
+            "total_us": 298.204
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 267.041,
+              "import_mapper": 177.013,
+              "read_validate_metadata": 98.58,
+              "restore_devices": 219.405
+            },
+            "total_us": 836.573
+          }
+        },
+        {
+          "generation": 12,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 3.317401,
+          "request_ack_ms": 18.135061,
+          "export_attach_api_ms": 2.097376,
+          "kernel_ms": 0.357331,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 6.645,
+              "export_detach_ioctls": 81.301,
+              "log_receipt": 19.209,
+              "park_resident": 37.736,
+              "peek_token": 0.628,
+              "read_manifest_and_build_state": 17.441000000000003,
+              "seal_mapper": 53.074,
+              "serialize_devices": 33.892,
+              "unbind_ioevents": 95.29100000000001,
+              "validate_and_open": 14.365,
+              "write_devices": 3.666
+            },
+            "total_us": 363.393
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 323.226,
+              "import_mapper": 184.893,
+              "read_validate_metadata": 101.113,
+              "restore_devices": 68.706
+            },
+            "total_us": 759.9459999999999
+          }
+        },
+        {
+          "generation": 13,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 3.57177,
+          "request_ack_ms": 17.942544,
+          "export_attach_api_ms": 2.4444369999999997,
+          "kernel_ms": 0.309586,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 12.733,
+              "export_detach_ioctls": 106.292,
+              "log_receipt": 62.440000000000005,
+              "park_resident": 76.988,
+              "peek_token": 1.7329999999999999,
+              "read_manifest_and_build_state": 50.002,
+              "seal_mapper": 149.089,
+              "serialize_devices": 95.239,
+              "unbind_ioevents": 38.980000000000004,
+              "validate_and_open": 27.752000000000002,
+              "write_devices": 9.085
+            },
+            "total_us": 630.616
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 261.454,
+              "import_mapper": 173.189,
+              "read_validate_metadata": 94.17399999999999,
+              "restore_devices": 226.315
+            },
+            "total_us": 828.703
+          }
+        },
+        {
+          "generation": 14,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 5.068398,
+          "request_ack_ms": 20.145938,
+          "export_attach_api_ms": 3.9375470000000004,
+          "kernel_ms": 0.642685,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 5.976,
+              "export_detach_ioctls": 887.276,
+              "log_receipt": 19.131999999999998,
+              "park_resident": 47.812000000000005,
+              "peek_token": 1.249,
+              "read_manifest_and_build_state": 15.645,
+              "seal_mapper": 51.931999999999995,
+              "serialize_devices": 35.979,
+              "unbind_ioevents": 86.886,
+              "validate_and_open": 13.543999999999999,
+              "write_devices": 7.388
+            },
+            "total_us": 1172.966
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 590.679,
+              "import_mapper": 416.963,
+              "read_validate_metadata": 225.68800000000002,
+              "restore_devices": 244.81999999999996
+            },
+            "total_us": 1692.393
+          }
+        },
+        {
+          "generation": 15,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 3.299782,
+          "request_ack_ms": 18.882382,
+          "export_attach_api_ms": 2.210292,
+          "kernel_ms": 0.295917,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 6.936,
+              "export_detach_ioctls": 69.633,
+              "log_receipt": 22.761000000000003,
+              "park_resident": 44.867999999999995,
+              "peek_token": 1.22,
+              "read_manifest_and_build_state": 20.576999999999998,
+              "seal_mapper": 56.941,
+              "serialize_devices": 37.134,
+              "unbind_ioevents": 14.651000000000002,
+              "validate_and_open": 14.76,
+              "write_devices": 3.505
+            },
+            "total_us": 293.141
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 259.427,
+              "import_mapper": 166.662,
+              "read_validate_metadata": 95.765,
+              "restore_devices": 214.84
+            },
+            "total_us": 806.853
+          }
+        },
+        {
+          "generation": 16,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 3.256291,
+          "request_ack_ms": 17.55143,
+          "export_attach_api_ms": 2.1393020000000003,
+          "kernel_ms": 0.393579,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 6.624,
+              "export_detach_ioctls": 109.09,
+              "log_receipt": 19.24,
+              "park_resident": 35.998000000000005,
+              "peek_token": 0.6950000000000001,
+              "read_manifest_and_build_state": 16.592,
+              "seal_mapper": 53.439,
+              "serialize_devices": 33.567,
+              "unbind_ioevents": 101.078,
+              "validate_and_open": 13.284,
+              "write_devices": 2.712
+            },
+            "total_us": 392.46799999999996
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 340.613,
+              "import_mapper": 183.09300000000002,
+              "read_validate_metadata": 95.583,
+              "restore_devices": 61.35900000000001
+            },
+            "total_us": 760.059
+          }
+        },
+        {
+          "generation": 17,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 4.091857,
+          "request_ack_ms": 19.577604,
+          "export_attach_api_ms": 2.8229319999999998,
+          "kernel_ms": 0.388889,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 13.671,
+              "export_detach_ioctls": 202.25,
+              "log_receipt": 83.54199999999999,
+              "park_resident": 102.891,
+              "peek_token": 2.369,
+              "read_manifest_and_build_state": 64.48,
+              "seal_mapper": 170.006,
+              "serialize_devices": 129.161,
+              "unbind_ioevents": 50.946000000000005,
+              "validate_and_open": 34.946,
+              "write_devices": 11.485
+            },
+            "total_us": 866.115
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 263.625,
+              "import_mapper": 176.78099999999998,
+              "read_validate_metadata": 93.881,
+              "restore_devices": 229.03
+            },
+            "total_us": 833.953
+          }
+        },
+        {
+          "generation": 18,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 4.734095,
+          "request_ack_ms": 18.201884,
+          "export_attach_api_ms": 3.6412329999999997,
+          "kernel_ms": 0.728934,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 6.824,
+              "export_detach_ioctls": 101.079,
+              "log_receipt": 18.361,
+              "park_resident": 34.205999999999996,
+              "peek_token": 0.7999999999999999,
+              "read_manifest_and_build_state": 15.549999999999999,
+              "seal_mapper": 49.965,
+              "serialize_devices": 31.398,
+              "unbind_ioevents": 89.23,
+              "validate_and_open": 13.393999999999998,
+              "write_devices": 3.395
+            },
+            "total_us": 364.362
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 756.691,
+              "import_mapper": 534.207,
+              "read_validate_metadata": 295.819,
+              "restore_devices": 255.41700000000003
+            },
+            "total_us": 2128.5280000000002
+          }
+        },
+        {
+          "generation": 19,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 3.412054,
+          "request_ack_ms": 19.239314,
+          "export_attach_api_ms": 2.237735,
+          "kernel_ms": 0.295389,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 6.776,
+              "export_detach_ioctls": 72.794,
+              "log_receipt": 22.71,
+              "park_resident": 41.9,
+              "peek_token": 0.7,
+              "read_manifest_and_build_state": 20.27,
+              "seal_mapper": 58.044999999999995,
+              "serialize_devices": 36.584,
+              "unbind_ioevents": 14.399999999999999,
+              "validate_and_open": 14.74,
+              "write_devices": 3.523
+            },
+            "total_us": 292.61400000000003
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 266.368,
+              "import_mapper": 171.459,
+              "read_validate_metadata": 93.99,
+              "restore_devices": 200.723
+            },
+            "total_us": 804.684
+          }
+        },
+        {
+          "generation": 20,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 3.359876,
+          "request_ack_ms": 17.602053,
+          "export_attach_api_ms": 2.106814,
+          "kernel_ms": 0.383744,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 5.797,
+              "export_detach_ioctls": 101.58800000000001,
+              "log_receipt": 20.146,
+              "park_resident": 36.375,
+              "peek_token": 0.719,
+              "read_manifest_and_build_state": 16.779999999999998,
+              "seal_mapper": 54.96,
+              "serialize_devices": 33.321999999999996,
+              "unbind_ioevents": 76.49,
+              "validate_and_open": 15.21,
+              "write_devices": 3.088
+            },
+            "total_us": 364.636
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 337.581,
+              "import_mapper": 179.059,
+              "read_validate_metadata": 95.34,
+              "restore_devices": 71.264
+            },
+            "total_us": 766.8720000000001
+          }
+        },
+        {
+          "generation": 21,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 3.932084,
+          "request_ack_ms": 19.361973,
+          "export_attach_api_ms": 2.734587,
+          "kernel_ms": 0.337463,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 13.988000000000001,
+              "export_detach_ioctls": 152.065,
+              "log_receipt": 82.679,
+              "park_resident": 101.03800000000001,
+              "peek_token": 2.417,
+              "read_manifest_and_build_state": 65.10300000000001,
+              "seal_mapper": 185.134,
+              "serialize_devices": 129.105,
+              "unbind_ioevents": 46.589,
+              "validate_and_open": 33.192,
+              "write_devices": 11.851999999999999
+            },
+            "total_us": 823.525
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 261.594,
+              "import_mapper": 184.27100000000002,
+              "read_validate_metadata": 92.626,
+              "restore_devices": 147.47299999999998
+            },
+            "total_us": 756.43
+          }
+        },
+        {
+          "generation": 22,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 5.135793,
+          "request_ack_ms": 18.083655,
+          "export_attach_api_ms": 3.833576,
+          "kernel_ms": 0.738786,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 5.854,
+              "export_detach_ioctls": 101.35,
+              "log_receipt": 19.025000000000002,
+              "park_resident": 35.454,
+              "peek_token": 0.883,
+              "read_manifest_and_build_state": 16.702,
+              "seal_mapper": 57.952,
+              "serialize_devices": 33.438,
+              "unbind_ioevents": 85.856,
+              "validate_and_open": 14.054,
+              "write_devices": 3.181
+            },
+            "total_us": 373.89500000000004
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 731.422,
+              "import_mapper": 545.902,
+              "read_validate_metadata": 300.267,
+              "restore_devices": 451.419
+            },
+            "total_us": 2319.166
+          }
+        },
+        {
+          "generation": 23,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 3.302374,
+          "request_ack_ms": 17.26615,
+          "export_attach_api_ms": 2.0606679999999997,
+          "kernel_ms": 0.274293,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 7.55,
+              "export_detach_ioctls": 84.635,
+              "log_receipt": 24.076,
+              "park_resident": 38.627,
+              "peek_token": 0.9879999999999999,
+              "read_manifest_and_build_state": 20.086000000000002,
+              "seal_mapper": 59.089999999999996,
+              "serialize_devices": 39.230000000000004,
+              "unbind_ioevents": 103.08,
+              "validate_and_open": 13.796,
+              "write_devices": 3.576
+            },
+            "total_us": 394.902
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 246.729,
+              "import_mapper": 183.77700000000002,
+              "read_validate_metadata": 90.828,
+              "restore_devices": 145.941
+            },
+            "total_us": 734.78
+          }
+        },
+        {
+          "generation": 24,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 3.49027,
+          "request_ack_ms": 16.908672,
+          "export_attach_api_ms": 2.2975320000000004,
+          "kernel_ms": 0.416208,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 6.574,
+              "export_detach_ioctls": 102.291,
+              "log_receipt": 20.23,
+              "park_resident": 40.467999999999996,
+              "peek_token": 0.755,
+              "read_manifest_and_build_state": 17.246000000000002,
+              "seal_mapper": 53.012,
+              "serialize_devices": 33.617,
+              "unbind_ioevents": 123.195,
+              "validate_and_open": 13.757000000000001,
+              "write_devices": 3.512
+            },
+            "total_us": 414.797
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 363.251,
+              "import_mapper": 188.01000000000002,
+              "read_validate_metadata": 101.795,
+              "restore_devices": 163.91299999999998
+            },
+            "total_us": 912.031
+          }
+        }
+      ],
+      "preparation": {
+        "wall_ns": 133756209,
+        "stages": [
+          {
+            "role": "B",
+            "kind": "scratch-resource",
+            "file": "0048-scratch-resource.txt",
+            "elapsed_ns": 36710434
+          },
+          {
+            "role": "B",
+            "kind": "native-prepare",
+            "file": "0049-native-prepare.txt",
+            "elapsed_ns": 96147242
+          }
+        ],
+        "worker": {
+          "directory": "/run/swe-pool-c80188264d85cae5/vm1-epoch1-resident-prepare",
+          "plan": "/run/swe-pool-c80188264d85cae5/vm1-epoch1-resident-prepare/memory-plan.json",
+          "report": "/run/swe-pool-c80188264d85cae5/vm1-epoch1-resident-prepare/memory-report.json",
+          "manifest_path": "/run/swe-pool-c80188264d85cae5/vm1-epoch1-resident-prepare/memory-manifest.json",
+          "hints": "/run/swe-pool-c80188264d85cae5/vm1-epoch1-resident-prepare/unused-read-history.json",
+          "imported": false,
+          "prepared_api": {
+            "file": "0049-native-prepare.txt",
+            "role": "B",
+            "path": "/actions",
+            "method": "PUT",
+            "request": {
+              "action_type": "DirectPrepare"
+            },
+            "response": {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 4128.123
+            },
+            "control_wall_ns": 0,
+            "embedded_in": "0049-native-prepare.txt"
+          },
+          "native_boot": {
+            "pid": 138,
+            "starttime": 2425,
+            "fork_ns": 87245,
+            "fork_to_api_ready_ns": 4173055,
+            "prepare_api_ns": 4128123,
+            "native_ready_ns": 8436037
+          },
+          "native_boot_file": "0049-native-prepare.txt"
+        },
+        "server_wall_ns": 104906378
+      },
+      "prepares": [
+        {
+          "role": "B",
+          "elapsed_ns": 3189382,
+          "event": "prepare",
+          "guest_ram_access": false,
+          "kernel_attach": false,
+          "pid": 138
+        }
+      ],
+      "disk_profiles": [
+        {
+          "role": "A",
+          "scope": "disk_properties",
+          "stages_us": {
+            "file_engine": 213.048,
+            "image_id": 22.372,
+            "open": 1024.123,
+            "pool_identity": 3.7969999999999997,
+            "size": 5.451
+          },
+          "total_us": 1278.7930000000001
+        },
+        {
+          "role": "B",
+          "scope": "disk_properties",
+          "stages_us": {
+            "file_engine": 212.465,
+            "image_id": 23.187,
+            "open": 2750.1800000000003,
+            "pool_identity": 3.8569999999999998,
+            "size": 6.668
+          },
+          "total_us": 3004.36
+        }
+      ],
+      "first": {
+        "generation": 1,
+        "destination": "B",
+        "first": true,
+        "request_resume_ms": 13.000402,
+        "request_ack_ms": 27.147262,
+        "export_attach_api_ms": 8.557038,
+        "kernel_ms": 1.664838,
+        "export_profile": {
+          "scope": "direct_export",
+          "stages_us": {
+            "drain_and_save_devices": 43.928,
+            "export_detach_ioctls": 900.853,
+            "log_receipt": 104.905,
+            "park_resident": 443.628,
+            "peek_token": 3.6279999999999997,
+            "read_manifest_and_build_state": 87.351,
+            "seal_mapper": 173.506,
+            "serialize_devices": 179.714,
+            "unbind_ioevents": 419.279,
+            "validate_and_open": 48.525,
+            "write_devices": 13.868
+          },
+          "total_us": 2419.652
+        },
+        "import_profile": {
+          "scope": "direct_import",
+          "stages_us": {
+            "adopt_memory": 19.262,
+            "attach_and_vm_wrapper": 1053.233,
+            "import_mapper": 527.8080000000001,
+            "kvm_capabilities": 146.692,
+            "log_receipt": 334.368,
+            "read_validate_metadata": 455.363,
+            "register_events": 30.354000000000003,
+            "restore_devices": 1247.628,
+            "start_vcpu_thread": 352.358,
+            "validate_vmm": 23.343999999999998,
+            "vcpu_wrapper": 21.438
+          },
+          "total_us": 4212.348
+        }
+      },
+      "warm": {
+        "request_resume_ms": {
+          "n": 23,
+          "p50": 4.298148,
+          "min": 3.256291,
+          "max": 15.163352
+        },
+        "request_ack_ms": {
+          "n": 23,
+          "p50": 19.239314,
+          "min": 16.908672,
+          "max": 30.150999
+        },
+        "export_attach_api_ms": {
+          "n": 23,
+          "p50": 2.8229319999999998,
+          "min": 2.0606679999999997,
+          "max": 10.054403
+        },
+        "kernel_ms": {
+          "n": 23,
+          "p50": 0.416208,
+          "min": 0.274293,
+          "max": 4.7781
+        }
+      },
+      "to_b": {
+        "request_resume_ms": {
+          "n": 11,
+          "p50": 3.932084,
+          "min": 3.299782,
+          "max": 7.19942
+        },
+        "export_attach_api_ms": {
+          "n": 11,
+          "p50": 2.734587,
+          "min": 2.0606679999999997,
+          "max": 4.827082000000001
+        },
+        "kernel_ms": {
+          "n": 11,
+          "p50": 0.334098,
+          "min": 0.274293,
+          "max": 1.023287
+        }
+      },
+      "source_fault_probes": 24,
+      "parked_rejections": 72
+    },
+    {
+      "id": "01-local",
+      "arm": "local",
+      "result": "passed",
+      "hops": [
+        {
+          "generation": 1,
+          "destination": "B",
+          "first": true,
+          "request_resume_ms": 13.773227,
+          "request_ack_ms": 28.068734,
+          "export_attach_api_ms": 8.894628999999998,
+          "kernel_ms": 1.798772,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 43.559,
+              "export_detach_ioctls": 1048.5349999999999,
+              "log_receipt": 106.346,
+              "park_resident": 436.679,
+              "peek_token": 3.016,
+              "read_manifest_and_build_state": 88.69699999999999,
+              "seal_mapper": 183.732,
+              "serialize_devices": 207.494,
+              "unbind_ioevents": 407.994,
+              "validate_and_open": 66.679,
+              "write_devices": 14.063
+            },
+            "total_us": 2607.302
+          },
+          "import_profile": {
+            "scope": "direct_import",
+            "stages_us": {
+              "adopt_memory": 32.945,
+              "attach_and_vm_wrapper": 1091.074,
+              "import_mapper": 470.685,
+              "kvm_capabilities": 89.72999999999999,
+              "log_receipt": 339.516,
+              "read_validate_metadata": 831.9350000000001,
+              "register_events": 13.763,
+              "restore_devices": 963.1,
+              "start_vcpu_thread": 205.233,
+              "validate_vmm": 41.795,
+              "vcpu_wrapper": 37.898
+            },
+            "total_us": 4118.324
+          }
+        },
+        {
+          "generation": 2,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 15.286034,
+          "request_ack_ms": 30.757546,
+          "export_attach_api_ms": 10.499678,
+          "kernel_ms": 4.853808,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 56.063,
+              "export_detach_ioctls": 269.75300000000004,
+              "log_receipt": 107.14500000000001,
+              "park_resident": 274.88000000000005,
+              "peek_token": 2.417,
+              "read_manifest_and_build_state": 87.609,
+              "seal_mapper": 167.625,
+              "serialize_devices": 184.429,
+              "unbind_ioevents": 332.582,
+              "validate_and_open": 77.58200000000001,
+              "write_devices": 11.770000000000001
+            },
+            "total_us": 1572.353
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 4803.96,
+              "import_mapper": 674.261,
+              "read_validate_metadata": 785.673,
+              "restore_devices": 521.0889999999999
+            },
+            "total_us": 7140.763
+          }
+        },
+        {
+          "generation": 3,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 7.451314,
+          "request_ack_ms": 20.372474,
+          "export_attach_api_ms": 5.013204,
+          "kernel_ms": 1.028831,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 9.593,
+              "export_detach_ioctls": 107.222,
+              "log_receipt": 31.03,
+              "park_resident": 75.274,
+              "peek_token": 1.26,
+              "read_manifest_and_build_state": 28.802,
+              "seal_mapper": 73.211,
+              "serialize_devices": 41.949,
+              "unbind_ioevents": 109.461,
+              "validate_and_open": 19.825,
+              "write_devices": 4.574
+            },
+            "total_us": 502.40599999999995
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 1035.308,
+              "import_mapper": 570.131,
+              "read_validate_metadata": 403.114,
+              "restore_devices": 549.819
+            },
+            "total_us": 2914.511
+          }
+        },
+        {
+          "generation": 4,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 5.668063,
+          "request_ack_ms": 20.828593,
+          "export_attach_api_ms": 3.557394,
+          "kernel_ms": 0.763572,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 9.771,
+              "export_detach_ioctls": 131.34799999999998,
+              "log_receipt": 30.945000000000004,
+              "park_resident": 69.873,
+              "peek_token": 0.87,
+              "read_manifest_and_build_state": 28.479,
+              "seal_mapper": 75.301,
+              "serialize_devices": 52.052,
+              "unbind_ioevents": 238.359,
+              "validate_and_open": 26.427999999999997,
+              "write_devices": 5.255
+            },
+            "total_us": 668.927
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 711.014,
+              "import_mapper": 283.05,
+              "read_validate_metadata": 135.191,
+              "restore_devices": 219.214
+            },
+            "total_us": 1447.703
+          }
+        },
+        {
+          "generation": 5,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 6.446532,
+          "request_ack_ms": 20.723816,
+          "export_attach_api_ms": 4.248301,
+          "kernel_ms": 0.718933,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 14.780000000000001,
+              "export_detach_ioctls": 393.912,
+              "log_receipt": 82.861,
+              "park_resident": 160.24,
+              "peek_token": 2.3489999999999998,
+              "read_manifest_and_build_state": 94.464,
+              "seal_mapper": 145.53400000000002,
+              "serialize_devices": 106.84700000000001,
+              "unbind_ioevents": 176.527,
+              "validate_and_open": 30.774,
+              "write_devices": 11.363
+            },
+            "total_us": 1220.0430000000001
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 428.665,
+              "import_mapper": 309.775,
+              "read_validate_metadata": 145.291,
+              "restore_devices": 365.853
+            },
+            "total_us": 1354.678
+          }
+        },
+        {
+          "generation": 6,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 7.562535,
+          "request_ack_ms": 22.080894,
+          "export_attach_api_ms": 5.1098230000000004,
+          "kernel_ms": 0.947218,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 10.182,
+              "export_detach_ioctls": 118.926,
+              "log_receipt": 32.311,
+              "park_resident": 62.663999999999994,
+              "peek_token": 1.009,
+              "read_manifest_and_build_state": 29.166,
+              "seal_mapper": 89.82700000000001,
+              "serialize_devices": 41.314,
+              "unbind_ioevents": 133.863,
+              "validate_and_open": 27.66,
+              "write_devices": 4.917
+            },
+            "total_us": 552.067
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 945.97,
+              "import_mapper": 626.044,
+              "read_validate_metadata": 412.399,
+              "restore_devices": 501.35900000000004
+            },
+            "total_us": 2828.2070000000003
+          }
+        },
+        {
+          "generation": 7,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 5.398084,
+          "request_ack_ms": 19.825415,
+          "export_attach_api_ms": 3.5044790000000003,
+          "kernel_ms": 0.624279,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 10.82,
+              "export_detach_ioctls": 128.396,
+              "log_receipt": 30.284,
+              "park_resident": 124.47399999999999,
+              "peek_token": 1.185,
+              "read_manifest_and_build_state": 28.580000000000002,
+              "seal_mapper": 84.43299999999999,
+              "serialize_devices": 41.355,
+              "unbind_ioevents": 108.134,
+              "validate_and_open": 23.195999999999998,
+              "write_devices": 5.422
+            },
+            "total_us": 586.497
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 571.818,
+              "import_mapper": 296.036,
+              "read_validate_metadata": 146.409,
+              "restore_devices": 213.661
+            },
+            "total_us": 1327.692
+          }
+        },
+        {
+          "generation": 8,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 3.799181,
+          "request_ack_ms": 18.192019,
+          "export_attach_api_ms": 2.225249,
+          "kernel_ms": 0.337758,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 7.007,
+              "export_detach_ioctls": 74.827,
+              "log_receipt": 24.912000000000003,
+              "park_resident": 40.091,
+              "peek_token": 0.633,
+              "read_manifest_and_build_state": 21.886,
+              "seal_mapper": 55.099999999999994,
+              "serialize_devices": 33.268,
+              "unbind_ioevents": 92.342,
+              "validate_and_open": 15.546,
+              "write_devices": 3.0829999999999997
+            },
+            "total_us": 368.856
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 308.822,
+              "import_mapper": 203.635,
+              "read_validate_metadata": 104.339,
+              "restore_devices": 159.601
+            },
+            "total_us": 854.48
+          }
+        },
+        {
+          "generation": 9,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 4.284835,
+          "request_ack_ms": 17.671957,
+          "export_attach_api_ms": 2.8815239999999998,
+          "kernel_ms": 0.332054,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 12.942,
+              "export_detach_ioctls": 252.933,
+              "log_receipt": 81.705,
+              "park_resident": 104.077,
+              "peek_token": 2.504,
+              "read_manifest_and_build_state": 125.057,
+              "seal_mapper": 172.917,
+              "serialize_devices": 127.711,
+              "unbind_ioevents": 244.877,
+              "validate_and_open": 35.428,
+              "write_devices": 12.809000000000001
+            },
+            "total_us": 1173.323
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 237.321,
+              "import_mapper": 154.84099999999998,
+              "read_validate_metadata": 96.543,
+              "restore_devices": 160.97799999999998
+            },
+            "total_us": 724.557
+          }
+        },
+        {
+          "generation": 10,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 5.625532,
+          "request_ack_ms": 19.82857,
+          "export_attach_api_ms": 3.947376,
+          "kernel_ms": 0.751574,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 7.146,
+              "export_detach_ioctls": 79.42699999999999,
+              "log_receipt": 24.034,
+              "park_resident": 37.935,
+              "peek_token": 0.9490000000000001,
+              "read_manifest_and_build_state": 21.268,
+              "seal_mapper": 49.603,
+              "serialize_devices": 32.015,
+              "unbind_ioevents": 98.787,
+              "validate_and_open": 12.964,
+              "write_devices": 3.315
+            },
+            "total_us": 367.60699999999997
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 750.8299999999999,
+              "import_mapper": 542.527,
+              "read_validate_metadata": 372.022,
+              "restore_devices": 437.745
+            },
+            "total_us": 2420.515
+          }
+        },
+        {
+          "generation": 11,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 3.877227,
+          "request_ack_ms": 17.864831,
+          "export_attach_api_ms": 2.3613869999999997,
+          "kernel_ms": 0.300813,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 7.08,
+              "export_detach_ioctls": 115.35900000000001,
+              "log_receipt": 23.13,
+              "park_resident": 40.7,
+              "peek_token": 1.107,
+              "read_manifest_and_build_state": 19.075,
+              "seal_mapper": 59.855000000000004,
+              "serialize_devices": 37.469,
+              "unbind_ioevents": 111.123,
+              "validate_and_open": 15.743000000000002,
+              "write_devices": 3.6310000000000002
+            },
+            "total_us": 434.416
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 234.615,
+              "import_mapper": 176.631,
+              "read_validate_metadata": 93.006,
+              "restore_devices": 192.888
+            },
+            "total_us": 768.407
+          }
+        },
+        {
+          "generation": 12,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 3.811513,
+          "request_ack_ms": 17.755727,
+          "export_attach_api_ms": 2.1573890000000002,
+          "kernel_ms": 0.404183,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 5.813,
+              "export_detach_ioctls": 115.712,
+              "log_receipt": 18.627,
+              "park_resident": 32.085,
+              "peek_token": 0.711,
+              "read_manifest_and_build_state": 16.046,
+              "seal_mapper": 49.480000000000004,
+              "serialize_devices": 30.759999999999998,
+              "unbind_ioevents": 79.937,
+              "validate_and_open": 12.603,
+              "write_devices": 3.05
+            },
+            "total_us": 364.96999999999997
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 336.928,
+              "import_mapper": 259.07000000000005,
+              "read_validate_metadata": 95.03399999999999,
+              "restore_devices": 182.871
+            },
+            "total_us": 954.549
+          }
+        },
+        {
+          "generation": 13,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 4.329499,
+          "request_ack_ms": 19.812054,
+          "export_attach_api_ms": 2.774656,
+          "kernel_ms": 0.336079,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 13.56,
+              "export_detach_ioctls": 201.968,
+              "log_receipt": 85.111,
+              "park_resident": 102.25,
+              "peek_token": 2.372,
+              "read_manifest_and_build_state": 64.569,
+              "seal_mapper": 164.917,
+              "serialize_devices": 128.667,
+              "unbind_ioevents": 164.557,
+              "validate_and_open": 31.493,
+              "write_devices": 12.036
+            },
+            "total_us": 971.8679999999999
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 245.196,
+              "import_mapper": 158.994,
+              "read_validate_metadata": 88.899,
+              "restore_devices": 152.059
+            },
+            "total_us": 716.061
+          }
+        },
+        {
+          "generation": 14,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 5.569589,
+          "request_ack_ms": 19.742836,
+          "export_attach_api_ms": 3.9286730000000003,
+          "kernel_ms": 0.791283,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 6.221,
+              "export_detach_ioctls": 109.40899999999999,
+              "log_receipt": 27.109,
+              "park_resident": 35.324000000000005,
+              "peek_token": 0.678,
+              "read_manifest_and_build_state": 15.866,
+              "seal_mapper": 46.650000000000006,
+              "serialize_devices": 32.97,
+              "unbind_ioevents": 81.798,
+              "validate_and_open": 12.16,
+              "write_devices": 3.055
+            },
+            "total_us": 371.384
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 768.494,
+              "import_mapper": 520.361,
+              "read_validate_metadata": 343.82500000000005,
+              "restore_devices": 474.547
+            },
+            "total_us": 2397.9689999999996
+          }
+        },
+        {
+          "generation": 15,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 3.788293,
+          "request_ack_ms": 19.325156,
+          "export_attach_api_ms": 2.2122640000000002,
+          "kernel_ms": 0.300925,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 6.234999999999999,
+              "export_detach_ioctls": 107.71400000000001,
+              "log_receipt": 23.218999999999998,
+              "park_resident": 39.631,
+              "peek_token": 1.051,
+              "read_manifest_and_build_state": 18.768,
+              "seal_mapper": 57.612,
+              "serialize_devices": 36.22,
+              "unbind_ioevents": 94.126,
+              "validate_and_open": 23.5,
+              "write_devices": 3.488
+            },
+            "total_us": 411.714
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 242.13,
+              "import_mapper": 193.947,
+              "read_validate_metadata": 87.797,
+              "restore_devices": 208.987
+            },
+            "total_us": 800.658
+          }
+        },
+        {
+          "generation": 16,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 3.769252,
+          "request_ack_ms": 18.237411,
+          "export_attach_api_ms": 2.077484,
+          "kernel_ms": 0.36442,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 6.83,
+              "export_detach_ioctls": 105.645,
+              "log_receipt": 18.457,
+              "park_resident": 36.498000000000005,
+              "peek_token": 0.634,
+              "read_manifest_and_build_state": 15.393,
+              "seal_mapper": 49.765,
+              "serialize_devices": 31.866000000000003,
+              "unbind_ioevents": 80.076,
+              "validate_and_open": 12.303,
+              "write_devices": 2.61
+            },
+            "total_us": 360.21700000000004
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 322.744,
+              "import_mapper": 182.38799999999998,
+              "read_validate_metadata": 96.455,
+              "restore_devices": 180.555
+            },
+            "total_us": 862.287
+          }
+        },
+        {
+          "generation": 17,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 4.614526,
+          "request_ack_ms": 20.258232,
+          "export_attach_api_ms": 3.092737,
+          "kernel_ms": 0.432987,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 13.588,
+              "export_detach_ioctls": 265.11699999999996,
+              "log_receipt": 82.609,
+              "park_resident": 126.32499999999999,
+              "peek_token": 2.3369999999999997,
+              "read_manifest_and_build_state": 65.423,
+              "seal_mapper": 169.123,
+              "serialize_devices": 127.49500000000002,
+              "unbind_ioevents": 165.705,
+              "validate_and_open": 36.248999999999995,
+              "write_devices": 11.91
+            },
+            "total_us": 1066.239
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 272.821,
+              "import_mapper": 173.612,
+              "read_validate_metadata": 97.768,
+              "restore_devices": 133.01
+            },
+            "total_us": 748.036
+          }
+        },
+        {
+          "generation": 18,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 5.411802,
+          "request_ack_ms": 19.69777,
+          "export_attach_api_ms": 3.8725680000000002,
+          "kernel_ms": 0.743857,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 6.749,
+              "export_detach_ioctls": 103.896,
+              "log_receipt": 19.059,
+              "park_resident": 36.452000000000005,
+              "peek_token": 0.6619999999999999,
+              "read_manifest_and_build_state": 16.634999999999998,
+              "seal_mapper": 51.376,
+              "serialize_devices": 32.186,
+              "unbind_ioevents": 100.967,
+              "validate_and_open": 14.376999999999999,
+              "write_devices": 3.399
+            },
+            "total_us": 385.902
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 741.521,
+              "import_mapper": 519.696,
+              "read_validate_metadata": 369.325,
+              "restore_devices": 409.574
+            },
+            "total_us": 2351.621
+          }
+        },
+        {
+          "generation": 19,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 3.69395,
+          "request_ack_ms": 18.845891,
+          "export_attach_api_ms": 2.1102570000000003,
+          "kernel_ms": 0.299686,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 7.760000000000001,
+              "export_detach_ioctls": 100.257,
+              "log_receipt": 22.267,
+              "park_resident": 36.97,
+              "peek_token": 0.9269999999999999,
+              "read_manifest_and_build_state": 18.652,
+              "seal_mapper": 55.04,
+              "serialize_devices": 36.652,
+              "unbind_ioevents": 85.357,
+              "validate_and_open": 14.491000000000001,
+              "write_devices": 3.7840000000000003
+            },
+            "total_us": 382.31
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 253.31799999999998,
+              "import_mapper": 158.517,
+              "read_validate_metadata": 91.50999999999999,
+              "restore_devices": 210.638
+            },
+            "total_us": 783.456
+          }
+        },
+        {
+          "generation": 20,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 3.724202,
+          "request_ack_ms": 18.613908,
+          "export_attach_api_ms": 2.225563,
+          "kernel_ms": 0.364804,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 6.779,
+              "export_detach_ioctls": 77.011,
+              "log_receipt": 20.111,
+              "park_resident": 36.739999999999995,
+              "peek_token": 0.767,
+              "read_manifest_and_build_state": 16.352,
+              "seal_mapper": 50.791999999999994,
+              "serialize_devices": 32.102,
+              "unbind_ioevents": 81.39699999999999,
+              "validate_and_open": 14.088,
+              "write_devices": 3.456
+            },
+            "total_us": 339.762
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 344.50300000000004,
+              "import_mapper": 180.459,
+              "read_validate_metadata": 103.021,
+              "restore_devices": 159.624
+            },
+            "total_us": 869.697
+          }
+        },
+        {
+          "generation": 21,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 4.065317,
+          "request_ack_ms": 19.686218,
+          "export_attach_api_ms": 2.8046840000000004,
+          "kernel_ms": 0.340063,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 13.983,
+              "export_detach_ioctls": 184.107,
+              "log_receipt": 114.6,
+              "park_resident": 101.503,
+              "peek_token": 2.383,
+              "read_manifest_and_build_state": 64.929,
+              "seal_mapper": 165.83700000000002,
+              "serialize_devices": 128.979,
+              "unbind_ioevents": 165.017,
+              "validate_and_open": 33.9,
+              "write_devices": 12.035
+            },
+            "total_us": 987.6380000000001
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 259.48900000000003,
+              "import_mapper": 173.429,
+              "read_validate_metadata": 88.081,
+              "restore_devices": 133.55499999999998
+            },
+            "total_us": 723.121
+          }
+        },
+        {
+          "generation": 22,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 5.598824,
+          "request_ack_ms": 20.565467,
+          "export_attach_api_ms": 3.874378,
+          "kernel_ms": 0.748994,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 12.558000000000002,
+              "export_detach_ioctls": 78.805,
+              "log_receipt": 19.136000000000003,
+              "park_resident": 37.029,
+              "peek_token": 0.795,
+              "read_manifest_and_build_state": 15.969,
+              "seal_mapper": 53.623,
+              "serialize_devices": 32.330999999999996,
+              "unbind_ioevents": 78.21,
+              "validate_and_open": 14.017,
+              "write_devices": 3.5549999999999997
+            },
+            "total_us": 346.176
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 761.884,
+              "import_mapper": 561.281,
+              "read_validate_metadata": 297.092,
+              "restore_devices": 502.94800000000004
+            },
+            "total_us": 2434.4449999999997
+          }
+        },
+        {
+          "generation": 23,
+          "destination": "B",
+          "first": false,
+          "request_resume_ms": 3.402299,
+          "request_ack_ms": 18.449478,
+          "export_attach_api_ms": 1.998208,
+          "kernel_ms": 0.298226,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 7.54,
+              "export_detach_ioctls": 99.125,
+              "log_receipt": 23.087,
+              "park_resident": 41.415,
+              "peek_token": 1.507,
+              "read_manifest_and_build_state": 18.567999999999998,
+              "seal_mapper": 54.452,
+              "serialize_devices": 37.26,
+              "unbind_ioevents": 111.013,
+              "validate_and_open": 14.47,
+              "write_devices": 3.263
+            },
+            "total_us": 411.85
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 264.69,
+              "import_mapper": 169.88,
+              "read_validate_metadata": 84.10499999999999,
+              "restore_devices": 131.398
+            },
+            "total_us": 717.1700000000001
+          }
+        },
+        {
+          "generation": 24,
+          "destination": "A",
+          "first": false,
+          "request_resume_ms": 3.688415,
+          "request_ack_ms": 18.109254,
+          "export_attach_api_ms": 2.219215,
+          "kernel_ms": 0.365519,
+          "export_profile": {
+            "scope": "direct_export",
+            "stages_us": {
+              "drain_and_save_devices": 6.668,
+              "export_detach_ioctls": 104.151,
+              "log_receipt": 19.375999999999998,
+              "park_resident": 34.888000000000005,
+              "peek_token": 0.775,
+              "read_manifest_and_build_state": 15.565999999999999,
+              "seal_mapper": 51.576,
+              "serialize_devices": 30.939000000000004,
+              "unbind_ioevents": 107.423,
+              "validate_and_open": 13.32,
+              "write_devices": 9.312
+            },
+            "total_us": 394.144
+          },
+          "import_profile": {
+            "scope": "direct_resident_import",
+            "stages_us": {
+              "attach": 308.81,
+              "import_mapper": 182.35500000000002,
+              "read_validate_metadata": 97.696,
+              "restore_devices": 197.332
+            },
+            "total_us": 867.157
+          }
+        }
+      ],
+      "preparation": {
+        "wall_ns": 144815399,
+        "stages": [
+          {
+            "role": "B",
+            "kind": "scratch-resource",
+            "file": "0049-scratch-resource.txt",
+            "elapsed_ns": 47427138
+          },
+          {
+            "role": "B",
+            "kind": "native-prepare",
+            "file": "0050-native-prepare.txt",
+            "elapsed_ns": 96378767
+          }
+        ],
+        "worker": {
+          "directory": "/run/swe-pool-5037b91d850f5d5a/vm1-epoch1-resident-prepare",
+          "plan": "/run/swe-pool-5037b91d850f5d5a/vm1-epoch1-resident-prepare/memory-plan.json",
+          "report": "/run/swe-pool-5037b91d850f5d5a/vm1-epoch1-resident-prepare/memory-report.json",
+          "manifest_path": "/run/swe-pool-5037b91d850f5d5a/vm1-epoch1-resident-prepare/memory-manifest.json",
+          "hints": "/run/swe-pool-5037b91d850f5d5a/vm1-epoch1-resident-prepare/unused-read-history.json",
+          "imported": false,
+          "prepared_api": {
+            "file": "0050-native-prepare.txt",
+            "role": "B",
+            "path": "/actions",
+            "method": "PUT",
+            "request": {
+              "action_type": "DirectPrepare"
+            },
+            "response": {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 1420.443
+            },
+            "control_wall_ns": 0,
+            "embedded_in": "0050-native-prepare.txt"
+          },
+          "native_boot": {
+            "pid": 146,
+            "starttime": 2499,
+            "fork_ns": 95583,
+            "fork_to_api_ready_ns": 4090988,
+            "prepare_api_ns": 1420443,
+            "native_ready_ns": 5652922
+          },
+          "native_boot_file": "0050-native-prepare.txt"
+        },
+        "server_wall_ns": 118938740
+      },
+      "prepares": [
+        {
+          "role": "B",
+          "elapsed_ns": 415452,
+          "event": "prepare",
+          "guest_ram_access": false,
+          "kernel_attach": false,
+          "pid": 146
+        }
+      ],
+      "disk_profiles": [
+        {
+          "role": "A",
+          "scope": "disk_properties",
+          "stages_us": {
+            "file_engine": 205.849,
+            "image_id": 21.212999999999997,
+            "open": 1368.1940000000002,
+            "pool_identity": 3.8,
+            "size": 5.338
+          },
+          "total_us": 1613.4910000000002
+        },
+        {
+          "role": "B",
+          "scope": "disk_properties",
+          "stages_us": {
+            "file_engine": 178.33700000000002,
+            "image_id": 14.5,
+            "open": 35.477,
+            "pool_identity": 2.295,
+            "size": 4.368
+          },
+          "total_us": 242.78900000000002
+        }
+      ],
+      "first": {
+        "generation": 1,
+        "destination": "B",
+        "first": true,
+        "request_resume_ms": 13.773227,
+        "request_ack_ms": 28.068734,
+        "export_attach_api_ms": 8.894628999999998,
+        "kernel_ms": 1.798772,
+        "export_profile": {
+          "scope": "direct_export",
+          "stages_us": {
+            "drain_and_save_devices": 43.559,
+            "export_detach_ioctls": 1048.5349999999999,
+            "log_receipt": 106.346,
+            "park_resident": 436.679,
+            "peek_token": 3.016,
+            "read_manifest_and_build_state": 88.69699999999999,
+            "seal_mapper": 183.732,
+            "serialize_devices": 207.494,
+            "unbind_ioevents": 407.994,
+            "validate_and_open": 66.679,
+            "write_devices": 14.063
+          },
+          "total_us": 2607.302
+        },
+        "import_profile": {
+          "scope": "direct_import",
+          "stages_us": {
+            "adopt_memory": 32.945,
+            "attach_and_vm_wrapper": 1091.074,
+            "import_mapper": 470.685,
+            "kvm_capabilities": 89.72999999999999,
+            "log_receipt": 339.516,
+            "read_validate_metadata": 831.9350000000001,
+            "register_events": 13.763,
+            "restore_devices": 963.1,
+            "start_vcpu_thread": 205.233,
+            "validate_vmm": 41.795,
+            "vcpu_wrapper": 37.898
+          },
+          "total_us": 4118.324
+        }
+      },
+      "warm": {
+        "request_resume_ms": {
+          "n": 23,
+          "p50": 4.329499,
+          "min": 3.402299,
+          "max": 15.286034
+        },
+        "request_ack_ms": {
+          "n": 23,
+          "p50": 19.69777,
+          "min": 17.671957,
+          "max": 30.757546
+        },
+        "export_attach_api_ms": {
+          "n": 23,
+          "p50": 2.8815239999999998,
+          "min": 1.998208,
+          "max": 10.499678
+        },
+        "kernel_ms": {
+          "n": 23,
+          "p50": 0.404183,
+          "min": 0.298226,
+          "max": 4.853808
+        }
+      },
+      "to_b": {
+        "request_resume_ms": {
+          "n": 11,
+          "p50": 4.284835,
+          "min": 3.402299,
+          "max": 7.451314
+        },
+        "export_attach_api_ms": {
+          "n": 11,
+          "p50": 2.8046840000000004,
+          "min": 1.998208,
+          "max": 5.013204
+        },
+        "kernel_ms": {
+          "n": 11,
+          "p50": 0.336079,
+          "min": 0.298226,
+          "max": 1.028831
+        }
+      },
+      "source_fault_probes": 24,
+      "parked_rejections": 72
+    }
+  ]
+}

@@ -78,29 +78,32 @@ class PoolController(Controller):
     def fetch_json(self, role, path, kind="json"):
         return json.loads(self.fetch_bytes(role, path, kind))
 
-    def write_bytes(self, role, path, data, kind="write"):
+    def write_bytes(self, role, path, data, kind="write", after=""):
         # Owned ivshmem scratch upload avoids giant serial commands. This region
         # is separate from CXL RAM/pool/Bloom and all transfers are sequential.
         compressed = gzip.compress(data)
         offset = 4*MIB
         require(len(compressed) <= self.config["shared_mib"]*MIB-offset, "Scratch upload exceeds ivshmem")
-        event = next(e for e in lab.events(Path(self.vms[role]["serial_log"]))
-                     if e.get("event") == "shared_memory" and e.get("nonce") == self.config["nonce"])
-        bdf = event["pci_bdf"]
-        require(re.fullmatch(r"[0-9a-fA-F:.]+", bdf), "Invalid scratch PCI BDF")
-        raw, _ = self.shell(role, f"sed -n '3p' /sys/bus/pci/devices/{bdf}/resource", "scratch-resource")
-        rows = [line.split() for line in raw.splitlines() if re.fullmatch(r"\s*0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s*", line)]
-        require(len(rows) == 1, "Scratch BAR missing")
-        start, end, flags = (int(v, 16) for v in rows[0])
-        require(flags & 0x200 and end-start+1 == self.config["shared_mib"]*MIB and start%4096 == 0, "Scratch BAR invalid")
+        if not hasattr(self, '_scratch_bars'):
+            self._scratch_bars = {}
+        if role not in self._scratch_bars:
+            event = next(e for e in lab.events(Path(self.vms[role]["serial_log"]))
+                         if e.get("event") == "shared_memory" and e.get("nonce") == self.config["nonce"])
+            bdf = event["pci_bdf"]
+            require(re.fullmatch(r"[0-9a-fA-F:.]+", bdf), "Invalid scratch PCI BDF")
+            raw, _ = self.shell(role, f"sed -n '3p' /sys/bus/pci/devices/{bdf}/resource", "scratch-resource")
+            rows = [line.split() for line in raw.splitlines() if re.fullmatch(r"\s*0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s*", line)]
+            require(len(rows) == 1, "Scratch BAR missing")
+            start, end, flags = (int(v, 16) for v in rows[0])
+            require(flags & 0x200 and end-start+1 == self.config["shared_mib"]*MIB and start%4096 == 0, "Scratch BAR invalid")
+            self._scratch_bars[role] = start
+        start = self._scratch_bars[role]
         with Path(self.config["backing"]).open("r+b", buffering=0) as stream:
             stream.seek(offset)
             require(stream.write(compressed) == len(compressed), "Scratch write short")
         qpath = shlex.quote(path)
-        digest = hashlib.sha256(data).hexdigest()
-        self.shell(role, f"dd if=/dev/mem bs=4096 skip={(start+offset)//4096} count={math.ceil(len(compressed)/4096)} 2>/dev/null | "
-                   f"head -c {len(compressed)} | gzip -dc > {qpath}\n"
-                   f"printf '%s  %s\\n' {shlex.quote(digest)} {qpath} | sha256sum -c -", kind, 120)
+        return self.shell(role, f"dd if=/dev/mem bs=4096 skip={(start+offset)//4096} count={math.ceil(len(compressed)/4096)} 2>/dev/null | "
+                   f"head -c {len(compressed)} | gzip -dc > {qpath}" + ("\n" + after if after else ""), kind, 120)
 
     def write_json(self, role, path, value, kind="write-json"):
         return self.write_bytes(role, path, json.dumps(value, separators=(",", ":")).encode(), kind)

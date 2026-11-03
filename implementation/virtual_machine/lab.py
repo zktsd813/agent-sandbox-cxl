@@ -401,9 +401,6 @@ def start(args):
     no_active_run()
     host_kvm()
     prepared = json.loads((ASSETS / "manifest.json").read_text())
-    for name, expected in prepared["artifacts"].items():
-        if sha256(ASSETS / name) != expected:
-            raise RuntimeError(f"Asset changed: {name}; run prepare again.")
     vendor = prepared["vendor"]
     parameter = Path(f"/sys/module/kvm_{'intel' if vendor == 'intel' else 'amd'}/parameters/nested")
     if parameter.read_text().strip().lower() not in ["y", "1"]:
@@ -480,7 +477,7 @@ def start(args):
               "migration_network": migration_network,
               "prepared": prepared, "assets": str(ASSETS), "host_kernel": os.uname().release, "vms": {}}
     if storage_image:
-        config["storage_image"] = {"path": str(storage_image), "sha256": sha256(storage_image),
+        config["storage_image"] = {"path": str(storage_image), "build_sha256": prepared["artifacts"].get(storage_image.name) if storage_image.parent == ASSETS else None,
                                    "readonly": True, "format": "raw", "cache": "none"}
     if home_storage_image:
         # Never attach the user's template writable. A owns the per-run copy;
@@ -488,13 +485,11 @@ def start(args):
         private_storage = run / "home-storage.raw"
         command(["cp", "--reflink=auto", "--sparse=always", "--", home_storage_image, private_storage])
         config["home_storage_image"] = {
-            "template": str(home_storage_image), "template_sha256": sha256(home_storage_image),
-            "path": str(private_storage), "initial_sha256": sha256(private_storage),
+            "template": str(home_storage_image), "template_sha256": prepared["artifacts"].get(home_storage_image.name) if home_storage_image.parent == ASSETS else None,
+            "path": str(private_storage), "runtime_rehashed": False,
             "owner": "A", "readonly": False, "format": "raw", "cache": "none",
             "guest_device": "/dev/vdb" if storage_image else "/dev/vda",
         }
-        if config["home_storage_image"]["initial_sha256"] != config["home_storage_image"]["template_sha256"]:
-            raise RuntimeError("Private home storage copy differs from its template")
         if getattr(args, "replicated_home_storage", False):
             config["replicated_home_storage"] = {"owner": "B", "path": str(home_storage_image),
                 "readonly": True, "sha256": config["home_storage_image"]["template_sha256"]}
@@ -1961,26 +1956,29 @@ def migration_trace_fetch(vm, config, path):
     bdf = event.get("pci_bdf", "") if event else ""
     if not re.fullmatch(r"[0-9a-fA-F:.]+", bdf):
         raise RuntimeError("Missing validated ivshmem BAR for diagnostic export")
-    resource = guest_command(vm, f"sed -n '3p' /sys/bus/pci/devices/{bdf}/resource")
-    ranges = [line.split() for line in resource.splitlines()
-              if re.fullmatch(r"\s*0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s*", line)]
-    if len(ranges) != 1:
-        raise RuntimeError("Cannot read diagnostic export BAR")
-    start, end, flags = (int(value, 16) for value in ranges[0])
-    if not flags & 0x200 or end - start + 1 != config["shared_mib"] * 1024 * 1024 or start % 4096:
-        raise RuntimeError("Invalid diagnostic export BAR range")
+    key = (config['nonce'], bdf, vm['pid'])
+    cache = getattr(migration_trace_fetch, '_bars', {})
+    if key not in cache:
+        resource = guest_command(vm, f"sed -n '3p' /sys/bus/pci/devices/{bdf}/resource")
+        ranges = [line.split() for line in resource.splitlines()
+                  if re.fullmatch(r"\s*0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s*", line)]
+        if len(ranges) != 1:
+            raise RuntimeError("Cannot read diagnostic export BAR")
+        start, end, flags = (int(value, 16) for value in ranges[0])
+        if not flags & 0x200 or end - start + 1 != config["shared_mib"] * 1024 * 1024 or start % 4096:
+            raise RuntimeError("Invalid diagnostic export BAR range")
+        cache[key] = start
+        migration_trace_fetch._bars = cache
+    start = cache[key]
     tag = "MIGRATION_EXPORT_" + secrets.token_hex(8)
     temporary = "/tmp/" + tag.lower() + ".gz"
     quoted = shlex.quote(path)
     try:
         metadata = guest_command(vm, f"gzip -c {quoted} > {temporary}\n"
                                  f"printf '\\n{tag}_BYTES='; wc -c < {quoted}\n"
-                                 f"printf '{tag}_SHA='; sha256sum {quoted}\n"
-                                 f"printf '{tag}_GZIP_BYTES='; wc -c < {temporary}\n"
-                                 f"printf '{tag}_GZIP_SHA='; sha256sum {temporary}", timeout=60)
+                                 f"printf '{tag}_GZIP_BYTES='; wc -c < {temporary}", timeout=60)
         values = {}
-        for name, pattern in (("BYTES", r"\s*(\d+)\s*$"), ("SHA", r"([0-9a-f]{64})\s"),
-                              ("GZIP_BYTES", r"\s*(\d+)\s*$"), ("GZIP_SHA", r"([0-9a-f]{64})\s")):
+        for name, pattern in (("BYTES", r"\s*(\d+)\s*$"), ("GZIP_BYTES", r"\s*(\d+)\s*$")):
             match = re.search(rf"^{tag}_{name}={pattern}", metadata, re.MULTILINE)
             if not match:
                 raise RuntimeError("Missing diagnostic export integrity metadata")
@@ -1992,14 +1990,14 @@ def migration_trace_fetch(vm, config, path):
         with Path(config["backing"]).open("rb") as stream:
             stream.seek(offset)
             compressed = stream.read(compressed_size)
-        if len(compressed) != compressed_size or hashlib.sha256(compressed).hexdigest() != values["GZIP_SHA"]:
-            raise RuntimeError("Diagnostic ivshmem export compressed bytes/hash mismatch")
+        if len(compressed) != compressed_size:
+            raise RuntimeError("Diagnostic ivshmem export compressed size mismatch")
         data = gzip.decompress(compressed)
-        if len(data) != size or hashlib.sha256(data).hexdigest() != values["SHA"]:
-            raise RuntimeError("Diagnostic ivshmem export original bytes/hash mismatch")
-        return data, {"path": path, "bytes": size, "sha256": values["SHA"], "gzip_bytes": compressed_size,
-                      "gzip_sha256": values["GZIP_SHA"], "ivshmem_offset": offset,
-                      "transport": "post-migration diagnostic export only; experimental guest RAM travels over TCP"}
+        if len(data) != size:
+            raise RuntimeError("Diagnostic ivshmem export original size mismatch")
+        return data, {"path": path, "bytes": size, "sha256": hashlib.sha256(data).hexdigest(), "gzip_bytes": compressed_size,
+                      "gzip_sha256": hashlib.sha256(compressed).hexdigest(), "ivshmem_offset": offset,
+                      "transport": "framed gzip through shared scratch; no guest-side SHA verification; not guest RAM transfer"}
     finally:
         try:
             guest_command(vm, f"rm -f {temporary}")

@@ -72,6 +72,7 @@ def trial(path):
         timing=h['timing']
         need(records(read(h['file']),'RESIDENT_FAST_JSON ')==[timing],'Native timing summary changed')
         need(all(v['status']==204 for v in timing['apis'].values()),'API error')
+        if timing['version']==2:need(set(timing['apis'])=={'send','receive'},'Extra/missing runtime API')
         state=json.loads(read(h['state_file']));sealed=json.loads(read(h['sealed_file']));manifest=json.loads(read(h['manifest_file']))
         token=state['token'];generation=token['generation']
         need(token==h['export_token'] and generation==index+1,'Token/generation mismatch')
@@ -90,6 +91,7 @@ def trial(path):
         retained=identity
         need(token['vm_creates']==token['vcpu_creates']==1 and token['ram_bytes']==2*1024**3,'Wrong retained VM')
         exp,imp=events[('export',generation)],events[('import',generation)]
+        if timing['version']==2:need(imp.get('mapper')==manifest,'Imported mapper log differs')
         need(exp['token']==token and all(imp['token'][k]==v for k,v in identity.items()),'Kernel attach graph differs')
         need(exp['snapshot_bytes']==exp['ram_transfer_bytes']==imp['snapshot_bytes']==imp['ram_transfer_bytes']==0,'RAM transfer on handoff')
         need(imp['token']['flags']==1 and token['flags']==2,'Kernel ownership flags')
@@ -102,11 +104,15 @@ def trial(path):
         need(p['memory_errno']==14 and p['kvm_errno']!=0,'Old source can access VM')
         row={'generation':generation,'destination':h['destination'],'first':h['first_import'],
             'request_resume_ms':timing['request_to_resume_response_ns']/1e6,'request_ack_ms':timing['request_ns']/1e6,
-            'export_attach_api_ms':sum(timing['apis'][k]['duration_us'] for k in ('export','attach'))/1000,
+            'export_attach_api_ms':sum(timing['apis'][k]['duration_us'] for k in (('send','receive') if timing['version']==2 else ('export','attach')))/1000,
             'kernel_ms':(token['kernel_ns']+imp['token']['kernel_ns'])/1e6,
             'export_profile':profiles[('export',generation)],'import_profile':profiles[('import',generation)]}
         hops.append(row)
     expected_apis=2*len(hops)
+    combined=[x for x in r['negative_apis'] if x['kind']=='parked-combined-send']
+    if combined or r.get('parked_combined_action_test'):
+        need(len(combined)==len(hops),'Incomplete combined API fencing test')
+        expected_apis+=len(hops)
     need(len(r['negative_apis'])==expected_apis,'Missing parked-owner rejection checks')
     for row in r['negative_apis']:
         need(receipt_record(row,'LAB_API_JSON ')['status']==400,'Parked owner operation accepted')

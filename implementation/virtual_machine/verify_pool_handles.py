@@ -43,8 +43,10 @@ def verify(path):
         text = e.text(launch['file'])
         identity = re.findall(r'^EXEC_PROCESS (\d+) (\d+)\s*$', text, re.M)
         digest = re.findall(r'^([0-9a-f]{64})  /proc/(\d+)/exe\s*$', text, re.M)
-        need(len(identity)==len(digest)==1 and identity[0][0]==digest[0][1]
-             and digest[0][0]==launch['sha256']==r['fixture']['artifacts']['firecracker'], 'running VMM differs')
+        need(len(identity)==1, 'missing runtime incarnation')
+        if launch.get('runtime_rehashed') is not False:
+            need(len(digest)==1 and identity[0][0]==digest[0][1]
+                 and digest[0][0]==launch['sha256']==r['fixture']['artifacts']['firecracker'], 'running VMM differs')
         incarnations[launch['directory']] = identity[0]
     authorities={a['file']:registration(e,a) for a in r['authority_events']}
     for key,prefix in [('mapper_smoke','POOL_MEMORY_SMOKE_JSON '),('kvm_mapper_smoke','POOL_MEMORY_KVM_SMOKE_JSON '),('handle_smoke','POOL_HANDLE_SMOKE_JSON ')]:

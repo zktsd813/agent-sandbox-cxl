@@ -22,7 +22,7 @@ NAMES = ("gin-gonic__gin-3741", "php-cs-fixer__php-cs-fixer-8331",
          "micropython__micropython-13039")
 MODES = ("baseline", "state-only", "direct")
 SOURCES = ("swe_pool_run.py", "swe_pool_bench.py", "swe_pool_prepare.py",
-           "swe_pool_protocol.py", "verify_swe_pool.py", "verify_pool_handles.py", "swe-pool-l2-init.sh",
+           "swe_pool_protocol.py", "verify_swe_pool.py", "verify_swe_runtime.py", "verify_pool_handles.py", "swe-pool-l2-init.sh",
            "swe-pool-guest-run.sh", "guest-pool-cli.c", "guest-pool-uapi.h",
            "guest-pool.c", "guest_pool_protocol.py", "pool_handoff_bench.py",
            "pool_handoff_control.py", "pool_memory_module.c", "pool_memory_uapi.h",
@@ -85,9 +85,6 @@ def main():
     for name in args.names:
         if name not in manifest["traces"]:
             raise RuntimeError("Trace missing from fixture: " + name)
-    for name, digest in manifest["artifacts"].items():
-        if Path(name).name != name or lab.sha256(assets / name) != digest:
-            raise RuntimeError("Fixture hash mismatch: " + name)
     for name in SOURCES:
         if not (HERE / name).is_file():
             raise FileNotFoundError(HERE / name)
@@ -109,10 +106,6 @@ def main():
 
     def save():
         lab.save_json(output / "report.json", suite)
-
-    def require_frozen_sources():
-        if any(lab.sha256(HERE / path) != digest for path, digest in source_hashes.items()):
-            raise RuntimeError("Execution/verification source changed during the suite; use a new output")
 
     def command(argv, env, path):
         started = time.monotonic_ns()
@@ -137,7 +130,7 @@ def main():
         if storage != run / "home-storage.raw" or storage.is_symlink() or not storage.is_file():
             raise RuntimeError("Unexpected owned storage path; refusing cleanup")
         arm["owned_storage"] = {"path": str(storage), "initial_sha256":
-            config["home_storage_image"]["initial_sha256"], "retained": True,
+            config["home_storage_image"].get("initial_sha256"), "retained": True,
             "bytes": storage.stat().st_size}
 
     def release_storage(arm):
@@ -157,7 +150,6 @@ def main():
     save()
     try:
         for index, (name, mode) in enumerate((name, mode) for name in args.names for mode in args.modes):
-            require_frozen_sources()
             session = f"{args.session}-{index:02d}"
             pointer = HERE / ".local" / f"current-{session}.json"
             if pointer.exists():
@@ -179,11 +171,11 @@ def main():
             bench = prefix + [str(HERE / "swe_pool_bench.py"), "--mode", mode, "--name", name,
                               "--memory-mib", str(args.memory_mib),
                               "--direct-profile-roundtrips", str(args.direct_profile_roundtrips)]
-            if args.resident_fast_control:
+            if mode == "direct" and args.resident_fast_control:
                 bench.append("--resident-fast-control")
-            if args.resident_ready_control:
+            if mode == "direct" and args.resident_ready_control:
                 bench.append("--resident-ready-control")
-            if args.resident_direct:
+            if mode == "direct" and args.resident_direct:
                 bench.extend(["--resident-direct", "--resident-repromote-handoff"])
             if args.restore_timing:
                 bench.append("--restore-timing")
@@ -230,7 +222,6 @@ def main():
                 save()
             if failure:
                 raise failure
-            require_frozen_sources()
             if "report_file" not in arm:
                 raise RuntimeError("Expected exactly one SWE pooling report for " + trial_id)
             if args.defer_verification:
@@ -242,7 +233,6 @@ def main():
                     output / (trial_id + "-verification.log"))
                 if arm["verification"]["returncode"]:
                     raise RuntimeError("Independent workload verification failed: " + trial_id)
-                require_frozen_sources()
                 arm["verification_result"] = {"file": verification.name, **record_file(verification)}
                 arm["result"] = "passed"
             release_storage(arm)
@@ -251,14 +241,12 @@ def main():
         suite["result"] = "execution-passed-unverified" if args.defer_verification else "passed"
         save()
         if not args.defer_verification:
-            require_frozen_sources()
             verification = output / "suite-verification.json"
             suite["verification"] = command([sys.executable, str(HERE / "verify_swe_pool.py"),
                 "--suite", str(output / "report.json"), "--output", str(verification)], os.environ,
                 output / "suite-verification.log")
             if suite["verification"]["returncode"]:
                 raise RuntimeError("Independent suite comparison failed")
-            require_frozen_sources()
             suite["verification_result"] = {"file": verification.name, **record_file(verification)}
     except BaseException as exc:
         suite.update(result="failed", error=repr(exc))

@@ -42,10 +42,10 @@ index ecc11186d..672acecaf 100644
              && let Some((metric, action)) = metric_with_action
          {
 diff --git a/src/firecracker/src/api_server/request/actions.rs b/src/firecracker/src/api_server/request/actions.rs
-index a3b3f3f3a..f1a248a59 100644
+index a3b3f3f3a..5eb4bbaf1 100644
 --- a/src/firecracker/src/api_server/request/actions.rs
 +++ b/src/firecracker/src/api_server/request/actions.rs
-@@ -16,8 +16,14 @@ use super::StatusCode;
+@@ -16,8 +16,16 @@ use super::StatusCode;
  #[derive(Debug, Deserialize, Serialize)]
  enum ActionType {
      FlushMetrics,
@@ -53,6 +53,8 @@ index a3b3f3f3a..f1a248a59 100644
 +    DirectExport,
 +    DirectPrepare,
 +    DirectImport,
++    DirectSend,
++    DirectReceive,
      InstanceStart,
      SendCtrlAltDel,
 +    #[cfg(target_arch = "x86_64")]
@@ -60,13 +62,15 @@ index a3b3f3f3a..f1a248a59 100644
  }
  
  // The model of the json body from a sync request. We use Serde to transform each associated
-@@ -35,8 +41,14 @@ pub(crate) fn parse_put_actions(body: &Body) -> Result<ParsedRequest, RequestErr
+@@ -35,8 +43,16 @@ pub(crate) fn parse_put_actions(body: &Body) -> Result<ParsedRequest, RequestErr
      })?;
  
      match action_body.action_type {
 +        ActionType::PoolCache => Ok(ParsedRequest::new_sync(VmmAction::PoolCache)),
 +        ActionType::DirectPrepare => Ok(ParsedRequest::new_sync(VmmAction::DirectPrepare)),
 +        ActionType::DirectImport => Ok(ParsedRequest::new_sync(VmmAction::DirectImport)),
++        ActionType::DirectSend => Ok(ParsedRequest::new_sync(VmmAction::DirectSend)),
++        ActionType::DirectReceive => Ok(ParsedRequest::new_sync(VmmAction::DirectReceive)),
 +        ActionType::DirectExport => Ok(ParsedRequest::new_sync(VmmAction::DirectExport)),
          ActionType::FlushMetrics => Ok(ParsedRequest::new_sync(VmmAction::FlushMetrics)),
          ActionType::InstanceStart => Ok(ParsedRequest::new_sync(VmmAction::StartMicroVm)),
@@ -75,7 +79,7 @@ index a3b3f3f3a..f1a248a59 100644
          ActionType::SendCtrlAltDel => {
              // SendCtrlAltDel not supported on aarch64.
              #[cfg(target_arch = "aarch64")]
-@@ -57,6 +69,11 @@ mod tests {
+@@ -57,6 +73,11 @@ mod tests {
  
      #[test]
      fn test_parse_put_actions_request() {
@@ -2166,10 +2170,10 @@ index 2a75945f6..fe91a5d09 100644
      type ConstructorArgs = MmioTransportConstructorArgs;
 diff --git a/src/vmm/src/direct.rs b/src/vmm/src/direct.rs
 new file mode 100644
-index 000000000..e400ea2a1
+index 000000000..8b6546cc2
 --- /dev/null
 +++ b/src/vmm/src/direct.rs
-@@ -0,0 +1,681 @@
+@@ -0,0 +1,696 @@
 +// Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 +// SPDX-License-Identifier: Apache-2.0
 +
@@ -2246,6 +2250,10 @@ index 000000000..e400ea2a1
 +    static TOKEN: std::sync::OnceLock<Mutex<Option<HandoffToken>>> = std::sync::OnceLock::new();
 +    TOKEN.get_or_init(|| Mutex::new(None))
 +}
++fn profiling() -> bool {
++    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
++    *ENABLED.get_or_init(|| std::env::var("FC_RESTORE_TIMING").as_deref() == Ok("1"))
++}
 +pub(crate) fn resident_enabled() -> bool {
 +    io_enabled() && std::env::var("FC_DAX_RESIDENT").as_deref() == Ok("1")
 +}
@@ -2254,9 +2262,11 @@ index 000000000..e400ea2a1
 +    if !resident_enabled() { return Err(invalid("resident mode not enabled")); }
 +    let start = std::time::Instant::now();
 +    crate::devices::virtio::block::virtio::device::DiskProperties::prepare_direct().map_err(io::Error::other)?;
-+    crate::logger::info_unrestricted!("DIRECT_RESIDENT_JSON {}", serde_json::json!({
-+        "event":"prepare", "pid":std::process::id(), "elapsed_ns":start.elapsed().as_nanos() as u64,
-+        "guest_ram_access":false, "kernel_attach":false}));
++    if profiling() {
++        crate::logger::info_unrestricted!("DIRECT_RESIDENT_JSON {}", serde_json::json!({
++            "event":"prepare", "pid":std::process::id(), "elapsed_ns":start.elapsed().as_nanos() as u64,
++            "guest_ram_access":false, "kernel_attach":false}));
++    }
 +    Ok(())
 +}
 +
@@ -2436,17 +2446,17 @@ index 000000000..e400ea2a1
 +                crate::pool_memory::park_resident(vm.guest_memory())?;
 +                *resident_token().lock().unwrap() = Some(state.token.clone());
 +                PARKED.store(true, std::sync::atomic::Ordering::Release);
-+                crate::logger::info_unrestricted!("DIRECT_RESIDENT_JSON {}", serde_json::json!({
-+                    "event":"park", "pid":std::process::id(), "generation":state.token.generation,
-+                    "ram_access_revoked":true, "io_drained":true, "devices_unsubscribed":true}));
++                if profiling() {
++                    crate::logger::info_unrestricted!("DIRECT_RESIDENT_JSON {}", serde_json::json!({
++                        "event":"park", "pid":std::process::id(), "generation":state.token.generation,
++                        "ram_access_revoked":true, "io_drained":true, "devices_unsubscribed":true}));
++                }
 +                timing.mark("park_resident");
 +            }
 +            let bytes = serde_json::to_vec(&state).map_err(io::Error::other)?;
 +            timing.mark("serialize_devices");
 +            output.write_all(&bytes)?;
 +            timing.mark("write_devices");
-+            output.sync_all()?;
-+            timing.mark("sync_devices");
 +            Ok(bytes.len())
 +        })();
 +        let bytes = match result {
@@ -2456,14 +2466,16 @@ index 000000000..e400ea2a1
 +                std::process::abort(); // Never resume partially unbound or detached device state.
 +            }
 +        };
-+        crate::logger::info_unrestricted!(
-+            "DIRECT_HANDOFF_JSON {}",
-+            serde_json::json!({
-+                "event":"export", "token":state.token, "device_state_bytes":bytes,
-+                "snapshot_bytes":0, "ram_transfer_bytes":0, "elapsed_ns":started.elapsed().as_nanos() as u64,
-+                "memory_manifest_sha256":state.memory_manifest_sha256,
-+            })
-+        );
++        if profiling() {
++            crate::logger::info_unrestricted!(
++                "DIRECT_HANDOFF_JSON {}",
++                serde_json::json!({
++                    "event":"export", "token":state.token, "device_state_bytes":bytes,
++                    "snapshot_bytes":0, "ram_transfer_bytes":0, "elapsed_ns":started.elapsed().as_nanos() as u64,
++                    "memory_manifest_sha256":state.memory_manifest_sha256,
++                })
++            );
++        }
 +        timing.mark("log_receipt");
 +        timing.finish();
 +        Ok(())
@@ -2489,9 +2501,11 @@ index 000000000..e400ea2a1
 +        let rc = unsafe { libc::ioctl(fd, 0x8090ae81u32 as _, regs.as_mut_ptr()) };
 +        let kvm_errno = io::Error::last_os_error().raw_os_error();
 +        if rc != -1 { return Err(VmmError::DaxPreflight("parked vCPU FD still authorized")); }
-+        crate::logger::info_unrestricted!("DIRECT_RESIDENT_PROBE_JSON {}", serde_json::json!({
-+            "pid":std::process::id(), "generation":token.generation, "memory_errno":memory_errno,
-+            "kvm_errno":kvm_errno, "vm_fd":self.vm.as_kvm().unwrap().fd().as_raw_fd(), "vcpu_fd":fd}));
++        if profiling() {
++            crate::logger::info_unrestricted!("DIRECT_RESIDENT_PROBE_JSON {}", serde_json::json!({
++                "pid":std::process::id(), "generation":token.generation, "memory_errno":memory_errno,
++                "kvm_errno":kvm_errno, "vm_fd":self.vm.as_kvm().unwrap().fd().as_raw_fd(), "vcpu_fd":fd}));
++        }
 +        Ok(())
 +    }
 +
@@ -2506,8 +2520,7 @@ index 000000000..e400ea2a1
 +        validate_state(&state).map_err(err)?;
 +        let previous = resident_token().lock().unwrap().clone().ok_or_else(|| err(invalid("resident token absent")))?;
 +        validate_resident_token(&previous, &state.token).map_err(err)?;
-+        if serde_json::to_value(&state.machine_config).unwrap() != serde_json::to_value(&self.machine_config).unwrap()
-+            || serde_json::to_value(&state.boot_source).unwrap() != serde_json::to_value(&self.boot_source_config).unwrap() {
++        if state.machine_config != self.machine_config || state.boot_source != self.boot_source_config {
 +            return Err(err(invalid("resident machine contract changed")));
 +        }
 +        let manifest = bounded_read(&env_path("FC_DAX_RESIDENT_MANIFEST").map_err(err)?).map_err(err)?;
@@ -2540,12 +2553,15 @@ index 000000000..e400ea2a1
 +        std::fs::remove_file(env_path("FC_DAX_DIRECT_EXPORT").map_err(err)?).map_err(err)?;
 +        PARKED.store(false, std::sync::atomic::Ordering::Release);
 +        self.reuse_restore_failed = false;
-+        crate::logger::info_unrestricted!("DIRECT_HANDOFF_JSON {}", serde_json::json!({
-+            "event":"import", "token":state.token, "snapshot_bytes":0, "ram_transfer_bytes":0,
-+            "memory_manifest_sha256":state.memory_manifest_sha256, "resident":true,
-+            "pid":std::process::id(), "vm_fd":std::os::fd::AsRawFd::as_raw_fd(vm.fd()),
-+            "vcpu_fd":std::os::fd::AsRawFd::as_raw_fd(&vm.vcpus_handles()[0].vcpu_fd),
-+            "thread_creates":0, "disk_opens":0, "io_engine_creates":0}));
++        if profiling() {
++            crate::logger::info_unrestricted!("DIRECT_HANDOFF_JSON {}", serde_json::json!({
++                "event":"import", "token":state.token, "snapshot_bytes":0, "ram_transfer_bytes":0,
++                "memory_manifest_sha256":state.memory_manifest_sha256, "resident":true,
++                "pid":std::process::id(), "vm_fd":std::os::fd::AsRawFd::as_raw_fd(vm.fd()),
++                "vcpu_fd":std::os::fd::AsRawFd::as_raw_fd(&vm.vcpus_handles()[0].vcpu_fd),
++                "thread_creates":0, "disk_opens":0, "io_engine_creates":0,
++                "mapper":crate::pool_memory::manifest_for_profile()}));
++        }
 +        timing.finish();
 +        Ok(())
 +    }
@@ -2715,13 +2731,16 @@ index 000000000..e400ea2a1
 +    let vmm = Arc::new(Mutex::new(vmm));
 +    events.add_subscriber(vmm.clone());
 +    timing.mark("register_events");
-+    crate::logger::info_unrestricted!(
-+        "DIRECT_HANDOFF_JSON {}",
-+        serde_json::json!({
-+            "event":"import", "token":state.token, "snapshot_bytes":0, "ram_transfer_bytes":0,
-+            "memory_manifest_sha256":state.memory_manifest_sha256,
-+        })
-+    );
++    if profiling() {
++        crate::logger::info_unrestricted!(
++            "DIRECT_HANDOFF_JSON {}",
++            serde_json::json!({
++                "event":"import", "token":state.token, "snapshot_bytes":0, "ram_transfer_bytes":0,
++                "memory_manifest_sha256":state.memory_manifest_sha256,
++                "mapper":crate::pool_memory::manifest_for_profile(),
++            })
++        );
++    }
 +    timing.mark("log_receipt");
 +    timing.finish();
 +    Ok(vmm)
@@ -4283,10 +4302,10 @@ index 000000000..bcb56bda7
 +}
 diff --git a/src/vmm/src/pool_memory.rs b/src/vmm/src/pool_memory.rs
 new file mode 100644
-index 000000000..0c389531a
+index 000000000..c6ed03f39
 --- /dev/null
 +++ b/src/vmm/src/pool_memory.rs
-@@ -0,0 +1,1137 @@
+@@ -0,0 +1,1151 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Guest-authorized pooling and persistent CXL logical RAM. Control plans are
 +//! private, trusted controller files. Only the kernel-owned ACTIVE registration
@@ -4816,7 +4835,17 @@ index 000000000..0c389531a
 +            return Err(invalid("resident mapper stale epoch/lease"));
 +        }
 +    }
-+    if dax_geometry(&m.pool_path)? != (m.phys_base, m.device_bytes) { return Err(invalid("resident DAX geometry changed")); }
++    // The resident process pins the fixed DAX device for its lifetime. Reuse
++    // the established geometry instead of opening three sysfs files each hop.
++    // A new allocation/lease is still checked by CPM_IMPORT below.
++    if let Some(previous) = guard.as_ref() {
++        if m.pool_path != previous.manifest.pool_path || m.phys_base != previous.manifest.phys_base
++            || m.device_bytes != previous.manifest.device_bytes {
++            return Err(invalid("resident DAX geometry changed"));
++        }
++    } else if dax_geometry(&m.pool_path)? != (m.phys_base, m.device_bytes) {
++        return Err(invalid("resident DAX geometry changed"));
++    }
 +    let file = Arc::new(OpenOptions::new().read(true).write(true).open(env("FC_POOL_MEMORY_DEVICE")?)?);
 +    let mut h = m.handle.unwrap();
 +    if h.owner_epoch != old || h.state != 2 { return Err(invalid("resident unsealed mapper")); }
@@ -4849,6 +4878,10 @@ index 000000000..0c389531a
 +}
 +pub(crate) fn checkpoint_ready(mem: &GuestMemoryMmap) -> io::Result<()> { checkpoint(mem, false) }
 +pub(crate) fn seal_for_handoff(mem: &GuestMemoryMmap) -> io::Result<()> { checkpoint(mem, true) }
++/// Existing metadata for optional experiment logs; no query or RAM walk.
++pub(crate) fn manifest_for_profile() -> Option<Manifest> {
++    state().lock().unwrap().as_ref().map(|a| a.manifest.clone())
++}
 +
 +pub(crate) fn bind_state(path: &Path) -> io::Result<()> {
 +    let bytes = std::fs::read(path)?;
@@ -6183,10 +6216,10 @@ index 000000000..0f90a81c0
 +    }
 +}
 diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
-index ca743fa6f..8db4c5582 100644
+index ca743fa6f..0eb537578 100644
 --- a/src/vmm/src/rpc_interface.rs
 +++ b/src/vmm/src/rpc_interface.rs
-@@ -100,6 +100,14 @@ pub enum VmmAction {
+@@ -100,6 +100,18 @@ pub enum VmmAction {
      PatchMMDS(Value),
      /// Pause the guest, by pausing the microVM VCPUs.
      Pause,
@@ -6198,10 +6231,14 @@ index ca743fa6f..8db4c5582 100644
 +    DirectPrepare,
 +    /// Attach a new ownership epoch to a parked resident VMM.
 +    DirectImport,
++    /// Pause and export the current owner in one dispatch.
++    DirectSend,
++    /// Import and resume the destination in one dispatch.
++    DirectReceive,
      /// Repopulate the MMDS contents.
      PutMMDS(Value),
      /// Configure the guest vCPU features.
-@@ -133,6 +141,9 @@ pub enum VmmAction {
+@@ -133,6 +145,9 @@ pub enum VmmAction {
      /// driver is listening on the guest end, this can be used to shut down the microVM gracefully.
      #[cfg(target_arch = "x86_64")]
      SendCtrlAltDel,
@@ -6211,7 +6248,7 @@ index ca743fa6f..8db4c5582 100644
      /// Update the balloon size, after microVM start.
      UpdateBalloon(BalloonUpdateConfig),
      /// Update the balloon statistics polling interval, after microVM start.
-@@ -313,6 +324,8 @@ impl fmt::Debug for PrebootApiController<'_> {
+@@ -313,6 +328,8 @@ impl fmt::Debug for PrebootApiController<'_> {
  /// Error type for [`PrebootApiController::load_snapshot`]
  #[derive(Debug, thiserror::Error, displaydoc::Display)]
  pub enum LoadSnapshotError {
@@ -6220,7 +6257,7 @@ index ca743fa6f..8db4c5582 100644
      /// Loading a microVM snapshot not allowed after configuring boot-specific resources.
      LoadSnapshotNotAllowed,
      /// Failed to restore from snapshot: {0}
-@@ -495,6 +508,10 @@ impl<'a> PrebootApiController<'a> {
+@@ -495,7 +512,19 @@ impl<'a> PrebootApiController<'a> {
              SetBalloonDevice(config) => self.set_balloon_device(config),
              SetVsockDevice(config) => self.set_vsock_device(config),
              SetMmdsConfiguration(config) => self.set_mmds_config(config),
@@ -6229,19 +6266,29 @@ index ca743fa6f..8db4c5582 100644
 +                Ok(VmmData::Empty)
 +            }
              StartMicroVm => self.start_microvm(),
++            DirectReceive => {
++                if !crate::direct::import_enabled() {
++                    return Err(VmmActionError::NotSupported("direct import is not configured".into()));
++                }
++                self.start_microvm()?;
++                self.built_vmm.as_ref().unwrap().lock().expect("Poisoned lock").resume_vm()?;
++                Ok(VmmData::Empty)
++            }
              UpdateMachineConfiguration(config) => self.update_machine_config(config),
              SetEntropyDevice(config) => self.set_entropy_device(config),
-@@ -503,6 +520,9 @@ impl<'a> PrebootApiController<'a> {
+             SetMemoryHotplugDevice(config) => self.set_memory_hotplug_device(config),
+@@ -503,6 +532,10 @@ impl<'a> PrebootApiController<'a> {
              CreateSnapshot(_)
              | FlushMetrics
              | Pause
 +            | PoolCache
 +            | DirectExport
++            | DirectSend
 +            | DirectImport
              | Resume
              | GetBalloonStats
              | GetMemoryHotplugStatus
-@@ -517,7 +537,7 @@ impl<'a> PrebootApiController<'a> {
+@@ -517,7 +550,7 @@ impl<'a> PrebootApiController<'a> {
              | StopFreePageHinting
              | HotUnplugDevice(_) => Err(VmmActionError::OperationNotSupportedPreBoot),
              #[cfg(target_arch = "x86_64")]
@@ -6250,12 +6297,12 @@ index ca743fa6f..8db4c5582 100644
          }
      }
  
-@@ -700,6 +720,18 @@ impl RuntimeApiController {
+@@ -700,6 +733,18 @@ impl RuntimeApiController {
          event_manager: &mut EventManager,
      ) -> Result<VmmData, VmmActionError> {
          use self::VmmAction::*;
 +        if crate::direct::resident_parked() && !matches!(&request,
-+            DirectImport | DirectPrepare | GetVmInstanceInfo | GetVmMachineConfig | GetVmmVersion) {
++            DirectImport | DirectReceive | DirectPrepare | GetVmInstanceInfo | GetVmMachineConfig | GetVmmVersion) {
 +            return Err(VmmActionError::NotSupported("parked resident rejects guest/device operations".into()));
 +        }
 +        #[cfg(target_arch = "x86_64")]
@@ -6269,7 +6316,7 @@ index ca743fa6f..8db4c5582 100644
          match request {
              // Supported operations allowed post-boot.
              CreateSnapshot(snapshot_create_cfg) => self.create_snapshot(&snapshot_create_cfg),
-@@ -786,6 +818,36 @@ impl RuntimeApiController {
+@@ -786,6 +831,48 @@ impl RuntimeApiController {
                  .hot_unplug_device(device_id, event_manager)
                  .map(|()| VmmData::Empty),
              Pause => self.pause(),
@@ -6287,6 +6334,18 @@ index ca743fa6f..8db4c5582 100644
 +            }
 +            DirectExport => {
 +                self.vmm.lock().expect("Poisoned lock").direct_export(event_manager)?;
++                Ok(VmmData::Empty)
++            }
++            DirectSend => {
++                let mut vmm = self.vmm.lock().expect("Poisoned lock");
++                vmm.pause_vm()?;
++                vmm.direct_export(event_manager)?;
++                Ok(VmmData::Empty)
++            }
++            DirectReceive => {
++                let mut vmm = self.vmm.lock().expect("Poisoned lock");
++                vmm.import_resident(event_manager)?;
++                vmm.resume_vm()?;
 +                Ok(VmmData::Empty)
 +            }
 +            #[cfg(target_arch = "x86_64")]

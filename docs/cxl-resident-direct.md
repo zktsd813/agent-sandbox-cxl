@@ -4,7 +4,7 @@
 
 기존 direct 경로는 CXL의 KVM VM/vCPU/VMCS/EPT 객체를 인계하면서도, 목적지의 Firecracker 프로세스와 장치 실행 환경은 매번 만들었다. 이번에는 **A와 B에 Firecracker를 하나씩 유지**하고, 목적지를 준비한 뒤 소유권과 최신 장치 상태만 넘기는 `resident direct` 경로를 추가했다.
 
-Guest RAM은 CXL에 그대로 있고 CPU register snapshot도 만들지 않는다. 전달하는 파일은 작은 장치 상태와 mapper 소유권 handle이다. Promotion은 DRAM→CXL 배치 변경, demotion은 CXL→DRAM 복사이며 이 두 비용은 CPU handoff와 분리한다. State-only 경로는 기존 구현을 유지한다.
+Guest RAM은 CXL에 그대로 있고 CPU register snapshot도 만들지 않는다. 전달하는 파일은 작은 장치 상태와 mapper 소유권 handle이다. Promotion은 DRAM→CXL 배치 변경, demotion은 CXL→DRAM 복사이며 이 두 비용은 CPU handoff와 분리한다. State-only 경로도 반복 checkpoint와 guest 확인 호출을 제거하고 snapshot load에서 바로 resume하도록 바꿨다. 이 모드의 작은 CPU/device state 전달과 source 종료는 유지한다.
 
 실험 결과와 재현 입력은 [검증 자료](../implementation/virtual_machine/results/direct-resident-20261102/README.md)에 모았다. 이전 측정 범위와 NFS 병목은 [Direct API 비용 분석](cxl-direct-api-latency.md)을 참고한다.
 
@@ -37,8 +37,8 @@ sequenceDiagram
     B->>B: generation·identity·digest 검증
     B->>C: 현재 mapper import, 기존 KVM 객체 attach
     B->>B: 장치 queue 갱신, IRQFD/ioeventfd 재연결
-    B->>B: Resume → guest ping 응답
-    B-->>A: 응답을 받은 사실과 단계별 시간 반환
+    B->>B: Resume
+    B-->>A: 실행 재개 API 응답 반환
 ```
 
 Source는 block completion을 마무리하고 현재 queue 위치를 기록한다. 과거 방문 때 저장한 queue 상태를 재사용하지 않는다. 목적지는 최신 상태를 기존 객체에 적용하고 실행을 재개한다.
@@ -49,7 +49,7 @@ Source process는 종료하지 않는다. 다만 virtio event subscriber를 제�
 
 A에는 원래 실행하던 VMM, VM/vCPU FD, vCPU thread, block 객체, 이미지 FD, io_uring, eventfd가 남아 있다. 새로운 token과 mapper handle을 확인한 뒤 같은 HVA에 현재 backing을 연결하고, 기존 kernel의 reuse-VM-FD attach ioctl을 사용한다.
 
-이후 B로 다시 갈 때도 같은 방법을 쓴다. FD를 다시 열거나 vCPU thread를 새로 만들지 않는다. 기존 제어기는 준비 API를 다시 호출하여 parked RAM/KVM 접근을 검사했다. Ready-control은 이 중복 호출을 생략하고, 매번 source를 넘긴 뒤 기존 fence/probe 검사로 접근 차단을 검증한다.
+이후 B로 다시 갈 때도 같은 방법을 쓴다. FD를 다시 열거나 vCPU thread를 새로 만들지 않는다. 기존 제어기는 준비 API를 다시 호출하여 parked RAM/KVM 접근을 검사했다. 현재 runtime은 이 중복 호출과 handoff별 fence/probe 진단을 모두 생략한다. 실제 KVM 소유권 차단과 PROT_NONE 처리는 유지하며, 접근 실패 시험은 별도 실험 드라이버가 수행한다.
 
 Demotion으로 기존 CXL 할당을 반환한 뒤 다시 promotion하면 allocation generation과 mapper handle은 바뀐다. 과거 handle을 저장해 재사용하지 않고 **해당 전환에서 받은 최신 handle**을 검증·연결한다. KVM 객체 identity와 handoff generation 검증은 별도로 유지한다.
 
@@ -74,11 +74,13 @@ FD는 로컬 inode 또는 NFS의 열린 파일을 계속 참조한다. 실험에
 
 첫 promotion이 완료되면 B의 VMM을 준비하고 A/B 제어 서버를 띄운다. 이 과정의 전체 외부 제어 시간, VMM의 fork→API 연결 가능 시간, NFS FD·io_uring 준비 시간, 제어 서버 각각의 fork→listen 완료 시간을 별도 기록한다. 준비 단계는 source 실행 중이며, promotion의 데이터 복사 시간과도 구분한다.
 
-`resident_bootstrap.c`가 디렉터리·FIFO·PID 기록·프로세스 실행·API 대기·DirectPrepare를 한 번의 노드 내부 작업으로 처리한다. 고정 20ms shell polling을 없애고 실제 API 연결 가능 여부를 확인한다. 실행 바이너리 hash와 FD/TID 감사는 외부 제어 시간에 남긴다.
+`resident_bootstrap.c`가 디렉터리·FIFO·PID 기록·프로세스 실행·API 대기·DirectPrepare를 한 번의 노드 내부 작업으로 처리한다. 고정 20ms shell polling을 없애고 실제 API 연결 가능 여부를 확인한다. 실행 바이너리 hash, 이미지 재해시, FD/TID 감사는 준비 경로에서도 제거했다.
 
-준비된 상태의 handoff는 이미 실행 중인 source 제어 서버에 요청한다. 제어 서버는 peer에 연결하고 pause/export/상태 전송/import/checkpoint/resume를 수행한다. 목적지의 다음 checkpoint plan도 작은 요청 필드로 전달해 목적지에서 작성한다. 전환 직전 serial 파일 업로드, DirectPrepare 재호출이나 제어 서버 생성은 없다. 준비가 없으면 요청을 실패시키며 숨겨진 초기화를 수행하지 않는다.
+준비된 상태의 handoff는 source 제어 서버에 요청한다. `DirectSend`가 pause와 export를, `DirectReceive`가 import와 resume를 한 번의 VMM dispatch에서 처리한다. 중간 checkpoint와 checkpoint plan 전달은 없다. API Unix socket도 상주 제어기에서 재사용한다. Kernel 소유권·mapper epoch·메모리 범위와 장치 상태의 유효성은 그대로 검사한다.
 
-두 완료 시점을 측정한다. **요청→Resume 응답**은 API가 실행 재개를 수락한 시점이며 guest의 첫 instruction 실행 시각은 아니다. **요청→guest ACK**는 기존 serial ping의 실제 응답이 돌아온 시점이다. 두 값 모두 로컬 및 peer TCP 연결을 포함한다. 최초 B 방문에서 만드는 VM/vCPU wrapper와 장치 객체 비용도 포함한다. 원시 결과의 `controller_command_wall_ns`는 별도로 serial 실행·결과 회수 시간을 포함한다.
+**요청→Resume 응답**은 목적지 API의 실행 재개 응답 시점이다. Guest의 첫 instruction 실행 시각은 아니다. 기본 runtime은 guest ping이나 source 실패 유도 시험을 수행하지 않는다. 원시 결과의 `controller_command_wall_ns`에는 실험용 serial 명령 전달·결과 회수가 별도로 포함된다. 최초 B 방문에는 VM/vCPU wrapper·스레드·나머지 장치 객체의 생성 비용이 남아 있다.
+
+아래 지표와 진단 절차는 `620e2d5`/`2a015f3`의 **이전 v1 실험 기록**이다. v2의 두 API 시간은 pause/resume까지 포함하므로 이전 Export+Import 두 API 시간과 동일한 범위로 비교하지 않는다.
 
 ### 기존 지표와의 관계
 

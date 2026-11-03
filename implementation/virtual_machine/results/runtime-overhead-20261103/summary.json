@@ -1,0 +1,339 @@
+{
+  "schema": "runtime-overhead-removal-v1",
+  "base_commit": "8935bf035d3576db072c1f697c1d0f773cd75329",
+  "result": "passed",
+  "old_verification": "../backend-ablation-20261103/verification.json",
+  "before": [
+    {
+      "arm": "local",
+      "prepare_process_disk_ms": 317.55592,
+      "prepare_control_servers_ms": 165.6127,
+      "prepare_total_ms": 483.16862,
+      "prepare_native_ms": 6.29952,
+      "first_request_resume_ms": 18.601276,
+      "warm": {
+        "request_resume_ms": {
+          "n": 23,
+          "p50": 9.556411,
+          "min": 8.549993,
+          "max": 21.926354
+        },
+        "request_ack_ms": {
+          "n": 23,
+          "p50": 24.776596,
+          "min": 13.94096,
+          "max": 42.312121
+        },
+        "export_attach_api_ms": {
+          "n": 23,
+          "p50": 4.642892,
+          "min": 4.142596999999999,
+          "max": 13.807689
+        },
+        "kernel_ms": {
+          "n": 23,
+          "p50": 0.956055,
+          "min": 0.809888,
+          "max": 7.726353
+        }
+      },
+      "source_fault_probes": 24,
+      "parked_rejections": 48
+    },
+    {
+      "arm": "nfs",
+      "prepare_process_disk_ms": 351.714213,
+      "prepare_control_servers_ms": 169.979533,
+      "prepare_total_ms": 521.693746,
+      "prepare_native_ms": 7.85519,
+      "first_request_resume_ms": 17.3765,
+      "warm": {
+        "request_resume_ms": {
+          "n": 23,
+          "p50": 9.562249,
+          "min": 8.574337,
+          "max": 17.87984
+        },
+        "request_ack_ms": {
+          "n": 23,
+          "p50": 25.208556,
+          "min": 13.84844,
+          "max": 33.027367
+        },
+        "export_attach_api_ms": {
+          "n": 23,
+          "p50": 4.638236,
+          "min": 4.288946,
+          "max": 9.850192000000002
+        },
+        "kernel_ms": {
+          "n": 23,
+          "p50": 0.947537,
+          "min": 0.866691,
+          "max": 4.640841
+        }
+      },
+      "source_fault_probes": 24,
+      "parked_rejections": 48
+    }
+  ],
+  "after": [
+    {
+      "arm": "nfs",
+      "prepare_process_disk_ms": 133.756209,
+      "prepare_control_servers_ms": 104.906378,
+      "prepare_total_ms": 238.662587,
+      "prepare_native_ms": 8.436037,
+      "first_request_resume_ms": 13.000402,
+      "warm": {
+        "request_resume_ms": {
+          "n": 23,
+          "p50": 4.298148,
+          "min": 3.256291,
+          "max": 15.163352
+        },
+        "request_ack_ms": {
+          "n": 23,
+          "p50": 19.239314,
+          "min": 16.908672,
+          "max": 30.150999
+        },
+        "export_attach_api_ms": {
+          "n": 23,
+          "p50": 2.8229319999999998,
+          "min": 2.0606679999999997,
+          "max": 10.054403
+        },
+        "kernel_ms": {
+          "n": 23,
+          "p50": 0.416208,
+          "min": 0.274293,
+          "max": 4.7781
+        }
+      },
+      "source_fault_probes": 24,
+      "parked_rejections": 72
+    },
+    {
+      "arm": "local",
+      "prepare_process_disk_ms": 144.815399,
+      "prepare_control_servers_ms": 118.93874,
+      "prepare_total_ms": 263.754139,
+      "prepare_native_ms": 5.652922,
+      "first_request_resume_ms": 13.773227,
+      "warm": {
+        "request_resume_ms": {
+          "n": 23,
+          "p50": 4.329499,
+          "min": 3.402299,
+          "max": 15.286034
+        },
+        "request_ack_ms": {
+          "n": 23,
+          "p50": 19.69777,
+          "min": 17.671957,
+          "max": 30.757546
+        },
+        "export_attach_api_ms": {
+          "n": 23,
+          "p50": 2.8815239999999998,
+          "min": 1.998208,
+          "max": 10.499678
+        },
+        "kernel_ms": {
+          "n": 23,
+          "p50": 0.404183,
+          "min": 0.298226,
+          "max": 4.853808
+        }
+      },
+      "source_fault_probes": 24,
+      "parked_rejections": 72
+    }
+  ],
+  "passes": [
+    {
+      "pass": 1,
+      "change": "Remove executable/bootstrap/script hashes; cache scratch BAR lookup",
+      "experiment": "5 destination preparations"
+    },
+    {
+      "pass": 2,
+      "change": "Two combined APIs, persistent API socket; remove per-handoff guest/probe/log/checkpoint work",
+      "experiment": "24 NFS handoffs"
+    },
+    {
+      "pass": 3,
+      "change": "Remove whole image/canonical scans and duplicate launch/transport diagnostics",
+      "experiment": "3-mode Gin trace; 48 backend handoffs"
+    },
+    {
+      "pass": 4,
+      "change": "Remove state-only duplicate checkpoints/guest checks; resume in snapshot load",
+      "experiment": "Gin state-only trace rerun"
+    },
+    {
+      "pass": 5,
+      "change": "Combine script upload and launch; remove environment upload and manifest copy comparison",
+      "experiment": "48 backend handoffs; unprofiled 3-mode Gin trace"
+    }
+  ],
+  "retained": [
+    "Owner/epoch and mapping bounds checks",
+    "Small CPU/device-state and mapper-file binding",
+    "I/O drain, KVM detach, source PROT_NONE, CoW and discard ACK",
+    "Promotion/demotion copies required to change RAM tier"
+  ],
+  "timing_scope": [
+    "Warm samples exclude the first B import; n=23 per arm and include first return to A",
+    "Request-to-Resume includes native control TCP; excludes Python/serial request delivery and separate guest ACK",
+    "Preparation total includes destination process/disk preparation plus both native coordinator launches through lab serial",
+    "Preparation totals are one fresh pair per arm, not a percentile",
+    "Final backend measurements ran without another SWE VM suite; SWE trials are correctness tests, not workload performance comparisons",
+    "API sums changed from five actions to two actions; old export+attach alone excludes old pause/resume/checkpoint",
+    "Coherent nested QEMU/KVM lab, not physical noncoherent CXL nodes"
+  ],
+  "tests": {
+    "vmm_direct": 5,
+    "vmm_pool_memory": 6,
+    "allocator": 9,
+    "backend_evidence": 13
+  },
+  "archive_replay_commands": [
+    "tar -xf backend-final.tar.xz",
+    "python3 implementation/virtual_machine/verify_backend_ablation.py cxl-overhead-backend-pass5/suite.json --output backend-replay.json",
+    "tar -xf swe-unprofiled.tar.xz",
+    "python3 implementation/virtual_machine/verify_swe_pool.py --suite cxl-overhead-swe-unprofiled/report.json --output swe-replay.json"
+  ],
+  "build_firecracker_sha256": "eb907bb107f3c0a8b9ea9a1d5f8b2248a1552180a402153d61476a206056171c",
+  "swe_profiled": [
+    {
+      "mode": "baseline",
+      "trace": "gin-gonic__gin-3741",
+      "commands": 27,
+      "transitions": {},
+      "shared_cache_bytes": [],
+      "registered_cache_bytes": [],
+      "profiled_kernel_handoffs": 0
+    },
+    {
+      "mode": "state-only",
+      "trace": "gin-gonic__gin-3741",
+      "commands": 27,
+      "transitions": {
+        "promotion": 2,
+        "state-only": 2,
+        "demotion": 2
+      },
+      "shared_cache_bytes": [
+        51523584,
+        51662848
+      ],
+      "registered_cache_bytes": [
+        51523584,
+        51662848
+      ],
+      "profiled_kernel_handoffs": 0
+    },
+    {
+      "mode": "direct",
+      "trace": "gin-gonic__gin-3741",
+      "commands": 27,
+      "transitions": {
+        "promotion": 2,
+        "direct": 4,
+        "demotion": 2
+      },
+      "shared_cache_bytes": [
+        51314688,
+        51519488
+      ],
+      "registered_cache_bytes": [
+        51314688,
+        51519488
+      ],
+      "profiled_kernel_handoffs": 4
+    }
+  ],
+  "swe_state_v2": [
+    {
+      "mode": "state-only",
+      "trace": "gin-gonic__gin-3741",
+      "commands": 27,
+      "transitions": {
+        "promotion": 2,
+        "state-only": 2,
+        "demotion": 2
+      },
+      "shared_cache_bytes": [
+        51179520,
+        51728384
+      ],
+      "registered_cache_bytes": [
+        51179520,
+        51728384
+      ],
+      "profiled_kernel_handoffs": 0
+    }
+  ],
+  "swe_unprofiled": [
+    {
+      "mode": "baseline",
+      "trace": "gin-gonic__gin-3741",
+      "commands": 27,
+      "transitions": {},
+      "shared_cache_bytes": [],
+      "registered_cache_bytes": [],
+      "profiled_kernel_handoffs": 0
+    },
+    {
+      "mode": "state-only",
+      "trace": "gin-gonic__gin-3741",
+      "commands": 27,
+      "transitions": {
+        "promotion": 2,
+        "state-only": 2,
+        "demotion": 2
+      },
+      "shared_cache_bytes": [
+        51314688,
+        51642368
+      ],
+      "registered_cache_bytes": [
+        51314688,
+        51642368
+      ],
+      "profiled_kernel_handoffs": 0
+    },
+    {
+      "mode": "direct",
+      "trace": "gin-gonic__gin-3741",
+      "commands": 27,
+      "transitions": {
+        "promotion": 2,
+        "direct": 4,
+        "demotion": 2
+      },
+      "shared_cache_bytes": [
+        51179520,
+        51474432
+      ],
+      "registered_cache_bytes": [
+        51179520,
+        51474432
+      ],
+      "profiled_kernel_handoffs": 0
+    }
+  ],
+  "preparation_probe_medians_ms": {
+    "original": {
+      "n": 5,
+      "median_ms": 347.123042
+    },
+    "pass1": {
+      "n": 5,
+      "median_ms": 158.194203
+    }
+  },
+  "preparation_probe_note": "Pass1 BAR cache was already populated by timer upload; do not equate it to the fresh-pair cold preparation total."
+}

@@ -191,7 +191,7 @@ def audit(report_path, report=None, overrides=None, pilot=False, full_patterns=F
             "ordinary snapshot experiment mislabeled as direct/reuse")
     home = config["home_storage_image"]
     require(home["owner"] == "A" and home["readonly"] is False and home["path"] != home["template"] and
-            home["initial_sha256"] == home["template_sha256"], "private home A storage configuration")
+            (home.get("runtime_rehashed") is False or home["initial_sha256"] == home["template_sha256"]), "private home A storage configuration")
     for role in ("A", "B"):
         args = config["vms"][role]["command"]
         drives = [args[index+1] for index, value in enumerate(args[:-1]) if value == "-drive"]

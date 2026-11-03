@@ -387,6 +387,9 @@ def verify_trace(e, report):
 def verify(path):
     path = Path(path)
     report = json.loads(path.read_bytes())
+    if report["schema"] == "swe-pool-trace-v2":
+        from verify_swe_runtime import verify as verify_runtime
+        return verify_runtime(path)
     need(report["schema"] == "swe-pool-trace-v1" and report["result"] == "passed", "trace run incomplete/failed")
     need(report["mode"] in ("baseline", "state-only", "direct"), "unknown mode")
     e = Evidence(report, path.parent)
