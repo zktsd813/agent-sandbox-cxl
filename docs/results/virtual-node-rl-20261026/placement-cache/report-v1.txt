@@ -1,0 +1,313 @@
+
+== 4 nodes x 15 cores, 96/node (6.4/core), LLM x0.15, async
+  P1 + hand-off              util 0.75 wait/run 0.0489 step 1.054 moves   21008 | cache/node 1.28 (peak 1.42) total 5.14 GiB | fetch GiB/h rho0 4.3 rho.25 4.3 rho1 4.3
+  P1 least-loaded            util 0.75 wait/run 0.0836 step 1.059 moves       0 | cache/node 1.28 (peak 1.42) total 5.12 GiB | fetch GiB/h rho0 4.6 rho.25 4.6 rho1 4.6
+  P2 locality                util 0.68 wait/run 0.4491 step 1.099 moves       0 | cache/node 0.37 (peak 0.65) total 1.48 GiB | fetch GiB/h rho0 1.1 rho.25 1.1 rho1 1.1
+  P3 score b20               util 0.73 wait/run 0.1587 step 1.068 moves       0 | cache/node 0.55 (peak 0.87) total 2.20 GiB | fetch GiB/h rho0 2.1 rho.25 2.1 rho1 2.1
+  P3 score b20 + hand-off    util 0.75 wait/run 0.0490 step 1.054 moves   21028 | cache/node 1.04 (peak 1.29) total 4.15 GiB | fetch GiB/h rho0 3.8 rho.25 3.9 rho1 4.1
+  P3 score b5                util 0.74 wait/run 0.0963 step 1.061 moves       0 | cache/node 0.98 (peak 1.29) total 3.93 GiB | fetch GiB/h rho0 3.6 rho.25 3.6 rho1 3.6
+  P4 locality + hand-off     util 0.75 wait/run 0.0493 step 1.054 moves   21172 | cache/node 1.03 (peak 1.27) total 4.12 GiB | fetch GiB/h rho0 3.9 rho.25 3.9 rho1 4.2
+  P5 fixed home              util 0.67 wait/run 0.4530 step 1.101 moves       0 | cache/node 0.38 (peak 0.53) total 1.51 GiB | fetch GiB/h rho0 1.1 rho.25 1.1 rho1 1.1
+  P5 fixed home + hand-off   util 0.75 wait/run 0.0494 step 1.054 moves   21354 | cache/node 0.56 (peak 0.71) total 2.24 GiB | fetch GiB/h rho0 1.0 rho.25 2.3 rho1 5.8
+  POOL ideal                 util 0.75 wait/run 0.0343 step 1.052 moves       0 | cache/node 1.28 (peak 1.42) total 5.13 GiB | fetch GiB/h rho0 4.6 rho.25 4.6 rho1 4.6
+  shared CXL cache           total 1.32 GiB, fetch 0.9 GiB/h (any placement)
+
+== 4 nodes x 15 cores, 96/node (6.4/core), LLM x0.15, sync
+  P1 + hand-off              util 0.50 wait/run 0.0589 step 1.117 moves    9642 | cache/node 1.06 (peak 1.35) total 4.24 GiB | fetch GiB/h rho0 6.3 rho.25 6.3 rho1 6.4
+  P1 least-loaded            util 0.50 wait/run 0.0853 step 1.127 moves       0 | cache/node 1.05 (peak 1.35) total 4.19 GiB | fetch GiB/h rho0 6.3 rho.25 6.3 rho1 6.3
+  P2 locality                util 0.45 wait/run 0.4121 step 1.211 moves       0 | cache/node 0.31 (peak 0.64) total 1.24 GiB | fetch GiB/h rho0 1.6 rho.25 1.6 rho1 1.6
+  P3 score b20               util 0.46 wait/run 0.2742 step 1.189 moves       0 | cache/node 0.36 (peak 0.69) total 1.45 GiB | fetch GiB/h rho0 2.0 rho.25 2.0 rho1 2.0
+  P3 score b20 + hand-off    util 0.50 wait/run 0.0593 step 1.117 moves    9796 | cache/node 0.77 (peak 1.08) total 3.08 GiB | fetch GiB/h rho0 4.3 rho.25 4.8 rho1 6.0
+  P3 score b5                util 0.47 wait/run 0.2140 step 1.173 moves       0 | cache/node 0.45 (peak 0.77) total 1.78 GiB | fetch GiB/h rho0 2.3 rho.25 2.3 rho1 2.3
+  P4 locality + hand-off     util 0.50 wait/run 0.0593 step 1.117 moves    9802 | cache/node 0.77 (peak 1.09) total 3.09 GiB | fetch GiB/h rho0 4.4 rho.25 4.8 rho1 5.9
+  P5 fixed home              util 0.45 wait/run 0.3593 step 1.203 moves       0 | cache/node 0.31 (peak 0.52) total 1.25 GiB | fetch GiB/h rho0 1.6 rho.25 1.6 rho1 1.6
+  P5 fixed home + hand-off   util 0.50 wait/run 0.0629 step 1.118 moves   10298 | cache/node 0.47 (peak 0.70) total 1.86 GiB | fetch GiB/h rho0 1.8 rho.25 3.1 rho1 6.7
+  POOL ideal                 util 0.50 wait/run 0.0473 step 1.115 moves       0 | cache/node 1.05 (peak 1.35) total 4.19 GiB | fetch GiB/h rho0 6.5 rho.25 6.5 rho1 6.5
+  shared CXL cache           total 1.11 GiB, fetch 1.6 GiB/h (any placement)
+
+== 4 nodes x 15 cores, 96/node (6.4/core), LLM x0.25, async
+  P1 + hand-off              util 0.48 wait/run 0.0034 step 1.030 moves     981 | cache/node 1.21 (peak 1.41) total 4.82 GiB | fetch GiB/h rho0 5.2 rho.25 5.2 rho1 5.2
+  P1 least-loaded            util 0.48 wait/run 0.0056 step 1.030 moves       0 | cache/node 1.21 (peak 1.41) total 4.82 GiB | fetch GiB/h rho0 5.2 rho.25 5.2 rho1 5.2
+  P2 locality                util 0.47 wait/run 0.0828 step 1.035 moves       0 | cache/node 0.36 (peak 0.63) total 1.44 GiB | fetch GiB/h rho0 1.2 rho.25 1.2 rho1 1.2
+  P3 score b20               util 0.48 wait/run 0.0159 step 1.030 moves       0 | cache/node 0.53 (peak 0.89) total 2.12 GiB | fetch GiB/h rho0 2.3 rho.25 2.3 rho1 2.3
+  P3 score b20 + hand-off    util 0.48 wait/run 0.0036 step 1.030 moves    1178 | cache/node 0.67 (peak 0.97) total 2.67 GiB | fetch GiB/h rho0 2.9 rho.25 3.2 rho1 3.8
+  P3 score b5                util 0.48 wait/run 0.0067 step 1.030 moves       0 | cache/node 0.87 (peak 1.15) total 3.47 GiB | fetch GiB/h rho0 3.7 rho.25 3.7 rho1 3.7
+  P4 locality + hand-off     util 0.48 wait/run 0.0036 step 1.030 moves    1170 | cache/node 0.61 (peak 0.86) total 2.45 GiB | fetch GiB/h rho0 2.7 rho.25 3.0 rho1 3.7
+  P5 fixed home              util 0.47 wait/run 0.0858 step 1.035 moves       0 | cache/node 0.36 (peak 0.53) total 1.45 GiB | fetch GiB/h rho0 1.2 rho.25 1.2 rho1 1.2
+  P5 fixed home + hand-off   util 0.48 wait/run 0.0038 step 1.030 moves    1386 | cache/node 0.43 (peak 0.62) total 1.72 GiB | fetch GiB/h rho0 1.2 rho.25 2.1 rho1 4.5
+  POOL ideal                 util 0.48 wait/run 0.0020 step 1.030 moves       0 | cache/node 1.21 (peak 1.41) total 4.83 GiB | fetch GiB/h rho0 5.2 rho.25 5.2 rho1 5.2
+  shared CXL cache           total 1.26 GiB, fetch 1.1 GiB/h (any placement)
+
+== 4 nodes x 15 cores, 96/node (6.4/core), LLM x0.25, sync
+  P1 + hand-off              util 0.36 wait/run 0.0152 step 1.052 moves    1148 | cache/node 0.99 (peak 1.33) total 3.96 GiB | fetch GiB/h rho0 5.0 rho.25 5.0 rho1 5.1
+  P1 least-loaded            util 0.36 wait/run 0.0194 step 1.052 moves       0 | cache/node 0.99 (peak 1.33) total 3.95 GiB | fetch GiB/h rho0 5.0 rho.25 5.0 rho1 5.0
+  P2 locality                util 0.34 wait/run 0.1429 step 1.070 moves       0 | cache/node 0.30 (peak 0.64) total 1.20 GiB | fetch GiB/h rho0 1.4 rho.25 1.4 rho1 1.4
+  P3 score b20               util 0.35 wait/run 0.0954 step 1.058 moves       0 | cache/node 0.36 (peak 0.74) total 1.45 GiB | fetch GiB/h rho0 1.6 rho.25 1.6 rho1 1.6
+  P3 score b20 + hand-off    util 0.36 wait/run 0.0155 step 1.052 moves    1290 | cache/node 0.59 (peak 0.94) total 2.37 GiB | fetch GiB/h rho0 2.8 rho.25 3.1 rho1 3.8
+  P3 score b5                util 0.35 wait/run 0.0711 step 1.056 moves       0 | cache/node 0.43 (peak 0.78) total 1.73 GiB | fetch GiB/h rho0 1.9 rho.25 1.9 rho1 1.9
+  P4 locality + hand-off     util 0.36 wait/run 0.0156 step 1.052 moves    1369 | cache/node 0.57 (peak 0.95) total 2.29 GiB | fetch GiB/h rho0 2.7 rho.25 3.0 rho1 3.8
+  P5 fixed home              util 0.33 wait/run 0.1814 step 1.072 moves       0 | cache/node 0.30 (peak 0.51) total 1.20 GiB | fetch GiB/h rho0 1.4 rho.25 1.4 rho1 1.4
+  P5 fixed home + hand-off   util 0.36 wait/run 0.0191 step 1.052 moves    1723 | cache/node 0.39 (peak 0.62) total 1.57 GiB | fetch GiB/h rho0 1.3 rho.25 2.3 rho1 5.1
+  POOL ideal                 util 0.36 wait/run 0.0135 step 1.052 moves       0 | cache/node 0.99 (peak 1.33) total 3.95 GiB | fetch GiB/h rho0 5.0 rho.25 5.0 rho1 5.0
+  shared CXL cache           total 1.05 GiB, fetch 1.2 GiB/h (any placement)
+
+== 4 nodes x 15 cores, 96/node (6.4/core), LLM x1.0, async
+  P1 + hand-off              util 0.13 wait/run 0.0003 step 1.008 moves       0 | cache/node 0.95 (peak 1.21) total 3.79 GiB | fetch GiB/h rho0 2.5 rho.25 2.5 rho1 2.5
+  P1 least-loaded            util 0.13 wait/run 0.0003 step 1.008 moves       0 | cache/node 0.95 (peak 1.21) total 3.79 GiB | fetch GiB/h rho0 2.5 rho.25 2.5 rho1 2.5
+  P2 locality                util 0.13 wait/run 0.0004 step 1.008 moves       0 | cache/node 0.30 (peak 0.61) total 1.18 GiB | fetch GiB/h rho0 0.6 rho.25 0.6 rho1 0.6
+  P3 score b20               util 0.13 wait/run 0.0003 step 1.008 moves       0 | cache/node 0.38 (peak 0.65) total 1.54 GiB | fetch GiB/h rho0 0.9 rho.25 0.9 rho1 0.9
+  P3 score b20 + hand-off    util 0.13 wait/run 0.0003 step 1.008 moves       0 | cache/node 0.38 (peak 0.65) total 1.54 GiB | fetch GiB/h rho0 0.9 rho.25 0.9 rho1 0.9
+  P3 score b5                util 0.13 wait/run 0.0003 step 1.008 moves       0 | cache/node 0.64 (peak 0.89) total 2.55 GiB | fetch GiB/h rho0 1.7 rho.25 1.7 rho1 1.7
+  P4 locality + hand-off     util 0.13 wait/run 0.0004 step 1.008 moves       0 | cache/node 0.30 (peak 0.61) total 1.18 GiB | fetch GiB/h rho0 0.6 rho.25 0.6 rho1 0.6
+  P5 fixed home              util 0.13 wait/run 0.0005 step 1.008 moves       0 | cache/node 0.30 (peak 0.51) total 1.20 GiB | fetch GiB/h rho0 0.6 rho.25 0.6 rho1 0.6
+  P5 fixed home + hand-off   util 0.13 wait/run 0.0004 step 1.008 moves       1 | cache/node 0.30 (peak 0.51) total 1.20 GiB | fetch GiB/h rho0 0.6 rho.25 0.6 rho1 0.6
+  POOL ideal                 util 0.13 wait/run 0.0002 step 1.008 moves       0 | cache/node 0.95 (peak 1.21) total 3.79 GiB | fetch GiB/h rho0 2.5 rho.25 2.5 rho1 2.5
+  shared CXL cache           total 1.03 GiB, fetch 0.5 GiB/h (any placement)
+
+== 4 nodes x 15 cores, 96/node (6.4/core), LLM x1.0, sync
+  P1 + hand-off              util 0.10 wait/run 0.0100 step 1.004 moves      28 | cache/node 0.72 (peak 1.05) total 2.87 GiB | fetch GiB/h rho0 3.0 rho.25 3.0 rho1 3.0
+  P1 least-loaded            util 0.10 wait/run 0.0100 step 1.004 moves       0 | cache/node 0.72 (peak 1.05) total 2.88 GiB | fetch GiB/h rho0 3.0 rho.25 3.0 rho1 3.0
+  P2 locality                util 0.10 wait/run 0.0121 step 1.004 moves       0 | cache/node 0.23 (peak 0.45) total 0.93 GiB | fetch GiB/h rho0 0.9 rho.25 0.9 rho1 0.9
+  P3 score b20               util 0.10 wait/run 0.0109 step 1.004 moves       0 | cache/node 0.26 (peak 0.45) total 1.03 GiB | fetch GiB/h rho0 1.0 rho.25 1.0 rho1 1.0
+  P3 score b20 + hand-off    util 0.10 wait/run 0.0104 step 1.004 moves      32 | cache/node 0.29 (peak 0.53) total 1.17 GiB | fetch GiB/h rho0 1.0 rho.25 1.1 rho1 1.2
+  P3 score b5                util 0.10 wait/run 0.0104 step 1.004 moves       0 | cache/node 0.31 (peak 0.49) total 1.24 GiB | fetch GiB/h rho0 1.2 rho.25 1.2 rho1 1.2
+  P4 locality + hand-off     util 0.10 wait/run 0.0110 step 1.004 moves      52 | cache/node 0.28 (peak 0.48) total 1.14 GiB | fetch GiB/h rho0 0.9 rho.25 1.0 rho1 1.2
+  P5 fixed home              util 0.10 wait/run 0.0161 step 1.004 moves       0 | cache/node 0.23 (peak 0.45) total 0.93 GiB | fetch GiB/h rho0 0.9 rho.25 0.9 rho1 0.9
+  P5 fixed home + hand-off   util 0.10 wait/run 0.0140 step 1.004 moves     112 | cache/node 0.26 (peak 0.47) total 1.05 GiB | fetch GiB/h rho0 0.9 rho.25 1.0 rho1 1.4
+  POOL ideal                 util 0.10 wait/run 0.0099 step 1.004 moves       0 | cache/node 0.72 (peak 1.05) total 2.88 GiB | fetch GiB/h rho0 3.0 rho.25 3.0 rho1 3.0
+  shared CXL cache           total 0.80 GiB, fetch 0.7 GiB/h (any placement)
+
+== 8 nodes x 15 cores, 64/node (4.3/core), LLM x0.15, async
+  P1 + hand-off              util 0.50 wait/run 0.0034 step 1.047 moves    1709 | cache/node 1.27 (peak 1.42) total 10.16 GiB | fetch GiB/h rho0 10.0 rho.25 10.0 rho1 10.1
+  P1 least-loaded            util 0.50 wait/run 0.0051 step 1.047 moves       0 | cache/node 1.27 (peak 1.42) total 10.19 GiB | fetch GiB/h rho0 10.1 rho.25 10.1 rho1 10.1
+  P2 locality                util 0.46 wait/run 0.2570 step 1.074 moves       0 | cache/node 0.21 (peak 0.48) total 1.67 GiB | fetch GiB/h rho0 0.8 rho.25 0.8 rho1 0.8
+  P3 score b20               util 0.50 wait/run 0.0268 step 1.050 moves       0 | cache/node 0.38 (peak 0.68) total 3.05 GiB | fetch GiB/h rho0 2.2 rho.25 2.2 rho1 2.2
+  P3 score b20 + hand-off    util 0.50 wait/run 0.0036 step 1.047 moves    2098 | cache/node 0.66 (peak 0.99) total 5.25 GiB | fetch GiB/h rho0 5.2 rho.25 5.4 rho1 6.1
+  P3 score b5                util 0.50 wait/run 0.0087 step 1.048 moves       0 | cache/node 0.72 (peak 1.05) total 5.72 GiB | fetch GiB/h rho0 4.6 rho.25 4.6 rho1 4.6
+  P4 locality + hand-off     util 0.50 wait/run 0.0037 step 1.047 moves    2209 | cache/node 0.59 (peak 0.93) total 4.72 GiB | fetch GiB/h rho0 4.8 rho.25 5.1 rho1 6.1
+  P5 fixed home              util 0.48 wait/run 0.1140 step 1.058 moves       0 | cache/node 0.21 (peak 0.42) total 1.67 GiB | fetch GiB/h rho0 0.7 rho.25 0.7 rho1 0.7
+  P5 fixed home + hand-off   util 0.50 wait/run 0.0040 step 1.047 moves    3052 | cache/node 0.30 (peak 0.55) total 2.39 GiB | fetch GiB/h rho0 0.7 rho.25 3.0 rho1 9.0
+  POOL ideal                 util 0.50 wait/run 0.0019 step 1.047 moves       0 | cache/node 1.27 (peak 1.42) total 10.16 GiB | fetch GiB/h rho0 10.1 rho.25 10.1 rho1 10.1
+  shared CXL cache           total 1.38 GiB, fetch 0.6 GiB/h (any placement)
+
+== 8 nodes x 15 cores, 64/node (4.3/core), LLM x0.25, async
+  P1 + hand-off              util 0.32 wait/run 0.0011 step 1.030 moves      30 | cache/node 1.19 (peak 1.40) total 9.51 GiB | fetch GiB/h rho0 10.7 rho.25 10.7 rho1 10.7
+  P1 least-loaded            util 0.32 wait/run 0.0011 step 1.030 moves       0 | cache/node 1.19 (peak 1.41) total 9.48 GiB | fetch GiB/h rho0 10.6 rho.25 10.6 rho1 10.6
+  P2 locality                util 0.32 wait/run 0.0303 step 1.031 moves       0 | cache/node 0.20 (peak 0.45) total 1.63 GiB | fetch GiB/h rho0 0.9 rho.25 0.9 rho1 0.9
+  P3 score b20               util 0.32 wait/run 0.0045 step 1.030 moves       0 | cache/node 0.35 (peak 0.65) total 2.79 GiB | fetch GiB/h rho0 2.3 rho.25 2.3 rho1 2.3
+  P3 score b20 + hand-off    util 0.32 wait/run 0.0015 step 1.030 moves     162 | cache/node 0.37 (peak 0.62) total 2.96 GiB | fetch GiB/h rho0 2.5 rho.25 2.6 rho1 3.0
+  P3 score b5                util 0.32 wait/run 0.0014 step 1.030 moves       0 | cache/node 0.64 (peak 0.93) total 5.10 GiB | fetch GiB/h rho0 4.4 rho.25 4.4 rho1 4.4
+  P4 locality + hand-off     util 0.32 wait/run 0.0016 step 1.030 moves     256 | cache/node 0.28 (peak 0.55) total 2.27 GiB | fetch GiB/h rho0 1.8 rho.25 2.0 rho1 2.6
+  P5 fixed home              util 0.32 wait/run 0.0274 step 1.031 moves       0 | cache/node 0.20 (peak 0.42) total 1.62 GiB | fetch GiB/h rho0 0.8 rho.25 0.8 rho1 0.8
+  P5 fixed home + hand-off   util 0.32 wait/run 0.0019 step 1.030 moves     473 | cache/node 0.23 (peak 0.47) total 1.81 GiB | fetch GiB/h rho0 0.8 rho.25 1.5 rho1 3.5
+  POOL ideal                 util 0.32 wait/run 0.0006 step 1.030 moves       0 | cache/node 1.18 (peak 1.40) total 9.46 GiB | fetch GiB/h rho0 10.6 rho.25 10.6 rho1 10.6
+  shared CXL cache           total 1.34 GiB, fetch 0.7 GiB/h (any placement)
+
+== 8 nodes x 15 cores, 96/node (6.4/core), LLM x0.15, async
+  P1 + hand-off              util 0.75 wait/run 0.0228 step 1.050 moves   42818 | cache/node 1.38 (peak 1.42) total 11.03 GiB | fetch GiB/h rho0 4.5 rho.25 4.6 rho1 4.6
+  P1 least-loaded            util 0.74 wait/run 0.0577 step 1.056 moves       0 | cache/node 1.37 (peak 1.42) total 10.95 GiB | fetch GiB/h rho0 5.3 rho.25 5.3 rho1 5.3
+  P2 locality                util 0.62 wait/run 0.7109 step 1.122 moves       0 | cache/node 0.21 (peak 0.42) total 1.67 GiB | fetch GiB/h rho0 0.2 rho.25 0.2 rho1 0.2
+  P3 score b20               util 0.72 wait/run 0.1583 step 1.068 moves       0 | cache/node 0.45 (peak 0.69) total 3.64 GiB | fetch GiB/h rho0 1.3 rho.25 1.3 rho1 1.3
+  P3 score b20 + hand-off    util 0.75 wait/run 0.0230 step 1.050 moves   42688 | cache/node 1.15 (peak 1.34) total 9.22 GiB | fetch GiB/h rho0 4.6 rho.25 4.6 rho1 4.6
+  P3 score b5                util 0.74 wait/run 0.0802 step 1.058 moves       0 | cache/node 0.86 (peak 1.14) total 6.85 GiB | fetch GiB/h rho0 2.7 rho.25 2.7 rho1 2.7
+  P4 locality + hand-off     util 0.75 wait/run 0.0231 step 1.050 moves   42483 | cache/node 1.14 (peak 1.32) total 9.13 GiB | fetch GiB/h rho0 5.0 rho.25 4.9 rho1 4.7
+  P5 fixed home              util 0.66 wait/run 0.4843 step 1.102 moves       0 | cache/node 0.21 (peak 0.42) total 1.71 GiB | fetch GiB/h rho0 0.2 rho.25 0.2 rho1 0.2
+  P5 fixed home + hand-off   util 0.75 wait/run 0.0237 step 1.050 moves   43536 | cache/node 0.45 (peak 0.66) total 3.58 GiB | fetch GiB/h rho0 0.3 rho.25 2.6 rho1 8.9
+  POOL ideal                 util 0.75 wait/run 0.0097 step 1.048 moves       0 | cache/node 1.37 (peak 1.42) total 10.95 GiB | fetch GiB/h rho0 5.6 rho.25 5.6 rho1 5.6
+  shared CXL cache           total 1.41 GiB, fetch 0.2 GiB/h (any placement)
+
+== 8 nodes x 15 cores, 96/node (6.4/core), LLM x0.15, sync
+  P1 + hand-off              util 0.48 wait/run 0.0352 step 1.108 moves   18062 | cache/node 1.25 (peak 1.42) total 9.96 GiB | fetch GiB/h rho0 8.9 rho.25 9.0 rho1 9.3
+  P1 least-loaded            util 0.48 wait/run 0.0625 step 1.117 moves       0 | cache/node 1.21 (peak 1.42) total 9.68 GiB | fetch GiB/h rho0 11.0 rho.25 11.0 rho1 11.0
+  P2 locality                util 0.40 wait/run 0.5831 step 1.255 moves       0 | cache/node 0.20 (peak 0.50) total 1.57 GiB | fetch GiB/h rho0 0.9 rho.25 0.9 rho1 0.9
+  P3 score b20               util 0.44 wait/run 0.2804 step 1.192 moves       0 | cache/node 0.27 (peak 0.58) total 2.14 GiB | fetch GiB/h rho0 1.5 rho.25 1.5 rho1 1.5
+  P3 score b20 + hand-off    util 0.48 wait/run 0.0356 step 1.107 moves   18512 | cache/node 0.94 (peak 1.26) total 7.51 GiB | fetch GiB/h rho0 7.0 rho.25 7.5 rho1 8.8
+  P3 score b5                util 0.44 wait/run 0.2408 step 1.189 moves       0 | cache/node 0.35 (peak 0.63) total 2.76 GiB | fetch GiB/h rho0 1.7 rho.25 1.7 rho1 1.7
+  P4 locality + hand-off     util 0.48 wait/run 0.0357 step 1.108 moves   18544 | cache/node 0.94 (peak 1.24) total 7.50 GiB | fetch GiB/h rho0 7.1 rho.25 7.6 rho1 9.0
+  P5 fixed home              util 0.41 wait/run 0.4574 step 1.232 moves       0 | cache/node 0.20 (peak 0.42) total 1.58 GiB | fetch GiB/h rho0 0.9 rho.25 0.9 rho1 0.9
+  P5 fixed home + hand-off   util 0.48 wait/run 0.0426 step 1.108 moves   21154 | cache/node 0.42 (peak 0.65) total 3.33 GiB | fetch GiB/h rho0 1.0 rho.25 3.9 rho1 12.0
+  POOL ideal                 util 0.48 wait/run 0.0261 step 1.106 moves       0 | cache/node 1.21 (peak 1.42) total 9.68 GiB | fetch GiB/h rho0 11.9 rho.25 11.9 rho1 11.9
+  shared CXL cache           total 1.33 GiB, fetch 0.9 GiB/h (any placement)
+
+== 8 nodes x 15 cores, 96/node (6.4/core), LLM x0.25, async
+  P1 + hand-off              util 0.49 wait/run 0.0031 step 1.030 moves    1466 | cache/node 1.31 (peak 1.42) total 10.51 GiB | fetch GiB/h rho0 7.2 rho.25 7.3 rho1 7.3
+  P1 least-loaded            util 0.49 wait/run 0.0044 step 1.030 moves       0 | cache/node 1.31 (peak 1.42) total 10.50 GiB | fetch GiB/h rho0 7.2 rho.25 7.2 rho1 7.2
+  P2 locality                util 0.46 wait/run 0.1884 step 1.040 moves       0 | cache/node 0.21 (peak 0.48) total 1.66 GiB | fetch GiB/h rho0 0.4 rho.25 0.4 rho1 0.4
+  P3 score b20               util 0.48 wait/run 0.0237 step 1.031 moves       0 | cache/node 0.43 (peak 0.70) total 3.41 GiB | fetch GiB/h rho0 1.8 rho.25 1.8 rho1 1.8
+  P3 score b20 + hand-off    util 0.49 wait/run 0.0033 step 1.030 moves    1732 | cache/node 0.68 (peak 1.02) total 5.43 GiB | fetch GiB/h rho0 3.5 rho.25 3.8 rho1 4.6
+  P3 score b5                util 0.48 wait/run 0.0089 step 1.030 moves       0 | cache/node 0.79 (peak 1.10) total 6.31 GiB | fetch GiB/h rho0 3.0 rho.25 3.0 rho1 3.0
+  P4 locality + hand-off     util 0.49 wait/run 0.0034 step 1.030 moves    1876 | cache/node 0.59 (peak 0.89) total 4.71 GiB | fetch GiB/h rho0 3.6 rho.25 3.9 rho1 4.9
+  P5 fixed home              util 0.47 wait/run 0.1183 step 1.037 moves       0 | cache/node 0.21 (peak 0.42) total 1.69 GiB | fetch GiB/h rho0 0.4 rho.25 0.4 rho1 0.4
+  P5 fixed home + hand-off   util 0.49 wait/run 0.0037 step 1.030 moves    2598 | cache/node 0.30 (peak 0.55) total 2.37 GiB | fetch GiB/h rho0 0.4 rho.25 2.4 rho1 8.1
+  POOL ideal                 util 0.49 wait/run 0.0017 step 1.030 moves       0 | cache/node 1.31 (peak 1.42) total 10.48 GiB | fetch GiB/h rho0 7.4 rho.25 7.4 rho1 7.4
+  shared CXL cache           total 1.40 GiB, fetch 0.3 GiB/h (any placement)
+
+== 8 nodes x 15 cores, 96/node (6.4/core), LLM x0.25, sync
+  P1 + hand-off              util 0.34 wait/run 0.0145 step 1.051 moves    1450 | cache/node 1.15 (peak 1.42) total 9.22 GiB | fetch GiB/h rho0 9.2 rho.25 9.3 rho1 9.4
+  P1 least-loaded            util 0.34 wait/run 0.0173 step 1.052 moves       0 | cache/node 1.15 (peak 1.42) total 9.19 GiB | fetch GiB/h rho0 9.3 rho.25 9.3 rho1 9.3
+  P2 locality                util 0.31 wait/run 0.2780 step 1.095 moves       0 | cache/node 0.19 (peak 0.47) total 1.53 GiB | fetch GiB/h rho0 0.8 rho.25 0.8 rho1 0.8
+  P3 score b20               util 0.32 wait/run 0.1234 step 1.067 moves       0 | cache/node 0.25 (peak 0.57) total 2.02 GiB | fetch GiB/h rho0 1.3 rho.25 1.3 rho1 1.3
+  P3 score b20 + hand-off    util 0.34 wait/run 0.0149 step 1.052 moves    1806 | cache/node 0.63 (peak 1.06) total 5.05 GiB | fetch GiB/h rho0 4.3 rho.25 4.7 rho1 5.8
+  P3 score b5                util 0.33 wait/run 0.0763 step 1.062 moves       0 | cache/node 0.34 (peak 0.62) total 2.71 GiB | fetch GiB/h rho0 1.6 rho.25 1.6 rho1 1.6
+  P4 locality + hand-off     util 0.34 wait/run 0.0149 step 1.052 moves    1910 | cache/node 0.63 (peak 1.04) total 5.05 GiB | fetch GiB/h rho0 4.6 rho.25 5.0 rho1 6.1
+  P5 fixed home              util 0.32 wait/run 0.2062 step 1.069 moves       0 | cache/node 0.19 (peak 0.42) total 1.55 GiB | fetch GiB/h rho0 0.9 rho.25 0.9 rho1 0.9
+  P5 fixed home + hand-off   util 0.34 wait/run 0.0206 step 1.051 moves    3288 | cache/node 0.32 (peak 0.61) total 2.53 GiB | fetch GiB/h rho0 0.9 rho.25 3.5 rho1 10.5
+  POOL ideal                 util 0.34 wait/run 0.0130 step 1.051 moves       0 | cache/node 1.15 (peak 1.42) total 9.19 GiB | fetch GiB/h rho0 9.3 rho.25 9.3 rho1 9.3
+  shared CXL cache           total 1.29 GiB, fetch 0.7 GiB/h (any placement)
+
+== 8 nodes x 15 cores, 96/node (6.4/core), LLM x1.0, async
+  P1 + hand-off              util 0.13 wait/run 0.0003 step 1.008 moves       0 | cache/node 1.11 (peak 1.39) total 8.88 GiB | fetch GiB/h rho0 5.2 rho.25 5.2 rho1 5.2
+  P1 least-loaded            util 0.13 wait/run 0.0003 step 1.008 moves       0 | cache/node 1.11 (peak 1.39) total 8.88 GiB | fetch GiB/h rho0 5.2 rho.25 5.2 rho1 5.2
+  P2 locality                util 0.13 wait/run 0.0011 step 1.008 moves       0 | cache/node 0.20 (peak 0.43) total 1.56 GiB | fetch GiB/h rho0 0.4 rho.25 0.4 rho1 0.4
+  P3 score b20               util 0.13 wait/run 0.0004 step 1.008 moves       0 | cache/node 0.32 (peak 0.63) total 2.58 GiB | fetch GiB/h rho0 1.1 rho.25 1.1 rho1 1.1
+  P3 score b20 + hand-off    util 0.13 wait/run 0.0004 step 1.008 moves       0 | cache/node 0.32 (peak 0.63) total 2.58 GiB | fetch GiB/h rho0 1.1 rho.25 1.1 rho1 1.1
+  P3 score b5                util 0.13 wait/run 0.0003 step 1.008 moves       0 | cache/node 0.59 (peak 0.90) total 4.70 GiB | fetch GiB/h rho0 2.2 rho.25 2.2 rho1 2.2
+  P4 locality + hand-off     util 0.13 wait/run 0.0005 step 1.008 moves       6 | cache/node 0.20 (peak 0.43) total 1.61 GiB | fetch GiB/h rho0 0.5 rho.25 0.5 rho1 0.5
+  P5 fixed home              util 0.13 wait/run 0.0011 step 1.008 moves       0 | cache/node 0.20 (peak 0.42) total 1.56 GiB | fetch GiB/h rho0 0.4 rho.25 0.4 rho1 0.4
+  P5 fixed home + hand-off   util 0.13 wait/run 0.0006 step 1.008 moves      12 | cache/node 0.20 (peak 0.42) total 1.57 GiB | fetch GiB/h rho0 0.4 rho.25 0.5 rho1 0.6
+  POOL ideal                 util 0.13 wait/run 0.0002 step 1.008 moves       0 | cache/node 1.11 (peak 1.39) total 8.88 GiB | fetch GiB/h rho0 5.2 rho.25 5.2 rho1 5.2
+  shared CXL cache           total 1.30 GiB, fetch 0.4 GiB/h (any placement)
+
+== 8 nodes x 15 cores, 96/node (6.4/core), LLM x1.0, sync
+  P1 + hand-off              util 0.10 wait/run 0.0101 step 1.004 moves      69 | cache/node 0.91 (peak 1.26) total 7.28 GiB | fetch GiB/h rho0 7.6 rho.25 7.6 rho1 7.6
+  P1 least-loaded            util 0.10 wait/run 0.0102 step 1.004 moves       0 | cache/node 0.92 (peak 1.26) total 7.32 GiB | fetch GiB/h rho0 7.7 rho.25 7.7 rho1 7.7
+  P2 locality                util 0.10 wait/run 0.0240 step 1.004 moves       0 | cache/node 0.17 (peak 0.44) total 1.34 GiB | fetch GiB/h rho0 1.2 rho.25 1.2 rho1 1.2
+  P3 score b20               util 0.10 wait/run 0.0135 step 1.004 moves       0 | cache/node 0.20 (peak 0.49) total 1.62 GiB | fetch GiB/h rho0 1.4 rho.25 1.4 rho1 1.4
+  P3 score b20 + hand-off    util 0.10 wait/run 0.0113 step 1.004 moves     124 | cache/node 0.23 (peak 0.51) total 1.85 GiB | fetch GiB/h rho0 1.5 rho.25 1.7 rho1 2.2
+  P3 score b5                util 0.10 wait/run 0.0115 step 1.004 moves       0 | cache/node 0.25 (peak 0.49) total 2.01 GiB | fetch GiB/h rho0 1.7 rho.25 1.7 rho1 1.7
+  P4 locality + hand-off     util 0.10 wait/run 0.0115 step 1.004 moves     121 | cache/node 0.23 (peak 0.50) total 1.80 GiB | fetch GiB/h rho0 1.5 rho.25 1.7 rho1 2.1
+  P5 fixed home              util 0.10 wait/run 0.0224 step 1.004 moves       0 | cache/node 0.17 (peak 0.40) total 1.35 GiB | fetch GiB/h rho0 1.2 rho.25 1.2 rho1 1.2
+  P5 fixed home + hand-off   util 0.10 wait/run 0.0153 step 1.004 moves     352 | cache/node 0.22 (peak 0.44) total 1.74 GiB | fetch GiB/h rho0 1.2 rho.25 1.7 rho1 3.0
+  POOL ideal                 util 0.10 wait/run 0.0100 step 1.004 moves       0 | cache/node 0.92 (peak 1.26) total 7.32 GiB | fetch GiB/h rho0 7.7 rho.25 7.7 rho1 7.7
+  shared CXL cache           total 1.12 GiB, fetch 1.0 GiB/h (any placement)
+
+== 8 nodes x 15 cores, 128/node (8.5/core), LLM x0.15, async
+  P1 + hand-off              util 0.95 wait/run 0.3202 step 1.093 moves   84762 | cache/node 1.41 (peak 1.42) total 11.24 GiB | fetch GiB/h rho0 2.0 rho.25 2.0 rho1 2.0
+  P1 least-loaded            util 0.92 wait/run 0.4082 step 1.107 moves       0 | cache/node 1.40 (peak 1.42) total 11.19 GiB | fetch GiB/h rho0 2.8 rho.25 2.8 rho1 2.8
+  P2 locality                util 0.73 wait/run 1.4294 step 1.216 moves       0 | cache/node 0.21 (peak 0.40) total 1.71 GiB | fetch GiB/h rho0 0.1 rho.25 0.1 rho1 0.1
+  P3 score b20               util 0.88 wait/run 0.5669 step 1.125 moves       0 | cache/node 0.50 (peak 0.75) total 4.00 GiB | fetch GiB/h rho0 0.8 rho.25 0.8 rho1 0.8
+  P3 score b20 + hand-off    util 0.95 wait/run 0.3207 step 1.093 moves   84534 | cache/node 1.29 (peak 1.41) total 10.36 GiB | fetch GiB/h rho0 2.7 rho.25 2.5 rho1 2.1
+  P3 score b5                util 0.91 wait/run 0.4462 step 1.114 moves       0 | cache/node 0.96 (peak 1.21) total 7.70 GiB | fetch GiB/h rho0 1.9 rho.25 1.9 rho1 1.9
+  P4 locality + hand-off     util 0.95 wait/run 0.3213 step 1.093 moves   84470 | cache/node 1.29 (peak 1.42) total 10.29 GiB | fetch GiB/h rho0 2.7 rho.25 2.5 rho1 2.1
+  P5 fixed home              util 0.76 wait/run 1.2149 step 1.188 moves       0 | cache/node 0.21 (peak 0.42) total 1.71 GiB | fetch GiB/h rho0 0.1 rho.25 0.1 rho1 0.1
+  P5 fixed home + hand-off   util 0.95 wait/run 0.3241 step 1.093 moves   86916 | cache/node 0.48 (peak 0.67) total 3.84 GiB | fetch GiB/h rho0 0.1 rho.25 1.6 rho1 5.9
+  POOL ideal                 util 0.95 wait/run 0.2776 step 1.086 moves       0 | cache/node 1.40 (peak 1.42) total 11.19 GiB | fetch GiB/h rho0 3.0 rho.25 3.0 rho1 3.0
+  shared CXL cache           total 1.42 GiB, fetch 0.0 GiB/h (any placement)
+
+== 8 nodes x 15 cores, 128/node (8.5/core), LLM x0.25, async
+  P1 + hand-off              util 0.65 wait/run 0.0098 step 1.031 moves   16574 | cache/node 1.38 (peak 1.42) total 11.04 GiB | fetch GiB/h rho0 3.7 rho.25 3.7 rho1 3.8
+  P1 least-loaded            util 0.65 wait/run 0.0260 step 1.032 moves       0 | cache/node 1.37 (peak 1.42) total 10.94 GiB | fetch GiB/h rho0 4.4 rho.25 4.4 rho1 4.4
+  P2 locality                util 0.59 wait/run 0.5196 step 1.065 moves       0 | cache/node 0.22 (peak 0.39) total 1.72 GiB | fetch GiB/h rho0 0.2 rho.25 0.2 rho1 0.2
+  P3 score b20               util 0.64 wait/run 0.1160 step 1.039 moves       0 | cache/node 0.45 (peak 0.71) total 3.62 GiB | fetch GiB/h rho0 0.9 rho.25 0.9 rho1 0.9
+  P3 score b20 + hand-off    util 0.65 wait/run 0.0100 step 1.031 moves   16706 | cache/node 1.07 (peak 1.32) total 8.58 GiB | fetch GiB/h rho0 3.9 rho.25 3.8 rho1 3.8
+  P3 score b5                util 0.65 wait/run 0.0401 step 1.033 moves       0 | cache/node 0.91 (peak 1.16) total 7.31 GiB | fetch GiB/h rho0 2.3 rho.25 2.3 rho1 2.3
+  P4 locality + hand-off     util 0.65 wait/run 0.0100 step 1.031 moves   16534 | cache/node 1.05 (peak 1.27) total 8.39 GiB | fetch GiB/h rho0 3.9 rho.25 3.8 rho1 3.8
+  P5 fixed home              util 0.60 wait/run 0.3197 step 1.053 moves       0 | cache/node 0.21 (peak 0.42) total 1.70 GiB | fetch GiB/h rho0 0.2 rho.25 0.2 rho1 0.2
+  P5 fixed home + hand-off   util 0.65 wait/run 0.0104 step 1.031 moves   17322 | cache/node 0.41 (peak 0.62) total 3.28 GiB | fetch GiB/h rho0 0.2 rho.25 2.6 rho1 9.0
+  POOL ideal                 util 0.66 wait/run 0.0048 step 1.030 moves       0 | cache/node 1.37 (peak 1.42) total 10.96 GiB | fetch GiB/h rho0 4.3 rho.25 4.3 rho1 4.3
+  shared CXL cache           total 1.41 GiB, fetch 0.1 GiB/h (any placement)
+
+== 8 nodes x 15 cores, 160/node (10.7/core), LLM x0.15, async
+  P1 + hand-off              util 0.97 wait/run 1.1844 step 1.204 moves    8501 | cache/node 1.41 (peak 1.42) total 11.26 GiB | fetch GiB/h rho0 1.7 rho.25 1.7 rho1 1.7
+  P1 least-loaded            util 0.97 wait/run 1.1807 step 1.205 moves       0 | cache/node 1.41 (peak 1.42) total 11.26 GiB | fetch GiB/h rho0 1.7 rho.25 1.7 rho1 1.7
+  P2 locality                util 0.75 wait/run 2.7986 step 1.341 moves       0 | cache/node 0.21 (peak 0.39) total 1.68 GiB | fetch GiB/h rho0 0.1 rho.25 0.1 rho1 0.1
+  P3 score b20               util 0.95 wait/run 1.2331 step 1.209 moves       0 | cache/node 0.52 (peak 0.81) total 4.17 GiB | fetch GiB/h rho0 0.6 rho.25 0.6 rho1 0.6
+  P3 score b20 + hand-off    util 0.97 wait/run 1.1735 step 1.205 moves    8877 | cache/node 1.17 (peak 1.37) total 9.36 GiB | fetch GiB/h rho0 1.1 rho.25 1.0 rho1 0.9
+  P3 score b5                util 0.96 wait/run 1.1694 step 1.207 moves       0 | cache/node 1.01 (peak 1.25) total 8.04 GiB | fetch GiB/h rho0 1.3 rho.25 1.3 rho1 1.3
+  P4 locality + hand-off     util 0.97 wait/run 1.1755 step 1.205 moves    9530 | cache/node 1.17 (peak 1.35) total 9.36 GiB | fetch GiB/h rho0 1.3 rho.25 1.3 rho1 1.1
+  P5 fixed home              util 0.81 wait/run 2.1391 step 1.291 moves       0 | cache/node 0.21 (peak 0.42) total 1.71 GiB | fetch GiB/h rho0 0.1 rho.25 0.1 rho1 0.1
+  P5 fixed home + hand-off   util 0.97 wait/run 1.1883 step 1.200 moves   16236 | cache/node 0.39 (peak 0.64) total 3.14 GiB | fetch GiB/h rho0 0.0 rho.25 2.4 rho1 8.7
+  POOL ideal                 util 0.97 wait/run 1.1895 step 1.201 moves       0 | cache/node 1.41 (peak 1.42) total 11.27 GiB | fetch GiB/h rho0 1.7 rho.25 1.7 rho1 1.7
+  shared CXL cache           total 1.42 GiB, fetch 0.0 GiB/h (any placement)
+
+== 8 nodes x 15 cores, 160/node (10.7/core), LLM x0.25, async
+  P1 + hand-off              util 0.81 wait/run 0.0486 step 1.034 moves   74352 | cache/node 1.40 (peak 1.42) total 11.24 GiB | fetch GiB/h rho0 1.7 rho.25 1.7 rho1 1.7
+  P1 least-loaded            util 0.80 wait/run 0.1268 step 1.041 moves       0 | cache/node 1.40 (peak 1.42) total 11.17 GiB | fetch GiB/h rho0 2.5 rho.25 2.5 rho1 2.5
+  P2 locality                util 0.56 wait/run 2.5060 step 1.204 moves       0 | cache/node 0.21 (peak 0.46) total 1.70 GiB | fetch GiB/h rho0 0.2 rho.25 0.2 rho1 0.2
+  P3 score b20               util 0.77 wait/run 0.2850 step 1.053 moves       0 | cache/node 0.49 (peak 0.78) total 3.94 GiB | fetch GiB/h rho0 0.7 rho.25 0.7 rho1 0.7
+  P3 score b20 + hand-off    util 0.81 wait/run 0.0489 step 1.034 moves   74264 | cache/node 1.25 (peak 1.40) total 10.03 GiB | fetch GiB/h rho0 3.0 rho.25 2.8 rho1 2.4
+  P3 score b5                util 0.80 wait/run 0.1539 step 1.043 moves       0 | cache/node 0.97 (peak 1.20) total 7.73 GiB | fetch GiB/h rho0 1.7 rho.25 1.7 rho1 1.7
+  P4 locality + hand-off     util 0.81 wait/run 0.0490 step 1.034 moves   74040 | cache/node 1.24 (peak 1.39) total 9.95 GiB | fetch GiB/h rho0 3.2 rho.25 3.0 rho1 2.5
+  P5 fixed home              util 0.70 wait/run 0.7166 step 1.084 moves       0 | cache/node 0.21 (peak 0.42) total 1.71 GiB | fetch GiB/h rho0 0.1 rho.25 0.1 rho1 0.1
+  P5 fixed home + hand-off   util 0.81 wait/run 0.0496 step 1.034 moves   75192 | cache/node 0.47 (peak 0.67) total 3.78 GiB | fetch GiB/h rho0 0.1 rho.25 1.6 rho1 5.5
+  POOL ideal                 util 0.82 wait/run 0.0208 step 1.032 moves       0 | cache/node 1.40 (peak 1.42) total 11.17 GiB | fetch GiB/h rho0 2.6 rho.25 2.6 rho1 2.6
+  shared CXL cache           total 1.42 GiB, fetch 0.1 GiB/h (any placement)
+
+== 16 nodes x 15 cores, 96/node (6.4/core), LLM x0.15, async
+  P1 + hand-off              util 0.75 wait/run 0.0188 step 1.050 moves   79282 | cache/node 1.40 (peak 1.42) total 22.46 GiB | fetch GiB/h rho0 4.1 rho.25 4.1 rho1 4.1
+  P1 least-loaded            util 0.75 wait/run 0.0548 step 1.055 moves       0 | cache/node 1.39 (peak 1.42) total 22.23 GiB | fetch GiB/h rho0 7.2 rho.25 7.2 rho1 7.2
+  P2 locality                util 0.53 wait/run 1.6385 step 1.212 moves       0 | cache/node 0.11 (peak 0.34) total 1.79 GiB | fetch GiB/h rho0 0.0 rho.25 0.0 rho1 0.0
+  P3 score b20               util 0.72 wait/run 0.1908 step 1.072 moves       0 | cache/node 0.32 (peak 0.66) total 5.08 GiB | fetch GiB/h rho0 0.7 rho.25 0.7 rho1 0.7
+  P3 score b20 + hand-off    util 0.75 wait/run 0.0191 step 1.050 moves   78694 | cache/node 1.20 (peak 1.35) total 19.14 GiB | fetch GiB/h rho0 5.6 rho.25 5.4 rho1 4.8
+  P3 score b5                util 0.74 wait/run 0.0792 step 1.059 moves       0 | cache/node 0.72 (peak 1.03) total 11.44 GiB | fetch GiB/h rho0 2.2 rho.25 2.2 rho1 2.2
+  P4 locality + hand-off     util 0.75 wait/run 0.0191 step 1.050 moves   78433 | cache/node 1.19 (peak 1.36) total 19.04 GiB | fetch GiB/h rho0 6.3 rho.25 6.1 rho1 5.4
+  P5 fixed home              util 0.60 wait/run 0.8349 step 1.131 moves       0 | cache/node 0.11 (peak 0.32) total 1.80 GiB | fetch GiB/h rho0 0.0 rho.25 0.0 rho1 0.0
+  P5 fixed home + hand-off   util 0.75 wait/run 0.0202 step 1.050 moves   80964 | cache/node 0.38 (peak 0.58) total 6.01 GiB | fetch GiB/h rho0 0.0 rho.25 4.2 rho1 14.8
+  POOL ideal                 util 0.75 wait/run 0.0080 step 1.048 moves       0 | cache/node 1.39 (peak 1.42) total 22.23 GiB | fetch GiB/h rho0 7.0 rho.25 7.0 rho1 7.0
+  shared CXL cache           total 1.42 GiB, fetch 0.0 GiB/h (any placement)
+
+== 16 nodes x 15 cores, 96/node (6.4/core), LLM x0.15, sync
+  P1 + hand-off              util 0.48 wait/run 0.0279 step 1.098 moves   36554 | cache/node 1.33 (peak 1.42) total 21.28 GiB | fetch GiB/h rho0 11.3 rho.25 11.4 rho1 11.4
+  P1 least-loaded            util 0.48 wait/run 0.0558 step 1.109 moves       0 | cache/node 1.28 (peak 1.42) total 20.44 GiB | fetch GiB/h rho0 18.2 rho.25 18.2 rho1 18.2
+  P2 locality                util 0.35 wait/run 0.8849 step 1.344 moves       0 | cache/node 0.11 (peak 0.34) total 1.76 GiB | fetch GiB/h rho0 0.3 rho.25 0.3 rho1 0.3
+  P3 score b20               util 0.39 wait/run 0.4363 step 1.258 moves       0 | cache/node 0.18 (peak 0.44) total 2.82 GiB | fetch GiB/h rho0 0.9 rho.25 0.9 rho1 0.9
+  P3 score b20 + hand-off    util 0.48 wait/run 0.0283 step 1.098 moves   37301 | cache/node 1.08 (peak 1.34) total 17.23 GiB | fetch GiB/h rho0 10.9 rho.25 11.1 rho1 11.8
+  P3 score b5                util 0.40 wait/run 0.3102 step 1.247 moves       0 | cache/node 0.24 (peak 0.51) total 3.80 GiB | fetch GiB/h rho0 0.8 rho.25 0.8 rho1 0.8
+  P4 locality + hand-off     util 0.48 wait/run 0.0284 step 1.098 moves   37434 | cache/node 1.08 (peak 1.36) total 17.20 GiB | fetch GiB/h rho0 11.0 rho.25 11.3 rho1 12.2
+  P5 fixed home              util 0.38 wait/run 0.6093 step 1.269 moves       0 | cache/node 0.11 (peak 0.32) total 1.78 GiB | fetch GiB/h rho0 0.2 rho.25 0.2 rho1 0.2
+  P5 fixed home + hand-off   util 0.48 wait/run 0.0384 step 1.099 moves   46542 | cache/node 0.38 (peak 0.58) total 6.09 GiB | fetch GiB/h rho0 0.2 rho.25 5.8 rho1 20.4
+  POOL ideal                 util 0.48 wait/run 0.0185 step 1.096 moves       0 | cache/node 1.28 (peak 1.42) total 20.48 GiB | fetch GiB/h rho0 18.2 rho.25 18.2 rho1 18.2
+  shared CXL cache           total 1.41 GiB, fetch 0.2 GiB/h (any placement)
+
+== 16 nodes x 15 cores, 96/node (6.4/core), LLM x0.25, async
+  P1 + hand-off              util 0.49 wait/run 0.0031 step 1.030 moves    2712 | cache/node 1.35 (peak 1.42) total 21.66 GiB | fetch GiB/h rho0 10.2 rho.25 10.2 rho1 10.3
+  P1 least-loaded            util 0.49 wait/run 0.0045 step 1.030 moves       0 | cache/node 1.35 (peak 1.42) total 21.59 GiB | fetch GiB/h rho0 10.7 rho.25 10.7 rho1 10.7
+  P2 locality                util 0.41 wait/run 0.7813 step 1.075 moves       0 | cache/node 0.11 (peak 0.31) total 1.79 GiB | fetch GiB/h rho0 0.0 rho.25 0.0 rho1 0.0
+  P3 score b20               util 0.49 wait/run 0.0507 step 1.034 moves       0 | cache/node 0.30 (peak 0.58) total 4.82 GiB | fetch GiB/h rho0 1.0 rho.25 1.0 rho1 1.0
+  P3 score b20 + hand-off    util 0.49 wait/run 0.0033 step 1.030 moves    3438 | cache/node 0.74 (peak 1.06) total 11.79 GiB | fetch GiB/h rho0 6.2 rho.25 6.3 rho1 6.7
+  P3 score b5                util 0.49 wait/run 0.0085 step 1.030 moves       0 | cache/node 0.67 (peak 0.94) total 10.67 GiB | fetch GiB/h rho0 2.6 rho.25 2.6 rho1 2.6
+  P4 locality + hand-off     util 0.49 wait/run 0.0034 step 1.030 moves    3868 | cache/node 0.65 (peak 0.99) total 10.35 GiB | fetch GiB/h rho0 6.5 rho.25 6.9 rho1 8.0
+  P5 fixed home              util 0.45 wait/run 0.2776 step 1.047 moves       0 | cache/node 0.11 (peak 0.32) total 1.79 GiB | fetch GiB/h rho0 0.0 rho.25 0.0 rho1 0.0
+  P5 fixed home + hand-off   util 0.49 wait/run 0.0038 step 1.030 moves    5530 | cache/node 0.20 (peak 0.48) total 3.27 GiB | fetch GiB/h rho0 0.0 rho.25 4.2 rho1 15.4
+  POOL ideal                 util 0.49 wait/run 0.0016 step 1.030 moves       0 | cache/node 1.35 (peak 1.42) total 21.64 GiB | fetch GiB/h rho0 10.4 rho.25 10.4 rho1 10.4
+  shared CXL cache           total 1.42 GiB, fetch 0.0 GiB/h (any placement)
+
+== 16 nodes x 15 cores, 96/node (6.4/core), LLM x0.25, sync
+  P1 + hand-off              util 0.33 wait/run 0.0142 step 1.064 moves    2536 | cache/node 1.24 (peak 1.42) total 19.81 GiB | fetch GiB/h rho0 16.2 rho.25 16.3 rho1 16.5
+  P1 least-loaded            util 0.33 wait/run 0.0165 step 1.065 moves       0 | cache/node 1.23 (peak 1.42) total 19.67 GiB | fetch GiB/h rho0 16.5 rho.25 16.5 rho1 16.5
+  P2 locality                util 0.29 wait/run 0.4226 step 1.138 moves       0 | cache/node 0.11 (peak 0.34) total 1.75 GiB | fetch GiB/h rho0 0.5 rho.25 0.5 rho1 0.5
+  P3 score b20               util 0.31 wait/run 0.2065 step 1.093 moves       0 | cache/node 0.17 (peak 0.44) total 2.69 GiB | fetch GiB/h rho0 0.8 rho.25 0.8 rho1 0.8
+  P3 score b20 + hand-off    util 0.33 wait/run 0.0147 step 1.065 moves    3497 | cache/node 0.74 (peak 1.17) total 11.91 GiB | fetch GiB/h rho0 8.5 rho.25 9.1 rho1 10.7
+  P3 score b5                util 0.32 wait/run 0.1172 step 1.087 moves       0 | cache/node 0.23 (peak 0.49) total 3.63 GiB | fetch GiB/h rho0 0.9 rho.25 0.9 rho1 0.9
+  P4 locality + hand-off     util 0.33 wait/run 0.0148 step 1.065 moves    3513 | cache/node 0.72 (peak 1.16) total 11.56 GiB | fetch GiB/h rho0 7.8 rho.25 8.5 rho1 10.5
+  P5 fixed home              util 0.30 wait/run 0.3123 step 1.095 moves       0 | cache/node 0.11 (peak 0.32) total 1.77 GiB | fetch GiB/h rho0 0.4 rho.25 0.4 rho1 0.4
+  P5 fixed home + hand-off   util 0.33 wait/run 0.0227 step 1.065 moves    8409 | cache/node 0.28 (peak 0.54) total 4.53 GiB | fetch GiB/h rho0 0.4 rho.25 7.3 rho1 25.9
+  POOL ideal                 util 0.33 wait/run 0.0128 step 1.064 moves       0 | cache/node 1.23 (peak 1.42) total 19.67 GiB | fetch GiB/h rho0 16.5 rho.25 16.5 rho1 16.5
+  shared CXL cache           total 1.41 GiB, fetch 0.2 GiB/h (any placement)
+
+== 16 nodes x 15 cores, 96/node (6.4/core), LLM x1.0, async
+  P1 + hand-off              util 0.13 wait/run 0.0003 step 1.008 moves       0 | cache/node 1.21 (peak 1.41) total 19.30 GiB | fetch GiB/h rho0 9.5 rho.25 9.5 rho1 9.5
+  P1 least-loaded            util 0.13 wait/run 0.0003 step 1.008 moves       0 | cache/node 1.21 (peak 1.41) total 19.30 GiB | fetch GiB/h rho0 9.5 rho.25 9.5 rho1 9.5
+  P2 locality                util 0.13 wait/run 0.0134 step 1.008 moves       0 | cache/node 0.11 (peak 0.33) total 1.77 GiB | fetch GiB/h rho0 0.1 rho.25 0.1 rho1 0.1
+  P3 score b20               util 0.13 wait/run 0.0004 step 1.008 moves       0 | cache/node 0.25 (peak 0.48) total 3.93 GiB | fetch GiB/h rho0 1.0 rho.25 1.0 rho1 1.0
+  P3 score b20 + hand-off    util 0.13 wait/run 0.0004 step 1.008 moves       2 | cache/node 0.24 (peak 0.47) total 3.82 GiB | fetch GiB/h rho0 0.9 rho.25 0.9 rho1 0.9
+  P3 score b5                util 0.13 wait/run 0.0003 step 1.008 moves       0 | cache/node 0.47 (peak 0.74) total 7.57 GiB | fetch GiB/h rho0 2.2 rho.25 2.2 rho1 2.2
+  P4 locality + hand-off     util 0.13 wait/run 0.0007 step 1.008 moves      45 | cache/node 0.13 (peak 0.35) total 2.01 GiB | fetch GiB/h rho0 0.3 rho.25 0.4 rho1 0.5
+  P5 fixed home              util 0.13 wait/run 0.0015 step 1.008 moves       0 | cache/node 0.11 (peak 0.32) total 1.78 GiB | fetch GiB/h rho0 0.1 rho.25 0.1 rho1 0.1
+  P5 fixed home + hand-off   util 0.13 wait/run 0.0007 step 1.008 moves      40 | cache/node 0.11 (peak 0.34) total 1.82 GiB | fetch GiB/h rho0 0.1 rho.25 0.3 rho1 0.7
+  POOL ideal                 util 0.13 wait/run 0.0002 step 1.008 moves       0 | cache/node 1.20 (peak 1.40) total 19.25 GiB | fetch GiB/h rho0 9.6 rho.25 9.6 rho1 9.6
+  shared CXL cache           total 1.41 GiB, fetch 0.1 GiB/h (any placement)
+
+== 16 nodes x 15 cores, 96/node (6.4/core), LLM x1.0, sync
+  P1 + hand-off              util 0.09 wait/run 0.0103 step 1.004 moves     196 | cache/node 0.97 (peak 1.37) total 15.52 GiB | fetch GiB/h rho0 16.4 rho.25 16.4 rho1 16.5
+  P1 least-loaded            util 0.09 wait/run 0.0103 step 1.004 moves       0 | cache/node 0.97 (peak 1.38) total 15.59 GiB | fetch GiB/h rho0 16.3 rho.25 16.3 rho1 16.3
+  P2 locality                util 0.09 wait/run 0.0543 step 1.005 moves       0 | cache/node 0.10 (peak 0.36) total 1.56 GiB | fetch GiB/h rho0 1.4 rho.25 1.4 rho1 1.4
+  P3 score b20               util 0.09 wait/run 0.0315 step 1.004 moves       0 | cache/node 0.13 (peak 0.43) total 2.10 GiB | fetch GiB/h rho0 1.9 rho.25 1.9 rho1 1.9
+  P3 score b20 + hand-off    util 0.09 wait/run 0.0118 step 1.004 moves     357 | cache/node 0.17 (peak 0.48) total 2.71 GiB | fetch GiB/h rho0 2.1 rho.25 2.7 rho1 4.3
+  P3 score b5                util 0.09 wait/run 0.0191 step 1.004 moves       0 | cache/node 0.18 (peak 0.44) total 2.86 GiB | fetch GiB/h rho0 2.4 rho.25 2.4 rho1 2.4
+  P4 locality + hand-off     util 0.09 wait/run 0.0128 step 1.004 moves     405 | cache/node 0.16 (peak 0.44) total 2.59 GiB | fetch GiB/h rho0 2.0 rho.25 2.7 rho1 4.7
+  P5 fixed home              util 0.09 wait/run 0.0443 step 1.004 moves       0 | cache/node 0.10 (peak 0.32) total 1.58 GiB | fetch GiB/h rho0 1.4 rho.25 1.4 rho1 1.4
+  P5 fixed home + hand-off   util 0.09 wait/run 0.0170 step 1.004 moves     875 | cache/node 0.16 (peak 0.43) total 2.57 GiB | fetch GiB/h rho0 1.4 rho.25 2.8 rho1 6.5
+  POOL ideal                 util 0.09 wait/run 0.0101 step 1.004 moves       0 | cache/node 0.97 (peak 1.38) total 15.59 GiB | fetch GiB/h rho0 16.3 rho.25 16.3 rho1 16.3
+  shared CXL cache           total 1.26 GiB, fetch 1.1 GiB/h (any placement)
+/home/ijkim/agent-sandbox-cxl/docs/results/virtual-node-rl-20261026/placement-cache

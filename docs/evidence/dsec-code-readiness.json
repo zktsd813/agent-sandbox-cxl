@@ -1,0 +1,100 @@
+{
+  "checked_at": "2026-10-08T11:23:06.487429+09:00",
+  "scope": "Public source inspection and local Docker primitive check; no DSec/AgentENV deployment.",
+  "paper": "https://arxiv.org/html/2609.22978v1",
+  "dsec_full_code": "Not found in paper release links or public DeepSeek organization repository list (44 repositories).",
+  "published_components": [
+    {
+      "repository": "https://github.com/deepseek-ai/3FS",
+      "role": "Shared storage"
+    },
+    {
+      "repository": "https://github.com/kvcache-ai/AgentENV/tree/main/storage/overlaybd",
+      "role": "OverlayBD storage component explicitly linked by DSec paper"
+    },
+    {
+      "repository": "https://github.com/kvcache-ai/AgentENV/tree/main/storage/ublk",
+      "role": "Userspace block device library in the linked repository"
+    }
+  ],
+  "agentenv": {
+    "repository": "kvcache-ai/AgentENV",
+    "commit": "34cdc8098096726646853a18cec7ae143995dcef",
+    "license": "MIT",
+    "verified_files": [
+      "AGENTS.md",
+      "CLAUDE.md",
+      "Cargo.toml",
+      "README.md",
+      "crates/benchmarks/benches/snapshot_benchmark.rs",
+      "docs/src/concepts/sandboxes/auto-eviction.md",
+      "docs/src/concepts/sandboxes/index.md",
+      "docs/src/concepts/sandboxes/starting.md",
+      "docs/src/concepts/sandboxes/working.md",
+      "src/api/impls/sandbox.rs",
+      "src/orchestrator/launch_plan.rs",
+      "src/orchestrator/metrics.rs",
+      "src/orchestrator/mod.rs",
+      "src/orchestrator/persistence/file_backed.rs",
+      "src/orchestrator/persistence/mock.rs",
+      "src/orchestrator/persistence/mod.rs",
+      "src/orchestrator/proxy.rs",
+      "src/orchestrator/sandbox_metrics.rs",
+      "src/orchestrator/service.rs",
+      "src/orchestrator/store/in_memory.rs",
+      "src/orchestrator/store/metadata.rs",
+      "src/orchestrator/store/mod.rs",
+      "src/orchestrator/tests.rs",
+      "src/orchestrator/types.rs",
+      "src/sandbox/backend.rs",
+      "src/sandbox/firecracker/config.rs",
+      "src/sandbox/firecracker/connector.rs",
+      "src/sandbox/firecracker/factory.rs",
+      "src/sandbox/firecracker/instance.rs",
+      "src/sandbox/firecracker/mmds.rs",
+      "src/sandbox/firecracker/mod.rs",
+      "src/sandbox/firecracker/overlaybd_snapshot.rs",
+      "src/sandbox/firecracker/pool.rs",
+      "src/sandbox/firecracker/process_vm_reader.rs",
+      "src/sandbox/firecracker/sandbox.rs",
+      "src/sandbox/firecracker/socket.rs",
+      "src/sandbox/firecracker/startup_pack.rs",
+      "tests/integration/fc.rs",
+      "tests/integration/orchestrator.rs"
+    ],
+    "lifecycle_sources": {
+      "src/api/impls/sandbox.rs:783": "auto_pause=false selects Delete; otherwise Pause",
+      "src/orchestrator/service.rs:2265": "Expired running sandboxes follow configured Pause/Delete action",
+      "src/orchestrator/service.rs:1503": "Capture paused state",
+      "src/orchestrator/service.rs:1614": "Stop runtime after persisting paused metadata",
+      "src/orchestrator/service.rs:1635": "Resume existing sandbox identity from paused state",
+      "src/sandbox/firecracker/pool.rs:138": "Acquire pre-spawned process and request replenishment below low watermark"
+    },
+    "native_execution_performed": false,
+    "readme_requirements": [
+      "Linux kernel 6.8+",
+      "KVM access"
+    ],
+    "host_kernel": "6.6.0-rc6-niagara-lreclaim-20260923",
+    "host_kvm_read_write_access": true,
+    "custom_kernel_backport_compatibility_checked": false
+  },
+  "local_docker_probe": {
+    "implementation": "local Docker primitives; not DSec or AgentENV",
+    "container": "mini-replay-lifecycle-8a1dd98039264560b39acb2d8be60de1",
+    "state_persists_across_exec_calls": true,
+    "effective_cpus": "2",
+    "effective_memory_nodes": "0",
+    "paused_flag": true,
+    "paused_cpu_delta_usec": 0,
+    "paused_memory_bytes": 892928,
+    "state_and_background_process_survive_resume": true,
+    "same_container_id": true,
+    "cleanup_removed": true
+  },
+  "independent_verification_limits": [
+    "DSec production creation/reuse policy unavailable",
+    "DSec production arrival trace not obtained",
+    "Docker pause probe does not test swap reclamation or Firecracker snapshot/restore"
+  ]
+}

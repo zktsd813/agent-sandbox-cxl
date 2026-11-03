@@ -1,0 +1,199 @@
+[
+ {
+  "run": "20261027T075422Z-pilot-k96-none-g8-v1-smem1-1mbu3dv2",
+  "condition": "mem-s025-k96-blk",
+  "base_pmem": false,
+  "mean_live_vms": 146.6,
+  "host_rss_gib_mean": 32.82,
+  "host_rss_anon_gib_mean": 32.54,
+  "host_rss_anon_gib_peak": 43.34,
+  "host_rss_file_gib_mean": 0.29,
+  "image_cache_gib_mean": 4.08,
+  "image_cache_gib_peak": 5.43,
+  "sandbox_memory_gib_mean": 36.4,
+  "sandbox_memory_gib_peak": 46.09,
+  "per_vm_rss_anon_mib": 227.2,
+  "guest_median_mib": {
+   "cached_mib": 47.7,
+   "anon_mib": 0.3,
+   "free_mib": 1881.6,
+   "shmem_mib": 0.8
+  },
+  "per_vm": {
+   "host_rss_anon": {
+    "median_mib": 190.3,
+    "mean_mib": 228.3
+   },
+   "guest_used": {
+    "median_mib": 174.2,
+    "mean_mib": 207.8
+   },
+   "page_cache": {
+    "median_mib": 61.0,
+    "mean_mib": 95.6
+   },
+   "anon": {
+    "median_mib": 0.3,
+    "mean_mib": 1.6
+   },
+   "shmem": {
+    "median_mib": 0.8,
+    "mean_mib": 0.8
+   },
+   "kernel_other": {
+    "median_mib": 106.6,
+    "mean_mib": 106.3
+   },
+   "touched_free": {
+    "median_mib": -3.7,
+    "mean_mib": 16.4
+   },
+   "vms": 726
+  },
+  "base_reads_remaining_after_age": {
+   "30s": {
+    "n": 585,
+    "median": 0.789,
+    "mean": 0.693
+   },
+   "60s": {
+    "n": 585,
+    "median": 0.571,
+    "mean": 0.534
+   },
+   "120s": {
+    "n": 581,
+    "median": 0.305,
+    "mean": 0.351
+   },
+   "300s": {
+    "n": 430,
+    "median": 0.085,
+    "mean": 0.155
+   },
+   "600s": {
+    "n": 131,
+    "median": 0.0,
+    "mean": 0.035
+   },
+   "1200s": {
+    "n": 0,
+    "median": null,
+    "mean": null
+   },
+   "uniform_move": {
+    "n": 585,
+    "median": 0.253,
+    "mean": 0.279
+   }
+  },
+  "wait_over_run": 0.0485,
+  "utilization": 0.506,
+  "cmd_slowdown": {
+   "n": 5057,
+   "min_solo_s": 0.5,
+   "p50": 1.282,
+   "p90": 1.738,
+   "p99": 4.011
+  },
+  "mismatches": 694,
+  "timeouts": 48,
+  "sandboxes": 776
+ },
+ {
+  "run": "20261027T083452Z-pilot-k96-none-g8-v1-smem1-vh6l451s",
+  "condition": "mem-s025-k96-pmem",
+  "base_pmem": true,
+  "mean_live_vms": 146.5,
+  "host_rss_gib_mean": 47.63,
+  "host_rss_anon_gib_mean": 38.57,
+  "host_rss_anon_gib_peak": 49.61,
+  "host_rss_file_gib_mean": 9.06,
+  "image_cache_gib_mean": 4.87,
+  "image_cache_gib_peak": 6.51,
+  "sandbox_memory_gib_mean": 43.18,
+  "sandbox_memory_gib_peak": 53.02,
+  "per_vm_rss_anon_mib": 269.6,
+  "guest_median_mib": {
+   "cached_mib": 5.1,
+   "anon_mib": 0.3,
+   "free_mib": 1843.1,
+   "shmem_mib": 0.8
+  },
+  "per_vm": {
+   "host_rss_anon": {
+    "median_mib": 235.0,
+    "mean_mib": 268.5
+   },
+   "guest_used": {
+    "median_mib": 213.8,
+    "mean_mib": 245.4
+   },
+   "page_cache": {
+    "median_mib": 13.4,
+    "mean_mib": 46.2
+   },
+   "anon": {
+    "median_mib": 0.3,
+    "mean_mib": 1.2
+   },
+   "shmem": {
+    "median_mib": 0.8,
+    "mean_mib": 0.8
+   },
+   "kernel_other": {
+    "median_mib": 190.8,
+    "mean_mib": 194.2
+   },
+   "touched_free": {
+    "median_mib": -2.8,
+    "mean_mib": 19.1
+   },
+   "vms": 726
+  },
+  "base_reads_remaining_after_age": {
+   "30s": {
+    "n": 0,
+    "median": null,
+    "mean": null
+   },
+   "60s": {
+    "n": 0,
+    "median": null,
+    "mean": null
+   },
+   "120s": {
+    "n": 0,
+    "median": null,
+    "mean": null
+   },
+   "300s": {
+    "n": 0,
+    "median": null,
+    "mean": null
+   },
+   "600s": {
+    "n": 0,
+    "median": null,
+    "mean": null
+   },
+   "1200s": {
+    "n": 0,
+    "median": null,
+    "mean": null
+   }
+  },
+  "wait_over_run": 0.0424,
+  "utilization": 0.502,
+  "cmd_slowdown": {
+   "n": 5091,
+   "min_solo_s": 0.5,
+   "p50": 1.219,
+   "p90": 1.595,
+   "p99": 3.183
+  },
+  "mismatches": 762,
+  "timeouts": 44,
+  "sandboxes": 776
+ }
+]

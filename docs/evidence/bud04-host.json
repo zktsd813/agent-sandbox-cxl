@@ -1,0 +1,59 @@
+{
+  "observed_at_utc": "2026-10-06T09:55:03.044781+00:00",
+  "hostname": "ubuntu",
+  "kernel": "6.18.0-m3-20261003",
+  "cgroup_controllers": "cpuset cpu io memory hugetlb pids rdma misc",
+  "online_nodes": "0-1",
+  "nodes_with_memory": "0-1",
+  "kernel_config": {
+    "CONFIG_SCHED_CLASS_EXT": "# CONFIG_SCHED_CLASS_EXT is not set",
+    "CONFIG_BPF_SYSCALL": "CONFIG_BPF_SYSCALL=y",
+    "CONFIG_MEMCG": "CONFIG_MEMCG=y",
+    "CONFIG_DEV_DAX": "CONFIG_DEV_DAX=m",
+    "CONFIG_DEV_DAX_KMEM": "CONFIG_DEV_DAX_KMEM=m",
+    "CONFIG_CXL_NIAGARA2": "absent from this config"
+  },
+  "nodes": [
+    {
+      "name": "node0",
+      "cpulist": "0-31",
+      "meminfo": [
+        "Node 0 MemTotal:       131665552 kB",
+        "Node 0 MemFree:        95383604 kB",
+        "Node 0 MemUsed:        36281948 kB",
+        "Node 0 SwapCached:            0 kB"
+      ]
+    },
+    {
+      "name": "node1",
+      "cpulist": "",
+      "meminfo": [
+        "Node 1 MemTotal:       33000412 kB",
+        "Node 1 MemFree:        31462664 kB",
+        "Node 1 MemUsed:         1537748 kB",
+        "Node 1 SwapCached:            0 kB"
+      ]
+    }
+  ],
+  "dax_devices": [
+    {
+      "name": "dax0.0",
+      "size_bytes": "274877906944",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax2.0",
+      "size_bytes": "274877906944",
+      "align_bytes": "2097152",
+      "target_node": "4",
+      "driver": "device_dax"
+    }
+  ],
+  "node_identity": {
+    "name": "bud04",
+    "address": "143.248.188.22",
+    "verified_via": "existing SSH alias bud04"
+  }
+}

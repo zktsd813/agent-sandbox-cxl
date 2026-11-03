@@ -1,0 +1,115 @@
+{
+  "checked_at_utc": "2026-10-07T06:06:07.866757+00:00",
+  "scope": "Read-only host/source inspection and public image manifest/config lookup. No package installation, image layer pull, container creation or trace execution.",
+  "host": {
+    "hostname": "ubuntu",
+    "kernel": "6.6.0-rc6-niagara-lreclaim-20260923",
+    "architecture": "x86_64",
+    "python": "3.12.3",
+    "disk_free_bytes": 109061365760,
+    "numa_nodes": [
+      {
+        "node": 0,
+        "cpulist": "0-31",
+        "memory_bytes": {
+          "MemTotal": 134817898496,
+          "MemFree": 68231737344,
+          "MemUsed": 66586161152
+        }
+      },
+      {
+        "node": 1,
+        "cpulist": "32-63",
+        "memory_bytes": {
+          "MemTotal": 33794863104,
+          "MemFree": 878538752,
+          "MemUsed": 32916324352
+        }
+      },
+      {
+        "node": 2,
+        "cpulist": "",
+        "memory_bytes": {
+          "MemTotal": 0,
+          "MemFree": 0,
+          "MemUsed": 0
+        }
+      }
+    ]
+  },
+  "tools": {
+    "docker": "/usr/bin/docker",
+    "numactl": "/usr/bin/numactl",
+    "lscpu": "/usr/bin/lscpu",
+    "git": "/usr/bin/git",
+    "uv": null,
+    "perf": "/usr/bin/perf",
+    "pidstat": "/usr/bin/pidstat",
+    "vmstat": "/usr/bin/vmstat"
+  },
+  "docker_daemon_observed": {
+    "server_version": "29.3.1",
+    "cgroup_version": "2",
+    "cgroup_driver": "systemd",
+    "cpus": 64,
+    "memory_bytes": 168612761600,
+    "docker_root_dir": "/var/lib/docker",
+    "warnings": null,
+    "container_execution_verified": false
+  },
+  "image_metadata": {
+    "image": "swebench/sweb.eval.x86_64.gin-gonic_1776_gin-3741:latest",
+    "digest": "sha256:97f695249048d35cb099e7f853402e2c1282507a26429383b7da9f44b1bacef8",
+    "manifest_media_type": "application/vnd.oci.image.index.v1+json",
+    "platforms": [
+      {
+        "architecture": "amd64",
+        "os": "linux"
+      },
+      {
+        "architecture": "unknown",
+        "os": "unknown"
+      }
+    ],
+    "single_image_platform": {
+      "os": "linux",
+      "architecture": "amd64"
+    },
+    "compressed_layer_bytes": 360615062,
+    "scope": "Manifest and small config metadata only; no layers were downloaded.",
+    "amd64_manifest_digest": "sha256:c134cc213a09fd5060dd3d3a70adde0eb6607750c111f397b163a306d0ee5a1e",
+    "layer_count": 8,
+    "working_dir": "/testbed"
+  },
+  "proposed_configuration": "harness/trace-replay/configs/node0.json",
+  "configuration_checks": {
+    "controller_and_workload_cpus_in_node0": true,
+    "controller_and_workload_cpus_disjoint": true,
+    "memory_node0_requested": true,
+    "swap_disabled_requested": true,
+    "image_amd64_metadata_verified": true,
+    "actual_container_cpuset_and_numa_locality_verified": false
+  },
+  "implementation_status": {
+    "runner": false,
+    "docker_session_backend": false,
+    "sampler": false,
+    "reporter": false
+  },
+  "primary_sources": [
+    "https://docs.docker.com/engine/containers/resource_constraints/",
+    "https://docs.docker.com/reference/cli/docker/container/run/",
+    "https://docs.kernel.org/admin-guide/cgroup-v2.html"
+  ],
+  "implementation_update": {
+    "checked_on_utc": "2026-10-07T06:26:17.632674+00:00",
+    "files": [
+      "harness/trace-replay/analyze.py",
+      "harness/trace-replay/experiment.py"
+    ],
+    "native_plan_validated": true,
+    "simulated_replay_and_plot_validated": true,
+    "live_container_validated": false,
+    "superseding_details": "mini-concurrency-readiness.json"
+  }
+}

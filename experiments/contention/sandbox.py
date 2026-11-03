@@ -7,8 +7,10 @@ solo:   replay each trace alone in a 1-vCPU microVM and record per-command CPU d
 """
 
 import argparse
+import collections
 import csv
 import datetime
+import hashlib
 import importlib.util
 import json
 import os
@@ -20,10 +22,11 @@ import shutil
 import signal
 import subprocess
 import sys
+import tarfile
 import tempfile
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
@@ -31,13 +34,19 @@ LOCAL = HERE / ".local"
 IMAGES = LOCAL / "images"
 RUNS = LOCAL / "runs"
 CANDIDATES = HERE / "candidates.json"
+PINS = HERE / "image-pins.json"  # RL image tag -> repo@manifest digest of the first build, so deleted images rebuild
 TRACES = REPO / "harness/trace-replay/data/native"
 DOCKER_RESULTS = REPO / "docs/results/numa-immediate-20261014"
 KERNEL = REPO / ".local/microvm/vmlinux-6.1.188"
 # Pinned copy (sha256 9aa1b69b...) of the Firecracker build used since the first solo run; the source tree's build
 # output belongs to another agent and may be rebuilt at any time.
 FIRECRACKER = LOCAL / "bin/firecracker"
+BE_LOAD = LOCAL / "bin/be_load"  # built from be_load.c on first use
+RESCTRL = Path("/sys/fs/resctrl")
+TURBOSTAT = Path("/usr/lib/linux-tools-6.8.0-146/turbostat")
 BUSYBOX = Path("/usr/bin/busybox")
+LLM_MODEL = None  # (t0 s, s per context token, s per output token); set by --llm-model tokens
+BALLOON = True
 GIB = 1024 ** 3
 USER_HZ = os.sysconf("SC_CLK_TCK")
 # The root disk only carries this stub, so changing guest-init.sh (copied to each job disk) needs no image rebuild.
@@ -80,6 +89,11 @@ def candidates(names=None):
             raise SystemExit(f"Not in {CANDIDATES.name}: {sorted(unknown)}")
         entries = [e for e in entries if e["name"] in names]
     return entries
+
+
+def image_dir(entry):
+    """Root disk directory. RL rollouts of one task share an image (`image_key`); 264-trace entries use their name."""
+    return IMAGES / entry.get("image_key", entry["name"])
 
 
 def guest_memory_mib(peak_gib):
@@ -140,8 +154,135 @@ def install_stub(disk):
         os.unlink(stream.name)
 
 
-def build_image(entry, keep_image):
-    out = IMAGES / entry["name"]
+REGISTRY = "https://registry-1.docker.io"
+MANIFEST_TYPES = ", ".join(["application/vnd.docker.distribution.manifest.v2+json",
+                            "application/vnd.oci.image.manifest.v1+json",
+                            "application/vnd.docker.distribution.manifest.list.v2+json",
+                            "application/vnd.oci.image.index.v1+json"])
+
+
+def registry_rootfs(reference, work):
+    """Download an image's layers from Docker Hub with curl and flatten them into work/rootfs.tar, applying OCI
+    whiteouts. Returns (image config, manifest digest, [repo@digest])."""
+    ref = reference.removeprefix("docker.io/")
+    if "@" in ref:  # repo@sha256:... (a pinned platform manifest)
+        name, tag = ref.split("@", 1)
+    else:
+        name, tag = ref.rsplit(":", 1) if ":" in ref.split("/")[-1] else (ref, "latest")
+    auth = []
+
+    def login():
+        # Registry tokens expire after about 5 minutes; large images outlive one, so blob fetches renew it.
+        token = json.loads(output(["curl", "-sf", "--retry", "5",
+                                   f"https://auth.docker.io/token?service=registry.docker.io&scope=repository:{name}:pull"]))["token"]
+        auth[:] = ["-H", f"Authorization: Bearer {token}"]
+
+    login()
+
+    def get(path, *extra):
+        return subprocess.run(["curl", "-sfL", "--retry", "5", *auth, *extra, f"{REGISTRY}/v2/{name}/{path}"],
+                              check=True, capture_output=True).stdout
+
+    raw = get(f"manifests/{tag}", "-H", f"Accept: {MANIFEST_TYPES}")
+    manifest = json.loads(raw)
+    if "manifests" in manifest:
+        choice = next(m for m in manifest["manifests"]
+                      if m.get("platform", {}).get("os") == "linux" and m["platform"].get("architecture") == "amd64")
+        raw = get(f"manifests/{choice['digest']}", "-H", f"Accept: {MANIFEST_TYPES}")
+        manifest = json.loads(raw)
+    digest = "sha256:" + hashlib.sha256(raw).hexdigest()
+    config = json.loads(get(f"blobs/{manifest['config']['digest']}"))
+
+    def fetch(item):
+        index, layer = item
+        if "gzip" not in layer["mediaType"] and not layer["mediaType"].endswith(".tar"):
+            raise RuntimeError(f"{reference}: unsupported layer type {layer['mediaType']}")
+        path = work / f"layer{index:03d}.tgz"
+        for attempt in range(4):
+            try:
+                subprocess.run(["curl", "-sfL", "--retry", "8", "--retry-all-errors", *auth, "-o", str(path),
+                                f"{REGISTRY}/v2/{name}/blobs/{layer['digest']}"], check=True)
+                break
+            except subprocess.CalledProcessError:
+                if attempt == 3:
+                    raise
+                time.sleep(5 * (attempt + 1))
+                login()
+        actual = "sha256:" + output(["sha256sum", str(path)]).split()[0]
+        if actual != layer["digest"]:
+            raise RuntimeError(f"{reference}: layer {index} digest {actual} != {layer['digest']}")
+        return path
+
+    with ThreadPoolExecutor(4) as pool:
+        paths = list(pool.map(fetch, enumerate(manifest["layers"])))
+    flatten_layers(paths, work / "rootfs.tar")
+    for path in paths:
+        path.unlink()
+    return config.get("config") or {}, digest, [f"{name}@{digest}"]
+
+
+def layer_path(name):
+    path = os.path.normpath("/" + name).lstrip("/")
+    return path if path != "." else ""
+
+
+def flatten_layers(paths, out_path):
+    """Two passes: find which layer provides each path (whiteouts delete lower-layer paths, an opaque marker
+    clears the directory below), then copy those members in layer order."""
+    final = {}
+    for index, path in enumerate(paths):
+        with tarfile.open(path, "r:*") as tf:
+            names = [layer_path(m.name) for m in tf]
+        for name in names:
+            base, parent = os.path.basename(name), os.path.dirname(name)
+            if base == ".wh..wh..opq":
+                prefix = parent + "/" if parent else ""
+                for key in [k for k in final if k.startswith(prefix) and k != parent]:
+                    del final[key]
+            elif base.startswith(".wh."):
+                target = os.path.join(parent, base[4:])
+                for key in [k for k in final if k == target or k.startswith(target + "/")]:
+                    del final[key]
+        for name in names:
+            if name and not os.path.basename(name).startswith(".wh."):
+                final[name] = index
+    with tarfile.open(out_path, "w", format=tarfile.PAX_FORMAT) as out:
+        for index, path in enumerate(paths):
+            with tarfile.open(path, "r:*") as tf:
+                for member in tf:
+                    name = layer_path(member.name)
+                    if final.get(name) != index:
+                        continue
+                    if member.islnk():
+                        target = layer_path(member.linkname)
+                        if final.get(target) is None or final[target] > index:
+                            continue  # its target was deleted or replaced later
+                        member.linkname = target
+                    member.name = name
+                    out.addfile(member, tf.extractfile(member) if member.isreg() else None)
+
+
+def run_setup(entry, rootfs_tar):
+    """Task setup the RL harness ran before the agent (Scale-SWE pre_commands: base-commit checkout, git gc).
+    Runs in a local container imported from the flattened root file system; no registry access."""
+    image = output(["docker", "import", str(rootfs_tar)]).strip()
+    try:
+        container = output(["docker", "run", "-d", "--network", "none", "-w", entry["cwd"], image,
+                            "bash", "-c", entry["setup"]]).strip()
+        try:
+            status = int(output(["docker", "wait", container]).strip())
+            if status:
+                log = subprocess.run(["docker", "logs", container], capture_output=True, text=True)
+                raise RuntimeError(f"{entry['name']}: setup exited {status}: {(log.stdout + log.stderr)[-1500:]}")
+            run(["docker", "export", "-o", str(rootfs_tar), container])
+        finally:
+            run(["docker", "rm", "-f", container], stdout=subprocess.DEVNULL)
+    finally:
+        run(["docker", "image", "rm", image], stdout=subprocess.DEVNULL)
+
+
+def build_image(entry, keep_image, pin=None):
+    out = image_dir(entry)
     if (out / "image.json").exists():
         image = json.loads((out / "image.json").read_text())
         if image.get("init_stub") == INIT_STUB:
@@ -151,21 +292,36 @@ def build_image(entry, keep_image):
         image["init_stub"] = INIT_STUB
         save_json(out / "image.json", image)
         return f"{entry['name']}: init stub updated"
-    work = IMAGES / (entry["name"] + ".partial")
+    work = IMAGES / (image_dir(entry).name + ".partial")
     if work.exists():
         run(["chmod", "-R", "u+w", work])
         shutil.rmtree(work)
     work.mkdir(parents=True)
-    reference = entry["repo_digest"]
-    run(["docker", "pull", "-q", reference], stdout=subprocess.DEVNULL)
-    inspect = json.loads(output(["docker", "image", "inspect", reference]))[0]
-    if inspect["Id"] != entry["image_id"]:
-        raise RuntimeError(f"{entry['name']}: image id {inspect['Id']} != pinned {entry['image_id']}")
-    container = output(["docker", "create", reference]).strip()
-    try:
-        run(["docker", "export", "-o", str(work / "rootfs.tar"), container])
-    finally:
-        run(["docker", "rm", "-f", container], stdout=subprocess.DEVNULL)
+    if entry.get("repo_digest"):
+        # 264-trace entries: pinned digest through dockerd, as before.
+        reference = entry["repo_digest"]
+        run(["docker", "pull", "-q", reference], stdout=subprocess.DEVNULL)
+        inspect = json.loads(output(["docker", "image", "inspect", reference]))[0]
+        if inspect["Id"] != entry["image_id"]:
+            raise RuntimeError(f"{entry['name']}: image id {inspect['Id']} != pinned {entry['image_id']}")
+        container = output(["docker", "create", reference]).strip()
+        try:
+            run(["docker", "export", "-o", str(work / "rootfs.tar"), container])
+        finally:
+            run(["docker", "rm", "-f", container], stdout=subprocess.DEVNULL)
+        config, image_id, digests = inspect["Config"], inspect["Id"], inspect.get("RepoDigests") or []
+        if not keep_image:
+            run(["docker", "image", "rm", reference], stdout=subprocess.DEVNULL)
+    else:
+        # RL rollouts name only a tag. dockerd pulls at 1-2 MB/s on this host while one curl stream gets ~18 MB/s,
+        # so the layers come straight from the registry and are flattened here; the manifest digest is recorded.
+        # A pin (repo@digest from an earlier build, image-pins.json) rebuilds exactly that image after deletion.
+        reference = pin or entry["image"]
+        config, image_id, digests = registry_rootfs(reference, work)
+        if pin and digests != [pin.removeprefix("docker.io/")]:
+            raise RuntimeError(f"{entry['name']}: pinned {pin} resolved to {digests}")
+        if entry.get("setup"):
+            run_setup(entry, work / "rootfs.tar")
     tar_bytes = (work / "rootfs.tar").stat().st_size
     disk_bytes = -(-int(tar_bytes * 1.25 + 2 * GIB) // GIB) * GIB
     # fakeroot keeps the image's root ownership for mkfs without creating root-owned files on the host.
@@ -182,33 +338,78 @@ def build_image(entry, keep_image):
     run(["chmod", "-R", "u+w", work / "root"])
     shutil.rmtree(work / "root")
     (work / "rootfs.tar").unlink()
-    config = inspect["Config"]
-    save_json(work / "image.json", {"name": entry["name"], "repo_digest": reference, "image_id": inspect["Id"],
+    save_json(work / "image.json", {"name": entry["name"], "repo_digest": reference, "image_id": image_id,
+                                    "repo_digests": digests, "setup": entry.get("setup") or "",
                                     "env": config.get("Env") or [], "working_dir": config.get("WorkingDir"),
                                     "export_tar_bytes": tar_bytes, "disk_bytes": disk_bytes,
                                     "disk_allocated_bytes": (work / "rootfs.ext4").stat().st_blocks * 512,
                                     "init_stub": INIT_STUB,
                                     "busybox": str(BUSYBOX), "built_utc": datetime.datetime.now(datetime.timezone.utc).isoformat()})
     work.rename(out)
-    if not keep_image:
-        run(["docker", "image", "rm", reference], stdout=subprocess.DEVNULL)
     return f"{entry['name']}: {tar_bytes / GIB:.2f} GiB export, {disk_bytes // GIB} GiB disk"
+
+
+def plan_entries(entries, plan_path, steps):
+    """Entries of the groups in steps 'a-b' of a step plan."""
+    plan = json.loads(plan_path.read_text())
+    first, _, last = (steps or f"0-{len(plan['steps']) - 1}").partition("-")
+    wanted = {g for s in plan["steps"][int(first):int(last or first) + 1] for w in s["waves"] for g in w["groups"]}
+    return [e for e in entries if e.get("group") in wanted]
+
+
+def load_pins():
+    return json.loads(PINS.read_text()) if PINS.exists() else {}
 
 
 def build(args):
     IMAGES.mkdir(parents=True, exist_ok=True)
     entries = candidates(args.names)
+    if args.plan:
+        entries = plan_entries(entries, args.plan, args.plan_steps)
+    entries = list({image_dir(e): e for e in entries}.values())  # one build per shared image
+    pins = load_pins()
     failures = []
-    with ThreadPoolExecutor(args.jobs) as pool:
-        futures = {pool.submit(build_image, e, args.keep_image): e["name"] for e in entries}
+    # Processes, not threads: flattening layers is pure Python and would serialize on the GIL.
+    with ProcessPoolExecutor(args.jobs) as pool:
+        futures = {pool.submit(build_image, e, args.keep_image, None if args.unpinned else pins.get(e.get("image"))): e
+                   for e in entries}
         for future in as_completed(futures):
+            entry = futures[future]
             try:
                 print(future.result(), flush=True)
             except Exception as error:
-                failures.append(futures[future])
-                print(f"{futures[future]}: FAILED {error}", flush=True)
+                failures.append(entry["name"])
+                print(f"{entry['name']}: FAILED {error}", flush=True)
+                continue
+            built = json.loads((image_dir(entry) / "image.json").read_text())
+            if entry.get("image") and not entry.get("repo_digest") and built.get("repo_digests"):
+                pins.setdefault(entry["image"], built["repo_digests"][0])
+                save_json(PINS, dict(sorted(pins.items())))
     if failures:
         raise SystemExit(f"{len(failures)} image builds failed: {sorted(failures)}")
+
+
+def drop_images(args):
+    """Segment cleanup: remove the root disks of a plan segment's images once every condition has run on them.
+    The pin stays in image-pins.json, so `build --plan` makes the same image again."""
+    keep_files = args.keep or [HERE / "candidates-rl.json"]
+    keep = {image_dir(e) for f in keep_files for e in json.loads(f.read_text())["traces"]}
+    pins = load_pins()
+    targets = sorted({image_dir(e) for e in plan_entries(candidates(), args.plan, args.plan_steps)} - keep)
+    freed = 0
+    for path in targets:
+        if not (path / "image.json").exists():
+            continue
+        image = json.loads((path / "image.json").read_text())
+        if not any(d in pins.values() for d in image.get("repo_digests") or []):
+            print(f"{path.name}: no pin recorded, kept")
+            continue
+        freed += sum(f.stat().st_blocks * 512 for f in path.iterdir())
+        if not args.dry_run:
+            run(["chmod", "-R", "u+w", path])
+            shutil.rmtree(path)
+    print(f"{'would free' if args.dry_run else 'freed'} {freed / GIB:.1f} GiB in {len(targets)} images "
+          f"({len(keep)} kept by {[str(f) for f in keep_files]})")
 
 
 def sudo(*command, check=True):
@@ -252,8 +453,23 @@ def tap_up(name):
     return name
 
 
-def make_job(entry, image, directory, scale, net=None):
+def llm_gaps(trace):
+    """Modeled LLM wait before each batch: t0 + alpha * context tokens + beta * output tokens of the response that
+    carries the batch (tokens from the converted RL rollouts). None keeps the recorded gaps."""
+    if not LLM_MODEL:
+        return None
+    raw = json.loads(Path(trace["source"]).read_text())
+    tokens = [m["extra"]["tokens"] for m in raw["messages"]
+              if m["role"] == "assistant" and (m.get("extra") or {}).get("actions")]
+    if len(tokens) != len(trace["batches"]):
+        raise RuntimeError(f"{trace['name']}: {len(tokens)} token rows for {len(trace['batches'])} batches")
+    t0, alpha, beta = LLM_MODEL
+    return [max(0.0, t0 + alpha * t["context"] + beta * t["output"]) for t in tokens]
+
+
+def make_job(entry, image, directory, scale, net=None, mem_sample_s=0.0):
     trace = replay.load_trace(str(REPO / entry["trace"]))
+    modeled = llm_gaps(trace)
     environment = trace["environment"]
     env = dict(item.split("=", 1) for item in image["env"])
     env.update({"HOME": "/root", "HOSTNAME": "swe-microvm"})
@@ -263,11 +479,13 @@ def make_job(entry, image, directory, scale, net=None):
     shutil.copy2(HERE / "guest-init.sh", job / "init")
     if net:
         (job / "net").write_text(" ".join(net) + "\n")
+    if mem_sample_s:
+        (job / "memsample").write_text(f"{mem_sample_s:g}\n")
     commands = []
     for b, batch in enumerate(trace["batches"]):
         for a, action in enumerate(batch["actions"]):
             index = len(commands)
-            gap = batch["gap"] if a == 0 else 0.0
+            gap = (modeled[b] if modeled else batch["gap"]) if a == 0 else 0.0
             (job / "cmd" / f"{index:03d}.sh").write_text(action["command"])
             (job / "cmd" / f"{index:03d}.gap").write_text(f"{gap:.3f}\n")
             commands.append({"index": index, "batch": b, "action": a, "gap_s": round(gap, 3),
@@ -277,7 +495,7 @@ def make_job(entry, image, directory, scale, net=None):
                              + ' "$(/microvm/busybox cat "$1")"\n')
     (job / "run").chmod(0o755)
     (job / "meta").write_text(f"{len(commands)} {environment.get('timeout', 60)} {scale}\n")
-    (job / "cwd").write_text(environment["cwd"])
+    (job / "cwd").write_text(entry.get("cwd") or environment["cwd"])
     disk = directory / "job.ext4"
     run(["truncate", "-s", "1G", disk])
     run(["mkfs.ext4", "-q", "-F", "-L", "swe-job", "-d", job, disk])
@@ -302,13 +520,20 @@ def boot_and_replay(entry, image, directory, cores, siblings, node, memory_mib, 
     if tap:
         net = (f"10.200.1.{core}/{SUBNET.split('/')[1]}", GATEWAY, ",".join(host_dns()))
     trace, commands, job_disk = make_job(entry, image, directory, scale, net)
-    root_disk = directory / "rootfs.ext4"
-    run(["cp", "--sparse=always", IMAGES / entry["name"] / "rootfs.ext4", root_disk])
-    config = {"boot-source": {"kernel_image_path": str(KERNEL),
-                              "boot_args": "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda rw init=/microvm/init"},
-              "drives": [{"drive_id": "rootfs", "path_on_host": str(root_disk), "is_root_device": True, "is_read_only": False},
-                         {"drive_id": "job", "path_on_host": str(job_disk), "is_root_device": False, "is_read_only": False}],
+    # Same disk layout as the pilot (shared read-only base + sparse writable overlay), so solo is its baseline and
+    # 30 parallel solo VMs do not need 30 full copies of the root disk.
+    upper = directory / "rootfs.ext4"
+    run(["truncate", "-s", "8G", upper])
+    run(["mkfs.ext4", "-q", "-F", "-L", "swe-upper", upper])
+    config = {"boot-source": {"kernel_image_path": str(KERNEL), "initrd_path": str(overlay_initrd()),
+                              "boot_args": "console=ttyS0 reboot=k panic=1 pci=off"},
+              "drives": [{"drive_id": "base", "path_on_host": str(image_dir(entry) / "rootfs.ext4"),
+                          "is_root_device": False, "is_read_only": True},
+                         {"drive_id": "job", "path_on_host": str(job_disk), "is_root_device": False, "is_read_only": False},
+                         {"drive_id": "upper", "path_on_host": str(upper), "is_root_device": False, "is_read_only": False}],
               "machine-config": {"vcpu_count": vcpus, "mem_size_mib": memory_mib}}
+    if BALLOON:
+        config["balloon"] = balloon_config()
     if tap:
         config["network-interfaces"] = [{"iface_id": "eth0", "host_dev_name": tap,
                                          "guest_mac": f"06:00:0a:c8:01:{core:02x}"}]
@@ -318,6 +543,8 @@ def boot_and_replay(entry, image, directory, cores, siblings, node, memory_mib, 
     samples = (directory / "threads.csv").open("w", newline="")
     writer = csv.writer(samples)
     writer.writerow(["t_ns", "tid", "comm", "run_ns", "wait_ns"])
+    rss = (directory / "rss.csv").open("w")
+    rss.write("t_ns,rss_kib\n")
     process = subprocess.Popen(["numactl", f"--membind={node}", "taskset", "-c", ",".join(map(str, sorted(cores | siblings))),
                                 str(FIRECRACKER),
                                 "--no-api", "--config-file", str(directory / "config.json")],
@@ -339,12 +566,15 @@ def boot_and_replay(entry, image, directory, cores, siblings, node, memory_mib, 
 
     reader = threading.Thread(target=read_serial, daemon=True)
     reader.start()
-    pinned, halted = set(), False
+    pinned, halted, tick = set(), False, 0
     try:
         while process.poll() is None:
             now = time.monotonic_ns()
             if (now - started) / 1e9 > limit:
                 raise TimeoutError(f"VM exceeded {limit:.0f}s")
+            if tick % 50 == 0:
+                rss.write(f"{now},{vm_rss_kib(process.pid)}\n")
+            tick += 1
             for tid, comm, run_ns, wait_ns in thread_stats(process.pid):
                 writer.writerow([now, tid, comm, run_ns, wait_ns])
                 if tid not in pinned:
@@ -368,10 +598,40 @@ def boot_and_replay(entry, image, directory, cores, siblings, node, memory_mib, 
                 process.wait()
         reader.join(timeout=10)
         samples.close()
+        rss.close()
         serial.close()
     out = directory / "out"
     run(["debugfs", "-R", f"rdump /out {directory}", str(job_disk)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return trace, commands, markers, halted, process.returncode, out
+
+
+def vm_rss_parts_kib(pid):
+    """(RssAnon, RssFile) of a VMM: guest RAM and touched file mappings (a DAX base image is RssFile, shared)."""
+    try:
+        fields = {l.split(":")[0]: int(l.split()[1]) for l in open(f"/proc/{pid}/status") if l.startswith(("RssAnon", "RssFile"))}
+        return fields.get("RssAnon", 0), fields.get("RssFile", 0)
+    except (FileNotFoundError, ProcessLookupError, ValueError):
+        return 0, 0
+
+
+def vm_rss_kib(pid):
+    try:
+        return next(int(l.split()[1]) for l in open(f"/proc/{pid}/status") if l.startswith("VmRSS:"))
+    except (FileNotFoundError, ProcessLookupError, StopIteration, ValueError):
+        return 0
+
+
+def peak_rss_kib(directory):
+    path = directory / "rss.csv"
+    if not path.exists():
+        return 0
+    with path.open() as stream:
+        return max((int(row["rss_kib"]) for row in csv.DictReader(stream)), default=0)
+
+
+def balloon_config():
+    """Free page reporting returns pages the guest frees (exited test processes) to the host; page cache stays."""
+    return {"amount_mib": 0, "deflate_on_oom": True, "free_page_reporting": True}
 
 
 def busy_jiffies(path):
@@ -432,7 +692,9 @@ def analyze(entry, trace, commands, markers, out, directory, scale):
             "replay_s": round(replay_s, 3), "guest_cpu_s": round(cpu_s, 3), "vcpu_run_s": round(vcpu_s, 3),
             "recorded_gap_s": round(gap_s, 3), "gap_scale": scale,
             "mean_demand_cores_with_recorded_gaps": round(vcpu_s / (replay_s + gap_s), 4) if replay_s + gap_s else None,
-            "docker_cpu_time_s": entry["docker_cpu_time_s"], "docker_duration_s": entry["docker_duration_s"]}
+            "docker_cpu_time_s": entry.get("docker_cpu_time_s"), "docker_duration_s": entry.get("docker_duration_s"),
+            "peak_rss_mib": round(peak_rss_kib(directory) / 1024, 1), "group": entry.get("group"),
+            "image_key": entry.get("image_key")}
 
 
 def solo_one(entry, groups, root, args):
@@ -441,7 +703,7 @@ def solo_one(entry, groups, root, args):
     group = groups.get()
     tap = None
     try:
-        image = json.loads((IMAGES / entry["name"] / "image.json").read_text())
+        image = json.loads((image_dir(entry) / "image.json").read_text())
         if image.get("init_stub") != INIT_STUB:
             raise RuntimeError("image has an old init; run build again to install the stub")
         core = min(group)
@@ -464,7 +726,9 @@ def solo_one(entry, groups, root, args):
 
 
 def solo(args):
-    entries = [e for e in candidates(args.names) if (IMAGES / e["name"] / "image.json").exists()]
+    entries = [e for e in candidates(args.names) if (image_dir(e) / "image.json").exists()]
+    if args.plan:
+        entries = plan_entries(entries, args.plan, args.plan_steps)
     RUNS.mkdir(parents=True, exist_ok=True)
     if args.resume:
         # Continue an interrupted solo run: keep finished traces, redo unfinished ones.
@@ -492,6 +756,7 @@ def solo(args):
                                   "sibling_offset": args.sibling_offset, "node": args.node,
                                   "memory_mib": args.memory_mib or "per trace (candidates memory_mib, else 2048)",
                                   "vcpus": args.vcpus, "gap_scale": args.gap_scale, "sample_ms": args.sample_ms,
+                                  "llm_model": LLM_MODEL, "balloon": BALLOON,
                                   "kernel": str(KERNEL), "firecracker": str(FIRECRACKER),
                                   "firecracker_sha256": output(["sha256sum", str(FIRECRACKER)]).split()[0],
                                   "host_kernel": os.uname().release,
@@ -541,23 +806,30 @@ exec $B switch_root /newroot /microvm/busybox sh /job/init
 """
 
 
-def overlay_initrd():
-    path = LOCAL / "overlay-initrd.cpio"
-    stamp = LOCAL / "overlay-initrd.init"
-    if path.exists() and stamp.exists() and stamp.read_text() == OVERLAY_INIT:
+# --base-pmem: the base image is a read-only virtio-pmem device mounted with DAX, so the guest maps the host's page
+# cache of the image file instead of keeping its own copy; the block devices shift to job = vda, upper = vdb.
+OVERLAY_INIT_PMEM = OVERLAY_INIT.replace("-o ro /dev/vda /lower", "-o ro,dax,noload /dev/pmem0 /lower") \
+    .replace("/dev/vdc /upper", "/dev/vdb /upper").replace("/dev/vdb /newroot/job", "/dev/vda /newroot/job")
+
+
+def overlay_initrd(pmem=False):
+    init = OVERLAY_INIT_PMEM if pmem else OVERLAY_INIT
+    path = LOCAL / ("overlay-initrd-pmem.cpio" if pmem else "overlay-initrd.cpio")
+    stamp = LOCAL / ("overlay-initrd-pmem.init" if pmem else "overlay-initrd.init")
+    if path.exists() and stamp.exists() and stamp.read_text() == init:
         return path
     with tempfile.TemporaryDirectory(dir=LOCAL) as temp:
         root = Path(temp)
         for directory in ("bin", "dev", "proc", "sys"):
             (root / directory).mkdir()
         shutil.copy2(BUSYBOX, root / "bin/busybox")
-        (root / "init").write_text(OVERLAY_INIT)
+        (root / "init").write_text(init)
         (root / "init").chmod(0o755)
         names = sorted(str(p.relative_to(root)) for p in root.rglob("*"))
         with path.open("wb") as stream:
             run(["cpio", "--quiet", "-o", "--format=newc", "--owner=0:0"], cwd=root,
                 input=("\n".join(["."] + names) + "\n").encode(), stdout=stream)
-    stamp.write_text(OVERLAY_INIT)
+    stamp.write_text(init)
     return path
 
 
@@ -566,37 +838,66 @@ class Sandbox:
 
     def __init__(self, entry, directory, node, slot, args):
         self.entry, self.directory, self.node, self.slot, self.args = entry, directory, node, slot, args
-        self.image = json.loads((IMAGES / entry["name"] / "image.json").read_text())
+        self.image = json.loads((image_dir(entry) / "image.json").read_text())
         self.markers, self.complete, self.vcpus = [], threading.Event(), {}
         self.process = self.reader = self.tap = None
+        self.net_id = None  # plan mode: network identity fixed before the node is chosen
+        self.prepared, self.prepare_error = False, None
 
     def start(self):
+        if not self.prepared:
+            self.prepare()
+        self.launch()
+
+    def prepare(self):
+        """Job disk, overlay disk and VMM config: done before a synchronous step so all VMs launch at the barrier."""
         args, node = self.args, self.node
         self.directory.mkdir(parents=True)
         net = None
         if args.network:
-            self.tap = tap_up(f"ctt{node['index']}x{self.slot}")
-            net = (f"10.200.{2 + node['index']}.{self.slot + 2}/{SUBNET.split('/')[1]}", GATEWAY, ",".join(host_dns()))
-        self.trace, self.commands, job_disk = make_job(self.entry, self.image, self.directory, args.gap_scale, net)
+            if self.net_id is None:
+                hi, lo, name = node["index"], self.slot, f"ctt{node['index']}x{self.slot}"
+            else:
+                hi, lo, name = 100 + self.net_id // 250, self.net_id % 250, f"ctv{self.net_id}"
+            self.tap = tap_up(name)
+            self.mac = f"06:00:0a:c8:{2 + hi:02x}:{lo + 2:02x}"
+            net = (f"10.200.{2 + hi}.{lo + 2}/{SUBNET.split('/')[1]}", GATEWAY, ",".join(host_dns()))
+        self.trace, self.commands, job_disk = make_job(self.entry, self.image, self.directory, args.gap_scale, net,
+                                                       getattr(args, "mem_sample_s", 0.0))
         upper = self.directory / "upper.ext4"
         run(["truncate", "-s", f"{args.upper_gib}G", upper])
         run(["mkfs.ext4", "-q", "-F", "-L", "swe-upper", upper])
-        config = {"boot-source": {"kernel_image_path": str(KERNEL), "initrd_path": str(overlay_initrd()),
+        pmem = getattr(args, "base_pmem", False)
+        base = str(image_dir(self.entry) / "rootfs.ext4")
+        drives = [{"drive_id": "job", "path_on_host": str(job_disk), "is_root_device": False, "is_read_only": False},
+                  {"drive_id": "upper", "path_on_host": str(upper), "is_root_device": False, "is_read_only": False}]
+        if not pmem:
+            drives.insert(0, {"drive_id": "base", "path_on_host": base, "is_root_device": False, "is_read_only": True})
+        config = {"boot-source": {"kernel_image_path": str(KERNEL), "initrd_path": str(overlay_initrd(pmem)),
                                   "boot_args": "console=ttyS0 reboot=k panic=1 pci=off"},
-                  "drives": [{"drive_id": "base", "path_on_host": str(IMAGES / self.entry["name"] / "rootfs.ext4"),
-                              "is_root_device": False, "is_read_only": True},
-                             {"drive_id": "job", "path_on_host": str(job_disk), "is_root_device": False, "is_read_only": False},
-                             {"drive_id": "upper", "path_on_host": str(upper), "is_root_device": False, "is_read_only": False}],
+                  "drives": drives,
                   "machine-config": {"vcpu_count": args.vcpus,
                                      "mem_size_mib": args.memory_mib or self.entry.get("memory_mib", 2048)}}
+        if pmem:
+            config["pmem"] = [{"id": "base", "path_on_host": base, "root_device": False, "read_only": True}]
+        if BALLOON:
+            config["balloon"] = balloon_config()
         if self.tap:
-            config["network-interfaces"] = [{"iface_id": "eth0", "host_dev_name": self.tap,
-                                             "guest_mac": f"06:00:0a:c8:{2 + node['index']:02x}:{self.slot + 2:02x}"}]
+            config["network-interfaces"] = [{"iface_id": "eth0", "host_dev_name": self.tap, "guest_mac": self.mac}]
         save_json(self.directory / "config.json", config)
+        self.prepared = True
+
+    def launch(self):
+        node = self.node
+        if self.prepare_error:
+            raise RuntimeError(self.prepare_error)
         self.serial = (self.directory / "serial.log").open("w")
+        command = ["numactl", f"--membind={node['memory_node']}", "taskset", "-c", node["vmm_cpus"], str(FIRECRACKER),
+                   "--no-api", "--config-file", str(self.directory / "config.json")]
+        if self.args.ls_resctrl:  # join the group before Firecracker starts its vCPU threads, which inherit it
+            command = ["sh", "-c", f'echo $$ > {RESCTRL / self.args.ls_resctrl}/tasks && exec "$@"', "sh", *command]
         self.process = subprocess.Popen(
-            ["numactl", f"--membind={node['memory_node']}", "taskset", "-c", node["vmm_cpus"], str(FIRECRACKER),
-             "--no-api", "--config-file", str(self.directory / "config.json")],
+            command,
             stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
         self.started_ns = time.monotonic_ns()
         self.reader = threading.Thread(target=self.read_serial, daemon=True)
@@ -660,7 +961,10 @@ class Sandbox:
                          "host_start_ns": starts[c["index"]], "host_end_ns": end})
         (self.directory / "job.ext4").unlink(missing_ok=True)
         done = [r for r in rows if r["rc"] is not None]
-        return {"trace": self.entry["name"], "node": self.node["index"], "slot": self.slot,
+        # SWE_MEM samples: [host_ns, uptime, MemFree, Cached, Buffers, AnonPages, Shmem, Dirty (KiB),
+        #                   read and written sectors of vda, vdb, vdc]
+        mem = [[t] + [float(x) for x in m.split()[1:]] for t, m in self.markers if m.startswith("SWE_MEM ")]
+        return {"trace": self.entry["name"], "node": self.node["index"], "slot": self.slot, "mem": mem,
                 "start_ns": self.started_ns, "ready_ns": ready,
                 "completed": any(m.startswith("SWE_COMPLETE") for _, m in self.markers),
                 "commands_total": len(self.commands), "commands_done": len(done),
@@ -836,20 +1140,50 @@ def move_controller(sandboxes, lock, nodes, stop, directory, args):
     log.close()
 
 
+def numa_reclaimable_kib(memory_node):
+    """MemFree + FilePages of one NUMA node: what sandboxes bound to it can still get without swapping anon pages."""
+    fields = {}
+    for line in open(f"/sys/devices/system/node/node{memory_node}/meminfo"):
+        parts = line.split()
+        fields[parts[2].rstrip(":")] = int(parts[3])
+    return fields.get("MemFree", 0) + fields.get("FilePages", 0) - fields.get("Shmem", 0), fields.get("MemFree", 0)
+
+
 def sampler(sandboxes, lock, nodes, stop, directory, interval_s):
-    """Every interval, per-VM vCPU run/wait deltas (only nonzero rows) and per-node totals."""
+    """Every interval, per-VM vCPU run/wait deltas (only nonzero rows) and per-node totals.
+    Every 2 s, per-VM VMM RSS and the memory node's free memory; the run stops before the node runs out."""
     previous = {}
+    memory_nodes = sorted({n["memory_node"] for n in nodes})
+    tick, every = 0, max(1, round(2.0 / interval_s))
     with (directory / "vcpu.csv").open("w", newline="") as vm_stream, \
-            (directory / "nodes.csv").open("w", newline="") as node_stream:
-        vm_writer, node_writer = csv.writer(vm_stream), csv.writer(node_stream)
+            (directory / "nodes.csv").open("w", newline="") as node_stream, \
+            (directory / "memory.csv").open("w", newline="") as mem_stream:
+        vm_writer, node_writer, mem_writer = csv.writer(vm_stream), csv.writer(node_stream), csv.writer(mem_stream)
         vm_writer.writerow(["t_ns", "dt_ns", "node", "vm", "run_ns", "wait_ns"])
         node_writer.writerow(["t_ns", "dt_ns", "node", "live_vms", "run_ns", "wait_ns", "mem_available_kib"])
+        mem_writer.writerow(["t_ns", "vm", "rss_kib"])
         last = time.monotonic_ns()
         while not stop.wait(max(0.0, interval_s - (time.monotonic_ns() - last) / 1e9)):
             now = time.monotonic_ns()
             dt, last = now - last, now
             with lock:
                 live = list(sandboxes.items())
+            tick += 1
+            if tick % every == 0:
+                for vm, box in live:
+                    if box.process:
+                        mem_writer.writerow([now, vm, vm_rss_kib(box.process.pid)])
+                        anon, mapped = vm_rss_parts_kib(box.process.pid)
+                        mem_writer.writerow([now, f"{vm}_anon", anon])
+                        mem_writer.writerow([now, f"{vm}_file", mapped])
+                for m in memory_nodes:
+                    reclaimable, free = numa_reclaimable_kib(m)
+                    mem_writer.writerow([now, f"numa{m}_free", free])
+                    mem_writer.writerow([now, f"numa{m}_reclaimable", reclaimable])
+                    if reclaimable < 6 * 1024 * 1024:
+                        print(f"NUMA {m} free + file pages below 6GiB; stopping run", flush=True)
+                        stop.set()
+                mem_stream.flush()
             totals = {n["index"]: [0, 0, 0] for n in nodes}
             for vm, box in live:
                 totals[box.node["index"]][0] += 1
@@ -873,9 +1207,173 @@ def sampler(sandboxes, lock, nodes, stop, directory, interval_s):
                 stop.set()
 
 
+VMSTAT = ("pgfault", "pgmajfault", "pgscan_kswapd", "pgscan_direct", "pgsteal_direct", "allocstall_normal",
+          "compact_stall", "workingset_refault_file", "thp_fault_alloc", "pswpin", "pswpout")
+
+
+def host_sampler(directory, stop, cpus, disk="nvme0n1", interval_s=1.0):
+    """Host-wide counters besides CPU, every second (host.csv, cumulative values; diff them): PSI totals (us), reclaim
+    and fault counters, disk sectors/ms of the run disk, sandbox network bytes (TAPs and bridge), IRQ and softirq
+    time of the node CPUs (jiffies), conntrack entries, and free space of the run file system. Point-in-time values:
+    memory of this run's cgroup (run it in its own scope, e.g. `systemd-run --user --scope`; total, anon and file
+    GiB, OOM kills) and allocated GiB of all sandbox job and writable disks."""
+    def psi(kind):
+        lines = Path(f"/proc/pressure/{kind}").read_text().splitlines()
+        return [line.rsplit("total=", 1)[1] for line in lines]
+
+    columns = (["t_ns", "psi_cpu_some", "psi_cpu_full", "psi_mem_some", "psi_mem_full", "psi_io_some", "psi_io_full"]
+               + list(VMSTAT) + ["disk_rd_sectors", "disk_rd_ms", "disk_wr_sectors", "disk_wr_ms", "disk_io_ms",
+                                 "tap_rx_bytes", "tap_tx_bytes", "tap_drops", "irq_jiffies", "softirq_jiffies",
+                                 "conntrack", "fs_free_gib", "cg_mem_gib", "cg_anon_gib", "cg_file_gib",
+                                 "cg_oom_kill", "vm_disk_gib"])
+    cgroup = Path("/sys/fs/cgroup") / Path("/proc/self/cgroup").read_text().split("::", 1)[1].strip().lstrip("/")
+    with (directory / "host.csv").open("w") as stream:
+        stream.write(",".join(columns) + "\n")
+        while not stop.wait(interval_s):
+            row = [time.monotonic_ns()] + psi("cpu") + psi("memory") + psi("io")
+            vm = dict(line.split() for line in Path("/proc/vmstat").read_text().splitlines())
+            row += [vm.get(k, "") for k in VMSTAT]
+            fields = next((line.split() for line in Path("/proc/diskstats").read_text().splitlines()
+                           if line.split()[2] == disk), None)
+            row += [fields[5], fields[6], fields[9], fields[10], fields[12]] if fields else [""] * 5
+            rx = tx = drops = 0
+            for link in Path("/sys/class/net").iterdir():
+                if link.name.startswith(("ctv", "ctap", "ctbr")):
+                    try:
+                        stats = link / "statistics"
+                        rx += int((stats / "rx_bytes").read_text())
+                        tx += int((stats / "tx_bytes").read_text())
+                        drops += int((stats / "rx_dropped").read_text()) + int((stats / "tx_dropped").read_text())
+                    except OSError:
+                        pass  # a TAP removed between listing and reading
+            irq = softirq = 0
+            for line in Path("/proc/stat").read_text().splitlines():
+                if line.startswith("cpu") and line[3].isdigit() and int(line.split()[0][3:]) in cpus:
+                    parts = line.split()
+                    irq += int(parts[6])
+                    softirq += int(parts[7])
+            try:
+                conntrack = Path("/proc/sys/net/netfilter/nf_conntrack_count").read_text().strip()
+            except OSError:
+                conntrack = ""
+            free = os.statvfs(directory)
+            row += [rx, tx, drops, irq, softirq, conntrack, round(free.f_bavail * free.f_frsize / 2**30, 2)]
+            try:
+                stat = dict(line.split() for line in (cgroup / "memory.stat").read_text().splitlines())
+                events = dict(line.split() for line in (cgroup / "memory.events").read_text().splitlines())
+                row += [round(int((cgroup / "memory.current").read_text()) / 2**30, 3),
+                        round(int(stat["anon"]) / 2**30, 3), round(int(stat["file"]) / 2**30, 3), events["oom_kill"]]
+            except (OSError, KeyError):
+                row += [""] * 4
+            blocks = 0
+            for vm in os.scandir(directory / "vm") if (directory / "vm").exists() else []:
+                for name in ("job.ext4", "upper.ext4"):
+                    try:
+                        blocks += os.stat(os.path.join(vm.path, name)).st_blocks
+                    except OSError:
+                        pass
+            row.append(round(blocks * 512 / 2**30, 2))
+            stream.write(",".join(map(str, row)) + "\n")
+            stream.flush()
+
+
+class CoLoad:
+    """DSec-style co-located best-effort (BE) load (docs/dsec-interference-design.md): `be_load` busy LEVEL of every
+    CPU of the BE nodes for the whole run, under QoS none / idle (SCHED_IDLE) / core (+ one core-scheduling cookie,
+    so BE never shares an SMT core with the sandboxes) / rdt (+ RDT: BE limited to --be-rdt L3 ways and memory
+    bandwidth percent). With resctrl mounted, each node's BE runs in its own resctrl group and LLC occupancy and
+    memory traffic of the BE groups and of everything else (root group) are logged every second (resctrl.csv);
+    turbostat logs per-CPU busy frequency and IPC (turbostat.tsv)."""
+
+    def __init__(self, args, nodes, directory, sampler_cpu):
+        kind, _, level = (args.be or "").partition(":")
+        self.kind, self.level, self.qos = kind, float(level or 0), args.be_qos
+        self.nodes = [n for n in nodes if args.be_nodes is None or n["index"] in replay.cpu_ids(args.be_nodes)]
+        self.args, self.directory, self.sampler_cpu = args, directory, sampler_cpu
+        self.resctrl = (RESCTRL / "info").exists()
+        self.processes, self.groups, self.stop = [], [], threading.Event()
+        if self.qos == "rdt" and not self.resctrl:
+            raise SystemExit("--be-qos rdt needs resctrl mounted at /sys/fs/resctrl")
+
+    def config(self):
+        return {"kind": self.kind or None, "level": self.level, "qos": self.qos,
+                "nodes": [n["index"] for n in self.nodes],
+                "rdt": self.args.be_rdt if self.qos == "rdt" else None, "mem_mb": self.args.be_mem_mb,
+                "resctrl": self.resctrl}
+
+    def start(self):
+        if self.kind:
+            source = HERE / "be_load.c"
+            if not BE_LOAD.exists() or BE_LOAD.stat().st_mtime < source.stat().st_mtime:
+                subprocess.run(["gcc", "-O2", "-pthread", str(source), "-o", str(BE_LOAD)], check=True)
+            for node in self.nodes:
+                cpus = ",".join(map(str, sorted(node["cores"] | node["siblings"])))
+                command = ["taskset", "-c", cpus, "numactl", f"--membind={node['memory_node']}", str(BE_LOAD),
+                           "--cpus", cpus, "--level", str(self.level), "--kind", self.kind,
+                           "--mem-mb", str(self.args.be_mem_mb)]
+                command += ["--idle"] if self.qos != "none" else []
+                command += ["--core-cookie"] if self.qos in ("core", "rdt") else []
+                stream = (self.directory / f"be-node{node['index']}.json").open("w")
+                if self.resctrl:
+                    group = RESCTRL / f"ctbe{node['index']}"
+                    subprocess.run(["sudo", "-n", "mkdir", "-p", str(group)], check=True)
+                    self.groups.append((group, node["memory_node"]))
+                    if self.qos == "rdt":
+                        ways, _, mb = self.args.be_rdt.partition(":")
+                        schemata = f"L3:{node['memory_node']}={(1 << int(ways)) - 1:x}\nMB:{node['memory_node']}={mb}\n"
+                        subprocess.run(["sudo", "-n", "sh", "-c", f"printf '{schemata}' > {group}/schemata"],
+                                       check=True)
+                    command = ["sudo", "-n", "sh", "-c",
+                               f"echo $$ > {group}/tasks && exec " + " ".join(command)]  # threads inherit the group
+                self.processes.append((subprocess.Popen(command, stdout=stream), stream))
+        if self.resctrl:
+            self.sampler = threading.Thread(target=self.sample, daemon=True)
+            self.sampler.start()
+        self.turbostat = subprocess.Popen(
+            ["sudo", "-n", "taskset", "-c", str(self.sampler_cpu), str(TURBOSTAT), "--quiet", "--interval", "1",
+             "--enable", "Time_Of_Day_Seconds", "--show", "Time_Of_Day_Seconds,CPU,Busy%,Bzy_MHz,IPC",
+             "--cpu", ",".join(str(c) for n in self.args.nodes_parsed for c in sorted(n["cores"] | n["siblings"])),
+             "--out", str(self.directory / "turbostat.tsv")]) if TURBOSTAT.exists() else None
+
+    def sample(self):
+        """Every second: LLC occupancy and cumulative memory bytes of the root group and of each BE group."""
+        domains = sorted({n["memory_node"] for n in self.args.nodes_parsed})
+        with (self.directory / "resctrl.csv").open("w") as stream:
+            stream.write("t_ns,group,domain,llc_occupancy,mbm_total_bytes,mbm_local_bytes\n")
+            while not self.stop.wait(1.0):
+                now = time.monotonic_ns()
+                for name, group in [("root", RESCTRL)] + [(g.name, g) for g, _ in self.groups]:
+                    for d in domains:
+                        base = group / "mon_data" / f"mon_L3_{d:02d}"
+                        try:
+                            values = [(base / f).read_text().strip() for f in
+                                      ("llc_occupancy", "mbm_total_bytes", "mbm_local_bytes")]
+                        except OSError:
+                            continue
+                        stream.write(f"{now},{name},{d}," + ",".join(values) + "\n")
+                stream.flush()
+
+    def finish(self):
+        self.stop.set()
+        for process, stream in self.processes:
+            subprocess.run(["sudo", "-n", "kill", "-TERM", str(process.pid)] if self.resctrl
+                           else ["kill", "-TERM", str(process.pid)])
+            try:
+                process.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                subprocess.run(["sudo", "-n", "kill", "-KILL", str(process.pid)])
+            stream.close()
+        if self.turbostat:
+            subprocess.run(["sudo", "-n", "kill", "-TERM", str(self.turbostat.pid)])
+            self.turbostat.wait(timeout=10)
+        for group, _ in self.groups:
+            subprocess.run(["sudo", "-n", "rmdir", str(group)])
+
+
 def pilot(args):
-    entries = [e for e in candidates(args.names) if (IMAGES / e["name"] / "image.json").exists()]
+    entries = [e for e in candidates(args.names) if (image_dir(e) / "image.json").exists()]
     nodes = parse_nodes(args.nodes, args.sibling_offset, args.pool)
+    args.nodes_parsed = nodes
     used = set().union(*(n["cores"] | n["siblings"] for n in nodes))
     reserved = replay.cpu_ids(args.harness_cpus) if args.harness_cpus else set(range(os.cpu_count())) - used
     if reserved & used or len(reserved) < 2:
@@ -883,13 +1381,34 @@ def pilot(args):
     sampler_cpu = max(reserved)
     os.sched_setaffinity(0, reserved - {sampler_cpu})  # harness, mkfs and serial readers stay off the node CPUs
     RUNS.mkdir(parents=True, exist_ok=True)
+    if args.placement == "p2c" and not (args.sync_plan or (args.group_size and not args.sync_steps)):
+        raise SystemExit("--placement p2c is implemented for --sync-plan and the per-group loop only")
+    if args.sync_steps and not args.group_size:
+        raise SystemExit("--sync-steps needs --group-size")
+    plan, plan_range = None, None
+    if args.sync_plan:
+        plan = json.loads(args.sync_plan.read_text())
+        first, _, last = (args.plan_steps or f"0-{len(plan['steps']) - 1}").partition("-")
+        plan_range = (int(first), int(last or first))
+        if not (0 <= plan_range[0] <= plan_range[1] < len(plan["steps"])):
+            raise SystemExit(f"--plan-steps {args.plan_steps}: plan has {len(plan['steps'])} steps")
+        if args.group_size != plan["group_size"] or args.placement == "pack" or args.sync_steps:
+            raise SystemExit("--sync-plan needs --group-size as in the plan, no --sync-steps, and spread/home/least/p2c")
+        have = collections.Counter(e.get("group") for e in entries)
+        missing = sorted({g for s in plan["steps"][plan_range[0]:plan_range[1] + 1] for w in s["waves"]
+                          for g in w["groups"] if have[g] != plan["group_size"]})
+        if missing:
+            raise SystemExit(f"{len(missing)} plan groups lack traces or built images in {CANDIDATES.name}: {missing[:8]}")
     tag = (f"k{args.per_node}-{args.pool}" + (f"-g{args.group_size}" if args.group_size else "")
+           + (f"-sync{args.sync_steps}" if args.sync_steps else "")
+           + (f"-plan{plan_range[0]}-{plan_range[1]}" if plan else "")
            + (f"-m{args.move}" if args.move != "none" else "") + f"-v{args.vcpus}-s{args.seed}")
     directory = Path(tempfile.mkdtemp(prefix=datetime.datetime.now(datetime.timezone.utc).strftime(
         f"%Y%m%dT%H%M%SZ-pilot-{tag}-"), dir=RUNS))
     if args.network:
         network_up()
-    overlay_initrd()
+    overlay_initrd(args.base_pmem)
+    co_load = CoLoad(args, nodes, directory, sampler_cpu)
     save_json(directory / "run.json", {
         "kind": "pilot", "per_node": args.per_node, "pool": args.pool, "group_size": args.group_size,
         "move": args.move, "move_detect_ms": args.move_detect_ms, "move_threshold": args.move_threshold,
@@ -901,12 +1420,24 @@ def pilot(args):
         "harness_cpus": sorted(reserved - {sampler_cpu}), "cpu_sampler_cpu": sampler_cpu, "cpu_sample_ms": args.cpu_sample_ms,
         "duration_s": args.duration_s, "ramp_s": args.ramp_s, "gap_scale": args.gap_scale,
         "seed": args.seed, "sample_ms": args.sample_ms, "traces": [e["name"] for e in entries],
+        "placement": args.placement, "base_pmem": args.base_pmem, "mem_sample_s": args.mem_sample_s,
+        "sync_steps": args.sync_steps, "step_gap_s": args.step_gap_s,
+        "sync_plan": str(args.sync_plan) if plan else None, "plan_steps": plan_range, "llm_model": LLM_MODEL, "balloon": BALLOON, "candidates_file": str(CANDIDATES),
+        "co_load": co_load.config(), "smt": Path("/sys/devices/system/cpu/smt/active").read_text().strip() == "1",
         "network": "host NAT" if args.network else "loopback only", "kernel": str(KERNEL),
         "firecracker_sha256": output(["sha256sum", str(FIRECRACKER)]).split()[0], "host_kernel": os.uname().release})
+    if plan:
+        save_json(directory / "plan.json", plan)
     cpu_log = subprocess.Popen(
         ["taskset", "-c", str(sampler_cpu), sys.executable, str(Path(__file__).resolve()), "cpu-sampler",
          "--groups", "/".join(",".join(map(str, sorted(n["cores"]))) for n in nodes),
          "--interval-ms", str(args.cpu_sample_ms), "--output", str(directory / "cpu1ms.csv")])
+    co_load.start()
+    host_stop = threading.Event()
+    host_log = threading.Thread(target=host_sampler, args=(directory, host_stop, used), daemon=True)
+    host_log.start()
+    if co_load.kind and args.be_warmup_s:
+        time.sleep(args.be_warmup_s)  # BE threads touch their memory and settle before the first sandbox
     sandboxes, lock, stop = {}, threading.Lock(), threading.Event()
     events = (directory / "sandboxes.jsonl").open("w")
     steps = (directory / "steps.jsonl").open("w")
@@ -914,13 +1445,19 @@ def pilot(args):
     deadline = started + args.ramp_s + args.duration_s
     counter = [0]
 
-    def run_sandbox(entry, node, slot, delay=0.0):
-        if delay and stop.wait(delay):
-            return None
+    def new_box(entry, node, slot):
         with lock:
             vm = counter[0]
             counter[0] += 1
-        box = Sandbox(entry, directory / "vm" / f"{vm:05d}", node, slot, args)
+        return vm, Sandbox(entry, directory / "vm" / f"{vm:05d}", node, slot, args)
+
+    def run_sandbox(entry, node, slot, delay=0.0, prepared=None):
+        if delay and stop.wait(delay):
+            if prepared:
+                prepared[1].stop()
+                shutil.rmtree(prepared[1].directory, ignore_errors=True)
+            return None
+        vm, box = prepared or new_box(entry, node, slot)
         error = None
         try:
             box.start()
@@ -954,22 +1491,70 @@ def pilot(args):
         while time.monotonic() < deadline and not stop.is_set():
             run_sandbox(rng.choice(entries), node, slot)
 
+    # RL rollouts carry their real GRPO group: G different samples of one task. Without it, one trace is replicated.
+    real_groups = collections.defaultdict(list)
+    for e in entries:
+        if e.get("group"):
+            real_groups[e["group"]].append(e)
+    by_group = {g: sorted(v, key=lambda e: e["name"]) for g, v in real_groups.items() if len(v) == args.group_size}
+    real_groups = [v for _, v in sorted(by_group.items())]
+
+    # Dynamic group placement: home = the node fixed by the task's image (hash of image_key), least = the node with
+    # fewer live sandboxes (DSec's less-loaded choice with N = 2). Slots are handed out per group, so a node can hold
+    # more or fewer than --per-node sandboxes.
+    free_slots = {n["index"]: list(range(239, -1, -1)) for n in nodes}
+    live_count = {n["index"]: 0 for n in nodes}
+    p2c_rng = random.Random(f"{args.seed}-p2c")
+
+    def home_node(entry):
+        key = entry.get("image_key", entry["name"]).encode()
+        return nodes[int(hashlib.sha1(key).hexdigest(), 16) % len(nodes)]
+
+    def choose_node(entry):
+        """Node for a whole group under home or least placement; the caller holds the lock."""
+        if args.placement == "home":
+            return home_node(entry)
+        return min(nodes, key=lambda n: (live_count[n["index"]], n["index"]))
+
     def group_loop(group, members):
-        """Synchronous RL step: G rollouts of one task start within the jitter; the next step waits for the slowest."""
+        """One GRPO group slot: G rollouts of one task start within the jitter and the slot's next group waits for
+        the slowest. Slots run independently, so the fleet is asynchronous across groups (nodes never drain)."""
         rng = random.Random(f"{args.seed}-group-{group}")
         if stop.wait(rng.uniform(0, args.ramp_s)):
             return
         step = 0
         while time.monotonic() < deadline and not stop.is_set():
-            entry = rng.choice(entries)
+            if real_groups:
+                chosen = rng.choice(real_groups)
+                entry = chosen[0]
+            else:
+                entry = rng.choice(entries)
+                chosen = [entry] * len(members)
             delays = [rng.uniform(0, args.group_jitter_s) for _ in members]
             results = [None] * len(members)
+            placed = members
+            if args.placement in ("home", "least", "p2c"):
+                # Dynamic slots, released as each member ends (as in plan_loop); p2c picks per member.
+                with lock:
+                    placed = []
+                    target = None if args.placement == "p2c" else choose_node(entry)
+                    for _ in members:
+                        node = target or min(p2c_rng.sample(nodes, min(2, len(nodes))),
+                                             key=lambda n: (live_count[n["index"]], p2c_rng.random()))
+                        placed.append((node, free_slots[node["index"]].pop()))
+                        live_count[node["index"]] += 1
 
             def member(i, node, slot):
-                results[i] = run_sandbox(entry, node, slot, delays[i])
+                try:
+                    results[i] = run_sandbox(chosen[i], node, slot, delays[i])
+                finally:
+                    if placed is not members:
+                        with lock:
+                            live_count[node["index"]] -= 1
+                            free_slots[node["index"]].append(slot)
 
             begin = time.monotonic_ns()
-            workers = [threading.Thread(target=member, args=(i, n, s)) for i, (n, s) in enumerate(members)]
+            workers = [threading.Thread(target=member, args=(i, n, s)) for i, (n, s) in enumerate(placed)]
             for worker in workers:
                 worker.start()
             for worker in workers:
@@ -977,11 +1562,146 @@ def pilot(args):
             done = [r for r in results if r]
             with lock:
                 steps.write(json.dumps({"group": group, "step": step, "trace": entry["name"], "begin_ns": begin,
+                                        "node": placed[0][0]["index"], "member_node": [n["index"] for n, _ in placed],
+                                        "rl_group": entry.get("group"), "traces": [e["name"] for e in chosen],
                                         "end_ns": time.monotonic_ns(), "members": len(members),
                                         "completed": sum(bool(r.get("completed")) for r in done),
                                         "member_end_ns": [r["end_ns"] for r in done]}) + "\n")
                 steps.flush()
             step += 1
+
+    def prepare(item):
+        try:
+            item[1].prepare()
+        except Exception as exc:
+            item[1].prepare_error = str(exc)
+
+    def sync_loop(placements):
+        """Synchronous RL: every step starts B groups (all slots) together after preparing their disks, and the next
+        step waits for the slowest of all rollouts. The group draw depends only on the seed, so conditions pair exactly."""
+        rng = random.Random(f"{args.seed}-sync")
+        count = len(placements) // args.group_size
+        step = 0
+        while step < args.sync_steps and time.monotonic() < deadline and not stop.is_set():
+            if real_groups:
+                groups = rng.sample(real_groups, count) if len(real_groups) >= count else [rng.choice(real_groups) for _ in range(count)]
+            else:
+                groups = [[e] * args.group_size for e in (rng.choice(entries) for _ in range(count))]
+            chosen = [e for g in groups for e in g]
+            delays = [rng.uniform(0, args.group_jitter_s) for _ in chosen]
+            prepare_begin = time.monotonic_ns()
+            boxes = [new_box(e, n, s) for e, (n, s) in zip(chosen, placements)]
+            with ThreadPoolExecutor(8) as pool:
+                list(pool.map(prepare, boxes))
+            results = [None] * len(chosen)
+
+            def member(i):
+                results[i] = run_sandbox(chosen[i], *placements[i], delays[i], boxes[i])
+
+            begin = time.monotonic_ns()
+            workers = [threading.Thread(target=member, args=(i,)) for i in range(len(chosen))]
+            for worker in workers:
+                worker.start()
+            for worker in workers:
+                worker.join()
+            done = [r for r in results if r]
+            with lock:
+                steps.write(json.dumps({"group": "all", "step": step, "trace": chosen[0]["name"], "begin_ns": begin,
+                                        "prepare_s": round((begin - prepare_begin) / 1e9, 3),
+                                        "rl_groups": [g[0].get("group") for g in groups],
+                                        "traces": [e["name"] for e in chosen], "end_ns": time.monotonic_ns(),
+                                        "members": len(chosen), "completed": sum(bool(r.get("completed")) for r in done),
+                                        "member_end_ns": [r["end_ns"] for r in done]}) + "\n")
+                steps.flush()
+            step += 1
+            if args.step_gap_s and stop.wait(args.step_gap_s):
+                break
+
+    def plan_loop(plan, first, last):
+        """Synchronous steps that follow the original job (rl_rollouts.py plan). Every disk of the step is prepared
+        first (outside the measurement); wave w launches at its offset from the step start, and each member boots
+        after its recorded start delay. Nodes are chosen per group when its wave launches (home/least), or member by
+        member (spread, or p2c: the less loaded of two random nodes), so `least` sees the first wave's sandboxes. The
+        step ends when every member has ended; the idle phase (training) follows, except after the last step."""
+        p2c_rng = random.Random(f"{args.seed}-p2c")
+        for k in range(first, last + 1):
+            if time.monotonic() >= deadline or stop.is_set():
+                break
+            step = plan["steps"][k]
+            waves = step["waves"]
+            members = [(w, g, e, wave["start_delay_s"][e["name"]])
+                       for w, wave in enumerate(waves) for g in wave["groups"] for e in by_group[g]]
+            prepare_begin = time.monotonic_ns()
+            boxes = []
+            for i, (_, _, e, _) in enumerate(members):
+                vm, box = new_box(e, None, None)
+                box.net_id = i  # unique while the step runs; steps never overlap
+                boxes.append((vm, box))
+            with ThreadPoolExecutor(8) as pool:
+                list(pool.map(prepare, boxes))
+            results, placed, launches = [None] * len(members), [None] * len(members), [None] * len(waves)
+            begin = time.monotonic_ns()
+
+            def member(i, node, slot):
+                try:
+                    results[i] = run_sandbox(members[i][2], node, slot, members[i][3], boxes[i])
+                finally:
+                    with lock:
+                        live_count[node["index"]] -= 1
+                        free_slots[node["index"]].append(slot)
+
+            def wave_loop(w):
+                mine = [i for i, m in enumerate(members) if m[0] == w]
+                if stop.wait(max(0.0, begin / 1e9 + waves[w]["offset_s"] - time.monotonic_ns() / 1e9)):
+                    for i in mine:
+                        boxes[i][1].stop()
+                        shutil.rmtree(boxes[i][1].directory, ignore_errors=True)
+                    return
+                launches[w] = time.monotonic_ns()
+                threads = []
+                with lock:
+                    for g in waves[w]["groups"]:
+                        idx = [i for i in mine if members[i][1] == g]
+                        if args.placement == "spread":
+                            targets = [nodes[(len(threads) + j) % len(nodes)] for j in range(len(idx))]
+                        elif args.placement == "p2c":  # per sandbox, as members are counted in (DSec power-of-k)
+                            targets = [None] * len(idx)
+                        else:
+                            targets = [choose_node(members[idx[0]][2])] * len(idx)
+                        for i, node in zip(idx, targets):
+                            if node is None:
+                                node = min(p2c_rng.sample(nodes, min(2, len(nodes))),
+                                           key=lambda n: (live_count[n["index"]], p2c_rng.random()))
+                            slot = free_slots[node["index"]].pop()
+                            live_count[node["index"]] += 1
+                            placed[i] = node["index"]
+                            boxes[i][1].node, boxes[i][1].slot = node, slot
+                            threads.append(threading.Thread(target=member, args=(i, node, slot)))
+                for thread in threads:
+                    thread.start()
+                for thread in threads:
+                    thread.join()
+
+            workers = [threading.Thread(target=wave_loop, args=(w,)) for w in range(len(waves))]
+            for worker in workers:
+                worker.start()
+            for worker in workers:
+                worker.join()
+            done = [r for r in results if r]
+            with lock:
+                steps.write(json.dumps({
+                    "group": "all", "step": k, "orig_step": step["orig_step"], "trace": members[0][2]["name"],
+                    "begin_ns": begin, "prepare_s": round((begin - prepare_begin) / 1e9, 3),
+                    "rl_groups": [g for wave in waves for g in wave["groups"]], "images": step["images"],
+                    "wave_offset_s": [wave["offset_s"] for wave in waves], "wave_launch_ns": launches,
+                    "traces": [m[2]["name"] for m in members], "member_wave": [m[0] for m in members],
+                    "start_delay_s": [m[3] for m in members], "member_node": placed,
+                    "member_vm": [vm for vm, _ in boxes], "end_ns": time.monotonic_ns(),
+                    "members": len(members), "completed": sum(bool(r.get("completed")) for r in done),
+                    "member_end_ns": [r["end_ns"] for r in done], "idle_after_s": step["idle_after_s"]}) + "\n")
+                steps.flush()
+            if k < last and step["idle_after_s"] and stop.wait(step["idle_after_s"]):
+                break
 
     sampling = threading.Thread(target=sampler, args=(sandboxes, lock, nodes, stop, directory, args.sample_ms / 1000))
     sampling.start()
@@ -995,10 +1715,24 @@ def pilot(args):
         total = args.per_node * len(nodes)
         if total % args.group_size:
             raise SystemExit("per-node x nodes must be a multiple of --group-size")
-        # Member i of the whole fleet goes to node i mod N, so each group is spread across nodes.
-        threads = [threading.Thread(target=group_loop, args=(g, [(nodes[i % len(nodes)], i // len(nodes))
-                                                                 for i in range(g * args.group_size, (g + 1) * args.group_size)]))
-                   for g in range(total // args.group_size)]
+        if args.placement == "pack" and args.per_node % args.group_size:
+            raise SystemExit("--placement pack needs --per-node to be a multiple of --group-size")
+
+        def place(i):
+            # spread: member i of the fleet on node i mod N (a group spans nodes); pack: a whole group on one node
+            # (image/snapshot locality, group CoW).
+            if args.placement == "pack":
+                return nodes[i // args.per_node], i % args.per_node
+            return nodes[i % len(nodes)], i // len(nodes)
+
+        if plan:
+            threads = [threading.Thread(target=plan_loop, args=(plan, *plan_range))]
+        elif args.sync_steps:
+            threads = [threading.Thread(target=sync_loop, args=([place(i) for i in range(total)],))]
+        else:
+            threads = [threading.Thread(target=group_loop, args=(g, [place(i) for i in range(g * args.group_size,
+                                                                                             (g + 1) * args.group_size)]))
+                       for g in range(total // args.group_size)]
     else:
         threads = [threading.Thread(target=slot_loop, args=(n, s)) for n in nodes for s in range(args.per_node)]
     for thread in threads:
@@ -1014,6 +1748,9 @@ def pilot(args):
             controller.join()
         cpu_log.terminate()
         cpu_log.wait(timeout=10)
+        co_load.finish()
+        host_stop.set()
+        host_log.join(timeout=5)
         events.close()
         steps.close()
     save_json(directory / "done.json", {"wall_s": round(time.monotonic() - started, 3), "sandboxes": counter[0]})
@@ -1094,6 +1831,11 @@ def episodes(args):
     cores, ordered = load_ticks(directory, config, source, args.bin_ms)
     begin = ordered[0][0] + int(config["ramp_s"] * 1e9)
     end = begin + int(config["duration_s"] * 1e9)
+    if config.get("sync_steps") and (directory / "steps.jsonl").exists():
+        # synchronous steps: from the first step's launch to the last step's end (preparation between steps included)
+        records = [json.loads(line) for line in (directory / "steps.jsonl").open()]
+        if records:
+            begin, end = records[0]["begin_ns"], records[-1]["end_ns"]
     ordered = [(t, u) for t, u in ordered if begin <= t <= end]
     threshold = args.threshold_cores
     per_unit = {u: {"run_s": 0.0, "wait_s": 0.0, "time_s": 0.0, "contended_s": 0.0} for u in cores}
@@ -1146,8 +1888,11 @@ def episodes(args):
     if steps_path.exists():
         for line in steps_path.open():
             step = json.loads(line)
-            if step["completed"] == step["members"] and step["begin_ns"] >= begin and step["trace"] in expected:
-                step_slowdown.append((step["end_ns"] - step["begin_ns"]) / 1e9 / (expected[step["trace"]] + config["group_jitter_s"]))
+            # A real GRPO group has G different rollouts: the step's solo time is its slowest member's.
+            traces = step.get("traces") or [step["trace"]]
+            if step["completed"] == step["members"] and step["begin_ns"] >= begin and all(t in expected for t in traces):
+                step_slowdown.append((step["end_ns"] - step["begin_ns"]) / 1e9
+                                     / (max(expected[t] for t in traces) + config["group_jitter_s"]))
     q = lambda values: {f"p{int(x * 100)}": round(percentile(values, x), 3) if values else None for x in (.5, .9, .99)}
     summary = {
         "run": str(directory), "source": source, "bin_ms": args.bin_ms, "per_node": config["per_node"],
@@ -1230,8 +1975,19 @@ def statistics_mean(values):
     return sum(values) / len(values)
 
 
+def add_llm_args(p):
+    p.add_argument("--llm-model", choices=("recorded", "tokens"), default="recorded",
+                   help="LLM wait before each response: recorded gap, or t0 + alpha*context + beta*output tokens")
+    # Defaults: least-squares fit on the 2.49M turns of sweagent/iter2-rl-rollouts (training engine timing)
+    p.add_argument("--llm-t0", type=float, default=6.156)
+    p.add_argument("--llm-alpha", type=float, default=0.0)
+    p.add_argument("--llm-beta", type=float, default=0.02898)
+    p.add_argument("--no-balloon", dest="balloon", action="store_false",
+                   help="No virtio-balloon free page reporting")
+
+
 def main():
-    global CANDIDATES
+    global CANDIDATES, LLM_MODEL, BALLOON
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--candidates", type=Path, default=CANDIDATES, help="Trace list (select writes it)")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -1245,7 +2001,17 @@ def main():
     p.add_argument("names", nargs="*")
     p.add_argument("--jobs", type=int, default=4)
     p.add_argument("--keep-image", action="store_true", help="Keep the Docker image after export")
+    p.add_argument("--plan", type=Path, help="Only the images of this step plan's groups")
+    p.add_argument("--plan-steps", help="With --plan: steps a-b only")
+    p.add_argument("--unpinned", action="store_true", help="Ignore image-pins.json and pull the current tag")
     p.set_defaults(func=build)
+    p = sub.add_parser("drop-images", help="Delete built images of a plan's steps (never those in --keep lists)")
+    p.add_argument("--plan", type=Path, required=True)
+    p.add_argument("--plan-steps")
+    p.add_argument("--keep", type=Path, action="append", default=[],
+                   help="Candidates file whose images are kept (default: candidates-rl.json)")
+    p.add_argument("--dry-run", action="store_true")
+    p.set_defaults(func=drop_images)
     p = sub.add_parser("solo")
     p.add_argument("names", nargs="*")
     p.add_argument("--cores", default="13-23", help="Physical cores, one microVM each")
@@ -1259,6 +2025,9 @@ def main():
     p.add_argument("--vcpus", type=int, default=1, help="vCPUs per microVM; each gets that many dedicated cores")
     p.add_argument("--harness-cpus", help="CPUs for the harness process (default: unrestricted)")
     p.add_argument("--resume", type=Path, help="Continue this solo run directory (finished traces are kept)")
+    p.add_argument("--plan", type=Path, help="Only the traces of this step plan's groups")
+    p.add_argument("--plan-steps", help="With --plan: steps a-b only")
+    add_llm_args(p)
     p.set_defaults(func=solo)
     p = sub.add_parser("pilot", help="Concurrent replay on cpuset nodes, no migration")
     p.add_argument("names", nargs="*")
@@ -1288,6 +2057,33 @@ def main():
     p.add_argument("--dump-s-per-gib", type=float, default=0.30, help="Source CPU and downtime per GiB (experiment 3)")
     p.add_argument("--xfer-s-per-gib", type=float, default=0.39, help="Transfer time per GiB (experiment 3, ~37 Gb/s)")
     p.add_argument("--no-network", dest="network", action="store_false")
+    p.add_argument("--placement", choices=("spread", "pack", "home", "least", "p2c"), default="spread",
+                   help="Group mode: spread a group over nodes (i mod N), pack it on one node (fixed per group slot), "
+                        "home (the node fixed by the task's image), or least (the node with fewer live sandboxes); "
+                        "p2c (with --sync-plan): each sandbox on the less loaded of two random nodes")
+    p.add_argument("--sync-steps", type=int, default=0,
+                   help="Group mode: synchronous RL steps (all groups start together, next step waits for the slowest); "
+                        "the run ends after this many steps or --duration-s. Use --ramp-s 0")
+    p.add_argument("--step-gap-s", type=float, default=0, help="Idle time between synchronous steps (training phase)")
+    p.add_argument("--sync-plan", type=Path,
+                   help="Group mode: synchronous steps from a step plan (rl_rollouts.py plan): two waves, recorded "
+                        "start delays, idle between steps, new groups every step. Use --ramp-s 0 and a long --duration-s")
+    p.add_argument("--plan-steps", help="Steps of the plan to run, e.g. 0-1 (default: all)")
+    p.add_argument("--base-pmem", action="store_true",
+                   help="Base image as a read-only virtio-pmem device mounted with DAX (guest reads the host page cache)")
+    p.add_argument("--mem-sample-s", type=float, default=0,
+                   help="Guest memory/disk sampling interval (SWE_MEM serial lines, kept in sandboxes.jsonl); 0 = off")
+    p.add_argument("--be", help="Co-located best-effort load KIND:LEVEL on the BE nodes' CPUs, e.g. mix:0.3 "
+                                "(kinds cpu, avx, mem, mix; LEVEL = busy fraction of every CPU)")
+    p.add_argument("--be-nodes", help="Node indices that get the BE load, e.g. 0 or 0,1 (default: all)")
+    p.add_argument("--be-qos", choices=("none", "idle", "core", "rdt"), default="none",
+                   help="BE isolation: none; idle = SCHED_IDLE; core = + core scheduling; rdt = + L3 ways and MB cap")
+    p.add_argument("--be-rdt", default="4:30", help="WAYS:MB_PERCENT for BE with --be-qos rdt (L3 has 15 ways)")
+    p.add_argument("--be-mem-mb", type=int, default=64, help="Stream array per BE thread (mem/mix kinds)")
+    p.add_argument("--be-warmup-s", type=float, default=10)
+    p.add_argument("--ls-resctrl", help="Existing resctrl group (tasks file writable by this user) for every sandbox, "
+                                        "e.g. with fewer L3 ways to keep LLC per core when the nodes are shrunk")
+    add_llm_args(p)
     p.set_defaults(func=pilot)
     p = sub.add_parser("cpu-sampler", help=argparse.SUPPRESS)
     p.add_argument("--groups", required=True)
@@ -1311,6 +2107,9 @@ def main():
     p.set_defaults(func=network_down)
     args = parser.parse_args()
     CANDIDATES = args.candidates.resolve()
+    if getattr(args, "llm_model", "recorded") == "tokens":
+        LLM_MODEL = (args.llm_t0, args.llm_alpha, args.llm_beta)
+    BALLOON = getattr(args, "balloon", True)
     args.func(args)
 
 

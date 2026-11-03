@@ -34,4 +34,4 @@ __pycache__/
 *.tar.gz
 
 # Contention experiment images, runs and copied binaries
-/experiments/contention/.local/
+/experiments/contention/.local

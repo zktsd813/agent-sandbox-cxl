@@ -1,0 +1,47 @@
+{
+  "checked_at_utc": "2026-10-07T04:40:40.517193+00:00",
+  "scope": "Read-only host and source inspection; no package installation, image pull, container creation, or live replay.",
+  "execution_context": {
+    "hostname": "ubuntu",
+    "architecture": "x86_64",
+    "kernel": "6.6.0-rc6-niagara-lreclaim-20260923",
+    "python_version": "3.12.3",
+    "logical_cpus": 64,
+    "disk_bytes": {
+      "total": 452339236864,
+      "used": 340916469760,
+      "free": 109102391296
+    }
+  },
+  "docker": {
+    "cli_version": "29.3.1",
+    "daemon_query_outside_tool_sandbox_succeeded": true,
+    "daemon_query_inside_tool_sandbox_result": "Docker socket permission denied; reported zero resource fields are invalid placeholders.",
+    "server_version": "29.3.1",
+    "cpus": 64,
+    "memory_bytes": 168612761600,
+    "storage_driver": "overlayfs",
+    "cgroup_version": "2",
+    "container_execution_verified": false
+  },
+  "current_interpreter_packages": {
+    "sweagent": null,
+    "swe-rex": null,
+    "mini-swe-agent": null,
+    "datasets": null,
+    "pyarrow": null,
+    "pydantic": null
+  },
+  "repository_venvs_present": {
+    "SWE-agent": false,
+    "mini-swe-agent": false
+  },
+  "harness_requirements": {
+    "SWE-agent_python": ">=3.11",
+    "SWE-agent_swe_rex": ">=1.4.0",
+    "mini-swe-agent_python": ">=3.10"
+  },
+  "nvidia_sample_task_image_and_commit_matched": false,
+  "replay_input_conversion_implemented": false,
+  "custom_worker_implemented": false
+}

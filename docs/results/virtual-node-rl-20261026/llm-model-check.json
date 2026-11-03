@@ -1,0 +1,39 @@
+{
+ "rollouts": 448,
+ "groups": 56,
+ "images": 46,
+ "family_rollouts": {
+  "swerebench": 184,
+  "swerebenchv2": 136,
+  "aweaiteam": 128
+ },
+ "turns": 48363,
+ "turn_gap_recorded_pct": {
+  "p10": 2.14,
+  "p50": 8.03,
+  "p90": 34.36,
+  "p99": 80.74
+ },
+ "turn_gap_modeled_pct": {
+  "p10": 7.84,
+  "p50": 9.69,
+  "p90": 27.22,
+  "p99": 62.12
+ },
+ "corr_turn": 0.69,
+ "rollout_gap_sum_modeled_over_recorded_p50": 1.015,
+ "corr_rollout_sum": 0.792,
+ "resolved_rate": 0.422,
+ "exit_status": {
+  "Submitted": 401,
+  "TimeExceeded": 32,
+  "LimitsExceeded": 15
+ },
+ "fit_all_2.49M_turns": {
+  "t0_s": 6.155780382082149,
+  "alpha_s_per_ctx_token": -1.4223946406076177e-05,
+  "beta_s_per_out_token": 0.028976780744203432,
+  "r2": 0.4530669953301032,
+  "turns": 2490041
+ }
+}

@@ -1,0 +1,503 @@
+{
+  "observed_at_utc": "2026-10-06T09:54:52.408527+00:00",
+  "hostname": "ubuntu",
+  "kernel": "6.6.0-rc6-niagara-lreclaim-20260923",
+  "cgroup_controllers": "cpuset cpu io memory hugetlb pids rdma misc",
+  "online_nodes": "0-2",
+  "nodes_with_memory": "0-1",
+  "kernel_config": {
+    "CONFIG_SCHED_CLASS_EXT": "absent from this config",
+    "CONFIG_BPF_SYSCALL": "CONFIG_BPF_SYSCALL=y",
+    "CONFIG_MEMCG": "CONFIG_MEMCG=y",
+    "CONFIG_DEV_DAX": "CONFIG_DEV_DAX=y",
+    "CONFIG_DEV_DAX_KMEM": "CONFIG_DEV_DAX_KMEM=y",
+    "CONFIG_CXL_NIAGARA2": "CONFIG_CXL_NIAGARA2=y"
+  },
+  "nodes": [
+    {
+      "name": "node0",
+      "cpulist": "0-31",
+      "meminfo": [
+        "Node 0 MemTotal:       131658104 kB",
+        "Node 0 MemFree:        66762448 kB",
+        "Node 0 MemUsed:        64895656 kB",
+        "Node 0 SwapCached:          124 kB"
+      ]
+    },
+    {
+      "name": "node1",
+      "cpulist": "32-63",
+      "meminfo": [
+        "Node 1 MemTotal:       33002796 kB",
+        "Node 1 MemFree:          746192 kB",
+        "Node 1 MemUsed:        32256604 kB",
+        "Node 1 SwapCached:            0 kB"
+      ]
+    },
+    {
+      "name": "node2",
+      "cpulist": "",
+      "meminfo": [
+        "Node 2 MemTotal:              0 kB",
+        "Node 2 MemFree:               0 kB",
+        "Node 2 MemUsed:               0 kB",
+        "Node 2 SwapCached:            0 kB"
+      ]
+    }
+  ],
+  "dax_devices": [
+    {
+      "name": "dax0.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax1.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax10.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax11.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax12.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax13.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax14.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax15.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax16.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax17.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax18.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax19.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax2.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax20.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax21.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax22.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax23.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax24.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax25.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax26.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax27.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax28.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax29.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax3.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax30.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax31.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax32.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax33.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax34.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax35.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax36.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax37.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax38.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax39.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax4.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax40.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax41.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax42.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax43.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax44.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax45.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax46.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax47.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax48.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax49.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax5.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax50.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax51.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax52.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax53.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax54.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax55.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax56.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax57.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax58.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax59.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax6.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax60.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax61.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax62.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax63.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "4096",
+      "target_node": "2",
+      "driver": "device_dax"
+    },
+    {
+      "name": "dax7.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax8.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    },
+    {
+      "name": "dax9.0",
+      "size_bytes": "2147483648",
+      "align_bytes": "2097152",
+      "target_node": "2",
+      "driver": "kmem"
+    }
+  ],
+  "node_identity": {
+    "name": "bud05",
+    "address": "143.248.188.122",
+    "verified_via": "current server IP matched existing experiment/lib/run.py host configuration"
+  }
+}

@@ -1,0 +1,193 @@
+{
+  "checked_on_utc": "2026-10-07",
+  "method": "Read primary documentation and collection code; download only small samples. Recorded actions were not executed; images were not pulled; no model inference was performed.",
+  "dsec": {
+    "source": "https://arxiv.org/html/2609.22978v1",
+    "relevant_sections": [
+      "4.1",
+      "4.3"
+    ],
+    "production_trace_release_found": false,
+    "search_result_scope": "No public download found in this investigation; this does not establish permanent nonavailability."
+  },
+  "official_mini": {
+    "repository": "https://github.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash",
+    "tree_commit": "8dcca98587e7f698753903e3b1747eb5dc013cb1",
+    "snapshot_traj_file_count": 264,
+    "checked_files": 1,
+    "sample_path": "trajs/gin-gonic__gin-3741.traj.json",
+    "sample_url": "https://raw.githubusercontent.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash/8dcca98587e7f698753903e3b1747eb5dc013cb1/trajs/gin-gonic__gin-3741.traj.json",
+    "sample_sha256": "5837d6d1dc2e53031ed8c4e11c122fd1f822097c0735c741ece201285947f997",
+    "sample_bytes": 181663,
+    "mini_version": "2.4.6",
+    "exit_status": "Submitted",
+    "trajectory_format": "mini-swe-agent-1.1",
+    "roles": {
+      "system": 1,
+      "user": 1,
+      "assistant": 27,
+      "tool": 26,
+      "exit": 1
+    },
+    "all_checked_assistant_and_tool_messages_timestamped": true,
+    "model_api_calls": 27,
+    "environment": {
+      "image": "docker.io/swebench/sweb.eval.x86_64.gin-gonic_1776_gin-3741:latest",
+      "cwd": "/testbed",
+      "env": {
+        "PAGER": "cat",
+        "MANPAGER": "cat",
+        "LESS": "-R",
+        "PIP_PROGRESS_BAR": "off",
+        "TQDM_DISABLE": "1",
+        "BASH_ENV": "/root/.bashrc"
+      },
+      "forward_env": [],
+      "timeout": 60,
+      "executable": "docker",
+      "run_args": [
+        "--rm"
+      ],
+      "container_timeout": "2h",
+      "pull_timeout": 120,
+      "interpreter": [
+        "bash",
+        "-c"
+      ]
+    },
+    "multi_action_responses_in_sample": 0,
+    "first_six_batches": [
+      {
+        "message_index": 2,
+        "commands": [
+          "ls -la"
+        ],
+        "assistant_timestamp": 1788297108.8566096,
+        "tool_result_timestamps": [
+          1788297108.9211993
+        ],
+        "observed_response_gap_seconds": null,
+        "observed_tool_batch_seconds": 0.0645897388458252
+      },
+      {
+        "message_index": 4,
+        "commands": [
+          "grep -n -C 20 \"StatusCode\" logger.go"
+        ],
+        "assistant_timestamp": 1788297110.0720973,
+        "tool_result_timestamps": [
+          1788297110.1329165
+        ],
+        "observed_response_gap_seconds": 1.1508979797363281,
+        "observed_tool_batch_seconds": 0.060819149017333984
+      },
+      {
+        "message_index": 6,
+        "commands": [
+          "grep -n -C 10 \"StatusCodeColor\" logger_test.go"
+        ],
+        "assistant_timestamp": 1788297114.381308,
+        "tool_result_timestamps": [
+          1788297114.4362063
+        ],
+        "observed_response_gap_seconds": 4.248391628265381,
+        "observed_tool_batch_seconds": 0.05489826202392578
+      },
+      {
+        "message_index": 8,
+        "commands": [
+          "grep -rn \"StatusContinue\" ."
+        ],
+        "assistant_timestamp": 1788297118.7492218,
+        "tool_result_timestamps": [
+          1788297118.860672
+        ],
+        "observed_response_gap_seconds": 4.313015460968018,
+        "observed_tool_batch_seconds": 0.1114501953125
+      },
+      {
+        "message_index": 10,
+        "commands": [
+          "go test ./..."
+        ],
+        "assistant_timestamp": 1788297122.100822,
+        "tool_result_timestamps": [
+          1788297124.0791864
+        ],
+        "observed_response_gap_seconds": 3.240149974822998,
+        "observed_tool_batch_seconds": 1.9783644676208496
+      },
+      {
+        "message_index": 12,
+        "commands": [
+          "sed -n '81,96p' logger.go"
+        ],
+        "assistant_timestamp": 1788297130.071318,
+        "tool_result_timestamps": [
+          1788297130.1246397
+        ],
+        "observed_response_gap_seconds": 5.992131471633911,
+        "observed_tool_batch_seconds": 0.05332183837890625
+      }
+    ],
+    "limits": [
+      "One actual trajectory checked; snapshot is not claimed to be SWE-bench Verified.",
+      "Message timestamps are response/observation construction times, not direct CPU usage measurements.",
+      "Multiple actions in one response are stamped after the entire execution batch.",
+      "Observed response gap includes API, inference, network and framework overhead.",
+      "Image tag recorded but registry availability and original digest not checked.",
+      "Submitted does not establish resolved."
+    ],
+    "timestamp_semantics_checked_in_local_mini_commit": "04d809ceab9df28f9adaed044884180159172930"
+  },
+  "tracelab": {
+    "source": "https://github.com/uw-syfi/TraceLab",
+    "release": "https://github.com/uw-syfi/TraceLab/releases/tag/v0.0.2",
+    "checked_rows": 30,
+    "checked_tool_calls": 37,
+    "tool_calls_with_emitted_and_result_times": 37,
+    "example_tool": {
+      "tool_index": 0,
+      "tool_name": "Read",
+      "tool_call_id": "call_564d8f4159775bbf",
+      "emitted_at": "2026-06-02T23:55:38.897Z",
+      "input_chars": 94,
+      "result_chars": 5253,
+      "tool_wall_latency_ms": 60,
+      "tool_internal_latency_ms": null,
+      "is_error": false,
+      "result_at": "2026-06-02T23:55:38.957Z"
+    },
+    "limits": [
+      "Raw tool arguments and result payloads are sanitized out.",
+      "Command skeleton is insufficient for exact command replay.",
+      "Wall latency does not measure CPU usage.",
+      "Sample counts do not establish whole-dataset completeness."
+    ]
+  },
+  "agenttrace": {
+    "source": "https://github.com/pagarsky/agent-trace",
+    "code_commit": "8ce41dd7f7d2a8709b17287168bc788f291ac674",
+    "dataset": "https://huggingface.co/datasets/pagarsky/agent-trace",
+    "checked_samples": {
+      "nl2bash": {
+        "checked_traces": 30,
+        "checked_llm_steps": 159,
+        "nonnull_llm_duration_ms": 0
+      },
+      "mbpp": {
+        "checked_traces": 30,
+        "checked_llm_steps": 91,
+        "nonnull_llm_duration_ms": 0
+      }
+    },
+    "limits": [
+      "Small MBPP/NL2Bash tasks, not repository-scale SWE tasks.",
+      "Monotonic tool span timestamps support local differences, not cross-host absolute alignment.",
+      "Top-level UTC timestamp is recorded when building the trace, not a known session-start anchor.",
+      "All checked LLM duration_ms fields were null.",
+      "max_rss telemetry uses cumulative peak accounting, not a memory time series.",
+      "Original hardware is Apple M3 Pro/macOS."
+    ]
+  }
+}

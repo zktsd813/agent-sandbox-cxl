@@ -1,6 +1,6 @@
 # agent-sandbox-cxl
 
-처음 읽는 경우 [CXL microVM 연구와 구현 전체 정리](docs/cxl-microvm-overview.md)부터 본다. Workload 관측부터 실행 이전 구현, PML·MPTCP 검증, 파일 공유 설계와 후속 계획을 연결했다. 구현·실측·시뮬레이션·설계 중인 내용을 구분한다.
+문서 색인과 현재 방향(2026-11-03)은 [docs/README.md](docs/README.md)에 있다. 처음 읽는 경우 [CXL microVM 연구와 구현 전체 정리](docs/cxl-microvm-overview.md)부터 본다. Workload 관측부터 실행 이전 구현, PML·MPTCP 검증, 파일 공유 설계와 후속 계획을 연결했다. 구현·실측·시뮬레이션·설계 중인 내용을 구분한다.
 
 2026-11-02 최신 구현은 [목적지 FD·장치 실행 환경을 유지하는 resident direct](docs/cxl-resident-direct.md)다. 목적지 준비를 source 실행 중에 끝내고, 왕복 때 같은 VMM·디스크 FD·io_uring·vCPU thread를 사용한다. [검증 결과](implementation/virtual_machine/results/direct-resident-20261102/README.md)는 준비 비용, Export/Import API와 TCP로 측정한 실제 pause→guest 응답 시간을 구분한다.
 

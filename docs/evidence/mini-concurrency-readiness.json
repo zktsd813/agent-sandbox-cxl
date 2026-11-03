@@ -1,0 +1,152 @@
+{
+  "checked_on_utc": "2026-10-07T06:26:17.632674+00:00",
+  "code_files": [
+    "harness/trace-replay/analyze.py",
+    "harness/trace-replay/experiment.py"
+  ],
+  "source_repository": "https://github.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash",
+  "source_commit": "8dcca98587e7f698753903e3b1747eb5dc013cb1",
+  "checked_traces": 16,
+  "observed_interaction_window_peak": 3,
+  "observed_schedule_span_s": 6711.192091226578,
+  "clock_assumption": "Recorded timestamps are comparable across the selected traces.",
+  "container_setup": "All selected containers are prepared before the replay clock starts.",
+  "windows": [
+    {
+      "name": "apache__lucene-12212",
+      "source_url": "https://raw.githubusercontent.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash/8dcca98587e7f698753903e3b1747eb5dc013cb1/trajs/apache__lucene-12212.traj.json",
+      "first_unix": 1788294754.040107,
+      "last_observed_unix": 1788295208.2984717,
+      "sha256": "610d62192f573d091fbd5e34655aace42f23e294442d0ba9477e80e8eccdfc74"
+    },
+    {
+      "name": "fluent__fluentd-4030",
+      "source_url": "https://raw.githubusercontent.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash/8dcca98587e7f698753903e3b1747eb5dc013cb1/trajs/fluent__fluentd-4030.traj.json",
+      "first_unix": 1788296710.8810089,
+      "last_observed_unix": 1788296902.3676171,
+      "sha256": "7450dc7eea5561303705916046923447455dcccd89ce3f80cbc344070b4ca308"
+    },
+    {
+      "name": "fluent__fluentd-4598",
+      "source_url": "https://raw.githubusercontent.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash/8dcca98587e7f698753903e3b1747eb5dc013cb1/trajs/fluent__fluentd-4598.traj.json",
+      "first_unix": 1788296748.5333436,
+      "last_observed_unix": 1788296831.2335143,
+      "sha256": "0bdc1fcb3e4daabed4251c6cb91f221d53c0dcf7a8d0dcfb624f297936ccc389"
+    },
+    {
+      "name": "fmtlib__fmt-1683",
+      "source_url": "https://raw.githubusercontent.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash/8dcca98587e7f698753903e3b1747eb5dc013cb1/trajs/fmtlib__fmt-1683.traj.json",
+      "first_unix": 1788296827.2932916,
+      "last_observed_unix": 1788297038.187026,
+      "sha256": "d7490bd80840fdb3c25052051ed8492c0bf6dd5614c2a191703a509bccb27579"
+    },
+    {
+      "name": "gin-gonic__gin-2755",
+      "source_url": "https://raw.githubusercontent.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash/8dcca98587e7f698753903e3b1747eb5dc013cb1/trajs/gin-gonic__gin-2755.traj.json",
+      "first_unix": 1788297082.4820788,
+      "last_observed_unix": 1788297178.5668857,
+      "sha256": "9f032bec07aa4bafe6635903b5d66060cd4311f9fa1761ffac09ba7f85148c42"
+    },
+    {
+      "name": "gin-gonic__gin-3741",
+      "source_url": "https://raw.githubusercontent.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash/8dcca98587e7f698753903e3b1747eb5dc013cb1/trajs/gin-gonic__gin-3741.traj.json",
+      "first_unix": 1788297108.8566096,
+      "last_observed_unix": 1788297178.144387,
+      "sha256": "5837d6d1dc2e53031ed8c4e11c122fd1f822097c0735c741ece201285947f997"
+    },
+    {
+      "name": "gin-gonic__gin-4003",
+      "source_url": "https://raw.githubusercontent.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash/8dcca98587e7f698753903e3b1747eb5dc013cb1/trajs/gin-gonic__gin-4003.traj.json",
+      "first_unix": 1788297174.272488,
+      "last_observed_unix": 1788297249.086074,
+      "sha256": "3df6e5aa5771c61cc268025b4a6cb041a82ae4900b5856a65de95694581b3158"
+    },
+    {
+      "name": "javaparser__javaparser-4538",
+      "source_url": "https://raw.githubusercontent.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash/8dcca98587e7f698753903e3b1747eb5dc013cb1/trajs/javaparser__javaparser-4538.traj.json",
+      "first_unix": 1788297635.4778337,
+      "last_observed_unix": 1788297862.9146032,
+      "sha256": "5c14f99ae3e600fb40fd807a2d3d23e9be750c4b3a01ced01554722c51d02925"
+    },
+    {
+      "name": "jqlang__jq-2235",
+      "source_url": "https://raw.githubusercontent.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash/8dcca98587e7f698753903e3b1747eb5dc013cb1/trajs/jqlang__jq-2235.traj.json",
+      "first_unix": 1788297913.6297808,
+      "last_observed_unix": 1788298099.45655,
+      "sha256": "251789310312d4a6517df066bc039317f086a9bb1c04f745f5838c0536f9e473"
+    },
+    {
+      "name": "laravel__framework-48573",
+      "source_url": "https://raw.githubusercontent.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash/8dcca98587e7f698753903e3b1747eb5dc013cb1/trajs/laravel__framework-48573.traj.json",
+      "first_unix": 1788298093.7721317,
+      "last_observed_unix": 1788298223.5613468,
+      "sha256": "113cbaebeb3acb2d0e8333edf21978b91519d39377a633d06f410e28afb460eb"
+    },
+    {
+      "name": "micropython__micropython-10095",
+      "source_url": "https://raw.githubusercontent.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash/8dcca98587e7f698753903e3b1747eb5dc013cb1/trajs/micropython__micropython-10095.traj.json",
+      "first_unix": 1788298297.809564,
+      "last_observed_unix": 1788298480.9470751,
+      "sha256": "379e208636ffde0e1157dd1b8e130c09559808eaa0370e52530245e67102e9b0"
+    },
+    {
+      "name": "mrdoob__three.js-26589",
+      "source_url": "https://raw.githubusercontent.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash/8dcca98587e7f698753903e3b1747eb5dc013cb1/trajs/mrdoob__three.js-26589.js-26589.traj.json",
+      "first_unix": 1788298398.2952871,
+      "last_observed_unix": 1788298717.4487433,
+      "sha256": "2421cf3269a03e1862f69988ce2d0a0f8abf66c4a05aa4fa4440b37e6642001c"
+    },
+    {
+      "name": "preactjs__preact-3010",
+      "source_url": "https://raw.githubusercontent.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash/8dcca98587e7f698753903e3b1747eb5dc013cb1/trajs/preactjs__preact-3010.traj.json",
+      "first_unix": 1788299041.696897,
+      "last_observed_unix": 1788299317.6833262,
+      "sha256": "81ecb54a21badec7f7596e55b4cf430ea40ccc0dd7c968ea7fc21ce496704d8d"
+    },
+    {
+      "name": "preactjs__preact-3562",
+      "source_url": "https://raw.githubusercontent.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash/8dcca98587e7f698753903e3b1747eb5dc013cb1/trajs/preactjs__preact-3562.traj.json",
+      "first_unix": 1788299133.8631144,
+      "last_observed_unix": 1788299350.0146766,
+      "sha256": "93682f22165de0778defed18a2db8f9292e0ec8967f5e0d522bc8dc4c552de53"
+    },
+    {
+      "name": "prometheus__prometheus-13845",
+      "source_url": "https://raw.githubusercontent.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash/8dcca98587e7f698753903e3b1747eb5dc013cb1/trajs/prometheus__prometheus-13845.traj.json",
+      "first_unix": 1788299906.8067024,
+      "last_observed_unix": 1788299976.2029104,
+      "sha256": "881aaa3f4f2a2d6fca468b3e3539b1ecd51d4a6f3fd9a4988914b00e1398f727"
+    },
+    {
+      "name": "tokio-rs__tokio-7139",
+      "source_url": "https://raw.githubusercontent.com/SWE-bench/20260902_mini-v2.4.6_gemini-3-5-flash/8dcca98587e7f698753903e3b1747eb5dc013cb1/trajs/tokio-rs__tokio-7139.traj.json",
+      "first_unix": 1788301256.54751,
+      "last_observed_unix": 1788301465.2321982,
+      "sha256": "60099f4b9624d41d899bef415b086d0f8168e444296cac66d6357e0ca7a817d8"
+    }
+  ],
+  "validation": [
+    "All 16 sampled native traces passed parser/plan validation.",
+    "Syntax checks passed for exactly two Python files.",
+    "Simulated two-session replay and resource sampling: concurrent sessions, serial batches, late commands, expected nonzero return codes, invalid timestamp rejection, analysis summary and PNG output."
+  ],
+  "live_container_validation": true,
+  "limitations": [
+    "Native timestamp comparability across hosts was not established from metadata.",
+    "Interaction window overlap is not container creation/lifetime concurrency.",
+    "Only 16 traces in one submission were inspected.",
+    "Command duration and original completion timestamps are not enforced on the current server."
+  ],
+  "live_validation_update": {
+    "checked_at_utc": "2026-10-07T09:28:47.253803+00:00",
+    "pilot16_completed": 16,
+    "commands": 680,
+    "returncode_mismatches": 6,
+    "submission_equivalent_except_warning_order": 16,
+    "shared_budget_case_completed": true,
+    "task_image_cache": 79,
+    "full264_started": false,
+    "full264_blocker": "Docker Hub unauthenticated pull rate limit; no stored Docker login configuration",
+    "report": "../replay-report.md"
+  }
+}
