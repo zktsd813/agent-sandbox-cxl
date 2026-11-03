@@ -71,10 +71,17 @@ def trial(path):
     for index,h in enumerate(r['hops']):
         timing=h['timing']
         need(records(read(h['file']),'RESIDENT_FAST_JSON ')==[timing],'Native timing summary changed')
+        from resident_proxy import verify_receipt
+        verify_receipt(read(h['file']),timing)
         need(all(v['status']==204 for v in timing['apis'].values()),'API error')
         if timing['version']==2:need(set(timing['apis'])=={'send','receive'},'Extra/missing runtime API')
         state=json.loads(read(h['state_file']));sealed=json.loads(read(h['sealed_file']));manifest=json.loads(read(h['manifest_file']))
         token=state['token'];generation=token['generation']
+        if h.get('kernel_profile'):
+            kp=h['kernel_profile'];value=json.loads(read(kp['file']))
+            need(value=={k:v for k,v in kp.items() if k!='file'} and value['generation']==generation
+                and value['bytes']==128 and value['offset']==12288*1024**2+512
+                and len(value['attach_ns'])==len(value['detach_ns'])==8,'Kernel profile binding')
         need(token==h['export_token'] and generation==index+1,'Token/generation mismatch')
         need(len(read(h['state_file']).encode())==timing['state_bytes'] and len(read(h['sealed_file']).encode())==timing['manifest_bytes'], 'Wrong wire byte count')
         need(hashlib.sha256(read(h['sealed_file']).encode()).hexdigest()==state['memory_manifest_sha256'],'Manifest digest mismatch')
@@ -101,7 +108,7 @@ def trial(path):
             a=h['guest_ack']['receipt']
             need(any(json.loads(line)==a for line in read(h['guest_ack']['file']).splitlines()
                 if line.startswith('{"event":')),'Separate guest ACK summary changed')
-        need(a['label']==f'hop{index+1}' and all(a[k]==before[k] for k in ('boot_id','pid','cookie')),'Invalid ACK')
+        need(isinstance(a,dict) and a['label']==f'hop{index+1}' and all(a[k]==before[k] for k in ('boot_id','pid','cookie')),'Invalid ACK')
         guest_pings=[json.loads(line) for line in guest[h['destination']].splitlines() if line.startswith('{"event":"trace_ping"')]
         need(a in guest_pings,'ACK absent from actual guest log')
         probe=next(p for p in r['source_probes'] if p['role']==h['source'] and p['receipt']['generation']==generation)
@@ -112,6 +119,7 @@ def trial(path):
             'external_command_ms':h.get('controller_command_wall_ns',0)/1e6,
             'export_attach_api_ms':sum(timing['apis'][k]['duration_us'] for k in (('send','receive') if timing['version']==2 else ('export','attach')))/1000,
             'kernel_ms':(token['kernel_ns']+imp['token']['kernel_ns'])/1e6,
+            'kernel_profile':h.get('kernel_profile'),
             'export_profile':profiles.get(('export',generation)),'import_profile':profiles.get(('import',generation))}
         need(bool(row['export_profile'])==bool(row['import_profile'])==r.get('profiled',True),'Unexpected/missing profiler records')
         if timing.get('wire_version')==3 and index>0:

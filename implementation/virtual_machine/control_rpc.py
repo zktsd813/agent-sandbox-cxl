@@ -21,7 +21,7 @@ def _read(sock, count):
     return out
 
 
-def call(vm, operation, body, timeout):
+def call(vm, operation, body, timeout, *, binary=False):
     if len(body) > CAP or not .001 <= timeout <= 900:
         raise ValueError('Control frame bounds')
     key = (vm['control_rpc'], vm['pid'], vm['starttime'])
@@ -49,13 +49,12 @@ def call(vm, operation, body, timeout):
             sock.close()
         _clients.pop(key, None)
         raise
-    text = data.decode(errors='replace')
     if status:
-        raise RuntimeError(f'Guest RPC command failed ({status}):\n{text}')
+        raise RuntimeError(f'Guest RPC command failed ({status}):\n{data.decode(errors="replace")}')
     # Expose transport/native boundaries without issuing another command.
     vm['_last_control_timing'] = {'wall_ns':time.monotonic_ns()-started, 'native_ns':native,
                                   'request_bytes':len(body), 'response_bytes':length}
-    return text
+    return data if binary else data.decode(errors='replace')
 
 
 def command(vm, body, timeout):
@@ -67,3 +66,9 @@ def put(vm, path, data, after='', timeout=120):
     script = ('set -e\n'+after+'\n').encode() if after else b''
     return 'LAB_RPC_PUT '+repr((path.decode(), after))+'\n'+call(vm, 2,
         struct.pack('<II',len(path),len(script))+path+script+data, timeout)
+
+
+def unix_exchange(vm, path, request, response_bytes, prefix_bytes, timeout=120):
+    path=path.encode()
+    return call(vm,3,struct.pack('<IIII',len(path),len(request),response_bytes,prefix_bytes)
+                +path+request,timeout,binary=True)

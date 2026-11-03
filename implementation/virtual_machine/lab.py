@@ -579,6 +579,7 @@ def start(args):
                                     "serial_log": str(prefix) + ".serial.log"}
             if control_rpc:
                 config["vms"][role].update(control_rpc=command_path, control_nonce=nonce)
+                config["vms"][role]['control_rpc_operations'] = prepared['control_rpc'].get('operations',[1,2])
             config["vms"] = {name: config["vms"][name] for name in ("A", "B") if name in config["vms"]}
             save_json(run / "run.json", config)
             if migration_network and args.network_backend == "socket" and role == args.socket_listener:

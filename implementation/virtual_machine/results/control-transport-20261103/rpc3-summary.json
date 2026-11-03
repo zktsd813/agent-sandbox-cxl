@@ -1,0 +1,70 @@
+{
+  "result": "passed",
+  "stage": "no-fork-resident-request-relay",
+  "archives": {
+    "backend-rpc3": {
+      "file": "backend-rpc3.tar.xz",
+      "sha256": "42a316b6908ec3aa9bd672074a78ea7539681d2657c91a6da2a9c568226ad3d7"
+    },
+    "swe-rpc3": {
+      "file": "swe-rpc3.tar.xz",
+      "sha256": "a031a635258dc549b7739d731af1201fba99ddd8d5c6c46bda4a457c34b6121f"
+    },
+    "kernel-trace-before": {
+      "file": "kernel-trace-before.tar.xz",
+      "sha256": "b0c34176736895676512f580ad46a8e5e6340a706236756e5d03265a345296aa"
+    },
+    "swe-relay-ab": {
+      "file": "swe-relay-ab.tar.xz",
+      "sha256": "aa8b73bb68a80e2e82815dad8f2bfdc02572593eb9e33ce32e0816ef02186f7f"
+    }
+  },
+  "paired_same_vm": {
+    "relay": {
+      "native_request_resume_ms": {
+        "n": 18,
+        "p50": 5.114297,
+        "min": 3.888329,
+        "max": 6.015585
+      },
+      "external_complete_ms": {
+        "n": 18,
+        "p50": 6.226914000000001,
+        "min": 4.930374,
+        "max": 7.153711
+      }
+    },
+    "exec": {
+      "native_request_resume_ms": {
+        "n": 20,
+        "p50": 5.0605655,
+        "min": 4.213121,
+        "max": 5.994182
+      },
+      "external_complete_ms": {
+        "n": 20,
+        "p50": 9.351611,
+        "min": 8.130257,
+        "max": 10.698552
+      }
+    }
+  },
+  "coverage": {
+    "backend_handoffs": 48,
+    "swe_proxy_handoffs": 44,
+    "swe_paired_handoffs": 44,
+    "diagnostic_kernel_handoffs": 6,
+    "protocol_tests": 12,
+    "evidence_mutation_tests": 13
+  },
+  "kernel_diagnostic": {
+    "first_return_arch_us": 4526,
+    "first_return_ept_us": 4192,
+    "note": "Kprobes perturb timing; use only to attribute cost, not as baseline latency"
+  },
+  "sample_definition": "Same live SWE VM, alternate relay/exec every complete roundtrip; excludes first A->B and B->A. Unprofiled execution. 18 relay and 20 exec warm samples.",
+  "limitations": [
+    "Coherent nested KVM",
+    "Separate runs varied substantially in native API latency; the relay improvement claim uses within-run comparison only"
+  ]
+}

@@ -19,23 +19,11 @@
 #include <sys/un.h>
 #include <time.h>
 #include <unistd.h>
+#include "resident_wire.h"
 
 #define CAP (64*1024)
 #define PORT 19091
-#define MAGIC 0x43585233u
-struct request {
- uint32_t magic, state_len, manifest_len, first, operation, observe, persistent;
- uint64_t vm, epoch, canonical_start, canonical_bytes;
- char nonce[33], label[96], peer[16];
-};
-struct api_result { double us; int status; };
-struct reply { uint32_t magic, ack_len; struct api_result receive; uint64_t ack_ns; };
-struct outcome {
- struct api_result send;
- struct reply target;
- uint64_t handoff_ns, connection_ns, pause_to_resume_ns;
- uint32_t state_len, manifest_len;
-};
+#define MAGIC RESIDENT_MAGIC
 static char directory[160], socket_path[192];
 static int readiness_pipe = -1;
 static int api_fd = -1;

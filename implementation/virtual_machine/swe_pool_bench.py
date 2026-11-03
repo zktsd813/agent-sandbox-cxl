@@ -287,6 +287,8 @@ def main():
     parser.add_argument("--full-audit", action="store_true")
     parser.add_argument("--restore-timing", action="store_true")
     parser.add_argument("--resume-nokick", action="store_true")
+    parser.add_argument("--exec-request", action="store_true")
+    parser.add_argument("--alternate-request", action="store_true",help="Diagnostic comparison: alternate relay/exec every roundtrip")
     parser.add_argument("--resident-direct", action="store_true")
     parser.add_argument("--resident-fast-control", action="store_true")
     parser.add_argument("--resident-ready-control", action="store_true")
@@ -310,7 +312,7 @@ def main():
     c = SWEController(config, out, args)
     s = c.sandboxes[0]
     report = {'schema': 'swe-pool-trace-v2', 'result': 'running', 'mode': args.mode, 'name': args.name,
-        'arguments': vars(args), 'config': config, 'fixture': c.fixture, 'trace': c.trace,
+        'arguments': dict(vars(args)), 'config': config, 'fixture': c.fixture, 'trace': c.trace,
         'commands': c.trace_commands, 'control_commands': c.commands, 'receipts': c.receipts,
         'transitions': c.transitions, 'authority_events': c.authority_events, 'memory_events': c.memory_events,
         'api_events': c.api_events, 'launches': c.launches, 'resident_negatives':c.import_negatives,
@@ -323,7 +325,7 @@ def main():
             'Same patched DRAM baseline, not pristine Firecracker', 'Natural resident pages in at most16 selected lower files',
             'One VM per trial: no multi-VM memory savings claim; full canonical image preloaded and counted']}
     sources = ('swe_pool_bench.py','swe_pool_protocol.py','swe-pool-l2-init.sh','swe-pool-guest-run.sh',
-        'resident_fast.py','resident_control.c','resident_bootstrap.c','control_rpc.c','control_rpc.py','guest-init.sh','guest-pool-cli.c','guest-pool.c','guest-pool-uapi.h','pool_handoff_bench.py','pool_handoff_control.py',
+        'resident_fast.py','resident_control.c','resident_wire.h','resident_proxy.py','resident_bootstrap.c','control_rpc.c','control_rpc.py','guest-init.sh','guest-pool-cli.c','guest-pool.c','guest-pool-uapi.h','pool_handoff_bench.py','pool_handoff_control.py',
         'pool_bench.py','pool_control.py','home_storage_bench.py','nfs_bench.py','trace_bench.py','lab.py')
     (out/'measured-sources').mkdir()
     for name in sources:

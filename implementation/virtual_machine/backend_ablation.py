@@ -16,6 +16,7 @@ import re
 import secrets
 import shutil
 import subprocess
+import struct
 import sys
 import tempfile
 import time
@@ -91,11 +92,12 @@ class Controller(HandoffController):
     setup = SWEController.setup
     configure_direct = SWEController.configure_direct
 
-    def __init__(self, config, out, arm, *, profiled=True, inline_guest_ack=False, resume_nokick=False):
+    def __init__(self, config, out, arm, *, profiled=True, inline_guest_ack=False, resume_nokick=False, exec_request=False):
         args = argparse.Namespace(memory_mib=2048, vcpus=1, sandboxes=1, minimum_cache_mib=128,
             io_engine='Async', mode='direct', credit_mib=16, resident_direct=True,
             resident_ready_control=True, resident_skip_disk_prepare=arm in ('none', 'nfs-unprepared'),
-            immutable_nfs_cache=True, restore_timing=profiled, full_audit=False, resume_nokick=resume_nokick)
+            immutable_nfs_cache=True, restore_timing=profiled, full_audit=False, resume_nokick=resume_nokick,
+            exec_request=exec_request)
         super().__init__(config, out, args)
         self.root = '/run/swe-pool-'+secrets.token_hex(8)
         self.arm = arm
@@ -162,10 +164,8 @@ class Controller(HandoffController):
         old_dir=s.directory;worker=self.resident_workers[dest];epoch=s.epoch+1
         first=not worker['imported'];label=f'hop{epoch}'
         ip={'A':'172.30.0.1','B':'172.30.0.2'}
-        raw,name=self.shell(source,f'/lab/resident-control request {old_dir} {ip[source]} '
-            f'{self.resident_control_nonce} {int(first)} {label} {ip[dest]} 1 {epoch} {self.pool_offset} {self.image_bytes}'
-            + (' 1' if self.inline_guest_ack else ''),
-            'handoff-request',120)
+        raw,name=resident_fast.request(self,source,old_dir,self.resident_control_nonce,first,label,ip[dest],
+            1,epoch,self.pool_offset,self.image_bytes,'handoff-request',observe=self.inline_guest_ack)
         rows=json_lines(raw,'RESIDENT_FAST_JSON ')
         controller_ns=self.control_timings[-1]['elapsed_ns']
         controller_rpc=self.control_timings[-1].get('rpc')
@@ -174,6 +174,18 @@ class Controller(HandoffController):
         require(all(x['status']==204 for x in timing['apis'].values()),'Handoff API failed')
         state_bytes=self.fetch_bytes(source,old_dir+'/direct-export.json','device-state')
         state=json.loads(state_bytes);state_file=self.receipts[-1]['file']
+        kernel_profile=None
+        if self.args.restore_timing:
+            # Diagnostic-only fixed 128-byte timing record, after the timed
+            # request has completed. Never walk guest RAM or mapper entries.
+            offset=12288*MIB+512
+            with Path(self.config['cxl_backing']).open('rb',buffering=0) as stream:
+                stream.seek(offset);data=stream.read(128)
+            require(len(data)==128,'Short kernel profile')
+            stages=struct.unpack('<16Q',data)
+            kernel_profile={'generation':state['token']['generation'],'offset':offset,'bytes':128,
+                'detach_ns':list(stages[:8]),'attach_ns':list(stages[8:])}
+            kernel_profile={'file':self.raw('kernel-stage-profile',json.dumps(kernel_profile)),**kernel_profile}
         sealed_bytes=self.fetch_bytes(source,s.manifest_path,'sealed-manifest')
         sealed=json.loads(sealed_bytes);sealed_file=self.receipts[-1]['file']
         require(len(state_bytes)==timing['state_bytes'] and len(sealed_bytes)==timing['manifest_bytes']
@@ -201,19 +213,20 @@ class Controller(HandoffController):
         return {'source':source,'destination':dest,'first_import':first,'epoch':epoch,'file':name,
             'controller_command_wall_ns':controller_ns,
             'controller_rpc':controller_rpc,
+            'kernel_profile':kernel_profile,
             'timing':timing,'export_token':state['token'],'state_file':state_file,
             'sealed_file':sealed_file,'manifest_file':manifest_file}
 
 
 def bench(a):
     _,config=lab.current_run();out=a.output;out.mkdir(parents=True,exist_ok=False)
-    c=Controller(config,out,a.arm,profiled=not a.unprofiled,inline_guest_ack=a.inline_guest_ack,
-                 resume_nokick=a.resume_nokick);s=c.sandboxes[0]
+    c=Controller(config,out,a.arm,profiled=True,inline_guest_ack=a.inline_guest_ack,
+                 resume_nokick=a.resume_nokick,exec_request=a.exec_request);s=c.sandboxes[0]
     report={'schema':'backend-ablation-trial-v1','arm':a.arm,'result':'running','fixture':c.fixture,
         'config':config,'receipts':c.receipts,'commands':c.commands,'api_events':c.api_events,
         'launches':c.launches,'hops':[],'backend_reads':[],'logs':[],'parked_combined_action_test':True,
         'memory_events':c.memory_events,'source_probes':c.resident_probes,'negative_apis':c.import_negatives,
-        'profiled':not a.unprofiled,'inline_guest_ack':a.inline_guest_ack,'resume_nokick':a.resume_nokick}
+        'profiled':True,'inline_guest_ack':a.inline_guest_ack,'resume_nokick':a.resume_nokick}
     def save(): lab.save_json(out/'report.json',report)
     save()
     try:
@@ -229,7 +242,11 @@ def bench(a):
         report['before']=c.command_vm(s,'check',require_cache=True)
         report['promotion']=c.promote(s)
         report['preparation']=c.prepare(s)
+        if a.kernel_trace:
+            import kernel_handoff_trace
+            kernel_handoff_trace.start(c)
         for _ in range(a.hops):
+            if a.kernel_trace:kernel_handoff_trace.mark(c,s.epoch+1)
             hop=c.hop(s);report['hops'].append(hop)
             ack=hop['timing']['ack']
             if not a.inline_guest_ack:
@@ -243,6 +260,7 @@ def bench(a):
             if a.arm!='none' and s.epoch<=2: report['backend_reads'].append(c.backend_read(s))
             save()
         require(s.role=='A','Even number of hops required')
+        if a.kernel_trace:report['kernel_trace']=kernel_handoff_trace.finish(c)
         report['after']=c.command_vm(s,'check',require_cache=True)
         c.same_identity(report['before'],report['after'])
         if a.arm!='none':report['backend_reads'].append(c.backend_read(s))
@@ -290,8 +308,8 @@ def suite(a):
                     '--replicated-home-storage','--qemu',a.qemu.resolve(),'--dax-handoff']
                 if a.serial_control:start.append('--serial-control')
                 require(command(start,'start')==0,'Lab start failed')
-                flags=[name for name,value in (('--unprofiled',a.unprofiled),('--inline-guest-ack',a.inline_guest_ack),
-                    ('--resume-nokick',a.resume_nokick)) if value]
+                flags=[name for name,value in (('--inline-guest-ack',a.inline_guest_ack),
+                    ('--resume-nokick',a.resume_nokick),('--exec-request',a.exec_request),('--kernel-trace',a.kernel_trace)) if value]
                 require(command(prefix+[HERE/'backend_ablation.py','bench','--arm',arm,'--hops',str(a.hops),
                     '--output',a.output/ident]+flags,'bench')==0,'Benchmark failed')
                 row['result']='passed'
@@ -326,10 +344,10 @@ def main():
     b=sub.add_parser('build');b.add_argument('--base',type=Path,required=True);b.add_argument('--pool-storage',type=Path,required=True)
     b.add_argument('--output',type=Path,required=True)
     b=sub.add_parser('bench');b.add_argument('--arm',choices=ARMS,required=True);b.add_argument('--hops',type=int,default=24)
-    for flag in ('--unprofiled','--inline-guest-ack','--resume-nokick'):b.add_argument(flag,action='store_true')
+    for flag in ('--inline-guest-ack','--resume-nokick','--exec-request','--kernel-trace'):b.add_argument(flag,action='store_true')
     b.add_argument('--output',type=Path,required=True)
     b=sub.add_parser('run');b.add_argument('--assets',type=Path,required=True);b.add_argument('--qemu',type=Path,required=True)
-    for flag in ('--unprofiled','--inline-guest-ack','--resume-nokick','--serial-control'):b.add_argument(flag,action='store_true')
+    for flag in ('--inline-guest-ack','--resume-nokick','--serial-control','--exec-request','--kernel-trace'):b.add_argument(flag,action='store_true')
     b.add_argument('--qemu-root',type=Path,required=True);b.add_argument('--session',required=True)
     b.add_argument('--arms',choices=ARMS,nargs='+',default=list(ARMS));b.add_argument('--hops',type=int,default=24)
     b.add_argument('--output',type=Path,required=True)
