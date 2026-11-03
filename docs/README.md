@@ -2,6 +2,8 @@
 
 2026-11-03 정리. 실행 방법과 설정은 [저장소 README](../README.md)를 기준으로 한다.
 
+**GPU 실험만 할 때는 [GPU 노드 harvest 설계](gpu-node-harvest-design.md) 하나만 읽으면 된다.** 배경 결과, 실험 G1~G5, A6000 실행 준비가 모두 들어 있다. 아래 목록은 출처를 찾을 때만 본다.
+
 ## 처음 읽는 순서
 
 1. [HANDOFF](HANDOFF.md): 연구 배경, VM hand-off 설계, Phase A~F 원래 계획(2026-10-19)

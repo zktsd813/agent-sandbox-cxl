@@ -126,7 +126,13 @@ DGX H100은 노드당 112 core, 2 TB다. 30K core는 약 270대(GPU 약 2,100장
 ### G4. 비우는 비용 (실제 CXL 장치)
 
 - **상황**: phase 신호가 오면 tool call 실행 중인 sandbox N개를 비운다.
-- **방식**: kill 후 재시작, network snapshot·restore(M2), CXL 위 restore·migration(M3, M4, M4+P), hand-off. 정의는 [HANDOFF](HANDOFF.md) 7.4절을 따른다.
+- **방식**:
+  - kill 후 재시작
+  - M2: Firecracker full snapshot을 공유 storage로 보내고 restore
+  - M3: QEMU `x-ignore-shared`, 메모리는 CXL DAX
+  - M4: Firecracker restore. 메모리 파일을 CXL DAX에 두고 MAP_SHARED, 메모리 dump 생략, 목적지 process 미리 생성
+  - M4+P: M4에 `KVM_PRE_FAULT_MEMORY`로 resume 전 EPT 채우기
+  - hand-off: vCPU·device 상태 약 20KB만 넘기고 EPT 입양
 - **측정**:
   - 전체를 비우는 데 걸리는 시간과 sandbox downtime
   - 비우는 동안 GPU 노드 NIC·DDR·PCIe 사용량과 GPU 쪽 slowdown
@@ -141,7 +147,7 @@ DGX H100은 노드당 112 core, 2 TB다. 30K core는 약 270대(GPU 약 2,100장
 
 ## 6. A6000 × 2 서버에서 먼저 할 것 (CXL 없이)
 
-이 서버는 [RL rollout 수집 계획](trace-collection-plan.md)의 시험 서버와 같다. 거기 기록된 상태는 A6000 두 장(NVLink bridge), CUDA와 Docker 설치다. 3절의 사전 확인과 4절의 설치를 공유한다.
+이 서버는 [RL rollout 수집 계획](trace-collection-plan.md)의 시험 서버와 같다. 거기 기록된 상태는 A6000 두 장(NVLink bridge), CUDA와 Docker 설치다. 실행에 필요한 준비는 [부록](#부록-a6000에서-실행-준비)에 모았다. 이 실험을 위해 다른 문서를 읽을 필요는 없다.
 
 ### 6.1 볼 수 있는 것
 
@@ -162,10 +168,7 @@ DGX H100은 노드당 112 core, 2 TB다. 30K core는 약 270대(GPU 약 2,100장
   1. 추론만(G2 중심): vLLM을 GPU 1~2장에 띄운다. SWE trace의 turn별 prompt·completion token 수와 동시 요청 수로 요청을 재생한다. CoTail과 같은 측정인데, co-tenant가 실제 sandbox 부하다.
   2. RL 학습(G1 중심): verl GRPO, model 1.5B~7B. 2장 표의 세 구성을 돌린다. 2 × 48 GB에서 7B를 full fine-tune하려면 optimizer나 parameter offload가 필요할 가능성이 크다. 그게 보고 싶은 CPU 구간을 만든다. task는 math든 code든 상관없다. GPU 쪽 phase 구조가 실제와 같으면 된다.
 - **sandbox 쪽**: bud05의 Firecracker SWE replay(`experiments/contention/sandbox.py`, token model LLM 시간)를 그대로 옮긴다. sandbox는 그 서버의 엔진과 연결될 필요가 없다. 실제 부하 패턴을 내는 tenant 역할이다.
-- **준비**:
-  - KVM 권한
-  - image 복사(home 배치 기준 47개, eager 115 GiB)
-  - 측정 도구: perf uncore(DDR 대역폭), pidstat, nvidia-smi dmon 또는 DCGM, vLLM `/metrics`, verl의 phase별 timing
+- **준비**: 설치, image 복사, 새로 만들 도구는 [부록](#부록-a6000에서-실행-준비)에 있다.
 
 ### 6.3 먼저 확인할 서버 정보
 
@@ -201,6 +204,49 @@ free -g
 - RL 구성 중 어느 것이 실제로 많이 쓰이는가. 공개된 대형 RL 학습이 optimizer offload를 쓰는가.
 - GPU 노드가 preempt되거나 회수될 때 sandbox를 어디로 보내는가. sync job은 모든 노드가 같은 phase에 들어가므로, 받아 줄 곳이 phase가 다른 노드(다른 job, 생성 노드)여야 절약이 생긴다.
 - 보안 경로: GPU 노드 위 microVM의 network를 DSec처럼 apiserver 하나로 제한할 수 있는가.
+
+## 부록. A6000에서 실행 준비
+
+### 설치
+
+1. **NVIDIA Container Toolkit**(없으면): 배포판 package로 설치하고 `nvidia-ctk runtime configure --runtime=docker` 뒤 Docker를 재시작한다. 확인은 `docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi`.
+2. **vLLM**: 공식 image `vllm/vllm-openai`. 버전을 고정하고 digest를 기록한다.
+3. **verl**: commit을 고정해 설치한다. model은 1.5B~7B(Qwen 계열)에서 시작한다.
+4. **측정 도구**: `perf`(uncore IMC로 DDR 대역폭), `sysstat`(`pidstat -t`), `nvidia-smi dmon`, Intel CPU면 PCM.
+
+### sandbox replay를 옮기기
+
+bud05의 Firecracker replay(`experiments/contention/sandbox.py`)를 그대로 쓴다.
+- **필요한 것**: Docker, `fakeroot`, e2fsprogs, `numactl`, static `/usr/bin/busybox`, `/dev/kvm` 권한, 저장소의 Firecracker 빌드, guest kernel `.local/microvm/vmlinux-6.1.188`.
+- **image**: bud05의 `experiments/contention/.local/images/<key>/rootfs.ext4`를 복사한다(home 배치 기준 47개, 115 GiB). 새로 만들려면 `sandbox.py build`를 쓴다.
+- **실행**: async screen과 같은 명령에서 노드만 바꾼다. `--nodes`는 노드마다 CPU 목록을 `/`로 구분한다. 처음 둘이 "GPU 노드" 코어, 나머지가 "CPU 노드" 코어가 되도록 정한다.
+
+```bash
+python3 experiments/contention/sandbox.py --candidates experiments/contention/candidates-plan.json pilot \
+  --nodes <노드0 CPU>/<노드1 CPU>/... --sibling-offset 0 --harness-cpus <관리 코어> \
+  --per-node 48 --pool none --group-size 8 --placement home --llm-model tokens --gap-scale 0.25 \
+  --move none --ramp-s 300 --duration-s 3300 --seed async --mem-sample-s 5
+```
+
+- **이미 있는 기능**:
+  - `--move hand-off`: 쏠림을 감지하면 vCPU를 다른 노드 코어로 다시 pinning한다(10 ms 정지 흉내). G2 조건 5의 출발점이다.
+  - `--ls-resctrl GROUP`: Firecracker thread가 vCPU를 만들기 전에 resctrl group에 넣는다. schemata로 sandbox의 L3 way(CAT)와 MBA를 제한하면 G2 조건 3이 된다.
+  - `host.csv`: PSI, 회수, 디스크, softirq를 1초마다 기록한다.
+- **SCHED_IDLE**: `chrt --idle 0`으로 `sandbox.py`를 시작하면 Firecracker thread가 정책을 물려받는다.
+
+### 새로 만들 것
+
+| 항목 | 내용 | 쓰는 곳 |
+|---|---|---|
+| 자원 sampler | 100 ms 단위 core별 CPU(`/proc/stat`), thread별 CPU, host 메모리, DDR·PCIe 대역폭. sandbox 없이도 돈다 | G1, G2 |
+| phase 기록 | verl의 phase 시작·끝 시각을 같은 시계(CLOCK_MONOTONIC)로 남긴다 | G1, G2 |
+| 요청 재생기 | SWE trace의 turn별 prompt·completion token 수와 동시 요청 수로 vLLM에 요청을 보낸다 | G2(추론만) |
+| phase 연동 축소 | phase 신호가 오면 sandbox cgroup의 `cpuset.cpus`를 줄이고, 끝나면 되돌린다 | G2 조건 4 |
+| phase 연동 비우기 | phase 신호가 오면 tool call 중인 sandbox를 "CPU 노드" 코어로 옮기고, 끝나면 되돌린다. 기존 `--move hand-off` 경로를 재사용한다 | G2 조건 5 |
+
+### 실행 환경 기록
+
+bud05와 같은 항목을 실행마다 남긴다. SMT 상태(`/sys/devices/system/cpu/smt/active`), turbo와 governor, resctrl mount 여부, GPU clock이다. GPU clock은 가능하면 `nvidia-smi -lgc`로 고정한다.
 
 ## 9. 출처
 
