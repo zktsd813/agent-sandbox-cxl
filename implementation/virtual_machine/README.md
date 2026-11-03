@@ -24,17 +24,35 @@ DAX 공유 영역은 기본 2GiB다. 기본 microVM은 1 vCPU·128MiB이고 RAM 
 
 ## 다음 세션 인계: 2026-11-03
 
-최신 runtime은 실행 파일·이미지의 반복 해시, handoff별 FD/TID 감사·guest ping·실패 유도 시험·전체 로그 회수를 실행하지 않는다.
-SWE의 `direct` 모드는 상주 제어기를 기본 사용하며 `DirectSend`(pause+export)와 `DirectReceive`(import+resume) 두 API로 인계한다.
-중간 `PoolCache` checkpoint API도 제거했다. 디스크 FD·io_uring은 첫 방문 전에 준비하고, VM/vCPU 실행 자원은 첫 방문 이후 재사용한다.
-준비 시간, 최초 handoff, 반복 요청→Resume 응답은 서로 다른 측정 범위다. Promotion/demotion의 RAM 복사는 별도다.
-`--restore-timing`은 내부 계측을 명시적으로 켠다. 독립 검증은 종료 후 `verify_swe_pool.py`가 수행하며,
-source 접근 실패·guest ACK 시험은 별도 `backend_ablation.py`에서만 요청한다.
-시작 스크립트 전송과 실행은 한 serial 요청으로 묶었다. State-only도 snapshot 전후의 중복 checkpoint를 제거하고 load와 resume을 합쳤다.
-작은 state/mapper 파일의 결합, owner/epoch·범위 확인, I/O drain과 CoW/discard는 유지한다. 이미지·RAM 전체 재검증과는 별개다.
-[수정·실험 결과](results/runtime-overhead-20261103/summary.json): NFS 반복 요청→Resume 중앙값 9.562→4.298ms,
-목적지 프로세스·디스크와 양쪽 제어기 준비 합계 521.694→238.663ms다. 준비 합계는 각 fresh pair 한 번의 관측이며 serial 제어를 포함한다.
-최종 NFS/local 각 24회 handoff와 계측을 끈 baseline/state-only/direct의 Gin 27개 명령 replay를 통과했다. 원시 결과와 재검증 명령은 같은 디렉터리에 있다.
+검증한 소스는 `66c1d398b`다. 정상 handoff에는 이미지/RAM 전수 검증, 전체 mapping 조회,
+guest ping·실패 유도 시험·전체 로그 회수가 없다. Direct는 `DirectSend`(pause+export)와
+`DirectReceive`(import+resume)로 인계한다. 디스크 FD·io_uring·제어기와 peer TCP 연결은 미리 준비하고,
+방문한 VM/vCPU 자원을 재사용한다. 고정 크기 mapper handle과 작은 state는 전달하며,
+owner/epoch·범위 확인, I/O drain, CoW/discard는 유지한다. State-only도 중복 checkpoint를 제거했다.
+Promotion/demotion의 RAM 복사, 목적지 준비, CPU handoff는 별도 단계다.
+
+| 측정 범위 | 결과 | 해석 |
+|---|---|---|
+| 같은 실행에서 exec/직접 relay를 교대로 사용 (`48929fe54`) | 외부 요청→응답 p50 **9.35→6.23ms**, native 요청→Resume **5.06/5.11ms** | 첫 왕복 제외 exec 20회·relay 18회. 요청마다 shell/process를 실행하던 비용 감소 |
+| 최종 Gin 준비 (`66c1d398b`) | **24.79ms**, 그중 peer 연결 3.72ms | 프로세스·디스크와 양쪽 제어기 준비 포함, fresh pair 1회 관측. VM은 source에서 계속 실행 |
+| 최종 Gin 반복 handoff | 외부 **6.57ms**, native **5.69ms** p50 | 처음 40회 중 첫 왕복 제외 38회, 내부 상세 계측 꺼짐. 46회 전체에서 연결 준비 비용 0 |
+| NFS/local backend 회귀 | 각 **24회** 통과 | 160MiB 데이터 확인, source 접근 실패 48회, parked worker 실행 거절 144회는 별도 검증 |
+
+외부 시간은 host 제어기의 요청 호출부터 응답 기록까지이고, native 시간은 L1 relay의 요청부터 Resume 응답까지다.
+Guest application의 첫 응답 지연을 측정한 값은 아니다.
+Gin 27개·PHP 35개·MicroPython 43개 명령을 baseline/state-only/direct로 실행한 **9 trials·315명령**을 통과했다.
+Promotion 12회·demotion 12회·handoff 18회다. 별도 Gin 시험은 **46회 direct handoff·promotion/demotion 각 2회**를
+통과했고, 실행 중인 `go test`의 동일 PID/starttime을 B→A→B에서 확인한 뒤 종료 코드·출력·최종 제출물을 검증했다.
+Baseline은 같은 수정 VMM의 DRAM 실행이며 순정 Firecracker 비교가 아니다. 각 trial은 단일 microVM이다.
+실제 workload 및 재promotion 뒤에는 10–25ms handoff도 관측했다. 위 반복 중앙값을 모든 전환의 지연으로 해석하지 않는다.
+Nested EPT 첫 복귀 비용도 남아 있으며, 실제 다중 물리 노드·비일관 CXL의 성능은 검증하지 않았다.
+
+로컬 근거는 `/tmp/cxl-swe-relay-ab`, `/tmp/cxl-backend-preconnect`, `/tmp/cxl-swe-final-matrix`,
+`/tmp/cxl-swe-final-live`다. 원본 로그·전체 보고서·이미지·소스 사본은 Git에 넣지 않는다.
+과거 문서의 원시 archive 링크는 이제 로컬 보관 자료를 뜻하며 새 clone에는 포함되지 않는다.
+아래 [초기 runtime 결과](results/runtime-overhead-20261103/summary.json)의 238.663ms 준비는 serial 제어 시점의 기록이고,
+4.298ms는 native 구간만의 값이다. 이를 최신 외부 요청→응답 수치와 직접 비교하지 않는다.
+`--restore-timing`은 내부 상세 계측을 켜며, 독립 검증과 source 실패 시험은 측정 경로 밖에서 수행한다.
 
 직전 변경은 [Direct API 단계별 계측과 NFS/IRQFD 최적화](../../docs/cxl-direct-api-latency.md)다.
 11.66ms API와 2.48ms kernel 수치의 차이, 예전 1ms 미만 executor 경로와의 차이를 설명한다.
@@ -56,7 +74,7 @@ NFS refill·실제 OverlayFS·discard ACK/재사용 검증은 [이번 결과](re
 
 목표는 **microVM의 상태를 CXL에 유지하면서 실행 노드를 바꾸고, 기존 application 연결과
 파일 접근까지 이어가는 것**이다. CPU/RAM 전환과 실제 서비스 I/O 전환을 함께 완성하는 중이다.
-이 README를 운영·인계 문서로 유지하며, 측정 근거는 연결된 JSON과 원시 로그를 읽는다.
+이 README에는 핵심 결과와 소스 참조를 유지하며, 상세 측정 근거는 로컬 원본 자료에서 확인한다.
 
 | 영역 | 확인한 상태 | 남은 작업 |
 |---|---|---|
@@ -105,7 +123,8 @@ CPU/RAM 제어는 기존 `lab.py`·`build.sh`·`shared-probe`를 사용한다. �
 `nfs_bench.py`의 공통 NFS 설정·소유 프로세스 관리를 재사용하며, 실제 trace 준비·재생·독립 검증을 별도 script로 둔다.
 CPU 방식의 주기적 preflush를 다시 추진하지 않으며, 후속 preflush는 DSA 하드웨어를 전제로 한다.
 `experiments/`, `CLAUDE.md`, `docs/HANDOFF.md`는 다른 작업 영역이므로 이 microVM 인계에 사용하지 않는다.
-Git 배포 대상은 microVM 코드·패치·측정 결과와 관련 문서다. `main` 기준의 별도 작업 트리에서
+Git 배포 대상은 microVM 코드·필수 설정·간결한 결과 요약이다. Push는 구체적인 변경에 대한 사용자 승인을 받은 뒤 수행한다.
+`main` 기준의 별도 작업 트리에서
 반영하며, 공유 workspace의 `contention-fleet-sim` 작업과 로컬 VM·이미지·빌드 cache는 보존한다.
 배포 검증은 [publication.json](results/publication.json)에 기록한다. 2026-10-21 최초 배포 기록과
 2026-10-23 MPTCP 추가분의 검증을 구분하고, 기존 측정 결과의 날짜·소스 hash는 유지한다.
