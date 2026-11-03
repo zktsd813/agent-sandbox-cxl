@@ -30,6 +30,8 @@ static int readiness_pipe = -1;
 static int api_fd = -1;
 static int peer_fd = -1;
 static int owner_fd = -1, prepared_owner_pid, selector_fd = -1;
+struct metadata_file { int fd; size_t length; };
+static struct metadata_file import_file={.fd=-1}, manifest_file={.fd=-1};
 static char peer_ip[16];
 static int profile_enabled;
 static void fail(const char *s) { perror(s); exit(1); }
@@ -62,6 +64,25 @@ static void write_file(const char *name,const char *data,size_t len) {
  char p[256],tmp[272];path(p,sizeof(p),name);check(snprintf(tmp,sizeof(tmp),"%s.tmp",p)>0,"temp path");
  int fd=open(tmp,O_WRONLY|O_CREAT|O_TRUNC|O_CLOEXEC|O_NOFOLLOW,0600);if(fd<0)fail("write file");write_all(fd,data,len);
  if(close(fd)||rename(tmp,p))fail("publish file");
+}
+static struct metadata_file prepare_metadata(const char *name) {
+ char p[256];path(p,sizeof(p),name);
+ int fd=open(p,O_WRONLY|O_CREAT|O_CLOEXEC|O_NOFOLLOW|O_NONBLOCK,0600);if(fd<0)fail("prepare metadata");
+ struct stat st;if(fstat(fd,&st))fail("metadata stat");
+ check(S_ISREG(st.st_mode)&&st.st_nlink==1&&st.st_size>=0&&st.st_size<CAP,"private metadata file");
+ return (struct metadata_file){.fd=fd,.length=(size_t)st.st_size};
+}
+static void overwrite_metadata(struct metadata_file *file,const char *data,size_t len) {
+ check(file->fd>=0&&len>0&&len<CAP,"metadata write bounds");
+ size_t done=0;
+ while(done<len) {
+  ssize_t n=pwrite(file->fd,data+done,len-done,done);
+  if(n<0&&errno==EINTR)continue;
+  if(n<=0)fail("metadata write");
+  done+=n;
+ }
+ if(len<file->length&&ftruncate(file->fd,len))fail("metadata shrink");
+ file->length=len;
 }
 static unsigned long long process_start(int pid) {
  char p[64],line[4096];snprintf(p,sizeof(p),"/proc/%d/stat",pid);FILE *f=fopen(p,"r");if(!f||!fgets(line,sizeof(line),f))fail("process stat");fclose(f);
@@ -237,6 +258,8 @@ int main(int argc,char **argv) {
   selector_fd=open("/sys/module/kvm/parameters/dax_owner_pid",O_WRONLY|O_CLOEXEC);
   if(selector_fd<0)fail("prepare owner parameter");
   connect_api();
+  import_file=prepare_metadata("direct-import.json");
+  manifest_file=prepare_metadata("restore-manifest.json");
   if(argc==6) {
    // Destination launch follows source readiness. Warm TCP/ARP while the VM
    // still runs on its source; this message never selects an execution owner.
@@ -279,7 +302,11 @@ int main(int argc,char **argv) {
    struct phase_profile profile;phase_start(&profile);
    char state[CAP],manifest[CAP];recv_all(fd,state,q.state_len);recv_all(fd,manifest,q.manifest_len);
    phase_mark(&profile,"metadata_receive");
-   write_file("direct-import.json",state,q.state_len);write_file("restore-manifest.json",manifest,q.manifest_len);
+   // The parked VMM reads these private staging files only in DirectReceive.
+   // This serialized controller is their sole writer. Complete both writes
+   // before selecting the owner or sending that API; any error exits here.
+   // Thus the API publishes the pair, without per-handoff inode replacement.
+   overwrite_metadata(&import_file,state,q.state_len);overwrite_metadata(&manifest_file,manifest,q.manifest_len);
    phase_mark(&profile,"metadata_publish");
    int owner=owner_pid();phase_mark(&profile,"owner_check");select_owner(owner);phase_mark(&profile,"owner_select");
    struct reply r={.magic=MAGIC};off_t offset=0;
