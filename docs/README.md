@@ -28,6 +28,21 @@
 | [공개 RL rollout microVM 실측](results/virtual-node-rl-20261026/README.md) | 10-26~11-03 | virtual node 필요성 실측, fleet sim 보정, placement screen(`measured/placement-screen-*.json`) |
 | [초기 16개 pilot](replay-report.md) | 10-07 | 첫 Docker replay |
 
+## CXL microVM 구현 (hand-off, pooling)
+
+다른 머신에서 진행한 메커니즘 구현이다. 전체 흐름은 [CXL microVM 연구와 구현 정리](cxl-microvm-overview.md), 실행 방법은 [구현·사용법](../implementation/virtual_machine/README.md)에 있다.
+
+| 문서 | 내용 |
+|---|---|
+| [resident direct](cxl-resident-direct.md) | 목적지 FD와 장치 실행 환경을 유지하는 direct handoff. 2026-11-02 최신 구현 |
+| [direct handoff API 비용](cxl-direct-api-latency.md) | 매번 목적지 VMM을 만들던 경로의 분석과 과거 1 ms 미만 결과 |
+| [RAM 전수 순회를 제거한 pooling handoff](cxl-pool-incremental-handoff.md) | pooling handoff의 증분 처리 |
+| [guest metadata 기반 pooling](cxl-guest-pool-handoff.md) | guest page cache 공유와 direct·state-only 두 handoff 모드 |
+| [읽기 데이터 페이지 pooling](cxl-data-pooling.md) | immutable data page pooling |
+| [버린 공유 페이지의 재사용](cxl-page-discard.md) | guest가 버린 page를 복사 없이 재사용(10-30) |
+| [실제 SWE trace 위 pooling과 왕복 이전](cxl-swe-pool-traces.md) | Gin, PHP-CS-Fixer, MicroPython의 기록된 명령 재생 |
+| [일반 Firecracker와의 차이](firecracker-pooling-comparison.md) | 수정하지 않은 Firecracker v1.17.0과 비교 |
+
 ## 실험 설계 (bud04·bud05, CPU 노드)
 
 | 문서 | 상태 |
