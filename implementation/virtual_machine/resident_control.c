@@ -16,6 +16,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
 #include <sys/un.h>
 #include <time.h>
 #include <unistd.h>
@@ -28,6 +29,7 @@ static char directory[160], socket_path[192];
 static int readiness_pipe = -1;
 static int api_fd = -1;
 static int peer_fd = -1;
+static int owner_fd = -1, prepared_owner_pid, selector_fd = -1;
 static char peer_ip[16];
 static int profile_enabled;
 static void fail(const char *s) { perror(s); exit(1); }
@@ -67,20 +69,49 @@ static unsigned long long process_start(int pid) {
  for(int i=3;i<22&&v;i++) { v=strtok_r(NULL," ",&save); }
  check(v!=NULL,"process starttime");return strtoull(v,NULL,10);
 }
-static int owner_pid(void) {
+static int read_owner_pid(void) {
  char p[256];path(p,sizeof(p),"fc.pid");FILE *f=fopen(p,"r");int pid=0;unsigned long long start=0;
  check(f&&fscanf(f,"%d %llu",&pid,&start)==2&&pid>1,"owner pid file");fclose(f);
  check(process_start(pid)==start,"owner PID reused");return pid;
 }
-static void select_owner(int pid) { char b[32];int n=snprintf(b,sizeof(b),"%d\n",pid);int fd=open("/sys/module/kvm/parameters/dax_owner_pid",O_WRONLY|O_CLOEXEC);if(fd<0)fail("owner parameter");write_all(fd,b,n);close(fd); }
-static struct api_result api(const char *method,const char *route,const char *body) {
- struct api_result result={0};uint64_t start=ns();
+static int owner_pid(void) {
+ if(owner_fd<0)return read_owner_pid();
+ struct pollfd owner={.fd=owner_fd,.events=POLLIN};int result;
+ do {result=poll(&owner,1,0);}while(result<0&&errno==EINTR);
+ check(result==0,"prepared owner exited");return prepared_owner_pid;
+}
+static void prepare_owner(void) {
+ int pid=read_owner_pid();
+ int fd=syscall(SYS_pidfd_open,pid,0);if(fd<0)fail("owner pidfd");
+ // Pin the process before trusting its cached PID. Recheck the original
+ // PID/starttime record and reject an exit during this preparation window.
+ check(read_owner_pid()==pid,"owner changed during preparation");
+ prepared_owner_pid=pid;owner_fd=fd;(void)owner_pid();
+}
+static void select_owner(int pid) {
+ char b[32];int n=snprintf(b,sizeof(b),"%d\n",pid);
+ if(selector_fd>=0) {
+  ssize_t written;do {written=pwrite(selector_fd,b,n,0);}while(written<0&&errno==EINTR);
+  check(written==n,"prepared owner parameter write");return;
+ }
+ int fd=open("/sys/module/kvm/parameters/dax_owner_pid",O_WRONLY|O_CLOEXEC);if(fd<0)fail("owner parameter");
+ write_all(fd,b,n);close(fd);
+}
+static void connect_api(void) {
  if(api_fd<0) {
  int fd=socket(AF_UNIX,SOCK_STREAM|SOCK_CLOEXEC,0);if(fd<0)fail("API socket");timeout(fd);
  struct sockaddr_un a={.sun_family=AF_UNIX};check(strlen(socket_path)<sizeof(a.sun_path),"API path");strcpy(a.sun_path,socket_path);
  if(connect(fd,(void*)&a,sizeof(a))) { fail("API connect"); }
+ if(owner_fd>=0) {
+  struct ucred peer;socklen_t size=sizeof(peer);
+  if(getsockopt(fd,SOL_SOCKET,SO_PEERCRED,&peer,&size))fail("API peer identity");
+  check(peer.pid==owner_pid(),"API belongs to another process");
+ }
  api_fd=fd;
  }
+}
+static struct api_result api(const char *method,const char *route,const char *body) {
+ struct api_result result={0};uint64_t start=ns();connect_api();
  int fd=api_fd;
  char q[2048];int len=snprintf(q,sizeof(q),"%s %s HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: %zu\r\n\r\n%s",method,route,strlen(body),body);
  check(len>0&&(size_t)len<sizeof(q),"API request bound");send_all(fd,q,len);size_t got=0;
@@ -202,6 +233,10 @@ int main(int argc,char **argv) {
  }
  if(!strcmp(argv[1],"serve")){
   check(argc==5||argc==6,"serve arguments");int listener=tcp(argv[3],1),local=local_socket(1);
+  prepare_owner();
+  selector_fd=open("/sys/module/kvm/parameters/dax_owner_pid",O_WRONLY|O_CLOEXEC);
+  if(selector_fd<0)fail("prepare owner parameter");
+  connect_api();
   if(argc==6) {
    // Destination launch follows source readiness. Warm TCP/ARP while the VM
    // still runs on its source; this message never selects an execution owner.
