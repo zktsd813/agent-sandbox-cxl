@@ -96,6 +96,11 @@ def trial(path):
         need(exp['snapshot_bytes']==exp['ram_transfer_bytes']==imp['snapshot_bytes']==imp['ram_transfer_bytes']==0,'RAM transfer on handoff')
         need(imp['token']['flags']==1 and token['flags']==2,'Kernel ownership flags')
         a=timing['ack']
+        if not r.get('inline_guest_ack',True):
+            need(a is None and timing['guest_ack_ns']==0,'Guest probe in runtime interval')
+            a=h['guest_ack']['receipt']
+            need(any(json.loads(line)==a for line in read(h['guest_ack']['file']).splitlines()
+                if line.startswith('{"event":')),'Separate guest ACK summary changed')
         need(a['label']==f'hop{index+1}' and all(a[k]==before[k] for k in ('boot_id','pid','cookie')),'Invalid ACK')
         guest_pings=[json.loads(line) for line in guest[h['destination']].splitlines() if line.startswith('{"event":"trace_ping"')]
         need(a in guest_pings,'ACK absent from actual guest log')
@@ -103,10 +108,14 @@ def trial(path):
         p=receipt_record(probe,'DIRECT_RESIDENT_PROBE_JSON ')
         need(p['memory_errno']==14 and p['kvm_errno']!=0,'Old source can access VM')
         row={'generation':generation,'destination':h['destination'],'first':h['first_import'],
-            'request_resume_ms':timing['request_to_resume_response_ns']/1e6,'request_ack_ms':timing['request_ns']/1e6,
+            'request_resume_ms':timing['request_to_resume_response_ns']/1e6,'request_complete_ms':timing['request_ns']/1e6,
+            'external_command_ms':h.get('controller_command_wall_ns',0)/1e6,
             'export_attach_api_ms':sum(timing['apis'][k]['duration_us'] for k in (('send','receive') if timing['version']==2 else ('export','attach')))/1000,
             'kernel_ms':(token['kernel_ns']+imp['token']['kernel_ns'])/1e6,
-            'export_profile':profiles[('export',generation)],'import_profile':profiles[('import',generation)]}
+            'export_profile':profiles.get(('export',generation)),'import_profile':profiles.get(('import',generation))}
+        need(bool(row['export_profile'])==bool(row['import_profile'])==r.get('profiled',True),'Unexpected/missing profiler records')
+        if timing.get('wire_version')==3 and index>0:
+            need(timing['connection_prepare_ns']==0,'Warm handoff reopened peer connection')
         hops.append(row)
     expected_apis=2*len(hops)
     combined=[x for x in r['negative_apis'] if x['kind']=='parked-combined-send']
@@ -121,7 +130,7 @@ def trial(path):
     if r['arm'] in ('none','nfs-unprepared'):
         need(not prepares and boot['disk_prepared'] is False and boot['prepare_api_ns']==0,'Unexpected preprepared disk')
     else:need(len(prepares)==1 and prepares[0]['role']=='B' and boot['prepare_api_ns']>0,'Disk not preprepared')
-    need(len(disk_profiles)==(0 if r['arm']=='none' else 2),'Disk properties reopened on warm handoff')
+    need(len(disk_profiles)==(0 if r['arm']=='none' or not r.get('profiled',True) else 2),'Disk properties reopened on warm handoff')
     need(logs['B'].count('DIRECT_DISK_PREPARED consumed=true')==(r['arm'] in ('local','nfs')),'Prepared backend not consumed exactly once')
     need(bool(r['backend_reads'])==(r['arm']!='none'),'Missing/unexpected disk I/O validation')
     for row in r['backend_reads']:
@@ -131,7 +140,8 @@ def trial(path):
     warm=hops[1:]
     return {'arm':r['arm'],'result':'passed','hops':hops,'preparation':r['preparation'],
         'prepares':prepares,'disk_profiles':disk_profiles,'first':hops[0],
-        'warm':{k:stats([h[k] for h in warm]) for k in ('request_resume_ms','request_ack_ms','export_attach_api_ms','kernel_ms')},
+        'inline_guest_ack':r.get('inline_guest_ack',True),'profiled':r.get('profiled',True),
+        'warm':{k:stats([h[k] for h in warm]) for k in ('request_resume_ms','request_complete_ms','external_command_ms','export_attach_api_ms','kernel_ms')},
         'to_b':{k:stats([h[k] for h in warm if h['destination']=='B']) for k in ('request_resume_ms','export_attach_api_ms','kernel_ms')},
         'source_fault_probes':len(r['source_probes']),'parked_rejections':expected_apis}
 

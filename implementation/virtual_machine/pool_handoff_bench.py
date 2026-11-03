@@ -86,6 +86,8 @@ class HandoffController(PoolController):
         if s.direct:
             env.update(FC_DAX_DIRECT="1", FC_DAX_DIRECT_IO="1",
                 FC_DAX_DIRECT_EXPORT=s.directory + "/direct-export.json")
+            if getattr(self.args, 'resume_nokick', False):
+                env['FC_DAX_NO_RESUME_KICK'] = '1'
         if getattr(self.args, "restore_timing", False):
             env["FC_RESTORE_TIMING"] = "1"
         if direct_import:

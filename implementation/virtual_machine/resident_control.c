@@ -22,13 +22,13 @@
 
 #define CAP (64*1024)
 #define PORT 19091
-#define MAGIC 0x43585231u
+#define MAGIC 0x43585233u
 struct request {
- uint32_t magic, state_len, manifest_len, first, operation, observe;
+ uint32_t magic, state_len, manifest_len, first, operation, observe, persistent;
  uint64_t vm, epoch, canonical_start, canonical_bytes;
  char nonce[33], label[96], peer[16];
 };
-struct api_result { double us; int status; char response[1024]; };
+struct api_result { double us; int status; };
 struct reply { uint32_t magic, ack_len; struct api_result receive; uint64_t ack_ns; };
 struct outcome {
  struct api_result send;
@@ -39,6 +39,8 @@ struct outcome {
 static char directory[160], socket_path[192];
 static int readiness_pipe = -1;
 static int api_fd = -1;
+static int peer_fd = -1;
+static char peer_ip[16];
 static void fail(const char *s) { perror(s); exit(1); }
 static uint64_t ns(void) { struct timespec t; if(clock_gettime(CLOCK_MONOTONIC,&t))fail("clock");return (uint64_t)t.tv_sec*1000000000+t.tv_nsec; }
 static void check(int ok,const char *s) { if(!ok){fprintf(stderr,"resident-control: %s\n",s);exit(1);} }
@@ -80,8 +82,9 @@ static struct api_result api(const char *method,const char *route,const char *bo
  int fd=api_fd;
  char q[2048];int len=snprintf(q,sizeof(q),"%s %s HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: %zu\r\n\r\n%s",method,route,strlen(body),body);
  check(len>0&&(size_t)len<sizeof(q),"API request bound");send_all(fd,q,len);size_t got=0;
- while(got<sizeof(result.response)-1){ssize_t n=read(fd,result.response+got,sizeof(result.response)-1-got);if(n<=0)fail("API response");got+=n;result.response[got]=0;if(strstr(result.response,"\r\n\r\n"))break;}
- result.us=(ns()-start)/1000.;check(sscanf(result.response,"HTTP/1.1 %d",&result.status)==1&&result.status==204,"API did not return 204");return result;
+ char response[1024];
+ while(got<sizeof(response)-1){ssize_t n=read(fd,response+got,sizeof(response)-1-got);if(n<=0)fail("API response");got+=n;response[got]=0;if(strstr(response,"\r\n\r\n"))break;}
+ result.us=(ns()-start)/1000.;check(sscanf(response,"HTTP/1.1 %d",&result.status)==1&&result.status==204,"API did not return 204");return result;
 }
 static size_t guest_ack(const char *label,char *out,off_t offset,uint64_t *elapsed) {
  check(strlen(label)<90&&strspn(label,"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-:.")==strlen(label),"ACK label");
@@ -101,9 +104,18 @@ static int tcp(const char *ip,int listen_mode) {
  // requests, but never expire the listener merely because no handoff arrives.
  if(!listen_mode)timeout(fd);
  int one=1;
+ if(listen_mode && setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,&one,sizeof(one)))fail("TCP reuse address");
  if(setsockopt(fd,IPPROTO_TCP,TCP_NODELAY,&one,sizeof(one))) { fail("TCP_NODELAY"); }
  struct sockaddr_in a={.sin_family=AF_INET,.sin_port=htons(PORT)};
  check(inet_pton(AF_INET,ip,&a.sin_addr)==1,"IP address");if(listen_mode){if(bind(fd,(void*)&a,sizeof(a))||listen(fd,2))fail("TCP listen");}else if(connect(fd,(void*)&a,sizeof(a)))fail("TCP connect");return fd;
+}
+static int local_socket(int listen_mode) {
+ int fd=socket(AF_UNIX,SOCK_STREAM|SOCK_CLOEXEC,0);if(fd<0)fail("local socket");
+ struct sockaddr_un a={.sun_family=AF_UNIX};char p[256];path(p,sizeof(p),"control/request.sock");
+ check(strlen(p)<sizeof(a.sun_path),"local request path");strcpy(a.sun_path,p);
+ if(listen_mode){if(bind(fd,(void*)&a,sizeof(a))||listen(fd,2))fail("local listen");}
+ else {timeout(fd);if(connect(fd,(void*)&a,sizeof(a)))fail("local connect");}
+ return fd;
 }
 static void print_api(const char *name,const struct api_result *a) {
  printf("\"%s\":{\"status\":%d,\"duration_us\":%.3f}",name,a->status,a->us);
@@ -112,7 +124,7 @@ static void print_api(const char *name,const struct api_result *a) {
 
 static void validate_request(const struct request *q,const char *nonce) {
  check(q->magic==MAGIC && q->nonce[32]==0 && !strcmp(q->nonce,nonce)
-       && q->label[95]==0 && q->label[0] && q->first<=1 && q->operation<=1 && q->observe<=1,"request identity");
+       && q->label[95]==0 && q->label[0] && q->first<=1 && q->operation<=1 && q->observe<=1 && q->persistent<=1,"request identity");
  check(strlen(q->label)<90 && strspn(q->label,"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-:.")==strlen(q->label),"request label");
  if(q->operation==1) {
   struct in_addr address;
@@ -122,19 +134,26 @@ static void validate_request(const struct request *q,const char *nonce) {
                   && q->canonical_bytes%4096==0 && q->canonical_start<=UINT64_MAX-q->canonical_bytes,"plan bounds");
 }
 static struct outcome handoff(struct request q,const char *peer,int client,char *ack) {
- (void)owner_pid();struct outcome o={0};uint64_t connect_start=ns();int fd=tcp(peer,0);o.connection_ns=ns()-connect_start;
+ (void)owner_pid();struct outcome o={0};int fd;
+ q.persistent=client>=0;
+ if(q.persistent&&peer_fd>=0){check(!strcmp(peer,peer_ip),"cached peer changed");fd=peer_fd;}
+ else {
+  uint64_t connect_start=ns();fd=tcp(peer,0);o.connection_ns=ns()-connect_start;
+  if(q.persistent){peer_fd=fd;strcpy(peer_ip,peer);}
+ }
  uint64_t start=ns();o.send=api("PUT","/actions","{\"action_type\": \"DirectSend\"}");select_owner(2147483647);
- char state[CAP],manifest[CAP];q.operation=0;
- q.state_len=read_file("direct-export.json",state);q.manifest_len=read_file("memory-manifest.json",manifest);
+ char wire[sizeof(q)+2*CAP],*state=wire+sizeof(q),*manifest; q.operation=0;
+ q.state_len=read_file("direct-export.json",state);manifest=state+q.state_len;
+ q.manifest_len=read_file("memory-manifest.json",manifest);
  o.state_len=q.state_len;o.manifest_len=q.manifest_len;
- send_all(fd,&q,sizeof(q));send_all(fd,state,q.state_len);send_all(fd,manifest,q.manifest_len);
+ memcpy(wire,&q,sizeof(q));send_all(fd,wire,sizeof(q)+q.state_len+q.manifest_len);
  uint32_t marker;recv_all(fd,&marker,sizeof(marker));check(marker==MAGIC,"resume marker");o.pause_to_resume_ns=ns()-start;
  if(client>=0)send_all(client,&marker,sizeof(marker));
  recv_all(fd,&o.target,sizeof(o.target));check(o.target.magic==MAGIC&&o.target.ack_len<4096,"reply bounds");
- recv_all(fd,ack,o.target.ack_len);ack[o.target.ack_len]=0;o.handoff_ns=ns()-start;close(fd);return o;
+ recv_all(fd,ack,o.target.ack_len);ack[o.target.ack_len]=0;o.handoff_ns=ns()-start;if(!q.persistent)close(fd);return o;
 }
 static void print_outcome(const struct outcome *o,const char *ack,uint64_t request_ns,uint64_t request_resume_ns) {
- printf("RESIDENT_FAST_JSON {\"version\":2,\"handoff_ns\":%"PRIu64",\"connection_prepare_ns\":%"PRIu64
+ printf("RESIDENT_FAST_JSON {\"version\":2,\"wire_version\":3,\"handoff_ns\":%"PRIu64",\"connection_prepare_ns\":%"PRIu64
         ",\"guest_ack_ns\":%"PRIu64",\"pause_to_resume_response_ns\":%"PRIu64
         ",\"request_ns\":%"PRIu64",\"request_to_resume_response_ns\":%"PRIu64
         ",\"state_bytes\":%u,\"manifest_bytes\":%u,\"ack\":%s,\"apis\":{",
@@ -172,15 +191,28 @@ int main(int argc,char **argv) {
   close(in);close(out);argv[1]="serve";
  }
  if(!strcmp(argv[1],"serve")){
-  check(argc==5,"serve arguments");int listener=tcp(argv[3],1);puts("RESIDENT_CONTROL_READY");fflush(stdout);
+  check(argc==5,"serve arguments");int listener=tcp(argv[3],1),local=local_socket(1);puts("RESIDENT_CONTROL_READY");fflush(stdout);
   if(readiness_pipe>=0){write_all(readiness_pipe,"R",1);close(readiness_pipe);readiness_pipe=-1;}
-  for(;;){int fd=accept4(listener,NULL,NULL,SOCK_CLOEXEC);if(fd<0){if(errno==EINTR)continue;fail("accept");}timeout(fd);int one=1;setsockopt(fd,IPPROTO_TCP,TCP_NODELAY,&one,sizeof(one));
+  for(;;){
+   struct pollfd watched[3]={{.fd=listener,.events=POLLIN},{.fd=local,.events=POLLIN},{.fd=peer_fd,.events=POLLIN}};
+   int polled;do {polled=poll(watched,3,-1);}while(polled<0&&errno==EINTR);if(polled<0)fail("request poll");
+   int trigger=!!watched[1].revents,fd;
+   if(watched[2].revents) {check(!trigger,"concurrent ownership request");fd=peer_fd;}
+   else {fd=accept4(trigger?local:listener,NULL,NULL,SOCK_CLOEXEC);if(fd<0)fail("accept");timeout(fd);
+    if(!trigger){int one=1;if(setsockopt(fd,IPPROTO_TCP,TCP_NODELAY,&one,sizeof(one)))fail("accepted TCP_NODELAY");}}
    struct request q;recv_all(fd,&q,sizeof(q));validate_request(&q,argv[4]);
+   check(q.operation==(unsigned)trigger,"wrong request channel");
    char ack[4096];
    if(q.operation==1) {
     check(q.state_len==0&&q.manifest_len==0,"trigger contains metadata");
     struct outcome o=handoff(q,q.peer,fd,ack);send_all(fd,&o,sizeof(o));send_all(fd,ack,o.target.ack_len);close(fd);continue;
    }
+   if(q.persistent && peer_fd<0) {
+    struct sockaddr_in address;socklen_t size=sizeof(address);
+    if(getpeername(fd,(void*)&address,&size)||!inet_ntop(AF_INET,&address.sin_addr,peer_ip,sizeof(peer_ip)))fail("peer identity");
+    peer_fd=fd;
+   }
+   check(!q.persistent||peer_fd==fd,"multiple peer connections");
    check(q.state_len>0&&q.state_len<CAP&&q.manifest_len>0&&q.manifest_len<CAP,"request bounds");
    char state[CAP],manifest[CAP];recv_all(fd,state,q.state_len);recv_all(fd,manifest,q.manifest_len);
    write_file("direct-import.json",state,q.state_len);write_file("restore-manifest.json",manifest,q.manifest_len);
@@ -190,7 +222,7 @@ int main(int argc,char **argv) {
    r.receive=api("PUT","/actions","{\"action_type\": \"DirectReceive\"}");
    uint32_t marker=MAGIC;send_all(fd,&marker,sizeof(marker));
    if(q.observe)r.ack_len=guest_ack(q.label,ack,offset,&r.ack_ns);
-   send_all(fd,&r,sizeof(r));send_all(fd,ack,r.ack_len);close(fd);
+   send_all(fd,&r,sizeof(r));send_all(fd,ack,r.ack_len);if(!q.persistent)close(fd);
   }
  }
  check((!strcmp(argv[1],"handoff")&&argc==7)||(!strcmp(argv[1],"request")&&(argc==12||argc==13)),"command arguments");
@@ -201,7 +233,7 @@ int main(int argc,char **argv) {
   if(argc==13){check(!strcmp(argv[12],"1"),"observe argument");q.observe=1;}
   q.operation=1;check(strlen(argv[7])<sizeof(q.peer),"peer length");strcpy(q.peer,argv[7]);
   q.vm=number(argv[8]);q.epoch=number(argv[9]);q.canonical_start=number(argv[10]);q.canonical_bytes=number(argv[11]);validate_request(&q,argv[4]);
-  uint64_t start=ns();int fd=tcp(argv[3],0);send_all(fd,&q,sizeof(q));
+  uint64_t start=ns();int fd=local_socket(0);send_all(fd,&q,sizeof(q));
   uint32_t marker;recv_all(fd,&marker,sizeof(marker));check(marker==MAGIC,"request resume marker");uint64_t resumed=ns()-start;
   recv_all(fd,&o,sizeof(o));check(o.target.magic==MAGIC&&o.target.ack_len<sizeof(ack),"request reply bounds");
   recv_all(fd,ack,o.target.ack_len);ack[o.target.ack_len]=0;uint64_t elapsed=ns()-start;close(fd);

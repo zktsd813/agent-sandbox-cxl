@@ -46,6 +46,7 @@ def arguments():
     parser.add_argument("--modes", choices=MODES, nargs="+", default=list(MODES))
     parser.add_argument("--memory-mib", type=int, default=2048)
     parser.add_argument("--restore-timing", action="store_true")
+    parser.add_argument("--resume-nokick", action="store_true")
     parser.add_argument("--resident-direct", action="store_true")
     parser.add_argument("--resident-fast-control", action="store_true")
     parser.add_argument("--resident-ready-control", action="store_true")
@@ -179,6 +180,8 @@ def main():
                 bench.extend(["--resident-direct", "--resident-repromote-handoff"])
             if args.restore_timing:
                 bench.append("--restore-timing")
+            if args.resume_nokick and mode == 'direct':
+                bench.append('--resume-nokick')
             if args.immutable_nfs_cache:
                 bench.append("--immutable-nfs-cache")
             save()

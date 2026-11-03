@@ -86,6 +86,7 @@ def handoff(c,s,destination):
     control_start=time.monotonic_ns()
     raw,fast_file=c.shell(source,command,'resident-fast-run',120)
     controller_ns=time.monotonic_ns()-control_start
+    controller_rpc=c.control_timings[-1].get('rpc')
     values=json_lines(raw,'RESIDENT_FAST_JSON ')
     require(len(values)==1 and values[0]['version']==2,'Missing handoff result')
     fast=values[0]
@@ -98,6 +99,7 @@ def handoff(c,s,destination):
          'ready_control':ready,'fast_file':fast_file,'fast':fast,
          'vm':s.vm,'source':source,'destination':destination,'source_epoch':old_epoch,'destination_epoch':s.epoch,
          'source_tier':'cxl','destination_tier':'cxl','source_directory':old_dir,'destination_directory':target,
-         'preparation':preparation,'controller_command_wall_ns':controller_ns,'result':'passed'}
+         'preparation':preparation,'controller_command_wall_ns':controller_ns,
+         'controller_rpc':controller_rpc,'result':'passed'}
     c.transitions.append(row)
     return row

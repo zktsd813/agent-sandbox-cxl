@@ -91,14 +91,15 @@ class Controller(HandoffController):
     setup = SWEController.setup
     configure_direct = SWEController.configure_direct
 
-    def __init__(self, config, out, arm):
+    def __init__(self, config, out, arm, *, profiled=True, inline_guest_ack=False, resume_nokick=False):
         args = argparse.Namespace(memory_mib=2048, vcpus=1, sandboxes=1, minimum_cache_mib=128,
             io_engine='Async', mode='direct', credit_mib=16, resident_direct=True,
             resident_ready_control=True, resident_skip_disk_prepare=arm in ('none', 'nfs-unprepared'),
-            immutable_nfs_cache=True, restore_timing=True, full_audit=False)
+            immutable_nfs_cache=True, restore_timing=profiled, full_audit=False, resume_nokick=resume_nokick)
         super().__init__(config, out, args)
         self.root = '/run/swe-pool-'+secrets.token_hex(8)
         self.arm = arm
+        self.inline_guest_ack = inline_guest_ack
         self.trace = {'name':'backend'}
         self.metadata_base, self.pool_offset, self.bloom_offset = 8192*MIB, 4096*MIB, 3072*MIB
         self.allocator = FrameAllocator(2*MIB, 3072*MIB)
@@ -162,10 +163,12 @@ class Controller(HandoffController):
         first=not worker['imported'];label=f'hop{epoch}'
         ip={'A':'172.30.0.1','B':'172.30.0.2'}
         raw,name=self.shell(source,f'/lab/resident-control request {old_dir} {ip[source]} '
-            f'{self.resident_control_nonce} {int(first)} {label} {ip[dest]} 1 {epoch} {self.pool_offset} {self.image_bytes} 1',
+            f'{self.resident_control_nonce} {int(first)} {label} {ip[dest]} 1 {epoch} {self.pool_offset} {self.image_bytes}'
+            + (' 1' if self.inline_guest_ack else ''),
             'handoff-request',120)
         rows=json_lines(raw,'RESIDENT_FAST_JSON ')
         controller_ns=self.control_timings[-1]['elapsed_ns']
+        controller_rpc=self.control_timings[-1].get('rpc')
         require(len(rows)==1,'Missing native handoff receipt')
         timing=rows[0]
         require(all(x['status']==204 for x in timing['apis'].values()),'Handoff API failed')
@@ -197,17 +200,20 @@ class Controller(HandoffController):
         worker['imported']=True
         return {'source':source,'destination':dest,'first_import':first,'epoch':epoch,'file':name,
             'controller_command_wall_ns':controller_ns,
+            'controller_rpc':controller_rpc,
             'timing':timing,'export_token':state['token'],'state_file':state_file,
             'sealed_file':sealed_file,'manifest_file':manifest_file}
 
 
 def bench(a):
     _,config=lab.current_run();out=a.output;out.mkdir(parents=True,exist_ok=False)
-    c=Controller(config,out,a.arm);s=c.sandboxes[0]
+    c=Controller(config,out,a.arm,profiled=not a.unprofiled,inline_guest_ack=a.inline_guest_ack,
+                 resume_nokick=a.resume_nokick);s=c.sandboxes[0]
     report={'schema':'backend-ablation-trial-v1','arm':a.arm,'result':'running','fixture':c.fixture,
         'config':config,'receipts':c.receipts,'commands':c.commands,'api_events':c.api_events,
         'launches':c.launches,'hops':[],'backend_reads':[],'logs':[],'parked_combined_action_test':True,
-        'memory_events':c.memory_events,'source_probes':c.resident_probes,'negative_apis':c.import_negatives}
+        'memory_events':c.memory_events,'source_probes':c.resident_probes,'negative_apis':c.import_negatives,
+        'profiled':not a.unprofiled,'inline_guest_ack':a.inline_guest_ack,'resume_nokick':a.resume_nokick}
     def save(): lab.save_json(out/'report.json',report)
     save()
     try:
@@ -225,8 +231,15 @@ def bench(a):
         report['preparation']=c.prepare(s)
         for _ in range(a.hops):
             hop=c.hop(s);report['hops'].append(hop)
+            ack=hop['timing']['ack']
+            if not a.inline_guest_ack:
+                require(ack is None,'Unexpected guest probe in runtime request')
+                label=f'hop{s.epoch}'
+                c.shell(s.role,f"printf 'ping {label}\\n' > {s.directory}/input",'post-handoff-guest-input')
+                hop['guest_ack']=c.event(s,'trace_ping',label)
+                ack=hop['guest_ack']['receipt']
             for key in ('boot_id','pid','cookie'):
-                require(hop['timing']['ack'][key]==report['before']['receipt'][key],'Guest continuity failed')
+                require(ack[key]==report['before']['receipt'][key],'Guest continuity failed')
             if a.arm!='none' and s.epoch<=2: report['backend_reads'].append(c.backend_read(s))
             save()
         require(s.role=='A','Even number of hops required')
@@ -275,9 +288,12 @@ def suite(a):
                     '--cxl-mib','16384','--dax-guest','--dax-4k','--migration-network','--network-backend','tap',
                     '--memory-backing-dir','/dev/shm','--home-storage-image',assets/'storage.raw',
                     '--replicated-home-storage','--qemu',a.qemu.resolve(),'--dax-handoff']
+                if a.serial_control:start.append('--serial-control')
                 require(command(start,'start')==0,'Lab start failed')
+                flags=[name for name,value in (('--unprofiled',a.unprofiled),('--inline-guest-ack',a.inline_guest_ack),
+                    ('--resume-nokick',a.resume_nokick)) if value]
                 require(command(prefix+[HERE/'backend_ablation.py','bench','--arm',arm,'--hops',str(a.hops),
-                    '--output',a.output/ident],'bench')==0,'Benchmark failed')
+                    '--output',a.output/ident]+flags,'bench')==0,'Benchmark failed')
                 row['result']='passed'
             except BaseException as exc:
                 row.update(result='failed',error=repr(exc))
@@ -310,8 +326,10 @@ def main():
     b=sub.add_parser('build');b.add_argument('--base',type=Path,required=True);b.add_argument('--pool-storage',type=Path,required=True)
     b.add_argument('--output',type=Path,required=True)
     b=sub.add_parser('bench');b.add_argument('--arm',choices=ARMS,required=True);b.add_argument('--hops',type=int,default=24)
+    for flag in ('--unprofiled','--inline-guest-ack','--resume-nokick'):b.add_argument(flag,action='store_true')
     b.add_argument('--output',type=Path,required=True)
     b=sub.add_parser('run');b.add_argument('--assets',type=Path,required=True);b.add_argument('--qemu',type=Path,required=True)
+    for flag in ('--unprofiled','--inline-guest-ack','--resume-nokick','--serial-control'):b.add_argument(flag,action='store_true')
     b.add_argument('--qemu-root',type=Path,required=True);b.add_argument('--session',required=True)
     b.add_argument('--arms',choices=ARMS,nargs='+',default=list(ARMS));b.add_argument('--hops',type=int,default=24)
     b.add_argument('--output',type=Path,required=True)

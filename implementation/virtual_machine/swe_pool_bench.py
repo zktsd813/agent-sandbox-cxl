@@ -286,6 +286,7 @@ def main():
     parser.add_argument('--credit-mib', type=int, default=256)
     parser.add_argument("--full-audit", action="store_true")
     parser.add_argument("--restore-timing", action="store_true")
+    parser.add_argument("--resume-nokick", action="store_true")
     parser.add_argument("--resident-direct", action="store_true")
     parser.add_argument("--resident-fast-control", action="store_true")
     parser.add_argument("--resident-ready-control", action="store_true")
