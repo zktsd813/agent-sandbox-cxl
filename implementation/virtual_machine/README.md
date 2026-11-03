@@ -24,31 +24,41 @@ DAX 공유 영역은 기본 2GiB다. 기본 microVM은 1 vCPU·128MiB이고 RAM 
 
 ## 다음 세션 인계: 2026-11-03
 
-검증한 소스는 `9b0187c48`다(이력 정리 전 `66c1d398b`와 같은 구현). 정상 handoff에는 이미지/RAM 전수 검증, 전체 mapping 조회,
+검증한 소스는 `4ffffcb6a`다. 정상 handoff에는 이미지/RAM 전수 검증, 전체 mapping 조회,
 guest ping·실패 유도 시험·전체 로그 회수가 없다. Direct는 `DirectSend`(pause+export)와
 `DirectReceive`(import+resume)로 인계한다. 디스크 FD·io_uring·제어기와 peer TCP 연결은 미리 준비하고,
 방문한 VM/vCPU 자원을 재사용한다. 고정 크기 mapper handle과 작은 state는 전달하며,
 owner/epoch·범위 확인, I/O drain, CoW/discard는 유지한다. State-only도 중복 checkpoint를 제거했다.
 Promotion/demotion의 RAM 복사, 목적지 준비, CPU handoff는 별도 단계다.
+프로세스는 준비 때 연 pidfd로 확인하며, 소유권 설정 FD와 private metadata 파일 FD도 재사용한다.
+두 metadata 파일 쓰기가 모두 성공한 뒤에만 `DirectReceive`를 호출한다. 실패하면 재개하지 않는다.
 
 | 측정 범위 | 결과 | 해석 |
 |---|---|---|
 | 같은 실행에서 exec/직접 relay를 교대로 사용 (`c562c4bf6`) | 외부 요청→응답 p50 **9.35→6.23ms**, native 요청→Resume **5.06/5.11ms** | 첫 왕복 제외 exec 20회·relay 18회. 요청마다 shell/process를 실행하던 비용 감소 |
-| 최종 Gin 준비 (`9b0187c48`) | **24.79ms**, 그중 peer 연결 3.72ms | 프로세스·디스크와 양쪽 제어기 준비 포함, fresh pair 1회 관측. VM은 source에서 계속 실행 |
-| 최종 Gin 반복 handoff | 외부 **6.57ms**, native **5.69ms** p50 | 처음 40회 중 첫 왕복 제외 38회, 내부 상세 계측 꺼짐. 46회 전체에서 연결 준비 비용 0 |
+| 최종 Gin 준비 (`4ffffcb6a`) | **26.84ms**, 그중 peer 연결 1.96ms | 프로세스·디스크와 양쪽 제어기 준비 포함, fresh pair 1회 관측. VM은 source에서 계속 실행 |
+| 최종 Gin 반복 handoff | 외부 **6.36ms**, native **5.46ms** p50 | 처음 40회 중 첫 왕복 제외 38회, 내부 상세 계측 꺼짐. 46회 전체에서 연결 준비 비용 0 |
+| 송신·수신 PID 확인 합계 | **150.19→5.59µs** p50 | `/proc` 재조회 대신 pidfd 사용. 구간 계측을 켠 NFS의 이전 10회/최종 22회 비교 |
+| 목적지 metadata 파일 갱신 | **113.41→15.16µs** p50 | 같은 NFS 구간 계측. 매번 임시 inode를 생성·교체하던 작업 제거 |
 | NFS/local backend 회귀 | 각 **24회** 통과 | 160MiB 데이터 확인, source 접근 실패 48회, parked worker 실행 거절 144회는 별도 검증 |
 
 외부 시간은 host 제어기의 요청 호출부터 응답 기록까지이고, native 시간은 L1 relay의 요청부터 Resume 응답까지다.
 Guest application의 첫 응답 지연을 측정한 값은 아니다.
-Gin 27개·PHP 35개·MicroPython 43개 명령을 baseline/state-only/direct로 실행한 **9 trials·315명령**을 통과했다.
-Promotion 12회·demotion 12회·handoff 18회다. 별도 Gin 시험은 **46회 direct handoff·promotion/demotion 각 2회**를
+이번 변경은 Gin의 baseline/state-only/direct **3 trials·81명령**과 별도 Gin 27명령을 통과했다.
+세 모드 시험의 promotion/demotion은 각 4회, handoff는 6회다. 별도 시험은 **46회 direct handoff·promotion/demotion 각 2회**를
 통과했고, 실행 중인 `go test`의 동일 PID/starttime을 B→A→B에서 확인한 뒤 종료 코드·출력·최종 제출물을 검증했다.
+PID 종료·시작시각 불일치·다른 API 소유자·부분 쓰기·metadata 축소/링크 처리 검사 9개도 통과했다.
+Diskless와 디스크 사전 준비를 생략한 NFS도 각각 6회 handoff를 통과했다.
+직전 `9b0187c48`에서는 Gin/PHP/MicroPython의 9 trials·315명령을 검증했다. 그 실행의 반복 중앙값은
+외부 6.57ms/native 5.69ms였다. 서로 다른 실행이므로 최신 수치와의 차이를 확정적인 전체 지연 개선으로 계산하지 않는다.
 Baseline은 같은 수정 VMM의 DRAM 실행이며 순정 Firecracker 비교가 아니다. 각 trial은 단일 microVM이다.
 실제 workload 및 재promotion 뒤에는 10–25ms handoff도 관측했다. 위 반복 중앙값을 모든 전환의 지연으로 해석하지 않는다.
 Nested EPT 첫 복귀 비용도 남아 있으며, 실제 다중 물리 노드·비일관 CXL의 성능은 검증하지 않았다.
 
-로컬 근거는 `/tmp/cxl-swe-relay-ab`, `/tmp/cxl-backend-preconnect`, `/tmp/cxl-swe-final-matrix`,
-`/tmp/cxl-swe-final-live`다. 원본 로그·전체 보고서·이미지·소스 사본은 Git에 넣지 않는다.
+최신 로컬 근거는 `/tmp/cxl-backend-phases-before`, `/tmp/cxl-backend-staging`, `/tmp/cxl-swe-staging-matrix`,
+`/tmp/cxl-swe-staging-live`다. 새 실험은 소스 사본 대신 Git 커밋·파일 경로를 기록하고 Git 객체로 재검증한다.
+다른 clone에서 재검증할 때는 `CXL_EXPERIMENT_SOURCE_REPOSITORY`를 해당 커밋이 있는 저장소 경로로 지정한다.
+원본 로그·전체 보고서·이미지는 로컬에만 둔다.
 과거 문서의 원시 archive 링크는 이제 로컬 보관 자료를 뜻하며 새 clone에는 포함되지 않는다.
 아래 [초기 runtime 결과](results/runtime-overhead-20261103/summary.json)의 238.663ms 준비는 serial 제어 시점의 기록이고,
 4.298ms는 native 구간만의 값이다. 이를 최신 외부 요청→응답 수치와 직접 비교하지 않는다.
