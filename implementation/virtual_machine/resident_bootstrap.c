@@ -83,7 +83,9 @@ static void json_string(const char *text) {
     putchar('"');
 }
 int main(int argc, char **argv) {
-    need(argc == 3, "usage: resident-bootstrap DIRECTORY LAUNCH_SCRIPT");
+    need(argc == 3 || (argc == 4 && !strcmp(argv[3], "--no-prepare")),
+         "usage: resident-bootstrap DIRECTORY LAUNCH_SCRIPT [--no-prepare]");
+    int prepare_disk = argc == 3;
     need(!strncmp(argv[1], "/run/swe-pool-", 14) && strlen(argv[1]) < 90,
          "owned bounded directory required");
     need(!strncmp(argv[2], "/run/swe-pool-", 14), "owned launch script required");
@@ -140,6 +142,14 @@ int main(int argc, char **argv) {
     if (owner < 0) die("owner parameter");
     snprintf(record, sizeof(record), "%d\n", pid);
     write_all(owner, record, strlen(record)); close(owner);
+    if (!prepare_disk) {
+        close(fd);
+        printf("RESIDENT_BOOT_JSON {\"pid\":%d,\"starttime\":%llu,\"fork_ns\":%"PRIu64
+               ",\"fork_to_api_ready_ns\":%"PRIu64",\"prepare_api_ns\":0,\"disk_prepared\":false"
+               ",\"native_ready_ns\":%"PRIu64"}\n", pid, identity,
+               fork_end - fork_start, ready - fork_start, now() - begin);
+        return 0;
+    }
     counters(nfs_before);
     uint64_t prepare_start = now();
     struct timeval timeout = {.tv_sec = 30};

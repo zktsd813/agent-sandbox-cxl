@@ -95,6 +95,7 @@ class HandoffController(PoolController):
         # Upload a launch script: BusyBox interactive ash truncates very long
         # physical serial lines before execution. Keep console commands short.
         native = purpose == 'resident-prepare' and getattr(self.args, 'resident_ready_control', False)
+        skip_prepare = native and getattr(self.args, 'resident_skip_disk_prepare', False)
         if not native:
             self.shell(s.role, f"mkdir -p {s.directory}", "launch-directory")
         script = "set -e\n" + "\n".join("export " + shlex.quote(k + "=" + v)
@@ -113,7 +114,7 @@ class HandoffController(PoolController):
                 "kill -0 \"$p\"\nn=$((n+1))\n[ $n -lt 1000 ]\nsleep .02\ndone", "start")
             self.write_json(s.role, s.directory + "/environment.json", env, "launch-environment")
         raw, executable_file = self.shell(s.role,
-            (f'/lab/resident-bootstrap {s.directory} {script_path}\n' if native else '') +
+            (f'/lab/resident-bootstrap {s.directory} {script_path}' + (' --no-prepare' if skip_prepare else '') + '\n' if native else '') +
             f"read p t < {s.directory}/fc.pid\nprintf 'EXEC_PROCESS %s %s\\n' $p $t\nsha256sum /proc/$p/exe" +
             ('\nsha256sum /lab/resident-bootstrap' if native else ''),
             "native-prepare" if native else "launch-executable")
@@ -134,7 +135,12 @@ class HandoffController(PoolController):
                 from home_storage_bench import json_lines
                 boots = json_lines(raw, 'RESIDENT_BOOT_JSON ')
                 answers = json_lines(raw, 'LAB_API_JSON ')
-                require(len(boots) == len(answers) == 1 and answers[0]['status'] == 204, 'Native preparation failed')
+                require(len(boots) == 1, 'Native process readiness missing')
+                if skip_prepare:
+                    require(not answers and boots[0].get('disk_prepared') is False, 'Disk preparation was not skipped')
+                    self.resident_workers[s.role].update(native_boot=boots[0], native_boot_file=executable_file)
+                    return
+                require(len(answers) == 1 and answers[0]['status'] == 204, 'Native preparation failed')
                 api = {'file':executable_file, 'role':s.role, 'path':'/actions', 'method':'PUT',
                     'request':{'action_type':'DirectPrepare'}, 'response':answers[0],
                     'control_wall_ns':0, 'embedded_in':executable_file}

@@ -416,6 +416,8 @@ def start(args):
         if not storage_image.is_file():
             raise RuntimeError("--storage-image must be a regular raw image file")
     home_storage_image = getattr(args, "home_storage_image", None)
+    if getattr(args, "replicated_home_storage", False) and not home_storage_image:
+        raise RuntimeError("Replicated storage control requires --home-storage-image")
     if home_storage_image:
         home_storage_image = home_storage_image.resolve(strict=True)
         if not home_storage_image.is_file() or "," in str(home_storage_image):
@@ -481,8 +483,8 @@ def start(args):
         config["storage_image"] = {"path": str(storage_image), "sha256": sha256(storage_image),
                                    "readonly": True, "format": "raw", "cache": "none"}
     if home_storage_image:
-        # Never attach the user's template writable. Only A owns the per-run
-        # copy; B can reach its image files only through the lab's NFS export.
+        # Never attach the user's template writable. A owns the per-run copy;
+        # B uses NFS unless the replicated readonly ablation control is selected.
         private_storage = run / "home-storage.raw"
         command(["cp", "--reflink=auto", "--sparse=always", "--", home_storage_image, private_storage])
         config["home_storage_image"] = {
@@ -493,6 +495,9 @@ def start(args):
         }
         if config["home_storage_image"]["initial_sha256"] != config["home_storage_image"]["template_sha256"]:
             raise RuntimeError("Private home storage copy differs from its template")
+        if getattr(args, "replicated_home_storage", False):
+            config["replicated_home_storage"] = {"owner": "B", "path": str(home_storage_image),
+                "readonly": True, "sha256": config["home_storage_image"]["template_sha256"]}
     if args.dax_guest:
         config["source_patches"] = {name: sha256(HERE / name) for name in
                                     ["qemu-cxl-direct-ram.patch", "firecracker.patch", "ram-backend-source.json"]}
@@ -543,6 +548,9 @@ def start(args):
             if home_storage_image and role == "A":
                 cmd.extend(["-drive", f"file={private_storage},if=none,id=home-storage,format=raw,cache=none",
                             "-device", "virtio-blk-pci,drive=home-storage"])
+            if home_storage_image and role == "B" and getattr(args, "replicated_home_storage", False):
+                cmd.extend(["-drive", f"file={home_storage_image},if=none,id=replicated-home,format=raw,readonly=on,cache=none",
+                            "-device", "virtio-blk-pci,drive=replicated-home"])
             if cxl_backing:
                 cmd.extend(["-object", f"memory-backend-file,id=cxl-shared,size={args.cxl_mib}M,mem-path={cxl_backing},share=on",
                             "-device", "pxb-cxl,bus_nr=12,bus=pcie.0,id=cxl.0",
@@ -3357,6 +3365,8 @@ def main():
     p.add_argument("--socket-listener", choices=["A", "B"], default="A", help="Choose the QEMU socket listener; starts it before the connecting peer (default A)")
     p.add_argument("--storage-image", type=Path, help="Attach the same read-only raw disk to both L1s for storage experiments; QEMU uses cache=none")
     p.add_argument("--home-storage-image", type=Path, help="Copy a raw storage template into this run and attach it writable only to L1 A; B must use NFS")
+    p.add_argument("--replicated-home-storage", action="store_true",
+                   help="Backend ablation only: also attach the immutable template readonly to L1 B")
     p.set_defaults(func=start)
     p = subs.add_parser("verify", help="Wait for guest checks and validate host backing")
     p.add_argument("--timeout", type=float, default=180)

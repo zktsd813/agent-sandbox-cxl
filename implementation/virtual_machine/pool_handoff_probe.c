@@ -144,7 +144,9 @@ static uint64_t meminfo(const char *key) {
     require(result!=UINT64_MAX,"missing meminfo field"); return result;
 }
 static struct io_stats stats(void) {
-    struct io_stats s={0}; FILE *f=fopen("/sys/class/block/vda/stat","r"); if(!f) return s;
+    struct io_stats s={0}; FILE *f=fopen("/sys/class/block/vda/stat","r");
+    if(!f) f=fopen("/sys/class/block/loop0/stat","r");
+    if(!f) return s;
     uint64_t merged;
     require(fscanf(f,"%" SCNu64 " %" SCNu64 " %" SCNu64,&s.reads,&merged,&s.sectors)==3,"block stats");
     if(fclose(f)) fatal("close stats");
@@ -507,6 +509,27 @@ static void serve(const char *path,uint64_t vm,const char *upper,const char *ima
         for(char *w=strtok_r(line," \t\r\n",&save);w;w=strtok_r(NULL," \t\r\n",&save)) { require(count<5,"too many fields"); words[count++]=w; }
         require(count>=2 && strlen(words[1])<=64,"command/label missing");
         for(char *p=words[1];*p;p++) require(isalnum((unsigned char)*p)||*p=='_'||*p=='-',"label syntax");
+        if(!strcmp(words[0],"ping")) {
+            require(count==2,"ping syntax");
+            printf("{\"event\":\"trace_ping\",\"label\":\"%s\",\"boot_id\":\"%s\",\"pid\":%d,\"cookie\":\"%016"PRIx64"\"}\n",
+                   words[1],s.boot,getpid(),s.cookie);
+            continue;
+        }
+        if(!strcmp(words[0],"backend_read")) {
+            require(count==2,"backend read syntax");
+            void *buffer=NULL;
+            require(!posix_memalign(&buffer,4096,MIB),"backend aligned buffer");
+            int fd=open("/dev/vda",O_RDONLY|O_DIRECT|O_CLOEXEC);
+            if(fd<0) fatal("backend read open");
+            struct io_stats before_io=stats();
+            exact(fd,buffer,MIB,0,0);
+            uint64_t hash=UINT64_C(14695981039346656037);
+            for(size_t i=0;i<MIB;i++) hash=(hash^((unsigned char*)buffer)[i])*UINT64_C(1099511628211);
+            struct io_stats after_io=stats();
+            printf("{\"event\":\"backend_read\",\"label\":\"%s\",\"hash\":\"%016"PRIx64"\",\"bytes\":%u,\"read_ios\":%"PRIu64"}\n",
+                   words[1],hash,(unsigned)MIB,after_io.reads-before_io.reads);
+            close(fd);free(buffer);continue;
+        }
         uint64_t before=resident(&s),hash=0; struct io_stats io=stats(); int quit=0;
         s.churn_bytes=0; s.checked_churn_words=0;
         int cpu_before=current_cpu(); s.mono_start=mono_ns(); uint64_t started=now_ns();
