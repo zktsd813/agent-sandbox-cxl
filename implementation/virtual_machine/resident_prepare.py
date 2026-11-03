@@ -64,12 +64,14 @@ def main():
     if not args.keep_guest_images:
         original['source_hashes']['swe-pool-guest-run.sh']=lab.sha256(HERE/'swe-pool-guest-run.sh')
     original['resident_control']={'source_sha256':lab.sha256(source),
+        'wire_sha256':lab.sha256(HERE/'resident_wire.h'),
         'binary_sha256':lab.sha256(dest/'resident-control'),'build_argv':command,
         'compiler':subprocess.check_output(['gcc','--version'],text=True).splitlines()[0]}
     original['resident_bootstrap']={'source_sha256':lab.sha256(HERE/'resident_bootstrap.c'),
         'binary_sha256':lab.sha256(dest/'resident-bootstrap')}
     original['control_rpc']={'source_sha256':lab.sha256(HERE/'control_rpc.c'),
-        'binary_sha256':lab.sha256(dest/'control-rpc'), 'init_sha256':lab.sha256(HERE/'guest-init.sh')}
+        'binary_sha256':lab.sha256(dest/'control-rpc'), 'init_sha256':lab.sha256(HERE/'guest-init.sh'),
+        'operations':[1,2,3]}
     original['artifacts']={p.name:lab.sha256(p) for p in dest.iterdir() if p.is_file() and p.name!='manifest.json'}
     lab.save_json(dest/'manifest.json',original)
     print(json.dumps({'assets':str(dest),'firecracker':vmm,'controller':original['resident_control']},indent=2))

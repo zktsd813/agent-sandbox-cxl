@@ -93,6 +93,8 @@ def verify(path):
         elif kind == 'direct':
             need(transition.get('runtime_path') == 'resident-v2', 'Unexpected direct runtime')
             fast = e.record(transition['fast_file'],'RESIDENT_FAST_JSON ')
+            from resident_proxy import verify_receipt
+            verify_receipt(e.text(transition['fast_file']),fast)
             need(fast == transition['fast'] and fast['version'] == 2 and fast['ack'] is None and
                  set(fast['apis']) == {'send','receive'} and all(x['status'] == 204 for x in fast['apis'].values()),
                  'Runtime retained diagnostic API/guest probe or handoff failed')

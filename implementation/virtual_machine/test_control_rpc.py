@@ -8,6 +8,7 @@ import struct
 import subprocess
 import tempfile
 import threading
+import time
 import tty
 import unittest
 
@@ -86,6 +87,44 @@ class Protocol(unittest.TestCase):
         name=str(path).encode()
         self.assertEqual(self.request(2,struct.pack('<II',len(name),0)+name+b'changed')[0],125)
         self.assertEqual(target.read_bytes(),b'preserved')
+
+    def test_native_socket_relay(self):
+        address=str(self.root/'relay.sock')
+        with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as listener:
+            listener.bind(address);listener.listen(1)
+            request=b'command\x00binary';answer=b'ACK!reply\x00data'
+            def serve():
+                with listener.accept()[0] as sock:
+                    self.assertEqual(bytes(rpc._read(sock,len(request))),request)
+                    sock.sendall(answer[:4]);time.sleep(.005);sock.sendall(answer[4:])
+            thread=threading.Thread(target=serve);thread.start()
+            path=address.encode();body=struct.pack('<IIII',len(path),len(request),len(answer),4)+path+request
+            status,data=self.request(3,body)
+            thread.join(timeout=5);self.assertFalse(thread.is_alive())
+            self.assertEqual(status,0);complete,resumed=struct.unpack_from('<QQ',data)
+            self.assertGreater(complete,resumed+3000000);self.assertEqual(data[16:],answer)
+        os.unlink(address)
+
+    def test_relay_disconnect_is_not_retried(self):
+        address=str(self.root/'failed.sock')
+        with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as listener:
+            listener.bind(address);listener.listen(2)
+            def serve():
+                with listener.accept()[0] as sock:
+                    self.assertEqual(bytes(rpc._read(sock,1)),b'x');sock.sendall(b'A')
+            thread=threading.Thread(target=serve);thread.start()
+            path=address.encode();body=struct.pack('<IIII',len(path),1,4,4)+path+b'x'
+            self.assertEqual(self.request(3,body)[0],125)
+            thread.join(timeout=5);self.assertFalse(thread.is_alive())
+            listener.settimeout(.03)
+            with self.assertRaises(socket.timeout):listener.accept()
+        os.unlink(address)
+        self.assertEqual(self.request(1,b'printf recovered'),(0,b'recovered'))
+
+    def test_relay_bounds(self):
+        self.assertEqual(self.request(3,struct.pack('<IIII',4096,0,4,4))[0],125)
+        self.assertEqual(self.request(3,struct.pack('<IIII',6,1,rpc.CAP,4)+b'/tmp/x'+b'x')[0],125)
+        self.assertEqual(self.request(3,struct.pack('<IIII',6,1,4,5)+b'/tmp/x'+b'x')[0],125)
 
 class Client(unittest.TestCase):
     def setUp(self):

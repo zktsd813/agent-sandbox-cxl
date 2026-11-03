@@ -32,6 +32,7 @@ SOURCES = ("swe_pool_run.py", "swe_pool_bench.py", "swe_pool_prepare.py",
            "verify_pool_handoff.py", "verify_pool_discard_protocol.py", "lab.py",
            "shared_probe.c", "resident_fast.py", "resident_control.c", "resident_bootstrap.c", "resident_prepare.py", "analyze_resident_direct.py",
            "analyze_resident_preparation.py", "control_rpc.c", "control_rpc.py", "guest-init.sh",
+           "resident_wire.h", "resident_proxy.py", "kernel_handoff_trace.py",
            "firecracker.patch", "kvm-dax-state.patch", "kvm-dax-source.json")
 
 
@@ -47,6 +48,8 @@ def arguments():
     parser.add_argument("--memory-mib", type=int, default=2048)
     parser.add_argument("--restore-timing", action="store_true")
     parser.add_argument("--resume-nokick", action="store_true")
+    parser.add_argument("--exec-request", action="store_true")
+    parser.add_argument("--alternate-request", action="store_true")
     parser.add_argument("--resident-direct", action="store_true")
     parser.add_argument("--resident-fast-control", action="store_true")
     parser.add_argument("--resident-ready-control", action="store_true")
@@ -182,6 +185,10 @@ def main():
                 bench.append("--restore-timing")
             if args.resume_nokick and mode == 'direct':
                 bench.append('--resume-nokick')
+            if args.exec_request and mode == 'direct':
+                bench.append('--exec-request')
+            if args.alternate_request and mode == 'direct':
+                bench.append('--alternate-request')
             if args.immutable_nfs_cache:
                 bench.append("--immutable-nfs-cache")
             save()
