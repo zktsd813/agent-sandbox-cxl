@@ -165,6 +165,7 @@ class Controller(HandoffController):
             f'{self.resident_control_nonce} {int(first)} {label} {ip[dest]} 1 {epoch} {self.pool_offset} {self.image_bytes} 1',
             'handoff-request',120)
         rows=json_lines(raw,'RESIDENT_FAST_JSON ')
+        controller_ns=self.control_timings[-1]['elapsed_ns']
         require(len(rows)==1,'Missing native handoff receipt')
         timing=rows[0]
         require(all(x['status']==204 for x in timing['apis'].values()),'Handoff API failed')
@@ -195,6 +196,7 @@ class Controller(HandoffController):
         s.role,s.epoch,s.manifest=dest,epoch,manifest
         worker['imported']=True
         return {'source':source,'destination':dest,'first_import':first,'epoch':epoch,'file':name,
+            'controller_command_wall_ns':controller_ns,
             'timing':timing,'export_token':state['token'],'state_file':state_file,
             'sealed_file':sealed_file,'manifest_file':manifest_file}
 

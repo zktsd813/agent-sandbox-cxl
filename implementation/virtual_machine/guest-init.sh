@@ -8,7 +8,7 @@ mkdir -p /dev/pts /run
 mount -t devpts devpts /dev/pts
 mount -t tmpfs tmpfs /run
 
-role= nonce= rounds=1000 cxl_bytes=0 dax_guest=0 dax_kvm_state=0 dax_handoff=0 dax_4k=0 migration_ip=
+role= nonce= rounds=1000 cxl_bytes=0 dax_guest=0 dax_kvm_state=0 dax_handoff=0 dax_4k=0 migration_ip= control_rpc=0
 for arg in $(cat /proc/cmdline); do
     case "$arg" in
         lab.role=*) role=${arg#*=} ;;
@@ -20,6 +20,7 @@ for arg in $(cat /proc/cmdline); do
         lab.dax_handoff=*) dax_handoff=${arg#*=} ;;
         lab.dax_4k=*) dax_4k=${arg#*=} ;;
         lab.migration_ip=*) migration_ip=${arg#*=} ;;
+        lab.control_rpc=*) control_rpc=${arg#*=} ;;
     esac
 done
 
@@ -54,6 +55,17 @@ while read -r module; do
     fi
     insmod "/modules/$module" $module_args || fail "cannot load $module"
 done < /lab/modules.list
+if [ "$control_rpc" -eq 1 ]; then
+    /lab/control-rpc /dev/vport0p1 "$nonce" > /run/control-rpc.log 2>&1 &
+    control_pid=$!
+    attempt=0
+    while ! grep -q '^LAB_CONTROL_READY$' /run/control-rpc.log; do
+        kill -0 "$control_pid" || { cat /run/control-rpc.log; fail "control channel exited"; }
+        attempt=$((attempt + 1))
+        [ "$attempt" -lt 100 ] || fail "control channel startup timed out"
+        sleep .01
+    done
+fi
 if [ "$dax_handoff" -eq 1 ]; then
     /lab/shared-probe kvm-api "$role" || fail "L1 KVM API check failed"
 else

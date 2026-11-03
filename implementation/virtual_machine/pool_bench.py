@@ -79,6 +79,18 @@ class PoolController(Controller):
         return json.loads(self.fetch_bytes(role, path, kind))
 
     def write_bytes(self, role, path, data, kind="write", after=""):
+        if self.vms[role].get('control_rpc'):
+            import control_rpc
+            started = time.monotonic_ns()
+            require(lab.alive(self.vms[role]), 'VM is not running')
+            raw = control_rpc.put(self.vms[role], path, data, after)
+            name = self.raw(kind, raw)
+            if not hasattr(self, 'control_timings'):
+                self.control_timings = []
+            self.control_timings.append({'role':role, 'kind':kind, 'file':name,
+                'elapsed_ns':time.monotonic_ns()-started,
+                'rpc':dict(self.vms[role]['_last_control_timing'])})
+            return raw, name
         # Owned ivshmem scratch upload avoids giant serial commands. This region
         # is separate from CXL RAM/pool/Bloom and all transfers are sequential.
         compressed = gzip.compress(data)

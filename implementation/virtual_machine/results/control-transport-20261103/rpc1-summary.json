@@ -1,0 +1,55 @@
+{
+  "result": "passed",
+  "stage": "dedicated-virtio-command-channel",
+  "archives": {
+    "backend-rpc1": {
+      "file": "backend-rpc1.tar.xz",
+      "sha256": "6e89f8ae24e79f53526f440270fa99db04599704e29d290a27d3afcc2040978a"
+    },
+    "swe-rpc1": {
+      "file": "swe-rpc1.tar.xz",
+      "sha256": "adf19187613dc9d0ee8357e5b265d9b22202f00b9a2638b6e709681f796f33ca"
+    }
+  },
+  "preparation_ms": {
+    "destination_wall": 12.860875,
+    "control_servers_wall": 9.171805,
+    "destination_native": 8.028997
+  },
+  "swe_direct_handoffs_ms": [
+    {
+      "external": 16.324841,
+      "native_request_resume": 12.788062
+    },
+    {
+      "external": 24.69472,
+      "native_request_resume": 20.364434
+    },
+    {
+      "external": 29.848684,
+      "native_request_resume": 26.555045
+    },
+    {
+      "external": 8.503663,
+      "native_request_resume": 4.876207
+    }
+  ],
+  "coverage": {
+    "backend_handoffs": 24,
+    "warm_guest_cache_mib": 160,
+    "swe_modes": [
+      "baseline",
+      "state-only",
+      "direct"
+    ],
+    "swe_commands_per_mode": 27,
+    "promotion_demotion_cycles_per_migration_mode": 2,
+    "rpc_protocol_tests": 8
+  },
+  "limitations": [
+    "Coherent nested KVM, not physical cross-host CXL",
+    "Backend correctness driver measures guest ACK separately; its outer command includes that ACK",
+    "One fresh NFS backend trial; no native latency improvement claim",
+    "L1 control daemon starts during L1 boot, like the existing serial shell; this is infrastructure startup, separate from resident microVM preparation"
+  ]
+}

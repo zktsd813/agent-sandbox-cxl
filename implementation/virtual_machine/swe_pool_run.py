@@ -31,7 +31,7 @@ SOURCES = ("swe_pool_run.py", "swe_pool_bench.py", "swe_pool_prepare.py",
            "trace_prepare.py", "trace-guest-run.sh", "verify_trace_results.py",
            "verify_pool_handoff.py", "verify_pool_discard_protocol.py", "lab.py",
            "shared_probe.c", "resident_fast.py", "resident_control.c", "resident_bootstrap.c", "resident_prepare.py", "analyze_resident_direct.py",
-           "analyze_resident_preparation.py",
+           "analyze_resident_preparation.py", "control_rpc.c", "control_rpc.py", "guest-init.sh",
            "firecracker.patch", "kvm-dax-state.patch", "kvm-dax-source.json")
 
 

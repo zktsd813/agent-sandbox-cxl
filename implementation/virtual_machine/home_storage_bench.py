@@ -61,6 +61,8 @@ class Controller:
             self.control_timings = []
         self.control_timings.append({'role': role, 'kind': kind, 'file': name,
                                      'elapsed_ns': time.monotonic_ns() - started})
+        if self.vms[role].get('control_rpc'):
+            self.control_timings[-1]['rpc'] = dict(self.vms[role]['_last_control_timing'])
         return raw, name
 
     def api(self, role, directory, path, method, body):

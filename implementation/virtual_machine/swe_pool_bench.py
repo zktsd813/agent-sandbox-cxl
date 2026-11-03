@@ -322,7 +322,7 @@ def main():
             'Same patched DRAM baseline, not pristine Firecracker', 'Natural resident pages in at most16 selected lower files',
             'One VM per trial: no multi-VM memory savings claim; full canonical image preloaded and counted']}
     sources = ('swe_pool_bench.py','swe_pool_protocol.py','swe-pool-l2-init.sh','swe-pool-guest-run.sh',
-        'resident_fast.py','resident_control.c','resident_bootstrap.c','guest-pool-cli.c','guest-pool.c','guest-pool-uapi.h','pool_handoff_bench.py','pool_handoff_control.py',
+        'resident_fast.py','resident_control.c','resident_bootstrap.c','control_rpc.c','control_rpc.py','guest-init.sh','guest-pool-cli.c','guest-pool.c','guest-pool-uapi.h','pool_handoff_bench.py','pool_handoff_control.py',
         'pool_bench.py','pool_control.py','home_storage_bench.py','nfs_bench.py','trace_bench.py','lab.py')
     (out/'measured-sources').mkdir()
     for name in sources:

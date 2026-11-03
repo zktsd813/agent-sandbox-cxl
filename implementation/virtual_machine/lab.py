@@ -401,6 +401,7 @@ def start(args):
     no_active_run()
     host_kvm()
     prepared = json.loads((ASSETS / "manifest.json").read_text())
+    control_rpc = bool(prepared.get("control_rpc")) and not getattr(args, "serial_control", False)
     vendor = prepared["vendor"]
     parameter = Path(f"/sys/module/kvm_{'intel' if vendor == 'intel' else 'amd'}/parameters/nested")
     if parameter.read_text().strip().lower() not in ["y", "1"]:
@@ -509,6 +510,7 @@ def start(args):
             prefix = run / ("vm-" + role.lower())
             console_path = str(control / (role.lower() + ".console.sock"))
             qmp_path = str(control / (role.lower() + ".qmp.sock"))
+            command_path = str(control / (role.lower() + ".command.sock"))
             # QEMU's unix socket paths must fit sockaddr_un.sun_path.
             if max(len(console_path.encode()), len(qmp_path.encode())) >= 108:
                 raise RuntimeError("Runtime path is too long for UNIX sockets.")
@@ -525,6 +527,11 @@ def start(args):
                    "-device", "ivshmem-plain,memdev=shared",
                    "-chardev", f"socket,id=console,path={console_path},server=on,wait=off,logfile={prefix}.serial.log",
                    "-serial", "chardev:console", "-qmp", f"unix:{qmp_path},server=on,wait=off"]
+            if control_rpc:
+                cmd[cmd.index("-append") + 1] += " lab.control_rpc=1"
+                cmd.extend(["-device", "virtio-serial-pci,id=labcontrol",
+                    "-chardev", f"socket,id=labcmd,path={command_path},server=on,wait=off",
+                    "-device", "virtserialport,bus=labcontrol.0,nr=1,chardev=labcmd,name=cxl.control"])
             if getattr(args, "pool_cow", False):
                 cmd[cmd.index("-append") + 1] += " device_dax.pool_cow=1"
             if migration_network:
@@ -570,6 +577,8 @@ def start(args):
             config["vms"][role] = {"pid": process.pid, "starttime": identity, "command": cmd,
                                     "console": console_path, "qmp": qmp_path,
                                     "serial_log": str(prefix) + ".serial.log"}
+            if control_rpc:
+                config["vms"][role].update(control_rpc=command_path, control_nonce=nonce)
             config["vms"] = {name: config["vms"][name] for name in ("A", "B") if name in config["vms"]}
             save_json(run / "run.json", config)
             if migration_network and args.network_backend == "socket" and role == args.socket_listener:
@@ -778,9 +787,12 @@ def status(_):
 
 
 def guest_command(vm, body, timeout=15):
-    """Run a bounded command through the L1 serial shell, preserving its session."""
+    """Run a bounded command through the dedicated channel or legacy console."""
     if not alive(vm):
         raise RuntimeError("VM is not running")
+    if vm.get("control_rpc"):
+        import control_rpc
+        return control_rpc.command(vm, body, timeout)
     marker = "LAB_COMMAND_DONE_" + secrets.token_hex(8)
     script = f"\n(\nset -e\n{body}\n)\nprintf '\\n{marker}:%s\\n' \"$?\"\n"
     data = bytearray()
@@ -3354,6 +3366,7 @@ def main():
     p.add_argument("--qemu", type=Path, help="Use an explicit QEMU binary, e.g. one with CXL Type-3 support")
     p.add_argument("--cxl-mib", type=int, default=0, help="Add shared CXL Type-3 RAM exposed as device-DAX (e.g. 2048)")
     p.add_argument("--dax-guest", action="store_true", help="Run one microVM on A with all 128MiB guest RAM in DAX; B observes")
+    p.add_argument("--serial-control", action="store_true", help="Use the historical console transport even if the fixture has a dedicated control channel")
     p.add_argument("--dax-kvm-state", action="store_true", help="Use the experimental KVM device-DAX state allocator on VM A")
     p.add_argument("--dax-handoff", action="store_true", help="Direct shared KVM handoff lab; fixed kernel addresses, 4KiB DAX, no automatic L2")
     p.add_argument("--dax-4k", action="store_true", help="Configure the shared device-DAX allocation with 4KiB alignment for matched EPT measurements")
