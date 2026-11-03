@@ -1,0 +1,26 @@
+{
+  "result": "passed",
+  "positive_control": "passed",
+  "checks": [
+    {
+      "case": "wrong_api",
+      "result": "rejected",
+      "reason": "API receipt disagreement"
+    },
+    {
+      "case": "overlapping_kernel",
+      "result": "rejected",
+      "reason": "Nested interval exceeds parent"
+    },
+    {
+      "case": "wrong_kernel_record",
+      "result": "rejected",
+      "reason": "Kernel profile differs from receipt"
+    },
+    {
+      "case": "wrong_log_hash",
+      "result": "rejected",
+      "reason": "Receipt hash: 0650-final-vmm-log.bin"
+    }
+  ]
+}

@@ -1,0 +1,487 @@
+{
+  "result": "passed",
+  "mode": "resident direct CPU handoff; no state-only snapshot experiment",
+  "conditions": {
+    "guest_ram_bytes": 2147483648,
+    "vcpus": 1,
+    "resident_lower_cache_bytes": 167772160,
+    "common_guest_workload": "Same readonly loop-ext4 image in guest initramfs; the optional virtio-blk backend is activated and validated with O_DIRECT reads outside the timing interval",
+    "shared_canonical_pages": 0,
+    "mapper": "same CPM promotion, persistent handle, ownership revocation and nested EPT sync",
+    "host": "coherent nested KVM on one physical machine; 4-vCPU L1s pinned within CPUs 0-7",
+    "io_engine": "Async",
+    "nfs": "v3 TCP readonly actimeo=60,nocto"
+  },
+  "measurements": {
+    "handoff": "native request start through destination Resume API response; process preparation excluded",
+    "guest_ack": "separate serial ping acknowledgement, not an application latency",
+    "warm": "23 handoffs per arm after the first B import; includes first return to A and all outliers",
+    "first": "single first B import per fresh pair; do not interpret between-arm differences as a precise causal estimate",
+    "native_preparation": "fork through API socket readiness and optional DirectPrepare; excludes shell upload and executable hashing",
+    "outer_preparation": "lab console orchestration including script upload and executable hashing"
+  },
+  "validation": {
+    "handoffs": 96,
+    "roundtrips": 48,
+    "promotions": 4,
+    "demotions": 4,
+    "old_owner_memory_and_kvm_probes": 96,
+    "rejected_old_owner_mutations": 192,
+    "backend_read_oracles": 12,
+    "evidence_tests": 12,
+    "allocator_tests": 9,
+    "handoff_ram_copy_bytes": 0,
+    "handoff_full_scan_increment": 0
+  },
+  "limitations": [
+    "No concurrent outstanding disk I/O in the measured handoff interval",
+    "Synthetic backend ablation, not a new SWE workload benchmark",
+    "No stock VM-migration latency comparison",
+    "One fresh pair per arm in the final matrix; prior diskless 24-hop pilot retained separately"
+  ],
+  "arms": [
+    {
+      "arm": "local",
+      "warm": {
+        "request_resume_ms": {
+          "n": 23,
+          "p50": 9.556411,
+          "min": 8.549993,
+          "max": 21.926354
+        },
+        "request_ack_ms": {
+          "n": 23,
+          "p50": 24.776596,
+          "min": 13.94096,
+          "max": 42.312121
+        },
+        "export_attach_api_ms": {
+          "n": 23,
+          "p50": 4.642892,
+          "min": 4.142596999999999,
+          "max": 13.807689
+        },
+        "kernel_ms": {
+          "n": 23,
+          "p50": 0.956055,
+          "min": 0.809888,
+          "max": 7.726353
+        }
+      },
+      "to_B_warm": {
+        "request_resume_ms": {
+          "n": 11,
+          "p50": 9.739088,
+          "min": 8.744625,
+          "max": 10.353245
+        },
+        "export_attach_api_ms": {
+          "n": 11,
+          "p50": 4.912831,
+          "min": 4.396505,
+          "max": 5.359919
+        },
+        "kernel_ms": {
+          "n": 11,
+          "p50": 0.91756,
+          "min": 0.809888,
+          "max": 1.404207
+        }
+      },
+      "first_B_request_resume_ms": 18.601276,
+      "native_prepare_ms": 6.29952,
+      "fork_to_api_ready_ms": 4.576608,
+      "prepare_api_ms": 1.518915,
+      "outer_prepare_ms": 317.55592,
+      "outer_server_setup_ms": 165.6127,
+      "disk_properties": [
+        {
+          "role": "A",
+          "scope": "disk_properties",
+          "stages_us": {
+            "file_engine": 271.49399999999997,
+            "image_id": 10.208,
+            "open": 25.313,
+            "pool_identity": 2.371,
+            "size": 5.101
+          },
+          "total_us": 323.659
+        },
+        {
+          "role": "B",
+          "scope": "disk_properties",
+          "stages_us": {
+            "file_engine": 229.38400000000001,
+            "image_id": 9.783,
+            "open": 34.455999999999996,
+            "pool_identity": 2.42,
+            "size": 4.954000000000001
+          },
+          "total_us": 289.47499999999997
+        }
+      ],
+      "native_boot": {
+        "pid": 158,
+        "starttime": 3496,
+        "fork_ns": 114262,
+        "fork_to_api_ready_ns": 4576608,
+        "prepare_api_ns": 1518915,
+        "native_ready_ns": 6299520,
+        "nfs_proc3_before": [
+          1,
+          2,
+          0,
+          1,
+          2,
+          0,
+          336,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          2,
+          1,
+          0
+        ],
+        "nfs_proc3_after": [
+          1,
+          2,
+          0,
+          1,
+          2,
+          0,
+          336,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          2,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "arm": "nfs",
+      "warm": {
+        "request_resume_ms": {
+          "n": 23,
+          "p50": 9.562249,
+          "min": 8.574337,
+          "max": 17.87984
+        },
+        "request_ack_ms": {
+          "n": 23,
+          "p50": 25.208556,
+          "min": 13.84844,
+          "max": 33.027367
+        },
+        "export_attach_api_ms": {
+          "n": 23,
+          "p50": 4.638236,
+          "min": 4.288946,
+          "max": 9.850192000000002
+        },
+        "kernel_ms": {
+          "n": 23,
+          "p50": 0.947537,
+          "min": 0.866691,
+          "max": 4.640841
+        }
+      },
+      "to_B_warm": {
+        "request_resume_ms": {
+          "n": 11,
+          "p50": 9.625694,
+          "min": 9.128259,
+          "max": 10.804245
+        },
+        "export_attach_api_ms": {
+          "n": 11,
+          "p50": 4.881049999999999,
+          "min": 4.329847,
+          "max": 5.744194
+        },
+        "kernel_ms": {
+          "n": 11,
+          "p50": 0.927741,
+          "min": 0.866691,
+          "max": 1.212679
+        }
+      },
+      "first_B_request_resume_ms": 17.3765,
+      "native_prepare_ms": 7.85519,
+      "fork_to_api_ready_ms": 4.62877,
+      "prepare_api_ms": 2.981219,
+      "outer_prepare_ms": 351.714213,
+      "outer_server_setup_ms": 169.979533,
+      "disk_properties": [
+        {
+          "role": "A",
+          "scope": "disk_properties",
+          "stages_us": {
+            "file_engine": 240.614,
+            "image_id": 9.725,
+            "open": 26.729000000000003,
+            "pool_identity": 2.412,
+            "size": 5.448
+          },
+          "total_us": 293.979
+        },
+        {
+          "role": "B",
+          "scope": "disk_properties",
+          "stages_us": {
+            "file_engine": 167.203,
+            "image_id": 12.439,
+            "open": 1952.284,
+            "pool_identity": 2.56,
+            "size": 6.67
+          },
+          "total_us": 2146.3630000000003
+        }
+      ],
+      "native_boot": {
+        "pid": 148,
+        "starttime": 3366,
+        "fork_ns": 95982,
+        "fork_to_api_ready_ns": 4628770,
+        "prepare_api_ns": 2981219,
+        "native_ready_ns": 7855190,
+        "nfs_proc3_before": [
+          1,
+          2,
+          0,
+          1,
+          2,
+          0,
+          336,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          2,
+          1,
+          0
+        ],
+        "nfs_proc3_after": [
+          1,
+          2,
+          0,
+          2,
+          4,
+          0,
+          336,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          2,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "arm": "nfs-unprepared",
+      "warm": {
+        "request_resume_ms": {
+          "n": 23,
+          "p50": 9.344772,
+          "min": 7.245954,
+          "max": 17.63316
+        },
+        "request_ack_ms": {
+          "n": 23,
+          "p50": 25.282986,
+          "min": 19.889877,
+          "max": 32.368822
+        },
+        "export_attach_api_ms": {
+          "n": 23,
+          "p50": 4.548121,
+          "min": 2.647938,
+          "max": 9.856691000000001
+        },
+        "kernel_ms": {
+          "n": 23,
+          "p50": 1.013355,
+          "min": 0.534516,
+          "max": 4.582851
+        }
+      },
+      "to_B_warm": {
+        "request_resume_ms": {
+          "n": 11,
+          "p50": 9.394122,
+          "min": 7.245954,
+          "max": 10.622524
+        },
+        "export_attach_api_ms": {
+          "n": 11,
+          "p50": 4.854688,
+          "min": 2.647938,
+          "max": 5.326109000000001
+        },
+        "kernel_ms": {
+          "n": 11,
+          "p50": 0.932924,
+          "min": 0.534516,
+          "max": 1.150568
+        }
+      },
+      "first_B_request_resume_ms": 20.103377,
+      "native_prepare_ms": 4.626411,
+      "fork_to_api_ready_ms": 4.470711,
+      "prepare_api_ms": 0.0,
+      "outer_prepare_ms": 336.755876,
+      "outer_server_setup_ms": 177.930733,
+      "disk_properties": [
+        {
+          "role": "A",
+          "scope": "disk_properties",
+          "stages_us": {
+            "file_engine": 260.01300000000003,
+            "image_id": 10.307,
+            "open": 33.726,
+            "pool_identity": 2.197,
+            "size": 5.536
+          },
+          "total_us": 321.059
+        },
+        {
+          "role": "B",
+          "scope": "disk_properties",
+          "stages_us": {
+            "file_engine": 201.368,
+            "image_id": 4.357,
+            "open": 2065.888,
+            "pool_identity": 2.6079999999999997,
+            "size": 7.194999999999999
+          },
+          "total_us": 2284.1929999999998
+        }
+      ],
+      "native_boot": {
+        "pid": 150,
+        "starttime": 3356,
+        "fork_ns": 129453,
+        "fork_to_api_ready_ns": 4470711,
+        "prepare_api_ns": 0,
+        "disk_prepared": false,
+        "native_ready_ns": 4626411
+      }
+    },
+    {
+      "arm": "none",
+      "warm": {
+        "request_resume_ms": {
+          "n": 23,
+          "p50": 8.747759,
+          "min": 6.592183,
+          "max": 17.86821
+        },
+        "request_ack_ms": {
+          "n": 23,
+          "p50": 24.162349,
+          "min": 17.938924,
+          "max": 32.74392
+        },
+        "export_attach_api_ms": {
+          "n": 23,
+          "p50": 3.948179,
+          "min": 2.4463139999999997,
+          "max": 9.76513
+        },
+        "kernel_ms": {
+          "n": 23,
+          "p50": 0.90489,
+          "min": 0.642634,
+          "max": 5.40488
+        }
+      },
+      "to_B_warm": {
+        "request_resume_ms": {
+          "n": 11,
+          "p50": 8.889276,
+          "min": 8.309621,
+          "max": 9.364163
+        },
+        "export_attach_api_ms": {
+          "n": 11,
+          "p50": 4.1523,
+          "min": 3.837258,
+          "max": 4.658454
+        },
+        "kernel_ms": {
+          "n": 11,
+          "p50": 0.90489,
+          "min": 0.794107,
+          "max": 1.05991
+        }
+      },
+      "first_B_request_resume_ms": 16.248558,
+      "native_prepare_ms": 4.472711,
+      "fork_to_api_ready_ms": 4.335169,
+      "prepare_api_ms": 0.0,
+      "outer_prepare_ms": 334.718694,
+      "outer_server_setup_ms": 181.787438,
+      "disk_properties": [],
+      "native_boot": {
+        "pid": 149,
+        "starttime": 3298,
+        "fork_ns": 95017,
+        "fork_to_api_ready_ns": 4335169,
+        "prepare_api_ns": 0,
+        "disk_prepared": false,
+        "native_ready_ns": 4472711
+      }
+    }
+  ],
+  "reproduce": [
+    "python3 implementation/virtual_machine/backend_ablation.py build --base implementation/virtual_machine/.local/swe-ready2 --pool-storage implementation/virtual_machine/.local/handoff-fast2/storage.raw --output NEW_ASSETS",
+    "python3 implementation/virtual_machine/backend_ablation.py run --assets NEW_ASSETS --qemu QEMU --qemu-root QEMU_ROOT --session FRESH_SESSION --arms local nfs nfs-unprepared none --hops 24 --output NEW_RESULTS",
+    "python3 implementation/virtual_machine/verify_backend_ablation.py NEW_RESULTS/suite.json --output VERIFICATION.json",
+    "python3 implementation/virtual_machine/test_backend_ablation_evidence.py NEW_RESULTS/01-nfs"
+  ],
+  "post_measurement_source_changes": [
+    "Added session-name validation and failed-trial status recording to runner; removed an unused import",
+    "Clarified the lab storage comment; measured sources remain frozen in the evidence archive"
+  ],
+  "verifier_sources": {
+    "verify_backend_ablation.py": "a8ffb213bf17fda69c25f97cab5e36c7487fdaa3a537f91a60422a7423972d71",
+    "test_backend_ablation_evidence.py": "cf6b880e1c184a720474edadb69b7d4d4c60e27d1daf2b427229b7092ac565e8"
+  }
+}

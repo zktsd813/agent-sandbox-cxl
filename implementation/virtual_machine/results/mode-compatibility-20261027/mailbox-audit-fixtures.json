@@ -1,0 +1,60 @@
+{
+  "result": "passed",
+  "baseline": "passed",
+  "verifier_sha256": "b2b74e7c38373d9933e7167641d2afdca0bb4b0519927cab7f15cea3b9b4b877",
+  "negative_cases_rejected": 13,
+  "cases": [
+    {
+      "case": "nonce",
+      "error": "fixture/handoff0/receive: mailbox session/layout/payload metadata mismatch"
+    },
+    {
+      "case": "round",
+      "error": "fixture/handoff0/receive: mailbox session/layout/payload metadata mismatch"
+    },
+    {
+      "case": "schema",
+      "error": "fixture/handoff0/receive: mailbox session/layout/payload metadata mismatch"
+    },
+    {
+      "case": "offset",
+      "error": "fixture/handoff0/receive: mailbox session/layout/payload metadata mismatch"
+    },
+    {
+      "case": "capacity",
+      "error": "fixture/handoff0/receive: mailbox session/layout/payload metadata mismatch"
+    },
+    {
+      "case": "memory_bytes",
+      "error": "fixture/handoff0/receive: mailbox session/layout/payload metadata mismatch"
+    },
+    {
+      "case": "state_hash",
+      "error": "fixture/handoff0/receive: mailbox session/layout/payload metadata mismatch"
+    },
+    {
+      "case": "role",
+      "error": "fixture/handoff0/receive: mailbox session/layout/payload metadata mismatch"
+    },
+    {
+      "case": "duration_ns",
+      "error": "fixture/handoff0/receive: invalid native duration"
+    },
+    {
+      "case": "destination bytes",
+      "error": "fixture/handoff0: mailbox destination state differs from source"
+    },
+    {
+      "case": "duplicate receipt",
+      "error": "fixture/handoff0/receive: missing/duplicate native receipt"
+    },
+    {
+      "case": "API response disagrees with status",
+      "error": "fixture/handoff0/load: unsuccessful native API response"
+    },
+    {
+      "case": "handoff mislabeled as direct",
+      "error": "fixture/handoff0: trace evidence does not demonstrate direct/reuse handoff"
+    }
+  ]
+}

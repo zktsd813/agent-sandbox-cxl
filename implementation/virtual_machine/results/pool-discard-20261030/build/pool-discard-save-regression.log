@@ -1,0 +1,27 @@
+
+running 4 tests
+test devices::virtio::block::virtio::device::tests::test_prepare_save ... FAILED
+test devices::virtio::block::virtio::device::tests::test_prepare_save_flush_failure_is_reported_and_retryable ... FAILED
+test devices::virtio::vsock::device::tests::test_prepare_save_emits_transport_reset_when_active ... ok
+test devices::virtio::vsock::device::tests::test_prepare_save_inactive_is_a_noop ... ok
+
+failures:
+
+---- devices::virtio::block::virtio::device::tests::test_prepare_save stdout ----
+
+thread 'devices::virtio::block::virtio::device::tests::test_prepare_save' (4) panicked at src/vmm/src/devices/virtio/block/virtio/test_utils.rs:67:30:
+called `Result::unwrap()` on an `Err` value: FileEngine(Async(IoUring(Setup(Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }))))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- devices::virtio::block::virtio::device::tests::test_prepare_save_flush_failure_is_reported_and_retryable stdout ----
+
+thread 'devices::virtio::block::virtio::device::tests::test_prepare_save_flush_failure_is_reported_and_retryable' (5) panicked at src/vmm/src/devices/virtio/block/virtio/test_utils.rs:67:30:
+called `Result::unwrap()` on an `Err` value: FileEngine(Async(IoUring(Setup(Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }))))
+
+
+failures:
+    devices::virtio::block::virtio::device::tests::test_prepare_save
+    devices::virtio::block::virtio::device::tests::test_prepare_save_flush_failure_is_reported_and_retryable
+
+test result: FAILED. 2 passed; 2 failed; 0 ignored; 0 measured; 826 filtered out; finished in 0.00s
+

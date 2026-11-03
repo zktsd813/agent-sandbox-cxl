@@ -1,0 +1,36 @@
+
+running 31 tests
+test devices::virtio::balloon::device::tests::pool_discard_reporting_ack_and_rejection_protocol ... ok
+test devices::virtio::balloon::device::tests::pool_reporting_only_config_is_narrow ... ok
+test devices::virtio::balloon::device::tests::test_balloon_stat_size ... ok
+test devices::virtio::balloon::device::tests::test_cannot_update_inactive_device ... ok
+test devices::virtio::balloon::device::tests::test_config_as_bytes ... ok
+test devices::virtio::balloon::device::tests::test_deflate ... ok
+test devices::virtio::balloon::device::tests::test_free_page_hinting_config ... ok
+test devices::virtio::balloon::device::tests::test_hinting_invalid_cmd ... ok
+test devices::virtio::balloon::device::tests::test_hinting_misaligned_value ... ok
+test devices::virtio::balloon::device::tests::test_hinting_no_ack_on_stop ... ok
+test devices::virtio::balloon::device::tests::test_hinting_no_cmd_set ... ok
+test devices::virtio::balloon::device::tests::test_hinting_normal_path ... ok
+test devices::virtio::balloon::device::tests::test_hinting_stale_inflight_requests ... ok
+test devices::virtio::balloon::device::tests::test_hinting_stale_post_stop ... ok
+test devices::virtio::balloon::device::tests::test_inflate ... ok
+test devices::virtio::balloon::device::tests::test_invalid_request ... ok
+test devices::virtio::balloon::device::tests::test_num_pages ... ok
+test devices::virtio::balloon::device::tests::test_process_balloon_queues ... ok
+test devices::virtio::balloon::device::tests::test_process_reporting ... ok
+test devices::virtio::balloon::device::tests::test_stats ... ok
+test devices::virtio::balloon::device::tests::test_stats_queue_oversized_descriptor_rejected ... ok
+test devices::virtio::balloon::device::tests::test_update_balloon_stats ... ok
+test devices::virtio::balloon::device::tests::test_update_stats_interval ... ok
+test devices::virtio::balloon::device::tests::test_update_stats_interval_after_reset ... ok
+test devices::virtio::balloon::device::tests::test_virtio_features ... ok
+test devices::virtio::balloon::device::tests::test_virtio_write_config ... ok
+test devices::virtio::balloon::event_handler::tests::test_event_handler ... ok
+test devices::virtio::balloon::metrics::tests::test_balloon_dev_metrics ... ok
+test devices::virtio::balloon::persist::tests::test_persistence ... ok
+test devices::virtio::balloon::util::tests::test_compact_page_indices ... ok
+test devices::virtio::balloon::util::tests::test_pfn_compact ... ok
+
+test result: ok. 31 passed; 0 failed; 0 ignored; 0 measured; 799 filtered out; finished in 1.20s
+

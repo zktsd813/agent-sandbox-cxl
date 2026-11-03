@@ -1,0 +1,80 @@
+{
+  "result": "passed",
+  "mode": "direct",
+  "transitions": {
+    "promotion": 6,
+    "demotion": 6,
+    "direct": 4
+  },
+  "receipts": 859,
+  "handoff_full_scan_pages": 0,
+  "handoff_manifest_bytes": [
+    694,
+    717,
+    695,
+    716
+  ],
+  "minimum_shared_bytes": 167772160,
+  "ack_before_reuse_bytes": [
+    151007232
+  ],
+  "api_records": [
+    [
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 3647.573,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      },
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 10453.328,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      }
+    ],
+    [
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 2118.23,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      },
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 15579.309,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      }
+    ],
+    [
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 2131.908,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      },
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 30195.685,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      }
+    ],
+    [
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 2564.684,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      },
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 16257.787,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      }
+    ]
+  ],
+  "scope": "Coherent nested lab, trusted kernel mapper. Per-handoff physical identity uses persistent handles; PTE audits are separate stress evidence."
+}

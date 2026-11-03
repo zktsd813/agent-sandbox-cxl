@@ -1,0 +1,26 @@
+{
+  "summary.json": {
+    "bytes": 12814,
+    "sha256": "dfca3e211d2b31dadb7c979be3c0a67d99298ddabeb9fc8408015dbedd37e8ea"
+  },
+  "pilots.tar.xz": {
+    "bytes": 1441228,
+    "sha256": "8b1cc09e02b97960c432bcb72e2ac1741e6eb7efc9549e13fa66192d048cafd5"
+  },
+  "evidence-tests.log": {
+    "bytes": 111,
+    "sha256": "0300c48ad9c921533ade6ebcb89c2daac2f025216808c52ac9b3efa90feef281"
+  },
+  "matched.tar.xz": {
+    "bytes": 4515488,
+    "sha256": "b83ace30eefe4b6e1adc7f59d17bb337716893d14d153c263dbf6c4e330dc8d9"
+  },
+  "verification.json": {
+    "bytes": 148274,
+    "sha256": "b4dc3b14d4452808337a3df64a982d503ff61eab4d6ab1f8ff8b9db5f39d22ab"
+  },
+  "allocator-tests.log": {
+    "bytes": 107,
+    "sha256": "c9f2c1b54e73f254402bb1a5b42d7d0ba1341d1dcb01aa3cc77c43238566aaf5"
+  }
+}

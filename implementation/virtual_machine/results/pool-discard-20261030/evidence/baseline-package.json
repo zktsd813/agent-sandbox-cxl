@@ -1,0 +1,18 @@
+{
+  "file": "baseline-evidence.tar.xz",
+  "format": "tar.xz",
+  "compression": "xz -3 -T2",
+  "bytes": 31152844,
+  "sha256": "8bab984c66f500ee225a35c3cd5f7b6c8ea0d1c42fcdcb80698cce285a1dc720",
+  "source_directory": "/tmp/pool-discard-formal-staging-20261030/baseline",
+  "report_member": "baseline/report.json",
+  "report_sha256": "9577ba3618409ad34052bb8c60f15828166900636690b60a3d12963e175f5377",
+  "member_count": 1347,
+  "regular_file_count": 1344,
+  "directory_count": 3,
+  "uncompressed_file_bytes": 469773187,
+  "member_names_sizes_sha256_manifest_digest": "7836d55ca9fe757e69c3ac33608ab6fc96d569fd8055eaf8797fd889ceb9ef70",
+  "verified": "Exact member set, type, length, and SHA256 of every regular file compared with the source directory.",
+  "old_gzip_verified_identical": false,
+  "seconds": 39.37185958214104
+}

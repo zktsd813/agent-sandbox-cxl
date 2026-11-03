@@ -1,0 +1,75 @@
+{
+  "result": "passed",
+  "binary_sha256": "e4bee15efc90a58127c8e3a75ed446929c7938c2e91672e14772e21180e95dbd",
+  "source_sha256": "1e107accb8c6a141e9ceb3c4a0330db35bd6de0679ce91cbe6250e0ba1c54cc4",
+  "input_negative_cases": [
+    {
+      "case": "empty",
+      "result": "rejected",
+      "error": "POOL_COMPARE_FATAL empty input rows: Invalid argument"
+    },
+    {
+      "case": "negative_offset",
+      "result": "rejected",
+      "error": "POOL_COMPARE_FATAL unsigned decimal field required: Invalid argument"
+    },
+    {
+      "case": "overflow",
+      "result": "rejected",
+      "error": "POOL_COMPARE_FATAL invalid or overflowing decimal field: Invalid argument"
+    },
+    {
+      "case": "extra_column",
+      "result": "rejected",
+      "error": "POOL_COMPARE_FATAL unexpected trailing input: Invalid argument"
+    },
+    {
+      "case": "missing_column",
+      "result": "rejected",
+      "error": "POOL_COMPARE_FATAL unsigned decimal field required: Invalid argument"
+    },
+    {
+      "case": "unaligned_gpa",
+      "result": "rejected",
+      "error": "POOL_COMPARE_FATAL unaligned or null address: Invalid argument"
+    },
+    {
+      "case": "zero_hva",
+      "result": "rejected",
+      "error": "POOL_COMPARE_FATAL unaligned or null address: Invalid argument"
+    },
+    {
+      "case": "gap_file_offset",
+      "result": "rejected",
+      "error": "POOL_COMPARE_FATAL file offsets must cover consecutive pages from zero: Invalid argument"
+    },
+    {
+      "case": "duplicate_gpa",
+      "result": "rejected",
+      "error": "POOL_COMPARE_FATAL duplicate guest GPA: Invalid argument"
+    },
+    {
+      "case": "duplicate_hva",
+      "result": "rejected",
+      "error": "POOL_COMPARE_FATAL duplicate host HVA: Invalid argument"
+    }
+  ],
+  "hostwarm_fixture": {
+    "bytes": 8195,
+    "bytes_read": 8195,
+    "pages": 3,
+    "resident_pages": 3,
+    "all_resident": true,
+    "fnv64": "84ca7df1efd6b401"
+  },
+  "actual_pfn_success_validation": {
+    "result": "passed",
+    "report": ".local/runs/20261030T052014Z-7rnkevxs/compare-stock-dram-1793337624482137052/report.json",
+    "report_sha256": "9965541b1a50c91318c4f63e0f222a1430d109b495f475ab04b0bf179403a45b",
+    "arm": "stock-dram",
+    "independently_replayed_initial_current_cache_scans": 3,
+    "pages_per_scan": 40960,
+    "bytes_per_scan": 167772160,
+    "scope": "Actual privileged L1 PFN reads; raw guest-range, anonymous RAM mapping, scanner input/output, flags and uniqueness independently checked."
+  }
+}

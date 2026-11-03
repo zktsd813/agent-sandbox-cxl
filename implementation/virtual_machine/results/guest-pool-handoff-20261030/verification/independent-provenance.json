@@ -1,0 +1,87 @@
+{
+  "schema": "guest-pool-independent-verification-provenance-v1",
+  "cwd": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine",
+  "sources": {
+    "verify_pool_handoff.py": "f364e628244c376bfd446893dedd5bd8ee41375f98f770b02f77bc9143a3d277",
+    "verify_pool_discard_protocol.py": "0fdaf7654bfb4b4b140f5e7cabed6a33d612582b3cd441c37a1431e3958f473a",
+    "test_pool_handoff_evidence.py": "ec97e194ac762e6c2bf0eef8027c551bc1651ec84821faec05fe404c43c92018"
+  },
+  "inputs": {
+    "direct": {
+      "report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T125101Z-ryobfad3/pool-handoff-1793364701427832983/report.json",
+      "sha256": "61c50da9ecfcb88a3e58b3b8d9affaa5650b19fe0b317848167925d7b63806dc"
+    },
+    "state-only": {
+      "report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T125618Z-8583yia3/pool-handoff-1793365056101049779/report.json",
+      "sha256": "09264b7a0168be03dd2dec7e5231a87da796bdc4b2fcd28bc1b822d3c7963dbb"
+    },
+    "guest-smoke": {
+      "report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T122253Z-kkwp2hru/pool-handoff-1793363018075771140/report.json",
+      "sha256": "36d19292fe8d673e7bac759e39e433641b1dc6d73a63ec012be0d2228e9d6c7f"
+    }
+  },
+  "formal_mutations_per_mode": 20,
+  "mutations_rehash_changed_raw_receipts": true,
+  "guest_smoke_scope": "preparatory; full source/runtime instrumentation absent",
+  "commands": [
+    [
+      "taskset",
+      "-c",
+      "8-11",
+      "python3",
+      "verify_pool_handoff.py",
+      ".local/runs/20261030T125101Z-ryobfad3/pool-handoff-1793364701427832983/report.json",
+      "--output",
+      "/tmp/pool-handoff-direct-formal-audit-20261030.json"
+    ],
+    [
+      "taskset",
+      "-c",
+      "8-11",
+      "python3",
+      "test_pool_handoff_evidence.py",
+      ".local/runs/20261030T125101Z-ryobfad3/pool-handoff-1793364701427832983/report.json",
+      "--output",
+      "/tmp/pool-handoff-direct-formal-mutations-20261030.json"
+    ],
+    [
+      "taskset",
+      "-c",
+      "8-11",
+      "python3",
+      "verify_pool_handoff.py",
+      ".local/runs/20261030T125618Z-8583yia3/pool-handoff-1793365056101049779/report.json",
+      "--output",
+      "/tmp/pool-handoff-state-formal-audit-20261030.json"
+    ],
+    [
+      "taskset",
+      "-c",
+      "8-11",
+      "python3",
+      "test_pool_handoff_evidence.py",
+      ".local/runs/20261030T125618Z-8583yia3/pool-handoff-1793365056101049779/report.json",
+      "--output",
+      "/tmp/pool-handoff-state-formal-mutations-20261030.json"
+    ],
+    [
+      "taskset",
+      "-c",
+      "8-11",
+      "python3",
+      "verify_pool_handoff.py",
+      ".local/runs/20261030T122253Z-kkwp2hru/pool-handoff-1793363018075771140/report.json",
+      "--output",
+      "/tmp/pool-handoff-guest-smoke-audit-20261030.json"
+    ]
+  ],
+  "outputs": {
+    "direct-independent-audit.json": "43be76e900ab0c2a10bcd1a06fc40b4483d66af307ea8e1c50519b590ceae3db",
+    "state-only-independent-audit.json": "5e94c09c33626804a3c3ef3464791d27ebdfe20da6b74bdc7beed6564a03747f",
+    "direct-semantic-mutations.json": "48c2b345856c365e0fe9c3260beefe8af063dcd746e9ff13266de09aab75b415",
+    "state-only-semantic-mutations.json": "7f6ecf71f948e1ee5f8a9a433b1c5b90dfc78ae49f14bf4eadf039d9b16dfdba",
+    "guest-smoke-independent-audit.json": "60b7f8b1800bcc6029abc743bc9bd1ed8bd9f51b8cdf23c70fe9ef1806a0420a"
+  },
+  "result": "passed",
+  "formal_semantic_cases_total": 40
+}

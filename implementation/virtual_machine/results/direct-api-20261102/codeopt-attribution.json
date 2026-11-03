@@ -1,0 +1,2630 @@
+{
+  "schema": "direct-api-profile-v1",
+  "report": "/tmp/cxl-direct-profile-codeopt/gin-gonic__gin-3741-direct/report.json",
+  "report_sha256": "52f18f20855a3953cd1cc55a64901686ffd7aa4e6651d49adb64e083cf624114",
+  "executable_sha256": "d90ddd2d5d46dfc480868ec2b576fe785ad5c818cac19ed4d8b6cf617648b480",
+  "rows": [
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 1,
+      "source_epoch": 0,
+      "api_us": 12102.994,
+      "export_api_us": 2724.538,
+      "attach_api_us": 9378.456,
+      "kernel_us": 2020.393,
+      "nonkernel_us": 10082.601,
+      "components_us": {
+        "export.drain_and_save_devices": 69.23,
+        "export.export_detach_ioctls": 133.60299999999995,
+        "export.log_receipt": 116.562,
+        "export.peek_token": 3.382,
+        "export.read_manifest_and_build_state": 85.07,
+        "export.seal_mapper": 144.942,
+        "export.serialize_devices": 210.28900000000002,
+        "export.sync_devices": 3.208,
+        "export.unbind_ioevents": 202.775,
+        "export.validate_and_open": 59.516,
+        "export.write_devices": 12.463000000000001,
+        "import.adopt_memory": 49.029,
+        "import.attach_and_vm_wrapper": 326.2359999999999,
+        "import.import_mapper": 1004.189,
+        "import.kvm_capabilities": 261.91700000000003,
+        "import.log_receipt": 148.488,
+        "import.read_validate_metadata": 864.273,
+        "import.register_events": 14.326,
+        "import.restore_devices": 3837.585,
+        "import.start_vcpu_thread": 345.52500000000003,
+        "import.validate_vmm": 46.195,
+        "import.vcpu_wrapper": 26.858,
+        "kernel.detach": 851.715,
+        "kernel.attach": 1168.678,
+        "api_dispatch_response_and_profile_log": 2116.9400000000023
+      },
+      "export": {
+        "scope": "direct_export",
+        "stages_us": {
+          "drain_and_save_devices": 69.23,
+          "export_detach_ioctls": 985.318,
+          "log_receipt": 116.562,
+          "peek_token": 3.382,
+          "read_manifest_and_build_state": 85.07,
+          "seal_mapper": 144.942,
+          "serialize_devices": 210.28900000000002,
+          "sync_devices": 3.208,
+          "unbind_ioevents": 202.775,
+          "validate_and_open": 59.516,
+          "write_devices": 12.463000000000001
+        },
+        "total_us": 1893.2269999999999
+      },
+      "attach": {
+        "scope": "direct_import",
+        "stages_us": {
+          "adopt_memory": 49.029,
+          "attach_and_vm_wrapper": 1494.914,
+          "import_mapper": 1004.189,
+          "kvm_capabilities": 261.91700000000003,
+          "log_receipt": 148.488,
+          "read_validate_metadata": 864.273,
+          "register_events": 14.326,
+          "restore_devices": 3837.585,
+          "start_vcpu_thread": 345.52500000000003,
+          "validate_vmm": 46.195,
+          "vcpu_wrapper": 26.858
+        },
+        "total_us": 8093.674
+      },
+      "disk": {
+        "scope": "disk_properties",
+        "stages_us": {
+          "file_engine": 182.17499999999998,
+          "image_id": 3.6679999999999997,
+          "open": 1913.961,
+          "pool_identity": 2.442,
+          "size": 490.95400000000006
+        },
+        "total_us": 2594.5
+      },
+      "wrapper": {
+        "scope": "vm_local_wrapper",
+        "stages_us": {
+          "arch_fields": 0.377,
+          "msr_save_list": 60.535000000000004,
+          "set_tss_address": 0.17200000000000001,
+          "xsave_capability": 21.968
+        },
+        "total_us": 89.657
+      },
+      "kernel_substages_us": {
+        "detach.0": 607.969,
+        "detach.1": 177.189,
+        "detach.2": 45.748,
+        "detach.3": 1.749,
+        "detach.4": 6.06,
+        "detach.5": 12.88,
+        "detach.6": 0.391,
+        "detach.7": 0.0,
+        "attach.0": 12.329,
+        "attach.1": 310.043,
+        "attach.2": 23.819,
+        "attach.3": 15.078,
+        "attach.4": 24.796,
+        "attach.5": 777.31,
+        "attach.6": 5.075,
+        "attach.7": 0.743
+      },
+      "api_substages": [
+        {
+          "event": "export",
+          "parse_us": 48,
+          "vmm_roundtrip_us": 2269,
+          "response_us": 31,
+          "total_us": 2348,
+          "dispatch_and_main_profile_log_us": 375.77300000000014,
+          "transport_and_api_profile_log_us": 376.538
+        },
+        {
+          "event": "import",
+          "parse_us": 160,
+          "vmm_roundtrip_us": 8416,
+          "response_us": 60,
+          "total_us": 8636,
+          "dispatch_and_main_profile_log_us": 322.326,
+          "transport_and_api_profile_log_us": 742.4560000000001
+        }
+      ]
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 2,
+      "source_epoch": 1,
+      "api_us": 10610.028999999999,
+      "export_api_us": 2060.113,
+      "attach_api_us": 8549.916,
+      "kernel_us": 3270.5860000000002,
+      "nonkernel_us": 7339.442999999998,
+      "components_us": {
+        "export.drain_and_save_devices": 40.648,
+        "export.export_detach_ioctls": 148.03500000000003,
+        "export.log_receipt": 119.38,
+        "export.peek_token": 2.4099999999999997,
+        "export.read_manifest_and_build_state": 66.337,
+        "export.seal_mapper": 144.597,
+        "export.serialize_devices": 212.34199999999998,
+        "export.sync_devices": 2.824,
+        "export.unbind_ioevents": 323.139,
+        "export.validate_and_open": 59.23,
+        "export.write_devices": 10.783,
+        "import.adopt_memory": 43.908,
+        "import.attach_and_vm_wrapper": 305.3580000000002,
+        "import.import_mapper": 791.781,
+        "import.kvm_capabilities": 255.67999999999998,
+        "import.log_receipt": 146.049,
+        "import.read_validate_metadata": 789.436,
+        "import.register_events": 14.768,
+        "import.restore_devices": 1292.831,
+        "import.start_vcpu_thread": 369.812,
+        "import.validate_vmm": 41.594,
+        "import.vcpu_wrapper": 26.315,
+        "kernel.detach": 113.045,
+        "kernel.attach": 3157.541,
+        "api_dispatch_response_and_profile_log": 2132.185999999998
+      },
+      "export": {
+        "scope": "direct_export",
+        "stages_us": {
+          "drain_and_save_devices": 40.648,
+          "export_detach_ioctls": 261.08000000000004,
+          "log_receipt": 119.38,
+          "peek_token": 2.4099999999999997,
+          "read_manifest_and_build_state": 66.337,
+          "seal_mapper": 144.597,
+          "serialize_devices": 212.34199999999998,
+          "sync_devices": 2.824,
+          "unbind_ioevents": 323.139,
+          "validate_and_open": 59.23,
+          "write_devices": 10.783
+        },
+        "total_us": 1243.266
+      },
+      "attach": {
+        "scope": "direct_import",
+        "stages_us": {
+          "adopt_memory": 43.908,
+          "attach_and_vm_wrapper": 3462.8990000000003,
+          "import_mapper": 791.781,
+          "kvm_capabilities": 255.67999999999998,
+          "log_receipt": 146.049,
+          "read_validate_metadata": 789.436,
+          "register_events": 14.768,
+          "restore_devices": 1292.831,
+          "start_vcpu_thread": 369.812,
+          "validate_vmm": 41.594,
+          "vcpu_wrapper": 26.315
+        },
+        "total_us": 7235.415
+      },
+      "disk": {
+        "scope": "disk_properties",
+        "stages_us": {
+          "file_engine": 213.912,
+          "image_id": 3.402,
+          "open": 23.828999999999997,
+          "pool_identity": 2.21,
+          "size": 2.966
+        },
+        "total_us": 247.599
+      },
+      "wrapper": {
+        "scope": "vm_local_wrapper",
+        "stages_us": {
+          "arch_fields": 0.42,
+          "msr_save_list": 37.585,
+          "set_tss_address": 0.16899999999999998,
+          "xsave_capability": 21.883
+        },
+        "total_us": 66.21700000000001
+      },
+      "kernel_substages_us": {
+        "detach.0": 48.019,
+        "detach.1": 1.458,
+        "detach.2": 45.477,
+        "detach.3": 0.425,
+        "detach.4": 6.178,
+        "detach.5": 11.368,
+        "detach.6": 0.345,
+        "detach.7": 0.0,
+        "attach.0": 12.402,
+        "attach.1": 0.18,
+        "attach.2": 8.275,
+        "attach.3": 14.216,
+        "attach.4": 1.867,
+        "attach.5": 3114.008,
+        "attach.6": 6.405,
+        "attach.7": 0.654
+      },
+      "api_substages": [
+        {
+          "event": "export",
+          "parse_us": 48,
+          "vmm_roundtrip_us": 1517,
+          "response_us": 17,
+          "total_us": 1582,
+          "dispatch_and_main_profile_log_us": 273.7339999999999,
+          "transport_and_api_profile_log_us": 478.11299999999983
+        },
+        {
+          "event": "import",
+          "parse_us": 160,
+          "vmm_roundtrip_us": 7562,
+          "response_us": 58,
+          "total_us": 7780,
+          "dispatch_and_main_profile_log_us": 326.58500000000004,
+          "transport_and_api_profile_log_us": 769.9159999999993
+        }
+      ]
+    },
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 3,
+      "source_epoch": 2,
+      "api_us": 13194.39,
+      "export_api_us": 2505.497,
+      "attach_api_us": 10688.893,
+      "kernel_us": 2142.033,
+      "nonkernel_us": 11052.357,
+      "components_us": {
+        "export.drain_and_save_devices": 43.175,
+        "export.export_detach_ioctls": 111.10199999999998,
+        "export.log_receipt": 144.399,
+        "export.peek_token": 2.557,
+        "export.read_manifest_and_build_state": 97.967,
+        "export.seal_mapper": 145.597,
+        "export.serialize_devices": 201.512,
+        "export.sync_devices": 2.6919999999999997,
+        "export.unbind_ioevents": 329.5,
+        "export.validate_and_open": 58.773,
+        "export.write_devices": 10.551,
+        "import.adopt_memory": 49.291,
+        "import.attach_and_vm_wrapper": 315.0690000000002,
+        "import.import_mapper": 917.2959999999999,
+        "import.kvm_capabilities": 257.044,
+        "import.log_receipt": 148.338,
+        "import.read_validate_metadata": 931.646,
+        "import.register_events": 14.258,
+        "import.restore_devices": 4410.0160000000005,
+        "import.start_vcpu_thread": 238.85399999999998,
+        "import.validate_vmm": 46.96,
+        "import.vcpu_wrapper": 25.892,
+        "kernel.detach": 294.257,
+        "kernel.attach": 1847.776,
+        "api_dispatch_response_and_profile_log": 2549.8680000000004
+      },
+      "export": {
+        "scope": "direct_export",
+        "stages_us": {
+          "drain_and_save_devices": 43.175,
+          "export_detach_ioctls": 405.359,
+          "log_receipt": 144.399,
+          "peek_token": 2.557,
+          "read_manifest_and_build_state": 97.967,
+          "seal_mapper": 145.597,
+          "serialize_devices": 201.512,
+          "sync_devices": 2.6919999999999997,
+          "unbind_ioevents": 329.5,
+          "validate_and_open": 58.773,
+          "write_devices": 10.551
+        },
+        "total_us": 1442.5600000000002
+      },
+      "attach": {
+        "scope": "direct_import",
+        "stages_us": {
+          "adopt_memory": 49.291,
+          "attach_and_vm_wrapper": 2162.8450000000003,
+          "import_mapper": 917.2959999999999,
+          "kvm_capabilities": 257.044,
+          "log_receipt": 148.338,
+          "read_validate_metadata": 931.646,
+          "register_events": 14.258,
+          "restore_devices": 4410.0160000000005,
+          "start_vcpu_thread": 238.85399999999998,
+          "validate_vmm": 46.96,
+          "vcpu_wrapper": 25.892
+        },
+        "total_us": 9203.032
+      },
+      "disk": {
+        "scope": "disk_properties",
+        "stages_us": {
+          "file_engine": 246.86599999999999,
+          "image_id": 4.6770000000000005,
+          "open": 2680.4289999999996,
+          "pool_identity": 4.211,
+          "size": 283.003
+        },
+        "total_us": 3220.3940000000002
+      },
+      "wrapper": {
+        "scope": "vm_local_wrapper",
+        "stages_us": {
+          "arch_fields": 0.475,
+          "msr_save_list": 39.838,
+          "set_tss_address": 0.22,
+          "xsave_capability": 22.21
+        },
+        "total_us": 69.492
+      },
+      "kernel_substages_us": {
+        "detach.0": 83.94,
+        "detach.1": 1.272,
+        "detach.2": 191.171,
+        "detach.3": 0.436,
+        "detach.4": 5.892,
+        "detach.5": 11.418,
+        "detach.6": 0.4,
+        "detach.7": 0.0,
+        "attach.0": 12.082,
+        "attach.1": 0.203,
+        "attach.2": 10.215,
+        "attach.3": 13.97,
+        "attach.4": 1.764,
+        "attach.5": 1802.833,
+        "attach.6": 6.537,
+        "attach.7": 0.667
+      },
+      "api_substages": [
+        {
+          "event": "export",
+          "parse_us": 50,
+          "vmm_roundtrip_us": 1829,
+          "response_us": 31,
+          "total_us": 1910,
+          "dispatch_and_main_profile_log_us": 386.4399999999998,
+          "transport_and_api_profile_log_us": 595.4969999999998
+        },
+        {
+          "event": "import",
+          "parse_us": 161,
+          "vmm_roundtrip_us": 9657,
+          "response_us": 49,
+          "total_us": 9867,
+          "dispatch_and_main_profile_log_us": 453.96800000000076,
+          "transport_and_api_profile_log_us": 821.893
+        }
+      ]
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 4,
+      "source_epoch": 3,
+      "api_us": 9706.603000000001,
+      "export_api_us": 2911.704,
+      "attach_api_us": 6794.899,
+      "kernel_us": 1551.556,
+      "nonkernel_us": 8155.047000000002,
+      "components_us": {
+        "export.drain_and_save_devices": 41.515,
+        "export.export_detach_ioctls": 214.54600000000005,
+        "export.log_receipt": 119.89500000000001,
+        "export.peek_token": 3.052,
+        "export.read_manifest_and_build_state": 65.688,
+        "export.seal_mapper": 147.694,
+        "export.serialize_devices": 211.299,
+        "export.sync_devices": 2.9179999999999997,
+        "export.unbind_ioevents": 697.447,
+        "export.validate_and_open": 60.305,
+        "export.write_devices": 13.92,
+        "import.adopt_memory": 44.052,
+        "import.attach_and_vm_wrapper": 317.626,
+        "import.import_mapper": 816.6220000000001,
+        "import.kvm_capabilities": 256.46700000000004,
+        "import.log_receipt": 146.985,
+        "import.read_validate_metadata": 855.2800000000001,
+        "import.register_events": 15.945,
+        "import.restore_devices": 1276.486,
+        "import.start_vcpu_thread": 356.74600000000004,
+        "import.validate_vmm": 41.46,
+        "import.vcpu_wrapper": 27.542,
+        "kernel.detach": 270.085,
+        "kernel.attach": 1281.471,
+        "api_dispatch_response_and_profile_log": 2421.556999999999
+      },
+      "export": {
+        "scope": "direct_export",
+        "stages_us": {
+          "drain_and_save_devices": 41.515,
+          "export_detach_ioctls": 484.63100000000003,
+          "log_receipt": 119.89500000000001,
+          "peek_token": 3.052,
+          "read_manifest_and_build_state": 65.688,
+          "seal_mapper": 147.694,
+          "serialize_devices": 211.299,
+          "sync_devices": 2.9179999999999997,
+          "unbind_ioevents": 697.447,
+          "validate_and_open": 60.305,
+          "write_devices": 13.92
+        },
+        "total_us": 1848.779
+      },
+      "attach": {
+        "scope": "direct_import",
+        "stages_us": {
+          "adopt_memory": 44.052,
+          "attach_and_vm_wrapper": 1599.097,
+          "import_mapper": 816.6220000000001,
+          "kvm_capabilities": 256.46700000000004,
+          "log_receipt": 146.985,
+          "read_validate_metadata": 855.2800000000001,
+          "register_events": 15.945,
+          "restore_devices": 1276.486,
+          "start_vcpu_thread": 356.74600000000004,
+          "validate_vmm": 41.46,
+          "vcpu_wrapper": 27.542
+        },
+        "total_us": 5437.1269999999995
+      },
+      "disk": {
+        "scope": "disk_properties",
+        "stages_us": {
+          "file_engine": 168.979,
+          "image_id": 3.2399999999999998,
+          "open": 24.326999999999998,
+          "pool_identity": 2.174,
+          "size": 3.477
+        },
+        "total_us": 203.389
+      },
+      "wrapper": {
+        "scope": "vm_local_wrapper",
+        "stages_us": {
+          "arch_fields": 0.41800000000000004,
+          "msr_save_list": 36.283,
+          "set_tss_address": 0.222,
+          "xsave_capability": 21.996000000000002
+        },
+        "total_us": 64.963
+      },
+      "kernel_substages_us": {
+        "detach.0": 63.215,
+        "detach.1": 1.342,
+        "detach.2": 185.505,
+        "detach.3": 0.64,
+        "detach.4": 6.32,
+        "detach.5": 12.943,
+        "detach.6": 0.392,
+        "detach.7": 0.0,
+        "attach.0": 12.283,
+        "attach.1": 0.2,
+        "attach.2": 7.731,
+        "attach.3": 13.446,
+        "attach.4": 1.796,
+        "attach.5": 1239.272,
+        "attach.6": 6.595,
+        "attach.7": 0.62
+      },
+      "api_substages": [
+        {
+          "event": "export",
+          "parse_us": 51,
+          "vmm_roundtrip_us": 2231,
+          "response_us": 31,
+          "total_us": 2313,
+          "dispatch_and_main_profile_log_us": 382.221,
+          "transport_and_api_profile_log_us": 598.7040000000002
+        },
+        {
+          "event": "import",
+          "parse_us": 180,
+          "vmm_roundtrip_us": 5878,
+          "response_us": 56,
+          "total_us": 6114,
+          "dispatch_and_main_profile_log_us": 440.8730000000005,
+          "transport_and_api_profile_log_us": 680.8990000000003
+        }
+      ]
+    },
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 5,
+      "source_epoch": 4,
+      "api_us": 12033.058,
+      "export_api_us": 1872.88,
+      "attach_api_us": 10160.178,
+      "kernel_us": 1278.894,
+      "nonkernel_us": 10754.164,
+      "components_us": {
+        "export.drain_and_save_devices": 40.256,
+        "export.export_detach_ioctls": 132.47599999999997,
+        "export.log_receipt": 118.90899999999999,
+        "export.peek_token": 2.903,
+        "export.read_manifest_and_build_state": 66.823,
+        "export.seal_mapper": 169.209,
+        "export.serialize_devices": 192.90200000000002,
+        "export.sync_devices": 2.7199999999999998,
+        "export.unbind_ioevents": 203.131,
+        "export.validate_and_open": 59.22,
+        "export.write_devices": 10.335,
+        "import.adopt_memory": 44.3,
+        "import.attach_and_vm_wrapper": 300.279,
+        "import.import_mapper": 771.039,
+        "import.kvm_capabilities": 270.297,
+        "import.log_receipt": 147.08,
+        "import.read_validate_metadata": 805.453,
+        "import.register_events": 13.965,
+        "import.restore_devices": 5126.969999999999,
+        "import.start_vcpu_thread": 267.882,
+        "import.validate_vmm": 41.96,
+        "import.vcpu_wrapper": 26.592,
+        "kernel.detach": 120.394,
+        "kernel.attach": 1158.5,
+        "api_dispatch_response_and_profile_log": 1939.4630000000016
+      },
+      "export": {
+        "scope": "direct_export",
+        "stages_us": {
+          "drain_and_save_devices": 40.256,
+          "export_detach_ioctls": 252.86999999999998,
+          "log_receipt": 118.90899999999999,
+          "peek_token": 2.903,
+          "read_manifest_and_build_state": 66.823,
+          "seal_mapper": 169.209,
+          "serialize_devices": 192.90200000000002,
+          "sync_devices": 2.7199999999999998,
+          "unbind_ioevents": 203.131,
+          "validate_and_open": 59.22,
+          "write_devices": 10.335
+        },
+        "total_us": 1119.7749999999999
+      },
+      "attach": {
+        "scope": "direct_import",
+        "stages_us": {
+          "adopt_memory": 44.3,
+          "attach_and_vm_wrapper": 1458.779,
+          "import_mapper": 771.039,
+          "kvm_capabilities": 270.297,
+          "log_receipt": 147.08,
+          "read_validate_metadata": 805.453,
+          "register_events": 13.965,
+          "restore_devices": 5126.969999999999,
+          "start_vcpu_thread": 267.882,
+          "validate_vmm": 41.96,
+          "vcpu_wrapper": 26.592
+        },
+        "total_us": 8974.694
+      },
+      "disk": {
+        "scope": "disk_properties",
+        "stages_us": {
+          "file_engine": 232.286,
+          "image_id": 7.234,
+          "open": 2893.464,
+          "pool_identity": 3.917,
+          "size": 619.373
+        },
+        "total_us": 3757.6620000000003
+      },
+      "wrapper": {
+        "scope": "vm_local_wrapper",
+        "stages_us": {
+          "arch_fields": 0.386,
+          "msr_save_list": 36.949,
+          "set_tss_address": 0.16899999999999998,
+          "xsave_capability": 22.016000000000002
+        },
+        "total_us": 65.572
+      },
+      "kernel_substages_us": {
+        "detach.0": 62.015,
+        "detach.1": 1.217,
+        "detach.2": 39.52,
+        "detach.3": 0.393,
+        "detach.4": 5.464,
+        "detach.5": 11.665,
+        "detach.6": 0.403,
+        "detach.7": 0.0,
+        "attach.0": 12.549,
+        "attach.1": 0.2,
+        "attach.2": 9.371,
+        "attach.3": 14.429,
+        "attach.4": 1.771,
+        "attach.5": 1114.072,
+        "attach.6": 5.855,
+        "attach.7": 0.731
+      },
+      "api_substages": [
+        {
+          "event": "export",
+          "parse_us": 49,
+          "vmm_roundtrip_us": 1309,
+          "response_us": 18,
+          "total_us": 1376,
+          "dispatch_and_main_profile_log_us": 189.22500000000014,
+          "transport_and_api_profile_log_us": 496.8800000000001
+        },
+        {
+          "event": "import",
+          "parse_us": 145,
+          "vmm_roundtrip_us": 9266,
+          "response_us": 50,
+          "total_us": 9461,
+          "dispatch_and_main_profile_log_us": 291.3060000000005,
+          "transport_and_api_profile_log_us": 699.1779999999999
+        }
+      ]
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 6,
+      "source_epoch": 5,
+      "api_us": 9455.221,
+      "export_api_us": 2290.098,
+      "attach_api_us": 7165.123,
+      "kernel_us": 1515.0500000000002,
+      "nonkernel_us": 7940.170999999999,
+      "components_us": {
+        "export.drain_and_save_devices": 45.300000000000004,
+        "export.export_detach_ioctls": 129.22100000000003,
+        "export.log_receipt": 121.851,
+        "export.peek_token": 2.426,
+        "export.read_manifest_and_build_state": 96.765,
+        "export.seal_mapper": 151.11200000000002,
+        "export.serialize_devices": 228.429,
+        "export.sync_devices": 3.077,
+        "export.unbind_ioevents": 339.99699999999996,
+        "export.validate_and_open": 89.24000000000001,
+        "export.write_devices": 10.905,
+        "import.adopt_memory": 49.31,
+        "import.attach_and_vm_wrapper": 312.14200000000005,
+        "import.import_mapper": 938.163,
+        "import.kvm_capabilities": 259.899,
+        "import.log_receipt": 148.69,
+        "import.read_validate_metadata": 887.234,
+        "import.register_events": 14.622,
+        "import.restore_devices": 1380.763,
+        "import.start_vcpu_thread": 250.26999999999998,
+        "import.validate_vmm": 45.944,
+        "import.vcpu_wrapper": 25.979999999999997,
+        "kernel.detach": 139.295,
+        "kernel.attach": 1375.755,
+        "api_dispatch_response_and_profile_log": 2408.831
+      },
+      "export": {
+        "scope": "direct_export",
+        "stages_us": {
+          "drain_and_save_devices": 45.300000000000004,
+          "export_detach_ioctls": 268.516,
+          "log_receipt": 121.851,
+          "peek_token": 2.426,
+          "read_manifest_and_build_state": 96.765,
+          "seal_mapper": 151.11200000000002,
+          "serialize_devices": 228.429,
+          "sync_devices": 3.077,
+          "unbind_ioevents": 339.99699999999996,
+          "validate_and_open": 89.24000000000001,
+          "write_devices": 10.905
+        },
+        "total_us": 1358.104
+      },
+      "attach": {
+        "scope": "direct_import",
+        "stages_us": {
+          "adopt_memory": 49.31,
+          "attach_and_vm_wrapper": 1687.8970000000002,
+          "import_mapper": 938.163,
+          "kvm_capabilities": 259.899,
+          "log_receipt": 148.69,
+          "read_validate_metadata": 887.234,
+          "register_events": 14.622,
+          "restore_devices": 1380.763,
+          "start_vcpu_thread": 250.26999999999998,
+          "validate_vmm": 45.944,
+          "vcpu_wrapper": 25.979999999999997
+        },
+        "total_us": 5689.077
+      },
+      "disk": {
+        "scope": "disk_properties",
+        "stages_us": {
+          "file_engine": 175.209,
+          "image_id": 3.2880000000000003,
+          "open": 25.601000000000003,
+          "pool_identity": 2.0420000000000003,
+          "size": 3.063
+        },
+        "total_us": 210.454
+      },
+      "wrapper": {
+        "scope": "vm_local_wrapper",
+        "stages_us": {
+          "arch_fields": 0.38299999999999995,
+          "msr_save_list": 40.042,
+          "set_tss_address": 0.192,
+          "xsave_capability": 22.175
+        },
+        "total_us": 69.357
+      },
+      "kernel_substages_us": {
+        "detach.0": 63.104,
+        "detach.1": 1.306,
+        "detach.2": 55.757,
+        "detach.3": 0.505,
+        "detach.4": 6.9,
+        "detach.5": 11.597,
+        "detach.6": 0.411,
+        "detach.7": 0.0,
+        "attach.0": 12.747,
+        "attach.1": 0.256,
+        "attach.2": 8.084,
+        "attach.3": 14.531,
+        "attach.4": 1.945,
+        "attach.5": 1332.009,
+        "attach.6": 5.966,
+        "attach.7": 0.72
+      },
+      "api_substages": [
+        {
+          "event": "export",
+          "parse_us": 54,
+          "vmm_roundtrip_us": 1728,
+          "response_us": 31,
+          "total_us": 1813,
+          "dispatch_and_main_profile_log_us": 369.89599999999996,
+          "transport_and_api_profile_log_us": 477.09799999999996
+        },
+        {
+          "event": "import",
+          "parse_us": 146,
+          "vmm_roundtrip_us": 6133,
+          "response_us": 51,
+          "total_us": 6330,
+          "dispatch_and_main_profile_log_us": 443.9229999999998,
+          "transport_and_api_profile_log_us": 835.1229999999996
+        }
+      ]
+    },
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 7,
+      "source_epoch": 6,
+      "api_us": 11489.686000000002,
+      "export_api_us": 2076.63,
+      "attach_api_us": 9413.056,
+      "kernel_us": 1237.7830000000001,
+      "nonkernel_us": 10251.903000000002,
+      "components_us": {
+        "export.drain_and_save_devices": 40.585,
+        "export.export_detach_ioctls": 136.87400000000002,
+        "export.log_receipt": 118.386,
+        "export.peek_token": 2.5749999999999997,
+        "export.read_manifest_and_build_state": 66.322,
+        "export.seal_mapper": 135.52,
+        "export.serialize_devices": 194.867,
+        "export.sync_devices": 2.677,
+        "export.unbind_ioevents": 386.194,
+        "export.validate_and_open": 45.346000000000004,
+        "export.write_devices": 10.546000000000001,
+        "import.adopt_memory": 44.332,
+        "import.attach_and_vm_wrapper": 296.49699999999984,
+        "import.import_mapper": 800.1329999999999,
+        "import.kvm_capabilities": 253.51300000000003,
+        "import.log_receipt": 164.469,
+        "import.read_validate_metadata": 847.621,
+        "import.register_events": 14.475999999999999,
+        "import.restore_devices": 4143.863,
+        "import.start_vcpu_thread": 264.824,
+        "import.validate_vmm": 63.902,
+        "import.vcpu_wrapper": 26.034,
+        "kernel.detach": 120.823,
+        "kernel.attach": 1116.96,
+        "api_dispatch_response_and_profile_log": 2192.3470000000016
+      },
+      "export": {
+        "scope": "direct_export",
+        "stages_us": {
+          "drain_and_save_devices": 40.585,
+          "export_detach_ioctls": 257.697,
+          "log_receipt": 118.386,
+          "peek_token": 2.5749999999999997,
+          "read_manifest_and_build_state": 66.322,
+          "seal_mapper": 135.52,
+          "serialize_devices": 194.867,
+          "sync_devices": 2.677,
+          "unbind_ioevents": 386.194,
+          "validate_and_open": 45.346000000000004,
+          "write_devices": 10.546000000000001
+        },
+        "total_us": 1261.171
+      },
+      "attach": {
+        "scope": "direct_import",
+        "stages_us": {
+          "adopt_memory": 44.332,
+          "attach_and_vm_wrapper": 1413.4569999999999,
+          "import_mapper": 800.1329999999999,
+          "kvm_capabilities": 253.51300000000003,
+          "log_receipt": 164.469,
+          "read_validate_metadata": 847.621,
+          "register_events": 14.475999999999999,
+          "restore_devices": 4143.863,
+          "start_vcpu_thread": 264.824,
+          "validate_vmm": 63.902,
+          "vcpu_wrapper": 26.034
+        },
+        "total_us": 8037.058999999999
+      },
+      "disk": {
+        "scope": "disk_properties",
+        "stages_us": {
+          "file_engine": 213.148,
+          "image_id": 5.0,
+          "open": 2571.751,
+          "pool_identity": 4.289,
+          "size": 396.734
+        },
+        "total_us": 3192.65
+      },
+      "wrapper": {
+        "scope": "vm_local_wrapper",
+        "stages_us": {
+          "arch_fields": 0.38299999999999995,
+          "msr_save_list": 36.61300000000001,
+          "set_tss_address": 0.16799999999999998,
+          "xsave_capability": 21.968999999999998
+        },
+        "total_us": 65.016
+      },
+      "kernel_substages_us": {
+        "detach.0": 55.764,
+        "detach.1": 1.245,
+        "detach.2": 45.898,
+        "detach.3": 0.433,
+        "detach.4": 5.407,
+        "detach.5": 11.88,
+        "detach.6": 0.457,
+        "detach.7": 0.0,
+        "attach.0": 12.253,
+        "attach.1": 0.187,
+        "attach.2": 9.757,
+        "attach.3": 14.416,
+        "attach.4": 2.037,
+        "attach.5": 1072.316,
+        "attach.6": 5.717,
+        "attach.7": 0.771
+      },
+      "api_substages": [
+        {
+          "event": "export",
+          "parse_us": 50,
+          "vmm_roundtrip_us": 1518,
+          "response_us": 62,
+          "total_us": 1630,
+          "dispatch_and_main_profile_log_us": 256.82899999999995,
+          "transport_and_api_profile_log_us": 446.6300000000001
+        },
+        {
+          "event": "import",
+          "parse_us": 150,
+          "vmm_roundtrip_us": 8485,
+          "response_us": 48,
+          "total_us": 8683,
+          "dispatch_and_main_profile_log_us": 447.9410000000007,
+          "transport_and_api_profile_log_us": 730.0560000000005
+        }
+      ]
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 8,
+      "source_epoch": 7,
+      "api_us": 9054.887,
+      "export_api_us": 2175.963,
+      "attach_api_us": 6878.924,
+      "kernel_us": 1655.3220000000001,
+      "nonkernel_us": 7399.5650000000005,
+      "components_us": {
+        "export.drain_and_save_devices": 42.432,
+        "export.export_detach_ioctls": 137.02600000000004,
+        "export.log_receipt": 121.042,
+        "export.peek_token": 2.813,
+        "export.read_manifest_and_build_state": 69.072,
+        "export.seal_mapper": 149.185,
+        "export.serialize_devices": 203.103,
+        "export.sync_devices": 2.652,
+        "export.unbind_ioevents": 340.42,
+        "export.validate_and_open": 60.887,
+        "export.write_devices": 11.532,
+        "import.adopt_memory": 49.516,
+        "import.attach_and_vm_wrapper": 332.491,
+        "import.import_mapper": 908.5360000000001,
+        "import.kvm_capabilities": 255.04199999999997,
+        "import.log_receipt": 146.615,
+        "import.read_validate_metadata": 891.598,
+        "import.register_events": 13.847,
+        "import.restore_devices": 1242.086,
+        "import.start_vcpu_thread": 236.342,
+        "import.validate_vmm": 46.72,
+        "import.vcpu_wrapper": 26.469,
+        "kernel.detach": 157.833,
+        "kernel.attach": 1497.489,
+        "api_dispatch_response_and_profile_log": 2110.139000000001
+      },
+      "export": {
+        "scope": "direct_export",
+        "stages_us": {
+          "drain_and_save_devices": 42.432,
+          "export_detach_ioctls": 294.85900000000004,
+          "log_receipt": 121.042,
+          "peek_token": 2.813,
+          "read_manifest_and_build_state": 69.072,
+          "seal_mapper": 149.185,
+          "serialize_devices": 203.103,
+          "sync_devices": 2.652,
+          "unbind_ioevents": 340.42,
+          "validate_and_open": 60.887,
+          "write_devices": 11.532
+        },
+        "total_us": 1298.602
+      },
+      "attach": {
+        "scope": "direct_import",
+        "stages_us": {
+          "adopt_memory": 49.516,
+          "attach_and_vm_wrapper": 1829.98,
+          "import_mapper": 908.5360000000001,
+          "kvm_capabilities": 255.04199999999997,
+          "log_receipt": 146.615,
+          "read_validate_metadata": 891.598,
+          "register_events": 13.847,
+          "restore_devices": 1242.086,
+          "start_vcpu_thread": 236.342,
+          "validate_vmm": 46.72,
+          "vcpu_wrapper": 26.469
+        },
+        "total_us": 5647.129
+      },
+      "disk": {
+        "scope": "disk_properties",
+        "stages_us": {
+          "file_engine": 170.377,
+          "image_id": 3.151,
+          "open": 25.018,
+          "pool_identity": 2.1519999999999997,
+          "size": 2.866
+        },
+        "total_us": 204.76000000000002
+      },
+      "wrapper": {
+        "scope": "vm_local_wrapper",
+        "stages_us": {
+          "arch_fields": 0.391,
+          "msr_save_list": 60.893,
+          "set_tss_address": 0.266,
+          "xsave_capability": 21.858
+        },
+        "total_us": 90.16000000000001
+      },
+      "kernel_substages_us": {
+        "detach.0": 81.825,
+        "detach.1": 1.191,
+        "detach.2": 55.489,
+        "detach.3": 0.508,
+        "detach.4": 6.682,
+        "detach.5": 12.012,
+        "detach.6": 0.351,
+        "detach.7": 0.0,
+        "attach.0": 12.385,
+        "attach.1": 0.175,
+        "attach.2": 7.845,
+        "attach.3": 14.472,
+        "attach.4": 1.92,
+        "attach.5": 1454.674,
+        "attach.6": 5.851,
+        "attach.7": 0.707
+      },
+      "api_substages": [
+        {
+          "event": "export",
+          "parse_us": 49,
+          "vmm_roundtrip_us": 1590,
+          "response_us": 18,
+          "total_us": 1657,
+          "dispatch_and_main_profile_log_us": 291.3979999999999,
+          "transport_and_api_profile_log_us": 518.9630000000002
+        },
+        {
+          "event": "import",
+          "parse_us": 147,
+          "vmm_roundtrip_us": 5973,
+          "response_us": 49,
+          "total_us": 6169,
+          "dispatch_and_main_profile_log_us": 325.8710000000001,
+          "transport_and_api_profile_log_us": 709.924
+        }
+      ]
+    },
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 9,
+      "source_epoch": 8,
+      "api_us": 11112.444,
+      "export_api_us": 1842.399,
+      "attach_api_us": 9270.045,
+      "kernel_us": 1173.325,
+      "nonkernel_us": 9939.119,
+      "components_us": {
+        "export.drain_and_save_devices": 68.73,
+        "export.export_detach_ioctls": 75.93299999999999,
+        "export.log_receipt": 118.632,
+        "export.peek_token": 2.668,
+        "export.read_manifest_and_build_state": 65.51899999999999,
+        "export.seal_mapper": 150.295,
+        "export.serialize_devices": 193.579,
+        "export.sync_devices": 2.738,
+        "export.unbind_ioevents": 102.143,
+        "export.validate_and_open": 63.294999999999995,
+        "export.write_devices": 10.565,
+        "import.adopt_memory": 43.838,
+        "import.attach_and_vm_wrapper": 294.60299999999984,
+        "import.import_mapper": 774.372,
+        "import.kvm_capabilities": 251.917,
+        "import.log_receipt": 180.34,
+        "import.read_validate_metadata": 819.878,
+        "import.register_events": 14.249,
+        "import.restore_devices": 4081.449,
+        "import.start_vcpu_thread": 349.98199999999997,
+        "import.validate_vmm": 42.266,
+        "import.vcpu_wrapper": 26.37,
+        "kernel.detach": 92.219,
+        "kernel.attach": 1081.106,
+        "api_dispatch_response_and_profile_log": 2205.758
+      },
+      "export": {
+        "scope": "direct_export",
+        "stages_us": {
+          "drain_and_save_devices": 68.73,
+          "export_detach_ioctls": 168.152,
+          "log_receipt": 118.632,
+          "peek_token": 2.668,
+          "read_manifest_and_build_state": 65.51899999999999,
+          "seal_mapper": 150.295,
+          "serialize_devices": 193.579,
+          "sync_devices": 2.738,
+          "unbind_ioevents": 102.143,
+          "validate_and_open": 63.294999999999995,
+          "write_devices": 10.565
+        },
+        "total_us": 946.781
+      },
+      "attach": {
+        "scope": "direct_import",
+        "stages_us": {
+          "adopt_memory": 43.838,
+          "attach_and_vm_wrapper": 1375.7089999999998,
+          "import_mapper": 774.372,
+          "kvm_capabilities": 251.917,
+          "log_receipt": 180.34,
+          "read_validate_metadata": 819.878,
+          "register_events": 14.249,
+          "restore_devices": 4081.449,
+          "start_vcpu_thread": 349.98199999999997,
+          "validate_vmm": 42.266,
+          "vcpu_wrapper": 26.37
+        },
+        "total_us": 7960.838
+      },
+      "disk": {
+        "scope": "disk_properties",
+        "stages_us": {
+          "file_engine": 224.552,
+          "image_id": 4.503,
+          "open": 2255.7419999999997,
+          "pool_identity": 3.38,
+          "size": 415.764
+        },
+        "total_us": 2905.3289999999997
+      },
+      "wrapper": {
+        "scope": "vm_local_wrapper",
+        "stages_us": {
+          "arch_fields": 0.412,
+          "msr_save_list": 37.73,
+          "set_tss_address": 0.173,
+          "xsave_capability": 21.857
+        },
+        "total_us": 66.13799999999999
+      },
+      "kernel_substages_us": {
+        "detach.0": 66.099,
+        "detach.1": 1.458,
+        "detach.2": 8.832,
+        "detach.3": 0.382,
+        "detach.4": 5.295,
+        "detach.5": 10.033,
+        "detach.6": 0.578,
+        "detach.7": 0.0,
+        "attach.0": 12.16,
+        "attach.1": 0.183,
+        "attach.2": 9.965,
+        "attach.3": 31.848,
+        "attach.4": 1.658,
+        "attach.5": 1020.152,
+        "attach.6": 4.988,
+        "attach.7": 0.678
+      },
+      "api_substages": [
+        {
+          "event": "export",
+          "parse_us": 50,
+          "vmm_roundtrip_us": 1335,
+          "response_us": 30,
+          "total_us": 1415,
+          "dispatch_and_main_profile_log_us": 388.21900000000005,
+          "transport_and_api_profile_log_us": 427.3989999999999
+        },
+        {
+          "event": "import",
+          "parse_us": 158,
+          "vmm_roundtrip_us": 8381,
+          "response_us": 56,
+          "total_us": 8595,
+          "dispatch_and_main_profile_log_us": 420.16200000000026,
+          "transport_and_api_profile_log_us": 675.0450000000001
+        }
+      ]
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 10,
+      "source_epoch": 9,
+      "api_us": 9604.997,
+      "export_api_us": 2396.092,
+      "attach_api_us": 7208.905,
+      "kernel_us": 1646.351,
+      "nonkernel_us": 7958.645999999999,
+      "components_us": {
+        "export.drain_and_save_devices": 42.536,
+        "export.export_detach_ioctls": 142.123,
+        "export.log_receipt": 118.972,
+        "export.peek_token": 2.542,
+        "export.read_manifest_and_build_state": 65.28,
+        "export.seal_mapper": 155.32100000000003,
+        "export.serialize_devices": 188.51,
+        "export.sync_devices": 2.491,
+        "export.unbind_ioevents": 408.782,
+        "export.validate_and_open": 64.904,
+        "export.write_devices": 12.164000000000001,
+        "import.adopt_memory": 44.543,
+        "import.attach_and_vm_wrapper": 305.5329999999999,
+        "import.import_mapper": 797.864,
+        "import.kvm_capabilities": 251.994,
+        "import.log_receipt": 146.41400000000002,
+        "import.read_validate_metadata": 848.37,
+        "import.register_events": 13.011,
+        "import.restore_devices": 1674.7859999999998,
+        "import.start_vcpu_thread": 352.27099999999996,
+        "import.validate_vmm": 42.092999999999996,
+        "import.vcpu_wrapper": 25.78,
+        "kernel.detach": 276.699,
+        "kernel.attach": 1369.652,
+        "api_dispatch_response_and_profile_log": 2252.362000000001
+      },
+      "export": {
+        "scope": "direct_export",
+        "stages_us": {
+          "drain_and_save_devices": 42.536,
+          "export_detach_ioctls": 418.822,
+          "log_receipt": 118.972,
+          "peek_token": 2.542,
+          "read_manifest_and_build_state": 65.28,
+          "seal_mapper": 155.32100000000003,
+          "serialize_devices": 188.51,
+          "sync_devices": 2.491,
+          "unbind_ioevents": 408.782,
+          "validate_and_open": 64.904,
+          "write_devices": 12.164000000000001
+        },
+        "total_us": 1480.721
+      },
+      "attach": {
+        "scope": "direct_import",
+        "stages_us": {
+          "adopt_memory": 44.543,
+          "attach_and_vm_wrapper": 1675.185,
+          "import_mapper": 797.864,
+          "kvm_capabilities": 251.994,
+          "log_receipt": 146.41400000000002,
+          "read_validate_metadata": 848.37,
+          "register_events": 13.011,
+          "restore_devices": 1674.7859999999998,
+          "start_vcpu_thread": 352.27099999999996,
+          "validate_vmm": 42.092999999999996,
+          "vcpu_wrapper": 25.78
+        },
+        "total_us": 5872.594
+      },
+      "disk": {
+        "scope": "disk_properties",
+        "stages_us": {
+          "file_engine": 170.62300000000002,
+          "image_id": 3.011,
+          "open": 25.296,
+          "pool_identity": 2.0770000000000004,
+          "size": 2.926
+        },
+        "total_us": 205.26999999999998
+      },
+      "wrapper": {
+        "scope": "vm_local_wrapper",
+        "stages_us": {
+          "arch_fields": 0.374,
+          "msr_save_list": 38.249,
+          "set_tss_address": 0.16799999999999998,
+          "xsave_capability": 21.994999999999997
+        },
+        "total_us": 67.11200000000001
+      },
+      "kernel_substages_us": {
+        "detach.0": 63.094,
+        "detach.1": 1.295,
+        "detach.2": 192.81,
+        "detach.3": 0.472,
+        "detach.4": 6.957,
+        "detach.5": 11.948,
+        "detach.6": 0.4,
+        "detach.7": 0.0,
+        "attach.0": 12.169,
+        "attach.1": 0.18,
+        "attach.2": 9.306,
+        "attach.3": 13.954,
+        "attach.4": 2.316,
+        "attach.5": 1325.687,
+        "attach.6": 5.848,
+        "attach.7": 0.755
+      },
+      "api_substages": [
+        {
+          "event": "export",
+          "parse_us": 55,
+          "vmm_roundtrip_us": 1830,
+          "response_us": 33,
+          "total_us": 1918,
+          "dispatch_and_main_profile_log_us": 349.279,
+          "transport_and_api_profile_log_us": 478.0920000000001
+        },
+        {
+          "event": "import",
+          "parse_us": 164,
+          "vmm_roundtrip_us": 6290,
+          "response_us": 58,
+          "total_us": 6512,
+          "dispatch_and_main_profile_log_us": 417.40599999999995,
+          "transport_and_api_profile_log_us": 696.9049999999997
+        }
+      ]
+    }
+  ],
+  "all": {
+    "api_us": {
+      "n": 10,
+      "mean": 10836.4309,
+      "p50": 10861.236499999999,
+      "p95": 13194.39,
+      "min": 9054.887,
+      "max": 13194.39
+    },
+    "kernel_us": {
+      "n": 10,
+      "mean": 1749.1293,
+      "p50": 1598.9535,
+      "p95": 3270.5860000000002,
+      "min": 1173.325,
+      "max": 3270.5860000000002
+    },
+    "nonkernel_us": {
+      "n": 10,
+      "mean": 9087.3016,
+      "p50": 9047.083000000002,
+      "p95": 11052.357,
+      "min": 7339.442999999998,
+      "max": 11052.357
+    },
+    "components_us": {
+      "export.drain_and_save_devices": {
+        "n": 10,
+        "mean": 47.4407,
+        "p50": 42.484,
+        "p95": 69.23,
+        "min": 40.256,
+        "max": 69.23
+      },
+      "export.export_detach_ioctls": {
+        "n": 10,
+        "mean": 136.09390000000002,
+        "p50": 135.2385,
+        "p95": 214.54600000000005,
+        "min": 75.93299999999999,
+        "max": 214.54600000000005
+      },
+      "export.log_receipt": {
+        "n": 10,
+        "mean": 121.8028,
+        "p50": 119.17599999999999,
+        "p95": 144.399,
+        "min": 116.562,
+        "max": 144.399
+      },
+      "export.peek_token": {
+        "n": 10,
+        "mean": 2.7328,
+        "p50": 2.6215,
+        "p95": 3.382,
+        "min": 2.4099999999999997,
+        "max": 3.382
+      },
+      "export.read_manifest_and_build_state": {
+        "n": 10,
+        "mean": 74.4843,
+        "p50": 66.58,
+        "p95": 97.967,
+        "min": 65.28,
+        "max": 97.967
+      },
+      "export.seal_mapper": {
+        "n": 10,
+        "mean": 149.34720000000002,
+        "p50": 148.4395,
+        "p95": 169.209,
+        "min": 135.52,
+        "max": 169.209
+      },
+      "export.serialize_devices": {
+        "n": 10,
+        "mean": 203.6832,
+        "p50": 202.3075,
+        "p95": 228.429,
+        "min": 188.51,
+        "max": 228.429
+      },
+      "export.sync_devices": {
+        "n": 10,
+        "mean": 2.7997,
+        "p50": 2.729,
+        "p95": 3.208,
+        "min": 2.491,
+        "max": 3.208
+      },
+      "export.unbind_ioevents": {
+        "n": 10,
+        "mean": 333.3528,
+        "p50": 334.7485,
+        "p95": 697.447,
+        "min": 102.143,
+        "max": 697.447
+      },
+      "export.validate_and_open": {
+        "n": 10,
+        "mean": 62.071600000000004,
+        "p50": 59.9105,
+        "p95": 89.24000000000001,
+        "min": 45.346000000000004,
+        "max": 89.24000000000001
+      },
+      "export.write_devices": {
+        "n": 10,
+        "mean": 11.3764,
+        "p50": 10.844,
+        "p95": 13.92,
+        "min": 10.335,
+        "max": 13.92
+      },
+      "import.adopt_memory": {
+        "n": 10,
+        "mean": 46.2119,
+        "p50": 44.4375,
+        "p95": 49.516,
+        "min": 43.838,
+        "max": 49.516
+      },
+      "import.attach_and_vm_wrapper": {
+        "n": 10,
+        "mean": 310.5834,
+        "p50": 308.8375,
+        "p95": 332.491,
+        "min": 294.60299999999984,
+        "max": 332.491
+      },
+      "import.import_mapper": {
+        "n": 10,
+        "mean": 851.9995,
+        "p50": 808.3775,
+        "p95": 1004.189,
+        "min": 771.039,
+        "max": 1004.189
+      },
+      "import.kvm_capabilities": {
+        "n": 10,
+        "mean": 257.377,
+        "p50": 256.0735,
+        "p95": 270.297,
+        "min": 251.917,
+        "max": 270.297
+      },
+      "import.log_receipt": {
+        "n": 10,
+        "mean": 152.3468,
+        "p50": 147.709,
+        "p95": 180.34,
+        "min": 146.049,
+        "max": 180.34
+      },
+      "import.read_validate_metadata": {
+        "n": 10,
+        "mean": 854.0789,
+        "p50": 851.825,
+        "p95": 931.646,
+        "min": 789.436,
+        "max": 931.646
+      },
+      "import.register_events": {
+        "n": 10,
+        "mean": 14.3467,
+        "p50": 14.292,
+        "p95": 15.945,
+        "min": 13.011,
+        "max": 15.945
+      },
+      "import.restore_devices": {
+        "n": 10,
+        "mean": 2846.6835,
+        "p50": 2756.1855,
+        "p95": 5126.969999999999,
+        "min": 1242.086,
+        "max": 5126.969999999999
+      },
+      "import.start_vcpu_thread": {
+        "n": 10,
+        "mean": 303.2508,
+        "p50": 306.7035,
+        "p95": 369.812,
+        "min": 236.342,
+        "max": 369.812
+      },
+      "import.validate_vmm": {
+        "n": 10,
+        "mean": 45.9094,
+        "p50": 44.105000000000004,
+        "p95": 63.902,
+        "min": 41.46,
+        "max": 63.902
+      },
+      "import.vcpu_wrapper": {
+        "n": 10,
+        "mean": 26.3832,
+        "p50": 26.3425,
+        "p95": 27.542,
+        "min": 25.78,
+        "max": 27.542
+      },
+      "kernel.detach": {
+        "n": 10,
+        "mean": 243.6365,
+        "p50": 148.564,
+        "p95": 851.715,
+        "min": 92.219,
+        "max": 851.715
+      },
+      "kernel.attach": {
+        "n": 10,
+        "mean": 1505.4928,
+        "p50": 1325.5615,
+        "p95": 3157.541,
+        "min": 1081.106,
+        "max": 3157.541
+      },
+      "api_dispatch_response_and_profile_log": {
+        "n": 10,
+        "mean": 2232.9451000000004,
+        "p50": 2199.0525000000007,
+        "p95": 2549.8680000000004,
+        "min": 1939.4630000000016,
+        "max": 2549.8680000000004
+      }
+    },
+    "disk_substages_us": {
+      "file_engine": {
+        "n": 10,
+        "mean": 199.8127,
+        "p50": 197.6615,
+        "p95": 246.86599999999999,
+        "min": 168.979,
+        "max": 246.86599999999999
+      },
+      "image_id": {
+        "n": 10,
+        "mean": 4.1174,
+        "p50": 3.535,
+        "p95": 7.234,
+        "min": 3.011,
+        "max": 7.234
+      },
+      "open": {
+        "n": 10,
+        "mean": 1243.9418,
+        "p50": 969.7810000000001,
+        "p95": 2893.464,
+        "min": 23.828999999999997,
+        "max": 2893.464
+      },
+      "pool_identity": {
+        "n": 10,
+        "mean": 2.8894,
+        "p50": 2.326,
+        "p95": 4.289,
+        "min": 2.0420000000000003,
+        "max": 4.289
+      },
+      "size": {
+        "n": 10,
+        "mean": 222.11260000000001,
+        "p50": 143.23999999999998,
+        "p95": 619.373,
+        "min": 2.866,
+        "max": 619.373
+      }
+    },
+    "kernel_substages_us": {
+      "detach.0": {
+        "n": 10,
+        "mean": 119.5044,
+        "p50": 63.1595,
+        "p95": 607.969,
+        "min": 48.019,
+        "max": 607.969
+      },
+      "detach.1": {
+        "n": 10,
+        "mean": 18.897299999999998,
+        "p50": 1.3005,
+        "p95": 177.189,
+        "min": 1.191,
+        "max": 177.189
+      },
+      "detach.2": {
+        "n": 10,
+        "mean": 86.6207,
+        "p50": 50.6935,
+        "p95": 192.81,
+        "min": 8.832,
+        "max": 192.81
+      },
+      "detach.3": {
+        "n": 10,
+        "mean": 0.5943,
+        "p50": 0.45399999999999996,
+        "p95": 1.749,
+        "min": 0.382,
+        "max": 1.749
+      },
+      "detach.4": {
+        "n": 10,
+        "mean": 6.1155,
+        "p50": 6.119,
+        "p95": 6.957,
+        "min": 5.295,
+        "max": 6.957
+      },
+      "detach.5": {
+        "n": 10,
+        "mean": 11.7744,
+        "p50": 11.7725,
+        "p95": 12.943,
+        "min": 10.033,
+        "max": 12.943
+      },
+      "detach.6": {
+        "n": 10,
+        "mean": 0.4128,
+        "p50": 0.4,
+        "p95": 0.578,
+        "min": 0.345,
+        "max": 0.578
+      },
+      "detach.7": {
+        "n": 10,
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "attach.0": {
+        "n": 10,
+        "mean": 12.3359,
+        "p50": 12.306000000000001,
+        "p95": 12.747,
+        "min": 12.082,
+        "max": 12.747
+      },
+      "attach.1": {
+        "n": 10,
+        "mean": 31.1807,
+        "p50": 0.1935,
+        "p95": 310.043,
+        "min": 0.175,
+        "max": 310.043
+      },
+      "attach.2": {
+        "n": 10,
+        "mean": 10.4368,
+        "p50": 9.3385,
+        "p95": 23.819,
+        "min": 7.731,
+        "max": 23.819
+      },
+      "attach.3": {
+        "n": 10,
+        "mean": 16.036,
+        "p50": 14.4225,
+        "p95": 31.848,
+        "min": 13.446,
+        "max": 31.848
+      },
+      "attach.4": {
+        "n": 10,
+        "mean": 4.187,
+        "p50": 1.8935,
+        "p95": 24.796,
+        "min": 1.658,
+        "max": 24.796
+      },
+      "attach.5": {
+        "n": 10,
+        "mean": 1425.2332999999999,
+        "p50": 1282.4795,
+        "p95": 3114.008,
+        "min": 777.31,
+        "max": 3114.008
+      },
+      "attach.6": {
+        "n": 10,
+        "mean": 5.8837,
+        "p50": 5.853,
+        "p95": 6.595,
+        "min": 4.988,
+        "max": 6.595
+      },
+      "attach.7": {
+        "n": 10,
+        "mean": 0.7046,
+        "p50": 0.7135,
+        "p95": 0.771,
+        "min": 0.62,
+        "max": 0.771
+      }
+    },
+    "api_substages_us": {
+      "parse_us": {
+        "n": 10,
+        "mean": 207.5,
+        "p50": 208.0,
+        "p95": 231,
+        "min": 194,
+        "max": 231
+      },
+      "response_us": {
+        "n": 10,
+        "mean": 83.7,
+        "p50": 84.0,
+        "p95": 110,
+        "min": 67,
+        "max": 110
+      },
+      "dispatch_and_main_profile_log_us": {
+        "n": 10,
+        "mean": 715.3375000000002,
+        "p50": 735.7275000000003,
+        "p95": 840.4080000000006,
+        "min": 480.53100000000063,
+        "max": 840.4080000000006
+      },
+      "transport_and_api_profile_log_us": {
+        "n": 10,
+        "mean": 1225.5309,
+        "p50": 1212.4725,
+        "p95": 1417.3899999999999,
+        "min": 1102.444,
+        "max": 1417.3899999999999
+      }
+    }
+  },
+  "by_destination": {
+    "A": {
+      "api_us": {
+        "n": 5,
+        "mean": 9686.3474,
+        "p50": 9604.997,
+        "p95": 10610.028999999999,
+        "min": 9054.887,
+        "max": 10610.028999999999
+      },
+      "kernel_us": {
+        "n": 5,
+        "mean": 1927.7730000000001,
+        "p50": 1646.351,
+        "p95": 3270.5860000000002,
+        "min": 1515.0500000000002,
+        "max": 3270.5860000000002
+      },
+      "nonkernel_us": {
+        "n": 5,
+        "mean": 7758.5743999999995,
+        "p50": 7940.170999999999,
+        "p95": 8155.047000000002,
+        "min": 7339.442999999998,
+        "max": 8155.047000000002
+      },
+      "components_us": {
+        "export.drain_and_save_devices": {
+          "n": 5,
+          "mean": 42.486200000000004,
+          "p50": 42.432,
+          "p95": 45.300000000000004,
+          "min": 40.648,
+          "max": 45.300000000000004
+        },
+        "export.export_detach_ioctls": {
+          "n": 5,
+          "mean": 154.19020000000003,
+          "p50": 142.123,
+          "p95": 214.54600000000005,
+          "min": 129.22100000000003,
+          "max": 214.54600000000005
+        },
+        "export.log_receipt": {
+          "n": 5,
+          "mean": 120.228,
+          "p50": 119.89500000000001,
+          "p95": 121.851,
+          "min": 118.972,
+          "max": 121.851
+        },
+        "export.peek_token": {
+          "n": 5,
+          "mean": 2.6486,
+          "p50": 2.542,
+          "p95": 3.052,
+          "min": 2.4099999999999997,
+          "max": 3.052
+        },
+        "export.read_manifest_and_build_state": {
+          "n": 5,
+          "mean": 72.6284,
+          "p50": 66.337,
+          "p95": 96.765,
+          "min": 65.28,
+          "max": 96.765
+        },
+        "export.seal_mapper": {
+          "n": 5,
+          "mean": 149.58180000000002,
+          "p50": 149.185,
+          "p95": 155.32100000000003,
+          "min": 144.597,
+          "max": 155.32100000000003
+        },
+        "export.serialize_devices": {
+          "n": 5,
+          "mean": 208.7366,
+          "p50": 211.299,
+          "p95": 228.429,
+          "min": 188.51,
+          "max": 228.429
+        },
+        "export.sync_devices": {
+          "n": 5,
+          "mean": 2.7923999999999998,
+          "p50": 2.824,
+          "p95": 3.077,
+          "min": 2.491,
+          "max": 3.077
+        },
+        "export.unbind_ioevents": {
+          "n": 5,
+          "mean": 421.957,
+          "p50": 340.42,
+          "p95": 697.447,
+          "min": 323.139,
+          "max": 697.447
+        },
+        "export.validate_and_open": {
+          "n": 5,
+          "mean": 66.9132,
+          "p50": 60.887,
+          "p95": 89.24000000000001,
+          "min": 59.23,
+          "max": 89.24000000000001
+        },
+        "export.write_devices": {
+          "n": 5,
+          "mean": 11.8608,
+          "p50": 11.532,
+          "p95": 13.92,
+          "min": 10.783,
+          "max": 13.92
+        },
+        "import.adopt_memory": {
+          "n": 5,
+          "mean": 46.2658,
+          "p50": 44.543,
+          "p95": 49.516,
+          "min": 43.908,
+          "max": 49.516
+        },
+        "import.attach_and_vm_wrapper": {
+          "n": 5,
+          "mean": 314.63,
+          "p50": 312.14200000000005,
+          "p95": 332.491,
+          "min": 305.3580000000002,
+          "max": 332.491
+        },
+        "import.import_mapper": {
+          "n": 5,
+          "mean": 850.5932,
+          "p50": 816.6220000000001,
+          "p95": 938.163,
+          "min": 791.781,
+          "max": 938.163
+        },
+        "import.kvm_capabilities": {
+          "n": 5,
+          "mean": 255.8164,
+          "p50": 255.67999999999998,
+          "p95": 259.899,
+          "min": 251.994,
+          "max": 259.899
+        },
+        "import.log_receipt": {
+          "n": 5,
+          "mean": 146.9506,
+          "p50": 146.615,
+          "p95": 148.69,
+          "min": 146.049,
+          "max": 148.69
+        },
+        "import.read_validate_metadata": {
+          "n": 5,
+          "mean": 854.3836,
+          "p50": 855.2800000000001,
+          "p95": 891.598,
+          "min": 789.436,
+          "max": 891.598
+        },
+        "import.register_events": {
+          "n": 5,
+          "mean": 14.4386,
+          "p50": 14.622,
+          "p95": 15.945,
+          "min": 13.011,
+          "max": 15.945
+        },
+        "import.restore_devices": {
+          "n": 5,
+          "mean": 1373.3904,
+          "p50": 1292.831,
+          "p95": 1674.7859999999998,
+          "min": 1242.086,
+          "max": 1674.7859999999998
+        },
+        "import.start_vcpu_thread": {
+          "n": 5,
+          "mean": 313.08820000000003,
+          "p50": 352.27099999999996,
+          "p95": 369.812,
+          "min": 236.342,
+          "max": 369.812
+        },
+        "import.validate_vmm": {
+          "n": 5,
+          "mean": 43.5622,
+          "p50": 42.092999999999996,
+          "p95": 46.72,
+          "min": 41.46,
+          "max": 46.72
+        },
+        "import.vcpu_wrapper": {
+          "n": 5,
+          "mean": 26.4172,
+          "p50": 26.315,
+          "p95": 27.542,
+          "min": 25.78,
+          "max": 27.542
+        },
+        "kernel.detach": {
+          "n": 5,
+          "mean": 191.3914,
+          "p50": 157.833,
+          "p95": 276.699,
+          "min": 113.045,
+          "max": 276.699
+        },
+        "kernel.attach": {
+          "n": 5,
+          "mean": 1736.3816000000002,
+          "p50": 1375.755,
+          "p95": 3157.541,
+          "min": 1281.471,
+          "max": 3157.541
+        },
+        "api_dispatch_response_and_profile_log": {
+          "n": 5,
+          "mean": 2265.015,
+          "p50": 2252.362000000001,
+          "p95": 2421.556999999999,
+          "min": 2110.139000000001,
+          "max": 2421.556999999999
+        }
+      },
+      "disk_substages_us": {
+        "file_engine": {
+          "n": 5,
+          "mean": 179.82000000000002,
+          "p50": 170.62300000000002,
+          "p95": 213.912,
+          "min": 168.979,
+          "max": 213.912
+        },
+        "image_id": {
+          "n": 5,
+          "mean": 3.2184,
+          "p50": 3.2399999999999998,
+          "p95": 3.402,
+          "min": 3.011,
+          "max": 3.402
+        },
+        "open": {
+          "n": 5,
+          "mean": 24.8142,
+          "p50": 25.018,
+          "p95": 25.601000000000003,
+          "min": 23.828999999999997,
+          "max": 25.601000000000003
+        },
+        "pool_identity": {
+          "n": 5,
+          "mean": 2.1310000000000002,
+          "p50": 2.1519999999999997,
+          "p95": 2.21,
+          "min": 2.0420000000000003,
+          "max": 2.21
+        },
+        "size": {
+          "n": 5,
+          "mean": 3.0596,
+          "p50": 2.966,
+          "p95": 3.477,
+          "min": 2.866,
+          "max": 3.477
+        }
+      },
+      "kernel_substages_us": {
+        "detach.0": {
+          "n": 5,
+          "mean": 63.8514,
+          "p50": 63.104,
+          "p95": 81.825,
+          "min": 48.019,
+          "max": 81.825
+        },
+        "detach.1": {
+          "n": 5,
+          "mean": 1.3184,
+          "p50": 1.306,
+          "p95": 1.458,
+          "min": 1.191,
+          "max": 1.458
+        },
+        "detach.2": {
+          "n": 5,
+          "mean": 107.0076,
+          "p50": 55.757,
+          "p95": 192.81,
+          "min": 45.477,
+          "max": 192.81
+        },
+        "detach.3": {
+          "n": 5,
+          "mean": 0.51,
+          "p50": 0.505,
+          "p95": 0.64,
+          "min": 0.425,
+          "max": 0.64
+        },
+        "detach.4": {
+          "n": 5,
+          "mean": 6.6074,
+          "p50": 6.682,
+          "p95": 6.957,
+          "min": 6.178,
+          "max": 6.957
+        },
+        "detach.5": {
+          "n": 5,
+          "mean": 11.9736,
+          "p50": 11.948,
+          "p95": 12.943,
+          "min": 11.368,
+          "max": 12.943
+        },
+        "detach.6": {
+          "n": 5,
+          "mean": 0.37979999999999997,
+          "p50": 0.392,
+          "p95": 0.411,
+          "min": 0.345,
+          "max": 0.411
+        },
+        "detach.7": {
+          "n": 5,
+          "mean": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "attach.0": {
+          "n": 5,
+          "mean": 12.3972,
+          "p50": 12.385,
+          "p95": 12.747,
+          "min": 12.169,
+          "max": 12.747
+        },
+        "attach.1": {
+          "n": 5,
+          "mean": 0.1982,
+          "p50": 0.18,
+          "p95": 0.256,
+          "min": 0.175,
+          "max": 0.256
+        },
+        "attach.2": {
+          "n": 5,
+          "mean": 8.2482,
+          "p50": 8.084,
+          "p95": 9.306,
+          "min": 7.731,
+          "max": 9.306
+        },
+        "attach.3": {
+          "n": 5,
+          "mean": 14.1238,
+          "p50": 14.216,
+          "p95": 14.531,
+          "min": 13.446,
+          "max": 14.531
+        },
+        "attach.4": {
+          "n": 5,
+          "mean": 1.9687999999999999,
+          "p50": 1.92,
+          "p95": 2.316,
+          "min": 1.796,
+          "max": 2.316
+        },
+        "attach.5": {
+          "n": 5,
+          "mean": 1693.1299999999999,
+          "p50": 1332.009,
+          "p95": 3114.008,
+          "min": 1239.272,
+          "max": 3114.008
+        },
+        "attach.6": {
+          "n": 5,
+          "mean": 6.133,
+          "p50": 5.966,
+          "p95": 6.595,
+          "min": 5.848,
+          "max": 6.595
+        },
+        "attach.7": {
+          "n": 5,
+          "mean": 0.6912,
+          "p50": 0.707,
+          "p95": 0.755,
+          "min": 0.62,
+          "max": 0.755
+        }
+      },
+      "api_substages_us": {
+        "parse_us": {
+          "n": 5,
+          "mean": 210.8,
+          "p50": 208,
+          "p95": 231,
+          "min": 196,
+          "max": 231
+        },
+        "response_us": {
+          "n": 5,
+          "mean": 80.4,
+          "p50": 82,
+          "p95": 91,
+          "min": 67,
+          "max": 91
+        },
+        "dispatch_and_main_profile_log_us": {
+          "n": 5,
+          "mean": 724.2372,
+          "p50": 766.685,
+          "p95": 823.0940000000005,
+          "min": 600.319,
+          "max": 823.0940000000005
+        },
+        "transport_and_api_profile_log_us": {
+          "n": 5,
+          "mean": 1248.7473999999997,
+          "p50": 1248.028999999999,
+          "p95": 1312.2209999999995,
+          "min": 1174.9969999999998,
+          "max": 1312.2209999999995
+        }
+      }
+    },
+    "B": {
+      "api_us": {
+        "n": 5,
+        "mean": 11986.5144,
+        "p50": 12033.058,
+        "p95": 13194.39,
+        "min": 11112.444,
+        "max": 13194.39
+      },
+      "kernel_us": {
+        "n": 5,
+        "mean": 1570.4856,
+        "p50": 1278.894,
+        "p95": 2142.033,
+        "min": 1173.325,
+        "max": 2142.033
+      },
+      "nonkernel_us": {
+        "n": 5,
+        "mean": 10416.0288,
+        "p50": 10251.903000000002,
+        "p95": 11052.357,
+        "min": 9939.119,
+        "max": 11052.357
+      },
+      "components_us": {
+        "export.drain_and_save_devices": {
+          "n": 5,
+          "mean": 52.3952,
+          "p50": 43.175,
+          "p95": 69.23,
+          "min": 40.256,
+          "max": 69.23
+        },
+        "export.export_detach_ioctls": {
+          "n": 5,
+          "mean": 117.99759999999998,
+          "p50": 132.47599999999997,
+          "p95": 136.87400000000002,
+          "min": 75.93299999999999,
+          "max": 136.87400000000002
+        },
+        "export.log_receipt": {
+          "n": 5,
+          "mean": 123.3776,
+          "p50": 118.632,
+          "p95": 144.399,
+          "min": 116.562,
+          "max": 144.399
+        },
+        "export.peek_token": {
+          "n": 5,
+          "mean": 2.817,
+          "p50": 2.668,
+          "p95": 3.382,
+          "min": 2.557,
+          "max": 3.382
+        },
+        "export.read_manifest_and_build_state": {
+          "n": 5,
+          "mean": 76.3402,
+          "p50": 66.823,
+          "p95": 97.967,
+          "min": 65.51899999999999,
+          "max": 97.967
+        },
+        "export.seal_mapper": {
+          "n": 5,
+          "mean": 149.11260000000001,
+          "p50": 145.597,
+          "p95": 169.209,
+          "min": 135.52,
+          "max": 169.209
+        },
+        "export.serialize_devices": {
+          "n": 5,
+          "mean": 198.62980000000002,
+          "p50": 194.867,
+          "p95": 210.28900000000002,
+          "min": 192.90200000000002,
+          "max": 210.28900000000002
+        },
+        "export.sync_devices": {
+          "n": 5,
+          "mean": 2.807,
+          "p50": 2.7199999999999998,
+          "p95": 3.208,
+          "min": 2.677,
+          "max": 3.208
+        },
+        "export.unbind_ioevents": {
+          "n": 5,
+          "mean": 244.7486,
+          "p50": 203.131,
+          "p95": 386.194,
+          "min": 102.143,
+          "max": 386.194
+        },
+        "export.validate_and_open": {
+          "n": 5,
+          "mean": 57.23,
+          "p50": 59.22,
+          "p95": 63.294999999999995,
+          "min": 45.346000000000004,
+          "max": 63.294999999999995
+        },
+        "export.write_devices": {
+          "n": 5,
+          "mean": 10.892000000000001,
+          "p50": 10.551,
+          "p95": 12.463000000000001,
+          "min": 10.335,
+          "max": 12.463000000000001
+        },
+        "import.adopt_memory": {
+          "n": 5,
+          "mean": 46.158,
+          "p50": 44.332,
+          "p95": 49.291,
+          "min": 43.838,
+          "max": 49.291
+        },
+        "import.attach_and_vm_wrapper": {
+          "n": 5,
+          "mean": 306.53679999999997,
+          "p50": 300.279,
+          "p95": 326.2359999999999,
+          "min": 294.60299999999984,
+          "max": 326.2359999999999
+        },
+        "import.import_mapper": {
+          "n": 5,
+          "mean": 853.4058,
+          "p50": 800.1329999999999,
+          "p95": 1004.189,
+          "min": 771.039,
+          "max": 1004.189
+        },
+        "import.kvm_capabilities": {
+          "n": 5,
+          "mean": 258.93760000000003,
+          "p50": 257.044,
+          "p95": 270.297,
+          "min": 251.917,
+          "max": 270.297
+        },
+        "import.log_receipt": {
+          "n": 5,
+          "mean": 157.743,
+          "p50": 148.488,
+          "p95": 180.34,
+          "min": 147.08,
+          "max": 180.34
+        },
+        "import.read_validate_metadata": {
+          "n": 5,
+          "mean": 853.7742,
+          "p50": 847.621,
+          "p95": 931.646,
+          "min": 805.453,
+          "max": 931.646
+        },
+        "import.register_events": {
+          "n": 5,
+          "mean": 14.2548,
+          "p50": 14.258,
+          "p95": 14.475999999999999,
+          "min": 13.965,
+          "max": 14.475999999999999
+        },
+        "import.restore_devices": {
+          "n": 5,
+          "mean": 4319.9766,
+          "p50": 4143.863,
+          "p95": 5126.969999999999,
+          "min": 3837.585,
+          "max": 5126.969999999999
+        },
+        "import.start_vcpu_thread": {
+          "n": 5,
+          "mean": 293.4134,
+          "p50": 267.882,
+          "p95": 349.98199999999997,
+          "min": 238.85399999999998,
+          "max": 349.98199999999997
+        },
+        "import.validate_vmm": {
+          "n": 5,
+          "mean": 48.2566,
+          "p50": 46.195,
+          "p95": 63.902,
+          "min": 41.96,
+          "max": 63.902
+        },
+        "import.vcpu_wrapper": {
+          "n": 5,
+          "mean": 26.3492,
+          "p50": 26.37,
+          "p95": 26.858,
+          "min": 25.892,
+          "max": 26.858
+        },
+        "kernel.detach": {
+          "n": 5,
+          "mean": 295.8816,
+          "p50": 120.823,
+          "p95": 851.715,
+          "min": 92.219,
+          "max": 851.715
+        },
+        "kernel.attach": {
+          "n": 5,
+          "mean": 1274.604,
+          "p50": 1158.5,
+          "p95": 1847.776,
+          "min": 1081.106,
+          "max": 1847.776
+        },
+        "api_dispatch_response_and_profile_log": {
+          "n": 5,
+          "mean": 2200.8752000000013,
+          "p50": 2192.3470000000016,
+          "p95": 2549.8680000000004,
+          "min": 1939.4630000000016,
+          "max": 2549.8680000000004
+        }
+      },
+      "disk_substages_us": {
+        "file_engine": {
+          "n": 5,
+          "mean": 219.8054,
+          "p50": 224.552,
+          "p95": 246.86599999999999,
+          "min": 182.17499999999998,
+          "max": 246.86599999999999
+        },
+        "image_id": {
+          "n": 5,
+          "mean": 5.0164,
+          "p50": 4.6770000000000005,
+          "p95": 7.234,
+          "min": 3.6679999999999997,
+          "max": 7.234
+        },
+        "open": {
+          "n": 5,
+          "mean": 2463.0694,
+          "p50": 2571.751,
+          "p95": 2893.464,
+          "min": 1913.961,
+          "max": 2893.464
+        },
+        "pool_identity": {
+          "n": 5,
+          "mean": 3.6478,
+          "p50": 3.917,
+          "p95": 4.289,
+          "min": 2.442,
+          "max": 4.289
+        },
+        "size": {
+          "n": 5,
+          "mean": 441.16560000000004,
+          "p50": 415.764,
+          "p95": 619.373,
+          "min": 283.003,
+          "max": 619.373
+        }
+      },
+      "kernel_substages_us": {
+        "detach.0": {
+          "n": 5,
+          "mean": 175.15740000000002,
+          "p50": 66.099,
+          "p95": 607.969,
+          "min": 55.764,
+          "max": 607.969
+        },
+        "detach.1": {
+          "n": 5,
+          "mean": 36.4762,
+          "p50": 1.272,
+          "p95": 177.189,
+          "min": 1.217,
+          "max": 177.189
+        },
+        "detach.2": {
+          "n": 5,
+          "mean": 66.2338,
+          "p50": 45.748,
+          "p95": 191.171,
+          "min": 8.832,
+          "max": 191.171
+        },
+        "detach.3": {
+          "n": 5,
+          "mean": 0.6786,
+          "p50": 0.433,
+          "p95": 1.749,
+          "min": 0.382,
+          "max": 1.749
+        },
+        "detach.4": {
+          "n": 5,
+          "mean": 5.6236,
+          "p50": 5.464,
+          "p95": 6.06,
+          "min": 5.295,
+          "max": 6.06
+        },
+        "detach.5": {
+          "n": 5,
+          "mean": 11.5752,
+          "p50": 11.665,
+          "p95": 12.88,
+          "min": 10.033,
+          "max": 12.88
+        },
+        "detach.6": {
+          "n": 5,
+          "mean": 0.44580000000000003,
+          "p50": 0.403,
+          "p95": 0.578,
+          "min": 0.391,
+          "max": 0.578
+        },
+        "detach.7": {
+          "n": 5,
+          "mean": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "attach.0": {
+          "n": 5,
+          "mean": 12.2746,
+          "p50": 12.253,
+          "p95": 12.549,
+          "min": 12.082,
+          "max": 12.549
+        },
+        "attach.1": {
+          "n": 5,
+          "mean": 62.1632,
+          "p50": 0.2,
+          "p95": 310.043,
+          "min": 0.183,
+          "max": 310.043
+        },
+        "attach.2": {
+          "n": 5,
+          "mean": 12.625399999999999,
+          "p50": 9.965,
+          "p95": 23.819,
+          "min": 9.371,
+          "max": 23.819
+        },
+        "attach.3": {
+          "n": 5,
+          "mean": 17.9482,
+          "p50": 14.429,
+          "p95": 31.848,
+          "min": 13.97,
+          "max": 31.848
+        },
+        "attach.4": {
+          "n": 5,
+          "mean": 6.4052,
+          "p50": 1.771,
+          "p95": 24.796,
+          "min": 1.658,
+          "max": 24.796
+        },
+        "attach.5": {
+          "n": 5,
+          "mean": 1157.3366,
+          "p50": 1072.316,
+          "p95": 1802.833,
+          "min": 777.31,
+          "max": 1802.833
+        },
+        "attach.6": {
+          "n": 5,
+          "mean": 5.6344,
+          "p50": 5.717,
+          "p95": 6.537,
+          "min": 4.988,
+          "max": 6.537
+        },
+        "attach.7": {
+          "n": 5,
+          "mean": 0.718,
+          "p50": 0.731,
+          "p95": 0.771,
+          "min": 0.667,
+          "max": 0.771
+        }
+      },
+      "api_substages_us": {
+        "parse_us": {
+          "n": 5,
+          "mean": 204.2,
+          "p50": 208,
+          "p95": 211,
+          "min": 194,
+          "max": 211
+        },
+        "response_us": {
+          "n": 5,
+          "mean": 87,
+          "p50": 86,
+          "p95": 110,
+          "min": 68,
+          "max": 110
+        },
+        "dispatch_and_main_profile_log_us": {
+          "n": 5,
+          "mean": 706.4378000000005,
+          "p50": 704.7700000000007,
+          "p95": 840.4080000000006,
+          "min": 480.53100000000063,
+          "max": 840.4080000000006
+        },
+        "transport_and_api_profile_log_us": {
+          "n": 5,
+          "mean": 1202.3144000000002,
+          "p50": 1176.6860000000006,
+          "p95": 1417.3899999999999,
+          "min": 1102.444,
+          "max": 1417.3899999999999
+        }
+      }
+    }
+  },
+  "notes": [
+    "API = DirectExport + InstanceStart; pause, resume, source fence, process launch, metadata transport and guest ACK excluded",
+    "Clock sampling enabled; residual includes final profile logging and client/API dispatch/response scheduling",
+    "Nested subtimings overlap their parents; do not add them to exclusive components",
+    "Additive means; medians of individual components do not necessarily add to median API",
+    "No warmup samples discarded; first attach and post-workload return are retained",
+    "Independent workload verification must be run separately"
+  ]
+}

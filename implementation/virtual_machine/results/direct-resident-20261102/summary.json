@@ -1,0 +1,214 @@
+{
+  "schema": "resident-direct-summary-v1",
+  "result": "passed-independent-verification",
+  "report_sha256": "d635e80af75aace5638f8bf9d6e587c7846523e86cd36453c42bed7c42cd9e85",
+  "handoffs": 24,
+  "tcp_handoffs": 22,
+  "promotions": 2,
+  "demotions": 2,
+  "trace_commands": 27,
+  "negative_cases": {
+    "parked-operation": 52,
+    "stale-generation": 2,
+    "foreign-graph": 2,
+    "wrong-manifest-digest": 2
+  },
+  "real_access_probes": 26,
+  "guest_cached_mib_range": [
+    426.63671875,
+    441.90625
+  ],
+  "resources": {
+    "A": {
+      "pid": [
+        "176",
+        "8632"
+      ],
+      "active_fd_counts": [
+        45,
+        45,
+        45,
+        45,
+        45,
+        45,
+        45,
+        45,
+        45,
+        45,
+        45,
+        45,
+        45
+      ],
+      "disk_and_io_uring": {
+        "16": "/disk/sandbox.raw",
+        "18": "anon_inode:[io_uring]"
+      },
+      "vcpu_tasks": {
+        "195": "fc_vcpu 0"
+      }
+    },
+    "B": {
+      "pid": [
+        "174",
+        "15550"
+      ],
+      "active_fd_counts": [
+        45,
+        46,
+        46,
+        46,
+        46,
+        46,
+        46,
+        46,
+        46,
+        46,
+        46,
+        46
+      ],
+      "disk_and_io_uring": {
+        "14": "/disk/sandbox.raw",
+        "16": "anon_inode:[io_uring]"
+      },
+      "vcpu_tasks": {
+        "220": "fc_vcpu 0"
+      }
+    }
+  },
+  "preparation": {
+    "first_api_ms": 3.5328000000000004,
+    "first_vmm_ms": 2.372261,
+    "first_controller_ms": 763.965637,
+    "first_control_servers_ms": 309.64723,
+    "warm_probe_api": {
+      "n": 23,
+      "mean_ms": 0.8524994782608696,
+      "p50_ms": 0.85688,
+      "min_ms": 0.513276,
+      "max_ms": 1.1178240000000002
+    },
+    "tcp_connect": {
+      "n": 22,
+      "mean_ms": 0.9361924090909091,
+      "p50_ms": 0.7257819999999999,
+      "min_ms": 0.479117,
+      "max_ms": 3.124431
+    }
+  },
+  "tcp": {
+    "pause_to_guest_ack": {
+      "n": 22,
+      "mean_ms": 24.84141040909091,
+      "p50_ms": 24.1529605,
+      "min_ms": 13.079586,
+      "max_ms": 46.266379
+    },
+    "guest_serial_ack_segment": {
+      "n": 22,
+      "mean_ms": 14.501048818181818,
+      "p50_ms": 14.958503499999999,
+      "min_ms": 4.328916,
+      "max_ms": 17.13078
+    },
+    "remaining_control_including_transport": {
+      "n": 22,
+      "mean_ms": 10.34036159090909,
+      "p50_ms": 9.034583999999999,
+      "min_ms": 7.991043,
+      "max_ms": 30.826904
+    }
+  },
+  "export_import_api": {
+    "n": 24,
+    "mean_ms": 6.723050041666666,
+    "p50_ms": 5.316221,
+    "min_ms": 4.810657999999999,
+    "max_ms": 26.897899000000002
+  },
+  "notes": [
+    "First visit and all outliers retained. TCP and serial-diagnostic intervals are not mixed.",
+    "Remaining control subtracts the measured guest ping interval; it is not a separately observed guest first-instruction timestamp.",
+    "Original suite reports failed because its offline controller-fence regex rejected CRLF. Execution report and independent re-verification pass; raw reports are preserved."
+  ],
+  "fresh_process_comparison": {
+    "report_sha256": "817a9245a174b207b30b8f70f92ca0539771bde17042ddf0ccef44fb5cab9540",
+    "export_import_api": {
+      "n": 10,
+      "mean_ms": 9.4449832,
+      "p50_ms": 9.189522,
+      "min_ms": 8.228114,
+      "max_ms": 11.978150000000001
+    },
+    "rows": [
+      {
+        "generation": 1,
+        "source": "A",
+        "destination": "B",
+        "export_import_api_ms": 11.978150000000001
+      },
+      {
+        "generation": 2,
+        "source": "B",
+        "destination": "A",
+        "export_import_api_ms": 9.872391
+      },
+      {
+        "generation": 3,
+        "source": "A",
+        "destination": "B",
+        "export_import_api_ms": 9.362853999999999
+      },
+      {
+        "generation": 4,
+        "source": "B",
+        "destination": "A",
+        "export_import_api_ms": 8.99326
+      },
+      {
+        "generation": 5,
+        "source": "A",
+        "destination": "B",
+        "export_import_api_ms": 9.079863999999999
+      },
+      {
+        "generation": 6,
+        "source": "B",
+        "destination": "A",
+        "export_import_api_ms": 9.29918
+      },
+      {
+        "generation": 7,
+        "source": "A",
+        "destination": "B",
+        "export_import_api_ms": 8.659690999999999
+      },
+      {
+        "generation": 8,
+        "source": "B",
+        "destination": "A",
+        "export_import_api_ms": 9.975046
+      },
+      {
+        "generation": 9,
+        "source": "A",
+        "destination": "B",
+        "export_import_api_ms": 8.228114
+      },
+      {
+        "generation": 10,
+        "source": "B",
+        "destination": "A",
+        "export_import_api_ms": 9.001282
+      }
+    ],
+    "same_firecracker": "7a371e503d46a95836cae270594c43c03f64e577d58ea53c1742a14408337d1c",
+    "identical_runtime_sources": true,
+    "identical_trace_fixture": true,
+    "suite_audit_source_difference": [
+      "verify_swe_pool.py"
+    ],
+    "median_api_reduction_percent": 42.149101988112115,
+    "scope": "same binary/image, sequential trials with different handoff counts and control paths; not an isolated causal estimate",
+    "workload_results_identical": true
+  }
+}

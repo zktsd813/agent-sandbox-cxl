@@ -1,0 +1,11 @@
+{
+  "result": "passed",
+  "scope": "host control-protocol unit tests; not hardware proof",
+  "cases": 5,
+  "command": "python3 -m unittest -v test_pool_control",
+  "sources": {
+    "test_pool_control.py": "62680033b248478e643da12ab985faee3449fac268a40c0fcb5d9063c7ed8fa2",
+    "pool_control.py": "2427dba03f1a0b1545f46d81328f518065de4de52fdea6c82a6db6e47805d096"
+  },
+  "log_sha256": "1e020f9ea4a6d888bdc370f5cdbde72ea063176027d848292ee2e83690996dff"
+}

@@ -1,0 +1,200 @@
+{
+  "result": "passed",
+  "mode": "state-only",
+  "transitions": {
+    "promotion": 9,
+    "demotion": 9,
+    "state-only": 12
+  },
+  "receipts": 1476,
+  "handoff_full_scan_pages": 0,
+  "handoff_manifest_bytes": [
+    755,
+    755,
+    756,
+    778,
+    755,
+    756,
+    755,
+    755,
+    757,
+    778,
+    755,
+    757
+  ],
+  "minimum_shared_bytes": 167772160,
+  "ack_before_reuse_bytes": [
+    150994944
+  ],
+  "api_records": [
+    [
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 3182.607,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      },
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 22825.818,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      }
+    ],
+    [
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 3759.83,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      },
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 20029.003,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      }
+    ],
+    [
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 3246.337,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      },
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 20175.464,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      }
+    ],
+    [
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 3173.363,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      },
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 17144.858,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      }
+    ],
+    [
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 3128.389,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      },
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 17338.935,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      }
+    ],
+    [
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 3313.923,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      },
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 34722.006,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      }
+    ],
+    [
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 3456.628,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      },
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 20263.157,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      }
+    ],
+    [
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 3291.733,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      },
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 18613.607,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      }
+    ],
+    [
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 3438.265,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      },
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 18149.847,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      }
+    ],
+    [
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 3586.693,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      },
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 20085.951,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      }
+    ],
+    [
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 4185.894,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      },
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 16496.474,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      }
+    ],
+    [
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 3144.202,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      },
+      {
+        "status": 204,
+        "expected_status": 204,
+        "duration_us": 16769.12,
+        "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+      }
+    ]
+  ],
+  "scope": "Coherent nested lab, trusted kernel mapper. Per-handoff physical identity uses persistent handles; PTE audits are separate stress evidence."
+}

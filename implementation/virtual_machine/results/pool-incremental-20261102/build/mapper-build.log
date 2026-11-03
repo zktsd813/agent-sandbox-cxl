@@ -1,0 +1,8 @@
+make: Entering directory '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/linux'
+make[1]: Entering directory '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/kernel-fast'
+  CC [M]  /tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/mapper-fast/pool_memory_module.o
+  MODPOST /tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/mapper-fast/Module.symvers
+  CC [M]  /tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/mapper-fast/pool_memory_module.mod.o
+  LD [M]  /tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/mapper-fast/pool_memory_module.ko
+make[1]: Leaving directory '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/kernel-fast'
+make: Leaving directory '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/linux'

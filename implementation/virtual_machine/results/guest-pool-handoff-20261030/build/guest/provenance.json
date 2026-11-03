@@ -1,0 +1,37 @@
+{
+  "schema": "guest-pool-build-v1",
+  "base_source": "/tmp/pool-discard-guest-linux-20261030",
+  "base_build": "/tmp/pool-discard-guest-build-20261030",
+  "source": "/tmp/guest-pool-linux-20261030",
+  "build": "/tmp/guest-pool-build-20261030",
+  "base_config_sha256": "08d8c9ecf79f63a2b30470466de70c5285f4b73fb8cf3f5bbe62a2c5f2bbf127",
+  "base_source_hashes": {
+    "drivers/virtio/virtio_balloon.c": "6eb65444683a89a1c5f7959bc11edbce4ce055512b5dfb23c26d026fd7289c1a",
+    "mm/page_reporting.c": "64b76f913a3247ec09bdadd946f5768e261858dd3f299a205a3d615cf2762649",
+    "include/trace/events/pool_discard.h": "aa232a41855aa47417c5dae4faae096cfce65f54ef7a989b9563e8f3b55d3e18",
+    "drivers/misc/Kconfig": "9b1c5a6a2a2eccc921cb7de6439665d305f324e1a048ce5916cccb37fcd50e6a",
+    "drivers/misc/Makefile": "80a7c6fd4772b6ab4e2dc2b37cf8b94e129dde51a9c68964575785a136d36c50"
+  },
+  "source_inputs": {
+    "guest-pool.c": "8f878838feb9299295bda248cc6420f47674cfce77e4883a37c9c1b9b73bd135",
+    "guest-pool-uapi.h": "b4a6bd011b2baf993de449bbf847e9dc9b4ca79c0304cbf60f8a777f88e3cfeb",
+    "guest-pool-cli.c": "fae9c4ecd906a6f07cca40d69bbf48a417335d17ac2069a3a91e3c224de3cdea",
+    "guest-pool-build.py": "4994682cc4502c03b76aa2918ebfb6102f2b1b89ecdcf13d3560f2a36faaff1c"
+  },
+  "kernel": {
+    "path": "/tmp/guest-pool-build-20261030/vmlinux",
+    "sha256": "3c1dbb40dc425da777d632446974d6da9a55c4c4da773a5748ba03220445a342"
+  },
+  "config_sha256": "390364f74cd9f03cab59d9114b7897d7ecaa72221c39e957ee1b3156edac210a",
+  "cli_sha256": "a52af273abf32c67841154f45e253f64f6daa03311ba57d749aa2409f1145063",
+  "compiled_sources": {
+    "drivers/virtio/virtio_balloon.c": "6eb65444683a89a1c5f7959bc11edbce4ce055512b5dfb23c26d026fd7289c1a",
+    "mm/page_reporting.c": "64b76f913a3247ec09bdadd946f5768e261858dd3f299a205a3d615cf2762649",
+    "include/trace/events/pool_discard.h": "aa232a41855aa47417c5dae4faae096cfce65f54ef7a989b9563e8f3b55d3e18",
+    "drivers/misc/Kconfig": "3766dfcd664e4496fb6f0e4735653f6ee1e39357e89762482026ba5643ccedeb",
+    "drivers/misc/Makefile": "b556de2adb57b4869cab620acce2d7bab4d03e8800a6b41453f79484aeb4f97b",
+    "drivers/misc/guest-pool.c": "8f878838feb9299295bda248cc6420f47674cfce77e4883a37c9c1b9b73bd135",
+    "drivers/misc/guest-pool-uapi.h": "b4a6bd011b2baf993de449bbf847e9dc9b4ca79c0304cbf60f8a777f88e3cfeb"
+  },
+  "scope": "Built-in helper; copied frozen reporting guest source/build; no base files modified"
+}

@@ -1,0 +1,10 @@
+2026-10-30T03:54:54.895189060 [anonymous-instance:main] Running Firecracker v1.17.0
+2026-10-30T03:54:54.895526210 [anonymous-instance:main] Listening on API socket ("/run/pool-756054fd602b6cd3/vm1-epoch2/api.sock").
+2026-10-30T03:54:54.895728326 [anonymous-instance:fc_api] API server started.
+2026-10-30T03:54:54.969557635 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/load" with body "{\"snapshot_path\": \"/disk/pool-756054fd602b6cd3/vm1-epoch1/state\", \"mem_backend\": {\"backend_type\": \"File\", \"backend_path\": \"/dev/dax0.0\"}, \"resume_vm\": false}".
+2026-10-30T03:54:54.983241115 [anonymous-instance:main] Host CPU vendor ID: [71, 101, 110, 117, 105, 110, 101, 73, 110, 116, 101, 108]
+2026-10-30T03:54:54.983315009 [anonymous-instance:main] Snapshot CPU vendor ID: [71, 101, 110, 117, 105, 110, 101, 73, 110, 116, 101, 108]
+2026-10-30T03:54:54.983608249 [anonymous-instance:main] DAX_RAM path=/dev/dax0.0 offset=2097152 gpa=0 bytes=536870912 initialize=false hva=0x7f7547800000
+2026-10-30T03:54:54.998735214 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T03:54:54.998770848 [anonymous-instance:fc_api] 'load snapshot' API request took 29280 us.
+2026-10-30T03:54:55.191818721 [anonymous-instance:fc_api] The API server received a Put request on "/actions" with body "{\"action_type\": \"PoolCache\"}".

@@ -1,0 +1,238 @@
+{
+  "schema_version": 1,
+  "result": "passed",
+  "audited": [
+    {
+      "case": "direct-baseline",
+      "directory": "/tmp/compat-direct-baseline-20261027-final",
+      "handoffs": 20,
+      "raw_api_receipts": 0
+    },
+    {
+      "case": "direct-baseline",
+      "directory": "/tmp/compat-direct-baseline-mailbox-20261027",
+      "handoffs": 20,
+      "raw_api_receipts": 0
+    },
+    {
+      "case": "direct-two-vcpu",
+      "directory": "/tmp/compat-direct-two-vcpu-20261027-v3",
+      "raw_api_receipts": 6,
+      "source_usable": true
+    },
+    {
+      "case": "direct-block",
+      "directory": "/tmp/compat-direct-block-20261027",
+      "raw_api_receipts": 7,
+      "source_usable": false
+    },
+    {
+      "case": "reuse-block",
+      "directory": "/tmp/compat-reuse-block-20261027",
+      "raw_api_receipts": 8,
+      "source_usable": true
+    },
+    {
+      "case": "reuse-two-vcpu",
+      "directory": "/tmp/compat-reuse-two-vcpu-20261027",
+      "raw_api_receipts": 7,
+      "source_usable": true
+    }
+  ],
+  "negative_tests": [
+    {
+      "case": "direct-baseline",
+      "mutation": "cleanup",
+      "rejected": true,
+      "error": "Cleanup state"
+    },
+    {
+      "case": "direct-baseline",
+      "mutation": "source_hash",
+      "rejected": true,
+      "error": "Source hash"
+    },
+    {
+      "case": "direct-baseline",
+      "mutation": "compatibility",
+      "rejected": true,
+      "error": "Baseline mode claim"
+    },
+    {
+      "case": "direct-baseline",
+      "mutation": "baseline_handoffs",
+      "rejected": true,
+      "error": "Baseline nested validation differs"
+    },
+    {
+      "case": "direct-baseline",
+      "mutation": "cleanup",
+      "rejected": true,
+      "error": "Cleanup state"
+    },
+    {
+      "case": "direct-baseline",
+      "mutation": "source_hash",
+      "rejected": true,
+      "error": "Source hash"
+    },
+    {
+      "case": "direct-baseline",
+      "mutation": "compatibility",
+      "rejected": true,
+      "error": "Baseline mode claim"
+    },
+    {
+      "case": "direct-baseline",
+      "mutation": "baseline_handoffs",
+      "rejected": true,
+      "error": "Baseline nested validation differs"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "cleanup",
+      "rejected": true,
+      "error": "Cleanup state"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "source_hash",
+      "rejected": true,
+      "error": "Source hash"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "compatibility",
+      "rejected": true,
+      "error": "Negative case misrepresented as compatibility"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "api_status",
+      "rejected": true,
+      "error": "API report differs from raw"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "source_recovery",
+      "rejected": true,
+      "error": "Source recovery claim"
+    },
+    {
+      "case": "direct-two-vcpu",
+      "mutation": "pool_owner",
+      "rejected": true,
+      "error": "Pool report differs from raw"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "cleanup",
+      "rejected": true,
+      "error": "Cleanup state"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "source_hash",
+      "rejected": true,
+      "error": "Source hash"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "compatibility",
+      "rejected": true,
+      "error": "Negative case misrepresented as compatibility"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "api_status",
+      "rejected": true,
+      "error": "API report differs from raw"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "source_recovery",
+      "rejected": true,
+      "error": "Source recovery claim"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "pool_owner",
+      "rejected": true,
+      "error": "Pool report differs from raw"
+    },
+    {
+      "case": "direct-block",
+      "mutation": "read_latency",
+      "rejected": true,
+      "error": "Read report differs from raw"
+    },
+    {
+      "case": "reuse-block",
+      "mutation": "cleanup",
+      "rejected": true,
+      "error": "Cleanup state"
+    },
+    {
+      "case": "reuse-block",
+      "mutation": "source_hash",
+      "rejected": true,
+      "error": "Source hash"
+    },
+    {
+      "case": "reuse-block",
+      "mutation": "compatibility",
+      "rejected": true,
+      "error": "Negative case misrepresented as compatibility"
+    },
+    {
+      "case": "reuse-block",
+      "mutation": "api_status",
+      "rejected": true,
+      "error": "API report differs from raw"
+    },
+    {
+      "case": "reuse-block",
+      "mutation": "source_recovery",
+      "rejected": true,
+      "error": "Source recovery claim"
+    },
+    {
+      "case": "reuse-block",
+      "mutation": "read_latency",
+      "rejected": true,
+      "error": "Read report differs from raw"
+    },
+    {
+      "case": "reuse-two-vcpu",
+      "mutation": "cleanup",
+      "rejected": true,
+      "error": "Cleanup state"
+    },
+    {
+      "case": "reuse-two-vcpu",
+      "mutation": "source_hash",
+      "rejected": true,
+      "error": "Source hash"
+    },
+    {
+      "case": "reuse-two-vcpu",
+      "mutation": "compatibility",
+      "rejected": true,
+      "error": "Negative case misrepresented as compatibility"
+    },
+    {
+      "case": "reuse-two-vcpu",
+      "mutation": "api_status",
+      "rejected": true,
+      "error": "API report differs from raw"
+    },
+    {
+      "case": "reuse-two-vcpu",
+      "mutation": "source_recovery",
+      "rejected": true,
+      "error": "Source recovery claim"
+    }
+  ],
+  "script_sha256": "10e88dc417d5c7f45e0cf182cad7c4ea3b7038f603f57496bafea74441bd4ba3",
+  "scope": "Raw API/probe/pool/counter and direct-controller event evidence; cleanup checks recorded reports, not historical kernel state"
+}

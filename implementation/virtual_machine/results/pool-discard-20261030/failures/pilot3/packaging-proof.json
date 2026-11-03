@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "classification": "failed_and_independent_audit_rejected_pilot_not_formal_performance",
+  "checked_utc": "2026-10-30T07:25:20.691804+00:00",
+  "suite_source": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/pool-discard-pilot3-20261030",
+  "suite_sha256": "058dfec09590d284b72c5c30275aff337762ebb3c3353838a4cd320a70d2e0e7",
+  "suite_result_preserved": "failed",
+  "suite_source_hashes_verified": 9,
+  "arms": [
+    {
+      "mode": "reporting",
+      "original_result_preserved": "passed",
+      "original_error": null,
+      "source_report_sha256": "1e5d11b135bf80d67a49b6d40766f0a725830b2fa57825bb156818a1378a2ada",
+      "receipt_hashes_verified": 755,
+      "arm_source_hashes_verified": 21,
+      "processes": [
+        {
+          "role": "A",
+          "pid": 2908065,
+          "recorded_starttime": "320942528",
+          "observed_starttime": null,
+          "matching_process_alive": false,
+          "console_exists": false,
+          "qmp_exists": false
+        },
+        {
+          "role": "B",
+          "pid": 2908066,
+          "recorded_starttime": "320942528",
+          "observed_starttime": null,
+          "matching_process_alive": false,
+          "console_exists": false,
+          "qmp_exists": false
+        }
+      ],
+      "network_cleanup_recorded": true,
+      "ephemeral_memory_directory_absent": true,
+      "sample_count": 3,
+      "anon_mib": 400,
+      "firecracker_sha256": "a4d6f75f0cad5885009097221e464952a1706e3d1792826c14a0dfa84c8a6023",
+      "source_differences_from_suite": {}
+    },
+    {
+      "mode": "baseline",
+      "original_result_preserved": "failed",
+      "original_error": "ValueError('no write-protect fault calls observed')",
+      "source_report_sha256": "0973c776c7c6fb6f480a4e03fb608f754d33d190caf7db7e390e83ae66d481ea",
+      "receipt_hashes_verified": 557,
+      "arm_source_hashes_verified": 21,
+      "processes": [
+        {
+          "role": "A",
+          "pid": 2908672,
+          "recorded_starttime": "320966044",
+          "observed_starttime": null,
+          "matching_process_alive": false,
+          "console_exists": false,
+          "qmp_exists": false
+        },
+        {
+          "role": "B",
+          "pid": 2908673,
+          "recorded_starttime": "320966044",
+          "observed_starttime": null,
+          "matching_process_alive": false,
+          "console_exists": false,
+          "qmp_exists": false
+        }
+      ],
+      "network_cleanup_recorded": true,
+      "ephemeral_memory_directory_absent": true,
+      "sample_count": 3,
+      "anon_mib": 400,
+      "firecracker_sha256": "a4d6f75f0cad5885009097221e464952a1706e3d1792826c14a0dfa84c8a6023",
+      "source_differences_from_suite": {}
+    }
+  ],
+  "excluded_files": [
+    "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/pool-discard-pilot3-20261030/reporting-storage.raw",
+    "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T071436Z-vy0gi6ji/home-storage.raw",
+    "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/pool-discard-pilot3-20261030/baseline-storage.raw",
+    "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T071832Z-yf_55_yc/home-storage.raw"
+  ],
+  "independent_rejection_sha256": "5b7fabc99e984191d71587ac0a14c866f58a898dd68c910d4656467a433b3ec2"
+}

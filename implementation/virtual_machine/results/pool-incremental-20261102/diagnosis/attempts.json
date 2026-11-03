@@ -1,0 +1,195 @@
+[
+  {
+    "attempt": "a",
+    "result": "failed",
+    "note": "Incorrect QEMU runtime path; no guest validation.",
+    "error": "FileNotFoundError(2, 'No such file or directory')",
+    "original_directory": "/tmp/cxl-fast-suite-1102a",
+    "arms": [
+      {
+        "mode": "state-only",
+        "result": "running"
+      }
+    ]
+  },
+  {
+    "attempt": "b",
+    "result": "failed",
+    "note": "Initial fixture omitted Bloom helper; guest test did not begin.",
+    "error": "CalledProcessError(1, ['taskset', '-c', '0-7', '/usr/bin/python3', '-u', '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/pool_handoff_bench.py', '--mode', 'state-only', '--full-audit', '--sandboxes', '3', '--cycles', '2', '--kvm-memory-smoke', '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/fast-tools/pool-memory-kvm-smoke-20261030'])",
+    "original_directory": "/tmp/cxl-fast-suite-1102b",
+    "arms": [
+      {
+        "mode": "state-only",
+        "result": "running",
+        "outer_cleanup": {
+          "A": true,
+          "B": true
+        },
+        "memory_backing_removed": true,
+        "runtime_result": "failed",
+        "runtime_error": "RuntimeError('Guest command failed:\\n\\r\\n/ # (\\r\\n> set -e\\r\\n> /lab/pool-bloom-tool zero /dev/dax0.0 1 8be182c17056ed0de11f29d7ebd04778b3beb4\\r\\r\\nad897815eee77b3a0ae41c23dd /run/pool-bloom-000001.keys /run/pool-bloom-000001.ou\\r\\r\\nt\\r\\n> )\\r\\nsh: /lab/pool-bloom-tool: not found\\r\\n/ # printf \\'\\\\nLAB_COMMAND_DONE_969179a5c1570e60:%s\\\\n\\' \"$?\"\\r\\n\\r\\nLAB_COMMAND_DONE_969179a5c1570e60:127\\r\\n/')"
+      }
+    ]
+  },
+  {
+    "attempt": "c",
+    "result": "failed",
+    "note": "State-only runtime passed, offline verifier exposed incorrect plan receipt path; fixed before final suite.",
+    "error": "CalledProcessError(1, ['/usr/bin/python3', '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/verify_pool_handles.py', '/tmp/cxl-fast-suite-1102c/state-only/report.json', '--output', '/tmp/cxl-fast-suite-1102c/state-only-verification.json'])",
+    "original_directory": "/tmp/cxl-fast-suite-1102c",
+    "arms": [
+      {
+        "mode": "state-only",
+        "result": "running",
+        "outer_cleanup": {
+          "A": true,
+          "B": true
+        },
+        "memory_backing_removed": true,
+        "runtime_result": "passed",
+        "runtime_error": null
+      }
+    ]
+  },
+  {
+    "attempt": "d",
+    "result": "failed",
+    "note": "Direct return failed before diagnostics were available.",
+    "error": "CalledProcessError(1, ['taskset', '-c', '0-7', '/usr/bin/python3', '-u', '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/pool_handoff_bench.py', '--mode', 'direct', '--full-audit', '--sandboxes', '3', '--cycles', '2', '--kvm-memory-smoke', '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/fast-tools/pool-memory-kvm-smoke-20261030'])",
+    "original_directory": "/tmp/cxl-fast-suite-1102d",
+    "arms": [
+      {
+        "mode": "direct",
+        "result": "running",
+        "outer_cleanup": {
+          "A": true,
+          "B": true
+        },
+        "memory_backing_removed": true,
+        "runtime_result": "failed",
+        "runtime_error": "RuntimeError('Guest command failed:\\n\\r\\n/ # (\\r\\n> set -e\\r\\n> n=0\\r\\n> while ! grep -Eq \\'\"event\":\"pool_guest\",\"label\":\"v1e2c72\".*}[[:space:]]*$\\' /run\\r\\r\\n/pool-7633a1a9fc2db783/vm1-epoch2/fc.log; do\\r\\n> read p t < /run/pool-7633a1a9fc2db783/vm1-epoch2/fc.pid\\r\\n> kill -0 \"$p\"\\r\\n> ! grep -Eq \\'POOL_GUEST_FATAL|Kernel panic\\' /run/pool-7633a1a9fc2db783/vm1-epoc\\r\\r\\nh2/fc.log\\r\\n> n=$((n+1))\\r\\n> [ $n -lt 9000 ]\\r\\n> sleep .02\\r\\n> done\\r\\n> grep -E \\'\"event\":\"pool_guest\",\"label\":\"v1e2c72\".*}[[:space:]]*$\\' /run/pool-763\\r\\r\\n3a1a9fc2db783/vm1-epoch2/fc.log\\r\\n> )\\r\\nsh: can\\'t kill pid 3272: No such process\\r\\n/ # printf \\'\\\\nLAB_COMMAND_DONE_a6918d4e50b8536a:%s\\\\n\\' \"$?\"\\r\\n\\r\\nLAB_COMMAND_DONE_a6918d4e50b8536a:1\\r\\n')"
+      }
+    ]
+  },
+  {
+    "attempt": "e",
+    "result": "failed",
+    "note": "Repeated direct return failed with KVM shutdown.",
+    "error": "CalledProcessError(1, ['taskset', '-c', '0-7', '/usr/bin/python3', '-u', '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/pool_handoff_bench.py', '--mode', 'direct', '--full-audit', '--sandboxes', '3', '--cycles', '2', '--kvm-memory-smoke', '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/fast-tools/pool-memory-kvm-smoke-20261030'])",
+    "original_directory": "/tmp/cxl-fast-suite-1102e",
+    "arms": [
+      {
+        "mode": "direct",
+        "result": "running",
+        "outer_cleanup": {
+          "A": true,
+          "B": true
+        },
+        "memory_backing_removed": true,
+        "runtime_result": "failed",
+        "runtime_error": "RuntimeError(\"Guest console command timed out:\\n\\r\\n/ # (\\r\\n> set -e\\r\\n> printf '%s\\\\n' 'check v1e3c87' > /run/pool-3ad862ae360093c5/vm1-epoch3/input\\r\\n> )\\r\\n\")"
+      }
+    ]
+  },
+  {
+    "attempt": "f",
+    "result": "failed",
+    "note": "Diagnostic fixture initramfs root mode 0700 caused NFS service startup failure; fixed to 0755.",
+    "error": "CalledProcessError(1, ['taskset', '-c', '0-7', '/usr/bin/python3', '-u', '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/pool_handoff_bench.py', '--mode', 'direct', '--full-audit', '--sandboxes', '3', '--cycles', '2', '--kvm-memory-smoke', '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/fast-tools/pool-memory-kvm-smoke-20261030'])",
+    "original_directory": "/tmp/cxl-fast-suite-1102f",
+    "arms": [
+      {
+        "mode": "direct",
+        "result": "running",
+        "outer_cleanup": {
+          "A": true,
+          "B": true
+        },
+        "memory_backing_removed": true,
+        "runtime_result": "failed",
+        "runtime_error": "RuntimeError('Guest command failed:\\n\\r\\n/ # (\\r\\n> set -e\\r\\n> mount -t ext4 -o rw,noatime /dev/vda /storage\\r\\n> mount -o bind /storage /disk\\r\\n> export PATH=/usr/sbin:/usr/bin:/bin:/sbin:/lab\\r\\n> mkdir -p /var/lib/nfs /run/rpcbind /proc/fs/nfsd\\r\\n> mount -t nfsd nfsd /proc/fs/nfsd\\r\\n> printf \\'/storage 172.30.0.2(rw,sync,no_subtree_check,no_root_squash,fsid=19)\\\\n\\r\\r\\n\\' > /etc/exports\\r\\n> rpcbind -f -w > /run/pool-007b1f626cbbc84b/rpcbind.log 2>&1 &\\r\\n> sleep .2\\r\\n> exportfs -ra\\r\\n> rpc.mountd --foreground --no-nfs-version 2 --no-nfs-version 4 --port 20048 > /\\r\\r\\nrun/pool-007b1f626cbbc84b/mountd.log 2>&1 &\\r\\n> rpc.nfsd -V3 -N4 4\\r\\n> exportfs -v\\r\\n> cat /proc/mounts\\r\\n> )\\r\\nrpc.nfsd: writing fd to kernel failed: errno 13 (Permission denied)\\r\\nrpc.nfsd: unable to set any sockets for nfsd\\r\\n/ # printf \\'\\\\nLAB_COMMAND_DONE_8e640f4c347262eb:%s\\\\n\\' \"$?\"\\r\\n\\r\\nLAB_COMMAND_DONE_8e640f4c347262eb:1\\r\\n')"
+      }
+    ]
+  },
+  {
+    "attempt": "g",
+    "result": "failed",
+    "note": "Direct return/re-promotion triple fault with retained EPT.",
+    "error": "CalledProcessError(1, ['taskset', '-c', '0-7', '/usr/bin/python3', '-u', '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/pool_handoff_bench.py', '--mode', 'direct', '--full-audit', '--sandboxes', '3', '--cycles', '2', '--kvm-memory-smoke', '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/fast-tools/pool-memory-kvm-smoke-20261030'])",
+    "original_directory": "/tmp/cxl-fast-suite-1102g",
+    "arms": [
+      {
+        "mode": "direct",
+        "result": "running",
+        "outer_cleanup": {
+          "A": true,
+          "B": true
+        },
+        "memory_backing_removed": true,
+        "runtime_result": "failed",
+        "runtime_error": "JSONDecodeError('Unterminated string starting at: line 1 column 15 (char 14)')"
+      }
+    ]
+  },
+  {
+    "attempt": "h",
+    "result": "failed",
+    "note": "Guest TLB flush alone still produced file word mismatch.",
+    "error": "CalledProcessError(1, ['taskset', '-c', '0-7', '/usr/bin/python3', '-u', '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/pool_handoff_bench.py', '--mode', 'direct', '--full-audit', '--sandboxes', '3', '--cycles', '2', '--kvm-memory-smoke', '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/fast-tools/pool-memory-kvm-smoke-20261030'])",
+    "original_directory": "/tmp/cxl-fast-suite-1102h",
+    "arms": [
+      {
+        "mode": "direct",
+        "result": "running",
+        "outer_cleanup": {
+          "A": true,
+          "B": true
+        },
+        "memory_backing_removed": true,
+        "runtime_result": "failed",
+        "runtime_error": "RuntimeError('Guest command failed:\\n\\r\\n/ # (\\r\\n> set -e\\r\\n> n=0\\r\\n> while ! grep -Eq \\'\"event\":\"pool_guest\",\"label\":\"v1e2c72\".*}[[:space:]]*$\\' /run\\r\\r\\n/pool-a442d3e5550c6a1b/vm1-epoch2/fc.log; do\\r\\n> read p t < /run/pool-a442d3e5550c6a1b/vm1-epoch2/fc.pid\\r\\n> kill -0 \"$p\"\\r\\n> ! grep -Eq \\'POOL_GUEST_FATAL|Kernel panic\\' /run/pool-a442d3e5550c6a1b/vm1-epoc\\r\\r\\nh2/fc.log\\r\\n> n=$((n+1))\\r\\n> [ $n -lt 9000 ]\\r\\n> sleep .02\\r\\n> done\\r\\n> grep -E \\'\"event\":\"pool_guest\",\"label\":\"v1e2c72\".*}[[:space:]]*$\\' /run/pool-a44\\r\\r\\n2d3e5550c6a1b/vm1-epoch2/fc.log\\r\\n> )\\r\\nsh: can\\'t kill pid 3191: No such process\\r\\n/ # printf \\'\\\\nLAB_COMMAND_DONE_7d5318c33c8728f3:%s\\\\n\\' \"$?\"\\r\\n\\r\\nLAB_COMMAND_DONE_7d5318c33c8728f3:1\\r\\n/ # ')"
+      }
+    ]
+  },
+  {
+    "attempt": "i",
+    "result": "failed",
+    "note": "Temporary EPT diagnostic helper omitted import os; harness NameError, fixed.",
+    "error": "CalledProcessError(1, ['taskset', '-c', '0-7', '/usr/bin/python3', '-u', '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/pool_handoff_bench.py', '--mode', 'direct', '--full-audit', '--sandboxes', '3', '--cycles', '2', '--kvm-memory-smoke', '/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/fast-tools/pool-memory-kvm-smoke-20261030'])",
+    "original_directory": "/tmp/cxl-fast-suite-1102i",
+    "arms": [
+      {
+        "mode": "direct",
+        "result": "running",
+        "outer_cleanup": {
+          "A": true,
+          "B": true
+        },
+        "memory_backing_removed": true,
+        "runtime_result": "failed",
+        "runtime_error": "NameError(\"name 'os' is not defined\")"
+      }
+    ]
+  },
+  {
+    "attempt": "j",
+    "result": "passed",
+    "note": "Nested root notification plus guest TLB flush passed; temporary paused EPT diagnosis found zero mapper/PFN mismatches. Final suite removed this diagnostic code.",
+    "error": null,
+    "original_directory": "/tmp/cxl-fast-suite-1102j",
+    "arms": [
+      {
+        "mode": "direct",
+        "result": "passed",
+        "outer_cleanup": {
+          "A": true,
+          "B": true
+        },
+        "memory_backing_removed": true,
+        "runtime_result": "passed",
+        "runtime_error": null
+      }
+    ]
+  }
+]

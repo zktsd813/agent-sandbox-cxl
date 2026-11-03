@@ -1,0 +1,29 @@
+{
+  "schema": "pool-compare-independent-source-review-v1",
+  "result": "reviewed-no-blocking-issue",
+  "reviewer": "independent safety agent",
+  "source_file": "verify_pool_compare.py",
+  "source_sha256": "3b4d907aad689a934cfd6f074c711dfbabf89cd0b59592195c9f4c2c44d39480",
+  "method": "Read-only independent source review; this artifact is not an additional experiment or a replacement for raw evidence replay.",
+  "reviewed_contracts": [
+    "Every raw receipt is read from the archive with its recorded SHA-256 verified.",
+    "Initial unique anonymous or exact-offset devDAX RAM mapping anchors each VMM incarnation; later split VMAs retain full 512 MiB coverage.",
+    "Actual executable digest and environment are bound to each mapped process; disabled/stock arms exclude FC_* variables.",
+    "Current guest file-cache ranges cover every distinct offset in 160 MiB and join exactly to scanner GPA/HVA input and present non-swapped visible actual PFNs.",
+    "Per-scan pause acknowledges after cache pin; three-VM group scans occur within a common paused interval.",
+    "Samples bind before/recycle address sets, exact raw PFN changes, operation order, guest identity/private state and two distinct peers.",
+    "Independent boots and exact machine/block/kernel/initrd API settings distinguish primary arms from snapshot clones.",
+    "Guest hot/cold timing, complete payload/churn oracle, host prewarming and recorded KSM/THP settings are checked.",
+    "Pooled samples retain at least 128 MiB of the initially proven common PFNs; final canonical full comparison binds image identity and canonical offset.",
+    "Control timing is labeled experimental admission/evidence transport, not migration or direct-handoff latency.",
+    "Suite validates shared fixture/source hashes; stock snapshot proof is independently replayed by verify_stock_snapshot.py."
+  ],
+  "interpretation_limits": [
+    "Raw recorded evidence checks cannot certify arbitrary malicious measurement code or prove production deployment properties.",
+    "Fifteen sequential samples within one run are repeated workload observations, not independent hardware trials.",
+    "PFN equality is measured inside one L1 host; reserved devDAX backing is not reclaimed, so data-frame aliasing is not a net-capacity result.",
+    "QEMU-backed CXL topology does not reproduce physical CXL latency or validate noncoherent hardware.",
+    "Private-write measurements overwrite existing private mappings; recycle combines eviction/allocation/fill/verification and does not isolate first-write CoW latency.",
+    "Stock same-snapshot clones can share clean pages despite separately booted stock guests using separate cache frames."
+  ]
+}

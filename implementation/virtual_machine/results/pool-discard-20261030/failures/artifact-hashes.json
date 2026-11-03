@@ -1,0 +1,112 @@
+[
+  {
+    "file": "README.md",
+    "bytes": 3485,
+    "sha256": "eef843fc583ad04e95a5d02380d2fd57b1390ff1ecff0c435ba4d476b7efc7af"
+  },
+  {
+    "file": "pilot1/arm-report.json",
+    "bytes": 6498781,
+    "sha256": "95b571d5b8a854d2f532032c035f8da2167f662c395685ebb1aee49551eaf7b7"
+  },
+  {
+    "file": "pilot1/failure-analysis.json",
+    "bytes": 595,
+    "sha256": "2c6da1bf79493bed702b70a72cc083ab9c9c030106a093e8bce48aba1f45d84c"
+  },
+  {
+    "file": "pilot1/packaging-proof.json",
+    "bytes": 2183,
+    "sha256": "de4206b278c1c2cf980b158a59acc4a1ade3ec55e93cc33daede1a530dadab68"
+  },
+  {
+    "file": "pilot1/suite.json",
+    "bytes": 11817,
+    "sha256": "82a151139c9285097dc6d4e10216837ead076f5f2ff98b971a907b011d7ec387"
+  },
+  {
+    "file": "pilot1-evidence.tar.xz",
+    "bytes": 10494144,
+    "sha256": "7b8a5a1f50143df75a59fe4c6373ddda8b7d067db83ac38ab44789d89cb7ced2"
+  },
+  {
+    "file": "pilot1-package.json",
+    "bytes": 817,
+    "sha256": "85061c25443ea5bbde64958464af16798303462fa035b36fb6790477a19e02f8"
+  },
+  {
+    "file": "pilot2/arm-report.json",
+    "bytes": 398624,
+    "sha256": "aaa5ce9d71efcf9850bc14f27e86065a16cced801b8849c4bc31d2ab7971a567"
+  },
+  {
+    "file": "pilot2/failure-analysis.json",
+    "bytes": 1252,
+    "sha256": "1ce9b2a7d77cf8b2a5747ca1c8680898e64621d0a9e4000371fbc5930e957611"
+  },
+  {
+    "file": "pilot2/packaging-proof.json",
+    "bytes": 2227,
+    "sha256": "369ed2c48cdef8f66352be7fbb4717ec4e4d13d72bcc8e68ffedd0244172114d"
+  },
+  {
+    "file": "pilot2/suite.json",
+    "bytes": 11808,
+    "sha256": "68b3ac3f57f1cac293a014107eb2fa5bbaa5a085739f7cf3ecd5bbdccb6b0f09"
+  },
+  {
+    "file": "pilot2-evidence.tar.xz",
+    "bytes": 4971968,
+    "sha256": "cbf547eb382c652225cf312940a18d433d331bb2c4517bdc5f66f89387ae74c2"
+  },
+  {
+    "file": "pilot2-package.json",
+    "bytes": 814,
+    "sha256": "1c67f930c51a00bb47e47e5ea7e23d2ce719f33d78a97bf11fbdef35d0f6d11f"
+  },
+  {
+    "file": "pilot3/baseline-arm-report.json",
+    "bytes": 6596975,
+    "sha256": "0973c776c7c6fb6f480a4e03fb608f754d33d190caf7db7e390e83ae66d481ea"
+  },
+  {
+    "file": "pilot3/failure-analysis.json",
+    "bytes": 2114,
+    "sha256": "2fd5c985567fd0938b0158da9a42b6baf501060586081c74e115478c6c4c8b0f"
+  },
+  {
+    "file": "pilot3/independent-reporting-rejection.json",
+    "bytes": 2308,
+    "sha256": "5b7fabc99e984191d71587ac0a14c866f58a898dd68c910d4656467a433b3ec2"
+  },
+  {
+    "file": "pilot3/packaging-proof.json",
+    "bytes": 3439,
+    "sha256": "30320b3237c99f2534558a8b1bc08c37967ec9406740c7f7dd508e298a28aa98"
+  },
+  {
+    "file": "pilot3/reporting-arm-report.json",
+    "bytes": 9030614,
+    "sha256": "1e5d11b135bf80d67a49b6d40766f0a725830b2fa57825bb156818a1378a2ada"
+  },
+  {
+    "file": "pilot3/suite.json",
+    "bytes": 12218,
+    "sha256": "058dfec09590d284b72c5c30275aff337762ebb3c3353838a4cd320a70d2e0e7"
+  },
+  {
+    "file": "pilot3-evidence.tar.xz",
+    "bytes": 28033744,
+    "sha256": "6783d4139a98ca4c3ca61c78c5757c9b341b3d5db73d92338eece91c2a1c1b2b"
+  },
+  {
+    "file": "pilot3-package.json",
+    "bytes": 819,
+    "sha256": "e8ba64d47e77a6f92d05c580aa7052f035c3152c8630e3e413be39ee29f61902"
+  },
+  {
+    "file": "summary.json",
+    "bytes": 4692,
+    "sha256": "85ae777b3499bfe82a527f861830875c8b395c2d635d3585456c93d52d74c302"
+  }
+]

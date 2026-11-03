@@ -1,0 +1,34 @@
+[
+  {
+    "run": "pilot1",
+    "result": "failed",
+    "error": "RuntimeError('park evidence missing')",
+    "commands": 12,
+    "completed_handoffs": 0,
+    "report_sha256": "66697f71489944ec46f196a56d75e85b39be5ec050cff3a871dca17a24153df6"
+  },
+  {
+    "run": "pilot2",
+    "result": "passed",
+    "error": null,
+    "commands": 27,
+    "completed_handoffs": 4,
+    "report_sha256": "df566667d886d45c96a0a884a96ae5d8d2edcb99fe7edc7598d83c42924c7048"
+  },
+  {
+    "run": "tcp1",
+    "result": "failed",
+    "error": "JSONDecodeError(\"Expecting ',' delimiter: line 1 column 526 (char 525)\")",
+    "commands": 12,
+    "completed_handoffs": 0,
+    "report_sha256": "5d561ea2247711e23543463987e4fa16f5244fe765a469a914003d5b58b69c98"
+  },
+  {
+    "run": "tcp2",
+    "result": "failed",
+    "error": "RuntimeError('Guest command failed:\\n\\r\\n/ # (\\r\\n> set -e\\r\\n> /lab/resident-control handoff /run/swe-pool-b6bd3b4587042254/vm1-epoch0 172.30\\r\\r\\n.0.2 eb27ba8394eed50ae1cfb0549831dcdd 0 v1e7c58\\r\\n> )\\r\\nTCP connect: Connection refused\\r\\n/ # printf \\'\\\\nLAB_COMMAND_DONE_d06afcd895af92c8:%s\\\\n\\' \"$?\"\\r\\n\\r\\nLAB_COMMAND_DONE_d06afcd895af92c8:1\\r\\n')",
+    "commands": 27,
+    "completed_handoffs": 6,
+    "report_sha256": "2451fd03d0be471c8eeecc2f8fcc1cc65de079efb1d6b34ab6dd5181d4368caa"
+  }
+]

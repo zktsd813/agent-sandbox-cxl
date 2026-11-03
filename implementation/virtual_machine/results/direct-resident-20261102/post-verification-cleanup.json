@@ -1,0 +1,6 @@
+{
+  "result": "passed",
+  "private_storage_removed": "/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/runs/20261102T094200Z-ahbnh6ib/home-storage.raw",
+  "bytes": 13958643712,
+  "basis": "Independent verification passed; both exact outer process incarnations fenced. Original suite evidence remains unchanged."
+}

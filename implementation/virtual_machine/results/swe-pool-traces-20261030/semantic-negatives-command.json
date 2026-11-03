@@ -1,0 +1,24 @@
+{
+  "argv": [
+    "python3",
+    "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/verify_swe_pool_negatives.py",
+    "/tmp/swe-pool-pilot5-gin-baseline-20261030/gin-gonic__gin-3741-baseline/report.json",
+    "/tmp/swe-pool-gin-lifecycle-20261030/gin-gonic__gin-3741-state-only/report.json",
+    "/tmp/swe-pool-gin-lifecycle-20261030/gin-gonic__gin-3741-direct/report.json",
+    "--output",
+    "/tmp/swe-pool-final-semantic-negatives-20261030.json"
+  ],
+  "cwd": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine",
+  "returncode": 0,
+  "output_file": "/tmp/swe-pool-final-semantic-negatives-20261030.json",
+  "output_sha256": "298043304243aefdc1d3ee662039135dbabb57573b437bfcd5b55e53e03c6ab1",
+  "stdout_stderr_file": "/tmp/swe-pool-final-semantic-negatives-20261030.log",
+  "stdout_stderr_sha256": "298043304243aefdc1d3ee662039135dbabb57573b437bfcd5b55e53e03c6ab1",
+  "source_hashes": {
+    "verify_swe_pool_negatives.py": "201cac30e28ef82bdf2beec3cba16b3ca62afa294400fe93a1099fa81a842656",
+    "verify_swe_pool.py": "0b3a477bceb6e121ddf86c6a3b056ea6edc0fd48f97f5ef0908b91d0caff4952",
+    "verify_pool_handoff.py": "f364e628244c376bfd446893dedd5bd8ee41375f98f770b02f77bc9143a3d277",
+    "verify_pool_discard_protocol.py": "0fdaf7654bfb4b4b140f5e7cabed6a33d612582b3cd441c37a1431e3958f473a",
+    "verify_trace_results.py": "24f9f5e8b33da86d88805315d8632a3ea0c6ab92808549a1cd9760022a777bd1"
+  }
+}

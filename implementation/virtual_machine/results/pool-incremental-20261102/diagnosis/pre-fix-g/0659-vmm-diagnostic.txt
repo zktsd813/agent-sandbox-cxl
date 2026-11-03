@@ -1,0 +1,35 @@
+
+/ # (
+> set -e
+> tail -n 100 /run/pool-be9da7facb5aa40a/vm1-epoch3/vmm.log 2>/dev/null || true
+> )
+2026-11-02T05:36:24.674331246 [anonymous-instance:main] Running Firecracker v1.17.0
+2026-11-02T05:36:24.674521644 [anonymous-instance:main] Listening on API socket ("/run/pool-be9da7facb5aa40a/vm1-epoch3/api.sock").
+2026-11-02T05:36:24.674734562 [anonymous-instance:fc_api] API server started.
+2026-11-02T05:36:25.113369497 [anonymous-instance:fc_api] The API server received a Put request on "/actions" with body "{\"action_type\": \"InstanceStart\"}".
+2026-11-02T05:36:25.121853797 [anonymous-instance:main] [DevPreview] Async file IO is in development preview.
+2026-11-02T05:36:25.122777283 [anonymous-instance:main] DIRECT_HANDOFF_JSON {"event":"import","memory_manifest_sha256":"1509d2d2ee1fa8da3ab9dea0e94d6406bf278800c2636f4216f9a20612446ecc","ram_transfer_bytes":0,"snapshot_bytes":0,"token":{"binding_ns":54016,"ept_page_count":256,"ept_root_offset":475136,"flags":1,"generation":3,"kernel_ns":184451,"mmu_drain_ns":8027,"node":2,"pool_used":2630688,"quiesce_ns":4125,"ram_bytes":536870912,"ram_hva":70368744177664,"run_offset":90112,"vcpu_creates":1,"vcpu_offset":76928,"vm_creates":1,"vm_offset":8192,"vmcs_offset":118784}}
+2026-11-02T05:36:25.123016458 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-11-02T05:36:25.319621344 [anonymous-instance:fc_api] The API server received a Put request on "/actions" with body "{\"action_type\": \"PoolCache\"}".
+2026-11-02T05:36:25.320379685 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-11-02T05:36:26.247227360 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Resumed\"}".
+2026-11-02T05:36:26.247514017 [anonymous-instance:main] Artificially kick devices
+2026-11-02T05:36:26.247548028 [anonymous-instance:main] [Block:data] notifying queues
+2026-11-02T05:36:26.247570586 [anonymous-instance:main] [Balloon:balloon] notifying queues
+2026-11-02T05:36:26.247784568 [anonymous-instance:fc_vcpu 0] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-11-02T05:36:26.247974913 [anonymous-instance:main] 'resume vm' VMM action took 506 us.
+2026-11-02T05:36:26.248042525 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-11-02T05:36:26.248059027 [anonymous-instance:fc_api] 'resume vm' API request took 844 us.
+2026-11-02T05:36:26.248117585 [anonymous-instance:main] Got a spurious notification from api thread
+2026-11-02T05:36:26.248142262 [anonymous-instance:main] Got a spurious notification from api thread
+2026-11-02T05:36:26.248166202 [anonymous-instance:main] PoolDiscard("inflation is disabled for pool reporting")
+2026-11-02T05:36:26.248185830 [anonymous-instance:main] PoolDiscard("deflation is disabled for pool reporting")
+2026-11-02T05:36:26.344463977 [anonymous-instance:fc_vcpu 0] Unexpected exit reason on vcpu run: Shutdown
+2026-11-02T05:36:26.348010828 [anonymous-instance:main] Vmm is stopping.
+2026-11-02T05:36:26.348302962 [anonymous-instance:main] Killing vCPU threads
+2026-11-02T05:36:26.356906170 [anonymous-instance:main] RunWithApiError error: MicroVM stopped with an error: GenericError
+2026-11-02T05:36:26.356992940 [anonymous-instance:main] Firecracker exiting with error. exit_code=1
+/ # printf '\nLAB_COMMAND_DONE_e84af5811764c00d:%s\n' "$?"
+
+LAB_COMMAND_DONE_e84af5811764c00d:0
+/ 

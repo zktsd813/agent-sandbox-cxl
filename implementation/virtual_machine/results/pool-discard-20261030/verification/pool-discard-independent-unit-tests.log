@@ -1,0 +1,25 @@
+test_changed_ack_counter (test_pool_discard_protocol.ProtocolEvidenceTests) ... ok
+test_copy_is_not_nocopy (test_pool_discard_protocol.ProtocolEvidenceTests) ... ok
+test_discard_outside_request (test_pool_discard_protocol.ProtocolEvidenceTests) ... ok
+test_false_discard_count_rejected (test_pool_discard_protocol.ProtocolEvidenceTests) ... ok
+test_guest_ack_without_host_ack (test_pool_discard_protocol.ProtocolEvidenceTests) ... ok
+test_guest_range_mismatch (test_pool_discard_protocol.ProtocolEvidenceTests) ... ok
+test_guest_sequence_gap (test_pool_discard_protocol.ProtocolEvidenceTests) ... ok
+test_incomplete_final_guest_tail_is_not_success (test_pool_discard_protocol.ProtocolEvidenceTests) ... ok
+test_nonconsuming_trace_required (test_pool_discard_protocol.ProtocolEvidenceTests) ... ok
+test_overlapping_request_rejected (test_pool_discard_protocol.ProtocolEvidenceTests) ... ok
+test_partial_page_discard_rejected (test_pool_discard_protocol.ProtocolEvidenceTests) ... ok
+test_positive_ordered_epochs_and_noop_ack (test_pool_discard_protocol.ProtocolEvidenceTests) ... ok
+test_trace_overwrite_rejected (test_pool_discard_protocol.ProtocolEvidenceTests) ... ok
+test_wrong_vm_incarnation (test_pool_discard_protocol.ProtocolEvidenceTests) ... ok
+test_abandoned_source_ack_is_not_counted (test_pool_discard_cutoff.SnapshotCutTests) ... ok
+test_cutoff_cannot_invent_saved_ack (test_pool_discard_cutoff.SnapshotCutTests) ... ok
+test_cutoff_cannot_split_mapping_and_ack (test_pool_discard_cutoff.SnapshotCutTests) ... ok
+test_cutoff_must_bind_actual_snapshot_request (test_pool_discard_cutoff.SnapshotCutTests) ... ok
+test_duplicate_cutoff_is_ambiguous (test_pool_discard_cutoff.SnapshotCutTests) ... ok
+test_missing_cutoff_fails_closed (test_pool_discard_cutoff.SnapshotCutTests) ... ok
+
+----------------------------------------------------------------------
+Ran 20 tests in 0.007s
+
+OK

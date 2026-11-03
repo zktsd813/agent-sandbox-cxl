@@ -1,0 +1,23 @@
+{
+  "classification": "failed_pilot_not_formal_performance",
+  "cause": "A 224MiB anonymous allocation did not force enough originally shared GPAs to be reused. The >=128MiB physical-page overlap check failed rather than accepting aggregate allocation size as evidence.",
+  "saved_samples": 0,
+  "anon_mib": 224,
+  "original_cache_pages": 40960,
+  "host_detached_original_pages": 40960,
+  "guest_acked_original_pages": 40960,
+  "no_copy_host_batches": 13,
+  "actual_reused_original_pages": 3072,
+  "changed_reused_pages": 3072,
+  "actual_reused_mib": 12.0,
+  "required_reused_mib": 128,
+  "raw_files": [
+    "0215-pfn-values.bin",
+    "0239-discard-events.bin",
+    "0243-guest-report-trace.bin",
+    "0244-detached-target-gpas.txt",
+    "0265-anon-pfn-values.bin"
+  ],
+  "interpretation": "The protocol detached and acknowledged the whole 160MiB original set, but only 12MiB entered the measured anonymous workload. This is insufficient end-to-end reuse coverage, not a reported remap/ACK failure. Raw timings are excluded from formal results.",
+  "follow_up": "A separately archived stopped memory smoke used a measured safe 400MiB allocation, reused/changed 38,611 original pages (150.82421875MiB), and informed the fixed 400MiB formal workload."
+}

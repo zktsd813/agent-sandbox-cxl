@@ -1,0 +1,8 @@
+{"event": "archive_audit_passed", "archive": "primary-metadata.tar.xz", "members": 6, "bytes": 72788}
+{"event": "archive_audit_passed", "archive": "primary-patched-cxl-hints-unpooled.tar.xz", "members": 1014, "bytes": 126212194}
+{"event": "archive_audit_passed", "archive": "primary-patched-cxl-pooled.tar.xz", "members": 1498, "bytes": 1771804221}
+{"event": "archive_audit_passed", "archive": "primary-patched-dram-disabled.tar.xz", "members": 804, "bytes": 125848740}
+{"event": "archive_audit_passed", "archive": "primary-stock-dram.tar.xz", "members": 804, "bytes": 125841509}
+{"event": "archive_audit_passed", "archive": "primary-stock-snapshot.tar.xz", "members": 165, "bytes": 13218026}
+{"event": "archive_audit_passed", "archive": "tail.tar.xz", "members": 810, "bytes": 125920463}
+{"event": "package_verified", "directory": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/results/stock-comparison-20261030/evidence", "extracted_to": "/tmp/pool-comparison-archive-replay-20261030", "members": 5101}

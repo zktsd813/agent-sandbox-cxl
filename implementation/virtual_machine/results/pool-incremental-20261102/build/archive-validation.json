@@ -1,0 +1,20 @@
+{
+  "result": "passed",
+  "archives": {
+    "synthetic.tar.xz": {
+      "tar_sha256": "5126868d2b0554ea4540e86c7b2bf095e629aa826d66ae89bb7457a69eeac68a",
+      "bytes": 23481240,
+      "sha256": "355185bb8ac2e2e09fdb34713fd482874cc7994257ecc3c36577dcb1c0fc6d2e"
+    },
+    "swe-gin.tar.xz": {
+      "tar_sha256": "77423bce9874468a3e584536603f9b795249634fc6d68732b9e79cf35ae0ea45",
+      "bytes": 6708000,
+      "sha256": "1b360149777caa767080a99f44883cfed2b70fbbe9016bbb389db98feee190a5"
+    },
+    "diagnostic-direct.tar.xz": {
+      "tar_sha256": "6aab9ec8d3be7f1d481cc49298694307d37b5483b4a3148d7703722075b36995",
+      "bytes": 10081104,
+      "sha256": "61c891e916b6294c21c3843ae6dfeee968c11cf0c10105635ecbf4ab7ac434d3"
+    }
+  }
+}

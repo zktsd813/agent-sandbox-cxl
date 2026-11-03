@@ -1,0 +1,503 @@
+{
+  "schema": "resident-preparation-audit-v1",
+  "baseline": {
+    "result": "passed",
+    "report_sha256": "8c47188524fa812c477ea24dff5afc0b4b12d453ba229d22107e1cc2a85d32a9",
+    "vmm_sha256": "7a371e503d46a95836cae270594c43c03f64e577d58ea53c1742a14408337d1c",
+    "handoffs": 8,
+    "trace_commands": 27,
+    "cold_prepare_controller_ms": 766.561621,
+    "cold_prepare_api_ms": 3.722862,
+    "server_prepare_controller_ms": 352.093874,
+    "exclusive_control_stages_ms": [
+      {
+        "kind": "launch-directory",
+        "ms": 44.581203
+      },
+      {
+        "kind": "scratch-resource",
+        "ms": 47.764813
+      },
+      {
+        "kind": "launch-script",
+        "ms": 86.499638
+      },
+      {
+        "kind": "start",
+        "ms": 170.01587
+      },
+      {
+        "kind": "scratch-resource",
+        "ms": 45.997192
+      },
+      {
+        "kind": "launch-environment",
+        "ms": 87.775626
+      },
+      {
+        "kind": "launch-executable",
+        "ms": 151.550434
+      },
+      {
+        "kind": "select-direct-owner",
+        "ms": 61.149667
+      }
+    ],
+    "separate_api_control_ms": 68.387788,
+    "unattributed_control_ms": 2.83939,
+    "prepare_nfs_rpc_delta": {
+      "NULL": 0,
+      "GETATTR": 0,
+      "SETATTR": 0,
+      "LOOKUP": 1,
+      "ACCESS": 2,
+      "READLINK": 0,
+      "READ": 0,
+      "WRITE": 0,
+      "CREATE": 0,
+      "MKDIR": 0,
+      "SYMLINK": 0,
+      "MKNOD": 0,
+      "REMOVE": 0,
+      "RMDIR": 0,
+      "RENAME": 0,
+      "LINK": 0,
+      "READDIR": 0,
+      "READDIRPLUS": 0,
+      "FSSTAT": 0,
+      "FSINFO": 0,
+      "PATHCONF": 0,
+      "COMMIT": 0
+    },
+    "fast_samples": [
+      {
+        "generation": 1,
+        "first_import": true,
+        "handoff_ns": 30.268786,
+        "connection_prepare_ns": 3.346836,
+        "guest_ack_ns": 16.683582
+      },
+      {
+        "generation": 4,
+        "first_import": false,
+        "handoff_ns": 24.751835,
+        "connection_prepare_ns": 3.119731,
+        "guest_ack_ns": 15.264117
+      },
+      {
+        "generation": 5,
+        "first_import": false,
+        "handoff_ns": 24.91218,
+        "connection_prepare_ns": 0.853537,
+        "guest_ack_ns": 15.513721
+      },
+      {
+        "generation": 6,
+        "first_import": false,
+        "handoff_ns": 22.602461,
+        "connection_prepare_ns": 0.613131,
+        "guest_ack_ns": 14.261929
+      },
+      {
+        "generation": 7,
+        "first_import": false,
+        "handoff_ns": 48.743056,
+        "connection_prepare_ns": 0.836703,
+        "guest_ack_ns": 15.375035
+      },
+      {
+        "generation": 8,
+        "first_import": false,
+        "handoff_ns": 26.135621,
+        "connection_prepare_ns": 0.764172,
+        "guest_ack_ns": 15.594191
+      }
+    ],
+    "fast_ms": {
+      "handoff_ms": {
+        "n": 6,
+        "p50": 25.5239005,
+        "min": 22.602461,
+        "max": 48.743056,
+        "mean": 29.568989833333333
+      },
+      "guest_ack_ms": {
+        "n": 6,
+        "p50": 15.444378,
+        "min": 14.261929,
+        "max": 16.683582,
+        "mean": 15.4487625
+      },
+      "connection_prepare_ms": {
+        "n": 6,
+        "p50": 0.84512,
+        "min": 0.613131,
+        "max": 3.346836,
+        "mean": 1.5890183333333332
+      }
+    },
+    "fast_export_import_api_ms": {
+      "n": 6,
+      "p50": 6.462617,
+      "min": 5.222457,
+      "max": 29.442452,
+      "mean": 10.356399333333332
+    },
+    "disk_properties_profiles": [
+      {
+        "scope": "disk_properties",
+        "stages_us": {
+          "file_engine": 264.94300000000004,
+          "image_id": 17.544999999999998,
+          "open": 2121.556,
+          "pool_identity": 3.8739999999999997,
+          "size": 8.848
+        },
+        "total_us": 2450.486
+      }
+    ]
+  },
+  "ready": {
+    "result": "passed",
+    "report_sha256": "2e85740850389b6958bafa8089d2c66f5db39b1b61b36c141fc7d88a68bdc146",
+    "vmm_sha256": "7a371e503d46a95836cae270594c43c03f64e577d58ea53c1742a14408337d1c",
+    "handoffs": 24,
+    "trace_commands": 27,
+    "cold_prepare_controller_ms": 334.893583,
+    "cold_prepare_api_ms": 3.667118,
+    "server_prepare_controller_ms": 176.557289,
+    "exclusive_control_stages_ms": [
+      {
+        "kind": "scratch-resource",
+        "ms": 37.861828
+      },
+      {
+        "kind": "launch-script",
+        "ms": 80.41649
+      },
+      {
+        "kind": "native-prepare",
+        "ms": 214.987036
+      }
+    ],
+    "separate_api_control_ms": 0.0,
+    "unattributed_control_ms": 1.628229,
+    "native_vmm_ms": {
+      "fork_ns": 0.139829,
+      "fork_to_api_ready_ns": 4.437041,
+      "prepare_api_ns": 3.667118,
+      "native_ready_ns": 8.30508
+    },
+    "native_server_ms": {
+      "A": 0.728313,
+      "B": 0.593039
+    },
+    "full_prewarm_controller_ms": 774.304978,
+    "prepare_nfs_rpc_delta": {
+      "NULL": 0,
+      "GETATTR": 0,
+      "SETATTR": 0,
+      "LOOKUP": 1,
+      "ACCESS": 2,
+      "READLINK": 0,
+      "READ": 0,
+      "WRITE": 0,
+      "CREATE": 0,
+      "MKDIR": 0,
+      "SYMLINK": 0,
+      "MKNOD": 0,
+      "REMOVE": 0,
+      "RMDIR": 0,
+      "RENAME": 0,
+      "LINK": 0,
+      "READDIR": 0,
+      "READDIRPLUS": 0,
+      "FSSTAT": 0,
+      "FSINFO": 0,
+      "PATHCONF": 0,
+      "COMMIT": 0
+    },
+    "fast_samples": [
+      {
+        "generation": 1,
+        "first_import": true,
+        "handoff_ns": 29.502552,
+        "connection_prepare_ns": 0.822389,
+        "guest_ack_ns": 16.697444,
+        "pause_to_resume_response_ns": 12.535212,
+        "request_ns": 33.611664,
+        "request_to_resume_response_ns": 16.483172
+      },
+      {
+        "generation": 4,
+        "first_import": false,
+        "handoff_ns": 24.325009,
+        "connection_prepare_ns": 0.789232,
+        "guest_ack_ns": 15.247455,
+        "pause_to_resume_response_ns": 8.899492,
+        "request_ns": 28.281238,
+        "request_to_resume_response_ns": 12.742947
+      },
+      {
+        "generation": 5,
+        "first_import": false,
+        "handoff_ns": 22.798784,
+        "connection_prepare_ns": 0.774926,
+        "guest_ack_ns": 13.686684,
+        "pause_to_resume_response_ns": 8.889629,
+        "request_ns": 24.120083,
+        "request_to_resume_response_ns": 10.070168
+      },
+      {
+        "generation": 6,
+        "first_import": false,
+        "handoff_ns": 24.14814,
+        "connection_prepare_ns": 0.824499,
+        "guest_ack_ns": 15.268844,
+        "pause_to_resume_response_ns": 8.880445,
+        "request_ns": 25.451584,
+        "request_to_resume_response_ns": 10.137308
+      },
+      {
+        "generation": 7,
+        "first_import": false,
+        "handoff_ns": 13.191623,
+        "connection_prepare_ns": 0.708521,
+        "guest_ack_ns": 4.394156,
+        "pause_to_resume_response_ns": 8.652735,
+        "request_ns": 14.325022,
+        "request_to_resume_response_ns": 9.659646
+      },
+      {
+        "generation": 8,
+        "first_import": false,
+        "handoff_ns": 23.508327,
+        "connection_prepare_ns": 0.820281,
+        "guest_ack_ns": 15.213035,
+        "pause_to_resume_response_ns": 8.213489,
+        "request_ns": 24.815615,
+        "request_to_resume_response_ns": 9.490643
+      },
+      {
+        "generation": 9,
+        "first_import": false,
+        "handoff_ns": 24.399798,
+        "connection_prepare_ns": 0.813795,
+        "guest_ack_ns": 14.909812,
+        "pause_to_resume_response_ns": 9.363911,
+        "request_ns": 25.664838,
+        "request_to_resume_response_ns": 10.656552
+      },
+      {
+        "generation": 10,
+        "first_import": false,
+        "handoff_ns": 13.762875,
+        "connection_prepare_ns": 0.886101,
+        "guest_ack_ns": 4.923858,
+        "pause_to_resume_response_ns": 8.767362,
+        "request_ns": 15.118085,
+        "request_to_resume_response_ns": 10.030791
+      },
+      {
+        "generation": 11,
+        "first_import": false,
+        "handoff_ns": 23.524504,
+        "connection_prepare_ns": 0.749965,
+        "guest_ack_ns": 14.864724,
+        "pause_to_resume_response_ns": 8.564574,
+        "request_ns": 24.850838,
+        "request_to_resume_response_ns": 9.814853
+      },
+      {
+        "generation": 12,
+        "first_import": false,
+        "handoff_ns": 24.326139,
+        "connection_prepare_ns": 0.769953,
+        "guest_ack_ns": 15.165132,
+        "pause_to_resume_response_ns": 8.992254,
+        "request_ns": 25.678868,
+        "request_to_resume_response_ns": 10.283875
+      },
+      {
+        "generation": 13,
+        "first_import": false,
+        "handoff_ns": 24.128569,
+        "connection_prepare_ns": 0.827811,
+        "guest_ack_ns": 14.82855,
+        "pause_to_resume_response_ns": 9.072277,
+        "request_ns": 25.428719,
+        "request_to_resume_response_ns": 10.27932
+      },
+      {
+        "generation": 14,
+        "first_import": false,
+        "handoff_ns": 24.45774,
+        "connection_prepare_ns": 0.841265,
+        "guest_ack_ns": 15.167451,
+        "pause_to_resume_response_ns": 9.079224,
+        "request_ns": 25.700814,
+        "request_to_resume_response_ns": 10.244395
+      },
+      {
+        "generation": 15,
+        "first_import": false,
+        "handoff_ns": 23.642044,
+        "connection_prepare_ns": 0.665354,
+        "guest_ack_ns": 15.506483,
+        "pause_to_resume_response_ns": 7.921598,
+        "request_ns": 24.757571,
+        "request_to_resume_response_ns": 9.010548
+      },
+      {
+        "generation": 16,
+        "first_import": false,
+        "handoff_ns": 13.721725,
+        "connection_prepare_ns": 0.710445,
+        "guest_ack_ns": 4.923745,
+        "pause_to_resume_response_ns": 8.667568,
+        "request_ns": 14.834141,
+        "request_to_resume_response_ns": 9.71766
+      },
+      {
+        "generation": 17,
+        "first_import": false,
+        "handoff_ns": 24.041801,
+        "connection_prepare_ns": 0.773675,
+        "guest_ack_ns": 15.142878,
+        "pause_to_resume_response_ns": 8.762376,
+        "request_ns": 25.221235,
+        "request_to_resume_response_ns": 9.824043
+      },
+      {
+        "generation": 18,
+        "first_import": false,
+        "handoff_ns": 22.48401,
+        "connection_prepare_ns": 0.745456,
+        "guest_ack_ns": 13.581124,
+        "pause_to_resume_response_ns": 8.66982,
+        "request_ns": 23.692882,
+        "request_to_resume_response_ns": 9.816206
+      },
+      {
+        "generation": 19,
+        "first_import": false,
+        "handoff_ns": 23.222934,
+        "connection_prepare_ns": 0.716049,
+        "guest_ack_ns": 14.805143,
+        "pause_to_resume_response_ns": 8.386607,
+        "request_ns": 24.325274,
+        "request_to_resume_response_ns": 9.439446
+      },
+      {
+        "generation": 20,
+        "first_import": false,
+        "handoff_ns": 22.429882,
+        "connection_prepare_ns": 0.695982,
+        "guest_ack_ns": 14.893425,
+        "pause_to_resume_response_ns": 7.298898,
+        "request_ns": 23.549094,
+        "request_to_resume_response_ns": 8.359063
+      },
+      {
+        "generation": 21,
+        "first_import": false,
+        "handoff_ns": 16.201888,
+        "connection_prepare_ns": 0.682481,
+        "guest_ack_ns": 6.985069,
+        "pause_to_resume_response_ns": 9.264772,
+        "request_ns": 17.404173,
+        "request_to_resume_response_ns": 10.332391
+      },
+      {
+        "generation": 22,
+        "first_import": false,
+        "handoff_ns": 21.892597,
+        "connection_prepare_ns": 0.504031,
+        "guest_ack_ns": 13.443918,
+        "pause_to_resume_response_ns": 8.351658,
+        "request_ns": 22.763352,
+        "request_to_resume_response_ns": 9.157699
+      },
+      {
+        "generation": 23,
+        "first_import": false,
+        "handoff_ns": 48.540387,
+        "connection_prepare_ns": 0.782475,
+        "guest_ack_ns": 15.824751,
+        "pause_to_resume_response_ns": 32.63188,
+        "request_ns": 49.881213,
+        "request_to_resume_response_ns": 33.930622
+      },
+      {
+        "generation": 24,
+        "first_import": false,
+        "handoff_ns": 25.266419,
+        "connection_prepare_ns": 0.747427,
+        "guest_ack_ns": 15.112327,
+        "pause_to_resume_response_ns": 10.000075,
+        "request_ns": 26.584372,
+        "request_to_resume_response_ns": 11.305434
+      }
+    ],
+    "fast_ms": {
+      "handoff_ms": {
+        "n": 22,
+        "p50": 23.583274,
+        "min": 13.191623,
+        "max": 48.540387,
+        "mean": 23.341715772727273
+      },
+      "guest_ack_ms": {
+        "n": 22,
+        "p50": 14.901618500000001,
+        "min": 4.394156,
+        "max": 16.697444,
+        "mean": 13.208454909090909
+      },
+      "connection_prepare_ms": {
+        "n": 22,
+        "p50": 0.771814,
+        "min": 0.504031,
+        "max": 0.886101,
+        "mean": 0.7569142272727273
+      },
+      "request_ms": {
+        "n": 22,
+        "p50": 24.833226500000002,
+        "min": 14.325022,
+        "max": 49.881213,
+        "mean": 24.82093977272727
+      },
+      "request_to_resume_response_ms": {
+        "n": 22,
+        "p50": 10.050479500000002,
+        "min": 8.359063,
+        "max": 33.930622,
+        "mean": 11.399399181818183
+      },
+      "pause_to_resume_response_ms": {
+        "n": 22,
+        "p50": 8.8239035,
+        "min": 7.298898,
+        "max": 32.63188,
+        "mean": 9.993902545454546
+      }
+    },
+    "fast_export_import_api_ms": {
+      "n": 22,
+      "p50": 5.2844,
+      "min": 4.079003,
+      "max": 28.724080999999998,
+      "mean": 6.436302727272727
+    },
+    "disk_properties_profiles": []
+  },
+  "notes": [
+    "All samples, including first visits and slow guest ACKs, retained.",
+    "Native preparation intervals are inside controller wall time; do not sum overlapping clocks.",
+    "Full prewarm controller time includes console transfers, executable hash checks and resource audit.",
+    "Request includes local and peer TCP connections, metadata transport and all five VMM APIs.",
+    "Resume response is API acceptance; guest serial ACK is a separate completion milestone.",
+    "No conventional RAM migration was measured in this comparison."
+  ]
+}

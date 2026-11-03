@@ -2,6 +2,20 @@
 
 문서 색인과 현재 방향(2026-11-03)은 [docs/README.md](docs/README.md)에 있다. 처음 읽는 경우 [CXL microVM 연구와 구현 전체 정리](docs/cxl-microvm-overview.md)부터 본다. Workload 관측부터 실행 이전 구현, PML·MPTCP 검증, 파일 공유 설계와 후속 계획을 연결했다. 구현·실측·시뮬레이션·설계 중인 내용을 구분한다.
 
+2026-11-02 최신 구현은 [목적지 FD·장치 실행 환경을 유지하는 resident direct](docs/cxl-resident-direct.md)다. 목적지 준비를 source 실행 중에 끝내고, 왕복 때 같은 VMM·디스크 FD·io_uring·vCPU thread를 사용한다. [검증 결과](implementation/virtual_machine/results/direct-resident-20261102/README.md)는 준비 비용, Export/Import API와 TCP로 측정한 실제 pause→guest 응답 시간을 구분한다.
+
+직전 분석은 [Direct API 계측·최적화와 과거 1ms 미만 결과 비교](docs/cxl-direct-api-latency.md)다. NFS 이미지 metadata 조회, mapper 연결, 장치/스레드 준비와 커널 시간을 분리한다. [원시 증거와 결과](implementation/virtual_machine/results/direct-api-20261102/README.md)에서 코드 최적화와 immutable NFS 캐시 효과를 따로 확인할 수 있다.
+
+직전 구현은 [handoff의 RAM 전수 순회 제거](docs/cxl-pool-incremental-handoff.md)다. VM별 mapper를 CXL에 유지하고 작은 소유권 handle로 인계하여 반복 GPA/PFN 조회와 전체 mapping JSON을 없앴다. 필요한 최초 admission·실제 promotion/demotion 복사와 명시적 stress audit를 구분한다. [검증·성능·재현 자료](implementation/virtual_machine/results/pool-incremental-20261102/README.md)는 과거 API 측정과 같은 범위로 비교하며, nested KVM 보완과 실제 물리 CXL의 미검증 범위를 명시한다.
+
+2026-10-30의 후속 [guest metadata 기반 pooling](docs/cxl-guest-pool-handoff.md)은 현재 clean lower ext4 page cache를 확인해 promotion 시 데이터 backing만 공유한다. Private CoW도 CXL에 유지하고, demotion에서 현재 내용을 DRAM으로 복사해 할당을 반환한다. Direct와 state-only handoff, host NFS, 실제 OverlayFS와 ACK 이후 재사용의 [검증 결과](implementation/virtual_machine/results/guest-pool-handoff-20261030/README.md)를 별도로 보관한다. 기존 [virtio-blk 관측 기반 prototype](docs/cxl-data-pooling.md)과 full-RAM snapshot 결과는 이전 단계의 기록이다.
+
+이를 [실제 SWE trace 3개에 적용](docs/cxl-swe-pool-traces.md)해 DRAM·state-only·direct **9개 조건, 315개 명령과 36회 전환**을 검증했다. 자연 발생한 clean lower cache 20.6~49.4MiB를 canonical backing에 연결하고, A↔B 및 DRAM↔CXL 왕복 후에도 원본 작업 결과를 유지했다. [실측·원시 증거와 독립 재검증](implementation/virtual_machine/results/swe-pool-traces-20261030/README.md)을 함께 보관한다.
+
+같은 upstream의 [수정하지 않은 Firecracker와 비교](docs/firecracker-pooling-comparison.md)하여 독립 VM의 데이터 frame 공유, stock snapshot clone의 기존 공유 기능, guest 작업 시간과 현재 CoW 비용을 구분했다. [실측 자료](implementation/virtual_machine/results/stock-comparison-20261030/README.md)는 원본 증거와 오프라인 검증기를 포함한다.
+
+[공유 페이지 폐기와 재사용](docs/cxl-page-discard.md)은 guest의 명시적 free-page report를 받아 해당 VM의 공유 연결을 private zero backing으로 바꾸고, 완료 ACK 이후 재사용하는 경로를 설명한다. 기존 4.08초 측정은 한 페이지가 아니라 160MiB cache eviction과 224MiB 전체 재사용 workload의 시간이다.
+
 mini-swe-agent의 기록된 명령을 Docker에서 재실행하고 CPU·메모리·동시성·LLC MPKI를 측정한다. Trace replay는 CPU NUMA node 0과 DRAM(node 0) / CXL(node 2) 메모리 비교를 지원한다. 별도 microVM 실험은 공유 DAX RAM 위의 상태 복원·KVM worker 재사용·direct handoff와 PML/cache 처리 비용을 검증한다. GPU, 모델 가중치, LLM API key는 사용하지 않는다.
 
 2026-10-23 기준 microVM 구현·측정·EMR/DSA 조사와 MPTCP 연결을 유지한 snapshot 이전 결과는 [실행 문서와 다음 세션 인계](implementation/virtual_machine/README.md#session-handoff)에 모았다. 현재 전환 실험은 한 물리 호스트의 두 Linux VM 사이이며 실제 비일관 CXL 다중 호스트 검증은 남아 있다. DSA와 주기적 preflush는 조사·설계 단계로, 해당 성능을 측정한 결과는 없다.

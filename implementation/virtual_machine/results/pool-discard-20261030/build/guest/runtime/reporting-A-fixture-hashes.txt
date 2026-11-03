@@ -1,0 +1,14 @@
+
+/ # (
+> set -e
+> sha256sum /lab/firecracker /lab/l2-vmlinux /lab/pool-discard-l2-initramfs.cpio
+ /lab/pool-discard-probe /lab/pool-cow-latency
+> )
+a4d6f75f0cad5885009097221e464952a1706e3d1792826c14a0dfa84c8a6023  /lab/firecracker
+ea81dc49b729e8d5111765c11ace1a11bd53db59f75fd65d933f0d983a368d05  /lab/l2-vmlinux
+01a962acc7491efef541198325efd38b7dc16558f59db9dcf6691ca9c2647bb3  /lab/pool-discard-l2-initramfs.cpio
+7c91d4bbcf139fb22e195cac60e44034fa7ab00304086c1086bbdfa365bb92ad  /lab/pool-discard-probe
+d10354e472e11ce4da2f176b04610b7f3c98ebe09017b9dab5f27e2f20ddd06d  /lab/pool-cow-latency
+/ # printf '\nLAB_COMMAND_DONE_31a2782b2bedf7c2:%s\n' "$?"
+
+LAB_COMMAND_DONE_31a2782b2bedf7c2:0

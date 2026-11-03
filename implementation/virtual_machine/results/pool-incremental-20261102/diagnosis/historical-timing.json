@@ -1,0 +1,93 @@
+{
+  "source_commit": "d47cf6109148f10f19d3aa989d3d1abf3397b36f",
+  "scope": "Read-only historical evidence audit; no new benchmark",
+  "direct_handoffs": [
+    {
+      "report": "/tmp/swe-handoff-timing-audit-20261102/suites/gin-lifecycle/gin-gonic__gin-3741-direct/report.json",
+      "source": "A",
+      "destination": "B",
+      "export_api_ms": 695.099944,
+      "attach_api_ms": 713.577566,
+      "kernel_detach_ms": 85.355448,
+      "kernel_attach_ms": 255.215703,
+      "manifest_bytes": 28479520,
+      "device_state_bytes": 4106,
+      "api_pair_ms": 1408.67751,
+      "kernel_pair_ms": 340.571151
+    },
+    {
+      "report": "/tmp/swe-handoff-timing-audit-20261102/suites/gin-lifecycle/gin-gonic__gin-3741-direct/report.json",
+      "source": "B",
+      "destination": "A",
+      "export_api_ms": 360.202995,
+      "attach_api_ms": 572.80768,
+      "kernel_detach_ms": 82.246983,
+      "kernel_attach_ms": 255.394758,
+      "manifest_bytes": 28479522,
+      "device_state_bytes": 4105,
+      "api_pair_ms": 933.010675,
+      "kernel_pair_ms": 337.641741
+    },
+    {
+      "report": "/tmp/swe-handoff-timing-audit-20261102/suites/php-matrix/php-cs-fixer__php-cs-fixer-8331-direct/report.json",
+      "source": "A",
+      "destination": "B",
+      "export_api_ms": 609.566465,
+      "attach_api_ms": 645.093937,
+      "kernel_detach_ms": 82.208609,
+      "kernel_attach_ms": 285.574694,
+      "manifest_bytes": 28486749,
+      "device_state_bytes": 4115,
+      "api_pair_ms": 1254.660402,
+      "kernel_pair_ms": 367.78330300000005
+    },
+    {
+      "report": "/tmp/swe-handoff-timing-audit-20261102/suites/php-matrix/php-cs-fixer__php-cs-fixer-8331-direct/report.json",
+      "source": "B",
+      "destination": "A",
+      "export_api_ms": 301.04689,
+      "attach_api_ms": 553.0868839999999,
+      "kernel_detach_ms": 82.405165,
+      "kernel_attach_ms": 254.141887,
+      "manifest_bytes": 28486751,
+      "device_state_bytes": 4116,
+      "api_pair_ms": 854.1337739999999,
+      "kernel_pair_ms": 336.547052
+    },
+    {
+      "report": "/tmp/swe-handoff-timing-audit-20261102/suites/micro-matrix/micropython__micropython-13039-direct/report.json",
+      "source": "A",
+      "destination": "B",
+      "export_api_ms": 690.326665,
+      "attach_api_ms": 645.7140019999999,
+      "kernel_detach_ms": 106.869786,
+      "kernel_attach_ms": 274.406173,
+      "manifest_bytes": 28484124,
+      "device_state_bytes": 4118,
+      "api_pair_ms": 1336.040667,
+      "kernel_pair_ms": 381.27595900000006
+    },
+    {
+      "report": "/tmp/swe-handoff-timing-audit-20261102/suites/micro-matrix/micropython__micropython-13039-direct/report.json",
+      "source": "B",
+      "destination": "A",
+      "export_api_ms": 411.379321,
+      "attach_api_ms": 644.332746,
+      "kernel_detach_ms": 110.278446,
+      "kernel_attach_ms": 278.20819,
+      "manifest_bytes": 28484126,
+      "device_state_bytes": 4115,
+      "api_pair_ms": 1055.712067,
+      "kernel_pair_ms": 388.486636
+    }
+  ],
+  "medians_ms": {
+    "export_api_ms": 510.472893,
+    "attach_api_ms": 644.7133415000001,
+    "api_pair_ms": 1155.1862345,
+    "kernel_detach_ms": 83.88030649999999,
+    "kernel_attach_ms": 264.9004655,
+    "kernel_pair_ms": 354.177227
+  },
+  "note": "Kernel tokens are current detach and attach ioctl duration. quiesce_ns/mmu_drain_ns/binding_ns imported token fields remain prior detach subphases. kernel_pair excludes first KVM_DAX_EXPORT one-time setup on first handoff. PFN scan lacks a distinct timer."
+}

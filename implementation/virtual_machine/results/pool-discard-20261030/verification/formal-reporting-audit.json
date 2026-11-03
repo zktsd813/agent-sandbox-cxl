@@ -1,0 +1,616 @@
+{
+  "result": "passed",
+  "mode": "reporting",
+  "anon_mib": 400,
+  "raw_receipts": 1986,
+  "initial_group": {
+    "union_pages": 40960,
+    "intersection_pages": 40960,
+    "same_offset_shared_pages": 40960
+  },
+  "final_group": {
+    "union_pages": 40960,
+    "intersection_pages": 40960,
+    "same_offset_shared_pages": 40960
+  },
+  "samples": [
+    {
+      "vm": 1,
+      "epoch": 0,
+      "number": 0,
+      "canonical_pages": 40960,
+      "reused_pages": 38586,
+      "canonical_ack_detached_reused_pages": 38555,
+      "reporting_wait": {
+        "observed_controller_wall_ns": 4488323443,
+        "guest_threshold_ack_ns": 51468668000,
+        "guest_threshold_ack_offset_from_eviction_end_ns": 2124725386,
+        "guest_wait_after_eviction_until_128mib_ack_ns": 2124725386,
+        "guest_last_proved_ack_offset_from_eviction_end_ns": 2124725386,
+        "scope": "Same guest MONOTONIC domain; retrospective128MiB canonical/reused-page ACK threshold. Includes reporter scheduling, host service and guest completion; not pure reporter or native host latency. Controller wall includes polling and evidence capture."
+      },
+      "timings_ns": {
+        "hot": 142228455,
+        "evicted": 28685190,
+        "allocated": 10687,
+        "filled": 2698669851,
+        "verified": 192644282,
+        "freed": 68000283,
+        "refill": 418198156
+      }
+    },
+    {
+      "vm": 2,
+      "epoch": 0,
+      "number": 0,
+      "canonical_pages": 40960,
+      "reused_pages": 38705,
+      "canonical_ack_detached_reused_pages": 38705,
+      "reporting_wait": {
+        "observed_controller_wall_ns": 4035532254,
+        "guest_threshold_ack_ns": 78071673000,
+        "guest_threshold_ack_offset_from_eviction_end_ns": 2124754102,
+        "guest_wait_after_eviction_until_128mib_ack_ns": 2124754102,
+        "guest_last_proved_ack_offset_from_eviction_end_ns": 2124754102,
+        "scope": "Same guest MONOTONIC domain; retrospective128MiB canonical/reused-page ACK threshold. Includes reporter scheduling, host service and guest completion; not pure reporter or native host latency. Controller wall includes polling and evidence capture."
+      },
+      "timings_ns": {
+        "hot": 140276193,
+        "evicted": 6915364,
+        "allocated": 10426,
+        "filled": 2121809292,
+        "verified": 186953062,
+        "freed": 66314558,
+        "refill": 362433276
+      }
+    },
+    {
+      "vm": 3,
+      "epoch": 0,
+      "number": 0,
+      "canonical_pages": 40960,
+      "reused_pages": 38747,
+      "canonical_ack_detached_reused_pages": 38727,
+      "reporting_wait": {
+        "observed_controller_wall_ns": 4378956964,
+        "guest_threshold_ack_ns": 103313980000,
+        "guest_threshold_ack_offset_from_eviction_end_ns": 2111049947,
+        "guest_wait_after_eviction_until_128mib_ack_ns": 2111049947,
+        "guest_last_proved_ack_offset_from_eviction_end_ns": 2111049947,
+        "scope": "Same guest MONOTONIC domain; retrospective128MiB canonical/reused-page ACK threshold. Includes reporter scheduling, host service and guest completion; not pure reporter or native host latency. Controller wall includes polling and evidence capture."
+      },
+      "timings_ns": {
+        "hot": 128058772,
+        "evicted": 16700606,
+        "allocated": 16728,
+        "filled": 2126808012,
+        "verified": 176767567,
+        "freed": 66914454,
+        "refill": 507601193
+      }
+    },
+    {
+      "vm": 2,
+      "epoch": 0,
+      "number": 1,
+      "canonical_pages": 40960,
+      "reused_pages": 38915,
+      "canonical_ack_detached_reused_pages": 38915,
+      "reporting_wait": {
+        "observed_controller_wall_ns": 5237293126,
+        "guest_threshold_ack_ns": 148477971000,
+        "guest_threshold_ack_offset_from_eviction_end_ns": 2093454451,
+        "guest_wait_after_eviction_until_128mib_ack_ns": 2093454451,
+        "guest_last_proved_ack_offset_from_eviction_end_ns": 2093454451,
+        "scope": "Same guest MONOTONIC domain; retrospective128MiB canonical/reused-page ACK threshold. Includes reporter scheduling, host service and guest completion; not pure reporter or native host latency. Controller wall includes polling and evidence capture."
+      },
+      "timings_ns": {
+        "hot": 133839753,
+        "evicted": 28748457,
+        "allocated": 14280,
+        "filled": 1099388470,
+        "verified": 175698539,
+        "freed": 72598181,
+        "refill": 804326800
+      }
+    },
+    {
+      "vm": 3,
+      "epoch": 0,
+      "number": 1,
+      "canonical_pages": 40960,
+      "reused_pages": 38921,
+      "canonical_ack_detached_reused_pages": 38893,
+      "reporting_wait": {
+        "observed_controller_wall_ns": 5896949971,
+        "guest_threshold_ack_ns": 178250292000,
+        "guest_threshold_ack_offset_from_eviction_end_ns": 2078320075,
+        "guest_wait_after_eviction_until_128mib_ack_ns": 2078320075,
+        "guest_last_proved_ack_offset_from_eviction_end_ns": 2078320075,
+        "scope": "Same guest MONOTONIC domain; retrospective128MiB canonical/reused-page ACK threshold. Includes reporter scheduling, host service and guest completion; not pure reporter or native host latency. Controller wall includes polling and evidence capture."
+      },
+      "timings_ns": {
+        "hot": 131120814,
+        "evicted": 24782431,
+        "allocated": 12200,
+        "filled": 1109970112,
+        "verified": 167403880,
+        "freed": 63869555,
+        "refill": 425219444
+      }
+    },
+    {
+      "vm": 1,
+      "epoch": 0,
+      "number": 1,
+      "canonical_pages": 40960,
+      "reused_pages": 38796,
+      "canonical_ack_detached_reused_pages": 38781,
+      "reporting_wait": {
+        "observed_controller_wall_ns": 6256643602,
+        "guest_threshold_ack_ns": 234953524000,
+        "guest_threshold_ack_offset_from_eviction_end_ns": 2103546150,
+        "guest_wait_after_eviction_until_128mib_ack_ns": 2103546150,
+        "guest_last_proved_ack_offset_from_eviction_end_ns": 2103546150,
+        "scope": "Same guest MONOTONIC domain; retrospective128MiB canonical/reused-page ACK threshold. Includes reporter scheduling, host service and guest completion; not pure reporter or native host latency. Controller wall includes polling and evidence capture."
+      },
+      "timings_ns": {
+        "hot": 134238850,
+        "evicted": 23411631,
+        "allocated": 14354,
+        "filled": 1085622123,
+        "verified": 178746922,
+        "freed": 54384214,
+        "refill": 360128256
+      }
+    },
+    {
+      "vm": 3,
+      "epoch": 0,
+      "number": 2,
+      "canonical_pages": 40960,
+      "reused_pages": 38929,
+      "canonical_ack_detached_reused_pages": 38893,
+      "reporting_wait": {
+        "observed_controller_wall_ns": 7430885433,
+        "guest_threshold_ack_ns": 259578552000,
+        "guest_threshold_ack_offset_from_eviction_end_ns": 2067652649,
+        "guest_wait_after_eviction_until_128mib_ack_ns": 2067652649,
+        "guest_last_proved_ack_offset_from_eviction_end_ns": 2080879649,
+        "scope": "Same guest MONOTONIC domain; retrospective128MiB canonical/reused-page ACK threshold. Includes reporter scheduling, host service and guest completion; not pure reporter or native host latency. Controller wall includes polling and evidence capture."
+      },
+      "timings_ns": {
+        "hot": 131501785,
+        "evicted": 36670873,
+        "allocated": 11656,
+        "filled": 1130343019,
+        "verified": 162383365,
+        "freed": 60526486,
+        "refill": 532186779
+      }
+    },
+    {
+      "vm": 1,
+      "epoch": 0,
+      "number": 2,
+      "canonical_pages": 40960,
+      "reused_pages": 38798,
+      "canonical_ack_detached_reused_pages": 38781,
+      "reporting_wait": {
+        "observed_controller_wall_ns": 7680048648,
+        "guest_threshold_ack_ns": 321806181000,
+        "guest_threshold_ack_offset_from_eviction_end_ns": 2078255045,
+        "guest_wait_after_eviction_until_128mib_ack_ns": 2078255045,
+        "guest_last_proved_ack_offset_from_eviction_end_ns": 2078255045,
+        "scope": "Same guest MONOTONIC domain; retrospective128MiB canonical/reused-page ACK threshold. Includes reporter scheduling, host service and guest completion; not pure reporter or native host latency. Controller wall includes polling and evidence capture."
+      },
+      "timings_ns": {
+        "hot": 110005940,
+        "evicted": 34381223,
+        "allocated": 11978,
+        "filled": 1049329612,
+        "verified": 172321581,
+        "freed": 68021043,
+        "refill": 515202733
+      }
+    },
+    {
+      "vm": 2,
+      "epoch": 0,
+      "number": 2,
+      "canonical_pages": 40960,
+      "reused_pages": 38912,
+      "canonical_ack_detached_reused_pages": 38912,
+      "reporting_wait": {
+        "observed_controller_wall_ns": 6227926075,
+        "guest_threshold_ack_ns": 358321783000,
+        "guest_threshold_ack_offset_from_eviction_end_ns": 2075078227,
+        "guest_wait_after_eviction_until_128mib_ack_ns": 2075078227,
+        "guest_last_proved_ack_offset_from_eviction_end_ns": 2075078227,
+        "scope": "Same guest MONOTONIC domain; retrospective128MiB canonical/reused-page ACK threshold. Includes reporter scheduling, host service and guest completion; not pure reporter or native host latency. Controller wall includes polling and evidence capture."
+      },
+      "timings_ns": {
+        "hot": 125064171,
+        "evicted": 36377999,
+        "allocated": 13203,
+        "filled": 1091525627,
+        "verified": 154160852,
+        "freed": 60848207,
+        "refill": 434647328
+      }
+    }
+  ],
+  "additional_samples": [
+    {
+      "vm": 1,
+      "epoch": 0,
+      "number": "immediate",
+      "canonical_pages": 40960,
+      "reused_pages": 37774,
+      "canonical_ack_detached_reused_pages": 0,
+      "reporting_wait": null,
+      "timings_ns": {
+        "hot": 142969594,
+        "evicted": 18261996,
+        "allocated": 12943,
+        "filled": 1998936698,
+        "verified": 182863513,
+        "freed": 60077990,
+        "refill": 475312876
+      }
+    },
+    {
+      "vm": 1,
+      "epoch": 1,
+      "number": "lifecycle-1",
+      "canonical_pages": 40960,
+      "reused_pages": 38915,
+      "canonical_ack_detached_reused_pages": 38884,
+      "reporting_wait": {
+        "observed_controller_wall_ns": 10289677724,
+        "guest_threshold_ack_ns": 478099994000,
+        "guest_threshold_ack_offset_from_eviction_end_ns": 2114566211,
+        "guest_wait_after_eviction_until_128mib_ack_ns": 2114566211,
+        "guest_last_proved_ack_offset_from_eviction_end_ns": 2114566211,
+        "scope": "Same guest MONOTONIC domain; retrospective128MiB canonical/reused-page ACK threshold. Includes reporter scheduling, host service and guest completion; not pure reporter or native host latency. Controller wall includes polling and evidence capture."
+      },
+      "timings_ns": {
+        "hot": 132875081,
+        "evicted": 29762217,
+        "allocated": 13880,
+        "filled": 2181648563,
+        "verified": 186637786,
+        "freed": 67175859,
+        "refill": 499857691
+      }
+    },
+    {
+      "vm": 1,
+      "epoch": 3,
+      "number": "lifecycle-3",
+      "canonical_pages": 40960,
+      "reused_pages": 38803,
+      "canonical_ack_detached_reused_pages": 38698,
+      "reporting_wait": {
+        "observed_controller_wall_ns": 11667866478,
+        "guest_threshold_ack_ns": 569671369000,
+        "guest_threshold_ack_offset_from_eviction_end_ns": 2100961338,
+        "guest_wait_after_eviction_until_128mib_ack_ns": 2100961338,
+        "guest_last_proved_ack_offset_from_eviction_end_ns": 2111913338,
+        "scope": "Same guest MONOTONIC domain; retrospective128MiB canonical/reused-page ACK threshold. Includes reporter scheduling, host service and guest completion; not pure reporter or native host latency. Controller wall includes polling and evidence capture."
+      },
+      "timings_ns": {
+        "hot": 142693752,
+        "evicted": 23233433,
+        "allocated": 12389,
+        "filled": 2189323380,
+        "verified": 184489901,
+        "freed": 66382192,
+        "refill": 244509415
+      }
+    }
+  ],
+  "protocol": {
+    "1": {
+      "result": "passed",
+      "completed_batches": 82,
+      "incomplete_guest_tail": null,
+      "complete_host_tail_batches": 0,
+      "incomplete_host_tail_batches": 0,
+      "scope": "Exact trace protocol correlation; not a claim that ACKed no-op ranges were detached, or that lazy anonymous pages were physically prefaulted.",
+      "host_epochs": [
+        {
+          "vm_id": 1,
+          "run_epoch": 0,
+          "file": "1514-v1-e0-vmm-log.bin",
+          "snapshot_cutoff": {
+            "discard_sequence": 52,
+            "mem_file_path": "/run/pool-1f88ac17ff32cdee/vm1-epoch0/ram-snapshot",
+            "phase": "complete",
+            "run_epoch": "0",
+            "snapshot_path": "/run/pool-1f88ac17ff32cdee/vm1-epoch0/state-snapshot",
+            "version": 1,
+            "vm_id": "1"
+          },
+          "abandoned_after_snapshot_batches": 0
+        },
+        {
+          "vm_id": 1,
+          "run_epoch": 1,
+          "file": "1695-v1-e1-vmm-log.bin",
+          "snapshot_cutoff": {
+            "discard_sequence": 14,
+            "mem_file_path": "/run/pool-1f88ac17ff32cdee/vm1-epoch1/ram-snapshot",
+            "phase": "complete",
+            "run_epoch": "1",
+            "snapshot_path": "/run/pool-1f88ac17ff32cdee/vm1-epoch1/state-snapshot",
+            "version": 1,
+            "vm_id": "1"
+          },
+          "abandoned_after_snapshot_batches": 0
+        },
+        {
+          "vm_id": 1,
+          "run_epoch": 2,
+          "file": "1761-v1-e2-vmm-log.bin",
+          "snapshot_cutoff": {
+            "discard_sequence": 0,
+            "mem_file_path": "/run/pool-1f88ac17ff32cdee/vm1-epoch2/ram-snapshot",
+            "phase": "complete",
+            "run_epoch": "2",
+            "snapshot_path": "/run/pool-1f88ac17ff32cdee/vm1-epoch2/state-snapshot",
+            "version": 1,
+            "vm_id": "1"
+          },
+          "abandoned_after_snapshot_batches": 0
+        },
+        {
+          "vm_id": 1,
+          "run_epoch": 3,
+          "file": "1978-vm1-final-vmm-log.bin",
+          "snapshot_cutoff": null,
+          "abandoned_after_snapshot_batches": 0
+        }
+      ],
+      "discarded_pages": 239500,
+      "active_host_work": {
+        "samples": 60,
+        "median_ms": 1.2359,
+        "minimum_ms": 0.189696,
+        "maximum_ms": 52.890127
+      }
+    },
+    "2": {
+      "result": "passed",
+      "completed_batches": 31,
+      "incomplete_guest_tail": null,
+      "complete_host_tail_batches": 0,
+      "incomplete_host_tail_batches": 0,
+      "scope": "Exact trace protocol correlation; not a claim that ACKed no-op ranges were detached, or that lazy anonymous pages were physically prefaulted.",
+      "host_epochs": [
+        {
+          "vm_id": 2,
+          "run_epoch": 0,
+          "file": "1981-vm2-final-vmm-log.bin",
+          "snapshot_cutoff": null,
+          "abandoned_after_snapshot_batches": 0
+        }
+      ],
+      "discarded_pages": 122880,
+      "active_host_work": {
+        "samples": 17,
+        "median_ms": 2.19765,
+        "minimum_ms": 0.310946,
+        "maximum_ms": 33.187672
+      }
+    },
+    "3": {
+      "result": "passed",
+      "completed_batches": 42,
+      "incomplete_guest_tail": null,
+      "complete_host_tail_batches": 0,
+      "incomplete_host_tail_batches": 0,
+      "scope": "Exact trace protocol correlation; not a claim that ACKed no-op ranges were detached, or that lazy anonymous pages were physically prefaulted.",
+      "host_epochs": [
+        {
+          "vm_id": 3,
+          "run_epoch": 0,
+          "file": "1984-vm3-final-vmm-log.bin",
+          "snapshot_cutoff": null,
+          "abandoned_after_snapshot_batches": 0
+        }
+      ],
+      "discarded_pages": 122880,
+      "active_host_work": {
+        "samples": 28,
+        "median_ms": 1.09884,
+        "minimum_ms": 0.606557,
+        "maximum_ms": 60.291236
+      }
+    }
+  },
+  "lifecycle_transitions": 3,
+  "timings": {
+    "hot": {
+      "samples": 9,
+      "median_ms": 131.501785,
+      "minimum_ms": 110.00594,
+      "maximum_ms": 142.228455
+    },
+    "evicted": {
+      "samples": 9,
+      "median_ms": 28.68519,
+      "minimum_ms": 6.915364,
+      "maximum_ms": 36.670873
+    },
+    "allocated": {
+      "samples": 9,
+      "median_ms": 0.0122,
+      "minimum_ms": 0.010426,
+      "maximum_ms": 0.016728
+    },
+    "filled": {
+      "samples": 9,
+      "median_ms": 1109.970112,
+      "minimum_ms": 1049.329612,
+      "maximum_ms": 2698.669851
+    },
+    "verified": {
+      "samples": 9,
+      "median_ms": 175.698539,
+      "minimum_ms": 154.160852,
+      "maximum_ms": 192.644282
+    },
+    "freed": {
+      "samples": 9,
+      "median_ms": 66.314558,
+      "minimum_ms": 54.384214,
+      "maximum_ms": 72.598181
+    },
+    "refill": {
+      "samples": 9,
+      "median_ms": 434.647328,
+      "minimum_ms": 360.128256,
+      "maximum_ms": 804.3268
+    }
+  },
+  "one_page_latency": {
+    "scope": "One byte in4KiB; setup reads excluded; KVM entry/HLT exit included. Zero checks are this microprobe, not a pre-fill scan of every guest discarded page.",
+    "groups": {
+      "host_store/canonical_cow": {
+        "detach_ns": {
+          "samples": 100,
+          "median_ms": 0.0,
+          "minimum_ms": 0.0,
+          "maximum_ms": 0.0
+        },
+        "first_write_ns": {
+          "samples": 100,
+          "median_ms": 0.00669,
+          "minimum_ms": 0.006188,
+          "maximum_ms": 0.010422
+        },
+        "second_write_ns": {
+          "samples": 100,
+          "median_ms": 0.000148,
+          "minimum_ms": 0.0001,
+          "maximum_ms": 0.000166
+        }
+      },
+      "host_store/already_private": {
+        "detach_ns": {
+          "samples": 100,
+          "median_ms": 0.0,
+          "minimum_ms": 0.0,
+          "maximum_ms": 0.0
+        },
+        "first_write_ns": {
+          "samples": 100,
+          "median_ms": 0.00016,
+          "minimum_ms": 0.000145,
+          "maximum_ms": 0.000182
+        },
+        "second_write_ns": {
+          "samples": 100,
+          "median_ms": 0.000148,
+          "minimum_ms": 0.0001,
+          "maximum_ms": 0.000166
+        }
+      },
+      "host_store/discard_zero": {
+        "detach_ns": {
+          "samples": 100,
+          "median_ms": 0.006557,
+          "minimum_ms": 0.00601,
+          "maximum_ms": 1.844938
+        },
+        "first_write_ns": {
+          "samples": 100,
+          "median_ms": 0.005546,
+          "minimum_ms": 0.005272,
+          "maximum_ms": 0.024548
+        },
+        "second_write_ns": {
+          "samples": 100,
+          "median_ms": 0.000148,
+          "minimum_ms": 0.000103,
+          "maximum_ms": 0.000184
+        }
+      },
+      "kvm_run_store/canonical_cow": {
+        "detach_ns": {
+          "samples": 100,
+          "median_ms": 0.0,
+          "minimum_ms": 0.0,
+          "maximum_ms": 0.0
+        },
+        "first_write_ns": {
+          "samples": 100,
+          "median_ms": 0.2079605,
+          "minimum_ms": 0.203296,
+          "maximum_ms": 0.279717
+        },
+        "second_write_ns": {
+          "samples": 100,
+          "median_ms": 0.0467425,
+          "minimum_ms": 0.046198,
+          "maximum_ms": 0.117551
+        }
+      },
+      "kvm_run_store/already_private": {
+        "detach_ns": {
+          "samples": 100,
+          "median_ms": 0.0,
+          "minimum_ms": 0.0,
+          "maximum_ms": 0.0
+        },
+        "first_write_ns": {
+          "samples": 100,
+          "median_ms": 0.0468205,
+          "minimum_ms": 0.046175,
+          "maximum_ms": 0.116703
+        },
+        "second_write_ns": {
+          "samples": 100,
+          "median_ms": 0.046222,
+          "minimum_ms": 0.045729,
+          "maximum_ms": 0.068528
+        }
+      },
+      "kvm_run_store/discard_zero": {
+        "detach_ns": {
+          "samples": 100,
+          "median_ms": 0.0099005,
+          "minimum_ms": 0.009433,
+          "maximum_ms": 0.032064
+        },
+        "first_write_ns": {
+          "samples": 100,
+          "median_ms": 0.2047555,
+          "minimum_ms": 0.201051,
+          "maximum_ms": 0.277378
+        },
+        "second_write_ns": {
+          "samples": 100,
+          "median_ms": 0.0466895,
+          "minimum_ms": 0.046049,
+          "maximum_ms": 0.116195
+        }
+      }
+    }
+  },
+  "report_sha256": "afde0ed510d9d1109b0d4878cfaa2e33ff2f563489efdc31d7c5c67e9fc48d8d",
+  "limits": [
+    "Delayed free-page reporter can miss immediate reuse; ordinary CoW remains.",
+    "ACK can be a no-op for nonpooled/busy pages; only discarded ranges count.",
+    "A discarded GPA was previously pooled but may have already CoWed before the callback. copied_bytes=0 applies to the detach callback, not the whole interval or an exact number of copies avoided.",
+    "Physical PFN measurements are within each L1 namespace; no cross-node PFN equality claim.",
+    "Lazy fresh anonymous backing is not preallocated physical RAM; original DAX reservation is retained.",
+    "Successful ordinary snapshot transitions are covered; forced in-flight migration boundary requires separate injection evidence."
+  ],
+  "verifier_sources": {
+    "verify_pool_discard.py": "2a19ea46ba56c8fc73ee672565ff571d321d9de917103c4ae41552c79c1defe8",
+    "verify_pool_discard_protocol.py": "0fdaf7654bfb4b4b140f5e7cabed6a33d612582b3cd441c37a1431e3958f473a",
+    "verify_pool_compare.py": "3b4d907aad689a934cfd6f074c711dfbabf89cd0b59592195c9f4c2c44d39480"
+  }
+}

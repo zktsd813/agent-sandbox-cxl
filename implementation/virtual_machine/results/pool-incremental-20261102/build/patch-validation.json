@@ -1,0 +1,6 @@
+{
+  "result": "passed",
+  "firecracker_files": 32,
+  "kernel_files": 26,
+  "comparison": "independent patch application against original base; output byte/hash equality"
+}

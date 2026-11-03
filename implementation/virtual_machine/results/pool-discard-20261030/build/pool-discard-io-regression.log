@@ -1,0 +1,7 @@
+
+running 2 tests
+test devices::virtio::block::virtio::io::tests::test_async ... ok
+test devices::virtio::block::virtio::io::tests::test_sync ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 828 filtered out; finished in 0.06s
+

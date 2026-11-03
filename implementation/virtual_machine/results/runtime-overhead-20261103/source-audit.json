@@ -1,0 +1,560 @@
+{
+  "files_examined": 107,
+  "matches": [
+    {
+      "file": "backend_ablation.py",
+      "line": 176,
+      "text": "and hashlib.sha256(sealed_bytes).hexdigest()==state['memory_manifest_sha256'],'Transferred metadata mismatch')"
+    },
+    {
+      "file": "backend_ablation.py",
+      "line": 211,
+      "text": "f'printf \"%s  /disk/sandbox.raw\\\\n\" {c.image_id} | sha256sum -c -','local-backend')"
+    },
+    {
+      "file": "verify_pool_handles.py",
+      "line": 54,
+      "text": "need(e.record(r['handle_smoke']['file'],'POOL_HANDLE_SMOKE_JSON ')['handoff_full_scan_pages']==0,'handle import scanned')"
+    },
+    {
+      "file": "verify_pool_handles.py",
+      "line": 105,
+      "text": "for key in ('abi','phys_base','device_bytes','metadata_offset','metadata_bytes','cookie_lo','cookie_hi','allocation_generation','count','full_scan_pages'):"
+    },
+    {
+      "file": "verify_pool_handles.py",
+      "line": 153,
+      "text": "'handoff_full_scan_pages':0,'handoff_manifest_bytes':sizes,'minimum_shared_bytes':min(shared_sizes),"
+    },
+    {
+      "file": "pool_memory_uapi.h",
+      "line": 37,
+      "text": "__u64 faults, exhausted, full_scan_pages, state;"
+    },
+    {
+      "file": "nfs_dependencies.sh",
+      "line": 145,
+      "text": "h = hashlib.sha256()"
+    },
+    {
+      "file": "verify_stock_snapshot.py",
+      "line": 37,
+      "text": "require(hashlib.sha256(value).hexdigest() == receipt[\"sha256\"], \"raw receipt hash: \" + name)"
+    },
+    {
+      "file": "verify_stock_snapshot.py",
+      "line": 245,
+      "text": "require(Path(name).name == name and hashlib.sha256((report_path.parent/\"measured-sources\"/name).read_bytes()).hexdigest() == digest,"
+    },
+    {
+      "file": "verify_stock_snapshot.py",
+      "line": 430,
+      "text": "\"result\": \"passed\", \"arm\": \"stock-snapshot\", \"report_sha256\": hashlib.sha256(report_bytes).hexdigest(),"
+    },
+    {
+      "file": "verify_stock_snapshot.py",
+      "line": 431,
+      "text": "\"verifier_sha256\": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),"
+    },
+    {
+      "file": "pool_handoff_bench.py",
+      "line": 328,
+      "text": "require(parsed.get(\"state_sha256\") == hashlib.sha256(state).hexdigest(), \"State/manifest binding absent\")"
+    },
+    {
+      "file": "pool_handoff_bench.py",
+      "line": 362,
+      "text": "failed[\"damaged_sha256\"] = hashlib.sha256(damaged).hexdigest()"
+    },
+    {
+      "file": "pool_handoff_bench.py",
+      "line": 363,
+      "text": "failed[\"original_sha256\"] = hashlib.sha256(state).hexdigest()"
+    },
+    {
+      "file": "pool_handoff_bench.py",
+      "line": 381,
+      "text": "\"state_file\": state_receipt, \"state_bytes\": len(state), \"state_sha256\": hashlib.sha256(state).hexdigest(),"
+    },
+    {
+      "file": "pool_handoff_bench.py",
+      "line": 388,
+      "text": "def resident_resources(self, role, directory, epoch, phase):"
+    },
+    {
+      "file": "pool_handoff_bench.py",
+      "line": 469,
+      "text": "self.resident_resources(s.role, s.directory, s.epoch, \"active\")"
+    },
+    {
+      "file": "pool_handoff_bench.py",
+      "line": 493,
+      "text": "require(hashlib.sha256(manifest).hexdigest() == state[\"memory_manifest_sha256\"],"
+    },
+    {
+      "file": "pool_handoff_bench.py",
+      "line": 593,
+      "text": "self.resident_resources(destination,s.directory,s.epoch,\"active\")"
+    },
+    {
+      "file": "pool_handoff_bench.py",
+      "line": 881,
+      "text": "raw, name = c.shell(role, \"sha256sum /lab/firecracker /lab/l2-vmlinux /lab/pool-handoff-probe \""
+    },
+    {
+      "file": "test_swe_pool_protocol.py",
+      "line": 50,
+      "text": "header[\"records_sha256\"] = status[\"records_sha256\"] = hashlib.sha256(b).hexdigest()"
+    },
+    {
+      "file": "verify_trace_results.py",
+      "line": 35,
+      "text": "return hashlib.sha256(data).hexdigest()"
+    },
+    {
+      "file": "verify_trace_results.py",
+      "line": 39,
+      "text": "result = hashlib.sha256()"
+    },
+    {
+      "file": "test_pool_handoff_evidence.py",
+      "line": 34,
+      "text": "item[\"sha256\"] = hashlib.sha256(data).hexdigest()"
+    },
+    {
+      "file": "trace_bench.py",
+      "line": 415,
+      "text": "if hashlib.sha256(archive).hexdigest() != exported[\"sha256\"]:"
+    },
+    {
+      "file": "verify_pool_results.py",
+      "line": 30,
+      "text": "require(hashlib.sha256(data).hexdigest() == receipt[\"sha256\"], \"receipt hash mismatch: \" + name)"
+    },
+    {
+      "file": "verify_pool_results.py",
+      "line": 50,
+      "text": "require(hashlib.sha256(source).hexdigest() == measured[\"pfn_input_sha256\"], \"PFN input hash mismatch\")"
+    },
+    {
+      "file": "verify_pool_results.py",
+      "line": 273,
+      "text": "require(hashlib.sha256((root/\"measured-sources\"/name).read_bytes()).hexdigest() == digest,"
+    },
+    {
+      "file": "verify_nfs_results.py",
+      "line": 34,
+      "text": "h = hashlib.sha256()"
+    },
+    {
+      "file": "home_storage_bench.py",
+      "line": 52,
+      "text": "self.receipts.append({\"file\": name, \"sha256\": hashlib.sha256(text.encode()).hexdigest(), \"kind\": kind})"
+    },
+    {
+      "file": "home_storage_bench.py",
+      "line": 141,
+      "text": "raw, name = self.shell(role, \"sync\\necho 3 > /proc/sys/vm/drop_caches\\nsha256sum /disk/sandbox.raw\", \"image-hash\", 120)"
+    },
+    {
+      "file": "home_storage_bench.py",
+      "line": 243,
+      "text": "row[\"state_files\"].append({\"side\":side,\"file\":name,\"bytes\":len(data),\"sha256\":hashlib.sha256(data).hexdigest(),\"integrity\":integrity})"
+    },
+    {
+      "file": "home_storage_bench.py",
+      "line": 385,
+      "text": "\"sha256\":hashlib.sha256(raw).hexdigest(),\"integrity\":integrity})"
+    },
+    {
+      "file": "kvm-dax-state.patch",
+      "line": 2820,
+      "text": "+    if (!ret) pr_info(\"KVM_DAX_MAP_PROOF attach=%d full_scan_pages=0 generation=%llu epoch=%llu\\n\","
+    },
+    {
+      "file": "swe_pool_protocol.py",
+      "line": 35,
+      "text": "digest = hashlib.sha256(b\"GPOOL_RECORDS_V1\")"
+    },
+    {
+      "file": "analyze_resident_direct.py",
+      "line": 31,
+      "text": "need(hashlib.sha256(raw).hexdigest()==receipts[name]['sha256'], 'Changed receipt '+name)"
+    },
+    {
+      "file": "analyze_resident_direct.py",
+      "line": 100,
+      "text": "return {'schema':'resident-direct-profile-v1','report_sha256':hashlib.sha256(path.read_bytes()).hexdigest(),"
+    },
+    {
+      "file": "verify_backend_ablation.py",
+      "line": 29,
+      "text": "need(hashlib.sha256(data).hexdigest()==receipts[name]['sha256'],'Receipt changed: '+name)"
+    },
+    {
+      "file": "verify_backend_ablation.py",
+      "line": 79,
+      "text": "need(hashlib.sha256(read(h['sealed_file']).encode()).hexdigest()==state['memory_manifest_sha256'],'Manifest digest mismatch')"
+    },
+    {
+      "file": "verify_backend_ablation.py",
+      "line": 82,
+      "text": "for key in ('abi','phys_base','device_bytes','metadata_offset','metadata_bytes','cookie_lo','cookie_hi','allocation_generation','count','full_scan_pages'):"
+    },
+    {
+      "file": "verify_backend_ablation.py",
+      "line": 86,
+      "text": "if previous is not None:need(previous['handle']['full_scan_pages']==manifest['handle']['full_scan_pages'],'Handoff scanned mapping table')"
+    },
+    {
+      "file": "verify_backend_ablation.py",
+      "line": 137,
+      "text": "for name,digest in r['sources'].items():need(hashlib.sha256((a.suite.parent/'sources'/name).read_bytes()).hexdigest()==digest,'Frozen source changed')"
+    },
+    {
+      "file": "guest_pool_protocol.py",
+      "line": 33,
+      "text": "digest = hashlib.sha256(b\"GPOOL_RECORDS_V1\")"
+    },
+    {
+      "file": "swe-pool-guest-run.sh",
+      "line": 41,
+      "text": "CMD_SHA=$(sha256sum \"$T/cmd/$N.command\"); CMD_SHA=${CMD_SHA%% *}"
+    },
+    {
+      "file": "swe-pool-guest-run.sh",
+      "line": 58,
+      "text": "OUT_SHA=$(sha256sum \"$R/$N.out\"); OUT_SHA=${OUT_SHA%% *}"
+    },
+    {
+      "file": "swe-pool-guest-run.sh",
+      "line": 76,
+      "text": "STATE_SHA=$(sha256sum \"$T/state\"); STATE_SHA=${STATE_SHA%% *}"
+    },
+    {
+      "file": "swe-pool-guest-run.sh",
+      "line": 110,
+      "text": "SHA=$(sha256sum /ram/pool/registration.jsonl); SHA=${SHA%% *}"
+    },
+    {
+      "file": "swe-pool-guest-run.sh",
+      "line": 118,
+      "text": "SHA=$(sha256sum /ram/pool/registration.jsonl); SHA=${SHA%% *}"
+    },
+    {
+      "file": "swe-pool-guest-run.sh",
+      "line": 148,
+      "text": "SHA=$(sha256sum /ram/results.tar.gz); SHA=${SHA%% *}"
+    },
+    {
+      "file": "verify_pool_discard_protocol.py",
+      "line": 200,
+      "text": "result[\"source_sha256\"] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()"
+    },
+    {
+      "file": "verify_pool_discard_protocol.py",
+      "line": 201,
+      "text": "result[\"inputs\"] = {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in (a.guest_trace, a.host_log, *a.trace_stats)}"
+    },
+    {
+      "file": "swe_pool_bench.py",
+      "line": 167,
+      "text": "hashlib.sha256(data).hexdigest() == match[2] == row['receipt']['sha256'], 'Guest export integrity')"
+    },
+    {
+      "file": "swe_pool_bench.py",
+      "line": 170,
+      "text": "self.receipts.append({'file': name, 'kind': kind, 'sha256': hashlib.sha256(data).hexdigest()})"
+    },
+    {
+      "file": "swe_pool_bench.py",
+      "line": 260,
+      "text": "require(0 < len(state) < MIB and parsed['state_sha256'] == hashlib.sha256(state).hexdigest(), 'State binding')"
+    },
+    {
+      "file": "swe_pool_bench.py",
+      "line": 281,
+      "text": "'state_file': state_file, 'state_bytes': len(state), 'state_sha256': hashlib.sha256(state).hexdigest(),"
+    },
+    {
+      "file": "swe_pool_bench.py",
+      "line": 324,
+      "text": "'resident_resources':c.resident_resource_events, 'resident_probes':c.resident_probes,"
+    },
+    {
+      "file": "pool_bench.py",
+      "line": 70,
+      "text": "self.receipts.append({\"file\": name, \"sha256\": hashlib.sha256(data).hexdigest(), \"kind\": kind, \"integrity\": integrity})"
+    },
+    {
+      "file": "trace_prepare.py",
+      "line": 32,
+      "text": "\"readlink rm sed setsid sh sha256sum sleep stat stty sync tar uuencode\".split())"
+    },
+    {
+      "file": "trace_prepare.py",
+      "line": 75,
+      "text": "\"command_sha256\": hashlib.sha256(action[\"command\"].encode()).hexdigest(),"
+    },
+    {
+      "file": "trace_prepare.py",
+      "line": 77,
+      "text": "\"source_output_sha256\": hashlib.sha256(observation[\"raw_output\"].encode()).hexdigest() if observation else None})"
+    },
+    {
+      "file": "firecracker.patch",
+      "line": 4393,
+      "text": "+    faults: u64, exhausted: u64, full_scan_pages: u64, state: u64,"
+    },
+    {
+      "file": "firecracker.patch",
+      "line": 4770,
+      "text": "+fn full_query(a: &mut Active) -> io::Result<()> {"
+    },
+    {
+      "file": "firecracker.patch",
+      "line": 5160,
+      "text": "+            full_query(a)?;"
+    },
+    {
+      "file": "trace-guest-run.sh",
+      "line": 32,
+      "text": "CMD_SHA=$(sha256sum \"$T/cmd/$N.command\"); CMD_SHA=${CMD_SHA%% *}"
+    },
+    {
+      "file": "trace-guest-run.sh",
+      "line": 49,
+      "text": "OUT_SHA=$(sha256sum \"$R/$N.out\"); OUT_SHA=${OUT_SHA%% *}"
+    },
+    {
+      "file": "trace-guest-run.sh",
+      "line": 62,
+      "text": "STATE_SHA=$(sha256sum \"$T/state\"); STATE_SHA=${STATE_SHA%% *}"
+    },
+    {
+      "file": "trace-guest-run.sh",
+      "line": 83,
+      "text": "SHA=$(sha256sum /ram/results.tar.gz); SHA=${SHA%% *}"
+    },
+    {
+      "file": "test_resident_evidence.py",
+      "line": 30,
+      "text": "item['sha256'] = hashlib.sha256(target.read_bytes()).hexdigest()"
+    },
+    {
+      "file": "test_resident_evidence.py",
+      "line": 81,
+      "text": "row = [r for r in m.report['resident_resources'] if r['role'] == 'A' and r['phase'] == 'active'][-1]"
+    },
+    {
+      "file": "guest-pool-build.py",
+      "line": 24,
+      "text": "digest = hashlib.sha256()"
+    },
+    {
+      "file": "analyze_resident_preparation.py",
+      "line": 31,
+      "text": "if hashlib.sha256(raw).hexdigest()!=receipts[name]['sha256']:"
+    },
+    {
+      "file": "analyze_resident_preparation.py",
+      "line": 37,
+      "text": "result={'result':verified['result'],'report_sha256':hashlib.sha256(path.read_bytes()).hexdigest(),"
+    },
+    {
+      "file": "analyze_direct_profile.py",
+      "line": 35,
+      "text": "need(hashlib.sha256(raw).hexdigest() == receipts[name]['sha256'], 'Receipt hash: ' + name)"
+    },
+    {
+      "file": "analyze_direct_profile.py",
+      "line": 125,
+      "text": "report_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),"
+    },
+    {
+      "file": "nfs_bench.py",
+      "line": 215,
+      "text": "f\"printf '%s  %s\\\\n' {hashlib.sha256(data).hexdigest()} {path} | sha256sum -c -\")"
+    },
+    {
+      "file": "pool_handoff_control.py",
+      "line": 179,
+      "text": "\"cookie_lo\", \"cookie_hi\", \"allocation_generation\", \"count\", \"full_scan_pages\"):"
+    },
+    {
+      "file": "pool_control.py",
+      "line": 191,
+      "text": "\"pfn_input_file\": input_file, \"pfn_input_sha256\": hashlib.sha256(inputs).hexdigest(),"
+    },
+    {
+      "file": "verify_pool_compare.py",
+      "line": 23,
+      "text": "return hashlib.sha256(data).hexdigest()"
+    },
+    {
+      "file": "verify_pool_compare.py",
+      "line": 27,
+      "text": "digest = hashlib.sha256()"
+    },
+    {
+      "file": "lab.py",
+      "line": 76,
+      "text": "h = hashlib.sha256()"
+    },
+    {
+      "file": "lab.py",
+      "line": 673,
+      "text": "\"payload_sha256\": hashlib.sha256(memory[offset + 16:offset + 16 + 3072]).hexdigest()}"
+    },
+    {
+      "file": "lab.py",
+      "line": 838,
+      "text": "f\"printf '{tag}_SHA='; sha256sum {quoted}\\n\""
+    },
+    {
+      "file": "lab.py",
+      "line": 868,
+      "text": "final = read_command(f\"printf '\\\\n{tag}_FINAL_SHA='; sha256sum {quoted}\")"
+    },
+    {
+      "file": "lab.py",
+      "line": 870,
+      "text": "if (len(data) != size or hashlib.sha256(data).hexdigest() != digest or"
+    },
+    {
+      "file": "lab.py",
+      "line": 1998,
+      "text": "return data, {\"path\": path, \"bytes\": size, \"sha256\": hashlib.sha256(data).hexdigest(), \"gzip_bytes\": compressed_size,"
+    },
+    {
+      "file": "lab.py",
+      "line": 1999,
+      "text": "\"gzip_sha256\": hashlib.sha256(compressed).hexdigest(), \"ivshmem_offset\": offset,"
+    },
+    {
+      "file": "lab.py",
+      "line": 2507,
+      "text": "\"sha256\": hashlib.sha256(files[name]).hexdigest(), \"verified_archive_member\": True}"
+    },
+    {
+      "file": "lab.py",
+      "line": 2513,
+      "text": "\"sha256\": hashlib.sha256(data).hexdigest(),"
+    },
+    {
+      "file": "lab.py",
+      "line": 2997,
+      "text": "digest = hashlib.sha256(state).hexdigest()"
+    },
+    {
+      "file": "lab.py",
+      "line": 3000,
+      "text": "f\"printf '%s  %s\\\\n' {digest} {transaction}/state | sha256sum -c -\")"
+    },
+    {
+      "file": "verify_swe_pool_negatives.py",
+      "line": 88,
+      "text": "return hashlib.sha256(data).hexdigest()"
+    },
+    {
+      "file": "pool_compare_run.py",
+      "line": 17,
+      "text": "h=hashlib.sha256()"
+    },
+    {
+      "file": "verify_swe_pool.py",
+      "line": 35,
+      "text": "return hashlib.sha256(data).hexdigest()"
+    },
+    {
+      "file": "verify_swe_pool.py",
+      "line": 163,
+      "text": "digest = hashlib.sha256(b\"GPOOL_RECORDS_V1\")"
+    },
+    {
+      "file": "verify_swe_pool.py",
+      "line": 572,
+      "text": "for key in (\"abi\", \"phys_base\", \"device_bytes\", \"metadata_offset\", \"metadata_bytes\", \"cookie_lo\", \"cookie_hi\", \"allocation_generation\", \"count\", \"full_scan_pages\"):"
+    },
+    {
+      "file": "verify_swe_pool.py",
+      "line": 697,
+      "text": "for r in report[\"resident_resources\"]:"
+    },
+    {
+      "file": "pool_memory_handle_smoke.c",
+      "line": 54,
+      "text": "check(h.owner_epoch==2&&h.full_scan_pages==sealed.full_scan_pages,\"import scanned or epoch wrong\");"
+    },
+    {
+      "file": "pool_memory_handle_smoke.c",
+      "line": 68,
+      "text": "check(!ioctl(next,CPM_STATUS,&h)&&h.full_scan_pages==sealed.full_scan_pages,\"normal operations scanned\");"
+    },
+    {
+      "file": "pool_memory_handle_smoke.c",
+      "line": 79,
+      "text": "puts(\"POOL_HANDLE_SMOKE_JSON {\\\"result\\\":\\\"passed\\\",\\\"handoff_full_scan_pages\\\":0,\\\"stale_cookie_rejected\\\":true,\\\"stale_epoch_rejected\\\":true,\\\"stale_generation_rejected\\\":true,\\\"stale_lease_rejected\\\":true,\\\"duplicate_import_rejected\\\":true,\\\"lineage_restored\\\":true,\\\"credit_rollback\\\":true,\\\"slot_reuse_safe\\\":true}\");"
+    },
+    {
+      "file": "verify_pool_handoff.py",
+      "line": 35,
+      "text": "return hashlib.sha256(data).hexdigest()"
+    },
+    {
+      "file": "verify_pool_handoff.py",
+      "line": 155,
+      "text": "digest = hashlib.sha256(b\"GPOOL_RECORDS_V1\" + header + file)"
+    },
+    {
+      "file": "pool_compare_bench.py",
+      "line": 150,
+      "text": "raw,executable=self.shell(s.role,f\"read p t < {s.directory}/fc.pid\\nprintf 'PROCESS %s %s\\\\n' $p $t\\nsha256sum /proc/$p/exe\",\"process-executable\")"
+    },
+    {
+      "file": "pool_compare_bench.py",
+      "line": 302,
+      "text": "raw,inode_file=c.shell(\"A\",f\"stat -c 'SNAPSHOT %d %i %s' {ram}\\nsha256sum {snapshot} {ram}\",\"snapshot-inode\",180)"
+    },
+    {
+      "file": "pool_discard_bench.py",
+      "line": 414,
+      "text": "raw, file = c.shell(role, \"sha256sum \" + \" \".join(\"/lab/\" + name for name in names),"
+    },
+    {
+      "file": "pool_memory_module.c",
+      "line": 229,
+      "text": "c->state->full_scan_pages = cfg.count;"
+    },
+    {
+      "file": "pool_memory_module.c",
+      "line": 443,
+      "text": "c->state->full_scan_pages++;"
+    },
+    {
+      "file": "pool_memory_module.c",
+      "line": 475,
+      "text": "c->state->full_scan_pages += c->cfg.count;"
+    },
+    {
+      "file": "verify_home_storage.py",
+      "line": 36,
+      "text": "return hashlib.sha256(data).hexdigest()"
+    }
+  ],
+  "scope_note": "Initial first-party keyword inventory, followed by call-path inspection; line numbers precede edits. Vendored sources were inspected at the modified VMM/kernel paths, not counted here.",
+  "followed_runtime_paths": [
+    "swe_pool_bench.SWEController",
+    "pool_handoff_bench.HandoffController.start_vm",
+    "pool_bench.PoolController.write_bytes",
+    "lab.start/migration_trace_fetch",
+    "resident_fast.py",
+    "resident_control.c",
+    "resident_bootstrap.c",
+    "VMM direct.rs/pool_memory.rs/rpc_interface.rs",
+    "virtio block backend/persist/restore timing",
+    "pool_memory_module.c persistent import",
+    "kvm-dax-state.patch handoff attach/detach"
+  ],
+  "remaining_diagnostics": "Historical dedicated correctness drivers and explicit audit APIs remain; they are not called by the SWE runtime handoff path. Offline and build evidence hashes remain."
+}

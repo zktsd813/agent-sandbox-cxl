@@ -1,0 +1,184 @@
+{
+  "schema": "cxl-pool-failure-history-v1",
+  "scope": "Earlier failed attempts, separate from the successful formal Sync/Async runs. Original reports are identified by path and SHA-256 rather than duplicated.",
+  "timestamp_convention": "Original log timestamps are UTC.",
+  "cases": [
+    {
+      "id": "v1-nfsd",
+      "original_report": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T034618Z-6v3f_g81/pool-1793331987776649275/report.json",
+        "bytes": 19296,
+        "sha256": "30ac0f612c9112fa5e4170c866f192dec87ab8e73a1997dcdea111c9727e060a"
+      },
+      "result": "failed",
+      "error": "RuntimeError('Guest command failed:\\n\\r\\n/ # (\\r\\n> set -e\\r\\n> mount -t ext4 -o rw,noatime /dev/vda /storage\\r\\n> mount -o bind /storage /disk\\r\\n> export PATH=/usr/sbin:/usr/bin:/bin:/sbin:/lab\\r\\n> mkdir -p /var/lib/nfs /run/rpcbind /proc/fs/nfsd\\r\\n> mount -t nfsd nfsd /proc/fs/nfsd\\r\\n> printf \\'/storage 172.30.0.2(rw,sync,no_subtree_check,no_root_squash,fsid=19)\\\\n\\r\\r\\n\\' > /etc/exports\\r\\n> rpcbind -f -w > /run/pool-3e6585944644d5d4/rpcbind.log 2>&1 &\\r\\n> sleep .2\\r\\n> exportfs -ra\\r\\n> rpc.mountd --foreground --no-nfs-version 2 --no-nfs-version 4 --port 20048 > /\\r\\r\\nrun/pool-3e6585944644d5d4/mountd.log 2>&1 &\\r\\n> rpc.nfsd -V3 -N4 4\\r\\n> exportfs -v\\r\\n> cat /proc/mounts\\r\\n> )\\r\\nmount: mounting nfsd on /proc/fs/nfsd failed: No such device\\r\\n/ # printf \\'\\\\nLAB_COMMAND_DONE_facc62ddf008fcac:%s\\\\n\\' \"$?\"\\r\\n\\r\\nLAB_COMMAND_DONE_facc62ddf008fcac:255')",
+      "completed_transitions_before_failure": 0,
+      "completed_workload_commands_before_failure": 0,
+      "counted_as_successful_formal_run": false,
+      "cleanup_errors": [],
+      "runtime_inputs": {
+        "l1_kernel": {
+          "path": "/tmp/pool-kernel-build-20261030/arch/x86/boot/bzImage",
+          "sha256": "1397de5e96dd15eb539370e3bde556690f134879062040621ac01d790a98a777"
+        },
+        "firecracker": {
+          "path": "/tmp/firecracker-home-storage-20261028/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker",
+          "sha256": "81aea7b5fca81e6cc6257c4dfaba90ac2a4e04ae9fe0702156ced3b4f576eed1"
+        }
+      },
+      "original_log": {
+        "file": "v1-nfsd.log",
+        "path": "/tmp/pool-primary-20261030.log",
+        "bytes": 7641,
+        "sha256": "cadee6b045d61c9c820c319652c089e4f412cd9b40023ab8e9dfbdd8347b6d5c"
+      },
+      "wrapper_cleanup_observation": "Original wrapper log records Stopped lab VMs.",
+      "observed": "NFS server setup failed at mount -t nfsd with No such device, before any sandbox workload command.",
+      "cause": "The saved initial L1 build configuration had CONFIG_NFSD disabled.",
+      "evidence": [
+        {
+          "path": "/tmp/pool-kernel-cow-only-20261030.config",
+          "bytes": 141821,
+          "sha256": "93cfac458421771f92ca4d65b766e5c80317c606bc29c45490039dac2aeb4853",
+          "file": "v1-kernel-config.txt.gz",
+          "encoding": "gzip",
+          "stored_bytes": 32072,
+          "stored_sha256": "238a8ea8e5ee4eb94196dcdfa59cb444afeb557c125452931cf29073d613c521"
+        },
+        {
+          "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-pool-v2-20261030/l1-kernel.config",
+          "bytes": 141898,
+          "sha256": "7da6303ddad9a24782aff314d50ee4c5f63268b1d84d96d227a833eabf42eaab",
+          "selected_lines": [
+            {
+              "line": 4458,
+              "text": "CONFIG_NFS_FS=y"
+            },
+            {
+              "line": 4460,
+              "text": "CONFIG_NFS_V3=y"
+            },
+            {
+              "line": 4469,
+              "text": "CONFIG_NFSD=y"
+            }
+          ]
+        }
+      ],
+      "fix": "Rebuilt the L1 kernel with CONFIG_NFSD=y and matching KVM modules, regenerated assets, and added prepare-time checks for NFS server/client configuration.",
+      "validation": "Subsequent fresh runs passed the NFS setup and later completed remote NFS refills."
+    },
+    {
+      "id": "v2-negative-harness",
+      "original_report": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T034823Z-munesrd8/pool-1793332113225139440/report.json",
+        "bytes": 15856961,
+        "sha256": "225ff7a34edef477d3c616cb654a1f4ee3ddece6732e9939c775a032e13631fa"
+      },
+      "result": "failed",
+      "error": "RuntimeError('Guest command failed:\\n\\r\\n/ # (\\r\\n> set -e\\r\\n> /lab/shared-probe api /run/pool-39690c986c493409/vm1-epoch1/api.sock PUT /acti\\r\\r\\nons \\'{\"action_type\": \"PoolCache\"}\\'\\r\\n> )\\r\\nLAB_API_JSON {\"status\":400,\"expected_status\":204,\"duration_us\":407490.099,\"response\":\"HTTP/1.1 400 \\\\u000d\\\\u000aServer: Firecracker API\\\\u000d\\\\u000aConnection: keep-alive\\\\u000d\\\\u000aContent-Type: application/json\\\\u000d\\\\u000aContent-Length: 127\\\\u000d\\\\u000a\\\\u000d\\\\u000a{\\\\\"fault_message\\\\\":\\\\\"Internal VMM error: Experimental block-data pool operation failed: pool plan VM identity/run epoch mismatch\\\\\"}\"}\\r\\nAPI PUT /actions failed: HTTP/1.1 400 \\r\\r\\nServer: Firecracker API\\r\\r\\nConnection: keep-alive\\r\\r\\nContent-Type: application/json\\r\\r\\nContent-Length: 127\\r\\r\\n\\r\\r\\n{\"fault_message\":\"Internal VMM error: Experimental block-data pool operation failed: pool plan VM identity/run epoch mismatch\"}\\r\\n/ # printf \\'\\\\nLAB_COMMAND_DONE_7018e83ac95bc01b:%s\\\\n\\' \"$?\"\\r\\n\\r\\nLAB_COMMAND_DONE_7018e83ac95bc01b:1\\r\\n/ ')",
+      "completed_transitions_before_failure": 0,
+      "completed_workload_commands_before_failure": 8,
+      "counted_as_successful_formal_run": false,
+      "cleanup_errors": [],
+      "runtime_inputs": {
+        "l1_kernel": {
+          "path": "/tmp/pool-kernel-build-20261030/arch/x86/boot/bzImage",
+          "sha256": "1e72c8a58c484dea501f1c2e3fc5a0efe93b46fe1e873e99a25c16154bf19e86"
+        },
+        "firecracker": {
+          "path": "/tmp/firecracker-home-storage-20261028/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker",
+          "sha256": "81aea7b5fca81e6cc6257c4dfaba90ac2a4e04ae9fe0702156ced3b4f576eed1"
+        }
+      },
+      "original_log": {
+        "file": "v2-negative-harness.log",
+        "path": "/tmp/pool-primary-v2-20261030.log",
+        "bytes": 8145,
+        "sha256": "18ee5f33a775b47b75370fe2870d3f0d1db3608cf18e34da70aa7b54f66770ec"
+      },
+      "wrapper_cleanup_observation": "Original wrapper log records Stopped lab VMs.",
+      "observed": "An intentionally wrong VM identity/run epoch received HTTP 400, but shared-probe was still configured to expect HTTP 204 and failed the harness command.",
+      "cause": "The negative-test caller used the normal success-only API wrapper.",
+      "fix": "Negative API tests now pass the explicit expected-status argument 400 to shared-probe; valid calls still require 204.",
+      "validation": "Both successful formal runs include completed structural rejection tests and normal guest progress afterwards."
+    },
+    {
+      "id": "v3-nfs-hints-timeout",
+      "original_report": {
+        "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T035115Z-i1a3ir47/pool-1793332284484761158/report.json",
+        "bytes": 100474339,
+        "sha256": "23d111c5ca4a6c6c2543750f0efc57225ea55ea0813b0e25b99c4f4e27f8ffb9"
+      },
+      "result": "failed",
+      "error": "RuntimeError('Guest command failed:\\n\\r\\n/ # (\\r\\n> set -e\\r\\n> /lab/shared-probe api /run/pool-756054fd602b6cd3/vm1-epoch2/api.sock PUT /acti\\r\\r\\nons \\'{\"action_type\": \"PoolCache\"}\\'\\r\\n> )\\r\\nAPI response: Resource temporarily unavailable\\r\\n/ # printf \\'\\\\nLAB_COMMAND_DONE_74ab8bb67379b284:%s\\\\n\\' \"$?\"\\r\\n\\r\\nLAB_COMMAND_DONE_74ab8bb67379b284:1')",
+      "completed_transitions_before_failure": 3,
+      "completed_workload_commands_before_failure": 30,
+      "counted_as_successful_formal_run": false,
+      "cleanup_errors": [],
+      "runtime_inputs": {
+        "l1_kernel": {
+          "path": "/tmp/pool-kernel-build-20261030/arch/x86/boot/bzImage",
+          "sha256": "1e72c8a58c484dea501f1c2e3fc5a0efe93b46fe1e873e99a25c16154bf19e86"
+        },
+        "firecracker": {
+          "path": "/tmp/firecracker-home-storage-20261028/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker",
+          "sha256": "81aea7b5fca81e6cc6257c4dfaba90ac2a4e04ae9fe0702156ced3b4f576eed1"
+        }
+      },
+      "original_log": {
+        "file": "v3-nfs-hints-timeout.log",
+        "path": "/tmp/pool-primary-v3-20261030.log",
+        "bytes": 7722,
+        "sha256": "a0790bdd1cf48aef5761e609df64841eeaa5633334484690f204abe69a020251"
+      },
+      "wrapper_cleanup_observation": "Original wrapper log records Stopped lab VMs.",
+      "observed": "After the first restore on B, the PoolCache API client ended with Resource temporarily unavailable. The helper receive timeout was 30 seconds; the VMM log records the request without a completion response before cleanup.",
+      "source_observations": "The measured code restored hints from the NFS-backed /disk path and used serde_json::from_reader(File::open(path)?) without a BufReader.",
+      "diagnosis": "Unbuffered metadata reads over NFS were a plausible contributor. No syscall/RPC trace or isolated timing experiment established an exact amplification factor or proved the timeout mechanism by itself.",
+      "fix": "Added 64 KiB buffered JSON readers/writers with explicit output flushes, and copied/compared restored hints into an owner-local /run file before starting Firecracker. Full RAM snapshot creation was also moved to local tmpfs, with a separately bounded, byte-compared local/NFS transport step.",
+      "validation": "Fresh Sync and Async runs using the changes completed B handoffs, NFS refills, and the full promotion/demotion lifecycle.",
+      "evidence": [
+        {
+          "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T035115Z-i1a3ir47/pool-1793332284484761158/measured-sources/firecracker.patch",
+          "bytes": 168354,
+          "sha256": "3fb9397aa1f59ce58825771a4d12abf5930cba00b648983d9133ab93013fddc8",
+          "selected_lines": [
+            {
+              "line": 3772,
+              "text": "+                let saved: HintFile = serde_json::from_reader(File::open(path)?)?;"
+            }
+          ]
+        },
+        {
+          "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T035115Z-i1a3ir47/pool-1793332284484761158/measured-sources/pool_bench.py",
+          "bytes": 24585,
+          "sha256": "5997e997c4dd4702c38a41845e66d2c74af3b57cceec5593992ee258a889891f",
+          "selected_lines": [
+            {
+              "line": 113,
+              "text": "            env[\"FC_POOL_HINTS_RESTORE\"] = restore_hints"
+            }
+          ]
+        },
+        {
+          "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/shared_probe.c",
+          "bytes": 157552,
+          "sha256": "966cdf908413578b7a5a2d9e8833bfb16f8460b5e8a4405d12a850c157c330d1",
+          "selected_lines": [
+            {
+              "line": 533,
+              "text": "    struct timeval timeout = {.tv_sec = 30};"
+            }
+          ]
+        },
+        {
+          "file": "v3-destination-vmm.log",
+          "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T035115Z-i1a3ir47/pool-1793332284484761158/0336-v1-final-log.bin",
+          "bytes": 1408,
+          "sha256": "2816ec1adee834363af20c391e899663b5d628cbe84d4a46fbd663d256a05d82"
+        }
+      ]
+    }
+  ]
+}

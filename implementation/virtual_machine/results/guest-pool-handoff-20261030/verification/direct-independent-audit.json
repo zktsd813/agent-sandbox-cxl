@@ -1,0 +1,22 @@
+{
+  "result": "passed",
+  "mode": "direct",
+  "receipts": 792,
+  "authorities": 11,
+  "transitions": {
+    "promotion": 6,
+    "demotion": 6,
+    "direct": 4
+  },
+  "minimum_common_current_shared_bytes": 167772160,
+  "actual_private_mapping_reuse_bytes": [],
+  "ack_before_guest_reuse_bytes": [
+    150994944
+  ],
+  "controller_declared_ack_before_reuse_bytes": [
+    150994944
+  ],
+  "limitations": [
+    "Coherent nested lab; trusted guest kernel/controller"
+  ]
+}

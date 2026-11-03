@@ -1,0 +1,62 @@
+{
+  "direct-unit.log": {
+    "bytes": 3057,
+    "sha256": "8d144a20dfab62e5e92e7ae1538d24017a46223c4734a490587c35c7cb040573"
+  },
+  "summary.json": {
+    "bytes": 9179,
+    "sha256": "072fa1e613497dc680c42164a2b2035e897ff77618173be6512add0255fc6fb3"
+  },
+  "mapper-unit.log": {
+    "bytes": 3158,
+    "sha256": "794e7ac8781eb312400323246bf99f44e1ae8216928715c72bdd42b7efbf6b63"
+  },
+  "source-audit.json": {
+    "bytes": 19121,
+    "sha256": "a8c26946df8774f714069c9f2b9663de8e9cc4fc7b3b47ed4b79c77e39a3d9e5"
+  },
+  "swe-unprofiled-verification.json": {
+    "bytes": 12467,
+    "sha256": "e916cdced6367b83fae68373b9154ba0bd5f0dc0de4d288aba7cec5605855009"
+  },
+  "swe-profiled-verification.json": {
+    "bytes": 12441,
+    "sha256": "04bed37653e02f1ca1427f5656ea67785c7a9403c57f9687aaced09a7065de21"
+  },
+  "evidence-tests.log": {
+    "bytes": 112,
+    "sha256": "3e06cb2d7f68dda65d9ee60fd6a104ca4cc3b148faa03222be715d2e6980f57d"
+  },
+  "swe-unprofiled.tar.xz": {
+    "bytes": 6983064,
+    "sha256": "6bc4e814642ac8ba998a25a8ae5d72991258386ff52bb9b9a8f208f535303a12"
+  },
+  "backend-verification.json": {
+    "bytes": 71830,
+    "sha256": "50439c0693f21064d9707e70e0235ff9e1383d275e4fa6ce5f2189da139d2a0f"
+  },
+  "allocator-unit.log": {
+    "bytes": 107,
+    "sha256": "c9f2c1b54e73f254402bb1a5b42d7d0ba1341d1dcb01aa3cc77c43238566aaf5"
+  },
+  "development.tar.xz": {
+    "bytes": 7574252,
+    "sha256": "e5019e0d8db30c3d5e642b18a6bb7f440516975a3fd7675278d1b499cf3a1394"
+  },
+  "archive-replay.json": {
+    "bytes": 106,
+    "sha256": "0f595364c2d19763f971dd67859ec7719b63e93e2a4542765d2c6fdbccd83e1f"
+  },
+  "backend-final.tar.xz": {
+    "bytes": 2155552,
+    "sha256": "a16ee7ac388f5d60fb28b3c2d21698b9dc7c9b034c4a3b2a47cf8430d971ff76"
+  },
+  "build.log": {
+    "bytes": 174,
+    "sha256": "f53c29fd6608b525c621133ba08c2e580ab1a9439231b99b0838565f69aeed38"
+  },
+  "swe-profiled.tar.xz": {
+    "bytes": 7187916,
+    "sha256": "c042df55ed76afb62b2b253aad2cd81b0020c4e8d631884000da24be2056a944"
+  }
+}

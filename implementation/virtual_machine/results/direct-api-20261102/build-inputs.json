@@ -1,0 +1,18 @@
+{
+  "base_commit": "fa7b08dd2598db36a80e717fa4ea2111a8eb5511",
+  "firecracker_base_commit": "95f868c8e345b1cc8faccd1a3c910b4989dc3f58",
+  "firecracker_sha256": "d90ddd2d5d46dfc480868ec2b576fe785ad5c818cac19ed4d8b6cf617648b480",
+  "sources_sha256": {
+    "firecracker.patch": "5c2204571e58df14e052e4bc93d84a1a0281137b6954f4cc7f5ce8e43dfeb417",
+    "kvm-dax-state.patch": "2f52a8de0f0d69c50266b6f8e9adc389a5444db53a5de83d43eba57a7a002854",
+    "swe_pool_run.py": "6d0a883aacdffb7d6679b54fe3fac13e6eeefe9bd48645ad8983148d3b9ecf0e",
+    "swe_pool_bench.py": "79db4968cf9ace37978d626bd1b0d5b58c3ed090d4b3274e1511f5fa7f36fe16",
+    "pool_handoff_bench.py": "69a94b50af7c430a840f5f2ea09ce25548a942784ca5ea54b4fa60a248322497",
+    "verify_swe_pool.py": "d34fbbb81181849ac097698c2fc6024676dc094e143253257361927fb8753ca1",
+    "analyze_direct_profile.py": "a2cba701231d5165e46cbb584ff679d0ed5d20001ef0f843ceeefae54db4e473"
+  },
+  "kernel_change": false,
+  "toolchain_image": "public.ecr.aws/firecracker/fcuvm:v93",
+  "target": "x86_64-unknown-linux-musl",
+  "profile": "release"
+}

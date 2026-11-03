@@ -1,0 +1,20 @@
+{
+  "archive": "/home/ijkim/dcd-v3-2023-10-30.zip",
+  "archive_sha256": "5b29096b3c7e4d9dceeb431d5ff35cd549159524c055301d1e5d4cb6b5819975",
+  "archive_root": "linux-kernel-dcd-v3-2023-10-30",
+  "entries": 87081,
+  "uncompressed_bytes": 1353567505,
+  "symlinks": 63,
+  "base_version": "6.6.0-rc6",
+  "local_patch": "cxl-static-capacity.patch",
+  "modified_source_files": [
+    "drivers/cxl/core/hdm.c",
+    "drivers/cxl/core/mbox.c"
+  ],
+  "patch_order": [
+    "cxl-static-capacity.patch",
+    "kvm-dax-state.patch"
+  ],
+  "source_checkout_in_git": false,
+  "archive_requirement": "Obtain the supplied archive separately, verify archive_sha256, and extract archive_root into implementation/linux; build.sh applies both patches."
+}

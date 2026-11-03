@@ -1,0 +1,68 @@
+{
+  "schema": "cxl-pool-cow-probe-v1",
+  "result": "passed",
+  "experiment_run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T034758Z-im581bxd",
+  "kernel_release": "6.6.0-rc6-dcd-v3",
+  "device_dax_alignment": 4096,
+  "test_offset": 536870912,
+  "test_bytes": 65536,
+  "cases": {
+    "default_off_rejects_private_mapping": true,
+    "private_alias_same_pfn": true,
+    "cpu_write_cow": true,
+    "write_before_initial_read_cow": true,
+    "host_pread_write_cow": true,
+    "fork_isolation": true,
+    "kvm_read_keeps_shared_pfn": true,
+    "kvm_write_splits_pfn": true,
+    "kvm_same_hva_remap_ept_invalidation_count": 16
+  },
+  "limitations": [
+    "One coherent physical host with two QEMU L1 VMs; not physical noncoherent CXL validation.",
+    "Private CoW allocates ordinary DRAM, making a CXL-backed sandbox hybrid after writes.",
+    "Immutable canonical backing and allocation lifetime are supplied by the controller, not enforced by this device driver.",
+    "This low-level probe does not establish >100 MiB sandbox guest cache residency or multi-sandbox lifecycle correctness."
+  ],
+  "artifacts": {
+    "kernel": {
+      "path": "/tmp/pool-kernel-build-20261030/arch/x86/boot/bzImage",
+      "sha256": "1e72c8a58c484dea501f1c2e3fc5a0efe93b46fe1e873e99a25c16154bf19e86"
+    },
+    "config": {
+      "path": "/tmp/pool-kernel-build-20261030/.config",
+      "sha256": "7da6303ddad9a24782aff314d50ee4c5f63268b1d84d96d227a833eabf42eaab"
+    },
+    "kernel_patch": {
+      "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/devdax-pool-cow.patch",
+      "sha256": "e3511e25b0ecea137b0856a487ffae484deaee929544214a47b802930072879d"
+    },
+    "probe_source": {
+      "path": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/pool_cow_probe.c",
+      "sha256": "aef978b2ba382212615deba4c6f0ae4e367bebd4e30135ccce10ec228f1db7f1"
+    },
+    "probe": {
+      "path": "/tmp/pool-cow-probe",
+      "sha256": "a687d21f17945f23ce21bc8b5f998dee6a224afa34415897d1b622ce480485ea"
+    },
+    "kvm": {
+      "path": "/tmp/pool-kernel-build-20261030/arch/x86/kvm/kvm.ko",
+      "sha256": "1be61aad42d131a60a7a4ac68a4cf59034b1b23ba5aaab447b1ac852bde6eba9"
+    },
+    "kvm_intel": {
+      "path": "/tmp/pool-kernel-build-20261030/arch/x86/kvm/kvm-intel.ko",
+      "sha256": "008e8430ce16c5bf4829845b2bfe4076f1f6c6dc06145753532e6304607fd9e9"
+    }
+  },
+  "evidence": {
+    "pool-cow-probe-A.txt": "37d5f26e0c5dcace0f373261dd60db0c958bae622944eb9fa97e084b38253a7c",
+    "pool-cow-probe-B.txt": "b62dfc3e89ecea5239c92ba5b3bfb69c0eccc9dd2346b13daa5392e0cf65a5bd",
+    "run.json": "b8df8d6b788cd2737ee05959d3e6ed1c2c81dba20660d803bbcc7671454bfc4d"
+  },
+  "previous_cow_only_run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T034201Z-_v8v0lko",
+  "kernel_features": {
+    "NFS_FS": true,
+    "NFS_V3": true,
+    "NFSD": true,
+    "pool_cow_default": false
+  }
+}

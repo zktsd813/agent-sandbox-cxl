@@ -1,0 +1,20 @@
+{
+  "result": "passed",
+  "archive_sha256": "318615932488237a7380e1cdf7e6c2267daef09d15f0753729f853cbcacbd11c",
+  "evidence_files_sha256_checked": 7844,
+  "offline_audits": {
+    "trace": {
+      "result": "passed",
+      "audit_sha256": "08489e3a42e31058629a241c709952789116ef982611d3f67ffb47cb1bdd5e12"
+    },
+    "guards": {
+      "result": "passed",
+      "audit_sha256": "6314cd39e9ba0210613c2d237a7c47a9148cf6b6728e955020ce5e4f77fe2ea2"
+    },
+    "state": {
+      "result": "passed",
+      "audit_sha256": "4882697685ea3262c379020cc7d3a8e116bc45f24ad9e8dadd519b01a01dd399"
+    }
+  },
+  "scope": "Fresh extraction; exact member set and file SHA256; VM-free trace, direct/guard and native-state audits. Large prepared images are checked separately in trace-audit.json."
+}

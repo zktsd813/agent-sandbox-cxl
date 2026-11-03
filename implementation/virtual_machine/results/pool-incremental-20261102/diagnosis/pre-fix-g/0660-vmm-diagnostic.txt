@@ -1,0 +1,10 @@
+
+/ # (
+> set -e
+> tail -n 100 /run/pool-be9da7facb5aa40a/vm1-epoch3/stderr.log 2>/dev/null || tr
+ue
+> )
+Error: RunWithApi(MicroVMStoppedWithError(GenericError))
+/ # printf '\nLAB_COMMAND_DONE_36c73ceb2d21ceb4:%s\n' "$?"
+
+LAB_COMMAND_DONE_36c73ceb2d21ceb4:0

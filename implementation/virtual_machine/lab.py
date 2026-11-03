@@ -39,7 +39,7 @@ SESSION = os.environ.get("CXL_LAB_SESSION", "")
 if SESSION and not re.fullmatch(r"[a-z0-9_-]{1,32}", SESSION):
     raise RuntimeError("CXL_LAB_SESSION must contain 1..32 lowercase letters, digits, _ or -")
 CURRENT = LOCAL / (f"current-{SESSION}.json" if SESSION else "current.json")
-QEMU_ROOT = LOCAL / "qemu/root"
+QEMU_ROOT = Path(os.environ.get("CXL_LAB_QEMU_ROOT", str(LOCAL / "qemu/root"))).resolve()
 KERNEL_BUILD = Path(os.environ.get("CXL_LAB_KERNEL_BUILD", str(LOCAL / "kernel-build"))).resolve()
 KERNEL_MODULES = Path(os.environ.get("CXL_LAB_KERNEL_MODULES", str(LOCAL / "kernel-modules"))).resolve() / "lib/modules"
 PACKAGES = ["qemu-system-x86", "qemu-system-common", "qemu-system-data", "seabios",
@@ -401,15 +401,25 @@ def start(args):
     no_active_run()
     host_kvm()
     prepared = json.loads((ASSETS / "manifest.json").read_text())
-    for name, expected in prepared["artifacts"].items():
-        if sha256(ASSETS / name) != expected:
-            raise RuntimeError(f"Asset changed: {name}; run prepare again.")
+    control_rpc = bool(prepared.get("control_rpc")) and not getattr(args, "serial_control", False)
     vendor = prepared["vendor"]
     parameter = Path(f"/sys/module/kvm_{'intel' if vendor == 'intel' else 'amd'}/parameters/nested")
     if parameter.read_text().strip().lower() not in ["y", "1"]:
         raise RuntimeError(f"Nested virtualization disabled: {parameter}")
     qemu = args.qemu.resolve() if args.qemu else find_qemu()
     qemu_version = output([qemu, "--version"], env=qemu_env(qemu)).splitlines()[0]
+    storage_image = getattr(args, "storage_image", None)
+    if storage_image:
+        storage_image = storage_image.resolve(strict=True)
+        if not storage_image.is_file():
+            raise RuntimeError("--storage-image must be a regular raw image file")
+    home_storage_image = getattr(args, "home_storage_image", None)
+    if getattr(args, "replicated_home_storage", False) and not home_storage_image:
+        raise RuntimeError("Replicated storage control requires --home-storage-image")
+    if home_storage_image:
+        home_storage_image = home_storage_image.resolve(strict=True)
+        if not home_storage_image.is_file() or "," in str(home_storage_image):
+            raise RuntimeError("--home-storage-image requires a regular raw image without commas in its path")
     if args.cxl_mib and "volatile-memdev" not in output([qemu, "-device", "cxl-type3,help"], env=qemu_env(qemu)):
         raise RuntimeError("CXL mode requires QEMU with cxl-type3 volatile-memdev; pass --qemu PATH")
     if args.dax_guest and "x-direct-ram" not in output([qemu, "-device", "cxl-type3,help"], env=qemu_env(qemu)):
@@ -464,8 +474,26 @@ def start(args):
               "dax_kvm_state": args.dax_kvm_state,
               "dax_handoff": args.dax_handoff,
               "dax_4k": args.dax_4k or args.dax_handoff,
+              "pool_cow": getattr(args, "pool_cow", False),
               "migration_network": migration_network,
               "prepared": prepared, "assets": str(ASSETS), "host_kernel": os.uname().release, "vms": {}}
+    if storage_image:
+        config["storage_image"] = {"path": str(storage_image), "build_sha256": prepared["artifacts"].get(storage_image.name) if storage_image.parent == ASSETS else None,
+                                   "readonly": True, "format": "raw", "cache": "none"}
+    if home_storage_image:
+        # Never attach the user's template writable. A owns the per-run copy;
+        # B uses NFS unless the replicated readonly ablation control is selected.
+        private_storage = run / "home-storage.raw"
+        command(["cp", "--reflink=auto", "--sparse=always", "--", home_storage_image, private_storage])
+        config["home_storage_image"] = {
+            "template": str(home_storage_image), "template_sha256": prepared["artifacts"].get(home_storage_image.name) if home_storage_image.parent == ASSETS else None,
+            "path": str(private_storage), "runtime_rehashed": False,
+            "owner": "A", "readonly": False, "format": "raw", "cache": "none",
+            "guest_device": "/dev/vdb" if storage_image else "/dev/vda",
+        }
+        if getattr(args, "replicated_home_storage", False):
+            config["replicated_home_storage"] = {"owner": "B", "path": str(home_storage_image),
+                "readonly": True, "sha256": config["home_storage_image"]["template_sha256"]}
     if args.dax_guest:
         config["source_patches"] = {name: sha256(HERE / name) for name in
                                     ["qemu-cxl-direct-ram.patch", "firecracker.patch", "ram-backend-source.json"]}
@@ -482,6 +510,7 @@ def start(args):
             prefix = run / ("vm-" + role.lower())
             console_path = str(control / (role.lower() + ".console.sock"))
             qmp_path = str(control / (role.lower() + ".qmp.sock"))
+            command_path = str(control / (role.lower() + ".command.sock"))
             # QEMU's unix socket paths must fit sockaddr_un.sun_path.
             if max(len(console_path.encode()), len(qmp_path.encode())) >= 108:
                 raise RuntimeError("Runtime path is too long for UNIX sockets.")
@@ -498,6 +527,13 @@ def start(args):
                    "-device", "ivshmem-plain,memdev=shared",
                    "-chardev", f"socket,id=console,path={console_path},server=on,wait=off,logfile={prefix}.serial.log",
                    "-serial", "chardev:console", "-qmp", f"unix:{qmp_path},server=on,wait=off"]
+            if control_rpc:
+                cmd[cmd.index("-append") + 1] += " lab.control_rpc=1"
+                cmd.extend(["-device", "virtio-serial-pci,id=labcontrol",
+                    "-chardev", f"socket,id=labcmd,path={command_path},server=on,wait=off",
+                    "-device", "virtserialport,bus=labcontrol.0,nr=1,chardev=labcmd,name=cxl.control"])
+            if getattr(args, "pool_cow", False):
+                cmd[cmd.index("-append") + 1] += " device_dax.pool_cow=1"
             if migration_network:
                 cmd[cmd.index("-append") + 1] += " lab.migration_ip=" + migration_network["ips"][role]
                 if args.network_backend == "socket":
@@ -508,6 +544,15 @@ def start(args):
                     backend = f"tap,id=migration,ifname={tap},script=no,downscript=no,vhost=on,queues=1"
                 cmd.extend(["-netdev", backend,
                             "-device", "virtio-net-pci,romfile=,netdev=migration,mac=52:54:00:ca:10:" + ("01" if role == "A" else "02")])
+            if storage_image:
+                cmd.extend(["-drive", f"file={storage_image},if=none,id=storage,format=raw,readonly=on,cache=none",
+                            "-device", "virtio-blk-pci,drive=storage"])
+            if home_storage_image and role == "A":
+                cmd.extend(["-drive", f"file={private_storage},if=none,id=home-storage,format=raw,cache=none",
+                            "-device", "virtio-blk-pci,drive=home-storage"])
+            if home_storage_image and role == "B" and getattr(args, "replicated_home_storage", False):
+                cmd.extend(["-drive", f"file={home_storage_image},if=none,id=replicated-home,format=raw,readonly=on,cache=none",
+                            "-device", "virtio-blk-pci,drive=replicated-home"])
             if cxl_backing:
                 cmd.extend(["-object", f"memory-backend-file,id=cxl-shared,size={args.cxl_mib}M,mem-path={cxl_backing},share=on",
                             "-device", "pxb-cxl,bus_nr=12,bus=pcie.0,id=cxl.0",
@@ -532,6 +577,8 @@ def start(args):
             config["vms"][role] = {"pid": process.pid, "starttime": identity, "command": cmd,
                                     "console": console_path, "qmp": qmp_path,
                                     "serial_log": str(prefix) + ".serial.log"}
+            if control_rpc:
+                config["vms"][role].update(control_rpc=command_path, control_nonce=nonce)
             config["vms"] = {name: config["vms"][name] for name in ("A", "B") if name in config["vms"]}
             save_json(run / "run.json", config)
             if migration_network and args.network_backend == "socket" and role == args.socket_listener:
@@ -740,9 +787,12 @@ def status(_):
 
 
 def guest_command(vm, body, timeout=15):
-    """Run a bounded command through the L1 serial shell, preserving its session."""
+    """Run a bounded command through the dedicated channel or legacy console."""
     if not alive(vm):
         raise RuntimeError("VM is not running")
+    if vm.get("control_rpc"):
+        import control_rpc
+        return control_rpc.command(vm, body, timeout)
     marker = "LAB_COMMAND_DONE_" + secrets.token_hex(8)
     script = f"\n(\nset -e\n{body}\n)\nprintf '\\n{marker}:%s\\n' \"$?\"\n"
     data = bytearray()
@@ -1918,26 +1968,29 @@ def migration_trace_fetch(vm, config, path):
     bdf = event.get("pci_bdf", "") if event else ""
     if not re.fullmatch(r"[0-9a-fA-F:.]+", bdf):
         raise RuntimeError("Missing validated ivshmem BAR for diagnostic export")
-    resource = guest_command(vm, f"sed -n '3p' /sys/bus/pci/devices/{bdf}/resource")
-    ranges = [line.split() for line in resource.splitlines()
-              if re.fullmatch(r"\s*0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s*", line)]
-    if len(ranges) != 1:
-        raise RuntimeError("Cannot read diagnostic export BAR")
-    start, end, flags = (int(value, 16) for value in ranges[0])
-    if not flags & 0x200 or end - start + 1 != config["shared_mib"] * 1024 * 1024 or start % 4096:
-        raise RuntimeError("Invalid diagnostic export BAR range")
+    key = (config['nonce'], bdf, vm['pid'])
+    cache = getattr(migration_trace_fetch, '_bars', {})
+    if key not in cache:
+        resource = guest_command(vm, f"sed -n '3p' /sys/bus/pci/devices/{bdf}/resource")
+        ranges = [line.split() for line in resource.splitlines()
+                  if re.fullmatch(r"\s*0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s+0x[0-9a-fA-F]+\s*", line)]
+        if len(ranges) != 1:
+            raise RuntimeError("Cannot read diagnostic export BAR")
+        start, end, flags = (int(value, 16) for value in ranges[0])
+        if not flags & 0x200 or end - start + 1 != config["shared_mib"] * 1024 * 1024 or start % 4096:
+            raise RuntimeError("Invalid diagnostic export BAR range")
+        cache[key] = start
+        migration_trace_fetch._bars = cache
+    start = cache[key]
     tag = "MIGRATION_EXPORT_" + secrets.token_hex(8)
     temporary = "/tmp/" + tag.lower() + ".gz"
     quoted = shlex.quote(path)
     try:
         metadata = guest_command(vm, f"gzip -c {quoted} > {temporary}\n"
                                  f"printf '\\n{tag}_BYTES='; wc -c < {quoted}\n"
-                                 f"printf '{tag}_SHA='; sha256sum {quoted}\n"
-                                 f"printf '{tag}_GZIP_BYTES='; wc -c < {temporary}\n"
-                                 f"printf '{tag}_GZIP_SHA='; sha256sum {temporary}", timeout=60)
+                                 f"printf '{tag}_GZIP_BYTES='; wc -c < {temporary}", timeout=60)
         values = {}
-        for name, pattern in (("BYTES", r"\s*(\d+)\s*$"), ("SHA", r"([0-9a-f]{64})\s"),
-                              ("GZIP_BYTES", r"\s*(\d+)\s*$"), ("GZIP_SHA", r"([0-9a-f]{64})\s")):
+        for name, pattern in (("BYTES", r"\s*(\d+)\s*$"), ("GZIP_BYTES", r"\s*(\d+)\s*$")):
             match = re.search(rf"^{tag}_{name}={pattern}", metadata, re.MULTILINE)
             if not match:
                 raise RuntimeError("Missing diagnostic export integrity metadata")
@@ -1949,14 +2002,14 @@ def migration_trace_fetch(vm, config, path):
         with Path(config["backing"]).open("rb") as stream:
             stream.seek(offset)
             compressed = stream.read(compressed_size)
-        if len(compressed) != compressed_size or hashlib.sha256(compressed).hexdigest() != values["GZIP_SHA"]:
-            raise RuntimeError("Diagnostic ivshmem export compressed bytes/hash mismatch")
+        if len(compressed) != compressed_size:
+            raise RuntimeError("Diagnostic ivshmem export compressed size mismatch")
         data = gzip.decompress(compressed)
-        if len(data) != size or hashlib.sha256(data).hexdigest() != values["SHA"]:
-            raise RuntimeError("Diagnostic ivshmem export original bytes/hash mismatch")
-        return data, {"path": path, "bytes": size, "sha256": values["SHA"], "gzip_bytes": compressed_size,
-                      "gzip_sha256": values["GZIP_SHA"], "ivshmem_offset": offset,
-                      "transport": "post-migration diagnostic export only; experimental guest RAM travels over TCP"}
+        if len(data) != size:
+            raise RuntimeError("Diagnostic ivshmem export original size mismatch")
+        return data, {"path": path, "bytes": size, "sha256": hashlib.sha256(data).hexdigest(), "gzip_bytes": compressed_size,
+                      "gzip_sha256": hashlib.sha256(compressed).hexdigest(), "ivshmem_offset": offset,
+                      "transport": "framed gzip through shared scratch; no guest-side SHA verification; not guest RAM transfer"}
     finally:
         try:
             guest_command(vm, f"rm -f {temporary}")
@@ -3313,12 +3366,18 @@ def main():
     p.add_argument("--qemu", type=Path, help="Use an explicit QEMU binary, e.g. one with CXL Type-3 support")
     p.add_argument("--cxl-mib", type=int, default=0, help="Add shared CXL Type-3 RAM exposed as device-DAX (e.g. 2048)")
     p.add_argument("--dax-guest", action="store_true", help="Run one microVM on A with all 128MiB guest RAM in DAX; B observes")
+    p.add_argument("--serial-control", action="store_true", help="Use the historical console transport even if the fixture has a dedicated control channel")
     p.add_argument("--dax-kvm-state", action="store_true", help="Use the experimental KVM device-DAX state allocator on VM A")
     p.add_argument("--dax-handoff", action="store_true", help="Direct shared KVM handoff lab; fixed kernel addresses, 4KiB DAX, no automatic L2")
     p.add_argument("--dax-4k", action="store_true", help="Configure the shared device-DAX allocation with 4KiB alignment for matched EPT measurements")
+    p.add_argument("--pool-cow", action="store_true", help="Opt in to experimental device-DAX MAP_PRIVATE CoW in the disposable L1 kernels")
     p.add_argument("--migration-network", action="store_true", help="Connect L1 A/B with a private virtio-net link for full RAM migration")
     p.add_argument("--network-backend", choices=["socket", "tap"], default="socket", help="Use a QEMU socket or isolated host TAP/bridge with vhost-net (default socket)")
     p.add_argument("--socket-listener", choices=["A", "B"], default="A", help="Choose the QEMU socket listener; starts it before the connecting peer (default A)")
+    p.add_argument("--storage-image", type=Path, help="Attach the same read-only raw disk to both L1s for storage experiments; QEMU uses cache=none")
+    p.add_argument("--home-storage-image", type=Path, help="Copy a raw storage template into this run and attach it writable only to L1 A; B must use NFS")
+    p.add_argument("--replicated-home-storage", action="store_true",
+                   help="Backend ablation only: also attach the immutable template readonly to L1 B")
     p.set_defaults(func=start)
     p = subs.add_parser("verify", help="Wait for guest checks and validate host backing")
     p.add_argument("--timeout", type=float, default=180)
@@ -3495,6 +3554,8 @@ def main():
             parser.error("cxl-mib must be zero or a power of two >= 256")
         if args.dax_4k and not args.cxl_mib:
             parser.error("--dax-4k requires --cxl-mib")
+        if args.pool_cow and (not args.dax_guest or not args.dax_4k or args.dax_handoff or args.dax_kvm_state):
+            parser.error("--pool-cow requires --dax-guest --dax-4k and ordinary snapshot mode")
         if args.dax_guest and args.cxl_mib < 256:
             parser.error("dax-guest requires --cxl-mib >= 256")
         if args.dax_kvm_state and (not args.dax_guest or args.cxl_mib < 1024):

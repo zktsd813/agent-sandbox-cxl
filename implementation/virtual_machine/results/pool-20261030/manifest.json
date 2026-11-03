@@ -1,0 +1,122 @@
+{
+  "schema": 1,
+  "scope": "All packaged result files except this manifest; measured implementation hashes are in the independent audits and archives.",
+  "files": {
+    "README.md": {
+      "bytes": 8258,
+      "sha256": "99f65de69118a6cc741e1e5b16d6b7df873e332c49571140eec04f4d0f749d05"
+    },
+    "archive-replay-audit.json": {
+      "bytes": 331,
+      "sha256": "c42de0d93c0bd300d226d8979a194e1b0868336ed2e08f522d39ed6530f6a6fb"
+    },
+    "async-audit.json": {
+      "bytes": 607,
+      "sha256": "f99e9d2a71de7b2c81402a21e0941ad4d79b2ad311e442469174eb9fe153e36e"
+    },
+    "async-evidence.tar.xz": {
+      "bytes": 17282112,
+      "sha256": "cc7419e3fedcdd509faab389931c6853a3f15f96c2d67aec3a87021558b857f3"
+    },
+    "async-independent-audit.json": {
+      "bytes": 23752,
+      "sha256": "3e4af3704ad222f732f1a70d5cd28e1ef9742654a14549d3b99c0b3a1a621d47"
+    },
+    "async-package.json": {
+      "bytes": 906,
+      "sha256": "38a556a1375a43c9182ab841f6dbfdbe363ad49406085552a4394d452f1d6baf"
+    },
+    "async-run.log": {
+      "bytes": 4882,
+      "sha256": "69985c0f0681a9ce6e7fa532ad41f24d1a4e888ffc18aa28112edc458931d9c6"
+    },
+    "audit-tools/README.md": {
+      "bytes": 3185,
+      "sha256": "cc058314982a336b6c460f3919331906b631ae2954fbb897682eec95147d647d"
+    },
+    "audit-tools/audit_current_cache.py": {
+      "bytes": 6010,
+      "sha256": "d60636d0200dbc68a3235cc909ccdc5910d2c92fcbed9529f0634c441e9cc43b"
+    },
+    "audit-tools/audit_receipts.py": {
+      "bytes": 16990,
+      "sha256": "e624d35ba8ce2a271dcc401655d3953203fcb8b00665d9cbdd69838525b75879"
+    },
+    "control-tests.json": {
+      "bytes": 453,
+      "sha256": "3edfc79bd9e69a1277ae418b00e2fbe31cf2aa8fee388dd0bb978e44b29c3e4c"
+    },
+    "control-tests.log": {
+      "bytes": 566,
+      "sha256": "1e020f9ea4a6d888bdc370f5cdbde72ea063176027d848292ee2e83690996dff"
+    },
+    "failures/history.json": {
+      "bytes": 11873,
+      "sha256": "842bae2b1e1145d15859597e5ba3d324bb1109c79dd176f1b6fcbdf9914fbe9a"
+    },
+    "failures/v1-kernel-config.txt.gz": {
+      "bytes": 32072,
+      "sha256": "238a8ea8e5ee4eb94196dcdfa59cb444afeb557c125452931cf29073d613c521"
+    },
+    "failures/v1-nfsd.log": {
+      "bytes": 7641,
+      "sha256": "cadee6b045d61c9c820c319652c089e4f412cd9b40023ab8e9dfbdd8347b6d5c"
+    },
+    "failures/v2-negative-harness.log": {
+      "bytes": 8145,
+      "sha256": "18ee5f33a775b47b75370fe2870d3f0d1db3608cf18e34da70aa7b54f66770ec"
+    },
+    "failures/v3-destination-vmm.log": {
+      "bytes": 1408,
+      "sha256": "2816ec1adee834363af20c391e899663b5d628cbe84d4a46fbd663d256a05d82"
+    },
+    "failures/v3-nfs-hints-timeout.log": {
+      "bytes": 7722,
+      "sha256": "a0790bdd1cf48aef5761e609df64841eeaa5633334484690f204abe69a020251"
+    },
+    "firecracker-tests.json": {
+      "bytes": 4304,
+      "sha256": "9eb61f3a88bf3d95b53544c124d52b63aed82ef186908b60d54314ab87d2d8ad"
+    },
+    "firecracker-tests.tar.gz": {
+      "bytes": 4257,
+      "sha256": "7062db44bae839c336ee8b8d0a1d5378c3f637bca80fe582ca966b9a88bc209f"
+    },
+    "kernel.config": {
+      "bytes": 141898,
+      "sha256": "7da6303ddad9a24782aff314d50ee4c5f63268b1d84d96d227a833eabf42eaab"
+    },
+    "patch-audit.json": {
+      "bytes": 208,
+      "sha256": "aa82165d5c9661755f01b6127c68c4802cddb85647249e7b8b164eff4f7d7c40"
+    },
+    "summary.json": {
+      "bytes": 8877,
+      "sha256": "1cd89765963b8a7c0c13bb285e20b882a84e3b363f477048f83c23df423da6e6"
+    },
+    "sync-audit.json": {
+      "bytes": 609,
+      "sha256": "b67acd15e4d760cf0269065e9e3376114dc9cbc845814875d8a7bc3e46140a42"
+    },
+    "sync-evidence.tar.xz": {
+      "bytes": 31311616,
+      "sha256": "a123487a70f2b4b2a00a0ac48e43acf487478752d1760c89945f7a5b3a254532"
+    },
+    "sync-independent-audit.json": {
+      "bytes": 23828,
+      "sha256": "6a0e8e715e0130eccc6496edf29a514f1aa5ffc1f7b6b1f0ffc887cdf906b6ac"
+    },
+    "sync-package.json": {
+      "bytes": 901,
+      "sha256": "c9944a0b3bbdac2e01ee91b6327fea09082cc17fb1b4768ae71932969d473b5b"
+    },
+    "sync-run.log": {
+      "bytes": 4881,
+      "sha256": "b7e0d76a0c7a62c48db950157e856bf796e5a4223d5e416fa247a61b6980d3df"
+    },
+    "workload-unit-report.json": {
+      "bytes": 17454,
+      "sha256": "a675cd3a570fd732c15b5cd36b158980fc1fc24ece67fefd5936e3d66f22b763"
+    }
+  }
+}

@@ -1,0 +1,356 @@
+{
+  "result": "passed",
+  "trials": [
+    {
+      "result": "passed",
+      "mode": "state-only",
+      "trace": "gin-gonic__gin-3741",
+      "report_sha256": "7fbdd37fe78d650d57b6f7170ae251235102b2511910a909551f689c0ce23d59",
+      "execution_inputs_sha256": "05db6304b734a4cb59827057b445bf88f3c378aba4c98c3ec963de1a0d633dd7",
+      "workload_inputs_sha256": "9578e198c8937a8ac8b99ca7d555109df3c9087677e4dd8757cb8157161cc76a",
+      "receipts": 326,
+      "transitions": {
+        "promotion": 2,
+        "state-only": 2,
+        "demotion": 2
+      },
+      "registered_cache_bytes": [
+        51408896,
+        51810304
+      ],
+      "shared_cache_bytes": [
+        51408896,
+        51810304
+      ],
+      "present_current_shared_bytes": [],
+      "shared_detachments": [],
+      "authority_metadata_read_ios": [
+        0,
+        0
+      ],
+      "commands": 27,
+      "returncodes": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        127,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "submission": {
+        "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+        "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151",
+        "startup_warning_count": 1
+      },
+      "tests": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "guest_command_seconds": 28.13000000000003,
+      "block_read_ios": 12185,
+      "remote_nfs_reads": 28,
+      "boot_id": "0841bb14-f19b-4007-ae23-d4805957ed45",
+      "identity_observations": 14,
+      "limitations": [
+        "Single coherent physical host; selected naturally resident lower files only",
+        "Transitions occur between recorded commands; not inside a running command"
+      ]
+    },
+    {
+      "result": "passed",
+      "mode": "direct",
+      "trace": "gin-gonic__gin-3741",
+      "report_sha256": "05a863a2988dd8a69bfbea70ee0ff962ee114ae17c2b65eafc63b8308c6a2b1d",
+      "execution_inputs_sha256": "05db6304b734a4cb59827057b445bf88f3c378aba4c98c3ec963de1a0d633dd7",
+      "workload_inputs_sha256": "9578e198c8937a8ac8b99ca7d555109df3c9087677e4dd8757cb8157161cc76a",
+      "receipts": 335,
+      "transitions": {
+        "promotion": 2,
+        "direct": 2,
+        "demotion": 2
+      },
+      "registered_cache_bytes": [
+        51433472,
+        51695616
+      ],
+      "shared_cache_bytes": [
+        51433472,
+        51695616
+      ],
+      "present_current_shared_bytes": [],
+      "shared_detachments": [],
+      "authority_metadata_read_ios": [
+        0,
+        0
+      ],
+      "commands": 27,
+      "returncodes": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        127,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "submission": {
+        "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+        "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151",
+        "startup_warning_count": 1
+      },
+      "tests": [
+        {
+          "index": 4,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 12,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        },
+        {
+          "index": 16,
+          "kind": "go",
+          "packages": [
+            [
+              "?",
+              "github.com/gin-gonic/gin/ginS"
+            ],
+            [
+              "?",
+              "github.com/gin-gonic/gin/internal/json"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/binding"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/internal/bytesconv"
+            ],
+            [
+              "ok",
+              "github.com/gin-gonic/gin/render"
+            ]
+          ]
+        }
+      ],
+      "guest_command_seconds": 26.579999999999984,
+      "block_read_ios": 12962,
+      "remote_nfs_reads": 22,
+      "boot_id": "550c53fd-f458-41f0-8a24-8c53e430f806",
+      "identity_observations": 14,
+      "limitations": [
+        "Single coherent physical host; selected naturally resident lower files only",
+        "Transitions occur between recorded commands; not inside a running command"
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "trace": "gin-gonic__gin-3741",
+      "mode": "state-only",
+      "baseline_present": false,
+      "workload_results_match": null
+    },
+    {
+      "trace": "gin-gonic__gin-3741",
+      "mode": "direct",
+      "baseline_present": false,
+      "workload_results_match": null
+    }
+  ],
+  "execution_inputs_sha256": "05db6304b734a4cb59827057b445bf88f3c378aba4c98c3ec963de1a0d633dd7",
+  "coverage": {
+    "gin-gonic__gin-3741": [
+      "direct",
+      "state-only"
+    ]
+  },
+  "complete_three_mode_matrix": false,
+  "complete_nine_trial_matrix": false
+}

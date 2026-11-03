@@ -1,0 +1,72 @@
+   Compiling vmm v0.1.0 (/firecracker/src/vmm)
+error[E0616]: field `config_space` of struct `BalloonState` is private
+    --> src/vmm/src/devices/virtio/balloon/device.rs:1726:15
+     |
+1726 |         saved.config_space.num_pages = 1;
+     |               ^^^^^^^^^^^^ private field
+
+error[E0616]: field `config_space` of struct `BalloonState` is private
+    --> src/vmm/src/devices/virtio/balloon/device.rs:1728:15
+     |
+1728 |         saved.config_space.num_pages = 0;
+     |               ^^^^^^^^^^^^ private field
+
+error[E0616]: field `config_space` of struct `BalloonState` is private
+    --> src/vmm/src/devices/virtio/balloon/device.rs:1729:15
+     |
+1729 |         saved.config_space.actual_pages = 1;
+     |               ^^^^^^^^^^^^ private field
+
+warning: variable does not need to be mutable
+   --> src/vmm/src/arch/x86_64/vm.rs:317:13
+    |
+317 |         let mut vm = setup_vm_with_memory(0x1000);
+    |             ----^^
+    |             |
+    |             help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> src/vmm/src/arch/x86_64/vm.rs:341:13
+    |
+341 |         let mut vm = setup_vm_with_memory(0x1000);
+    |             ----^^
+    |             |
+    |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> src/vmm/src/arch/x86_64/vm.rs:356:13
+    |
+356 |         let mut vm = setup_vm_with_memory(0x1000);
+    |             ----^^
+    |             |
+    |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> src/vmm/src/arch/x86_64/vm.rs:376:13
+    |
+376 |         let mut vm = setup_vm_with_memory(0x1000);
+    |             ----^^
+    |             |
+    |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> src/vmm/src/arch/x86_64/vm.rs:399:13
+    |
+399 |         let mut vm = setup_vm_with_memory(0x1000);
+    |             ----^^
+    |             |
+    |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+    --> src/vmm/src/vstate/vm.rs:1336:13
+     |
+1336 |         let mut vm = setup_vm_with_memory(0x1000);
+     |             ----^^
+     |             |
+     |             help: remove this `mut`
+
+For more information about this error, try `rustc --explain E0616`.
+warning: `vmm` (lib test) generated 6 warnings
+error: could not compile `vmm` (lib test) due to 3 previous errors; 6 warnings emitted

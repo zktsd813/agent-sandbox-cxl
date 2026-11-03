@@ -1,0 +1,49 @@
+{
+  "result": "passed",
+  "stage": "persistent-peer-and-local-unix-request",
+  "archives": {
+    "backend-rpc2": {
+      "file": "backend-rpc2.tar.xz",
+      "sha256": "cd5de28f71d868848853b23a0c11640360c8d475370b149e71fff68fe86feca5"
+    },
+    "swe-rpc2": {
+      "file": "swe-rpc2.tar.xz",
+      "sha256": "c1c7491e5d7888d9df116a868ed410c2de2aa53a567c4b3a1affa8de14dbc76f"
+    }
+  },
+  "backend_handoffs": 48,
+  "swe_handoffs": 44,
+  "swe_commands": 27,
+  "repeat_sample_definition": "38 repeated handoffs, excluding first A->B and first B->A; workload boundary and re-promotion handoffs reported separately",
+  "repeat_native_request_resume_ms": {
+    "n": 38,
+    "p50": 2.973121,
+    "min": 1.724544,
+    "max": 5.169507
+  },
+  "repeat_external_command_ms": {
+    "n": 38,
+    "p50": 5.610137,
+    "min": 3.569202,
+    "max": 9.582303
+  },
+  "final_four_handoffs_ms": [
+    {
+      "external": 4.922306,
+      "native": 1.929219
+    },
+    {
+      "external": 10.539125,
+      "native": 6.405929
+    },
+    {
+      "external": 16.107278,
+      "native": 11.50371
+    },
+    {
+      "external": 5.916486,
+      "native": 3.115525
+    }
+  ],
+  "correctness": "NFS/local 160MiB data oracles, retained kernel graph, no mapping-table scans, source fault/rejection probes, separate post-handoff guest ACK; SWE re-promotion/demotion and deleted open FD continuity passed"
+}

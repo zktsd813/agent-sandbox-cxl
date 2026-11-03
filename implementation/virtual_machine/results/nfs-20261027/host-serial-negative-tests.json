@@ -1,0 +1,32 @@
+{
+  "result": "passed",
+  "tests": [
+    {
+      "name": "multiply_nonzero_nfs_counters_by_1000",
+      "result": "rejected",
+      "reason": "s3_first_miss_seq: raw serial/report network_delta mismatch"
+    },
+    {
+      "name": "change_report_B_host_cache",
+      "result": "rejected",
+      "reason": "s1_retained_seq: raw serial/report B host cache mismatch"
+    },
+    {
+      "name": "duplicate_counter_stdout",
+      "result": "rejected",
+      "reason": "/tmp/legacy-host-audit-negatives-2wq0hv8p/L1-b-serial.log:926: incomplete/duplicate counter stdout"
+    },
+    {
+      "name": "missing_counter_stdout",
+      "result": "rejected",
+      "reason": "/tmp/legacy-host-audit-negatives-2wq0hv8p/L1-b-serial.log:926: incomplete/duplicate counter stdout"
+    },
+    {
+      "name": "failed_counter_transaction",
+      "result": "rejected",
+      "reason": "s1_retained_seq: counter serial command failed"
+    }
+  ],
+  "cpu_affinity": "6-11",
+  "audit_script_sha256": "69a2db64b1b0b5f324e65833beebaba99ad678c113f7804e207eab217659b6f9"
+}

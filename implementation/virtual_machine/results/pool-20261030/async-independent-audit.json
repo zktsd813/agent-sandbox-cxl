@@ -1,0 +1,848 @@
+{
+  "admission_negative_cases": [
+    "vm",
+    "epoch",
+    "image",
+    "unaligned",
+    "duplicate",
+    "out_of_range",
+    "stale_hint",
+    "content_mismatch"
+  ],
+  "arguments": {
+    "cycles": 1,
+    "io_engine": "Async",
+    "memory_mib": 512,
+    "minimum_cache_mib": 128,
+    "sandboxes": 3,
+    "vcpus": 2
+  },
+  "audited_utc": "2026-10-30T04:30:52.479043+00:00",
+  "binary_artifacts_verified": {
+    "firecracker": {
+      "bytes": 6114552,
+      "sha256": "866f5b44b96535c0c525f6cee0a9ee09ff64900fbd83458c51c45b4de3505d08"
+    },
+    "l1-kernel": {
+      "bytes": 13341024,
+      "sha256": "1e72c8a58c484dea501f1c2e3fc5a0efe93b46fe1e873e99a25c16154bf19e86"
+    }
+  },
+  "candidate_pfn_audits": [
+    {
+      "absent_pages": 0,
+      "admission_file": "0161-pool-admission.bin",
+      "all_rows_checked": true,
+      "epoch": 1,
+      "file": "0209-pfn-audit.txt",
+      "private_pages": 0,
+      "rows": 40960,
+      "shared_bytes": 167772160,
+      "shared_pages": 40960,
+      "unique_shared_offsets": 40960,
+      "vm": 1
+    },
+    {
+      "absent_pages": 0,
+      "admission_file": "0253-pool-admission.bin",
+      "all_rows_checked": true,
+      "epoch": 1,
+      "file": "0267-pfn-audit.txt",
+      "private_pages": 0,
+      "rows": 40960,
+      "shared_bytes": 167772160,
+      "shared_pages": 40960,
+      "unique_shared_offsets": 40960,
+      "vm": 2
+    },
+    {
+      "absent_pages": 0,
+      "admission_file": "0311-pool-admission.bin",
+      "all_rows_checked": true,
+      "epoch": 1,
+      "file": "0325-pfn-audit.txt",
+      "private_pages": 0,
+      "rows": 40960,
+      "shared_bytes": 167772160,
+      "shared_pages": 40960,
+      "unique_shared_offsets": 40960,
+      "vm": 3
+    },
+    {
+      "absent_pages": 0,
+      "admission_file": "0161-pool-admission.bin",
+      "all_rows_checked": true,
+      "epoch": 1,
+      "file": "0353-pfn-audit.txt",
+      "private_pages": 0,
+      "rows": 40960,
+      "shared_bytes": 167772160,
+      "shared_pages": 40960,
+      "unique_shared_offsets": 40960,
+      "vm": 1
+    },
+    {
+      "absent_pages": 0,
+      "admission_file": "0253-pool-admission.bin",
+      "all_rows_checked": true,
+      "epoch": 1,
+      "file": "0360-pfn-audit.txt",
+      "private_pages": 0,
+      "rows": 40960,
+      "shared_bytes": 167772160,
+      "shared_pages": 40960,
+      "unique_shared_offsets": 40960,
+      "vm": 2
+    },
+    {
+      "absent_pages": 0,
+      "admission_file": "0311-pool-admission.bin",
+      "all_rows_checked": true,
+      "epoch": 1,
+      "file": "0367-pfn-audit.txt",
+      "private_pages": 0,
+      "rows": 40960,
+      "shared_bytes": 167772160,
+      "shared_pages": 40960,
+      "unique_shared_offsets": 40960,
+      "vm": 3
+    },
+    {
+      "absent_pages": 0,
+      "admission_file": "0409-pool-admission.bin",
+      "all_rows_checked": true,
+      "epoch": 2,
+      "file": "0423-pfn-audit.txt",
+      "private_pages": 0,
+      "rows": 40960,
+      "shared_bytes": 167772160,
+      "shared_pages": 40960,
+      "unique_shared_offsets": 40960,
+      "vm": 1
+    },
+    {
+      "absent_pages": 0,
+      "admission_file": "0467-pool-admission.bin",
+      "all_rows_checked": true,
+      "epoch": 2,
+      "file": "0481-pfn-audit.txt",
+      "private_pages": 0,
+      "rows": 40960,
+      "shared_bytes": 167772160,
+      "shared_pages": 40960,
+      "unique_shared_offsets": 40960,
+      "vm": 3
+    },
+    {
+      "absent_pages": 0,
+      "admission_file": "0409-pool-admission.bin",
+      "all_rows_checked": true,
+      "epoch": 2,
+      "file": "0502-pfn-audit.txt",
+      "private_pages": 40960,
+      "rows": 40960,
+      "shared_bytes": 0,
+      "shared_pages": 0,
+      "unique_shared_offsets": 0,
+      "vm": 1
+    },
+    {
+      "absent_pages": 0,
+      "admission_file": "0547-pool-admission.bin",
+      "all_rows_checked": true,
+      "epoch": 2,
+      "file": "0559-pfn-audit.txt",
+      "private_pages": 0,
+      "rows": 40960,
+      "shared_bytes": 167772160,
+      "shared_pages": 40960,
+      "unique_shared_offsets": 40960,
+      "vm": 1
+    },
+    {
+      "absent_pages": 0,
+      "admission_file": "0547-pool-admission.bin",
+      "all_rows_checked": true,
+      "epoch": 2,
+      "file": "0585-pfn-audit.txt",
+      "private_pages": 0,
+      "rows": 40960,
+      "shared_bytes": 167772160,
+      "shared_pages": 40960,
+      "unique_shared_offsets": 40960,
+      "vm": 1
+    },
+    {
+      "absent_pages": 0,
+      "admission_file": "0253-pool-admission.bin",
+      "all_rows_checked": true,
+      "epoch": 1,
+      "file": "0592-pfn-audit.txt",
+      "private_pages": 0,
+      "rows": 40960,
+      "shared_bytes": 167772160,
+      "shared_pages": 40960,
+      "unique_shared_offsets": 40960,
+      "vm": 2
+    },
+    {
+      "absent_pages": 0,
+      "admission_file": "0467-pool-admission.bin",
+      "all_rows_checked": true,
+      "epoch": 2,
+      "file": "0599-pfn-audit.txt",
+      "private_pages": 0,
+      "rows": 40960,
+      "shared_bytes": 167772160,
+      "shared_pages": 40960,
+      "unique_shared_offsets": 40960,
+      "vm": 3
+    },
+    {
+      "absent_pages": 0,
+      "admission_file": "0641-pool-admission.bin",
+      "all_rows_checked": true,
+      "epoch": 3,
+      "file": "0655-pfn-audit.txt",
+      "private_pages": 0,
+      "rows": 40960,
+      "shared_bytes": 167772160,
+      "shared_pages": 40960,
+      "unique_shared_offsets": 40960,
+      "vm": 1
+    },
+    {
+      "absent_pages": 0,
+      "admission_file": "0699-pool-admission.bin",
+      "all_rows_checked": true,
+      "epoch": 3,
+      "file": "0713-pfn-audit.txt",
+      "private_pages": 0,
+      "rows": 40960,
+      "shared_bytes": 167772160,
+      "shared_pages": 40960,
+      "unique_shared_offsets": 40960,
+      "vm": 3
+    },
+    {
+      "absent_pages": 0,
+      "admission_file": "0641-pool-admission.bin",
+      "all_rows_checked": true,
+      "epoch": 3,
+      "file": "0741-pfn-audit.txt",
+      "private_pages": 0,
+      "rows": 40960,
+      "shared_bytes": 167772160,
+      "shared_pages": 40960,
+      "unique_shared_offsets": 40960,
+      "vm": 1
+    },
+    {
+      "absent_pages": 0,
+      "admission_file": "0253-pool-admission.bin",
+      "all_rows_checked": true,
+      "epoch": 1,
+      "file": "0748-pfn-audit.txt",
+      "private_pages": 0,
+      "rows": 40960,
+      "shared_bytes": 167772160,
+      "shared_pages": 40960,
+      "unique_shared_offsets": 40960,
+      "vm": 2
+    },
+    {
+      "absent_pages": 0,
+      "admission_file": "0699-pool-admission.bin",
+      "all_rows_checked": true,
+      "epoch": 3,
+      "file": "0755-pfn-audit.txt",
+      "private_pages": 0,
+      "rows": 40960,
+      "shared_bytes": 167772160,
+      "shared_pages": 40960,
+      "unique_shared_offsets": 40960,
+      "vm": 3
+    }
+  ],
+  "canonical_full_byte_comparisons": [
+    {
+      "bytes": 234881024,
+      "file": "1054-canonical-verify.txt",
+      "full_compare": true,
+      "hash": "d06177208391b683",
+      "offset": 2147483648,
+      "operation": "verify",
+      "result": "passed"
+    },
+    {
+      "bytes": 234881024,
+      "file": "0194-canonical-verify.txt",
+      "full_compare": true,
+      "hash": "d06177208391b683",
+      "offset": 2147483648,
+      "operation": "verify",
+      "result": "passed"
+    }
+  ],
+  "current_cache_join_audit": {
+    "completed_transitions_at_read": 10,
+    "current_cache_audits": [
+      {
+        "current_cache_pages": 40960,
+        "current_shared_file_bytes": 167772160,
+        "current_shared_file_pages": 40960,
+        "epoch": 1,
+        "file": "0209-pfn-audit.txt",
+        "matched_pages": 40960,
+        "raw_range_lines": 103,
+        "role": "A",
+        "unmatched_pages": 0,
+        "vm": 1
+      },
+      {
+        "current_cache_pages": 40960,
+        "current_shared_file_bytes": 167772160,
+        "current_shared_file_pages": 40960,
+        "epoch": 1,
+        "file": "0267-pfn-audit.txt",
+        "matched_pages": 40960,
+        "raw_range_lines": 129,
+        "role": "A",
+        "unmatched_pages": 0,
+        "vm": 2
+      },
+      {
+        "current_cache_pages": 40960,
+        "current_shared_file_bytes": 167772160,
+        "current_shared_file_pages": 40960,
+        "epoch": 1,
+        "file": "0325-pfn-audit.txt",
+        "matched_pages": 40960,
+        "raw_range_lines": 140,
+        "role": "A",
+        "unmatched_pages": 0,
+        "vm": 3
+      },
+      {
+        "current_cache_pages": 40960,
+        "current_shared_file_bytes": 167772160,
+        "current_shared_file_pages": 40960,
+        "epoch": 1,
+        "file": "0353-pfn-audit.txt",
+        "matched_pages": 40960,
+        "raw_range_lines": 103,
+        "role": "A",
+        "unmatched_pages": 0,
+        "vm": 1
+      },
+      {
+        "current_cache_pages": 40960,
+        "current_shared_file_bytes": 167772160,
+        "current_shared_file_pages": 40960,
+        "epoch": 1,
+        "file": "0360-pfn-audit.txt",
+        "matched_pages": 40960,
+        "raw_range_lines": 129,
+        "role": "A",
+        "unmatched_pages": 0,
+        "vm": 2
+      },
+      {
+        "current_cache_pages": 40960,
+        "current_shared_file_bytes": 167772160,
+        "current_shared_file_pages": 40960,
+        "epoch": 1,
+        "file": "0367-pfn-audit.txt",
+        "matched_pages": 40960,
+        "raw_range_lines": 140,
+        "role": "A",
+        "unmatched_pages": 0,
+        "vm": 3
+      },
+      {
+        "current_cache_pages": 40960,
+        "current_shared_file_bytes": 167772160,
+        "current_shared_file_pages": 40960,
+        "epoch": 2,
+        "file": "0423-pfn-audit.txt",
+        "matched_pages": 40960,
+        "raw_range_lines": 103,
+        "role": "B",
+        "unmatched_pages": 0,
+        "vm": 1
+      },
+      {
+        "current_cache_pages": 40960,
+        "current_shared_file_bytes": 167772160,
+        "current_shared_file_pages": 40960,
+        "epoch": 2,
+        "file": "0481-pfn-audit.txt",
+        "matched_pages": 40960,
+        "raw_range_lines": 140,
+        "role": "B",
+        "unmatched_pages": 0,
+        "vm": 3
+      },
+      {
+        "current_cache_pages": 40960,
+        "current_shared_file_bytes": 167772160,
+        "current_shared_file_pages": 40960,
+        "epoch": 2,
+        "file": "0559-pfn-audit.txt",
+        "matched_pages": 40960,
+        "raw_range_lines": 227,
+        "role": "B",
+        "unmatched_pages": 0,
+        "vm": 1
+      },
+      {
+        "current_cache_pages": 40960,
+        "current_shared_file_bytes": 167772160,
+        "current_shared_file_pages": 40960,
+        "epoch": 2,
+        "file": "0585-pfn-audit.txt",
+        "matched_pages": 40960,
+        "raw_range_lines": 227,
+        "role": "B",
+        "unmatched_pages": 0,
+        "vm": 1
+      },
+      {
+        "current_cache_pages": 40960,
+        "current_shared_file_bytes": 167772160,
+        "current_shared_file_pages": 40960,
+        "epoch": 1,
+        "file": "0592-pfn-audit.txt",
+        "matched_pages": 40960,
+        "raw_range_lines": 129,
+        "role": "A",
+        "unmatched_pages": 0,
+        "vm": 2
+      },
+      {
+        "current_cache_pages": 40960,
+        "current_shared_file_bytes": 167772160,
+        "current_shared_file_pages": 40960,
+        "epoch": 2,
+        "file": "0599-pfn-audit.txt",
+        "matched_pages": 40960,
+        "raw_range_lines": 140,
+        "role": "B",
+        "unmatched_pages": 0,
+        "vm": 3
+      },
+      {
+        "current_cache_pages": 40960,
+        "current_shared_file_bytes": 167772160,
+        "current_shared_file_pages": 40960,
+        "epoch": 3,
+        "file": "0655-pfn-audit.txt",
+        "matched_pages": 40960,
+        "raw_range_lines": 227,
+        "role": "A",
+        "unmatched_pages": 0,
+        "vm": 1
+      },
+      {
+        "current_cache_pages": 40960,
+        "current_shared_file_bytes": 167772160,
+        "current_shared_file_pages": 40960,
+        "epoch": 3,
+        "file": "0713-pfn-audit.txt",
+        "matched_pages": 40960,
+        "raw_range_lines": 140,
+        "role": "A",
+        "unmatched_pages": 0,
+        "vm": 3
+      },
+      {
+        "current_cache_pages": 40960,
+        "current_shared_file_bytes": 167772160,
+        "current_shared_file_pages": 40960,
+        "epoch": 3,
+        "file": "0741-pfn-audit.txt",
+        "matched_pages": 40960,
+        "raw_range_lines": 227,
+        "role": "A",
+        "unmatched_pages": 0,
+        "vm": 1
+      },
+      {
+        "current_cache_pages": 40960,
+        "current_shared_file_bytes": 167772160,
+        "current_shared_file_pages": 40960,
+        "epoch": 1,
+        "file": "0748-pfn-audit.txt",
+        "matched_pages": 40960,
+        "raw_range_lines": 129,
+        "role": "A",
+        "unmatched_pages": 0,
+        "vm": 2
+      },
+      {
+        "current_cache_pages": 40960,
+        "current_shared_file_bytes": 167772160,
+        "current_shared_file_pages": 40960,
+        "epoch": 3,
+        "file": "0755-pfn-audit.txt",
+        "matched_pages": 40960,
+        "raw_range_lines": 140,
+        "role": "A",
+        "unmatched_pages": 0,
+        "vm": 3
+      }
+    ],
+    "frozen_three_vm_groups": [
+      {
+        "all_three_paused_during_all_scans": true,
+        "common_current_file_bytes": 167772160,
+        "common_current_file_pages": 40960,
+        "cycle": 0,
+        "frozen_group_file": "0347-cache-group-frozen.txt",
+        "stage": "A",
+        "vm_roles": [
+          "A",
+          "A",
+          "A"
+        ]
+      },
+      {
+        "all_three_paused_during_all_scans": true,
+        "common_current_file_bytes": 167772160,
+        "common_current_file_pages": 40960,
+        "cycle": 0,
+        "frozen_group_file": "0579-cache-group-frozen.txt",
+        "stage": "split-hosts",
+        "vm_roles": [
+          "B",
+          "A",
+          "B"
+        ]
+      },
+      {
+        "all_three_paused_during_all_scans": true,
+        "common_current_file_bytes": 167772160,
+        "common_current_file_pages": 40960,
+        "cycle": 0,
+        "frozen_group_file": "0735-cache-group-frozen.txt",
+        "stage": "A",
+        "vm_roles": [
+          "A",
+          "A",
+          "A"
+        ]
+      }
+    ],
+    "method": "Independent raw guest cache-range expansion and exact file-offset/GPA/admission-HVA/PFN-input join; no project verifier import.",
+    "report_sha256": "53e16f7a9a06be9966e8dc410f64f13b8b68526a03acf5ac4d3b9bf1d55219d5",
+    "result": "passed",
+    "run_result_at_read": "passed",
+    "used_raw_receipts_hashed": 105
+  },
+  "current_guest_file_cache_gpa_proof": true,
+  "environment": {
+    "cxl_mib": 4096,
+    "host_kernel": "5.15.0-191-generic",
+    "l1_memory_mib": 8192,
+    "l1_vcpus": 4,
+    "qemu_version": "QEMU emulator version 10.2.2 (v10.2.2-dirty)",
+    "shared_mib": 64
+  },
+  "guest_workload": {
+    "command_count": 133,
+    "commands_by_vm": {
+      "1": 53,
+      "2": 34,
+      "3": 46
+    },
+    "final_all_three_on_home_dram": true,
+    "full_payload_bytes_verified": 10234101760,
+    "full_payload_check_count": 61,
+    "minimum_resident_bytes_after_full_payload_check": 167772160,
+    "operations": {
+      "cachemap": 17,
+      "cacheunmap": 17,
+      "check": 54,
+      "churn": 4,
+      "evict": 4,
+      "identity": 20,
+      "warm": 7,
+      "write": 10
+    },
+    "payload_bytes_per_vm": 167772160,
+    "stable_identities_by_vm": {
+      "1": [
+        "18b345ea-f846-4659-8fbb-338b480c8435",
+        64,
+        "a3426113327aead6"
+      ],
+      "2": [
+        "cce2bccb-7f3f-46ad-afa7-1a04db2913bb",
+        64,
+        "bdcc7470b644b593"
+      ],
+      "3": [
+        "256ef500-190e-4cf5-bafb-04e46864cc5f",
+        64,
+        "8392b4ab9bcbbd79"
+      ]
+    }
+  },
+  "limits": [
+    "Validation uses two nested QEMU/KVM nodes with shared emulated CXL; it is not a physical noncoherent CXL protocol validation.",
+    "CoW copies are private DRAM; CXL stages are hybrid.",
+    "Canonical image slots and each VM base DAX reservation are retained; no net memory-capacity saving is claimed.",
+    "Whole logical-RAM snapshots materialize aliases and private CoW bytes; existing state-only direct handoff is rejected while overlays exist.",
+    "Current cache-page identity is proven by a validation-only guest oracle; its GPA records never construct pooling plans."
+  ],
+  "measured_source_bytes": 493688,
+  "measured_sources": {
+    "devdax-pool-cow.patch": {
+      "bytes": 2435,
+      "sha256": "e3511e25b0ecea137b0856a487ffae484deaee929544214a47b802930072879d"
+    },
+    "firecracker.patch": {
+      "bytes": 168935,
+      "sha256": "2f3d07c67085fa894e610c92e53d3459339359a932ee39b205c39a925e1c9966"
+    },
+    "lab.py": {
+      "bytes": 233081,
+      "sha256": "5445f1ac094ee998c96550ca1dfd1d656007bdc9afb60446480b8d6fad29ac4e"
+    },
+    "pool-l2-init.sh": {
+      "bytes": 703,
+      "sha256": "0f71d5a0978b260c7fcaab5f298b538f1eaab5f4f4d86d2328088c10774e6105"
+    },
+    "pool_bench.py": {
+      "bytes": 26431,
+      "sha256": "f029ea88e060181d8b5476c9a3ce0b213b4b702b5fd01e0eecfea00f62b9f6cf"
+    },
+    "pool_bloom_tool.c": {
+      "bytes": 4613,
+      "sha256": "c23860d6bb688874a4203ccc997c13ff32a25a900d6bfa5230135ac884171eed"
+    },
+    "pool_control.py": {
+      "bytes": 19349,
+      "sha256": "2427dba03f1a0b1545f46d81328f518065de4de52fdea6c82a6db6e47805d096"
+    },
+    "pool_cow_probe.c": {
+      "bytes": 8222,
+      "sha256": "aef978b2ba382212615deba4c6f0ae4e367bebd4e30135ccce10ec228f1db7f1"
+    },
+    "pool_dax_copy.c": {
+      "bytes": 3948,
+      "sha256": "9f71538b6d764bf899aee3a1b9e1daa67915a5723dcc2027170eae401006294d"
+    },
+    "pool_guest_probe.c": {
+      "bytes": 12595,
+      "sha256": "d675b25001cc5c71c5951098e09bb1e9746be0072ffa3c8e493a8076327e0f41"
+    },
+    "pool_pfn_audit.c": {
+      "bytes": 3154,
+      "sha256": "6cc2903de17c2e752c12ea2fa120fc4caa0363f3e3ca4d43a6dee814f9835e64"
+    },
+    "pool_prepare.py": {
+      "bytes": 8439,
+      "sha256": "9a19bc6ae98d6f00323b074b3196176abd6a283e1a7794cefeeecb2a2fe145a5"
+    },
+    "pool_run.py": {
+      "bytes": 1783,
+      "sha256": "dd08ea28304069b6f4ef1340ccba76804a8181903293ba11fea01210113a4ab5"
+    }
+  },
+  "method": "Independent Python derivation from archived raw receipts and measured source files; does not import or execute verify_pool_results.py.",
+  "migration": {
+    "cxl_import_bytes": 3758096384,
+    "cxl_imports_full_compare": 7,
+    "demotion_poison_bytes": 1610612736,
+    "demotion_poison_cases": 3,
+    "dram_no_dax_map_checks": 3,
+    "full_logical_snapshot_bytes": 5368709120,
+    "post_transition_guest_block_reads": 0,
+    "routes": {
+      "A/cxl -> A/dram": 3,
+      "A/cxl -> B/cxl": 2,
+      "A/dram -> A/cxl": 3,
+      "B/cxl -> A/cxl": 2
+    },
+    "source_fences": 10,
+    "transition_count": 10,
+    "transport_state_ram_hints_cmp_count": 30
+  },
+  "proof_scope": "Actual current guest payload-cache pages were joined from pinned file offsets to GPA, raw VMM admission HVA, and canonical PFNs. All three VMs stayed paused throughout each common-offset group scan.",
+  "raw_evidence": {
+    "all_sha256_verified": true,
+    "bytes_by_kind": {
+      "api": 71819,
+      "bloom-build": 8721,
+      "bloom-hits": 15325826,
+      "bloom-keys": 27850,
+      "bloom-ones": 386,
+      "bloom-probe": 16246,
+      "bloom-zero": 1547,
+      "cache-gpa-select": 4177,
+      "cache-gpas": 116108,
+      "cache-group-frozen": 572,
+      "canonical-publish": 348,
+      "canonical-verify": 692,
+      "demotion-poison": 1072,
+      "dram-no-dax": 698,
+      "empty-plan": 9765,
+      "fence": 8366,
+      "guest": 144038,
+      "guest-input": 27066,
+      "home-storage": 1255,
+      "image-hash": 1129,
+      "import": 2604,
+      "local-owner-hints": 4058,
+      "negative-admission": 314,
+      "negative-api": 5388,
+      "negative-plan": 3727,
+      "nfs-cold-after": 436,
+      "nfs-cold-before": 481,
+      "owner-hints": 134034138,
+      "pfn-audit": 7863,
+      "pfn-input": 19906560,
+      "pfn-rows": 7332,
+      "pool-admission": 24486137,
+      "pool-kernel": 968,
+      "pool-plan": 9822,
+      "pool-storage": 162,
+      "prepare": 4663,
+      "remote-storage": 1296,
+      "restore-valid-plan": 472,
+      "retired-snapshot-unlink": 1740,
+      "scratch-resource": 32770,
+      "shared-offsets": 7659520,
+      "snapshot-transport": 9250,
+      "start": 19491,
+      "state-sentinel": 482,
+      "state-sentinel-after": 61,
+      "storage-claim": 470,
+      "storage-claim-check": 323,
+      "transfer-directory": 1728,
+      "v1-e0-log": 12788,
+      "v1-e1-log": 24824,
+      "v1-e2-log": 46501,
+      "v1-e3-log": 32546,
+      "v1-final-log": 12045,
+      "v2-e0-log": 12424,
+      "v2-e1-log": 42461,
+      "v2-final-log": 11574,
+      "v3-e0-log": 12894,
+      "v3-e1-log": 24344,
+      "v3-e2-log": 24818,
+      "v3-e3-log": 24822,
+      "v3-final-log": 11102
+    },
+    "counts_by_kind": {
+      "api": 158,
+      "bloom-build": 22,
+      "bloom-hits": 41,
+      "bloom-keys": 68,
+      "bloom-ones": 1,
+      "bloom-probe": 41,
+      "bloom-zero": 4,
+      "cache-gpa-select": 17,
+      "cache-gpas": 17,
+      "cache-group-frozen": 3,
+      "canonical-publish": 1,
+      "canonical-verify": 2,
+      "demotion-poison": 3,
+      "dram-no-dax": 3,
+      "empty-plan": 21,
+      "fence": 10,
+      "guest": 136,
+      "guest-input": 133,
+      "home-storage": 1,
+      "image-hash": 4,
+      "import": 7,
+      "local-owner-hints": 10,
+      "negative-admission": 2,
+      "negative-api": 8,
+      "negative-plan": 8,
+      "nfs-cold-after": 1,
+      "nfs-cold-before": 1,
+      "owner-hints": 21,
+      "pfn-audit": 18,
+      "pfn-input": 18,
+      "pfn-rows": 18,
+      "pool-admission": 21,
+      "pool-kernel": 2,
+      "pool-plan": 21,
+      "pool-storage": 1,
+      "prepare": 2,
+      "remote-storage": 1,
+      "restore-valid-plan": 1,
+      "retired-snapshot-unlink": 10,
+      "scratch-resource": 138,
+      "shared-offsets": 18,
+      "snapshot-transport": 10,
+      "start": 13,
+      "state-sentinel": 1,
+      "state-sentinel-after": 1,
+      "storage-claim": 2,
+      "storage-claim-check": 2,
+      "transfer-directory": 10,
+      "v1-e0-log": 1,
+      "v1-e1-log": 1,
+      "v1-e2-log": 1,
+      "v1-e3-log": 1,
+      "v1-final-log": 1,
+      "v2-e0-log": 1,
+      "v2-e1-log": 1,
+      "v2-final-log": 1,
+      "v3-e0-log": 1,
+      "v3-e1-log": 1,
+      "v3-e2-log": 1,
+      "v3-e3-log": 1,
+      "v3-final-log": 1
+    },
+    "receipt_bytes": 202263080,
+    "receipt_count": 1065,
+    "report_bytes": 297455807
+  },
+  "report": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T041956Z-gz5il0yc/pool-1793334005710569573/report.json",
+  "report_sha256": "53e16f7a9a06be9966e8dc410f64f13b8b68526a03acf5ac4d3b9bf1d55219d5",
+  "result": "passed",
+  "reuse_cow_and_nfs_cold_refill": [
+    {
+      "cycle": 0,
+      "guest_cold_read_bytes": 167772160,
+      "guest_hot_read_ios": 0,
+      "host_private_pages_after_guest_reuse": 40960,
+      "nfs_read_after": 11373,
+      "nfs_read_before": 10077,
+      "nfs_read_rpc_delta": 1296,
+      "stale_content_rejections": 40960
+    }
+  ],
+  "runtime_rejection_cases": [
+    "pool-action-while-running",
+    "state-only-snapshot-with-overlays"
+  ],
+  "schema": 1,
+  "three_vm_current_cache_intersections": [
+    {
+      "bytes": 167772160,
+      "common_canonical_offsets": 40960,
+      "cycle": 0,
+      "simultaneous_guest_cache_mapping_proof": true,
+      "stage": "A"
+    },
+    {
+      "bytes": 167772160,
+      "common_canonical_offsets": 40960,
+      "cycle": 0,
+      "simultaneous_guest_cache_mapping_proof": true,
+      "stage": "split-hosts"
+    },
+    {
+      "bytes": 167772160,
+      "common_canonical_offsets": 40960,
+      "cycle": 0,
+      "simultaneous_guest_cache_mapping_proof": true,
+      "stage": "A"
+    }
+  ]
+}

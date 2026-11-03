@@ -1,0 +1,257 @@
+{
+  "result": "passed",
+  "cases": [
+    {
+      "name": "baseline",
+      "profile": true,
+      "immutable_nfs_cache": false,
+      "api_ms": {
+        "n": 10,
+        "mean": 11.4712226,
+        "p50": 11.882493,
+        "p95": 13.916957,
+        "min": 9.109504000000001,
+        "max": 13.916957
+      },
+      "kernel_ms": {
+        "n": 10,
+        "mean": 1.6977373999999998,
+        "p50": 1.4146855,
+        "p95": 3.463279,
+        "min": 1.2416,
+        "max": 3.463279
+      },
+      "handoff_full_scan_increments": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "commands": 27,
+      "remote_nfs_reads": 20,
+      "transitions": {
+        "promotion": 2,
+        "direct": 10,
+        "demotion": 2
+      },
+      "firecracker_sha256": "a401792c774fd15a3afa0da40887db604a9b9287f1b7aed2921529cbb1502c0b",
+      "report_sha256": "7f39bf60eb175a8a098b16fad55bf9da9d5bab6f6e1a5b4654e2056895d79d6a",
+      "by_destination_api_ms": {
+        "A": {
+          "n": 5,
+          "mean": 9.6445262,
+          "p50": 9.314899,
+          "p95": 11.264882000000002,
+          "min": 9.109504000000001,
+          "max": 11.264882000000002
+        },
+        "B": {
+          "n": 5,
+          "mean": 13.297919,
+          "p50": 13.402149,
+          "p95": 13.916957,
+          "min": 12.500103999999999,
+          "max": 13.916957
+        }
+      }
+    },
+    {
+      "name": "codeopt",
+      "profile": true,
+      "immutable_nfs_cache": false,
+      "api_ms": {
+        "n": 10,
+        "mean": 10.8364309,
+        "p50": 10.8612365,
+        "p95": 13.19439,
+        "min": 9.054887,
+        "max": 13.19439
+      },
+      "kernel_ms": {
+        "n": 10,
+        "mean": 1.7491292999999999,
+        "p50": 1.5989535,
+        "p95": 3.270586,
+        "min": 1.173325,
+        "max": 3.270586
+      },
+      "handoff_full_scan_increments": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "commands": 27,
+      "remote_nfs_reads": 18,
+      "transitions": {
+        "promotion": 2,
+        "direct": 10,
+        "demotion": 2
+      },
+      "firecracker_sha256": "d90ddd2d5d46dfc480868ec2b576fe785ad5c818cac19ed4d8b6cf617648b480",
+      "report_sha256": "52f18f20855a3953cd1cc55a64901686ffd7aa4e6651d49adb64e083cf624114",
+      "by_destination_api_ms": {
+        "A": {
+          "n": 5,
+          "mean": 9.6863474,
+          "p50": 9.604997,
+          "p95": 10.610028999999999,
+          "min": 9.054887,
+          "max": 10.610028999999999
+        },
+        "B": {
+          "n": 5,
+          "mean": 11.9865144,
+          "p50": 12.033058,
+          "p95": 13.19439,
+          "min": 11.112444,
+          "max": 13.19439
+        }
+      }
+    },
+    {
+      "name": "cached",
+      "profile": true,
+      "immutable_nfs_cache": true,
+      "api_ms": {
+        "n": 10,
+        "mean": 9.3076545,
+        "p50": 8.9857585,
+        "p95": 10.957186,
+        "min": 8.318665999999999,
+        "max": 10.957186
+      },
+      "kernel_ms": {
+        "n": 10,
+        "mean": 1.635879,
+        "p50": 1.5645639999999998,
+        "p95": 2.294997,
+        "min": 1.15118,
+        "max": 2.294997
+      },
+      "handoff_full_scan_increments": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "commands": 27,
+      "remote_nfs_reads": 20,
+      "transitions": {
+        "promotion": 2,
+        "direct": 10,
+        "demotion": 2
+      },
+      "firecracker_sha256": "d90ddd2d5d46dfc480868ec2b576fe785ad5c818cac19ed4d8b6cf617648b480",
+      "report_sha256": "8d28d3a25a49d01bb6f05c05be4f31466310755eb9a3a6267b54f9f69e233da1",
+      "by_destination_api_ms": {
+        "A": {
+          "n": 5,
+          "mean": 9.4596634,
+          "p50": 9.156,
+          "p95": 10.273933999999999,
+          "min": 8.960193,
+          "max": 10.273933999999999
+        },
+        "B": {
+          "n": 5,
+          "mean": 9.1556456,
+          "p50": 8.813195,
+          "p95": 10.957186,
+          "min": 8.318665999999999,
+          "max": 10.957186
+        }
+      }
+    },
+    {
+      "name": "final",
+      "profile": false,
+      "immutable_nfs_cache": true,
+      "api_ms": {
+        "n": 10,
+        "mean": 8.6545083,
+        "p50": 8.3386615,
+        "p95": 11.651633,
+        "min": 6.123400999999999,
+        "max": 11.651633
+      },
+      "kernel_ms": {
+        "n": 10,
+        "mean": 1.6934059,
+        "p50": 1.4717315,
+        "p95": 3.659767,
+        "min": 0.961625,
+        "max": 3.659767
+      },
+      "handoff_full_scan_increments": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "commands": 27,
+      "remote_nfs_reads": 29,
+      "transitions": {
+        "promotion": 2,
+        "direct": 10,
+        "demotion": 2
+      },
+      "firecracker_sha256": "d90ddd2d5d46dfc480868ec2b576fe785ad5c818cac19ed4d8b6cf617648b480",
+      "report_sha256": "4d5a2d35e53c11dbdc53848f4a3ce6d349bc8893a87cae11f03b5aab83987c7b",
+      "by_destination_api_ms": {
+        "A": {
+          "n": 5,
+          "mean": 8.318532,
+          "p50": 8.311349,
+          "p95": 10.983666000000001,
+          "min": 6.123400999999999,
+          "max": 10.983666000000001
+        },
+        "B": {
+          "n": 5,
+          "mean": 8.9904846,
+          "p50": 8.602529999999998,
+          "p95": 11.651633,
+          "min": 7.68486,
+          "max": 11.651633
+        }
+      }
+    }
+  ],
+  "totals": {
+    "handoffs": 40,
+    "promotion": 8,
+    "demotion": 8,
+    "commands": 108
+  },
+  "unit_tests": {
+    "virtio_block": 41,
+    "python_protocols": 19
+  },
+  "scope": "2GiB/1vCPU Gin; four sequential independent trials; one coherent nested host; API excludes pause/resume/fence/exec/transport/ACK; kernel subset; no warmup exclusion",
+  "profiled_api_p50_reduction": 0.24378171314723274
+}

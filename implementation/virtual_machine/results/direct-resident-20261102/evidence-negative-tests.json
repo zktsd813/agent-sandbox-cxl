@@ -1,0 +1,46 @@
+{
+  "result": "passed",
+  "baseline": "passed",
+  "cases": [
+    {
+      "case": "preparation_paused",
+      "result": "rejected",
+      "reason": "preparation was on paused path"
+    },
+    {
+      "case": "accessible_ram",
+      "result": "rejected",
+      "reason": "parked mapping still accessible"
+    },
+    {
+      "case": "unrevoked_kvm",
+      "result": "rejected",
+      "reason": "parked memory or KVM access allowed"
+    },
+    {
+      "case": "missing_probe",
+      "result": "rejected",
+      "reason": "parked probe coverage"
+    },
+    {
+      "case": "disk_reopened",
+      "result": "rejected",
+      "reason": "disk FD/io_uring recreated"
+    },
+    {
+      "case": "thread_recreated",
+      "result": "rejected",
+      "reason": "vCPU thread recreated"
+    },
+    {
+      "case": "omitted_elapsed",
+      "result": "rejected",
+      "reason": "TCP interval excludes measured work"
+    },
+    {
+      "case": "wrong_negative",
+      "result": "rejected",
+      "reason": "invalid import did not test intended mismatch"
+    }
+  ]
+}

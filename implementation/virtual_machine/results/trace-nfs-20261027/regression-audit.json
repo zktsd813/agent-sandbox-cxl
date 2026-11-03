@@ -1,0 +1,46 @@
+{
+  "artifact_files_checked": [
+    "nfs-l2-initramfs.cpio",
+    "l1-initramfs.cpio",
+    "l1-kernel",
+    "storage.raw",
+    "shared-probe",
+    "nfs-probe",
+    "l2-initramfs.cpio"
+  ],
+  "build_runtime_source_differences": {
+    "nfs_bench.py": {
+      "build": "7353d457a0cc8fa8b13086280829bd61b72a94e84cba1580f21b7b7344aa91a3",
+      "runtime": "5d0cdf30624c853a685590b839addaa65e59d5ee8dbe11f2928cd2d0792f8c84"
+    },
+    "nfs_dependencies.sh": {
+      "build": "8d629db87f59555708cc122b664ab9968563fc951230312d8db3bc995ca65997",
+      "runtime": "28f2d04fa764046fd32ae2b435b208b6ede6158e11b9da1b59b6f3bcc5d67d4d"
+    }
+  },
+  "groups": 20,
+  "handoffs": 2,
+  "host_observation_samples_checked": 20,
+  "host_observations": "raw_validated",
+  "independent_checksums": {
+    "(0, 67108864)": "29aa1064b3d00833",
+    "(0, 8388608)": "7c39b2d9f62d526f",
+    "(134217728, 67108864)": "1364d7d9977ee1e7"
+  },
+  "measured_source_directory": "/tmp/nfs-regression-v2-measured-sources",
+  "raw_events": 38,
+  "report": "implementation/virtual_machine/.local/runs/20261027T070915Z-pyy602i3/nfs-1793084961082899059/report.json",
+  "result": "passed",
+  "rpc_counter_differences": [],
+  "rpc_counter_note": "proc3 counts calls at start; mountstats counts completed tasks; snapshots are sequential. Exact cause of an observed difference is not identified by these aggregate counters.",
+  "runtime_sources_checked": [
+    "nfs_bench.py",
+    "nfs_probe.c",
+    "nfs-l2-init.sh",
+    "nfs_dependencies.sh",
+    "lab.py"
+  ],
+  "samples": 20,
+  "schema_version": 2,
+  "steady_samples_per_group": 1
+}

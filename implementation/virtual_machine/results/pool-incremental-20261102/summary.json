@@ -1,0 +1,682 @@
+{
+  "schema": "pool-incremental-results-v1",
+  "date": "2026-11-02",
+  "scope": "Coherent nested KVM, one physical host; separate 512MiB stress and 2GiB Gin SWE trials",
+  "timing": "API pairs exclude serial orchestration, process launch/fencing and guest ACK; kernel pairs are a subset of direct API time",
+  "synthetic": {
+    "direct": {
+      "mode": "direct",
+      "memory_mib": 512,
+      "transitions": {
+        "promotion": 6,
+        "demotion": 6,
+        "direct": 4
+      },
+      "handoff_api_pair_ms": {
+        "samples": [
+          14.100901,
+          17.697539,
+          32.327593,
+          18.822471
+        ],
+        "count": 4,
+        "p50": 18.260005,
+        "min": 14.100901,
+        "max": 32.327593
+      },
+      "direct_kernel_pair_ms": {
+        "samples": [
+          2.427053,
+          10.985855,
+          19.81647,
+          11.193012
+        ],
+        "count": 4,
+        "p50": 11.0894335,
+        "min": 2.427053,
+        "max": 19.81647
+      },
+      "manifest_bytes": {
+        "samples": [
+          694,
+          717,
+          695,
+          716
+        ],
+        "count": 4,
+        "p50": 705.5,
+        "min": 694,
+        "max": 717
+      },
+      "handoff_full_scan_pages": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "observed_full_scan_counters": [
+        131072,
+        131072,
+        131072,
+        917504,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        393216,
+        393216
+      ],
+      "promotion_api_ms": {
+        "samples": [
+          667.9875820000001,
+          673.111326,
+          680.5644910000001,
+          386.960194,
+          385.05699,
+          399.00591499999996
+        ],
+        "count": 6,
+        "p50": 533.4967485,
+        "min": 385.05699,
+        "max": 680.5644910000001
+      },
+      "demotion_api_ms": {
+        "samples": [
+          400.94032799999997,
+          470.501468,
+          486.47956,
+          441.213267,
+          506.835847,
+          563.61423
+        ],
+        "count": 6,
+        "p50": 478.49051399999996,
+        "min": 400.94032799999997,
+        "max": 563.61423
+      },
+      "guest_command_seconds": null,
+      "controller_replay_seconds": null,
+      "report_sha256": "9b081c0720197da4c1f51e7748639df2c65c384e51f8a88e9bfd912eefefe8e4",
+      "verification": {
+        "result": "passed",
+        "mode": "direct",
+        "transitions": {
+          "promotion": 6,
+          "demotion": 6,
+          "direct": 4
+        },
+        "receipts": 859,
+        "handoff_full_scan_pages": 0,
+        "handoff_manifest_bytes": [
+          694,
+          717,
+          695,
+          716
+        ],
+        "minimum_shared_bytes": 167772160,
+        "ack_before_reuse_bytes": [
+          151007232
+        ],
+        "api_records": [
+          [
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 3647.573,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            },
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 10453.328,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            }
+          ],
+          [
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 2118.23,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            },
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 15579.309,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            }
+          ],
+          [
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 2131.908,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            },
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 30195.685,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            }
+          ],
+          [
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 2564.684,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            },
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 16257.787,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            }
+          ]
+        ],
+        "scope": "Coherent nested lab, trusted kernel mapper. Per-handoff physical identity uses persistent handles; PTE audits are separate stress evidence."
+      }
+    },
+    "state-only": {
+      "mode": "state-only",
+      "memory_mib": 512,
+      "transitions": {
+        "promotion": 9,
+        "demotion": 9,
+        "state-only": 12
+      },
+      "handoff_api_pair_ms": {
+        "samples": [
+          26.008425,
+          23.788833,
+          23.421801,
+          20.318221,
+          20.467324,
+          38.035929,
+          23.719784999999998,
+          21.90534,
+          21.588112000000002,
+          23.672644000000002,
+          20.682368,
+          19.913322
+        ],
+        "count": 12,
+        "p50": 22.6635705,
+        "min": 19.913322,
+        "max": 38.035929
+      },
+      "direct_kernel_pair_ms": null,
+      "manifest_bytes": {
+        "samples": [
+          755,
+          755,
+          756,
+          778,
+          755,
+          756,
+          755,
+          755,
+          757,
+          778,
+          755,
+          757
+        ],
+        "count": 12,
+        "p50": 755.5,
+        "min": 755,
+        "max": 778
+      },
+      "handoff_full_scan_pages": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "observed_full_scan_counters": [
+        131072,
+        131072,
+        131072,
+        917504,
+        131072,
+        131072,
+        131072,
+        393216,
+        393216,
+        393216,
+        393216,
+        131072,
+        131072,
+        393216,
+        393216,
+        393216,
+        393216,
+        131072,
+        393216,
+        131072,
+        131072,
+        393216,
+        131072,
+        131072,
+        131072,
+        393216,
+        393216,
+        393216,
+        393216,
+        393216,
+        393216,
+        393216,
+        393216,
+        393216,
+        393216,
+        393216,
+        393216,
+        393216,
+        393216,
+        131072,
+        131072,
+        393216
+      ],
+      "promotion_api_ms": {
+        "samples": [
+          578.141777,
+          677.566942,
+          677.0303909999999,
+          388.44304100000005,
+          394.31390500000003,
+          412.083261,
+          458.53313799999995,
+          383.902789,
+          390.498653
+        ],
+        "count": 9,
+        "p50": 412.083261,
+        "min": 383.902789,
+        "max": 677.566942
+      },
+      "demotion_api_ms": {
+        "samples": [
+          385.19922499999996,
+          436.516201,
+          520.363044,
+          438.213516,
+          559.909623,
+          445.512732,
+          439.255734,
+          442.65064399999994,
+          451.726968
+        ],
+        "count": 9,
+        "p50": 442.65064399999994,
+        "min": 385.19922499999996,
+        "max": 559.909623
+      },
+      "guest_command_seconds": null,
+      "controller_replay_seconds": null,
+      "report_sha256": "fa668084caf07fe2ffbacbeaeb20cc8e9f74aaa8948c13a1afc334ab340b7698",
+      "verification": {
+        "result": "passed",
+        "mode": "state-only",
+        "transitions": {
+          "promotion": 9,
+          "demotion": 9,
+          "state-only": 12
+        },
+        "receipts": 1476,
+        "handoff_full_scan_pages": 0,
+        "handoff_manifest_bytes": [
+          755,
+          755,
+          756,
+          778,
+          755,
+          756,
+          755,
+          755,
+          757,
+          778,
+          755,
+          757
+        ],
+        "minimum_shared_bytes": 167772160,
+        "ack_before_reuse_bytes": [
+          150994944
+        ],
+        "api_records": [
+          [
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 3182.607,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            },
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 22825.818,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            }
+          ],
+          [
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 3759.83,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            },
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 20029.003,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            }
+          ],
+          [
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 3246.337,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            },
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 20175.464,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            }
+          ],
+          [
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 3173.363,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            },
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 17144.858,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            }
+          ],
+          [
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 3128.389,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            },
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 17338.935,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            }
+          ],
+          [
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 3313.923,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            },
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 34722.006,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            }
+          ],
+          [
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 3456.628,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            },
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 20263.157,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            }
+          ],
+          [
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 3291.733,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            },
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 18613.607,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            }
+          ],
+          [
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 3438.265,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            },
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 18149.847,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            }
+          ],
+          [
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 3586.693,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            },
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 20085.951,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            }
+          ],
+          [
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 4185.894,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            },
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 16496.474,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            }
+          ],
+          [
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 3144.202,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            },
+            {
+              "status": 204,
+              "expected_status": 204,
+              "duration_us": 16769.12,
+              "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+            }
+          ]
+        ],
+        "scope": "Coherent nested lab, trusted kernel mapper. Per-handoff physical identity uses persistent handles; PTE audits are separate stress evidence."
+      }
+    }
+  },
+  "swe": {
+    "gin-gonic__gin-3741-state-only": {
+      "mode": "state-only",
+      "memory_mib": 2048,
+      "transitions": {
+        "promotion": 2,
+        "state-only": 2,
+        "demotion": 2
+      },
+      "handoff_api_pair_ms": {
+        "samples": [
+          24.035211,
+          20.103938999999997
+        ],
+        "count": 2,
+        "p50": 22.069575,
+        "min": 20.103938999999997,
+        "max": 24.035211
+      },
+      "direct_kernel_pair_ms": null,
+      "manifest_bytes": {
+        "samples": [
+          758,
+          762
+        ],
+        "count": 2,
+        "p50": 760.0,
+        "min": 758,
+        "max": 762
+      },
+      "handoff_full_scan_pages": [
+        0,
+        0
+      ],
+      "observed_full_scan_counters": [
+        524288,
+        524288,
+        524288,
+        524288,
+        524288,
+        524288,
+        524288,
+        524288
+      ],
+      "promotion_api_ms": {
+        "samples": [
+          3246.103866,
+          1714.232366
+        ],
+        "count": 2,
+        "p50": 2480.168116,
+        "min": 1714.232366,
+        "max": 3246.103866
+      },
+      "demotion_api_ms": {
+        "samples": [
+          1768.9554329999999,
+          1775.210967
+        ],
+        "count": 2,
+        "p50": 1772.0832,
+        "min": 1768.9554329999999,
+        "max": 1775.210967
+      },
+      "guest_command_seconds": 28.13000000000003,
+      "controller_replay_seconds": 161.284931647,
+      "report_sha256": "7fbdd37fe78d650d57b6f7170ae251235102b2511910a909551f689c0ce23d59"
+    },
+    "gin-gonic__gin-3741-direct": {
+      "mode": "direct",
+      "memory_mib": 2048,
+      "transitions": {
+        "promotion": 2,
+        "direct": 2,
+        "demotion": 2
+      },
+      "handoff_api_pair_ms": {
+        "samples": [
+          13.397079,
+          9.928395
+        ],
+        "count": 2,
+        "p50": 11.662737,
+        "min": 9.928395,
+        "max": 13.397079
+      },
+      "direct_kernel_pair_ms": {
+        "samples": [
+          2.153726,
+          2.804497
+        ],
+        "count": 2,
+        "p50": 2.4791115,
+        "min": 2.153726,
+        "max": 2.804497
+      },
+      "manifest_bytes": {
+        "samples": [
+          695,
+          699
+        ],
+        "count": 2,
+        "p50": 697.0,
+        "min": 695,
+        "max": 699
+      },
+      "handoff_full_scan_pages": [
+        0,
+        0
+      ],
+      "observed_full_scan_counters": [
+        524288,
+        524288,
+        524288,
+        524288,
+        524288,
+        524288,
+        524288,
+        524288
+      ],
+      "promotion_api_ms": {
+        "samples": [
+          3319.051984,
+          1733.368693
+        ],
+        "count": 2,
+        "p50": 2526.2103385,
+        "min": 1733.368693,
+        "max": 3319.051984
+      },
+      "demotion_api_ms": {
+        "samples": [
+          1783.012885,
+          1740.836868
+        ],
+        "count": 2,
+        "p50": 1761.9248765000002,
+        "min": 1740.836868,
+        "max": 1783.012885
+      },
+      "guest_command_seconds": 26.579999999999984,
+      "controller_replay_seconds": 150.536423504,
+      "report_sha256": "05a863a2988dd8a69bfbea70ee0ff962ee114ae17c2b65eafc63b8308c6a2b1d"
+    }
+  }
+}

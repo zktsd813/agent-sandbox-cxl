@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "classification": "formal_discard_experiment_arm",
+  "checked_utc": "2026-10-30T08:00:25.231107+00:00",
+  "mode": "reporting",
+  "source": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/pool-discard-formal-20261030/reporting",
+  "original_run": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T073134Z-vfe7afd3",
+  "report_sha256": "afde0ed510d9d1109b0d4878cfaa2e33ff2f563489efdc31d7c5c67e9fc48d8d",
+  "controller_result_preserved": "passed",
+  "receipt_hashes_verified": 1986,
+  "arm_source_hashes_verified": 21,
+  "suite_source_hashes_match_arm": true,
+  "fixture_manifest_source": "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/assets-pool-discard-v3-20261030/manifest.json",
+  "fixture_manifest_sha256": "1569de552e7dabb039d0eb953690c53f485b55da76855f7c8b179d6626e9c4ae",
+  "fixture_manifest_matches_report_and_outer_config": true,
+  "processes": [
+    {
+      "role": "A",
+      "pid": 2910666,
+      "recorded_starttime": "321044285",
+      "observed_starttime": null,
+      "matching_process_alive": false,
+      "console_exists": false,
+      "qmp_exists": false
+    },
+    {
+      "role": "B",
+      "pid": 2910667,
+      "recorded_starttime": "321044285",
+      "observed_starttime": null,
+      "matching_process_alive": false,
+      "console_exists": false,
+      "qmp_exists": false
+    }
+  ],
+  "network_cleanup_recorded": true,
+  "ephemeral_memory_directory_absent": true,
+  "excluded_files": [
+    "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/pool-discard-formal-20261030/reporting-storage.raw",
+    "/tmp/agent-sandbox-cxl-microvm-main-20261023/implementation/virtual_machine/.local/runs/20261030T073134Z-vfe7afd3/home-storage.raw"
+  ],
+  "regular_samples": 9,
+  "anon_mib": 400,
+  "firecracker_sha256": "a4d6f75f0cad5885009097221e464952a1706e3d1792826c14a0dfa84c8a6023",
+  "large_work_cpu_affinity": "8-11"
+}

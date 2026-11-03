@@ -1,0 +1,766 @@
+{
+  "schema": "resident-direct-profile-v1",
+  "report_sha256": "37347fcaa9d854b79310f15ee661d8d67d13a8d093de985a1ce5bdceb57b4c37",
+  "rows": [
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 1,
+      "allocation_generation": 1,
+      "resident_import": false,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 10.432,
+      "export_api_us": 3159.891,
+      "import_api_us": 6140.242,
+      "export_import_api_us": 9300.133,
+      "kernel_us": 2448.683,
+      "pause_export_import_resume_api_us": 10758.283,
+      "pause_to_ack_us": 64973.724,
+      "request_us": 69240.779,
+      "request_to_resume_response_us": 17547.157,
+      "pause_to_resume_response_us": 13350.774,
+      "exclusive_components_us": {
+        "export.drain_and_save_devices": 37.839999999999996,
+        "export.export_detach_ioctls": 192.317,
+        "export.log_receipt": 107.937,
+        "export.park_resident": 452.337,
+        "export.peek_token": 3.994,
+        "export.read_manifest_and_build_state": 85.843,
+        "export.seal_mapper": 174.554,
+        "export.serialize_devices": 184.637,
+        "export.sync_devices": 2.412,
+        "export.unbind_ioevents": 287.21,
+        "export.validate_and_open": 56.193999999999996,
+        "export.write_devices": 16.288,
+        "import.adopt_memory": 55.034,
+        "import.attach_and_vm_wrapper": 239.06500000000005,
+        "import.import_mapper": 929.952,
+        "import.kvm_capabilities": 257.77500000000003,
+        "import.log_receipt": 152.75400000000002,
+        "import.read_validate_metadata": 845.812,
+        "import.register_events": 15.095,
+        "import.restore_devices": 988.226,
+        "import.start_vcpu_thread": 368.974,
+        "import.validate_vmm": 32.508,
+        "import.vcpu_wrapper": 28.692,
+        "kernel.detach_attach": 2448.683,
+        "api_dispatch_response_profile_residual": 1336.0
+      }
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 2,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "serial-diagnostic",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 17.787,
+      "export_api_us": 2298.975,
+      "import_api_us": 5295.487,
+      "export_import_api_us": 7594.4619999999995,
+      "kernel_us": 2885.005,
+      "pause_export_import_resume_api_us": 10870.501999999999,
+      "pause_to_ack_us": 4583106.42,
+      "exclusive_components_us": {
+        "export.drain_and_save_devices": 48.844,
+        "export.export_detach_ioctls": 121.17700000000002,
+        "export.log_receipt": 109.363,
+        "export.park_resident": 186.531,
+        "export.peek_token": 2.6,
+        "export.read_manifest_and_build_state": 93.44999999999999,
+        "export.seal_mapper": 232.685,
+        "export.serialize_devices": 205.16299999999998,
+        "export.sync_devices": 2.033,
+        "export.unbind_ioevents": 193.47400000000002,
+        "export.validate_and_open": 48.619,
+        "export.write_devices": 12.84,
+        "import.attach": 99.62199999999984,
+        "import.import_mapper": 695.228,
+        "import.read_validate_metadata": 332.659,
+        "import.restore_devices": 493.459,
+        "kernel.detach_attach": 2885.005,
+        "api_dispatch_response_profile_residual": 1831.7099999999991
+      }
+    },
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 3,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "serial-diagnostic",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 8.48,
+      "export_api_us": 2282.133,
+      "import_api_us": 4526.539,
+      "export_import_api_us": 6808.672,
+      "kernel_us": 1846.296,
+      "pause_export_import_resume_api_us": 9164.945,
+      "pause_to_ack_us": 5002386.016,
+      "exclusive_components_us": {
+        "export.drain_and_save_devices": 18.605,
+        "export.export_detach_ioctls": 105.52000000000001,
+        "export.log_receipt": 103.393,
+        "export.park_resident": 193.631,
+        "export.peek_token": 2.9059999999999997,
+        "export.read_manifest_and_build_state": 92.7,
+        "export.seal_mapper": 182.21200000000002,
+        "export.serialize_devices": 138.739,
+        "export.sync_devices": 1.9860000000000002,
+        "export.unbind_ioevents": 360.239,
+        "export.validate_and_open": 50.58,
+        "export.write_devices": 10.62,
+        "import.attach": 95.49399999999991,
+        "import.import_mapper": 719.626,
+        "import.read_validate_metadata": 350.54200000000003,
+        "import.restore_devices": 477.517,
+        "kernel.detach_attach": 1846.296,
+        "api_dispatch_response_profile_residual": 2058.066
+      }
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 4,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 10.522,
+      "export_api_us": 1137.903,
+      "import_api_us": 4739.651,
+      "export_import_api_us": 5877.554,
+      "kernel_us": 1803.753,
+      "pause_export_import_resume_api_us": 7438.288,
+      "pause_to_ack_us": 23570.91,
+      "request_us": 27479.425,
+      "request_to_resume_response_us": 13417.728,
+      "pause_to_resume_response_us": 9552.068,
+      "exclusive_components_us": {
+        "export.drain_and_save_devices": 15.722999999999999,
+        "export.export_detach_ioctls": 41.38900000000001,
+        "export.log_receipt": 32.818999999999996,
+        "export.park_resident": 55.734,
+        "export.peek_token": 1.689,
+        "export.read_manifest_and_build_state": 30.477,
+        "export.seal_mapper": 85.921,
+        "export.serialize_devices": 46.157,
+        "export.sync_devices": 1.643,
+        "export.unbind_ioevents": 134.04399999999998,
+        "export.validate_and_open": 30.814,
+        "export.write_devices": 5.308,
+        "import.attach": 84.06500000000005,
+        "import.import_mapper": 664.536,
+        "import.read_validate_metadata": 399.014,
+        "import.restore_devices": 873.063,
+        "kernel.detach_attach": 1803.753,
+        "api_dispatch_response_profile_residual": 1571.4049999999997
+      }
+    },
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 5,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 10.674,
+      "export_api_us": 1250.249,
+      "import_api_us": 4678.763,
+      "export_import_api_us": 5929.012,
+      "kernel_us": 1819.954,
+      "pause_export_import_resume_api_us": 7367.808999999999,
+      "pause_to_ack_us": 24098.862,
+      "request_us": 25396.103,
+      "request_to_resume_response_us": 10793.947,
+      "pause_to_resume_response_us": 9582.791,
+      "exclusive_components_us": {
+        "export.drain_and_save_devices": 41.157,
+        "export.export_detach_ioctls": 54.230000000000004,
+        "export.log_receipt": 84.265,
+        "export.park_resident": 98.63,
+        "export.peek_token": 3.067,
+        "export.read_manifest_and_build_state": 67.694,
+        "export.seal_mapper": 182.596,
+        "export.serialize_devices": 136.412,
+        "export.sync_devices": 1.957,
+        "export.unbind_ioevents": 49.443,
+        "export.validate_and_open": 41.33,
+        "export.write_devices": 12.16,
+        "import.attach": 88.32500000000005,
+        "import.import_mapper": 850.671,
+        "import.read_validate_metadata": 408.927,
+        "import.restore_devices": 541.613,
+        "kernel.detach_attach": 1819.954,
+        "api_dispatch_response_profile_residual": 1446.5810000000001
+      }
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 6,
+      "allocation_generation": 1,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 8.47,
+      "export_api_us": 2115.212,
+      "import_api_us": 3485.423,
+      "export_import_api_us": 5600.635,
+      "kernel_us": 1358.488,
+      "pause_export_import_resume_api_us": 6748.018000000001,
+      "pause_to_ack_us": 22946.291,
+      "request_us": 23899.312,
+      "request_to_resume_response_us": 9129.759,
+      "pause_to_resume_response_us": 8300.232,
+      "exclusive_components_us": {
+        "export.drain_and_save_devices": 9.376,
+        "export.export_detach_ioctls": 53.173,
+        "export.log_receipt": 30.816,
+        "export.park_resident": 1387.78,
+        "export.peek_token": 1.286,
+        "export.read_manifest_and_build_state": 25.544,
+        "export.seal_mapper": 63.163000000000004,
+        "export.serialize_devices": 44.447,
+        "export.sync_devices": 0.84,
+        "export.unbind_ioevents": 95.592,
+        "export.validate_and_open": 17.5,
+        "export.write_devices": 4.356,
+        "import.attach": 56.08199999999988,
+        "import.import_mapper": 643.692,
+        "import.read_validate_metadata": 415.803,
+        "import.restore_devices": 368.762,
+        "kernel.detach_attach": 1358.488,
+        "api_dispatch_response_profile_residual": 1023.9350000000004
+      }
+    },
+    {
+      "source": "A",
+      "destination": "B",
+      "generation": 7,
+      "allocation_generation": 2,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 14.91,
+      "export_api_us": 1784.095,
+      "import_api_us": 20674.773,
+      "export_import_api_us": 22458.868000000002,
+      "kernel_us": 18684.279,
+      "pause_export_import_resume_api_us": 24053.759000000002,
+      "pause_to_ack_us": 41627.778,
+      "request_us": 42818.879,
+      "request_to_resume_response_us": 27061.884,
+      "pause_to_resume_response_us": 25871.04,
+      "exclusive_components_us": {
+        "export.drain_and_save_devices": 14.49,
+        "export.export_detach_ioctls": 75.05400000000003,
+        "export.log_receipt": 86.52799999999999,
+        "export.park_resident": 506.58099999999996,
+        "export.peek_token": 6.38,
+        "export.read_manifest_and_build_state": 25.378999999999998,
+        "export.seal_mapper": 92.174,
+        "export.serialize_devices": 153.887,
+        "export.sync_devices": 2.257,
+        "export.unbind_ioevents": 104.529,
+        "export.validate_and_open": 32.168,
+        "export.write_devices": 16.225,
+        "import.attach": 72.8189999999995,
+        "import.import_mapper": 499.39099999999996,
+        "import.read_validate_metadata": 282.784,
+        "import.restore_devices": 507.186,
+        "kernel.detach_attach": 18684.279,
+        "api_dispatch_response_profile_residual": 1296.757000000005
+      }
+    },
+    {
+      "source": "B",
+      "destination": "A",
+      "generation": 8,
+      "allocation_generation": 2,
+      "resident_import": true,
+      "control_path": "tcp",
+      "prepare_fresh": false,
+      "prepare_api_us": 0,
+      "prepare_controller_us": 11.376,
+      "export_api_us": 1011.781,
+      "import_api_us": 5537.278,
+      "export_import_api_us": 6549.059,
+      "kernel_us": 3003.081,
+      "pause_export_import_resume_api_us": 7957.877,
+      "pause_to_ack_us": 25655.957,
+      "request_us": 27089.722,
+      "request_to_resume_response_us": 11575.373,
+      "pause_to_resume_response_us": 10230.588,
+      "exclusive_components_us": {
+        "export.drain_and_save_devices": 15.481,
+        "export.export_detach_ioctls": 40.99599999999998,
+        "export.log_receipt": 25.046,
+        "export.park_resident": 88.06599999999999,
+        "export.peek_token": 1.767,
+        "export.read_manifest_and_build_state": 23.156,
+        "export.seal_mapper": 92.228,
+        "export.serialize_devices": 46.256,
+        "export.sync_devices": 1.6199999999999999,
+        "export.unbind_ioevents": 136.726,
+        "export.validate_and_open": 29.355,
+        "export.write_devices": 4.896,
+        "import.attach": 83.51499999999987,
+        "import.import_mapper": 740.114,
+        "import.read_validate_metadata": 403.214,
+        "import.restore_devices": 427.656,
+        "kernel.detach_attach": 3003.081,
+        "api_dispatch_response_profile_residual": 1385.8859999999995
+      }
+    }
+  ],
+  "preparation_vmm": [
+    {
+      "elapsed_ns": 2939726,
+      "event": "prepare",
+      "guest_ram_access": false,
+      "kernel_attach": false,
+      "pid": 173,
+      "role": "B"
+    }
+  ],
+  "preparation_controller": [
+    {
+      "source": "A",
+      "destination": "B",
+      "before_epoch": 0,
+      "fresh": true,
+      "api": {
+        "file": "0116-native-prepare.txt",
+        "role": "B",
+        "path": "/actions",
+        "method": "PUT",
+        "request": {
+          "action_type": "DirectPrepare"
+        },
+        "response": {
+          "status": 204,
+          "expected_status": 204,
+          "duration_us": 4065.062,
+          "response": "HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n"
+        },
+        "control_wall_ns": 0,
+        "embedded_in": "0116-native-prepare.txt"
+      },
+      "controller_wall_ns": 350489460,
+      "source_paused": false,
+      "directory": "/run/swe-pool-6d5c6d3191c1030d/vm1-epoch1-resident-prepare",
+      "control_stages": [
+        {
+          "role": "B",
+          "kind": "scratch-resource",
+          "file": "0114-scratch-resource.txt",
+          "elapsed_ns": 47002806
+        },
+        {
+          "role": "B",
+          "kind": "launch-script",
+          "file": "0115-launch-script.txt",
+          "elapsed_ns": 85015116
+        },
+        {
+          "role": "B",
+          "kind": "native-prepare",
+          "file": "0116-native-prepare.txt",
+          "elapsed_ns": 216381267
+        }
+      ],
+      "api_control_wall_ns": 0,
+      "unattributed_control_ns": 2090271,
+      "nfs_counters": {
+        "before_file": "0113-prepare-nfs-before.txt",
+        "after_file": "0117-prepare-nfs-after.txt"
+      },
+      "native_boot": {
+        "pid": 173,
+        "starttime": 14230,
+        "fork_ns": 89675,
+        "fork_to_api_ready_ns": 4356549,
+        "prepare_api_ns": 4065062,
+        "native_ready_ns": 8615288,
+        "nfs_proc3_before": [
+          1,
+          2,
+          0,
+          1,
+          2,
+          0,
+          6144,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          2,
+          1,
+          0
+        ],
+        "nfs_proc3_after": [
+          1,
+          2,
+          0,
+          2,
+          4,
+          0,
+          6144,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          2,
+          1,
+          0
+        ]
+      },
+      "native_boot_file": "0116-native-prepare.txt",
+      "phase": "post-promotion-prewarm",
+      "control_server_prepare_ns": 310975558
+    }
+  ],
+  "all": {
+    "prepare_api_us": {
+      "n": 8,
+      "mean": 0,
+      "p50": 0.0,
+      "min": 0,
+      "max": 0
+    },
+    "prepare_controller_us": {
+      "n": 8,
+      "mean": 11.581375,
+      "p50": 10.597999999999999,
+      "min": 8.47,
+      "max": 17.787
+    },
+    "export_import_api_us": {
+      "n": 8,
+      "mean": 8764.799375,
+      "p50": 6678.8655,
+      "min": 5600.635,
+      "max": 22458.868000000002
+    },
+    "kernel_us": {
+      "n": 8,
+      "mean": 4231.192375,
+      "p50": 2147.4895,
+      "min": 1358.488,
+      "max": 18684.279
+    },
+    "pause_export_import_resume_api_us": {
+      "n": 8,
+      "mean": 10544.935125,
+      "p50": 8561.411,
+      "min": 6748.018000000001,
+      "max": 24053.759000000002
+    },
+    "pause_to_ack_us": {
+      "n": 8,
+      "mean": 1223545.74475,
+      "p50": 33641.8675,
+      "min": 22946.291,
+      "max": 5002386.016
+    },
+    "request_us": {
+      "n": 6,
+      "mean": 35987.37,
+      "p50": 27284.5735,
+      "min": 23899.312,
+      "max": 69240.779
+    },
+    "request_to_resume_response_us": {
+      "n": 6,
+      "mean": 14920.974666666665,
+      "p50": 12496.5505,
+      "min": 9129.759,
+      "max": 27061.884
+    },
+    "pause_to_resume_response_us": {
+      "n": 6,
+      "mean": 12814.582166666667,
+      "p50": 9906.6895,
+      "min": 8300.232,
+      "max": 25871.04
+    }
+  },
+  "first_import": {
+    "prepare_api_us": {
+      "n": 1,
+      "mean": 0,
+      "p50": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prepare_controller_us": {
+      "n": 1,
+      "mean": 10.432,
+      "p50": 10.432,
+      "min": 10.432,
+      "max": 10.432
+    },
+    "export_import_api_us": {
+      "n": 1,
+      "mean": 9300.133,
+      "p50": 9300.133,
+      "min": 9300.133,
+      "max": 9300.133
+    },
+    "kernel_us": {
+      "n": 1,
+      "mean": 2448.683,
+      "p50": 2448.683,
+      "min": 2448.683,
+      "max": 2448.683
+    },
+    "pause_export_import_resume_api_us": {
+      "n": 1,
+      "mean": 10758.283,
+      "p50": 10758.283,
+      "min": 10758.283,
+      "max": 10758.283
+    },
+    "pause_to_ack_us": {
+      "n": 1,
+      "mean": 64973.724,
+      "p50": 64973.724,
+      "min": 64973.724,
+      "max": 64973.724
+    },
+    "request_us": {
+      "n": 1,
+      "mean": 69240.779,
+      "p50": 69240.779,
+      "min": 69240.779,
+      "max": 69240.779
+    },
+    "request_to_resume_response_us": {
+      "n": 1,
+      "mean": 17547.157,
+      "p50": 17547.157,
+      "min": 17547.157,
+      "max": 17547.157
+    },
+    "pause_to_resume_response_us": {
+      "n": 1,
+      "mean": 13350.774,
+      "p50": 13350.774,
+      "min": 13350.774,
+      "max": 13350.774
+    }
+  },
+  "resident_imports": {
+    "prepare_api_us": {
+      "n": 7,
+      "mean": 0,
+      "p50": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prepare_controller_us": {
+      "n": 7,
+      "mean": 11.745571428571429,
+      "p50": 10.674,
+      "min": 8.47,
+      "max": 17.787
+    },
+    "export_import_api_us": {
+      "n": 7,
+      "mean": 8688.323142857143,
+      "p50": 6549.059,
+      "min": 5600.635,
+      "max": 22458.868000000002
+    },
+    "kernel_us": {
+      "n": 7,
+      "mean": 4485.836571428571,
+      "p50": 1846.296,
+      "min": 1358.488,
+      "max": 18684.279
+    },
+    "pause_export_import_resume_api_us": {
+      "n": 7,
+      "mean": 10514.456857142857,
+      "p50": 7957.877,
+      "min": 6748.018000000001,
+      "max": 24053.759000000002
+    },
+    "pause_to_ack_us": {
+      "n": 7,
+      "mean": 1389056.0334285714,
+      "p50": 25655.957,
+      "min": 22946.291,
+      "max": 5002386.016
+    },
+    "request_us": {
+      "n": 5,
+      "mean": 29336.6882,
+      "p50": 27089.722,
+      "min": 23899.312,
+      "max": 42818.879
+    },
+    "request_to_resume_response_us": {
+      "n": 5,
+      "mean": 14395.7382,
+      "p50": 11575.373,
+      "min": 9129.759,
+      "max": 27061.884
+    },
+    "pause_to_resume_response_us": {
+      "n": 5,
+      "mean": 12707.3438,
+      "p50": 9582.791,
+      "min": 8300.232,
+      "max": 25871.04
+    }
+  },
+  "by_control_path": {
+    "serial-diagnostic": {
+      "prepare_api_us": {
+        "n": 2,
+        "mean": 0,
+        "p50": 0.0,
+        "min": 0,
+        "max": 0
+      },
+      "prepare_controller_us": {
+        "n": 2,
+        "mean": 13.1335,
+        "p50": 13.1335,
+        "min": 8.48,
+        "max": 17.787
+      },
+      "export_import_api_us": {
+        "n": 2,
+        "mean": 7201.566999999999,
+        "p50": 7201.566999999999,
+        "min": 6808.672,
+        "max": 7594.4619999999995
+      },
+      "kernel_us": {
+        "n": 2,
+        "mean": 2365.6505,
+        "p50": 2365.6505,
+        "min": 1846.296,
+        "max": 2885.005
+      },
+      "pause_export_import_resume_api_us": {
+        "n": 2,
+        "mean": 10017.7235,
+        "p50": 10017.7235,
+        "min": 9164.945,
+        "max": 10870.501999999999
+      },
+      "pause_to_ack_us": {
+        "n": 2,
+        "mean": 4792746.218,
+        "p50": 4792746.218,
+        "min": 4583106.42,
+        "max": 5002386.016
+      }
+    },
+    "tcp": {
+      "prepare_api_us": {
+        "n": 6,
+        "mean": 0,
+        "p50": 0.0,
+        "min": 0,
+        "max": 0
+      },
+      "prepare_controller_us": {
+        "n": 6,
+        "mean": 11.064,
+        "p50": 10.597999999999999,
+        "min": 8.47,
+        "max": 14.91
+      },
+      "export_import_api_us": {
+        "n": 6,
+        "mean": 9285.876833333334,
+        "p50": 6239.0355,
+        "min": 5600.635,
+        "max": 22458.868000000002
+      },
+      "kernel_us": {
+        "n": 6,
+        "mean": 4853.039666666667,
+        "p50": 2134.3185,
+        "min": 1358.488,
+        "max": 18684.279
+      },
+      "pause_export_import_resume_api_us": {
+        "n": 6,
+        "mean": 10720.672333333334,
+        "p50": 7698.0825,
+        "min": 6748.018000000001,
+        "max": 24053.759000000002
+      },
+      "pause_to_ack_us": {
+        "n": 6,
+        "mean": 33812.253666666664,
+        "p50": 24877.4095,
+        "min": 22946.291,
+        "max": 64973.724
+      },
+      "request_us": {
+        "n": 6,
+        "mean": 35987.37,
+        "p50": 27284.5735,
+        "min": 23899.312,
+        "max": 69240.779
+      },
+      "request_to_resume_response_us": {
+        "n": 6,
+        "mean": 14920.974666666665,
+        "p50": 12496.5505,
+        "min": 9129.759,
+        "max": 27061.884
+      },
+      "pause_to_resume_response_us": {
+        "n": 6,
+        "mean": 12814.582166666667,
+        "p50": 9906.6895,
+        "min": 8300.232,
+        "max": 25871.04
+      }
+    }
+  },
+  "notes": [
+    "No first visits or warmup samples discarded.",
+    "Export/import API excludes pause/resume, controller metadata transport and guest ACK.",
+    "The four-API sum includes pause/resume, but still excludes metadata transport and ACK.",
+    "Serial-diagnostic pause-to-ACK includes receipt checks/rejection tests. TCP pause-to-ACK is measured on the source host across pause, export, metadata transport, attach, checkpoint, resume and the remote guest ACK response.",
+    "Preparation occurs while source is running; fresh preparation includes process launch in controller time.",
+    "Ready-control preparation occurs once after promotion. Cached readiness issues no API; parked RAM/KVM access is still probed after each handoff.",
+    "Request timings include the local control connection and peer connection. Resume response means the VMM accepted Resume, not first guest execution; serial guest ACK remains separately measured.",
+    "Single coherent host with nested KVM; not a noncoherent multi-host CXL result."
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "files": {
+    "build.json": {
+      "bytes": 13353,
+      "sha256": "4eecf76084258df20ca4f63e006bae4599a4c5fa577948b59c7bb860e7d48a93"
+    },
+    "cleanup.json": {
+      "bytes": 31855,
+      "sha256": "5484ca6639e4eae1d2d820ecab9a55ed72d2e9b13cf5ccf28bd683c084c9e799"
+    },
+    "direct-audit.json": {
+      "bytes": 8901,
+      "sha256": "0c5de399cdb4c3c4ea52414e4724255333ea207ffc92c40b9fc144b38ead2605"
+    },
+    "disk-archive.json": {
+      "bytes": 604,
+      "sha256": "9d63380c7c37f679a9b9641495b47528bbdb525ae95d34aa19be79540b492168"
+    },
+    "disk-audit.json": {
+      "bytes": 38637,
+      "sha256": "e486f200ab447c927972e91294141706ba32c85a7e1ff17987ea144f0fcab220"
+    },
+    "final-home-storage.raw.gz": {
+      "bytes": 84207310,
+      "sha256": "c5bd9453d1e81708045975e220845643bb2bca94012681194a8ed23c771f73bf"
+    },
+    "home-audit.json": {
+      "bytes": 5101,
+      "sha256": "330a65cbe871d8a923544af11aef5917fe3fdbc01a83a955bc3e69f52ba928ae"
+    },
+    "home-report.json": {
+      "bytes": 363396,
+      "sha256": "7426759fcc88f544b9b7665a2a45b4884b3bacb2f7c95a1c020de407c2f2c504"
+    },
+    "raw-evidence.tar.gz": {
+      "bytes": 11090695,
+      "sha256": "19d41f6ce94a510557c3bf3db9a2d786d379c3f08eff739be79cf24f702f0e35"
+    },
+    "research.json": {
+      "bytes": 5600,
+      "sha256": "7b1124ccbb652c59194a058662d479f0e8a6db91e6bdc3c06a815cce090e1aa7"
+    },
+    "trace-audit.json": {
+      "bytes": 142472,
+      "sha256": "3a79b03182cebfe1e824ae97b879a92a6ee858575400386e781182a3c87e07e1"
+    },
+    "trace-negative-tests.json": {
+      "bytes": 8601,
+      "sha256": "c1385ee4d7ae1be597b357f384400d30dee36611c619f29dc4f3d1f01a3d4741"
+    },
+    "trace-report.json": {
+      "bytes": 2426959,
+      "sha256": "5c996663fa9a7a1e2c1b35ebc98aabacfff5bcecff65b3183fec9e26b9c919db"
+    },
+    "packaging-audit.json": {
+      "bytes": 223264,
+      "sha256": "39f08397d0fe70dcca20e81ec08224be6028f61f25d64239fb8f332098de1fde"
+    },
+    "offline-audit-evidence.tar.gz": {
+      "bytes": 32699,
+      "sha256": "f3d9cd1221b451cb36ea0aee9275834bd9b4da4a6b3d1eab7356b4560777d6ee"
+    },
+    "summary.json": {
+      "bytes": 3129,
+      "sha256": "da6c5102d1297c04faada621fe0532b18403f52efcba85ca8efe4a30a988fd72"
+    },
+    "README.md": {
+      "bytes": 14347,
+      "sha256": "142e127e7d619070e7cef4b0fc0c7b957033a6823ccb57cb15de0555f602ca86"
+    }
+  },
+  "evidence_files": 10172,
+  "raw_evidence_manifest_sha256": "b8c34b399b462541e0ddcb72703bfc7d64e2229953a91e009f284c1b0c34be56"
+}

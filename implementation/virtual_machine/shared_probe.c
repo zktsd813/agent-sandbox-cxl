@@ -712,10 +712,12 @@ static double bench_start(int boot, unsigned generation)
 
 static size_t read_checkpoint(unsigned char *data, size_t capacity)
 {
-    int fd = open(bench_checkpoint_path, O_RDONLY | O_CLOEXEC);
+    int fd = open(bench_checkpoint_path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
     struct stat st;
     if (fd < 0 || fstat(fd, &st)) die("checkpoint open");
-    if (st.st_size <= 0 || (uint64_t)st.st_size > capacity) { fprintf(stderr, "Checkpoint exceeds mailbox\n"); exit(1); }
+    if (!S_ISREG(st.st_mode) || st.st_size <= 0 || (uint64_t)st.st_size > capacity) {
+        fprintf(stderr, "Checkpoint must be a nonempty regular file within mailbox capacity\n"); exit(1);
+    }
     size_t length = st.st_size, done = 0;
     while (done < length) {
         ssize_t n = read(fd, data + done, length - done);
@@ -728,15 +730,17 @@ static size_t read_checkpoint(unsigned char *data, size_t capacity)
 
 static void write_checkpoint(const unsigned char *data, size_t length)
 {
-    int fd = open(bench_checkpoint_path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
-    if (fd < 0) die("checkpoint create");
+    int fd = open(bench_checkpoint_path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK, 0600);
+    struct stat st;
+    if (fd < 0 || fstat(fd, &st)) die("checkpoint create");
+    if (!S_ISREG(st.st_mode)) { fprintf(stderr, "Checkpoint output must be a regular file\n"); exit(1); }
     size_t done = 0;
     while (done < length) {
         ssize_t n = write(fd, data + done, length - done);
         if (n <= 0) die("checkpoint write");
         done += n;
     }
-    close(fd);
+    if (close(fd)) die("checkpoint close");
 }
 
 static uint64_t checkpoint_hash(const unsigned char *data, size_t length)
@@ -744,6 +748,143 @@ static uint64_t checkpoint_hash(const unsigned char *data, size_t length)
     uint64_t hash = UINT64_C(14695981039346656037);
     for (size_t i = 0; i < length; i++) hash = (hash ^ data[i]) * UINT64_C(1099511628211);
     return hash;
+}
+
+/* One-shot transfer for an externally fenced A->B->A experiment. The existing
+ * mailbox wire layout and its [1MiB,2MiB) reservation remain unchanged. A new
+ * trial nonce may replace old contents; the lab controller exclusively owns
+ * this reservation and must serialize publishers. This is not a recovery or
+ * non-coherent cross-host publication protocol. */
+static int state_mailbox_path_valid(const char *path)
+{
+    const char prefix[] = "/run/trace-";
+    size_t first = sizeof(prefix) - 1;
+    if (strlen(path) != first + 16 + 6 || strncmp(path, prefix, first) ||
+        strcmp(path + first + 16, "/state")) return 0;
+    for (size_t i = first; i < first + 16; i++)
+        if (!((path[i] >= '0' && path[i] <= '9') || (path[i] >= 'a' && path[i] <= 'f'))) return 0;
+    return 1;
+}
+
+static const char *state_mailbox_publish_error(const struct handoff_control *ctrl,
+                                              uint64_t nonce, unsigned round, uint64_t memory_bytes)
+{
+    uint64_t prior_nonce = atomic_load_explicit(&ctrl->nonce, memory_order_acquire);
+    if (round == 1) return prior_nonce == nonce ? "duplicate_trial_nonce" : NULL;
+    if (prior_nonce != nonce || ctrl->schema != HANDOFF_SCHEMA || ctrl->state_round != 1 ||
+        ctrl->sequence != 'A' || ctrl->memory_bytes != memory_bytes ||
+        atomic_load_explicit(&ctrl->published, memory_order_acquire) != 1 ||
+        atomic_load_explicit(&ctrl->acknowledged, memory_order_acquire) != 1)
+        return "previous_round_not_consumed";
+    return NULL;
+}
+
+static const char *state_mailbox_receive_error(const struct handoff_control *ctrl,
+                                              uint64_t nonce, unsigned round, uint64_t memory_bytes)
+{
+    if (atomic_load_explicit(&ctrl->published, memory_order_acquire) != round) return "not_published";
+    if (ctrl->schema != HANDOFF_SCHEMA) return "schema";
+    if (atomic_load_explicit(&ctrl->nonce, memory_order_acquire) != nonce) return "nonce";
+    if (ctrl->state_round != round) return "round";
+    if (ctrl->sequence != (uint64_t)(round == 1 ? 'A' : 'B')) return "source_role";
+    if (ctrl->memory_bytes != memory_bytes) return "memory_layout";
+    if (!ctrl->state_size || ctrl->state_size > sizeof(ctrl->state)) return "length";
+    if (atomic_load_explicit(&ctrl->acknowledged, memory_order_acquire)) return "already_consumed";
+    if (ctrl->state_hash != checkpoint_hash(ctrl->state, ctrl->state_size)) return "checksum";
+    return NULL;
+}
+
+static int state_mailbox(char role, const char *phase, const char *dax, const char *path,
+                         uint64_t nonce, unsigned round, unsigned memory_mib)
+{
+    uint64_t started = monotonic_ns(), memory_bytes = memory_mib * UINT64_C(1024) * 1024;
+    int publish = !strcmp(phase, "publish");
+    char source = round == 1 ? 'A' : 'B';
+    if ((!publish && strcmp(phase, "receive")) || strcmp(dax, "/dev/dax0.0") ||
+        !state_mailbox_path_valid(path) || role != (publish ? source : (source == 'A' ? 'B' : 'A')))
+        return 2;
+    char parent[160];
+    snprintf(parent, sizeof(parent), "%s", path);
+    *strrchr(parent, '/') = 0;
+    struct stat st;
+    if (lstat(parent, &st)) die("state mailbox directory");
+    if (!S_ISDIR(st.st_mode)) { fprintf(stderr, "State mailbox parent must be a real directory\n"); return 2; }
+    snprintf(bench_checkpoint_path, sizeof(bench_checkpoint_path), "%s", path);
+    uint64_t align = dax_attribute(dax, "align"), capacity = dax_attribute(dax, "size");
+    size_t mapping_bytes = 2 * 1024 * 1024;
+    if (align < 4096 || (align & (align - 1)) || align > mapping_bytes || mapping_bytes % align ||
+        capacity % align || capacity < memory_bytes + mapping_bytes) {
+        fprintf(stderr, "State mailbox DAX alignment/capacity mismatch\n"); return 2;
+    }
+    unsigned char *state = malloc(sizeof(((struct handoff_control *)0)->state));
+    if (!state) die("state mailbox buffer");
+    size_t length = publish ? read_checkpoint(state, sizeof(((struct handoff_control *)0)->state)) : 0;
+    int fd = open_dax(dax);
+    unsigned char *mapping = mmap(NULL, mapping_bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (mapping == MAP_FAILED) die("state mailbox DAX mmap");
+    close(fd);
+    if ((uintptr_t)mapping % align) { fprintf(stderr, "State mailbox DAX mapping is unaligned\n"); exit(1); }
+    struct handoff_control *ctrl = (void *)(mapping + 1024 * 1024);
+    const char *error = publish ? state_mailbox_publish_error(ctrl, nonce, round, memory_bytes) :
+                                 state_mailbox_receive_error(ctrl, nonce, round, memory_bytes);
+    uint64_t hash = 0;
+    if (!error && publish) {
+        hash = checkpoint_hash(state, length);
+        atomic_store_explicit(&ctrl->published, 0, memory_order_release);
+        atomic_store_explicit(&ctrl->acknowledged, 0, memory_order_relaxed);
+        atomic_store_explicit(&ctrl->nonce, nonce, memory_order_relaxed);
+        ctrl->schema = HANDOFF_SCHEMA;
+        ctrl->state_round = round;
+        ctrl->state_size = length;
+        ctrl->state_hash = hash;
+        ctrl->memory_bytes = memory_bytes;
+        ctrl->sequence = source;
+        memcpy(ctrl->state, state, length);
+        atomic_store_explicit(&ctrl->published, round, memory_order_release);
+    } else if (!error) {
+        length = ctrl->state_size;
+        hash = ctrl->state_hash;
+        memcpy(state, ctrl->state, length);
+        if (checkpoint_hash(state, length) != hash ||
+            atomic_load_explicit(&ctrl->published, memory_order_acquire) != round ||
+            atomic_load_explicit(&ctrl->nonce, memory_order_acquire) != nonce)
+            error = "changed_during_copy";
+        uint64_t expected = 0;
+        if (!error && !atomic_compare_exchange_strong_explicit(&ctrl->acknowledged, &expected, UINT64_MAX,
+                                                              memory_order_acq_rel, memory_order_acquire))
+            error = "already_consumed";
+        if (!error) {
+            write_checkpoint(state, length);
+            atomic_store_explicit(&ctrl->acknowledged, round, memory_order_release);
+        }
+    }
+    free(state);
+    if (munmap(mapping, mapping_bytes)) die("state mailbox munmap");
+    if (error) { fprintf(stderr, "State mailbox rejected: %s\n", error); return 3; }
+    printf("STATE_MAILBOX_JSON {\"phase\":\"%s\",\"role\":\"%c\",\"source_role\":\"%c\","
+           "\"nonce\":\"%016" PRIx64 "\",\"round\":%u,\"schema\":\"%016" PRIx64 "\","
+           "\"offset\":1048576,\"capacity\":%zu,\"memory_bytes\":%" PRIu64 ","
+           "\"state_bytes\":%zu,\"state_hash\":\"%016" PRIx64 "\",\"duration_ns\":%" PRIu64 "}\n",
+           phase, role, source, nonce, round, HANDOFF_SCHEMA, sizeof(ctrl->state), memory_bytes,
+           length, hash, monotonic_ns() - started);
+    return 0;
+}
+
+static int state_mailbox_dispatch(int argc, char **argv, char role)
+{
+    if (argc != 9 || strlen(argv[6]) != 16 || (strcmp(argv[7], "1") && strcmp(argv[7], "2"))) return 2;
+    for (const char *p = argv[6]; *p; p++)
+        if (!((*p >= '0' && *p <= '9') || (*p >= 'a' && *p <= 'f'))) return 2;
+    if (!*argv[8]) return 2;
+    for (const char *p = argv[8]; *p; p++) if (*p < '0' || *p > '9') return 2;
+    char *end;
+    errno = 0;
+    uint64_t nonce = strtoull(argv[6], &end, 16);
+    if (errno || *end || !nonce) return 2;
+    errno = 0;
+    unsigned long memory = strtoul(argv[8], &end, 10);
+    if (errno || *end || memory < 128 || memory > 2048) return 2;
+    return state_mailbox(role, argv[3], argv[4], argv[5], nonce, argv[7][0] - '0', memory);
 }
 
 /* Observe the RAM VMA in the actual Firecracker process, not this controller. */
@@ -2816,6 +2957,7 @@ int main(int argc, char **argv)
         return 2;
     }
     char role = argv[2][0];
+    if (!strcmp(argv[1], "state-mailbox")) return state_mailbox_dispatch(argc, argv, role);
     if (!strcmp(argv[1], "mptcp-stream") || !strcmp(argv[1], "mptcp-pm"))
         return mptcp_probe_dispatch(argc, argv, role);
     if (!strcmp(argv[1], "kvm")) check_kvm(role);
