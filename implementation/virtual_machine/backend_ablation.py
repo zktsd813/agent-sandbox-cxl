@@ -22,6 +22,7 @@ import tempfile
 import time
 
 import lab
+from experiment_sources import record_sources
 from home_storage_bench import require, json_lines
 from pool_bench import MIB
 from pool_handoff_bench import HandoffController
@@ -271,9 +272,9 @@ def bench(a):
         report.update(result='failed',error=repr(exc));raise
     finally:
         for role,worker in getattr(c,'resident_workers',{}).items():
-            for filename in ('vmm.log','fc.log','stderr.log'):
+            for filename in ('vmm.log','fc.log','stderr.log','control/log'):
                 try:
-                    c.fetch_bytes(role,worker['directory']+'/'+filename,'final-'+filename)
+                    c.fetch_bytes(role,worker['directory']+'/'+filename,'final-'+filename.replace('/','-'))
                     report['logs'].append({'role':role,'name':filename,'file':c.receipts[-1]['file']})
                 except Exception as exc: report['logs'].append({'role':role,'name':filename,'error':repr(exc)})
         save()
@@ -282,12 +283,10 @@ def bench(a):
 def suite(a):
     require(re.fullmatch(r'[a-z0-9_-]{1,29}',a.session),'Use a fresh lowercase session of at most 29 characters')
     assets=a.assets.resolve(strict=True);a.output.mkdir(parents=True,exist_ok=False)
-    frozen={name:lab.sha256(HERE/name) for name in (*SOURCES,'backend_ablation.py','pool_handoff_probe.c')}
-    (a.output/'sources').mkdir()
-    for name in frozen:shutil.copy2(HERE/name,a.output/'sources'/name)
+    frozen, source_reference = record_sources(HERE, (*SOURCES,'backend_ablation.py','pool_handoff_probe.c'))
     manifest=json.loads((assets/'manifest.json').read_text())
     for name,digest in manifest['artifacts'].items():require(lab.sha256(assets/name)==digest,'Changed asset '+name)
-    summary={'schema':'backend-ablation-suite-v1','result':'running','sources':frozen,'fixture':manifest,'trials':[]}
+    summary={'schema':'backend-ablation-suite-v1','result':'running','sources':frozen,'source_reference':source_reference,'fixture':manifest,'trials':[]}
     def save():lab.save_json(a.output/'suite.json',summary)
     save()
     try:

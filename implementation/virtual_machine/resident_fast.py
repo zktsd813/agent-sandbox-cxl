@@ -51,6 +51,8 @@ def prepare_servers(c):
                 +f'n=0\nwhile ! grep -q RESIDENT_CONTROL_READY {control}/log; do\n'
                  f'read p t < {control}/fc.pid\nkill -0 $p\nn=$((n+1))\n[ $n -lt 500 ]\nsleep .01\ndone\n'
                  ':')
+        if getattr(c.args,'restore_timing',False):
+            command='export FC_RESIDENT_PROFILE=1\n'+command
         raw,name=c.shell(role,command,'resident-controller-prepare')
         c.resident_servers[role]={'directory':control,'file':name}
         if getattr(c.args,'resident_ready_control',False):

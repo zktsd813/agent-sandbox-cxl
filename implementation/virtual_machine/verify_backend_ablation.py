@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Verify raw backend-ablation receipts and derive matched latency summaries."""
 import argparse
+from experiment_sources import verify_sources
 import hashlib
 import json
 from pathlib import Path
@@ -165,7 +166,7 @@ def trial(path):
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('suite',type=Path);p.add_argument('--output',type=Path,required=True)
     a=p.parse_args();r=json.loads(a.suite.read_text());need(r['result']=='passed','Unpassed suite')
-    for name,digest in r['sources'].items():need(hashlib.sha256((a.suite.parent/'sources'/name).read_bytes()).hexdigest()==digest,'Frozen source changed')
+    verify_sources(r, a.suite.parent, hashes_key='sources', legacy_directory='sources')
     results=[]
     for row in r['trials']:
         need(row['result']=='passed' and row['fenced'] and row['network_removed'] and row['memory_removed'],'Unfinished trial/cleanup')

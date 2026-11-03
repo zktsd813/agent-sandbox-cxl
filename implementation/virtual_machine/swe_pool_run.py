@@ -16,12 +16,13 @@ import sys
 import time
 
 import lab
+from experiment_sources import record_sources
 
 HERE = Path(__file__).resolve().parent
 NAMES = ("gin-gonic__gin-3741", "php-cs-fixer__php-cs-fixer-8331",
          "micropython__micropython-13039")
 MODES = ("baseline", "state-only", "direct")
-SOURCES = ("swe_pool_run.py", "swe_pool_bench.py", "swe_pool_prepare.py",
+SOURCES = ("experiment_sources.py", "swe_pool_run.py", "swe_pool_bench.py", "swe_pool_prepare.py",
            "swe_pool_protocol.py", "verify_swe_pool.py", "verify_swe_runtime.py", "verify_pool_handles.py", "swe-pool-l2-init.sh",
            "swe-pool-guest-run.sh", "guest-pool-cli.c", "guest-pool-uapi.h",
            "guest-pool.c", "guest_pool_protocol.py", "pool_handoff_bench.py",
@@ -97,14 +98,11 @@ def main():
             raise FileNotFoundError(HERE / name)
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
-    (output / "measured-sources").mkdir()
-    for name in SOURCES:
-        shutil.copy2(HERE / name, output / "measured-sources" / name)
-    source_hashes = {name: lab.sha256(output / "measured-sources" / name) for name in SOURCES}
+    source_hashes, source_reference = record_sources(HERE, SOURCES)
     suite = {"schema": "swe-pool-suite-v1", "result": "running",
              "arguments": {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()},
              "fixture_manifest": manifest, "fixture_manifest_sha256": lab.sha256(manifest_path),
-             "source_hashes": source_hashes, "qemu_sha256": lab.sha256(qemu), "trials": [],
+             "source_hashes": source_hashes, "source_reference": source_reference, "qemu_sha256": lab.sha256(qemu), "trials": [],
              "scope": "One fresh pair per actual trace/mode; same one-vCPU 2GiB sandbox configuration",
              "limitations": ["Coherent nested KVM on one physical host",
                              "One trial per trace/mode unless separately repeated",

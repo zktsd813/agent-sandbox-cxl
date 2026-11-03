@@ -5,6 +5,7 @@ Consumes completed workload output and optional VMM profiles. It never asks a
 running VMM to hash an image, scan RAM, checkpoint, or run a negative API test.
 """
 import collections
+from experiment_sources import verify_sources
 import json
 from pathlib import Path
 import re
@@ -20,9 +21,7 @@ def verify(path):
     e = Evidence(r, path.parent)
     memory = r['arguments']['memory_mib'] * MIB
     need(memory == 2048*MIB and r['mode'] in ('baseline', 'state-only', 'direct'), 'Unexpected runtime geometry')
-    for name, digest in r['source_hashes'].items():
-        need(Path(name).name == name and sha((path.parent/'measured-sources'/name).read_bytes()) == digest,
-             'Saved runtime source changed')
+    verify_sources(r, path.parent)
     workload = verify_trace(e, r)
     launches = {}
     for launch in r['launches']:

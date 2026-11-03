@@ -7,6 +7,7 @@ snapshot file is used. The baseline uses the same patched VMM entirely in DRAM.
 import argparse
 import base64
 import hashlib
+from experiment_sources import record_sources
 import json
 import os
 from pathlib import Path
@@ -347,13 +348,10 @@ def main():
         'limitations': ['Coherent nested KVM; one run per trace/mode', ('Two extra handoffs inside a running command' if args.inflight_handoff_index is not None else 'Transitions between recorded commands'),
             'Same patched DRAM baseline, not pristine Firecracker', 'Natural resident pages in at most16 selected lower files',
             'One VM per trial: no multi-VM memory savings claim; full canonical image preloaded and counted']}
-    sources = ('swe_pool_bench.py','swe_pool_protocol.py','swe-pool-l2-init.sh','swe-pool-guest-run.sh',
+    sources = ('experiment_sources.py','swe_pool_bench.py','swe_pool_protocol.py','swe-pool-l2-init.sh','swe-pool-guest-run.sh',
         'resident_fast.py','resident_control.c','resident_wire.h','resident_proxy.py','resident_bootstrap.c','control_rpc.c','control_rpc.py','guest-init.sh','guest-pool-cli.c','guest-pool.c','guest-pool-uapi.h','pool_handoff_bench.py','pool_handoff_control.py',
         'pool_bench.py','pool_control.py','home_storage_bench.py','nfs_bench.py','trace_bench.py','lab.py')
-    (out/'measured-sources').mkdir()
-    for name in sources:
-        shutil.copy2(HERE/name,out/'measured-sources'/name)
-    report['source_hashes'] = {name: lab.sha256(out/'measured-sources'/name) for name in sources}
+    report['source_hashes'], report['source_reference'] = record_sources(HERE, sources)
     source = Path(config['assets'])/'traces'/f'{args.name}.traj.json'
     shutil.copy2(source,out/'source.traj.json')
     report['source_trace'] = {'file':'source.traj.json','sha256':lab.sha256(source)}
@@ -425,6 +423,8 @@ def main():
         report['controller_cleanup'] = []
         for role, server in getattr(c, 'resident_servers', {}).items():
             nfs.stop_fc(c.vms[role], server['directory'])
+            if args.restore_timing:
+                c.fetch_bytes(role,server['directory']+'/log','final-controller-log')
             raw, name = c.shell(role,source_fence_script(server['directory']),'controller-final-fence')
             report['controller_cleanup'].append({**server, 'role':role, 'prepare_file':server['file'], 'file':name, 'fenced':'FENCED ' in raw})
         report['cleanup'] = []

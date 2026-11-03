@@ -24,7 +24,7 @@ DAX 공유 영역은 기본 2GiB다. 기본 microVM은 1 vCPU·128MiB이고 RAM 
 
 ## 다음 세션 인계: 2026-11-03
 
-검증한 소스는 `66c1d398b`다. 정상 handoff에는 이미지/RAM 전수 검증, 전체 mapping 조회,
+검증한 소스는 `9b0187c48`다(이력 정리 전 `66c1d398b`와 같은 구현). 정상 handoff에는 이미지/RAM 전수 검증, 전체 mapping 조회,
 guest ping·실패 유도 시험·전체 로그 회수가 없다. Direct는 `DirectSend`(pause+export)와
 `DirectReceive`(import+resume)로 인계한다. 디스크 FD·io_uring·제어기와 peer TCP 연결은 미리 준비하고,
 방문한 VM/vCPU 자원을 재사용한다. 고정 크기 mapper handle과 작은 state는 전달하며,
@@ -33,8 +33,8 @@ Promotion/demotion의 RAM 복사, 목적지 준비, CPU handoff는 별도 단계
 
 | 측정 범위 | 결과 | 해석 |
 |---|---|---|
-| 같은 실행에서 exec/직접 relay를 교대로 사용 (`48929fe54`) | 외부 요청→응답 p50 **9.35→6.23ms**, native 요청→Resume **5.06/5.11ms** | 첫 왕복 제외 exec 20회·relay 18회. 요청마다 shell/process를 실행하던 비용 감소 |
-| 최종 Gin 준비 (`66c1d398b`) | **24.79ms**, 그중 peer 연결 3.72ms | 프로세스·디스크와 양쪽 제어기 준비 포함, fresh pair 1회 관측. VM은 source에서 계속 실행 |
+| 같은 실행에서 exec/직접 relay를 교대로 사용 (`c562c4bf6`) | 외부 요청→응답 p50 **9.35→6.23ms**, native 요청→Resume **5.06/5.11ms** | 첫 왕복 제외 exec 20회·relay 18회. 요청마다 shell/process를 실행하던 비용 감소 |
+| 최종 Gin 준비 (`9b0187c48`) | **24.79ms**, 그중 peer 연결 3.72ms | 프로세스·디스크와 양쪽 제어기 준비 포함, fresh pair 1회 관측. VM은 source에서 계속 실행 |
 | 최종 Gin 반복 handoff | 외부 **6.57ms**, native **5.69ms** p50 | 처음 40회 중 첫 왕복 제외 38회, 내부 상세 계측 꺼짐. 46회 전체에서 연결 준비 비용 0 |
 | NFS/local backend 회귀 | 각 **24회** 통과 | 160MiB 데이터 확인, source 접근 실패 48회, parked worker 실행 거절 144회는 별도 검증 |
 

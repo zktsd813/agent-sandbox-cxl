@@ -29,9 +29,23 @@ static int readiness_pipe = -1;
 static int api_fd = -1;
 static int peer_fd = -1;
 static char peer_ip[16];
+static int profile_enabled;
 static void fail(const char *s) { perror(s); exit(1); }
 static uint64_t ns(void) { struct timespec t; if(clock_gettime(CLOCK_MONOTONIC,&t))fail("clock");return (uint64_t)t.tv_sec*1000000000+t.tv_nsec; }
 static void check(int ok,const char *s) { if(!ok){fprintf(stderr,"resident-control: %s\n",s);exit(1);} }
+struct phase_profile { uint64_t last; unsigned count; struct { const char *name; uint64_t ns; } stages[10]; };
+static void phase_start(struct phase_profile *p) { memset(p,0,sizeof(*p));if(profile_enabled)p->last=ns(); }
+static void phase_mark(struct phase_profile *p,const char *name) {
+ if(!profile_enabled)return;
+ check(p->count<10,"profile stage bound");uint64_t now=ns();
+ p->stages[p->count].name=name;p->stages[p->count++].ns=now-p->last;p->last=now;
+}
+static void phase_print(const struct phase_profile *p,const struct request *q,const char *side) {
+ if(!profile_enabled)return;
+ fprintf(stderr,"RESIDENT_PHASES_JSON {\"label\":\"%s\",\"epoch\":%"PRIu64",\"side\":\"%s\",\"stages_ns\":{",q->label,q->epoch,side);
+ for(unsigned i=0;i<p->count;i++)fprintf(stderr,"%s\"%s\":%"PRIu64,i?",":"",p->stages[i].name,p->stages[i].ns);
+ fputs("}}\n",stderr);
+}
 static void send_all(int fd,const void *p,size_t n) { while(n){ssize_t k=send(fd,p,n,MSG_NOSIGNAL);if(k<0&&errno==EINTR)continue;if(k<=0)fail("send");p=(const char *)p+k;n-=k;} }
 static void recv_all(int fd,void *p,size_t n) { while(n){ssize_t k=read(fd,p,n);if(k<0&&errno==EINTR)continue;if(k<=0)fail("receive");p=(char *)p+k;n-=k;} }
 static void write_all(int fd,const void *p,size_t n) { while(n){ssize_t k=write(fd,p,n);if(k<0&&errno==EINTR)continue;if(k<=0)fail("write");p=(const char *)p+k;n-=k;} }
@@ -122,23 +136,30 @@ static void validate_request(const struct request *q,const char *nonce) {
                   && q->canonical_bytes%4096==0 && q->canonical_start<=UINT64_MAX-q->canonical_bytes,"plan bounds");
 }
 static struct outcome handoff(struct request q,const char *peer,int client,char *ack) {
- (void)owner_pid();struct outcome o={0};int fd;
+ struct phase_profile profile;phase_start(&profile);
+ (void)owner_pid();phase_mark(&profile,"owner_check");struct outcome o={0};int fd;
  q.persistent=client>=0;
  if(q.persistent&&peer_fd>=0){check(!strcmp(peer,peer_ip),"cached peer changed");fd=peer_fd;}
  else {
   uint64_t connect_start=ns();fd=tcp(peer,0);o.connection_ns=ns()-connect_start;
   if(q.persistent){peer_fd=fd;strcpy(peer_ip,peer);}
  }
- uint64_t start=ns();o.send=api("PUT","/actions","{\"action_type\": \"DirectSend\"}");select_owner(2147483647);
+ phase_mark(&profile,"peer_connection");
+ uint64_t start=ns();o.send=api("PUT","/actions","{\"action_type\": \"DirectSend\"}");phase_mark(&profile,"export_api");
+ select_owner(2147483647);phase_mark(&profile,"source_fence");
  char wire[sizeof(q)+2*CAP],*state=wire+sizeof(q),*manifest; q.operation=0;
  q.state_len=read_file("direct-export.json",state);manifest=state+q.state_len;
  q.manifest_len=read_file("memory-manifest.json",manifest);
  o.state_len=q.state_len;o.manifest_len=q.manifest_len;
+ phase_mark(&profile,"metadata_read");
  memcpy(wire,&q,sizeof(q));send_all(fd,wire,sizeof(q)+q.state_len+q.manifest_len);
+ phase_mark(&profile,"metadata_send");
  uint32_t marker;recv_all(fd,&marker,sizeof(marker));check(marker==MAGIC,"resume marker");o.pause_to_resume_ns=ns()-start;
+ phase_mark(&profile,"peer_until_resume");
  if(client>=0)send_all(client,&marker,sizeof(marker));
  recv_all(fd,&o.target,sizeof(o.target));check(o.target.magic==MAGIC&&o.target.ack_len<4096,"reply bounds");
- recv_all(fd,ack,o.target.ack_len);ack[o.target.ack_len]=0;o.handoff_ns=ns()-start;if(!q.persistent)close(fd);return o;
+ recv_all(fd,ack,o.target.ack_len);ack[o.target.ack_len]=0;o.handoff_ns=ns()-start;if(!q.persistent)close(fd);
+ phase_print(&profile,&q,"send");return o;
 }
 static void print_outcome(const struct outcome *o,const char *ack,uint64_t request_ns,uint64_t request_resume_ns) {
  printf("RESIDENT_FAST_JSON {\"version\":2,\"wire_version\":3,\"handoff_ns\":%"PRIu64",\"connection_prepare_ns\":%"PRIu64
@@ -153,6 +174,7 @@ static uint64_t number(const char *s) {
  check(s[0] && strspn(s,"0123456789")==strlen(s) && !errno && !*end,"integer argument");return n;
 }
 int main(int argc,char **argv) {
+ const char *profile_env=getenv("FC_RESIDENT_PROFILE");profile_enabled=profile_env&&!strcmp(profile_env,"1");
  check(argc==5||argc==6||argc==7||argc==12||argc==13,"usage: serve DIR IP NONCE | handoff DIR PEER NONCE FIRST LABEL | request DIR LOCAL_IP NONCE FIRST LABEL PEER VM EPOCH START BYTES [OBSERVE]");
  check(strlen(argv[2])<sizeof(directory)&&!strncmp(argv[2],"/run/swe-pool-",14),"owned directory required");strcpy(directory,argv[2]);path(socket_path,sizeof(socket_path),"api.sock");
  check(strlen(argv[4])==32&&strspn(argv[4],"0123456789abcdef")==32,"session nonce");signal(SIGPIPE,SIG_IGN);
@@ -219,15 +241,20 @@ int main(int argc,char **argv) {
    }
    check(!q.persistent||peer_fd==fd,"multiple peer connections");
    check(q.state_len>0&&q.state_len<CAP&&q.manifest_len>0&&q.manifest_len<CAP,"request bounds");
+   struct phase_profile profile;phase_start(&profile);
    char state[CAP],manifest[CAP];recv_all(fd,state,q.state_len);recv_all(fd,manifest,q.manifest_len);
+   phase_mark(&profile,"metadata_receive");
    write_file("direct-import.json",state,q.state_len);write_file("restore-manifest.json",manifest,q.manifest_len);
-   select_owner(owner_pid());
+   phase_mark(&profile,"metadata_publish");
+   int owner=owner_pid();phase_mark(&profile,"owner_check");select_owner(owner);phase_mark(&profile,"owner_select");
    struct reply r={.magic=MAGIC};off_t offset=0;
    if(q.observe){char p[256];path(p,sizeof(p),"fc.log");struct stat st;if(stat(p,&st))fail("log offset");offset=st.st_size;}
    r.receive=api("PUT","/actions","{\"action_type\": \"DirectReceive\"}");
+   phase_mark(&profile,"import_api");
    uint32_t marker=MAGIC;send_all(fd,&marker,sizeof(marker));
    if(q.observe)r.ack_len=guest_ack(q.label,ack,offset,&r.ack_ns);
    send_all(fd,&r,sizeof(r));send_all(fd,ack,r.ack_len);if(!q.persistent)close(fd);
+   phase_print(&profile,&q,"receive");
   }
  }
  check((!strcmp(argv[1],"handoff")&&argc==7)||(!strcmp(argv[1],"request")&&(argc==12||argc==13)),"command arguments");

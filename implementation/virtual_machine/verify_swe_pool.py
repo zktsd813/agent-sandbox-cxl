@@ -5,6 +5,7 @@ No benchmark, controller, or admission-parser imports. The older independent
 auditors supply only raw-evidence, archive, trace and mapping readers.
 """
 import argparse
+from experiment_sources import verify_sources
 import base64
 import collections
 import hashlib
@@ -401,9 +402,7 @@ def verify(path):
     need(report["boundaries"] == [plan["handoff_before"], plan["command_count"] - 2], "unexpected transition boundaries")
     need(report["layout"] == {"private_start": PRIVATE_START, "private_end": PRIVATE_END, "bloom": 3072*MIB,
         "canonical_start": CANONICAL_START, "canonical_bytes": plan["image_bytes"], "kvm_arena": 12288*MIB}, "pool geometry changed")
-    for name, expected in report["source_hashes"].items():
-        need(Path(name).name == name and sha((path.parent / "measured-sources" / name).read_bytes()) == expected,
-             "measured source differs")
+    verify_sources(report, path.parent)
     trace_result = verify_trace(e, report)
     runtime_inputs(e, report)
     if report['arguments'].get('immutable_nfs_cache', False):
@@ -831,9 +830,7 @@ def verify_suite(path):
     path = Path(path)
     suite = json.loads(path.read_bytes())
     need(suite["schema"] == "swe-pool-suite-v1" and suite["trials"], "unknown/empty suite")
-    for name, expected in suite["source_hashes"].items():
-        need(Path(name).name == name and sha((path.parent / "measured-sources" / name).read_bytes()) == expected,
-             "suite source changed")
+    verify_sources(suite, path.parent)
     rows, groups = [], collections.defaultdict(dict)
     for trial in suite["trials"]:
         report = local(path.parent, trial["report_file"])
