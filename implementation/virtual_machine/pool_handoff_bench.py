@@ -73,6 +73,10 @@ class HandoffController(PoolController):
             "FC_POOL_MEMORY_MANIFEST": s.manifest_path, "FC_POOL_MEMORY_DEVICE": "/dev/cxl_pool",
             "FC_DAX_FIXED_HVA": "0x400000000000", "FC_DAX_SNAPSHOT": "1",
             "FC_POOL_DISCARD": "1"}
+        if getattr(self.args, "full_audit", False):
+            # The discard oracle joins host mapping/ACK receipts with guest
+            # trace ranges. Ordinary runtime deliberately omits these logs.
+            env["FC_POOL_DISCARD_TRACE"] = "1"
         resident = getattr(self.args, "resident_direct", False)
         if resident:
             env.update(FC_DAX_RESIDENT="1", FC_DAX_RESIDENT_IMPORT=s.directory+"/direct-import.json",
