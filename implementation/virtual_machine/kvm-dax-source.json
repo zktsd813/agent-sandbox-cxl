@@ -155,7 +155,7 @@
     "context_and_literature": "context-switch-comparison.json"
   },
   "pool_handoff": {
-    "status": "runtime revalidation in progress",
+    "status": "passed",
     "source": "/tmp/agent-sandbox-cxl-incremental-20261102/implementation/linux",
     "build": "/tmp/agent-sandbox-cxl-incremental-20261102/implementation/virtual_machine/.local/kernel-fast",
     "patch_sha256": "9a002a99aed0d49deac69af4c34c9573dddd61b2c28efc0c104dcee81903cc83",
@@ -178,7 +178,10 @@
     "new_private_ioctl_abi": [
       "KVM_DAX_LOCAL_RAM"
     ],
-    "local_ram": "paused-owner scalar toggle; local DRAM may run but export/detach forbidden until CXL is rearmed"
+    "local_ram": "paused-owner scalar toggle; local DRAM may run but export/detach forbidden until CXL is rearmed",
+    "validation_date": "2026-11-04",
+    "validation_document": "../../docs/cxl-resident-direct.md",
+    "validation_scope": "Coherent nested KVM: resident direct binary handoff, actual SWE lifecycle, 3-VM state-only/direct pooling; nested root/TLB functions measured separately. No physical noncoherent CXL claim."
   },
   "persistent_mapper_v2": {
     "normal_handoff": "registered kernel provider descriptor/cookie/lease/generation/epoch proof; no GPA PFN walk",
