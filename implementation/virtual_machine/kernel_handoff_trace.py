@@ -8,7 +8,9 @@ FUNCTIONS={'arch':('kvm','kvm_arch_dax_handoff'),
            'pit':('kvm','kvm_pit_dax_handoff'),
            'lapic':('kvm','kvm_lapic_dax_handoff')}
 OPTIONAL_FUNCTIONS={'nested_root':('kvm','kvm_dax_nested_root_sync'),
-                    'tlb_current':('kvm_intel','vmx_flush_tlb_current')}
+                    'tlb_current':('kvm_intel','vmx_flush_tlb_current'),
+                    'tlb_all':('kvm_intel','vmx_flush_tlb_all'),
+                    'tlb_guest':('kvm_intel','vmx_flush_tlb_guest')}
 
 
 def start(c):
