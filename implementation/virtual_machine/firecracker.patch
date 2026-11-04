@@ -1472,19 +1472,30 @@ index 2f1b6b95c..429214603 100644
      pub fn new(reset_evt: EventFd) -> Result<I8042Device, std::io::Error> {
          Ok(I8042Device {
 diff --git a/src/vmm/src/devices/legacy/serial.rs b/src/vmm/src/devices/legacy/serial.rs
-index e38480179..2bb278582 100644
+index e38480179..3b6792029 100644
 --- a/src/vmm/src/devices/legacy/serial.rs
 +++ b/src/vmm/src/devices/legacy/serial.rs
-@@ -265,6 +265,22 @@ impl<I: Read + AsRawFd + Send + Debug> SerialWrapper<EventFdTrigger, SerialEvent
+@@ -94,7 +94,7 @@ impl<EV: SerialEvents + Debug, W: Write + Debug> RawIOHandler for Serial<EventFd
+ #[derive(Debug)]
+ pub struct SerialEventsWrapper {
+     /// Buffer ready event.
+-    pub buffer_ready_event_fd: Option<EventFdTrigger>,
++    pub buffer_ready_event_fd: Option<Arc<EventFdTrigger>>,
+ }
+ 
+ impl SerialEvents for SerialEventsWrapper {
+@@ -265,6 +265,24 @@ impl<I: Read + AsRawFd + Send + Debug> SerialWrapper<EventFdTrigger, SerialEvent
  pub type SerialDevice = SerialWrapper<EventFdTrigger, SerialEventsWrapper, Stdin>;
  
  impl SerialDevice {
-+    /// The experimental pool only permits output-only UARTs (no epoll input FDs).
++    /// Restore UART registers while retaining the host's epoll registration.
 +    pub(crate) fn restore_reused(&mut self, state: &SerialState) -> io::Result<()> {
 +        assert!(self.input.is_none() || crate::direct::resident_enabled());
 +        let interrupt = self.serial.interrupt_evt().try_clone()?;
-+        let buffer = self.serial.events().buffer_ready_event_fd.as_ref()
-+            .map(EventFdTrigger::try_clone).transpose()?;
++        // dup() preserves the eventfd counter, but changes the numeric FD stored
++        // in epoll's event data. Keep the same owned FD across reconstruction so
++        // process() recognizes and consumes pending buffer-ready notifications.
++        let buffer = self.serial.events().buffer_ready_event_fd.clone();
 +        let output = std::mem::replace(
 +            self.serial.writer_mut(), SerialOut::new(SerialOutInner::Sink, None));
 +        self.serial = Serial::from_state(state, interrupt, SerialEventsWrapper {
@@ -1498,6 +1509,43 @@ index e38480179..2bb278582 100644
      pub fn new(
          serial_in: Option<Stdin>,
          serial_out: SerialOut,
+@@ -273,7 +291,7 @@ impl SerialDevice {
+         let interrupt_evt = EventFdTrigger::new(EventFd::new(EFD_NONBLOCK)?);
+         let buffer_read_event_fd = EventFdTrigger::new(EventFd::new(EFD_NONBLOCK)?);
+         let events = SerialEventsWrapper {
+-            buffer_ready_event_fd: Some(buffer_read_event_fd),
++            buffer_ready_event_fd: Some(Arc::new(buffer_read_event_fd)),
+         };
+ 
+         let serial =
+@@ -501,6 +519,27 @@ mod tests {
+         assert_eq!(buf[0], b'c');
+     }
+ 
++    #[test]
++    fn test_repeated_restore_retains_registered_buffer_event() {
++        use vmm_sys_util::epoll::{ControlOperation, Epoll, EpollEvent};
++        let mut serial = SerialDevice::new(None, test_serial_out_sink(), None).unwrap();
++        let fd = serial.buffer_ready_evt_fd();
++        let epoll = Epoll::new().unwrap();
++        epoll.ctl(ControlOperation::Add, fd, EpollEvent::new(EventSet::IN, fd as u64)).unwrap();
++        let mut events = [EpollEvent::default(); 1];
++        for _ in 0..32 {
++            serial.serial.raw_input(b"x").unwrap();
++            let state = serial.serial.state();
++            serial.restore_reused(&state).unwrap();
++            assert_eq!(serial.buffer_ready_evt_fd(), fd);
++            assert_eq!(serial.serial.read(0), b'x');
++            assert_eq!(epoll.wait(0, &mut events).unwrap(), 1);
++            assert_eq!(events[0].data(), fd as u64);
++            assert!(serial.consume_buffer_ready_event().unwrap() > 0);
++            assert_eq!(epoll.wait(0, &mut events).unwrap(), 0);
++        }
++    }
++
+     #[test]
+     fn test_is_fifo() {
+         // invalid file descriptors arent fifos
 diff --git a/src/vmm/src/devices/virtio/balloon/device.rs b/src/vmm/src/devices/virtio/balloon/device.rs
 index 4008b154b..c1cde166e 100644
 --- a/src/vmm/src/devices/virtio/balloon/device.rs
@@ -7395,3 +7443,16 @@ index dfedd6474..ab044b3b1 100644
  
          let mut entry = kvm_irq_routing_entry {
              gsi,
+diff --git a/src/vmm/tests/devices.rs b/src/vmm/tests/devices.rs
+index cfa847092..353f404ba 100644
+--- a/src/vmm/tests/devices.rs
++++ b/src/vmm/tests/devices.rs
+@@ -29,7 +29,7 @@ fn create_serial(
+         serial: Serial::with_events(
+             EventFdTrigger::new(EventFd::new(EFD_NONBLOCK).unwrap()),
+             SerialEventsWrapper {
+-                buffer_ready_event_fd: Some(kick_stdin_evt.try_clone().unwrap()),
++                buffer_ready_event_fd: Some(Arc::new(kick_stdin_evt.try_clone().unwrap())),
+             },
+             SerialOut::new(SerialOutInner::Stdout(std::io::stdout()), None),
+         ),
