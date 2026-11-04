@@ -361,8 +361,8 @@ int main(int argc,char **argv) {
    if(q.observe){char p[256];path(p,sizeof(p),"fc.log");struct stat st;if(stat(p,&st))fail("log offset");offset=st.st_size;}
    if(!q.manifest_len) {
     check(connect_native(),"memory receiver not ready");uint64_t begin=ns(),response[2];
-    unsigned char header[5]={4};memcpy(header+1,&q.state_len,4);
-    send_all(native_fd,header,sizeof(header));send_all(native_fd,state,q.state_len);recv_all(native_fd,response,sizeof(response));
+    unsigned char wire[5+CAP]={4};memcpy(wire+1,&q.state_len,4);memcpy(wire+5,state,q.state_len);
+    send_all(native_fd,wire,5+q.state_len);recv_all(native_fd,response,sizeof(response));
     check(response[0]==0,"memory import failed");r.receive=(struct api_result){.status=204,.us=(ns()-begin)/1000.};
    } else { r.receive=api("PUT","/actions","{\"action_type\": \"DirectReceive\"}"); }
    phase_mark(&profile,"import_api");

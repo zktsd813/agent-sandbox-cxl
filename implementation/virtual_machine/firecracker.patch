@@ -92,7 +92,7 @@ index a3b3f3f3a..5eb4bbaf1 100644
              parse_put_actions(&Body::new("invalid_body")).unwrap_err();
  
 diff --git a/src/firecracker/src/api_server_adapter.rs b/src/firecracker/src/api_server_adapter.rs
-index 70abff48c..194642c2c 100644
+index 70abff48c..6ca24573a 100644
 --- a/src/firecracker/src/api_server_adapter.rs
 +++ b/src/firecracker/src/api_server_adapter.rs
 @@ -2,10 +2,13 @@
@@ -109,7 +109,7 @@ index 70abff48c..194642c2c 100644
  
  use event_manager::{EventOps, Events, MutEventSubscriber, SubscriberOps};
  use vmm::logger::{ProcessTimeReporter, error_unrestricted, info_unrestricted, warn_unrestricted};
-@@ -48,6 +51,185 @@ struct ApiServerAdapter {
+@@ -48,6 +51,192 @@ struct ApiServerAdapter {
      request: Option<ApiRequest>,
  }
  
@@ -166,8 +166,15 @@ index 70abff48c..194642c2c 100644
 +        // This bounded reply must fit immediately; a stalled/broken controller
 +        // must not block device dispatch or cause a partially completed retry.
 +        let stream = self.stream.as_mut().unwrap();
-+        stream.write_all(&response).expect("resident reply");
-+        stream.write_all(&payload).expect("resident payload reply");
++        if payload.is_empty() { stream.write_all(&response).expect("resident reply"); }
++        else {
++            // Publish header and body in one write, avoiding an early wakeup
++            // that makes the controller block again waiting for the payload.
++            let mut wire = Vec::with_capacity(response.len() + payload.len());
++            wire.extend_from_slice(&response);
++            wire.extend_from_slice(&payload);
++            stream.write_all(&wire).expect("resident payload reply");
++        }
 +    }
 +}
 +
@@ -295,7 +302,7 @@ index 70abff48c..194642c2c 100644
  impl ApiServerAdapter {
      /// Runs the vmm to completion, while any arising control events are deferred
      /// to a `RuntimeApiController`.
-@@ -58,6 +240,9 @@ impl ApiServerAdapter {
+@@ -58,6 +247,9 @@ impl ApiServerAdapter {
          vmm: Arc<Mutex<Vmm>>,
          event_manager: &mut EventManager,
      ) -> Result<(), ApiServerError> {
@@ -305,7 +312,7 @@ index 70abff48c..194642c2c 100644
          let api_adapter = Arc::new(Mutex::new(Self {
              api_event_fd,
              from_api,
-@@ -66,10 +251,34 @@ impl ApiServerAdapter {
+@@ -66,10 +258,34 @@ impl ApiServerAdapter {
              request: None,
          }));
          event_manager.add_subscriber(api_adapter.clone());
@@ -340,7 +347,7 @@ index 70abff48c..194642c2c 100644
              api_adapter
                  .lock()
                  .expect("Poisoned lock")
-@@ -84,33 +293,36 @@ impl ApiServerAdapter {
+@@ -84,33 +300,36 @@ impl ApiServerAdapter {
          Ok(())
      }
  
@@ -384,7 +391,7 @@ index 70abff48c..194642c2c 100644
                          break;
                      }
                  }
-@@ -272,3 +484,107 @@ pub(crate) fn run_with_api(
+@@ -272,3 +491,107 @@ pub(crate) fn run_with_api(
  
      result
  }
