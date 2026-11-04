@@ -255,7 +255,13 @@ def bench(a):
         if a.kernel_trace:
             import kernel_handoff_trace
             kernel_handoff_trace.start(c)
-        for _ in range(a.hops):
+        report['inflight_backend']=[]
+        for hop_index in range(a.hops):
+            if getattr(a, 'inflight_backend', False) and hop_index>=2:
+                label=f'io_live_{hop_index}'
+                operation='backend_start' if hop_index==2 else 'backend_status'
+                c.shell(s.role,f"printf '{operation} {label}\\n' > {s.directory}/input", 'backend-inflight-command')
+                report['inflight_backend'].append(c.event(s,'backend_progress',label))
             if a.kernel_trace:kernel_handoff_trace.mark(c,s.epoch+1)
             hop=c.hop(s);report['hops'].append(hop)
             ack=hop['timing']['ack']
@@ -269,6 +275,10 @@ def bench(a):
                 require(ack[key]==report['before']['receipt'][key],'Guest continuity failed')
             if a.arm!='none' and s.epoch<=2: report['backend_reads'].append(c.backend_read(s))
             save()
+        if getattr(a, 'inflight_backend', False):
+            c.shell(s.role,f"printf 'backend_stop io_stop\\n' > {s.directory}/input", 'backend-inflight-stop')
+            stopped=c.event(s,'backend_progress','io_stop');report['inflight_backend'].append(stopped)
+            require(stopped['receipt']['iterations']>0 and stopped['receipt']['hash']==c.fixture['backend_prefix_fnv'], 'In-flight read integrity')
         require(s.role=='A','Even number of hops required')
         if a.kernel_trace:report['kernel_trace']=kernel_handoff_trace.finish(c)
         report['idle_cpu']=[]
@@ -324,7 +334,7 @@ def suite(a):
                     '--replicated-home-storage','--qemu',a.qemu.resolve(),'--dax-handoff']
                 if a.serial_control:start.append('--serial-control')
                 require(command(start,'start')==0,'Lab start failed')
-                flags=[name for name,value in (('--inline-guest-ack',a.inline_guest_ack),
+                flags=[name for name,value in (('--inflight-backend',a.inflight_backend),('--inline-guest-ack',a.inline_guest_ack),
                     ('--resident-memory-control',a.resident_memory_control),('--resident-native-control',a.resident_native_control),('--resume-nokick',a.resume_nokick),('--exec-request',a.exec_request),('--kernel-trace',a.kernel_trace)) if value]
                 require(command(prefix+[HERE/'backend_ablation.py','bench','--arm',arm,'--hops',str(a.hops),
                     '--output',a.output/ident]+flags,'bench')==0,'Benchmark failed')
@@ -360,10 +370,10 @@ def main():
     b=sub.add_parser('build');b.add_argument('--base',type=Path,required=True);b.add_argument('--pool-storage',type=Path,required=True)
     b.add_argument('--output',type=Path,required=True)
     b=sub.add_parser('bench');b.add_argument('--arm',choices=ARMS,required=True);b.add_argument('--hops',type=int,default=24)
-    for flag in ('--resident-memory-control','--resident-native-control','--inline-guest-ack','--resume-nokick','--exec-request','--kernel-trace'):b.add_argument(flag,action='store_true')
+    for flag in ('--inflight-backend','--resident-memory-control','--resident-native-control','--inline-guest-ack','--resume-nokick','--exec-request','--kernel-trace'):b.add_argument(flag,action='store_true')
     b.add_argument('--output',type=Path,required=True)
     b=sub.add_parser('run');b.add_argument('--assets',type=Path,required=True);b.add_argument('--qemu',type=Path,required=True)
-    for flag in ('--resident-memory-control','--resident-native-control','--inline-guest-ack','--resume-nokick','--serial-control','--exec-request','--kernel-trace'):b.add_argument(flag,action='store_true')
+    for flag in ('--inflight-backend','--resident-memory-control','--resident-native-control','--inline-guest-ack','--resume-nokick','--serial-control','--exec-request','--kernel-trace'):b.add_argument(flag,action='store_true')
     b.add_argument('--qemu-root',type=Path,required=True);b.add_argument('--session',required=True)
     b.add_argument('--arms',choices=ARMS,nargs='+',default=list(ARMS));b.add_argument('--hops',type=int,default=24)
     b.add_argument('--output',type=Path,required=True)

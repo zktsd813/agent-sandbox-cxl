@@ -15,12 +15,17 @@ def start(c):
     script='mount -t tracefs tracefs /sys/kernel/tracing 2>/dev/null || true\nT=/sys/kernel/tracing\necho 0 > $T/tracing_on\necho nop > $T/current_tracer\necho mono > $T/trace_clock\necho 1024 > $T/buffer_size_kb\necho > $T/trace\n'
     for name,(module,function) in (FUNCTIONS | OPTIONAL_FUNCTIONS).items():
         if name in OPTIONAL_FUNCTIONS:
-            script+=f'if grep -qw {shlex.quote(function)} /proc/kallsyms; then\n'
-        argument=' attach=$arg2:x32' if name in FUNCTIONS else ''
-        for edge,definition in [('enter',f'p:resident_diag/{name}_enter {module}:{function}{argument}'),
-                                ('exit',f'r128:resident_diag/{name}_exit {module}:{function}')]:
-            script+=f"printf '%s\\n' {shlex.quote(definition)} >> $T/kprobe_events\n"
-        if name in OPTIONAL_FUNCTIONS:script+='fi\n'
+            # GCC may specialize this noinline helper as .isra.0. Resolve the
+            # actual text symbol; a word grep also matches the unsuffixed prefix.
+            query=f'$2 ~ /^[tT]$/ && ($3 == "{function}" || index($3, "{function}.") == 1) {{ print $3; exit }}'
+            script+=f'symbol=$(awk {shlex.quote(query)} /proc/kallsyms)\nif [ -n "$symbol" ]; then\n'
+            script+=f'echo TRACE_SYMBOL={name}:"$symbol"\n'
+            script+=f'printf "p:resident_diag/{name}_enter {module}:%s\\n" "$symbol" >> $T/kprobe_events\n'
+            script+=f'printf "r128:resident_diag/{name}_exit {module}:%s\\n" "$symbol" >> $T/kprobe_events\nfi\n'
+        else:
+            for definition in (f'p:resident_diag/{name}_enter {module}:{function} attach=$arg2:x32',
+                               f'r128:resident_diag/{name}_exit {module}:{function}'):
+                script+=f"printf '%s\\n' {shlex.quote(definition)} >> $T/kprobe_events\n"
     script+='echo 1 > $T/events/resident_diag/enable\necho 1 > $T/tracing_on'
     for role in ('A','B'):c.shell(role,script,'kernel-trace-start')
 

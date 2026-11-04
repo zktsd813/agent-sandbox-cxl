@@ -18,6 +18,8 @@
 #include <dirent.h>
 #include <sys/ioctl.h>
 #include <sys/mount.h>
+#include <sys/wait.h>
+#include <signal.h>
 #include "guest-pool-uapi.h"
 
 /* Guest-authorized pooling variant; original experiment sources remain frozen.
@@ -482,6 +484,8 @@ static void emit(struct state *s,const char *label,const char *op,uint64_t hash,
 }
 static void serve(const char *path,uint64_t vm,const char *upper,const char *image_id) {
     require(vm>0 && vm<=1024,"VM ID range"); pin_cpu(); struct state s={.vm=vm};
+    pid_t backend_pid=0;
+    struct backend_progress { uint64_t iterations, hash; } *backend=NULL;
     require(strlen(image_id)==64,"image ID must be SHA256 hex");
     for(size_t i=0;i<32;i++) {
         unsigned int byte;
@@ -513,6 +517,40 @@ static void serve(const char *path,uint64_t vm,const char *upper,const char *ima
             require(count==2,"ping syntax");
             printf("{\"event\":\"trace_ping\",\"label\":\"%s\",\"boot_id\":\"%s\",\"pid\":%d,\"cookie\":\"%016"PRIx64"\"}\n",
                    words[1],s.boot,getpid(),s.cookie);
+            continue;
+        }
+        if(!strcmp(words[0],"backend_start") || !strcmp(words[0],"backend_status") || !strcmp(words[0],"backend_stop")) {
+            require(count==2,"backend stress syntax");
+            if(!strcmp(words[0],"backend_start")) {
+                require(!backend_pid,"backend stress already active");
+                backend=mmap(NULL,4096,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
+                require(backend!=MAP_FAILED,"backend progress mapping");
+                backend_pid=fork();if(backend_pid<0)fatal("backend fork");
+                if(!backend_pid) {
+                    void *buffer=NULL;require(!posix_memalign(&buffer,4096,MIB),"backend buffer");
+                    int fd=open("/dev/vda",O_RDONLY|O_DIRECT|O_CLOEXEC);if(fd<0)fatal("backend open");
+                    for(uint64_t iteration=1;;iteration++) {
+                        exact(fd,buffer,MIB,0,0);
+                        uint64_t hash=UINT64_C(14695981039346656037);
+                        for(size_t i=0;i<MIB;i++)hash=(hash^((unsigned char*)buffer)[i])*UINT64_C(1099511628211);
+                        require(iteration==1||hash==__atomic_load_n(&backend->hash,__ATOMIC_RELAXED),"backend stress data changed");
+                        __atomic_store_n(&backend->hash,hash,__ATOMIC_RELAXED);
+                        __atomic_store_n(&backend->iterations,iteration,__ATOMIC_RELEASE);
+                    }
+                }
+            }
+            require(backend_pid>0&&backend,"backend stress inactive");
+            int stopped=!strcmp(words[0],"backend_stop");
+            if(stopped) {
+                int status;require(!kill(backend_pid,SIGTERM)&&waitpid(backend_pid,&status,0)==backend_pid
+                    && WIFSIGNALED(status)&&WTERMSIG(status)==SIGTERM,"backend child failed");
+            } else require(!kill(backend_pid,0),"backend child not live");
+            uint64_t completed=__atomic_load_n(&backend->iterations,__ATOMIC_ACQUIRE);
+            uint64_t hash=__atomic_load_n(&backend->hash,__ATOMIC_RELAXED);
+            printf("{\"event\":\"backend_progress\",\"label\":\"%s\",\"pid\":%d,\"iterations\":%"PRIu64
+                   ",\"hash\":\"%016"PRIx64"\",\"stopped\":%s}\n",words[1],backend_pid,
+                   completed,hash,stopped?"true":"false");
+            if(stopped) { munmap(backend,4096);backend=NULL;backend_pid=0; }
             continue;
         }
         if(!strcmp(words[0],"backend_read")) {

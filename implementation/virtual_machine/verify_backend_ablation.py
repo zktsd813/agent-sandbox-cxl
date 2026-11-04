@@ -159,6 +159,20 @@ def trial(path):
         value=row['receipt'];raw=read(row['file'])
         need(any(json.loads(l)==value for l in raw.splitlines() if l.startswith('{"event":')),'Disk read summary changed')
         need(value['read_ios']>0 and value['hash']==r['fixture']['backend_prefix_fnv'],'Disk data mismatch')
+    live=r.get('inflight_backend',[])
+    if live:
+        values=[]
+        for row in live:
+            value=row['receipt']
+            need(any(json.loads(line)==value for line in read(row['file']).splitlines()
+                if line.startswith('{"event":')), 'In-flight read receipt mismatch')
+            need(value['event']=='backend_progress' and
+                (value['iterations']==0 or value['hash']==r['fixture']['backend_prefix_fnv']), 'In-flight data mismatch')
+            values.append(value)
+        need(len(values)==len(hops)-1 and len({x['pid'] for x in values})==1
+            and all(not x['stopped'] for x in values[:-1]) and values[-1]['stopped']
+            and values[-1]['iterations']>values[0]['iterations']
+            and all(b['iterations']>=a['iterations'] for a,b in zip(values,values[1:])), 'In-flight worker continuity')
     warm=hops[1:]
     return {'arm':r['arm'],'result':'passed','hops':hops,'preparation':r['preparation'],
         'prepares':prepares,'disk_profiles':disk_profiles,'first':hops[0],
