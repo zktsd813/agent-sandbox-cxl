@@ -1,0 +1,385 @@
+cores,policy,target_util,mechanism,pool,seeds,util_pct,lost_pct,tool_slowdown,trace_slowdown_p50,trace_slowdown_p90,trace_slowdown_p99,step_slowdown_p50,step_slowdown_p90,step_slowdown_p99,moves_per_s
+48,cap1,60,hand-off 10ms,none,2,59.54,0,3.528,1.198,2.569,4.489,nan,nan,nan,0
+48,cap1,60,migration pre-copy,none,2,59.54,0,3.528,1.198,2.569,4.489,nan,nan,nan,0
+48,cap1,60,none,all,2,59.54,0,3.528,1.198,2.569,4.489,nan,nan,nan,0
+48,cap1,60,none,none,2,59.54,0,3.528,1.198,2.569,4.489,nan,nan,nan,0
+48,cap1,70,hand-off 10ms,none,2,69.3,6.183e-05,3.528,1.204,2.569,4.489,nan,nan,nan,0.01315
+48,cap1,70,migration pre-copy,none,2,69.3,0.0008218,3.528,1.204,2.569,4.489,nan,nan,nan,0.003889
+48,cap1,70,none,all,2,69.3,0,3.528,1.204,2.569,4.489,nan,nan,nan,0
+48,cap1,70,none,none,2,69.3,0.0006825,3.528,1.204,2.569,4.489,nan,nan,nan,0
+48,cap1,80,hand-off 10ms,none,2,79.9,0.001474,3.528,1.204,2.569,4.475,nan,nan,nan,0.3325
+48,cap1,80,migration pre-copy,none,2,79.89,0.02957,3.529,1.204,2.57,4.476,nan,nan,nan,0.1188
+48,cap1,80,none,all,2,79.9,0,3.528,1.204,2.569,4.475,nan,nan,nan,0
+48,cap1,80,none,none,2,79.87,0.1002,3.531,1.204,2.57,4.485,nan,nan,nan,0
+48,cap1,90,hand-off 10ms,none,2,89.36,0.0518,3.53,1.204,2.57,4.478,nan,nan,nan,5.055
+48,cap1,90,migration pre-copy,none,2,89.17,0.5126,3.546,1.205,2.577,4.502,nan,nan,nan,0.8739
+48,cap1,90,none,all,2,89.37,8.904e-06,3.528,1.204,2.569,4.475,nan,nan,nan,0
+48,cap1,90,none,none,2,88.94,1.071,3.566,1.205,2.585,4.511,nan,nan,nan,0
+48,cap2,60,hand-off 10ms,none,2,60.35,0.0002021,2.069,1.078,1.722,2.626,nan,nan,nan,0.0375
+48,cap2,60,migration pre-copy,none,2,60.35,0.003212,2.069,1.078,1.723,2.626,nan,nan,nan,0.01546
+48,cap2,60,none,all,2,60.35,0,2.069,1.078,1.722,2.626,nan,nan,nan,0
+48,cap2,60,none,none,2,60.35,0.01034,2.069,1.078,1.723,2.626,nan,nan,nan,0
+48,cap2,70,hand-off 10ms,none,2,70.1,0.001387,2.069,1.076,1.729,2.626,nan,nan,nan,0.2669
+48,cap2,70,migration pre-copy,none,2,70.09,0.04792,2.07,1.077,1.729,2.627,nan,nan,nan,0.1256
+48,cap2,70,none,all,2,70.09,0,2.069,1.076,1.729,2.626,nan,nan,nan,0
+48,cap2,70,none,none,2,70.06,0.188,2.073,1.077,1.729,2.628,nan,nan,nan,0
+48,cap2,80,hand-off 10ms,none,2,80.03,0.01421,2.069,1.078,1.721,2.626,nan,nan,nan,1.859
+48,cap2,80,migration pre-copy,none,2,79.94,0.3468,2.076,1.078,1.725,2.634,nan,nan,nan,0.5695
+48,cap2,80,none,all,2,80.02,0,2.069,1.078,1.721,2.626,nan,nan,nan,0
+48,cap2,80,none,none,2,79.78,0.9799,2.089,1.079,1.733,2.647,nan,nan,nan,0
+48,cap2,90,hand-off 10ms,none,2,90.12,0.4884,2.079,1.081,1.728,2.637,nan,nan,nan,14.05
+48,cap2,90,migration pre-copy,none,2,89.18,3.656,2.145,1.084,1.759,2.718,nan,nan,nan,2.161
+48,cap2,90,none,all,2,90.23,0.007182,2.069,1.08,1.721,2.626,nan,nan,nan,0
+48,cap2,90,none,none,2,88.83,4.882,2.17,1.085,1.774,2.753,nan,nan,nan,0
+48,cap4,60,hand-off 10ms,none,2,60.87,0.003244,1.433,1.022,1.303,1.74,nan,nan,nan,0.4669
+48,cap4,60,migration pre-copy,none,2,60.85,0.1033,1.434,1.022,1.303,1.741,nan,nan,nan,0.2269
+48,cap4,60,none,all,2,60.86,0,1.433,1.022,1.302,1.74,nan,nan,nan,0
+48,cap4,60,none,none,2,60.81,0.4296,1.439,1.022,1.304,1.745,nan,nan,nan,0
+48,cap4,70,hand-off 10ms,none,2,70.87,0.02057,1.433,1.022,1.303,1.74,nan,nan,nan,2.144
+48,cap4,70,migration pre-copy,none,2,70.77,0.6153,1.442,1.023,1.306,1.752,nan,nan,nan,0.7357
+48,cap4,70,none,all,2,70.85,0,1.433,1.022,1.302,1.74,nan,nan,nan,0
+48,cap4,70,none,none,2,70.6,1.705,1.457,1.024,1.314,1.777,nan,nan,nan,0
+48,cap4,80,hand-off 10ms,none,2,80.6,0.2842,1.437,1.023,1.304,1.744,nan,nan,nan,9.986
+48,cap4,80,migration pre-copy,none,2,80.03,3.547,1.484,1.026,1.328,1.796,nan,nan,nan,1.964
+48,cap4,80,none,all,2,80.62,7.532e-05,1.433,1.022,1.302,1.74,nan,nan,nan,0
+48,cap4,80,none,none,2,79.77,4.846,1.502,1.029,1.34,1.809,nan,nan,nan,0
+48,cap4,90,hand-off 10ms,none,2,90.1,2.921,1.475,1.025,1.318,1.781,nan,nan,nan,39.68
+48,cap4,90,migration pre-copy,none,2,87.82,13.7,1.629,1.041,1.39,1.936,nan,nan,nan,3.989
+48,cap4,90,none,all,2,90.64,0.1155,1.434,1.023,1.303,1.742,nan,nan,nan,0
+48,cap4,90,none,none,2,88.01,12.76,1.616,1.042,1.396,1.909,nan,nan,nan,0
+48,cap8,60,hand-off 10ms,none,2,60.47,0.04289,1.149,1.005,1.116,1.289,nan,nan,nan,2.844
+48,cap8,60,migration pre-copy,none,2,60.36,1.241,1.163,1.006,1.119,1.303,nan,nan,nan,0.9538
+48,cap8,60,none,all,2,60.44,0,1.149,1.005,1.116,1.288,nan,nan,nan,0
+48,cap8,60,none,none,2,60.27,2.167,1.174,1.007,1.121,1.308,nan,nan,nan,0
+48,cap8,70,hand-off 10ms,none,2,69.9,0.3182,1.152,1.005,1.117,1.293,nan,nan,nan,9.246
+48,cap8,70,migration pre-copy,none,2,69.49,4.04,1.195,1.01,1.129,1.326,nan,nan,nan,1.963
+48,cap8,70,none,all,2,69.89,0.0001126,1.149,1.005,1.116,1.289,nan,nan,nan,0
+48,cap8,70,none,none,2,69.37,5.172,1.208,1.011,1.134,1.331,nan,nan,nan,0
+48,cap8,80,hand-off 10ms,none,2,79.98,1.958,1.171,1.007,1.121,1.307,nan,nan,nan,28.27
+48,cap8,80,migration pre-copy,none,2,78.74,11.44,1.28,1.02,1.158,1.385,nan,nan,nan,3.714
+48,cap8,80,none,all,2,80.18,0.02615,1.149,1.005,1.116,1.289,nan,nan,nan,0
+48,cap8,80,none,none,2,78.64,11.97,1.286,1.019,1.161,1.394,nan,nan,nan,0
+48,cap8,90,hand-off 10ms,none,2,88.4,6.72,1.226,1.015,1.138,1.341,nan,nan,nan,59.7
+48,cap8,90,migration pre-copy,none,2,85.8,24.24,1.427,1.038,1.21,1.489,nan,nan,nan,5.357
+48,cap8,90,none,all,2,89.25,0.6644,1.156,1.006,1.118,1.297,nan,nan,nan,0
+48,cap8,90,none,none,2,85.94,23.26,1.416,1.033,1.212,1.501,nan,nan,nan,0
+48,cap16,60,hand-off 10ms,none,2,60.78,0.3551,1.035,1.002,1.033,1.082,nan,nan,nan,8.452
+48,cap16,60,migration pre-copy,none,2,60.4,5.514,1.088,1.006,1.042,1.116,nan,nan,nan,2.089
+48,cap16,60,none,all,2,60.76,0,1.031,1.002,1.033,1.081,nan,nan,nan,0
+48,cap16,60,none,none,2,60.28,7.144,1.105,1.006,1.046,1.131,nan,nan,nan,0
+48,cap16,70,hand-off 10ms,none,2,70.3,1.371,1.046,1.003,1.035,1.087,nan,nan,nan,19.6
+48,cap16,70,migration pre-copy,none,2,69.38,11.51,1.15,1.012,1.058,1.151,nan,nan,nan,3.469
+48,cap16,70,none,all,2,70.38,0.001709,1.031,1.002,1.033,1.081,nan,nan,nan,0
+48,cap16,70,none,none,2,69.32,12.16,1.157,1.01,1.063,1.162,nan,nan,nan,0
+48,cap16,80,hand-off 10ms,none,2,79.38,3.865,1.071,1.006,1.04,1.102,nan,nan,nan,38.51
+48,cap16,80,migration pre-copy,none,2,77.56,20.48,1.243,1.021,1.086,1.202,nan,nan,nan,4.986
+48,cap16,80,none,all,2,79.75,0.08023,1.032,1.002,1.033,1.081,nan,nan,nan,0
+48,cap16,80,none,none,2,77.52,21.17,1.25,1.018,1.094,1.225,nan,nan,nan,0
+48,cap16,90,hand-off 10ms,none,2,89.06,11.13,1.146,1.015,1.058,1.141,nan,nan,nan,65.33
+48,cap16,90,migration pre-copy,none,2,85.67,37.99,1.423,1.041,1.144,1.294,nan,nan,nan,6.456
+48,cap16,90,none,all,2,90.21,1.85,1.05,1.003,1.036,1.096,nan,nan,nan,0
+48,cap16,90,none,none,2,85.67,38.59,1.429,1.033,1.157,1.367,nan,nan,nan,0
+48,cap30,60,hand-off 10ms,none,2,61.23,1.535,1.015,1.002,1.004,1.008,nan,nan,nan,14.07
+48,cap30,60,migration pre-copy,none,2,60.54,12.98,1.13,1.008,1.031,1.065,nan,nan,nan,3.08
+48,cap30,60,none,all,2,61.27,0.0001646,1,1.001,1.002,1.002,nan,nan,nan,0
+48,cap30,60,none,none,2,60.48,14.03,1.14,1.007,1.035,1.091,nan,nan,nan,0
+48,cap30,70,hand-off 10ms,none,2,70.77,3.45,1.034,1.004,1.009,1.016,nan,nan,nan,26.11
+48,cap30,70,migration pre-copy,none,2,69.46,20.91,1.209,1.015,1.052,1.1,nan,nan,nan,4.389
+48,cap30,70,none,all,2,70.99,0.01886,1,1.001,1.002,1.002,nan,nan,nan,0
+48,cap30,70,none,none,2,69.38,22,1.22,1.013,1.058,1.141,nan,nan,nan,0
+48,cap30,80,hand-off 10ms,none,2,79.8,7.005,1.07,1.007,1.018,1.032,nan,nan,nan,43.13
+48,cap30,80,migration pre-copy,none,2,77.47,32.59,1.326,1.027,1.086,1.158,nan,nan,nan,5.798
+48,cap30,80,none,all,2,80.4,0.3489,1.003,1.001,1.002,1.006,nan,nan,nan,0
+48,cap30,80,none,none,2,77.43,33.65,1.336,1.022,1.093,1.22,nan,nan,nan,0
+48,cap30,90,hand-off 10ms,none,2,88.09,13.77,1.138,1.014,1.038,1.068,nan,nan,nan,59.59
+48,cap30,90,migration pre-copy,none,2,84.48,47.91,1.479,1.044,1.132,1.232,nan,nan,nan,6.799
+48,cap30,90,none,all,2,89.29,2.756,1.028,1.003,1.01,1.029,nan,nan,nan,0
+48,cap30,90,none,none,2,84.32,50.84,1.508,1.036,1.154,1.34,nan,nan,nan,0
+48,image50,60,hand-off 10ms,none,2,60.51,0.2496,1.15,1.025,1.097,1.171,nan,nan,nan,6.769
+48,image50,60,migration pre-copy,none,2,60.14,4.581,1.2,1.03,1.106,1.178,nan,nan,nan,1.791
+48,image50,60,none,all,2,60.49,0,1.147,1.025,1.097,1.17,nan,nan,nan,0
+48,image50,60,none,none,2,60.06,5.689,1.213,1.031,1.109,1.186,nan,nan,nan,0
+48,image50,70,hand-off 10ms,none,2,69.89,1.093,1.16,1.026,1.1,1.172,nan,nan,nan,17.13
+48,image50,70,migration pre-copy,none,2,69.05,9.51,1.256,1.035,1.121,1.195,nan,nan,nan,3.046
+48,image50,70,none,all,2,69.96,0.001931,1.147,1.025,1.097,1.17,nan,nan,nan,0
+48,image50,70,none,none,2,68.85,11.49,1.279,1.036,1.128,1.235,nan,nan,nan,0
+48,image50,80,hand-off 10ms,none,2,79.8,3.738,1.19,1.03,1.106,1.178,nan,nan,nan,38.38
+48,image50,80,migration pre-copy,none,2,77.94,19.28,1.368,1.048,1.151,1.245,nan,nan,nan,4.72
+48,image50,80,none,all,2,80.22,0.1234,1.149,1.025,1.097,1.17,nan,nan,nan,0
+48,image50,80,none,none,2,77.87,19.95,1.376,1.045,1.154,1.296,nan,nan,nan,0
+48,image50,90,hand-off 10ms,none,2,88.06,9.628,1.258,1.037,1.125,1.201,nan,nan,nan,63.63
+48,image50,90,migration pre-copy,none,2,84.95,33.08,1.527,1.067,1.2,1.321,nan,nan,nan,6.18
+48,image50,90,none,all,2,89.17,1.505,1.165,1.027,1.101,1.174,nan,nan,nan,0
+48,image50,90,none,none,2,85,32.65,1.522,1.06,1.201,1.395,nan,nan,nan,0
+48,image90,60,hand-off 10ms,none,2,60.75,0.3401,1.037,1.002,1.033,1.082,nan,nan,nan,8.296
+48,image90,60,migration pre-copy,none,2,60.36,5.462,1.09,1.007,1.042,1.117,nan,nan,nan,2.127
+48,image90,60,none,all,2,60.73,0,1.033,1.002,1.033,1.081,nan,nan,nan,0
+48,image90,60,none,none,2,60.28,6.731,1.103,1.006,1.045,1.127,nan,nan,nan,0
+48,image90,70,hand-off 10ms,none,2,70.26,1.334,1.047,1.004,1.035,1.087,nan,nan,nan,19.39
+48,image90,70,migration pre-copy,none,2,69.38,11.07,1.148,1.012,1.057,1.149,nan,nan,nan,3.428
+48,image90,70,none,all,2,70.34,0.0007927,1.033,1.002,1.033,1.081,nan,nan,nan,0
+48,image90,70,none,none,2,69.24,12.4,1.162,1.011,1.064,1.164,nan,nan,nan,0
+48,image90,80,hand-off 10ms,none,2,79.34,3.821,1.073,1.007,1.04,1.101,nan,nan,nan,38.47
+48,image90,80,migration pre-copy,none,2,77.53,20.31,1.243,1.022,1.085,1.2,nan,nan,nan,4.976
+48,image90,80,none,all,2,79.71,0.06683,1.034,1.002,1.033,1.081,nan,nan,nan,0
+48,image90,80,none,none,2,77.42,21.43,1.255,1.018,1.095,1.233,nan,nan,nan,0
+48,image90,90,hand-off 10ms,none,2,89.02,11.05,1.148,1.015,1.058,1.141,nan,nan,nan,65.33
+48,image90,90,migration pre-copy,none,2,85.7,37.64,1.422,1.041,1.142,1.298,nan,nan,nan,6.437
+48,image90,90,none,all,2,90.17,1.818,1.052,1.004,1.036,1.095,nan,nan,nan,0
+48,image90,90,none,none,2,85.68,38.1,1.427,1.033,1.154,1.358,nan,nan,nan,0
+96,cap1,60,hand-off 10ms,none,2,59.69,0,3.528,1.198,2.569,4.475,nan,nan,nan,0
+96,cap1,60,migration pre-copy,none,2,59.69,0,3.528,1.198,2.569,4.475,nan,nan,nan,0
+96,cap1,60,none,all,2,59.69,0,3.528,1.198,2.569,4.475,nan,nan,nan,0
+96,cap1,60,none,none,2,59.69,0,3.528,1.198,2.569,4.475,nan,nan,nan,0
+96,cap1,70,hand-off 10ms,none,2,69.74,0,3.528,1.198,2.569,4.475,nan,nan,nan,0
+96,cap1,70,migration pre-copy,none,2,69.74,0,3.528,1.198,2.569,4.475,nan,nan,nan,0
+96,cap1,70,none,all,2,69.74,0,3.528,1.198,2.569,4.475,nan,nan,nan,0
+96,cap1,70,none,none,2,69.74,0,3.528,1.198,2.569,4.475,nan,nan,nan,0
+96,cap1,80,hand-off 10ms,none,2,79.87,0.0002032,3.528,1.198,2.547,4.475,nan,nan,nan,0.05648
+96,cap1,80,migration pre-copy,none,2,79.87,0.001284,3.528,1.198,2.551,4.475,nan,nan,nan,0.02685
+96,cap1,80,none,all,2,79.87,0,3.528,1.198,2.547,4.475,nan,nan,nan,0
+96,cap1,80,none,none,2,79.87,0.001562,3.528,1.198,2.551,4.475,nan,nan,nan,0
+96,cap1,90,hand-off 10ms,none,2,89.54,0.008637,3.528,1.199,2.57,4.475,nan,nan,nan,1.987
+96,cap1,90,migration pre-copy,none,2,89.49,0.1201,3.532,1.201,2.572,4.481,nan,nan,nan,0.5111
+96,cap1,90,none,all,2,89.53,0,3.528,1.205,2.569,4.475,nan,nan,nan,0
+96,cap1,90,none,none,2,89.41,0.3243,3.539,1.204,2.581,4.491,nan,nan,nan,0
+96,cap2,60,hand-off 10ms,none,2,60.02,7.176e-06,2.069,1.078,1.721,2.626,nan,nan,nan,0.001204
+96,cap2,60,migration pre-copy,none,2,60.02,0.0001341,2.069,1.078,1.721,2.626,nan,nan,nan,0.0006481
+96,cap2,60,none,all,2,60.02,0,2.069,1.078,1.721,2.626,nan,nan,nan,0
+96,cap2,60,none,none,2,60.02,1.797e-05,2.069,1.078,1.721,2.626,nan,nan,nan,0
+96,cap2,70,hand-off 10ms,none,2,70.08,0.0002241,2.069,1.078,1.721,2.626,nan,nan,nan,0.05093
+96,cap2,70,migration pre-copy,none,2,70.08,0.001997,2.069,1.078,1.721,2.626,nan,nan,nan,0.02454
+96,cap2,70,none,all,2,70.08,0,2.069,1.078,1.721,2.626,nan,nan,nan,0
+96,cap2,70,none,none,2,70.08,0.004027,2.069,1.078,1.721,2.626,nan,nan,nan,0
+96,cap2,80,hand-off 10ms,none,2,80.25,0.002557,2.069,1.078,1.721,2.626,nan,nan,nan,0.5943
+96,cap2,80,migration pre-copy,none,2,80.23,0.06152,2.07,1.078,1.721,2.627,nan,nan,nan,0.2639
+96,cap2,80,none,all,2,80.24,0,2.069,1.078,1.721,2.626,nan,nan,nan,0
+96,cap2,80,none,none,2,80.21,0.1617,2.072,1.078,1.723,2.628,nan,nan,nan,0
+96,cap2,90,hand-off 10ms,none,2,90.17,0.08777,2.071,1.077,1.722,2.628,nan,nan,nan,7.796
+96,cap2,90,migration pre-copy,none,2,89.91,0.9594,2.089,1.079,1.734,2.649,nan,nan,nan,1.506
+96,cap2,90,none,all,2,90.18,1.081e-05,2.069,1.078,1.721,2.626,nan,nan,nan,0
+96,cap2,90,none,none,2,89.61,1.991,2.11,1.08,1.743,2.665,nan,nan,nan,0
+96,cap4,60,hand-off 10ms,none,2,59.75,0.0004126,1.433,1.023,1.302,1.74,nan,nan,nan,0.08806
+96,cap4,60,migration pre-copy,none,2,59.75,0.007563,1.433,1.023,1.302,1.74,nan,nan,nan,0.04778
+96,cap4,60,none,all,2,59.75,0,1.433,1.023,1.302,1.74,nan,nan,nan,0
+96,cap4,60,none,none,2,59.75,0.01557,1.433,1.023,1.302,1.74,nan,nan,nan,0
+96,cap4,70,hand-off 10ms,none,2,69.66,0.002663,1.433,1.022,1.302,1.74,nan,nan,nan,0.5145
+96,cap4,70,migration pre-copy,none,2,69.65,0.05887,1.434,1.022,1.302,1.74,nan,nan,nan,0.2567
+96,cap4,70,none,all,2,69.65,0,1.433,1.022,1.302,1.74,nan,nan,nan,0
+96,cap4,70,none,none,2,69.63,0.1694,1.435,1.022,1.303,1.741,nan,nan,nan,0
+96,cap4,80,hand-off 10ms,none,2,79.74,0.02497,1.433,1.022,1.303,1.74,nan,nan,nan,3.359
+96,cap4,80,migration pre-copy,none,2,79.66,0.5312,1.44,1.023,1.305,1.748,nan,nan,nan,0.9872
+96,cap4,80,none,all,2,79.72,0,1.433,1.022,1.302,1.74,nan,nan,nan,0
+96,cap4,80,none,none,2,79.55,1.146,1.449,1.023,1.31,1.757,nan,nan,nan,0
+96,cap4,90,hand-off 10ms,none,2,89.96,0.7308,1.443,1.023,1.306,1.75,nan,nan,nan,25.55
+96,cap4,90,migration pre-copy,none,2,89.2,4.589,1.499,1.027,1.333,1.805,nan,nan,nan,3.072
+96,cap4,90,none,all,2,90.06,0.007807,1.433,1.022,1.302,1.74,nan,nan,nan,0
+96,cap4,90,none,none,2,88.99,5.662,1.514,1.031,1.344,1.819,nan,nan,nan,0
+96,cap8,60,hand-off 10ms,none,2,60.09,0.00413,1.149,1.005,1.116,1.289,nan,nan,nan,0.7289
+96,cap8,60,migration pre-copy,none,2,60.08,0.1184,1.15,1.005,1.116,1.29,nan,nan,nan,0.3443
+96,cap8,60,none,all,2,60.07,0,1.149,1.005,1.116,1.288,nan,nan,nan,0
+96,cap8,60,none,none,2,60.06,0.2692,1.152,1.005,1.116,1.293,nan,nan,nan,0
+96,cap8,70,hand-off 10ms,none,2,70.01,0.0247,1.149,1.005,1.116,1.289,nan,nan,nan,3.129
+96,cap8,70,migration pre-copy,none,2,69.93,0.6899,1.157,1.006,1.117,1.296,nan,nan,nan,0.9971
+96,cap8,70,none,all,2,69.98,0,1.149,1.005,1.116,1.288,nan,nan,nan,0
+96,cap8,70,none,none,2,69.87,1.28,1.163,1.006,1.119,1.303,nan,nan,nan,0
+96,cap8,80,hand-off 10ms,none,2,79.93,0.3275,1.152,1.005,1.117,1.292,nan,nan,nan,14.81
+96,cap8,80,migration pre-copy,none,2,79.56,3.247,1.186,1.009,1.125,1.318,nan,nan,nan,2.384
+96,cap8,80,none,all,2,79.93,0.0001523,1.149,1.005,1.116,1.288,nan,nan,nan,0
+96,cap8,80,none,none,2,79.39,4.454,1.2,1.011,1.13,1.323,nan,nan,nan,0
+96,cap8,90,hand-off 10ms,none,2,89.55,2.895,1.182,1.009,1.124,1.315,nan,nan,nan,54.48
+96,cap8,90,migration pre-copy,none,2,88.24,11.5,1.281,1.022,1.158,1.385,nan,nan,nan,4.486
+96,cap8,90,none,all,2,89.92,0.1104,1.15,1.005,1.116,1.29,nan,nan,nan,0
+96,cap8,90,none,none,2,88.18,11.97,1.286,1.021,1.162,1.389,nan,nan,nan,0
+96,cap16,60,hand-off 10ms,none,2,60.35,0.02078,1.032,1.002,1.032,1.081,nan,nan,nan,2.386
+96,cap16,60,migration pre-copy,none,2,60.29,0.8506,1.04,1.002,1.033,1.085,nan,nan,nan,0.9083
+96,cap16,60,none,all,2,60.32,0,1.031,1.002,1.031,1.081,nan,nan,nan,0
+96,cap16,60,none,none,2,60.25,1.32,1.045,1.002,1.034,1.091,nan,nan,nan,0
+96,cap16,70,hand-off 10ms,none,2,69.69,0.1377,1.033,1.002,1.032,1.081,nan,nan,nan,7.974
+96,cap16,70,migration pre-copy,none,2,69.46,2.785,1.06,1.004,1.037,1.1,nan,nan,nan,1.909
+96,cap16,70,none,all,2,69.65,0,1.031,1.002,1.032,1.081,nan,nan,nan,0
+96,cap16,70,none,none,2,69.38,3.639,1.069,1.004,1.038,1.109,nan,nan,nan,0
+96,cap16,80,hand-off 10ms,none,2,79.8,1.015,1.042,1.003,1.034,1.085,nan,nan,nan,26.34
+96,cap16,80,migration pre-copy,none,2,79.07,7.836,1.112,1.009,1.049,1.129,nan,nan,nan,3.581
+96,cap16,80,none,all,2,79.85,0.003573,1.031,1.002,1.031,1.081,nan,nan,nan,0
+96,cap16,80,none,none,2,78.9,9.201,1.126,1.009,1.055,1.145,nan,nan,nan,0
+96,cap16,90,hand-off 10ms,none,2,88.87,4.551,1.078,1.007,1.041,1.107,nan,nan,nan,62.17
+96,cap16,90,migration pre-copy,none,2,87.11,18.32,1.22,1.021,1.081,1.19,nan,nan,nan,5.443
+96,cap16,90,none,all,2,89.36,0.3075,1.035,1.002,1.032,1.083,nan,nan,nan,0
+96,cap16,90,none,none,2,87.03,19,1.227,1.018,1.09,1.221,nan,nan,nan,0
+96,cap30,60,hand-off 10ms,none,2,60.06,0.1249,1.001,1.001,1.002,1.003,nan,nan,nan,4.949
+96,cap30,60,migration pre-copy,none,2,59.88,3.16,1.032,1.003,1.009,1.022,nan,nan,nan,1.584
+96,cap30,60,none,all,2,60.02,0,1,1.001,1.002,1.002,nan,nan,nan,0
+96,cap30,60,none,none,2,59.86,3.457,1.035,1.002,1.009,1.029,nan,nan,nan,0
+96,cap30,70,hand-off 10ms,none,2,70.22,0.5866,1.006,1.002,1.003,1.004,nan,nan,nan,13.8
+96,cap30,70,migration pre-copy,none,2,69.75,6.874,1.069,1.005,1.019,1.04,nan,nan,nan,2.821
+96,cap30,70,none,all,2,70.22,0.0001513,1,1.001,1.002,1.002,nan,nan,nan,0
+96,cap30,70,none,none,2,69.68,7.657,1.077,1.005,1.022,1.059,nan,nan,nan,0
+96,cap30,80,hand-off 10ms,none,2,79.59,2.035,1.02,1.003,1.006,1.011,nan,nan,nan,31.58
+96,cap30,80,migration pre-copy,none,2,78.52,13.47,1.135,1.011,1.037,1.073,nan,nan,nan,4.418
+96,cap30,80,none,all,2,79.73,0.02103,1,1.001,1.002,1.002,nan,nan,nan,0
+96,cap30,80,none,none,2,78.42,14.47,1.145,1.01,1.042,1.105,nan,nan,nan,0
+96,cap30,90,hand-off 10ms,none,2,89.35,6.86,1.069,1.008,1.02,1.036,nan,nan,nan,61.64
+96,cap30,90,migration pre-copy,none,2,87.12,27.1,1.271,1.025,1.078,1.141,nan,nan,nan,6.15
+96,cap30,90,none,all,2,90.03,0.8861,1.009,1.002,1.004,1.01,nan,nan,nan,0
+96,cap30,90,none,none,2,86.95,28.6,1.286,1.021,1.088,1.213,nan,nan,nan,0
+96,image50,60,hand-off 10ms,none,2,60.09,0.01291,1.147,1.025,1.097,1.17,nan,nan,nan,1.782
+96,image50,60,migration pre-copy,none,2,60.03,0.6548,1.155,1.026,1.098,1.171,nan,nan,nan,0.7301
+96,image50,60,none,all,2,60.06,0,1.147,1.025,1.096,1.17,nan,nan,nan,0
+96,image50,60,none,none,2,60,1.092,1.16,1.026,1.098,1.171,nan,nan,nan,0
+96,image50,70,hand-off 10ms,none,2,70,0.1055,1.148,1.025,1.097,1.171,nan,nan,nan,6.883
+96,image50,70,migration pre-copy,none,2,69.77,2.337,1.174,1.028,1.102,1.174,nan,nan,nan,1.693
+96,image50,70,none,all,2,69.97,0,1.147,1.025,1.096,1.17,nan,nan,nan,0
+96,image50,70,none,none,2,69.68,3.212,1.184,1.029,1.104,1.178,nan,nan,nan,0
+96,image50,80,hand-off 10ms,none,2,79.86,0.8541,1.157,1.026,1.099,1.172,nan,nan,nan,24.45
+96,image50,80,migration pre-copy,none,2,79.14,6.919,1.227,1.033,1.116,1.187,nan,nan,nan,3.271
+96,image50,80,none,all,2,79.92,0.002463,1.147,1.025,1.096,1.17,nan,nan,nan,0
+96,image50,80,none,none,2,78.98,8.164,1.241,1.034,1.119,1.206,nan,nan,nan,0
+96,image50,90,hand-off 10ms,none,2,89.31,4.495,1.199,1.031,1.109,1.182,nan,nan,nan,62.82
+96,image50,90,migration pre-copy,none,2,87.48,17.4,1.347,1.047,1.151,1.238,nan,nan,nan,5.211
+96,image50,90,none,all,2,89.89,0.3518,1.151,1.025,1.097,1.171,nan,nan,nan,0
+96,image50,90,none,none,2,87.4,17.94,1.353,1.046,1.154,1.285,nan,nan,nan,0
+96,image90,60,hand-off 10ms,none,2,60.32,0.02139,1.034,1.002,1.032,1.081,nan,nan,nan,2.352
+96,image90,60,migration pre-copy,none,2,60.26,0.8454,1.042,1.003,1.033,1.085,nan,nan,nan,0.8806
+96,image90,60,none,all,2,60.29,0,1.033,1.002,1.031,1.081,nan,nan,nan,0
+96,image90,60,none,none,2,60.22,1.287,1.047,1.003,1.034,1.09,nan,nan,nan,0
+96,image90,70,hand-off 10ms,none,2,69.65,0.1321,1.035,1.002,1.032,1.081,nan,nan,nan,7.817
+96,image90,70,migration pre-copy,none,2,69.43,2.748,1.062,1.005,1.037,1.1,nan,nan,nan,1.915
+96,image90,70,none,all,2,69.62,0,1.033,1.002,1.032,1.081,nan,nan,nan,0
+96,image90,70,none,none,2,69.34,3.589,1.071,1.005,1.038,1.107,nan,nan,nan,0
+96,image90,80,hand-off 10ms,none,2,79.76,0.9997,1.044,1.003,1.034,1.085,nan,nan,nan,26.15
+96,image90,80,migration pre-copy,none,2,79.01,7.885,1.115,1.01,1.049,1.128,nan,nan,nan,3.61
+96,image90,80,none,all,2,79.81,0.002518,1.033,1.002,1.031,1.081,nan,nan,nan,0
+96,image90,80,none,none,2,78.9,8.946,1.126,1.01,1.055,1.141,nan,nan,nan,0
+96,image90,90,hand-off 10ms,none,2,89.57,5.085,1.086,1.009,1.043,1.11,nan,nan,nan,65.14
+96,image90,90,migration pre-copy,none,2,87.73,19.29,1.233,1.023,1.085,1.195,nan,nan,nan,5.565
+96,image90,90,none,all,2,90.12,0.4101,1.038,1.003,1.033,1.083,nan,nan,nan,0
+96,image90,90,none,none,2,87.57,20.3,1.243,1.02,1.095,1.221,nan,nan,nan,0
+192,cap1,60,hand-off 10ms,none,2,59.75,0,3.528,1.211,2.569,4.489,nan,nan,nan,0
+192,cap1,60,migration pre-copy,none,2,59.75,0,3.528,1.211,2.569,4.489,nan,nan,nan,0
+192,cap1,60,none,all,2,59.75,0,3.528,1.211,2.569,4.489,nan,nan,nan,0
+192,cap1,60,none,none,2,59.75,0,3.528,1.211,2.569,4.489,nan,nan,nan,0
+192,cap1,70,hand-off 10ms,none,2,69.89,0,3.528,1.205,2.569,4.489,nan,nan,nan,0
+192,cap1,70,migration pre-copy,none,2,69.89,0,3.528,1.205,2.569,4.489,nan,nan,nan,0
+192,cap1,70,none,all,2,69.89,0,3.528,1.205,2.569,4.489,nan,nan,nan,0
+192,cap1,70,none,none,2,69.89,0,3.528,1.205,2.569,4.489,nan,nan,nan,0
+192,cap1,80,hand-off 10ms,none,2,79.64,6.339e-06,3.528,1.198,2.538,4.489,nan,nan,nan,0.002407
+192,cap1,80,migration pre-copy,none,2,79.64,7.715e-06,3.528,1.198,2.538,4.489,nan,nan,nan,0.001111
+192,cap1,80,none,all,2,79.64,0,3.528,1.198,2.538,4.489,nan,nan,nan,0
+192,cap1,80,none,none,2,79.64,6.722e-06,3.528,1.198,2.538,4.489,nan,nan,nan,0
+192,cap1,90,hand-off 10ms,none,2,89.66,0.001915,3.528,1.198,2.538,4.489,nan,nan,nan,0.6973
+192,cap1,90,migration pre-copy,none,2,89.65,0.01888,3.528,1.199,2.538,4.491,nan,nan,nan,0.2593
+192,cap1,90,none,all,2,89.66,0,3.528,1.198,2.538,4.489,nan,nan,nan,0
+192,cap1,90,none,none,2,89.65,0.0411,3.529,1.199,2.539,4.494,nan,nan,nan,0
+192,cap2,60,hand-off 10ms,none,2,60.12,0,2.069,1.078,1.721,2.626,nan,nan,nan,0
+192,cap2,60,migration pre-copy,none,2,60.12,0,2.069,1.078,1.721,2.626,nan,nan,nan,0
+192,cap2,60,none,all,2,60.12,0,2.069,1.078,1.721,2.626,nan,nan,nan,0
+192,cap2,60,none,none,2,60.12,0,2.069,1.078,1.721,2.626,nan,nan,nan,0
+192,cap2,70,hand-off 10ms,none,2,70.13,2.997e-06,2.069,1.078,1.721,2.626,nan,nan,nan,0.0009259
+192,cap2,70,migration pre-copy,none,2,70.13,3.526e-06,2.069,1.078,1.721,2.626,nan,nan,nan,0.000463
+192,cap2,70,none,all,2,70.13,0,2.069,1.078,1.721,2.626,nan,nan,nan,0
+192,cap2,70,none,none,2,70.13,5.82e-06,2.069,1.078,1.721,2.626,nan,nan,nan,0
+192,cap2,80,hand-off 10ms,none,2,80.24,0.0004955,2.069,1.078,1.721,2.626,nan,nan,nan,0.1492
+192,cap2,80,migration pre-copy,none,2,80.23,0.00404,2.069,1.078,1.721,2.626,nan,nan,nan,0.07546
+192,cap2,80,none,all,2,80.23,0,2.069,1.078,1.721,2.626,nan,nan,nan,0
+192,cap2,80,none,none,2,80.23,0.007077,2.069,1.078,1.721,2.626,nan,nan,nan,0
+192,cap2,90,hand-off 10ms,none,2,90.02,0.01515,2.069,1.078,1.721,2.626,nan,nan,nan,3.274
+192,cap2,90,migration pre-copy,none,2,89.96,0.2292,2.074,1.078,1.724,2.634,nan,nan,nan,0.9203
+192,cap2,90,none,all,2,90.01,0,2.069,1.078,1.721,2.626,nan,nan,nan,0
+192,cap2,90,none,none,2,89.87,0.5285,2.08,1.079,1.731,2.646,nan,nan,nan,0
+192,cap4,60,hand-off 10ms,none,2,60,2.719e-05,1.433,1.022,1.302,1.74,nan,nan,nan,0.004074
+192,cap4,60,migration pre-copy,none,2,60,4.77e-05,1.433,1.022,1.302,1.74,nan,nan,nan,0.002315
+192,cap4,60,none,all,2,60,0,1.433,1.022,1.302,1.74,nan,nan,nan,0
+192,cap4,60,none,none,2,60,5.924e-05,1.433,1.022,1.302,1.74,nan,nan,nan,0
+192,cap4,70,hand-off 10ms,none,2,70.05,0.0004941,1.433,1.022,1.302,1.74,nan,nan,nan,0.1162
+192,cap4,70,migration pre-copy,none,2,70.05,0.003689,1.433,1.022,1.302,1.74,nan,nan,nan,0.05787
+192,cap4,70,none,all,2,70.05,0,1.433,1.022,1.302,1.74,nan,nan,nan,0
+192,cap4,70,none,none,2,70.05,0.006292,1.433,1.022,1.302,1.74,nan,nan,nan,0
+192,cap4,80,hand-off 10ms,none,2,80.18,0.004949,1.433,1.022,1.302,1.74,nan,nan,nan,1.269
+192,cap4,80,migration pre-copy,none,2,80.16,0.09188,1.434,1.022,1.303,1.741,nan,nan,nan,0.5059
+192,cap4,80,none,all,2,80.17,0,1.433,1.022,1.302,1.74,nan,nan,nan,0
+192,cap4,80,none,none,2,80.14,0.2246,1.436,1.022,1.303,1.743,nan,nan,nan,0
+192,cap4,90,hand-off 10ms,none,2,89.99,0.1469,1.435,1.023,1.303,1.743,nan,nan,nan,14.59
+192,cap4,90,migration pre-copy,none,2,89.74,1.413,1.453,1.024,1.312,1.767,nan,nan,nan,2.251
+192,cap4,90,none,all,2,89.99,0.0002416,1.433,1.022,1.302,1.74,nan,nan,nan,0
+192,cap4,90,none,none,2,89.6,2.106,1.463,1.024,1.316,1.77,nan,nan,nan,0
+192,cap8,60,hand-off 10ms,none,2,59.97,0.0006204,1.149,1.005,1.116,1.288,nan,nan,nan,0.1527
+192,cap8,60,migration pre-copy,none,2,59.97,0.006188,1.149,1.005,1.116,1.288,nan,nan,nan,0.07241
+192,cap8,60,none,all,2,59.97,0,1.149,1.005,1.116,1.288,nan,nan,nan,0
+192,cap8,60,none,none,2,59.97,0.00981,1.149,1.005,1.116,1.288,nan,nan,nan,0
+192,cap8,70,hand-off 10ms,none,2,69.93,0.003669,1.149,1.005,1.116,1.289,nan,nan,nan,0.9443
+192,cap8,70,migration pre-copy,none,2,69.92,0.07839,1.15,1.005,1.116,1.289,nan,nan,nan,0.3987
+192,cap8,70,none,all,2,69.92,0,1.149,1.005,1.116,1.288,nan,nan,nan,0
+192,cap8,70,none,none,2,69.91,0.1571,1.15,1.005,1.116,1.29,nan,nan,nan,0
+192,cap8,80,hand-off 10ms,none,2,80.06,0.03489,1.149,1.005,1.116,1.289,nan,nan,nan,6.038
+192,cap8,80,migration pre-copy,none,2,79.98,0.7069,1.157,1.006,1.117,1.298,nan,nan,nan,1.422
+192,cap8,80,none,all,2,80.03,0,1.149,1.005,1.116,1.288,nan,nan,nan,0
+192,cap8,80,none,none,2,79.91,1.193,1.162,1.007,1.119,1.301,nan,nan,nan,0
+192,cap8,90,hand-off 10ms,none,2,90.01,0.8713,1.159,1.006,1.118,1.301,nan,nan,nan,39.75
+192,cap8,90,migration pre-copy,none,2,89.43,4.709,1.203,1.012,1.131,1.329,nan,nan,nan,3.63
+192,cap8,90,none,all,2,90.1,0.007285,1.149,1.005,1.116,1.297,nan,nan,nan,0
+192,cap8,90,none,none,2,89.22,6.059,1.218,1.013,1.136,1.339,nan,nan,nan,0
+192,cap16,60,hand-off 10ms,none,2,59.8,0.002646,1.031,1.002,1.031,1.081,nan,nan,nan,0.6126
+192,cap16,60,migration pre-copy,none,2,59.79,0.09021,1.032,1.002,1.032,1.081,nan,nan,nan,0.2806
+192,cap16,60,none,all,2,59.79,0,1.031,1.002,1.031,1.081,nan,nan,nan,0
+192,cap16,60,none,none,2,59.79,0.1231,1.033,1.002,1.032,1.081,nan,nan,nan,0
+192,cap16,70,hand-off 10ms,none,2,69.63,0.0129,1.032,1.002,1.032,1.081,nan,nan,nan,2.529
+192,cap16,70,migration pre-copy,none,2,69.59,0.4986,1.037,1.002,1.033,1.082,nan,nan,nan,0.8995
+192,cap16,70,none,all,2,69.61,0,1.031,1.002,1.031,1.081,nan,nan,nan,0
+192,cap16,70,none,none,2,69.57,0.6922,1.039,1.002,1.033,1.083,nan,nan,nan,0
+192,cap16,80,hand-off 10ms,none,2,80.04,0.1503,1.033,1.002,1.032,1.081,nan,nan,nan,13.15
+192,cap16,80,migration pre-copy,none,2,79.8,2.405,1.056,1.004,1.036,1.096,nan,nan,nan,2.334
+192,cap16,80,none,all,2,80.01,8.083e-06,1.031,1.002,1.031,1.081,nan,nan,nan,0
+192,cap16,80,none,none,2,79.74,2.987,1.062,1.004,1.037,1.103,nan,nan,nan,0
+192,cap16,90,hand-off 10ms,none,2,89.75,1.798,1.05,1.004,1.036,1.09,nan,nan,nan,53.42
+192,cap16,90,migration pre-copy,none,2,88.86,8.776,1.122,1.011,1.053,1.135,nan,nan,nan,4.515
+192,cap16,90,none,all,2,89.93,0.04499,1.032,1.002,1.032,1.081,nan,nan,nan,0
+192,cap16,90,none,none,2,88.69,10.05,1.135,1.011,1.06,1.148,nan,nan,nan,0
+192,cap30,60,hand-off 10ms,none,2,59.93,0.01349,1,1.001,1.002,1.002,nan,nan,nan,1.458
+192,cap30,60,migration pre-copy,none,2,59.9,0.4548,1.005,1.001,1.002,1.006,nan,nan,nan,0.6024
+192,cap30,60,none,all,2,59.91,0,1,1.001,1.002,1.002,nan,nan,nan,0
+192,cap30,60,none,none,2,59.89,0.5513,1.006,1.001,1.003,1.007,nan,nan,nan,0
+192,cap30,70,hand-off 10ms,none,2,69.81,0.05469,1.001,1.001,1.002,1.002,nan,nan,nan,4.883
+192,cap30,70,migration pre-copy,none,2,69.69,1.599,1.016,1.002,1.005,1.014,nan,nan,nan,1.474
+192,cap30,70,none,all,2,69.77,0,1,1.001,1.002,1.002,nan,nan,nan,0
+192,cap30,70,none,none,2,69.66,1.928,1.019,1.002,1.006,1.019,nan,nan,nan,0
+192,cap30,80,hand-off 10ms,none,2,79.85,0.418,1.004,1.002,1.003,1.004,nan,nan,nan,18.07
+192,cap30,80,migration pre-copy,none,2,79.42,4.962,1.05,1.005,1.015,1.033,nan,nan,nan,3.036
+192,cap30,80,none,all,2,79.84,0.000332,1,1.001,1.002,1.002,nan,nan,nan,0
+192,cap30,80,none,none,2,79.36,5.581,1.056,1.004,1.018,1.047,nan,nan,nan,0
+192,cap30,90,hand-off 10ms,none,2,89.6,2.76,1.028,1.004,1.009,1.016,nan,nan,nan,54.39
+192,cap30,90,migration pre-copy,none,2,88.41,13.38,1.134,1.013,1.04,1.076,nan,nan,nan,5.115
+192,cap30,90,none,all,2,89.87,0.1587,1.002,1.001,1.002,1.004,nan,nan,nan,0
+192,cap30,90,none,none,2,88.26,14.59,1.146,1.011,1.046,1.111,nan,nan,nan,0
+192,image50,60,hand-off 10ms,none,2,59.97,0.001728,1.147,1.025,1.096,1.17,nan,nan,nan,0.4691
+192,image50,60,migration pre-copy,none,2,59.97,0.05478,1.148,1.025,1.096,1.17,nan,nan,nan,0.22
+192,image50,60,none,all,2,59.97,0,1.147,1.025,1.096,1.17,nan,nan,nan,0
+192,image50,60,none,none,2,59.97,0.08078,1.148,1.025,1.097,1.17,nan,nan,nan,0
+192,image50,70,hand-off 10ms,none,2,69.92,0.007751,1.147,1.025,1.096,1.17,nan,nan,nan,2.043
+192,image50,70,migration pre-copy,none,2,69.88,0.3586,1.151,1.025,1.097,1.171,nan,nan,nan,0.7577
+192,image50,70,none,all,2,69.9,0,1.147,1.025,1.096,1.17,nan,nan,nan,0
+192,image50,70,none,none,2,69.86,0.5565,1.154,1.026,1.097,1.171,nan,nan,nan,0
+192,image50,80,hand-off 10ms,none,2,80.04,0.1052,1.148,1.025,1.097,1.171,nan,nan,nan,11.4
+192,image50,80,migration pre-copy,none,2,79.81,2.052,1.171,1.028,1.102,1.174,nan,nan,nan,2.119
+192,image50,80,none,all,2,80.01,0,1.147,1.025,1.096,1.17,nan,nan,nan,0
+192,image50,80,none,none,2,79.74,2.623,1.177,1.029,1.104,1.177,nan,nan,nan,0
+192,image50,90,hand-off 10ms,none,2,89.9,1.63,1.166,1.027,1.102,1.174,nan,nan,nan,52.31
+192,image50,90,migration pre-copy,none,2,89.02,7.957,1.239,1.035,1.121,1.195,nan,nan,nan,4.253
+192,image50,90,none,all,2,90.08,0.04298,1.148,1.025,1.097,1.17,nan,nan,nan,0
+192,image50,90,none,none,2,88.81,9.403,1.255,1.036,1.126,1.222,nan,nan,nan,0
+192,image90,60,hand-off 10ms,none,2,59.77,0.002728,1.033,1.002,1.031,1.081,nan,nan,nan,0.6029
+192,image90,60,migration pre-copy,none,2,59.76,0.08345,1.034,1.002,1.032,1.081,nan,nan,nan,0.2715
+192,image90,60,none,all,2,59.75,0,1.033,1.002,1.031,1.081,nan,nan,nan,0
+192,image90,60,none,none,2,59.76,0.1172,1.035,1.002,1.032,1.081,nan,nan,nan,0
+192,image90,70,hand-off 10ms,none,2,70,0.01361,1.034,1.002,1.032,1.081,nan,nan,nan,2.617
+192,image90,70,migration pre-copy,none,2,69.95,0.5195,1.039,1.003,1.033,1.083,nan,nan,nan,0.91
+192,image90,70,none,all,2,69.97,0,1.033,1.002,1.031,1.081,nan,nan,nan,0
+192,image90,70,none,none,2,69.93,0.702,1.041,1.003,1.033,1.083,nan,nan,nan,0
+192,image90,80,hand-off 10ms,none,2,80,0.1458,1.035,1.002,1.032,1.081,nan,nan,nan,12.93
+192,image90,80,migration pre-copy,none,2,79.76,2.385,1.058,1.005,1.036,1.096,nan,nan,nan,2.321
+192,image90,80,none,all,2,79.97,7.673e-06,1.033,1.002,1.031,1.081,nan,nan,nan,0
+192,image90,80,none,none,2,79.71,2.874,1.063,1.005,1.037,1.102,nan,nan,nan,0
+192,image90,90,hand-off 10ms,none,2,89.7,1.778,1.052,1.005,1.036,1.09,nan,nan,nan,53.01
+192,image90,90,migration pre-copy,none,2,88.8,8.793,1.124,1.012,1.052,1.135,nan,nan,nan,4.488
+192,image90,90,none,all,2,89.88,0.03963,1.034,1.002,1.032,1.081,nan,nan,nan,0
+192,image90,90,none,none,2,88.66,9.88,1.136,1.012,1.059,1.15,nan,nan,nan,0

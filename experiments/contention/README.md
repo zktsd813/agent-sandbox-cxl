@@ -67,6 +67,7 @@ python3 experiments/contention/sandbox.py solo            # 코어 13-23에 micr
 | `pilot_audit.py` | pilot 실행을 단독 실행과 명령 단위로 비교: 경로 이탈(timeout), 같은 경로의 CPU, 사용률을 맞추는 수요 배율 |
 | `kernel_wait_fit.py` | 유체 모델이 놓치는 scheduler 대기 a(P)·exp(b·사용률)를 5/10/20코어 실측에 맞춤 (`fleet.KERNEL_WAIT`) |
 | `trace_count.py` | trace 수를 15~120개로 줄여도 같은 사용률의 contention이 같은지 확인 |
+| `cap_sweep.py` | sandbox 크기 정책(hard cap 1~16 vCPU, cap 없음, image별 크기)별 sandbox 느려짐과 노드 contention. 10-14 Docker 측정(30코어, quota 없음)의 수요를 cap에 맞게 늘여 `fleet.py`로 재생한다. `test`, `programs`, `grid`, `run`, `report` |
 | `plot_fleet.py` | `figures/fleet-*.png` |
 | `grids/` | 큰 규모 실험의 조건 목록 (`fleet.py --grid`) |
 | `candidates-all.json`, `candidates-v.json` | trace 264개 전체, 두 단독 실행에서 모두 쓸 수 있는 242개(검증용) |
