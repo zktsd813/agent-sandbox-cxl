@@ -79,20 +79,14 @@ def load_profiles(root=DOCKER, candidates=CANDIDATES):
 
 
 def stretch(demand, v):
-    """Serve at most v cores per slot; a slot above v becomes d/v slots of v (the last one holds the remainder)."""
+    """Serve at most v cores: a slot of demand d > v lasts d/v slots at rate v, later slots shift right. The stretched
+    rate curve is resampled onto whole slots (work is kept; the command's last slot rounds up to a whole slot)."""
     if not len(demand) or demand.max() <= v:
         return demand
-    k = np.floor(demand / v + 1e-9).astype(np.int64)
-    rest = demand - k * v
-    rest[rest < 1e-6] = 0.0
-    small = demand <= v
-    n = np.where(small, 1, k + (rest > 0))
-    out = np.full(int(n.sum()), float(v))
-    last = np.cumsum(n) - 1
-    out[last[small]] = demand[small]
-    tail = ~small & (rest > 0)
-    out[last[tail]] = rest[tail]
-    return out
+    edges = np.concatenate([[0.0], np.cumsum(np.maximum(1.0, demand / v))])  # stretched slot boundaries
+    work = np.concatenate([[0.0], np.cumsum(demand)])  # cumulative work, linear inside each stretched slot
+    grid = np.minimum(np.arange(math.ceil(edges[-1] - 1e-9) + 1, dtype=float), edges[-1])
+    return np.diff(np.interp(grid, edges, work))
 
 
 def width(demands, q):
@@ -153,9 +147,10 @@ def solo_summary(profiles, policy):
 
 
 def cmd_test(_args):
-    assert np.allclose(stretch(np.array([0.5, 2.5, 0.0]), 1), [0.5, 1, 1, 0.5, 0.0])
+    assert np.allclose(stretch(np.array([0.5, 2.5, 0.0]), 1), [0.5, 1, 1, 0.5, 0.0])  # 4.5 slots, last rounds up
     assert np.allclose(stretch(np.array([4.0]), 2), [2, 2])
     assert np.allclose(stretch(np.array([1.0, 3.0]), 4), [1.0, 3.0])
+    assert np.allclose(stretch(np.full(10, 1.2), 1), np.ones(12))  # 12 slots, not 20
     x = np.random.default_rng(0).random(1000) * 30
     for v in (1, 2, 4, 8, 16, 30):
         y = stretch(x, v)
