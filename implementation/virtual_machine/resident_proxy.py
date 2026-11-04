@@ -19,7 +19,7 @@ def decode(data):
     (send_us,send_status,magic,ack_len,receive_us,receive_status,ack_ns,
      handoff_ns,connection_ns,pause_ns,state_bytes,manifest_bytes)=OUTCOME.unpack_from(data,TIMES.size+4)
     if (marker!=MAGIC or magic!=MAGIC or ack_len or ack_ns or send_status!=204 or receive_status!=204
-        or not 0<resume_ns<=request_ns or not 0<state_bytes<65536 or not 0<manifest_bytes<65536):
+        or not 0<resume_ns<=request_ns or not 0<state_bytes<65536 or not 0<=manifest_bytes<65536):
         raise RuntimeError('Resident reply identity/status/bounds')
     return {'version':2,'wire_version':3,'handoff_ns':handoff_ns,'connection_prepare_ns':connection_ns,
         'guest_ack_ns':0,'pause_to_resume_response_ns':pause_ns,'request_ns':request_ns,

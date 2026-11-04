@@ -315,6 +315,7 @@ def main():
     parser.add_argument("--resident-fast-control", action="store_true")
     parser.add_argument("--resident-ready-control", action="store_true")
     parser.add_argument("--resident-native-control", action="store_true")
+    parser.add_argument("--resident-memory-control", action="store_true")
     parser.add_argument("--resident-repromote-handoff", action="store_true")
     parser.add_argument("--immutable-nfs-cache", action="store_true")
     parser.add_argument("--direct-profile-roundtrips", type=int, default=0)

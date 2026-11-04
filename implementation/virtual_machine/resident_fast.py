@@ -53,8 +53,10 @@ def prepare_servers(c):
                  ':')
         if getattr(c.args,'restore_timing',False):
             command='export FC_RESIDENT_PROFILE=1\n'+command
-        if getattr(c.args,'resident_native_control',False):
+        if getattr(c.args,'resident_native_control',False) or getattr(c.args,'resident_memory_control',False):
             command='export FC_RESIDENT_NATIVE=1\n'+command
+        if getattr(c.args,'resident_memory_control',False):
+            command='export FC_RESIDENT_MEMORY=1\n'+command
         raw,name=c.shell(role,command,'resident-controller-prepare')
         c.resident_servers[role]={'directory':control,'file':name}
         if getattr(c.args,'resident_ready_control',False):

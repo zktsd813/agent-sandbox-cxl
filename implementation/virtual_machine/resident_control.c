@@ -28,7 +28,7 @@
 static char directory[160], socket_path[192];
 static int readiness_pipe = -1;
 static int api_fd = -1;
-static int native_fd = -1, native_enabled;
+static int native_fd = -1, native_enabled, memory_enabled;
 static int peer_fd = -1;
 static int owner_fd = -1, prepared_owner_pid, selector_fd = -1;
 struct metadata_file { int fd; size_t length; };
@@ -205,7 +205,7 @@ static void print_api(const char *name,const struct api_result *a) {
 
 static void validate_request(const struct request *q,const char *nonce) {
  check(q->magic==MAGIC && q->nonce[32]==0 && !strcmp(q->nonce,nonce)
-       && q->label[95]==0 && q->label[0] && q->first<=1 && q->operation<=2 && q->observe<=1 && q->persistent<=1,"request identity");
+       && q->label[95]==0 && q->label[0] && q->first<=1 && q->operation<=3 && q->observe<=1 && q->persistent<=1,"request identity");
  check(strlen(q->label)<90 && strspn(q->label,"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-:.")==strlen(q->label),"request label");
  if(q->operation==1 || q->operation==2) {
   struct in_addr address;
@@ -224,11 +224,23 @@ static struct outcome handoff(struct request q,const char *peer,int client,char 
   if(q.persistent){peer_fd=fd;strcpy(peer_ip,peer);}
  }
  phase_mark(&profile,"peer_connection");
- uint64_t start=ns();o.send=api("PUT","/actions","{\"action_type\": \"DirectSend\"}");phase_mark(&profile,"export_api");
- select_owner(2147483647);phase_mark(&profile,"source_fence");
- char wire[sizeof(q)+2*CAP],*state=wire+sizeof(q),*manifest; q.operation=0;
- q.state_len=read_file("direct-export.json",state);manifest=state+q.state_len;
- q.manifest_len=read_file("memory-manifest.json",manifest);
+ char wire[sizeof(q)+2*CAP],*state=wire+sizeof(q),*manifest;
+ int memory=memory_enabled&&!q.first;
+ uint64_t start=ns();
+ if(memory) {
+  check(connect_native(),"memory sender not ready");
+  unsigned char command=3;uint64_t response[2];
+  send_all(native_fd,&command,1);recv_all(native_fd,response,sizeof(response));
+  check(response[0]==0&&response[1]>0&&response[1]<CAP,"memory export response");
+  q.state_len=response[1];q.manifest_len=0;recv_all(native_fd,state,q.state_len);
+  o.send=(struct api_result){.status=204,.us=(ns()-start)/1000.};
+ } else { o.send=api("PUT","/actions","{\"action_type\": \"DirectSend\"}"); }
+ phase_mark(&profile,"export_api");
+ select_owner(2147483647);phase_mark(&profile,"source_fence");q.operation=0;
+ if(!memory) {
+  q.state_len=read_file("direct-export.json",state);manifest=state+q.state_len;
+  q.manifest_len=read_file("memory-manifest.json",manifest);
+ }
  o.state_len=q.state_len;o.manifest_len=q.manifest_len;
  phase_mark(&profile,"metadata_read");
  memcpy(wire,&q,sizeof(q));send_all(fd,wire,sizeof(q)+q.state_len+q.manifest_len);
@@ -254,6 +266,8 @@ static uint64_t number(const char *s) {
 }
 int main(int argc,char **argv) {
  const char *native_env=getenv("FC_RESIDENT_NATIVE");native_enabled=native_env&&!strcmp(native_env,"1");
+ const char *memory_env=getenv("FC_RESIDENT_MEMORY");memory_enabled=memory_env&&!strcmp(memory_env,"1");
+ check(!memory_enabled||native_enabled,"memory wire needs native control");
  const char *profile_env=getenv("FC_RESIDENT_PROFILE");profile_enabled=profile_env&&!strcmp(profile_env,"1");
  check(argc==5||argc==6||argc==7||argc==12||argc==13,"usage: serve DIR IP NONCE | handoff DIR PEER NONCE FIRST LABEL | request DIR LOCAL_IP NONCE FIRST LABEL PEER VM EPOCH START BYTES [OBSERVE]");
  check(strlen(argv[2])<sizeof(directory)&&!strncmp(argv[2],"/run/swe-pool-",14),"owned directory required");strcpy(directory,argv[2]);path(socket_path,sizeof(socket_path),"api.sock");
@@ -315,6 +329,11 @@ int main(int argc,char **argv) {
     if(getpeername(fd,(void*)&address,&size)||!inet_ntop(AF_INET,&address.sin_addr,peer_ip,sizeof(peer_ip)))fail("prepared peer identity");
     peer_fd=fd;uint32_t marker=MAGIC;send_all(fd,&marker,sizeof(marker));continue;
    }
+   if(q.operation==3) {
+    check(trigger&&memory_enabled&&connect_native()&&!q.state_len&&!q.manifest_len,"evidence channel");
+    unsigned char command=5;uint64_t response[2];send_all(native_fd,&command,1);recv_all(native_fd,response,sizeof(response));
+    check(response[0]==0,"evidence command failed");uint32_t marker=MAGIC;send_all(fd,&marker,sizeof(marker));close(fd);continue;
+   }
    check(q.operation==(unsigned)trigger,"wrong request channel");
    char ack[4096];
    if(q.operation==1) {
@@ -327,7 +346,7 @@ int main(int argc,char **argv) {
     peer_fd=fd;
    }
    check(!q.persistent||peer_fd==fd,"multiple peer connections");
-   check(q.state_len>0&&q.state_len<CAP&&q.manifest_len>0&&q.manifest_len<CAP,"request bounds");
+   check(q.state_len>0&&q.state_len<CAP&&q.manifest_len<CAP&&(q.manifest_len>0||(memory_enabled&&!q.first)),"request bounds");
    struct phase_profile profile;phase_start(&profile);
    char state[CAP],manifest[CAP];recv_all(fd,state,q.state_len);recv_all(fd,manifest,q.manifest_len);
    phase_mark(&profile,"metadata_receive");
@@ -335,18 +354,27 @@ int main(int argc,char **argv) {
    // This serialized controller is their sole writer. Complete both writes
    // before selecting the owner or sending that API; any error exits here.
    // Thus the API publishes the pair, without per-handoff inode replacement.
-   overwrite_metadata(&import_file,state,q.state_len);overwrite_metadata(&manifest_file,manifest,q.manifest_len);
+   if(q.manifest_len) { overwrite_metadata(&import_file,state,q.state_len);overwrite_metadata(&manifest_file,manifest,q.manifest_len); }
    phase_mark(&profile,"metadata_publish");
    int owner=owner_pid();phase_mark(&profile,"owner_check");select_owner(owner);phase_mark(&profile,"owner_select");
    struct reply r={.magic=MAGIC};off_t offset=0;
    if(q.observe){char p[256];path(p,sizeof(p),"fc.log");struct stat st;if(stat(p,&st))fail("log offset");offset=st.st_size;}
-   r.receive=api("PUT","/actions","{\"action_type\": \"DirectReceive\"}");
+   if(!q.manifest_len) {
+    check(connect_native(),"memory receiver not ready");uint64_t begin=ns(),response[2];
+    unsigned char header[5]={4};memcpy(header+1,&q.state_len,4);
+    send_all(native_fd,header,sizeof(header));send_all(native_fd,state,q.state_len);recv_all(native_fd,response,sizeof(response));
+    check(response[0]==0,"memory import failed");r.receive=(struct api_result){.status=204,.us=(ns()-begin)/1000.};
+   } else { r.receive=api("PUT","/actions","{\"action_type\": \"DirectReceive\"}"); }
    phase_mark(&profile,"import_api");
    uint32_t marker=MAGIC;send_all(fd,&marker,sizeof(marker));
    if(q.observe)r.ack_len=guest_ack(q.label,ack,offset,&r.ack_ns);
    send_all(fd,&r,sizeof(r));send_all(fd,ack,r.ack_len);if(!q.persistent)close(fd);
    phase_print(&profile,&q,"receive");
   }
+ }
+ if(!strcmp(argv[1],"evidence")) {
+  check(argc==5,"evidence arguments");struct request q={.magic=MAGIC,.operation=3};strcpy(q.nonce,argv[4]);strcpy(q.label,"evidence");
+  int fd=local_socket(0);send_all(fd,&q,sizeof(q));uint32_t marker;recv_all(fd,&marker,sizeof(marker));check(marker==MAGIC,"evidence reply");close(fd);return 0;
  }
  check((!strcmp(argv[1],"handoff")&&argc==7)||(!strcmp(argv[1],"request")&&(argc==12||argc==13)),"command arguments");
  check(!strcmp(argv[5],"0")||!strcmp(argv[5],"1"),"first import flag");

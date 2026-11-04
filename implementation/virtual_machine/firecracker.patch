@@ -92,7 +92,7 @@ index a3b3f3f3a..5eb4bbaf1 100644
              parse_put_actions(&Body::new("invalid_body")).unwrap_err();
  
 diff --git a/src/firecracker/src/api_server_adapter.rs b/src/firecracker/src/api_server_adapter.rs
-index 70abff48c..488b78227 100644
+index 70abff48c..3c1fa8281 100644
 --- a/src/firecracker/src/api_server_adapter.rs
 +++ b/src/firecracker/src/api_server_adapter.rs
 @@ -2,10 +2,13 @@
@@ -109,7 +109,7 @@ index 70abff48c..488b78227 100644
  
  use event_manager::{EventOps, Events, MutEventSubscriber, SubscriberOps};
  use vmm::logger::{ProcessTimeReporter, error_unrestricted, info_unrestricted, warn_unrestricted};
-@@ -48,6 +51,146 @@ struct ApiServerAdapter {
+@@ -48,6 +51,185 @@ struct ApiServerAdapter {
      request: Option<ApiRequest>,
  }
  
@@ -118,7 +118,8 @@ index 70abff48c..488b78227 100644
 +struct ResidentControl {
 +    listener: UnixListener,
 +    stream: Option<UnixStream>,
-+    request: Option<u8>,
++    request: Option<(u8, Vec<u8>)>,
++    input: Vec<u8>,
 +}
 +
 +impl ResidentControl {
@@ -128,12 +129,13 @@ index 70abff48c..488b78227 100644
 +        let export = PathBuf::from(std::env::var_os("FC_DAX_DIRECT_EXPORT").unwrap());
 +        let listener = UnixListener::bind(export.parent().unwrap().join("resident.sock")).unwrap();
 +        listener.set_nonblocking(true).unwrap();
-+        Some(Self { listener, stream: None, request: None })
++        Some(Self { listener, stream: None, request: None, input: Vec::new() })
 +    }
 +
-+    fn dispatch(&mut self, controller: &mut RuntimeApiController, events: &mut EventManager) {
-+        let Some(command) = self.request.take() else { return; };
++    fn dispatch(&mut self, controller: &mut RuntimeApiController, events: &mut EventManager, vmm: &Arc<Mutex<Vmm>>) {
++        let Some((command, input)) = self.request.take() else { return; };
 +        let start = Instant::now();
++        let mut payload = Vec::new();
 +        let status = match command {
 +            0 => 0,
 +            1 | 2 => {
@@ -143,14 +145,29 @@ index 70abff48c..488b78227 100644
 +                    Err(error) => { error_unrestricted!("Resident command failed: {error}"); libc::EIO as u64 }
 +                }
 +            }
++            3 | 4 | 5 => {
++                let mut vm = vmm.lock().unwrap();
++                let result = match command {
++                    3 => vm.send_resident_memory(events).map(|bytes| payload = bytes),
++                    4 => vm.receive_resident_memory(events, &input),
++                    _ => vm.write_resident_evidence(),
++                };
++                match result {
++                    Ok(()) => 0,
++                    Err(error) => { error_unrestricted!("Resident memory command failed: {error}"); libc::EIO as u64 }
++                }
++            }
 +            _ => libc::EINVAL as u64,
 +        };
 +        let mut response = [0u8; 16];
 +        response[..8].copy_from_slice(&status.to_le_bytes());
-+        response[8..].copy_from_slice(&(start.elapsed().as_nanos() as u64).to_le_bytes());
++        let value = if command == 3 { payload.len() as u64 } else { start.elapsed().as_nanos() as u64 };
++        response[8..].copy_from_slice(&value.to_le_bytes());
 +        // This bounded reply must fit immediately; a stalled/broken controller
 +        // must not block device dispatch or cause a partially completed retry.
-+        self.stream.as_mut().unwrap().write_all(&response).expect("resident reply");
++        let stream = self.stream.as_mut().unwrap();
++        stream.write_all(&response).expect("resident reply");
++        stream.write_all(&payload).expect("resident payload reply");
 +    }
 +}
 +
@@ -171,14 +188,36 @@ index 70abff48c..488b78227 100644
 +        }
 +        let Some(stream) = self.stream.as_mut() else { return; };
 +        if event.fd() != stream.as_raw_fd() || self.request.is_some() { return; }
-+        let mut command = [0];
-+        match stream.read(&mut command) {
-+            Ok(1) => self.request = Some(command[0]),
-+            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => (),
-+            _ => {
-+                ops.remove(Events::new(stream, EventSet::IN)).unwrap();
-+                self.stream = None;
++        let mut buffer = [0u8; 8192];
++        let mut closed = false;
++        loop {
++            match stream.read(&mut buffer) {
++                Ok(0) => { closed = true; break; }
++                Ok(n) => {
++                    self.input.extend_from_slice(&buffer[..n]);
++                    if self.input.len() > 65540 { closed = true; break; }
++                }
++                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => break,
++                Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
++                Err(_) => { closed = true; break; }
 +            }
++        }
++        if !closed && !self.input.is_empty() {
++            let command = self.input[0];
++            let (header, length) = if command != 4 { (1, 0) }
++                else if self.input.len() < 5 { return; }
++                else { (5, u32::from_le_bytes(self.input[1..5].try_into().unwrap()) as usize) };
++            if length >= 65536 || (command == 4 && length == 0) || self.input.len() > header + length {
++                closed = true;
++            } else if self.input.len() == header + length {
++                self.request = Some((command, self.input[header..].to_vec()));
++                self.input.clear();
++            }
++        }
++        if closed {
++            ops.remove(Events::new(stream, EventSet::IN)).unwrap();
++            self.stream = None;
++            self.input.clear();
 +        }
 +    }
 +}
@@ -256,7 +295,7 @@ index 70abff48c..488b78227 100644
  impl ApiServerAdapter {
      /// Runs the vmm to completion, while any arising control events are deferred
      /// to a `RuntimeApiController`.
-@@ -58,6 +201,9 @@ impl ApiServerAdapter {
+@@ -58,6 +240,9 @@ impl ApiServerAdapter {
          vmm: Arc<Mutex<Vmm>>,
          event_manager: &mut EventManager,
      ) -> Result<(), ApiServerError> {
@@ -266,7 +305,7 @@ index 70abff48c..488b78227 100644
          let api_adapter = Arc::new(Mutex::new(Self {
              api_event_fd,
              from_api,
-@@ -66,10 +212,34 @@ impl ApiServerAdapter {
+@@ -66,10 +251,34 @@ impl ApiServerAdapter {
              request: None,
          }));
          event_manager.add_subscriber(api_adapter.clone());
@@ -296,12 +335,12 @@ index 70abff48c..488b78227 100644
                  .expect("EventManager events driver fatal error");
 +            if let Some(control) = &resident_control {
 +                control.lock().unwrap().dispatch(
-+                    &mut api_adapter.lock().unwrap().controller, event_manager);
++                    &mut api_adapter.lock().unwrap().controller, event_manager, &vmm);
 +            }
              api_adapter
                  .lock()
                  .expect("Poisoned lock")
-@@ -84,33 +254,36 @@ impl ApiServerAdapter {
+@@ -84,33 +293,36 @@ impl ApiServerAdapter {
          Ok(())
      }
  
@@ -345,7 +384,7 @@ index 70abff48c..488b78227 100644
                          break;
                      }
                  }
-@@ -272,3 +445,79 @@ pub(crate) fn run_with_api(
+@@ -272,3 +484,79 @@ pub(crate) fn run_with_api(
  
      result
  }
@@ -2301,10 +2340,10 @@ index 2a75945f6..fe91a5d09 100644
      type ConstructorArgs = MmioTransportConstructorArgs;
 diff --git a/src/vmm/src/direct.rs b/src/vmm/src/direct.rs
 new file mode 100644
-index 000000000..8b6546cc2
+index 000000000..88d454568
 --- /dev/null
 +++ b/src/vmm/src/direct.rs
-@@ -0,0 +1,696 @@
+@@ -0,0 +1,759 @@
 +// Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 +// SPDX-License-Identifier: Apache-2.0
 +
@@ -2374,6 +2413,12 @@ index 000000000..8b6546cc2
 +    memory: GuestMemoryState,
 +    memory_manifest_sha256: String,
 +    devices: DevicesState,
++}
++
++// Optional diagnostic state, materialized only by an explicit post-handoff request.
++fn last_memory_export() -> &'static Mutex<Option<(DirectState, crate::pool_memory::Manifest, Vec<u8>)>> {
++    static LAST: std::sync::OnceLock<Mutex<Option<(DirectState, crate::pool_memory::Manifest, Vec<u8>)>>> = std::sync::OnceLock::new();
++    LAST.get_or_init(|| Mutex::new(None))
 +}
 +
 +static PARKED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
@@ -2504,6 +2549,16 @@ index 000000000..8b6546cc2
 +    /// Transfer only device bindings and publish the retained kernel-object token.
 +    /// Ordinary Pause intentionally retains ownership, so pooling can run first.
 +    pub fn direct_export(&mut self, events: &mut EventManager) -> Result<(), VmmError> {
++        self.export_inner(events, false).map(|_| ())
++    }
++
++    pub fn send_resident_memory(&mut self, events: &mut EventManager) -> Result<Vec<u8>, VmmError> {
++        if !resident_enabled() || resident_parked() { return Err(VmmError::DaxPreflight("resident sender is not owner")); }
++        self.pause_vm()?;
++        self.export_inner(events, true)
++    }
++
++    fn export_inner(&mut self, events: &mut EventManager, memory_wire: bool) -> Result<Vec<u8>, VmmError> {
 +        let mut timing = crate::persist::RestoreTiming::new("direct_export");
 +        if !io_enabled()
 +            || self.instance_info.state != VmState::Paused
@@ -2523,11 +2578,11 @@ index 000000000..8b6546cc2
 +        }
 +        let path = env_path("FC_DAX_DIRECT_EXPORT").map_err(VmmError::DaxHandoff)?;
 +        // Reserve the output before mutating bindings. A previous generation is never overwritten.
-+        let mut output = OpenOptions::new()
++        let mut output = if memory_wire { None } else { Some(OpenOptions::new()
 +            .write(true)
 +            .create_new(true)
 +            .open(&path)
-+            .map_err(VmmError::DaxHandoff)?;
++            .map_err(VmmError::DaxHandoff)?) };
 +        let started = std::time::Instant::now();
 +        timing.mark("validate_and_open");
 +        let devices = self.device_manager.save(); // Drains async I/O and captures resulting used rings.
@@ -2538,22 +2593,28 @@ index 000000000..8b6546cc2
 +            let VirtioDevices::Mmio(mmio) = &mut self.device_manager.virtio_devices else { unreachable!() };
 +            mmio.park_direct(events);
 +        }
-+        crate::pool_memory::seal_for_handoff(vm.guest_memory()).map_err(VmmError::DaxHandoff)?;
++        let mapper = if memory_wire {
++            Some(crate::pool_memory::seal_for_handoff_memory(vm.guest_memory()).map_err(VmmError::DaxHandoff)?)
++        } else {
++            crate::pool_memory::seal_for_handoff(vm.guest_memory()).map_err(VmmError::DaxHandoff)?;
++            None
++        };
 +        timing.mark("seal_mapper");
-+        let manifest =
++        let manifest = if memory_wire { Vec::new() } else {
 +            bounded_read(&env_path("FC_POOL_MEMORY_MANIFEST").map_err(VmmError::DaxHandoff)?)
-+                .map_err(VmmError::DaxHandoff)?;
++                .map_err(VmmError::DaxHandoff)?
++        };
 +        let mut state = DirectState {
 +            schema: "direct-device-handoff-v1".into(),
 +            token: HandoffToken::default(),
 +            machine_config: self.machine_config.clone(),
 +            boot_source: self.boot_source_config.clone(),
 +            memory: vm.guest_memory().describe(),
-+            memory_manifest_sha256: sha256(&manifest),
++            memory_manifest_sha256: if memory_wire { String::new() } else { sha256(&manifest) },
 +            devices,
 +        };
 +        timing.mark("read_manifest_and_build_state");
-+        let result = (|| -> io::Result<usize> {
++        let result = (|| -> io::Result<Vec<u8>> {
 +            let VirtioDevices::Mmio(mmio) = &self.device_manager.virtio_devices else {
 +                unreachable!()
 +            };
@@ -2584,11 +2645,14 @@ index 000000000..8b6546cc2
 +                }
 +                timing.mark("park_resident");
 +            }
-+            let bytes = serde_json::to_vec(&state).map_err(io::Error::other)?;
++            let bytes = if let Some(mapper) = &mapper {
++                bitcode::serialize(&(1u32, &state.token, &state.devices, mapper)).map_err(io::Error::other)?
++            } else { serde_json::to_vec(&state).map_err(io::Error::other)? };
++            if bytes.len() >= 65536 { return Err(invalid("resident packet too large")); }
 +            timing.mark("serialize_devices");
-+            output.write_all(&bytes)?;
++            if let Some(output) = output.as_mut() { output.write_all(&bytes)?; }
 +            timing.mark("write_devices");
-+            Ok(bytes.len())
++            Ok(bytes)
 +        })();
 +        let bytes = match result {
 +            Ok(bytes) => bytes,
@@ -2601,15 +2665,29 @@ index 000000000..8b6546cc2
 +            crate::logger::info_unrestricted!(
 +                "DIRECT_HANDOFF_JSON {}",
 +                serde_json::json!({
-+                    "event":"export", "token":state.token, "device_state_bytes":bytes,
++                    "event":"export", "token":state.token, "device_state_bytes":bytes.len(),
 +                    "snapshot_bytes":0, "ram_transfer_bytes":0, "elapsed_ns":started.elapsed().as_nanos() as u64,
 +                    "memory_manifest_sha256":state.memory_manifest_sha256,
 +                })
 +            );
 +        }
++        if let Some(mapper) = mapper { *last_memory_export().lock().unwrap() = Some((state, mapper, bytes.clone())); }
 +        timing.mark("log_receipt");
 +        timing.finish();
-+        Ok(())
++        Ok(bytes)
++    }
++
++    /// Diagnostic only: no guest RAM reads. Never called by the handoff runtime.
++    pub fn write_resident_evidence(&self) -> Result<(), VmmError> {
++        let guard = last_memory_export().lock().unwrap();
++        let (state, mapper, packet) = guard.as_ref().ok_or(VmmError::DaxPreflight("no memory export"))?;
++        let dump = |name: &str, bytes: &[u8]| -> io::Result<()> { std::fs::write(env_path(name)?, bytes) };
++        let result = (|| -> io::Result<()> {
++            dump("FC_DAX_DIRECT_EXPORT", &serde_json::to_vec(state)?)?;
++            dump("FC_POOL_MEMORY_MANIFEST", &serde_json::to_vec(mapper)?)?;
++            std::fs::write(env_path("FC_DAX_DIRECT_EXPORT")?.with_extension("bin"), packet)
++        })();
++        result.map_err(VmmError::DaxHandoff)
 +    }
 +}
 +
@@ -2641,21 +2719,41 @@ index 000000000..8b6546cc2
 +    }
 +
 +    pub(crate) fn import_resident(&mut self, events: &mut EventManager) -> Result<(), VmmError> {
++        self.import_resident_inner(events, None)
++    }
++    pub fn receive_resident_memory(&mut self, events: &mut EventManager, bytes: &[u8]) -> Result<(), VmmError> {
++        self.import_resident_inner(events, Some(bytes))?;
++        self.resume_vm()
++    }
++    fn import_resident_inner(&mut self, events: &mut EventManager, packet: Option<&[u8]>) -> Result<(), VmmError> {
 +        let err = |e: io::Error| VmmError::DaxHandoff(e);
 +        if !resident_enabled() || !resident_parked() || self.reuse_restore_failed {
 +            return Err(VmmError::DaxPreflight("resident import requires a healthy parked owner"));
 +        }
 +        let mut timing = crate::persist::RestoreTiming::new("direct_resident_import");
-+        let input = bounded_read(&env_path("FC_DAX_RESIDENT_IMPORT").map_err(err)?).map_err(err)?;
-+        let mut state: DirectState = serde_json::from_slice(&input).map_err(|e| err(io::Error::other(e)))?;
++        let (mut state, mapper) = if let Some(bytes) = packet {
++            if bytes.len() >= 65536 { return Err(err(invalid("resident packet too large"))); }
++            let (version, token, devices, mapper): (u32, HandoffToken, DevicesState, crate::pool_memory::Manifest) =
++                bitcode::deserialize(bytes).map_err(|e| err(invalid(e.to_string())))?;
++            if version != 1 { return Err(err(invalid("resident packet version"))); }
++            (DirectState { schema: "direct-device-handoff-v1".into(), token, devices,
++                machine_config: self.machine_config.clone(), boot_source: self.boot_source_config.clone(),
++                memory: self.vm.as_kvm().unwrap().guest_memory().describe(), memory_manifest_sha256: String::new() }, Some(mapper))
++        } else {
++            let input = bounded_read(&env_path("FC_DAX_RESIDENT_IMPORT").map_err(err)?).map_err(err)?;
++            (serde_json::from_slice::<DirectState>(&input).map_err(|e| err(io::Error::other(e)))?, None)
++        };
 +        validate_state(&state).map_err(err)?;
 +        let previous = resident_token().lock().unwrap().clone().ok_or_else(|| err(invalid("resident token absent")))?;
 +        validate_resident_token(&previous, &state.token).map_err(err)?;
 +        if state.machine_config != self.machine_config || state.boot_source != self.boot_source_config {
 +            return Err(err(invalid("resident machine contract changed")));
 +        }
-+        let manifest = bounded_read(&env_path("FC_DAX_RESIDENT_MANIFEST").map_err(err)?).map_err(err)?;
-+        if sha256(&manifest) != state.memory_manifest_sha256 { return Err(err(invalid("resident manifest checksum mismatch"))); }
++        let manifest = if packet.is_some() { Vec::new() } else {
++            let manifest = bounded_read(&env_path("FC_DAX_RESIDENT_MANIFEST").map_err(err)?).map_err(err)?;
++            if sha256(&manifest) != state.memory_manifest_sha256 { return Err(err(invalid("resident manifest checksum mismatch"))); }
++            manifest
++        };
 +        let local_acpi = self.device_manager.acpi_devices.save();
 +        if local_acpi.vmgenid.addr != state.devices.acpi_state.vmgenid.addr
 +            || local_acpi.vmgenid.gsi != state.devices.acpi_state.vmgenid.gsi
@@ -2666,7 +2764,8 @@ index 000000000..8b6546cc2
 +        timing.mark("read_validate_metadata");
 +        self.reuse_restore_failed = true; // Any failure from here is permanently fail-closed.
 +        let vm = self.vm.as_kvm().ok_or(VmmError::NotSupported)?;
-+        crate::pool_memory::import_resident(vm.guest_memory(), &manifest).map_err(err)?;
++        if let Some(mapper) = mapper { crate::pool_memory::import_resident_state(vm.guest_memory(), mapper).map_err(err)?; }
++        else { crate::pool_memory::import_resident(vm.guest_memory(), &manifest).map_err(err)?; }
 +        timing.mark("import_mapper");
 +        vm.attach_resident(&mut state.token).map_err(err)?;
 +        timing.mark("attach");
@@ -2681,7 +2780,10 @@ index 000000000..8b6546cc2
 +        devices.rebind_direct(vm, events).map_err(|e| err(io::Error::other(e)))?;
 +        timing.mark("restore_devices");
 +        // A fresh export will create a new file; old generations are archived by the controller.
-+        std::fs::remove_file(env_path("FC_DAX_DIRECT_EXPORT").map_err(err)?).map_err(err)?;
++        if packet.is_none() { std::fs::remove_file(env_path("FC_DAX_DIRECT_EXPORT").map_err(err)?).map_err(err)?; }
++        // File exports are diagnostic-only for the memory wire. A later legacy
++        // export is not mixed into the same resident session.
++
 +        PARKED.store(false, std::sync::atomic::Ordering::Release);
 +        self.reuse_restore_failed = false;
 +        if profiling() {
@@ -4433,10 +4535,10 @@ index 000000000..bcb56bda7
 +}
 diff --git a/src/vmm/src/pool_memory.rs b/src/vmm/src/pool_memory.rs
 new file mode 100644
-index 000000000..c6ed03f39
+index 000000000..9ac943fd2
 --- /dev/null
 +++ b/src/vmm/src/pool_memory.rs
-@@ -0,0 +1,1151 @@
+@@ -0,0 +1,1162 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Guest-authorized pooling and persistent CXL logical RAM. Control plans are
 +//! private, trusted controller files. Only the kernel-owned ACTIVE registration
@@ -4650,9 +4752,9 @@ index 000000000..c6ed03f39
 +    device_bytes: u64,
 +    canonical_start: u64,
 +    canonical_bytes: u64,
-+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
++    #[serde(default)]
 +    mappings: Vec<Mapping>,
-+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
++    #[serde(default)]
 +    credits: Vec<u64>,
 +    #[serde(default)]
 +    handle: Option<Handle>,
@@ -4926,6 +5028,9 @@ index 000000000..c6ed03f39
 +    Ok(())
 +}
 +fn checkpoint(mem: &GuestMemoryMmap, seal: bool) -> io::Result<()> {
++    checkpoint_inner(mem, seal, true)
++}
++fn checkpoint_inner(mem: &GuestMemoryMmap, seal: bool, publish: bool) -> io::Result<()> {
 +    let mut guard = state().lock().unwrap();
 +    let Some(a) = guard.as_mut() else { return Ok(()); };
 +    query(a)?;
@@ -4939,7 +5044,8 @@ index 000000000..c6ed03f39
 +    // a 2GiB VM must not retain a spare 524288-entry userspace table.
 +    a.manifest.mappings = Vec::new(); a.manifest.credits = Vec::new();
 +    a.manifest.state_sha256 = None;
-+    write_json(&env("FC_POOL_MEMORY_MANIFEST")?, &a.manifest)
++    if publish { write_json(&env("FC_POOL_MEMORY_MANIFEST")?, &a.manifest)?; }
++    Ok(())
 +}
 +/// Revoke every local RAM access after KVM detach, including already present PTEs.
 +/// This changes VMAs, not guest contents, and performs no per-page userspace scan.
@@ -4954,7 +5060,10 @@ index 000000000..c6ed03f39
 +}
 +
 +pub(crate) fn import_resident(mem: &GuestMemoryMmap, bytes: &[u8]) -> io::Result<()> {
-+    let mut m: Manifest = serde_json::from_slice(bytes).map_err(io::Error::other)?;
++    let m: Manifest = serde_json::from_slice(bytes).map_err(io::Error::other)?;
++    import_resident_state(mem, m)
++}
++pub(crate) fn import_resident_state(mem: &GuestMemoryMmap, mut m: Manifest) -> io::Result<()> {
 +    if !enabled() || m.vm_id != env("FC_POOL_VM_ID")? { return Err(invalid("resident mapper VM mismatch")); }
 +    validate_handle_geometry(&m, &geometry(mem))?;
 +    let old: u64 = m.run_epoch.parse().map_err(io::Error::other)?;
@@ -5009,6 +5118,10 @@ index 000000000..c6ed03f39
 +}
 +pub(crate) fn checkpoint_ready(mem: &GuestMemoryMmap) -> io::Result<()> { checkpoint(mem, false) }
 +pub(crate) fn seal_for_handoff(mem: &GuestMemoryMmap) -> io::Result<()> { checkpoint(mem, true) }
++pub(crate) fn seal_for_handoff_memory(mem: &GuestMemoryMmap) -> io::Result<Manifest> {
++    checkpoint_inner(mem, true, false)?;
++    manifest_for_profile().ok_or_else(|| invalid("missing sealed mapper"))
++}
 +/// Existing metadata for optional experiment logs; no query or RAM walk.
 +pub(crate) fn manifest_for_profile() -> Option<Manifest> {
 +    state().lock().unwrap().as_ref().map(|a| a.manifest.clone())

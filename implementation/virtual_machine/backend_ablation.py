@@ -93,12 +93,12 @@ class Controller(HandoffController):
     setup = SWEController.setup
     configure_direct = SWEController.configure_direct
 
-    def __init__(self, config, out, arm, *, profiled=True, inline_guest_ack=False, resume_nokick=False, exec_request=False, resident_native_control=False):
+    def __init__(self, config, out, arm, *, profiled=True, inline_guest_ack=False, resume_nokick=False, exec_request=False, resident_native_control=False, resident_memory_control=False):
         args = argparse.Namespace(memory_mib=2048, vcpus=1, sandboxes=1, minimum_cache_mib=128,
             io_engine='Async', mode='direct', credit_mib=16, resident_direct=True,
             resident_ready_control=True, resident_skip_disk_prepare=arm in ('none', 'nfs-unprepared'),
             immutable_nfs_cache=True, restore_timing=profiled, full_audit=False, resume_nokick=resume_nokick,
-            exec_request=exec_request, resident_native_control=resident_native_control)
+            exec_request=exec_request, resident_native_control=resident_native_control or resident_memory_control, resident_memory_control=resident_memory_control)
         super().__init__(config, out, args)
         self.root = '/run/swe-pool-'+secrets.token_hex(8)
         self.arm = arm
@@ -174,6 +174,8 @@ class Controller(HandoffController):
         require(len(rows)==1,'Missing native handoff receipt')
         timing=rows[0]
         require(all(x['status']==204 for x in timing['apis'].values()),'Handoff API failed')
+        if timing['manifest_bytes']==0:
+            self.shell(source,f'/lab/resident-control evidence {old_dir} {ip[source]} {self.resident_control_nonce}', 'memory-evidence')
         state_bytes=self.fetch_bytes(source,old_dir+'/direct-export.json','device-state')
         state=json.loads(state_bytes);state_file=self.receipts[-1]['file']
         kernel_profile=None
@@ -190,8 +192,14 @@ class Controller(HandoffController):
             kernel_profile={'file':self.raw('kernel-stage-profile',json.dumps(kernel_profile)),**kernel_profile}
         sealed_bytes=self.fetch_bytes(source,s.manifest_path,'sealed-manifest')
         sealed=json.loads(sealed_bytes);sealed_file=self.receipts[-1]['file']
-        require(len(state_bytes)==timing['state_bytes'] and len(sealed_bytes)==timing['manifest_bytes']
-            and hashlib.sha256(sealed_bytes).hexdigest()==state['memory_manifest_sha256'],'Transferred metadata mismatch')
+        packet_file=None
+        if timing['manifest_bytes']==0:
+            packet=self.fetch_bytes(source,old_dir+'/direct-export.bin','binary-packet')
+            packet_file=self.receipts[-1]['file']
+            require(len(packet)==timing['state_bytes'] and state['memory_manifest_sha256']=='','Binary wire mismatch')
+        else:
+            require(len(state_bytes)==timing['state_bytes'] and len(sealed_bytes)==timing['manifest_bytes']
+                and hashlib.sha256(sealed_bytes).hexdigest()==state['memory_manifest_sha256'],'Transferred metadata mismatch')
         log=self.fetch_bytes(dest,worker['directory']+'/vmm.log','handoff-import-log').decode()
         imports=[json.loads(line.split('DIRECT_HANDOFF_JSON ',1)[1]) for line in log.splitlines() if 'DIRECT_HANDOFF_JSON ' in line]
         imported=next(x for x in imports if x['event']=='import' and x['token']['generation']==state['token']['generation'])
@@ -217,13 +225,13 @@ class Controller(HandoffController):
             'controller_rpc':controller_rpc,
             'kernel_profile':kernel_profile,
             'timing':timing,'export_token':state['token'],'state_file':state_file,
-            'sealed_file':sealed_file,'manifest_file':manifest_file}
+            'sealed_file':sealed_file,'manifest_file':manifest_file,'packet_file':packet_file}
 
 
 def bench(a):
     _,config=lab.current_run();out=a.output;out.mkdir(parents=True,exist_ok=False)
     c=Controller(config,out,a.arm,profiled=True,inline_guest_ack=a.inline_guest_ack,
-                 resume_nokick=a.resume_nokick,exec_request=a.exec_request, resident_native_control=getattr(a, "resident_native_control", False));s=c.sandboxes[0]
+                 resume_nokick=a.resume_nokick,exec_request=a.exec_request, resident_native_control=getattr(a, "resident_native_control", False), resident_memory_control=getattr(a, "resident_memory_control", False));s=c.sandboxes[0]
     report={'schema':'backend-ablation-trial-v1','arm':a.arm,'result':'running','fixture':c.fixture,
         'config':config,'receipts':c.receipts,'commands':c.commands,'api_events':c.api_events,
         'launches':c.launches,'hops':[],'backend_reads':[],'logs':[],'parked_combined_action_test':True,
@@ -309,7 +317,7 @@ def suite(a):
                 if a.serial_control:start.append('--serial-control')
                 require(command(start,'start')==0,'Lab start failed')
                 flags=[name for name,value in (('--inline-guest-ack',a.inline_guest_ack),
-                    ('--resident-native-control',a.resident_native_control),('--resume-nokick',a.resume_nokick),('--exec-request',a.exec_request),('--kernel-trace',a.kernel_trace)) if value]
+                    ('--resident-memory-control',a.resident_memory_control),('--resident-native-control',a.resident_native_control),('--resume-nokick',a.resume_nokick),('--exec-request',a.exec_request),('--kernel-trace',a.kernel_trace)) if value]
                 require(command(prefix+[HERE/'backend_ablation.py','bench','--arm',arm,'--hops',str(a.hops),
                     '--output',a.output/ident]+flags,'bench')==0,'Benchmark failed')
                 row['result']='passed'
@@ -344,10 +352,10 @@ def main():
     b=sub.add_parser('build');b.add_argument('--base',type=Path,required=True);b.add_argument('--pool-storage',type=Path,required=True)
     b.add_argument('--output',type=Path,required=True)
     b=sub.add_parser('bench');b.add_argument('--arm',choices=ARMS,required=True);b.add_argument('--hops',type=int,default=24)
-    for flag in ('--resident-native-control','--inline-guest-ack','--resume-nokick','--exec-request','--kernel-trace'):b.add_argument(flag,action='store_true')
+    for flag in ('--resident-memory-control','--resident-native-control','--inline-guest-ack','--resume-nokick','--exec-request','--kernel-trace'):b.add_argument(flag,action='store_true')
     b.add_argument('--output',type=Path,required=True)
     b=sub.add_parser('run');b.add_argument('--assets',type=Path,required=True);b.add_argument('--qemu',type=Path,required=True)
-    for flag in ('--resident-native-control','--inline-guest-ack','--resume-nokick','--serial-control','--exec-request','--kernel-trace'):b.add_argument(flag,action='store_true')
+    for flag in ('--resident-memory-control','--resident-native-control','--inline-guest-ack','--resume-nokick','--serial-control','--exec-request','--kernel-trace'):b.add_argument(flag,action='store_true')
     b.add_argument('--qemu-root',type=Path,required=True);b.add_argument('--session',required=True)
     b.add_argument('--arms',choices=ARMS,nargs='+',default=list(ARMS));b.add_argument('--hops',type=int,default=24)
     b.add_argument('--output',type=Path,required=True)

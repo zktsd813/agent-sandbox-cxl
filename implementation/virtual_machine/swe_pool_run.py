@@ -56,6 +56,7 @@ def arguments():
     parser.add_argument("--resident-fast-control", action="store_true")
     parser.add_argument("--resident-ready-control", action="store_true")
     parser.add_argument("--resident-native-control", action="store_true")
+    parser.add_argument("--resident-memory-control", action="store_true")
     parser.add_argument("--immutable-nfs-cache", action="store_true",
                         help="Remount the image filesystem readonly and allow 60s NFS attribute caching/nocto")
     parser.add_argument("--direct-profile-roundtrips", type=int, default=0)
@@ -181,6 +182,8 @@ def main():
                 bench.append("--resident-fast-control")
             if mode == "direct" and args.resident_ready_control:
                 bench.append("--resident-ready-control")
+            if mode == "direct" and args.resident_memory_control:
+                bench.append("--resident-memory-control")
             if mode == "direct" and args.resident_native_control:
                 bench.append("--resident-native-control")
             if mode == "direct" and args.resident_direct:
