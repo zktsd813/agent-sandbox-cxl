@@ -873,13 +873,19 @@ def main():
         lab.verify(argparse.Namespace(timeout=180))
         setup(c)
         report["runtime_hashes"] = {}
+        def upload_override(role, name, path, kind):
+            # RPC uploads are restricted to /run and /tmp. Stage the explicit
+            # test override there, then install it in this disposable L1.
+            staged = "/run/pool-handoff-override-" + name
+            c.write_bytes(role, staged, path.read_bytes(), kind,
+                          after="mv " + staged + " /lab/" + name)
         for role in ("A", "B"):
             if args.memory_module:
-                c.write_bytes(role, "/lab/pool_memory_module.ko", args.memory_module.read_bytes(), "module-upload")
+                upload_override(role, "pool_memory_module.ko", args.memory_module, "module-upload")
             for path, name in ((args.firecracker, "firecracker"), (args.memory_smoke, "pool-memory-smoke-20261030"),
                                (args.kvm_memory_smoke, "pool-memory-kvm-smoke-20261030")):
                 if path:
-                    c.write_bytes(role, "/lab/" + name, path.read_bytes(), "runtime-upload")
+                    upload_override(role, name, path, "runtime-upload")
                     c.shell(role, "chmod 755 /lab/" + name, "runtime-executable")
             c.shell(role, "insmod /lab/pool_memory_module.ko\ntest -c /dev/cxl_pool", "load-memory-module")
             raw, name = c.shell(role, "sha256sum /lab/firecracker /lab/l2-vmlinux /lab/pool-handoff-probe "
