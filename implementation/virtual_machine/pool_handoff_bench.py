@@ -76,7 +76,7 @@ class HandoffController(PoolController):
         if getattr(self.args, "full_audit", False):
             # The discard oracle joins host mapping/ACK receipts with guest
             # trace ranges. Ordinary runtime deliberately omits these logs.
-            env["FC_POOL_DISCARD_TRACE"] = "1"
+            env.update(FC_POOL_DISCARD_TRACE="1", FC_RESTORE_TIMING="1")
         resident = getattr(self.args, "resident_direct", False)
         if resident:
             env.update(FC_DAX_RESIDENT="1", FC_DAX_RESIDENT_IMPORT=s.directory+"/direct-import.json",
@@ -564,7 +564,8 @@ class HandoffController(PoolController):
         import_rows = [json.loads(line.split("DIRECT_HANDOFF_JSON ", 1)[1]) for line in log.decode().splitlines()
                        if "DIRECT_HANDOFF_JSON " in line]
         imports = [r for r in import_rows if r["event"] == "import"]
-        require(len(imports) == 1 and imports[0]["snapshot_bytes"] == imports[0]["ram_transfer_bytes"] == 0,
+        require(len(imports) == 1, "Missing/duplicate direct import evidence; enable full audit or restore timing")
+        require(imports[0]["snapshot_bytes"] == imports[0]["ram_transfer_bytes"] == 0,
                 "Direct target used snapshot or RAM transfer")
         for key in ("vm_offset", "vcpu_offset", "vmcs_offset", "run_offset", "ept_root_offset", "ram_hva",
                     "ram_bytes", "generation", "vm_creates", "vcpu_creates"):
