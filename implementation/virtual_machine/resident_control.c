@@ -28,6 +28,7 @@
 static char directory[160], socket_path[192];
 static int readiness_pipe = -1;
 static int api_fd = -1;
+static int native_fd = -1, native_enabled;
 static int peer_fd = -1;
 static int owner_fd = -1, prepared_owner_pid, selector_fd = -1;
 struct metadata_file { int fd; size_t length; };
@@ -131,7 +132,33 @@ static void connect_api(void) {
  api_fd=fd;
  }
 }
+static int connect_native(void) {
+ if(!native_enabled)return 0;
+ if(native_fd>=0)return 1;
+ int fd=socket(AF_UNIX,SOCK_STREAM|SOCK_CLOEXEC,0);if(fd<0)fail("native socket");timeout(fd);
+ struct sockaddr_un address={.sun_family=AF_UNIX};
+ check(snprintf(address.sun_path,sizeof(address.sun_path),"%s/resident.sock",directory)>0,"native path");
+ if(connect(fd,(void*)&address,sizeof(address))) {
+  int error=errno;close(fd);
+  // Before the first attach the destination has only its preboot HTTP API.
+  check(error==ENOENT||error==ECONNREFUSED,"native connect");return 0;
+ }
+ struct ucred peer;socklen_t size=sizeof(peer);
+ if(getsockopt(fd,SOL_SOCKET,SO_PEERCRED,&peer,&size))fail("native peer identity");
+ check(peer.pid==owner_pid(),"native endpoint belongs to another process");
+ native_fd=fd;
+ unsigned char command=0;uint64_t response[2];
+ send_all(fd,&command,1);recv_all(fd,response,sizeof(response));check(response[0]==0,"native ready");
+ return 1;
+}
 static struct api_result api(const char *method,const char *route,const char *body) {
+ if(connect_native()) {
+  unsigned char command=!strcmp(body,"{\"action_type\": \"DirectSend\"}")?1:2;
+  check(command==1||!strcmp(body,"{\"action_type\": \"DirectReceive\"}"),"native action");
+  uint64_t start=ns(),response[2];send_all(native_fd,&command,1);recv_all(native_fd,response,sizeof(response));
+  check(response[0]==0,"native handoff failed");
+  return (struct api_result){.status=204,.us=(ns()-start)/1000.};
+ }
  struct api_result result={0};uint64_t start=ns();connect_api();
  int fd=api_fd;
  char q[2048];int len=snprintf(q,sizeof(q),"%s %s HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: %zu\r\n\r\n%s",method,route,strlen(body),body);
@@ -226,6 +253,7 @@ static uint64_t number(const char *s) {
  check(s[0] && strspn(s,"0123456789")==strlen(s) && !errno && !*end,"integer argument");return n;
 }
 int main(int argc,char **argv) {
+ const char *native_env=getenv("FC_RESIDENT_NATIVE");native_enabled=native_env&&!strcmp(native_env,"1");
  const char *profile_env=getenv("FC_RESIDENT_PROFILE");profile_enabled=profile_env&&!strcmp(profile_env,"1");
  check(argc==5||argc==6||argc==7||argc==12||argc==13,"usage: serve DIR IP NONCE | handoff DIR PEER NONCE FIRST LABEL | request DIR LOCAL_IP NONCE FIRST LABEL PEER VM EPOCH START BYTES [OBSERVE]");
  check(strlen(argv[2])<sizeof(directory)&&!strncmp(argv[2],"/run/swe-pool-",14),"owned directory required");strcpy(directory,argv[2]);path(socket_path,sizeof(socket_path),"api.sock");
@@ -258,6 +286,7 @@ int main(int argc,char **argv) {
   selector_fd=open("/sys/module/kvm/parameters/dax_owner_pid",O_WRONLY|O_CLOEXEC);
   if(selector_fd<0)fail("prepare owner parameter");
   connect_api();
+  (void)connect_native();
   import_file=prepare_metadata("direct-import.json");
   manifest_file=prepare_metadata("restore-manifest.json");
   if(argc==6) {

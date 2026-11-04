@@ -76,6 +76,8 @@ class HandoffController(PoolController):
         if resident:
             env.update(FC_DAX_RESIDENT="1", FC_DAX_RESIDENT_IMPORT=s.directory+"/direct-import.json",
                 FC_DAX_RESIDENT_MANIFEST=s.directory+"/restore-manifest.json")
+            if getattr(self.args, 'resident_native_control', False):
+                env['FC_RESIDENT_NATIVE'] = '1'
         if restore_manifest:
             local = s.directory + "/restore-manifest.json"
             if purpose != "resident-prepare":

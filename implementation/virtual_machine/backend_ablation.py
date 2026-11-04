@@ -93,12 +93,12 @@ class Controller(HandoffController):
     setup = SWEController.setup
     configure_direct = SWEController.configure_direct
 
-    def __init__(self, config, out, arm, *, profiled=True, inline_guest_ack=False, resume_nokick=False, exec_request=False):
+    def __init__(self, config, out, arm, *, profiled=True, inline_guest_ack=False, resume_nokick=False, exec_request=False, resident_native_control=False):
         args = argparse.Namespace(memory_mib=2048, vcpus=1, sandboxes=1, minimum_cache_mib=128,
             io_engine='Async', mode='direct', credit_mib=16, resident_direct=True,
             resident_ready_control=True, resident_skip_disk_prepare=arm in ('none', 'nfs-unprepared'),
             immutable_nfs_cache=True, restore_timing=profiled, full_audit=False, resume_nokick=resume_nokick,
-            exec_request=exec_request)
+            exec_request=exec_request, resident_native_control=resident_native_control)
         super().__init__(config, out, args)
         self.root = '/run/swe-pool-'+secrets.token_hex(8)
         self.arm = arm
@@ -223,7 +223,7 @@ class Controller(HandoffController):
 def bench(a):
     _,config=lab.current_run();out=a.output;out.mkdir(parents=True,exist_ok=False)
     c=Controller(config,out,a.arm,profiled=True,inline_guest_ack=a.inline_guest_ack,
-                 resume_nokick=a.resume_nokick,exec_request=a.exec_request);s=c.sandboxes[0]
+                 resume_nokick=a.resume_nokick,exec_request=a.exec_request, resident_native_control=getattr(a, "resident_native_control", False));s=c.sandboxes[0]
     report={'schema':'backend-ablation-trial-v1','arm':a.arm,'result':'running','fixture':c.fixture,
         'config':config,'receipts':c.receipts,'commands':c.commands,'api_events':c.api_events,
         'launches':c.launches,'hops':[],'backend_reads':[],'logs':[],'parked_combined_action_test':True,
@@ -309,7 +309,7 @@ def suite(a):
                 if a.serial_control:start.append('--serial-control')
                 require(command(start,'start')==0,'Lab start failed')
                 flags=[name for name,value in (('--inline-guest-ack',a.inline_guest_ack),
-                    ('--resume-nokick',a.resume_nokick),('--exec-request',a.exec_request),('--kernel-trace',a.kernel_trace)) if value]
+                    ('--resident-native-control',a.resident_native_control),('--resume-nokick',a.resume_nokick),('--exec-request',a.exec_request),('--kernel-trace',a.kernel_trace)) if value]
                 require(command(prefix+[HERE/'backend_ablation.py','bench','--arm',arm,'--hops',str(a.hops),
                     '--output',a.output/ident]+flags,'bench')==0,'Benchmark failed')
                 row['result']='passed'
@@ -344,10 +344,10 @@ def main():
     b=sub.add_parser('build');b.add_argument('--base',type=Path,required=True);b.add_argument('--pool-storage',type=Path,required=True)
     b.add_argument('--output',type=Path,required=True)
     b=sub.add_parser('bench');b.add_argument('--arm',choices=ARMS,required=True);b.add_argument('--hops',type=int,default=24)
-    for flag in ('--inline-guest-ack','--resume-nokick','--exec-request','--kernel-trace'):b.add_argument(flag,action='store_true')
+    for flag in ('--resident-native-control','--inline-guest-ack','--resume-nokick','--exec-request','--kernel-trace'):b.add_argument(flag,action='store_true')
     b.add_argument('--output',type=Path,required=True)
     b=sub.add_parser('run');b.add_argument('--assets',type=Path,required=True);b.add_argument('--qemu',type=Path,required=True)
-    for flag in ('--inline-guest-ack','--resume-nokick','--serial-control','--exec-request','--kernel-trace'):b.add_argument(flag,action='store_true')
+    for flag in ('--resident-native-control','--inline-guest-ack','--resume-nokick','--serial-control','--exec-request','--kernel-trace'):b.add_argument(flag,action='store_true')
     b.add_argument('--qemu-root',type=Path,required=True);b.add_argument('--session',required=True)
     b.add_argument('--arms',choices=ARMS,nargs='+',default=list(ARMS));b.add_argument('--hops',type=int,default=24)
     b.add_argument('--output',type=Path,required=True)
