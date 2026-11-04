@@ -54,6 +54,21 @@ class SWEController(HandoffController):
         self.resident_readiness, self.resident_preparations = {}, []
         self.serial_number = 0
         self.kernel_profile_offset = 12288 * MIB + 512 if args.restore_timing else None
+        self.kernel_traces = []
+
+    def direct_handoff(self, s, destination):
+        if not getattr(self.args, 'kernel_trace', False):
+            return super().direct_handoff(s, destination)
+        import kernel_handoff_trace
+        # Restrict probes to one handoff at a time: do not trace the whole SWE
+        # workload or let unrelated TLB events overflow the diagnostic buffer.
+        kernel_handoff_trace.start(self, reuse=bool(self.kernel_traces))
+        epoch = s.epoch + 1
+        kernel_handoff_trace.mark(self, epoch)
+        row = super().direct_handoff(s, destination)
+        self.kernel_traces.append({'epoch':epoch, 'destination':destination,
+                                  'nodes':kernel_handoff_trace.finish(self)})
+        return row
 
     def wait_event(self, role, directory, event, label=None, timeout=120):
         pattern = f'"event":"{event}"'
@@ -307,6 +322,7 @@ def main():
     parser.add_argument('--credit-mib', type=int, default=256)
     parser.add_argument("--full-audit", action="store_true")
     parser.add_argument("--restore-timing", action="store_true")
+    parser.add_argument("--kernel-trace", action="store_true")
     parser.add_argument("--resume-nokick", action="store_true")
     parser.add_argument("--exec-request", action="store_true")
     parser.add_argument("--inflight-handoff-index", type=int, help="Test two handoffs while this real command is alive")
@@ -330,6 +346,7 @@ def main():
             (not args.direct_profile_roundtrips or args.mode == 'direct'), 'Invalid direct profile repetitions')
     require(args.inflight_handoff_index is None or (args.mode == 'direct' and not args.full_audit),
             'In-flight test requires direct runtime mode')
+    require(not args.kernel_trace or args.mode == 'direct', 'Kernel tracing requires direct mode')
     require(args.memory_mib == 2048 and args.credit_mib == 256, 'Use the bounded 2GiB/256MiB workload layout')
     run, config = lab.current_run()
     require(config['cxl_mib'] == 16384 and bool(config.get('dax_handoff')) == (args.mode == 'direct'), 'Wrong fresh pair mode/capacity')
@@ -415,6 +432,8 @@ def main():
         report['controller_replay_ns'] = time.monotonic_ns()-started
         report['guest_duration_s'] = sum(x['guest_duration_s'] for x in c.trace_commands)
         report['runtime_audits'] = False
+        if args.kernel_trace:
+            report['kernel_trace'] = c.kernel_traces
         report['allocator_final'] = c.allocator.summary()
         require(report['allocator_final']['allocated_bytes'] == 0, 'CXL grant leak')
         report['result'] = 'passed'

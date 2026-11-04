@@ -48,6 +48,7 @@ def arguments():
     parser.add_argument("--modes", choices=MODES, nargs="+", default=list(MODES))
     parser.add_argument("--memory-mib", type=int, default=2048)
     parser.add_argument("--restore-timing", action="store_true")
+    parser.add_argument("--kernel-trace", action="store_true")
     parser.add_argument("--resume-nokick", action="store_true")
     parser.add_argument("--exec-request", action="store_true")
     parser.add_argument("--inflight-handoff-index", type=int)
@@ -76,6 +77,8 @@ def arguments():
         parser.error("Profile repetitions require only direct mode and 0..20 roundtrips")
     if args.inflight_handoff_index is not None and (args.modes != ["direct"] or len(args.names) != 1):
         parser.error("In-flight index requires one explicit trace and direct mode")
+    if args.kernel_trace and args.modes != ['direct']:
+        parser.error("Kernel tracing requires only direct mode")
     if len(set(args.names)) != len(args.names) or len(set(args.modes)) != len(args.modes):
         parser.error("Do not repeat trace names or modes")
     return args
@@ -190,6 +193,8 @@ def main():
                 bench.extend(["--resident-direct", "--resident-repromote-handoff"])
             if args.restore_timing:
                 bench.append("--restore-timing")
+            if args.kernel_trace:
+                bench.append("--kernel-trace")
             if args.resume_nokick and mode == 'direct':
                 bench.append('--resume-nokick')
             if args.exec_request and mode == 'direct':

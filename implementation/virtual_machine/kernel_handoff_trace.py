@@ -13,9 +13,9 @@ OPTIONAL_FUNCTIONS={'nested_root':('kvm','kvm_dax_nested_root_sync'),
                     'tlb_guest':('kvm_intel','vmx_flush_tlb_guest')}
 
 
-def start(c):
+def start(c, *, reuse=False):
     script='mount -t tracefs tracefs /sys/kernel/tracing 2>/dev/null || true\nT=/sys/kernel/tracing\necho 0 > $T/tracing_on\necho nop > $T/current_tracer\necho mono > $T/trace_clock\necho 1024 > $T/buffer_size_kb\necho > $T/trace\n'
-    for name,(module,function) in (FUNCTIONS | OPTIONAL_FUNCTIONS).items():
+    for name,(module,function) in ({} if reuse else FUNCTIONS | OPTIONAL_FUNCTIONS).items():
         if name in OPTIONAL_FUNCTIONS:
             # GCC may specialize this noinline helper as .isra.0. Resolve the
             # actual text symbol; a word grep also matches the unsuffixed prefix.
@@ -40,7 +40,7 @@ def mark(c,epoch):
 def finish(c):
     rows=[]
     for role in ('A','B'):
-        raw,name=c.shell(role,'T=/sys/kernel/tracing\necho 0 > $T/tracing_on\ncat $T/trace\ncat $T/per_cpu/cpu*/stats','kernel-trace')
+        raw,name=c.shell(role,'T=/sys/kernel/tracing\necho 0 > $T/tracing_on\necho 0 > $T/events/resident_diag/enable\ncat $T/trace\ncat $T/per_cpu/cpu*/stats','kernel-trace')
         rows.append({'role':role,'file':name,'intervals':parse(raw)})
     return rows
 
