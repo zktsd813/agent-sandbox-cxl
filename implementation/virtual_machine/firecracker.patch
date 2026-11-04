@@ -92,7 +92,7 @@ index a3b3f3f3a..5eb4bbaf1 100644
              parse_put_actions(&Body::new("invalid_body")).unwrap_err();
  
 diff --git a/src/firecracker/src/api_server_adapter.rs b/src/firecracker/src/api_server_adapter.rs
-index 70abff48c..3c1fa8281 100644
+index 70abff48c..194642c2c 100644
 --- a/src/firecracker/src/api_server_adapter.rs
 +++ b/src/firecracker/src/api_server_adapter.rs
 @@ -2,10 +2,13 @@
@@ -384,7 +384,7 @@ index 70abff48c..3c1fa8281 100644
                          break;
                      }
                  }
-@@ -272,3 +484,79 @@ pub(crate) fn run_with_api(
+@@ -272,3 +484,107 @@ pub(crate) fn run_with_api(
  
      result
  }
@@ -394,6 +394,34 @@ index 70abff48c..3c1fa8281 100644
 +    use std::sync::atomic::{AtomicUsize, Ordering};
 +
 +    use super::*;
++
++    #[test]
++    fn resident_control_reassembles_fragments_and_rejects_oversized_frames() {
++        let directory = vmm_sys_util::tempdir::TempDir::new().unwrap();
++        let path = directory.as_path().join("resident.sock");
++        let listener = UnixListener::bind(&path).unwrap();
++        listener.set_nonblocking(true).unwrap();
++        let control = Arc::new(Mutex::new(ResidentControl {
++            listener, stream: None, request: None, input: Vec::new(),
++        }));
++        let mut events = EventManager::new().unwrap();
++        events.add_subscriber(control.clone());
++        let mut client = UnixStream::connect(path).unwrap();
++        events.run_with_timeout(100).unwrap();
++        client.write_all(&[4, 3]).unwrap();
++        events.run_with_timeout(100).unwrap();
++        assert!(control.lock().unwrap().request.is_none());
++        client.write_all(&[0, 0, 0, b'x', b'y']).unwrap();
++        events.run_with_timeout(100).unwrap();
++        assert!(control.lock().unwrap().request.is_none());
++        client.write_all(b"z").unwrap();
++        events.run_with_timeout(100).unwrap();
++        assert_eq!(control.lock().unwrap().request.take(), Some((4, b"xyz".to_vec())));
++        client.write_all(&[4, 0, 0, 1, 0]).unwrap(); // 65536 exceeds the bound.
++        events.run_with_timeout(100).unwrap();
++        assert!(control.lock().unwrap().stream.is_none());
++        assert!(control.lock().unwrap().request.is_none());
++    }
 +
 +    struct DeviceEventProbe {
 +        event: EventFd,
@@ -2340,10 +2368,10 @@ index 2a75945f6..fe91a5d09 100644
      type ConstructorArgs = MmioTransportConstructorArgs;
 diff --git a/src/vmm/src/direct.rs b/src/vmm/src/direct.rs
 new file mode 100644
-index 000000000..88d454568
+index 000000000..aacc566f3
 --- /dev/null
 +++ b/src/vmm/src/direct.rs
-@@ -0,0 +1,759 @@
+@@ -0,0 +1,791 @@
 +// Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 +// SPDX-License-Identifier: Apache-2.0
 +
@@ -2455,6 +2483,14 @@ index 000000000..88d454568
 +    io_enabled() && std::env::var_os("FC_DAX_DIRECT_IMPORT").is_some()
 +}
 +
++type ResidentPacket = (u32, HandoffToken, DevicesState, crate::pool_memory::Manifest);
++fn decode_resident_packet(bytes: &[u8]) -> io::Result<ResidentPacket> {
++    if bytes.is_empty() || bytes.len() >= 65536 { return Err(invalid("resident packet size")); }
++    let packet: ResidentPacket = bitcode::deserialize(bytes).map_err(|e| invalid(e.to_string()))?;
++    if packet.0 != 1 { return Err(invalid("resident packet version")); }
++    Ok(packet)
++}
++
 +fn invalid(message: impl Into<String>) -> io::Error {
 +    io::Error::new(io::ErrorKind::InvalidInput, message.into())
 +}
@@ -2552,6 +2588,7 @@ index 000000000..88d454568
 +        self.export_inner(events, false).map(|_| ())
 +    }
 +
++    /// Pause and publish bounded device/mapper state without filesystem staging.
 +    pub fn send_resident_memory(&mut self, events: &mut EventManager) -> Result<Vec<u8>, VmmError> {
 +        if !resident_enabled() || resident_parked() { return Err(VmmError::DaxPreflight("resident sender is not owner")); }
 +        self.pause_vm()?;
@@ -2721,6 +2758,7 @@ index 000000000..88d454568
 +    pub(crate) fn import_resident(&mut self, events: &mut EventManager) -> Result<(), VmmError> {
 +        self.import_resident_inner(events, None)
 +    }
++    /// Import the latest resident state and resume its single execution owner.
 +    pub fn receive_resident_memory(&mut self, events: &mut EventManager, bytes: &[u8]) -> Result<(), VmmError> {
 +        self.import_resident_inner(events, Some(bytes))?;
 +        self.resume_vm()
@@ -2732,10 +2770,7 @@ index 000000000..88d454568
 +        }
 +        let mut timing = crate::persist::RestoreTiming::new("direct_resident_import");
 +        let (mut state, mapper) = if let Some(bytes) = packet {
-+            if bytes.len() >= 65536 { return Err(err(invalid("resident packet too large"))); }
-+            let (version, token, devices, mapper): (u32, HandoffToken, DevicesState, crate::pool_memory::Manifest) =
-+                bitcode::deserialize(bytes).map_err(|e| err(invalid(e.to_string())))?;
-+            if version != 1 { return Err(err(invalid("resident packet version"))); }
++            let (_, token, devices, mapper) = decode_resident_packet(bytes).map_err(err)?;
 +            (DirectState { schema: "direct-device-handoff-v1".into(), token, devices,
 +                machine_config: self.machine_config.clone(), boot_source: self.boot_source_config.clone(),
 +                memory: self.vm.as_kvm().unwrap().guest_memory().describe(), memory_manifest_sha256: String::new() }, Some(mapper))
@@ -3088,6 +3123,31 @@ index 000000000..88d454568
 +            let mut bad = next.clone(); mutate(&mut bad);
 +            assert!(validate_resident_token(&first, &bad).is_err());
 +        }
++    }
++
++    #[test]
++    #[ignore = "requires a completed disposable VM trial via CXL_RESIDENT_TRIAL"]
++    fn resident_binary_evidence_matches_wire_and_rejects_truncation() {
++        let path = std::path::PathBuf::from(std::env::var_os("CXL_RESIDENT_TRIAL").expect("trial report"));
++        let report: serde_json::Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
++        assert_eq!(report["result"], "passed");
++        let root = path.parent().unwrap();
++        let mut checked = 0;
++        for hop in report["hops"].as_array().unwrap() {
++            let Some(packet_path) = hop["packet_file"].as_str() else { continue; };
++            let bytes = std::fs::read(root.join(packet_path)).unwrap();
++            let (_, token, devices, mapper) = decode_resident_packet(&bytes).unwrap();
++            let state: DirectState = serde_json::from_slice(&std::fs::read(root.join(hop["state_file"].as_str().unwrap())).unwrap()).unwrap();
++            let expected: serde_json::Value = serde_json::from_slice(&std::fs::read(root.join(hop["sealed_file"].as_str().unwrap())).unwrap()).unwrap();
++            assert_eq!(token, state.token);
++            assert_eq!(serde_json::to_value(devices).unwrap(), serde_json::to_value(state.devices).unwrap());
++            assert_eq!(serde_json::to_value(mapper).unwrap(), expected);
++            for end in 0..bytes.len() { assert!(decode_resident_packet(&bytes[..end]).is_err(), "accepted truncated packet {end}"); }
++            let mut trailing = bytes; trailing.push(0);
++            assert!(decode_resident_packet(&trailing).is_err());
++            checked += 1;
++        }
++        assert!(checked >= 3, "insufficient binary handoffs");
 +    }
 +
 +    #[test]

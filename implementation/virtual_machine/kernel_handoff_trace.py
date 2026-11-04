@@ -7,14 +7,20 @@ FUNCTIONS={'arch':('kvm','kvm_arch_dax_handoff'),
            'vmx':('kvm_intel','vmx_dax_handoff'),
            'pit':('kvm','kvm_pit_dax_handoff'),
            'lapic':('kvm','kvm_lapic_dax_handoff')}
+OPTIONAL_FUNCTIONS={'nested_root':('kvm','kvm_dax_nested_root_sync'),
+                    'tlb_current':('kvm_intel','vmx_flush_tlb_current')}
 
 
 def start(c):
     script='mount -t tracefs tracefs /sys/kernel/tracing 2>/dev/null || true\nT=/sys/kernel/tracing\necho 0 > $T/tracing_on\necho nop > $T/current_tracer\necho mono > $T/trace_clock\necho 1024 > $T/buffer_size_kb\necho > $T/trace\n'
-    for name,(module,function) in FUNCTIONS.items():
-        for edge,definition in [('enter',f'p:resident_diag/{name}_enter {module}:{function} attach=$arg2:x32'),
+    for name,(module,function) in (FUNCTIONS | OPTIONAL_FUNCTIONS).items():
+        if name in OPTIONAL_FUNCTIONS:
+            script+=f'if grep -qw {shlex.quote(function)} /proc/kallsyms; then\n'
+        argument=' attach=$arg2:x32' if name in FUNCTIONS else ''
+        for edge,definition in [('enter',f'p:resident_diag/{name}_enter {module}:{function}{argument}'),
                                 ('exit',f'r128:resident_diag/{name}_exit {module}:{function}')]:
             script+=f"printf '%s\\n' {shlex.quote(definition)} >> $T/kprobe_events\n"
+        if name in OPTIONAL_FUNCTIONS:script+='fi\n'
     script+='echo 1 > $T/events/resident_diag/enable\necho 1 > $T/tracing_on'
     for role in ('A','B'):c.shell(role,script,'kernel-trace-start')
 
@@ -44,7 +50,7 @@ def parse(text):
         timestamp=int(sec)*1000000000+int((frac+'000000000')[:9])
         marker=re.search(r'RESIDENT_KERNEL_EPOCH=(\d+)',fields)
         if marker:epoch=int(marker[1]);continue
-        for kind in FUNCTIONS:
+        for kind in FUNCTIONS | OPTIONAL_FUNCTIONS:
             if event==kind+'_enter':
                 arg=re.search(r'attach=(0x[0-9a-f]+|\d+)',fields)
                 stacks.setdefault((kind,pid),[]).append((timestamp,epoch,bool(int(arg[1],0)) if arg else None))

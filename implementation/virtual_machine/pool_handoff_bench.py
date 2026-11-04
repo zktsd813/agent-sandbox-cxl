@@ -16,6 +16,7 @@ import shutil
 import time
 
 import lab
+from experiment_sources import record_sources
 import nfs_bench as nfs
 from home_storage_bench import setup, require, json_lines
 from pool_bench import PoolController, HERE, MIB
@@ -861,10 +862,7 @@ def main():
         "pool_memory_module.c", "pool_memory_smoke.c", "pool_memory_kvm_smoke.c", "pool-handoff-l2-init.sh",
         "pool_discard_bench.py", "pool_bench.py", "pool_control.py", "home_storage_bench.py",
         "nfs_bench.py", "trace_bench.py", "lab.py")
-    (out / "measured-sources").mkdir()
-    for name in sources:
-        shutil.copy2(HERE / name, out / "measured-sources" / name)
-    report["source_hashes"] = {name: lab.sha256(HERE / name) for name in sources}
+    report["source_hashes"], report["source_reference"] = record_sources(HERE, sources)
     report["runtime_overrides"] = {name: {"path": str(path.resolve()), "sha256": lab.sha256(path)}
         for name, path in (("memory_module", args.memory_module), ("firecracker", args.firecracker),
                            ("memory_smoke", args.memory_smoke), ("kvm_memory_smoke", args.kvm_memory_smoke)) if path}

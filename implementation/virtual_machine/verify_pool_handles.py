@@ -10,6 +10,7 @@ import collections
 import json
 from pathlib import Path
 import re
+from experiment_sources import verify_sources
 
 from verify_pool_handoff import (Evidence, PAGE, MIB, need, sha, registration,
                                 status_proof, same, ranges, dram_mapping, paused, extended)
@@ -30,8 +31,7 @@ def verify(path):
     path=Path(path); r=json.loads(path.read_text());e=Evidence(r,path.parent)
     need(r['result']=='passed' and r['arguments']['sandboxes']==3 and r['arguments']['cycles']>=2, 'incomplete stress matrix')
     memory=r['arguments']['memory_mib']*MIB;minimum=r['arguments']['minimum_cache_mib']*MIB
-    for name,digest in r['source_hashes'].items():
-        need(sha((path.parent/'measured-sources'/name).read_bytes())==digest,'source hash '+name)
+    verify_sources(r, path.parent)
     commands = [e.guest(c) for c in r['commands']]
     boots_by_vm = {}
     for c in commands: boots_by_vm.setdefault(c['vm'], set()).add(c['boot_id'])

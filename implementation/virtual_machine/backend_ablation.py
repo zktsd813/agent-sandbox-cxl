@@ -271,6 +271,14 @@ def bench(a):
             save()
         require(s.role=='A','Even number of hops required')
         if a.kernel_trace:report['kernel_trace']=kernel_handoff_trace.finish(c)
+        report['idle_cpu']=[]
+        for role,worker in c.resident_workers.items():
+            raw,name=c.shell(role,f"read p t < {worker['directory']}/fc.pid\n"
+                'cat /proc/$p/task/$p/stat\nsleep .1\ncat /proc/$p/task/$p/stat', 'idle-main-thread')
+            samples=[line.rsplit(')',1)[1].split() for line in raw.splitlines() if ') ' in line and line.split()[0].isdigit()]
+            require(len(samples)==2,'Idle CPU samples missing')
+            report['idle_cpu'].append({'role':role,'file':name,
+                'ticks':sum(int(samples[1][i])-int(samples[0][i]) for i in (11,12)),'interval_ms':100})
         report['after']=c.command_vm(s,'check',require_cache=True)
         c.same_identity(report['before'],report['after'])
         if a.arm!='none':report['backend_reads'].append(c.backend_read(s))

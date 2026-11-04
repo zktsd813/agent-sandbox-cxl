@@ -10,6 +10,7 @@ import subprocess
 import sys
 
 import lab
+from experiment_sources import record_sources
 
 HERE = Path(__file__).resolve().parent
 
@@ -43,14 +44,12 @@ def main():
     sources = ("pool_handoff_run.py", "pool_handoff_bench.py", "pool_handoff_control.py",
                "guest_pool_protocol.py", "verify_pool_handles.py", "lab.py",
                "firecracker.patch", "kvm-dax-state.patch", "kvm-dax-source.json")
-    (output / "measured-sources").mkdir()
-    for name in sources:
-        shutil.copy2(HERE / name, output / "measured-sources" / name)
+    source_hashes, source_reference = record_sources(HERE, sources)
     suite = {"schema": "guest-pool-handoff-suite-v1", "result": "running",
              "arguments": {k: str(v) if isinstance(v, Path) else v for k, v in vars(a).items()},
              "fixture_manifest": manifest, "fixture_manifest_sha256": lab.sha256(assets / "manifest.json"),
              "qemu_sha256": lab.sha256(qemu), "kvm_memory_smoke_sha256": lab.sha256(smoke),
-             "source_hashes": {name: lab.sha256(output / "measured-sources" / name) for name in sources},
+             "source_hashes": source_hashes, "source_reference": source_reference,
              "arms": []}
 
     def save():

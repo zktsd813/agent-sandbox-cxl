@@ -483,7 +483,7 @@
  	if (!page)
  		return -ENOMEM;
  
-@@ -6044,6 +6045,106 @@
+@@ -6044,6 +6045,110 @@
  	free_mmu_pages(&vcpu->arch.guest_mmu);
  	return ret;
  }
@@ -500,6 +500,19 @@
 +	vcpu->arch.mmu_page_header_cache.kmem_cache = mmu_page_header_cache;
 +	vcpu->kvm->arch.split_page_header_cache.kmem_cache = mmu_page_header_cache;
 +	vcpu->kvm->arch.split_desc_cache.kmem_cache = pte_list_desc_cache;
++}
++
++static noinline void kvm_dax_nested_root_sync(struct kvm_vcpu *vcpu)
++{
++	/* Outer KVM cannot observe EPT writes made by a different L1 VM.
++	 * INVEPT drops local root references, but cached indirect shadow
++	 * pages can still survive through other L1 vCPUs. A non-entry-
++	 * aligned byte write invokes outer KVM's whole shadow-page zap.
++	 * Touch the retained root only; no RAM or EPT leaf walk. This is
++	 * an explicit nested-KVM lab accommodation, never a CXL flush.
++	 * The guest is paused and the previous owner has been fenced. */
++	u8 *root = (u8 *)__va(vcpu->arch.mmu->root.hpa) + 1;
++	WRITE_ONCE(*root, READ_ONCE(*root));
 +}
 +
 +int kvm_mmu_dax_ept_rebind(struct kvm_vcpu *vcpu, bool attach)
@@ -542,17 +555,8 @@
 +			}
 +		}
 +	}
-+	if (attach && dax_nested_root_sync) {
-+		/* Outer KVM cannot observe EPT writes made by a different L1 VM.
-+		 * INVEPT drops local root references, but cached indirect shadow
-+		 * pages can still survive through other L1 vCPUs. A non-entry-
-+		 * aligned byte write invokes outer KVM's whole shadow-page zap.
-+		 * Touch the retained root only; no RAM or EPT leaf walk. This is
-+		 * an explicit nested-KVM lab accommodation, never a CXL flush.
-+		 * The guest is paused and the previous owner has been fenced. */
-+		u8 *root = (u8 *)__va(vcpu->arch.mmu->root.hpa) + 1;
-+		WRITE_ONCE(*root, READ_ONCE(*root));
-+	}
++	if (attach && dax_nested_root_sync)
++		kvm_dax_nested_root_sync(vcpu);
 +	/* Local allocations set their struct-page backlink in tdp_mmu_init_sp()
 +	 * before publishing dax_next. Imported pages were rebound on attach.
 +	 * Remember both sets when leaving: returning to their original node

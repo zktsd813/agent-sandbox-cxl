@@ -25,12 +25,12 @@ def trial(path):
     r=json.loads(path.read_text());need(r['result']=='passed','Unpassed trial')
     receipts={e['file']:e for e in r['receipts']}
     need(len(receipts)==len(r['receipts']),'Duplicate receipt')
-    def raw(name):
+    def read_bytes(name):
         data=(path.parent/name).read_bytes()
         need(hashlib.sha256(data).hexdigest()==receipts[name]['sha256'],'Receipt changed: '+name)
         return data
-    def read(name): return raw(name).decode()
-    for name in receipts:raw(name)
+    def read(name): return read_bytes(name).decode()
+    for name in receipts:read_bytes(name)
     def receipt_record(row,marker):
         found=records(read(row['file']),marker)
         value=row.get('receipt',row.get('response'))
@@ -86,11 +86,11 @@ def trial(path):
                 and len(value['attach_ns'])==len(value['detach_ns'])==8,'Kernel profile binding')
         need(token==h['export_token'] and generation==index+1,'Token/generation mismatch')
         if timing['manifest_bytes']==0:
-            need(h.get('packet_file') and len(raw(h['packet_file']))==timing['state_bytes'] and
+            need(h.get('packet_file') and len(read_bytes(h['packet_file']))==timing['state_bytes'] and
                  state['memory_manifest_sha256']=='', 'Binary packet receipt mismatch')
         else:
-            need(len(raw(h['state_file']))==timing['state_bytes'] and len(raw(h['sealed_file']))==timing['manifest_bytes'], 'Wrong wire byte count')
-            need(hashlib.sha256(raw(h['sealed_file'])).hexdigest()==state['memory_manifest_sha256'],'Manifest digest mismatch')
+            need(len(read_bytes(h['state_file']))==timing['state_bytes'] and len(read_bytes(h['sealed_file']))==timing['manifest_bytes'], 'Wrong wire byte count')
+            need(hashlib.sha256(read_bytes(h['sealed_file'])).hexdigest()==state['memory_manifest_sha256'],'Manifest digest mismatch')
         devices=state['devices']['virtio_state']['Mmio']
         need(len(devices['block_devices'])==(r['arm']!='none'),'Wrong block graph')
         for key in ('abi','phys_base','device_bytes','metadata_offset','metadata_bytes','cookie_lo','cookie_hi','allocation_generation','count','full_scan_pages'):
