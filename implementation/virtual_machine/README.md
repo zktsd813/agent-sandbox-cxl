@@ -22,7 +22,26 @@ DAX 공유 영역은 기본 2GiB다. 기본 microVM은 1 vCPU·128MiB이고 RAM 
 
 <a id="session-handoff"></a>
 
-## 다음 세션 인계: 2026-11-03
+## 다음 세션 인계: 2026-11-04
+
+누적 실행 소스는 `1c359875c`, 핵심 VMM 변경은 `0e4f78b58`까지다. [구현 지도](../../docs/cxl-implementation-map.md)에 기준 버전, patch의 **파일별 추가/삭제 줄 수**, guest/host 모듈과 controller의 역할, NFS·pooling·두 handoff 흐름을 기록했다. 새 clone은 patch와 직접 관리하는 소스를 받으며 vendor checkout·VM image·원시 로그는 별도로 준비한다.
+
+최신 resident 경로는 동일 UART eventfd를 유지하고 native Unix endpoint를 VMM event loop에서 직접 처리한다. Warm binary packet에는 token·최신 device state·ABI 2 mapper handle만 들어간다. HTTP/API thread·JSON staging·handoff별 이미지/RAM hash와 전체 mapping 조회는 생략한다. Pause, I/O drain, source owner/접근 차단, 최신 epoch 확인과 장치 재연결은 유지한다. 첫 B 방문에는 VM wrapper/thread 생성 비용이 남으며 warm 왕복과 따로 집계한다.
+
+| 검증·측정 | 최신 결과 | 범위 |
+|---|---|---|
+| 같은 binary의 HTTP/native/binary 144 handoff | 계측 p50 **8.113 / 7.318 / 6.992ms** | 각 최초 왕복 제외 44개/경로, 요청→Resume 응답 |
+| 무계측 Gin 반복 44 handoff | warm 38개 **p50 4.092ms / p95 5.333ms** | 준비·promotion/demotion·guest ping 제외 |
+| 준비 | VMM/backend 준비 7.575–8.231ms; 외부 전체 25.082–25.275ms | binary 경로 두 fresh trial, source 실행 중 |
+| 실제 SWE Gin/PHP × state-only/direct | 총 124개 명령 결과와 각 trial의 2 promotion·2 demotion 통과 | 열린 삭제 파일과 최종 diff 포함 |
+| 3 VM × 160MiB cache | CoW·discard ACK·재사용·다른 VM 재할당 통과 | direct 이동 대상 1개+peer 2개; state-only도 별도 검증 |
+| 실제 읽기/명령 중 handoff | 지속 block read, 실행 중 `go test`의 동일 PID와 결과 유지 | 모든 pause에 미완료 I/O가 있었다는 보장은 아님 |
+
+정상 handoff의 mapper full-scan 카운터 증가 0을 확인했다. 별도 상세 계측의 느린 두 handoff는 13.030/31.057ms였고, 각각 source mapping 철회 4.989ms와 nested root 보완 26.003ms를 포함했다. 이 두 시간은 다른 실행의 무계측 중앙값과 합산하지 않는다. 물리 host에서는 nested 전용 보완 호출을 제외할 수 있지만 일반 TLB·CXL 가시성 보장은 남으며 실제 물리 성능은 미측정이다.
+
+[최신 측정·구간별 합계·검증 범위](../../docs/cxl-resident-direct.md)를 따른다. 로컬 원본은 `/tmp/cxl-revision-*-20261104`이고 Git에는 요약과 소스 참조만 유지한다. PML/MPTCP와 최신 resident pooling의 통합, 비일관 물리 CXL, writable direct·다중 vCPU·장애 복구는 후속 작업이다.
+
+### 이전 인계 기록: 2026-11-03
 
 검증한 소스는 `4ffffcb6a`다. 정상 handoff에는 이미지/RAM 전수 검증, 전체 mapping 조회,
 guest ping·실패 유도 시험·전체 로그 회수가 없다. Direct는 `DirectSend`(pause+export)와

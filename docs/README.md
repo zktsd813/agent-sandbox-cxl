@@ -36,7 +36,8 @@
 
 | 문서 | 내용 |
 |---|---|
-| [resident direct](cxl-resident-direct.md) | 목적지 FD와 장치 실행 환경을 유지하는 direct handoff. 2026-11-02 최신 구현 |
+| [구현 지도·기준 소스 대비 변경량](cxl-implementation-map.md) | 2026-11-04 누적 patch의 파일별 규모·역할, 자체 모듈, 두 handoff·NFS·pooling의 구현 흐름 |
+| [resident direct](cxl-resident-direct.md) | 2026-11-04 native binary 제어, FD/장치 재사용, 동일 handoff의 구간별 비용과 nested EPT 분석 |
 | [direct handoff API 비용](cxl-direct-api-latency.md) | 매번 목적지 VMM을 만들던 경로의 분석과 과거 1 ms 미만 결과 |
 | [RAM 전수 순회를 제거한 pooling handoff](cxl-pool-incremental-handoff.md) | pooling handoff의 증분 처리 |
 | [guest metadata 기반 pooling](cxl-guest-pool-handoff.md) | guest page cache 공유와 direct·state-only 두 handoff 모드 |

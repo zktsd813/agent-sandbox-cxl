@@ -2,7 +2,9 @@
 
 문서 색인과 현재 방향(2026-11-03)은 [docs/README.md](docs/README.md)에 있다. 처음 읽는 경우 [CXL microVM 연구와 구현 전체 정리](docs/cxl-microvm-overview.md)부터 본다. Workload 관측부터 실행 이전 구현, PML·MPTCP 검증, 파일 공유 설계와 후속 계획을 연결했다. 구현·실측·시뮬레이션·설계 중인 내용을 구분한다.
 
-2026-11-02 최신 구현은 [목적지 FD·장치 실행 환경을 유지하는 resident direct](docs/cxl-resident-direct.md)다. 목적지 준비를 source 실행 중에 끝내고, 왕복 때 같은 VMM·디스크 FD·io_uring·vCPU thread를 사용한다. [검증 결과](implementation/virtual_machine/results/direct-resident-20261102/README.md)는 준비 비용, Export/Import API와 TCP로 측정한 실제 pause→guest 응답 시간을 구분한다.
+2026-11-04 최신 구현은 [resident direct 제어 경로와 단계별 지연 분석](docs/cxl-resident-direct.md)이다. UART eventfd 수명을 고치고 VMM event loop의 native binary 제어로 warm handoff의 HTTP·JSON staging을 생략했다. 같은 바이너리의 계측 비교 중앙값은 8.113→6.992ms, 별도 무계측 실제 SWE 반복은 4.092ms다. 요청→Resume 응답 기준이며 준비·promotion/demotion·guest 첫 실행 시각과 구분한다.
+
+[구현 지도·기준 소스 대비 변경량](docs/cxl-implementation-map.md)에 Firecracker 35개 파일(+6,254/-75줄), KVM 26개 파일(+1,914/-184줄)의 변경 역할, 별도 guest/host 모듈, 두 handoff·NFS·pooling·CoW/discard 흐름과 후속 과제를 기록했다. Linux 기준은 제공 DCD 커널이며 정식 upstream과의 전체 차이라고 주장하지 않는다. 원시 실험 archive·이미지·vendor 사본은 새로 게시하지 않는다.
 
 직전 분석은 [Direct API 계측·최적화와 과거 1ms 미만 결과 비교](docs/cxl-direct-api-latency.md)다. NFS 이미지 metadata 조회, mapper 연결, 장치/스레드 준비와 커널 시간을 분리한다. [원시 증거와 결과](implementation/virtual_machine/results/direct-api-20261102/README.md)에서 코드 최적화와 immutable NFS 캐시 효과를 따로 확인할 수 있다.
 

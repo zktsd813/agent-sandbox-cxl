@@ -72,7 +72,42 @@ Nested root 동작은 외부 KVM이 다른 L1의 EPT 갱신을 인지하게 하�
 | 재promotion 직후 B 방문 | **26.003ms** | **26.021ms** |
 | 다음 A 복귀 | 2.186ms | 2.193ms |
 
-재promotion 직후의 큰 attach 비용은 이 실행에서는 외부 KVM의 shadow EPT 무효화가 지배했다. EPT metadata의 신규 연결 작업이나 NFS 이미지 열기가 26ms였다는 뜻이 아니다. 이 workaround는 nested 환경에서만 켜며 그대로 제거하면 이 실험 환경의 오래된 변환을 사용할 수 있으므로 유지했다. 물리 CXL에서는 별도의 일반 TLB·메모리 가시성 처리가 필요하고, 이 표만으로 물리 환경의 총 handoff 시간을 예측할 수 없다.
+재promotion 직후의 큰 attach 비용은 이 실행에서는 nested root 보완 함수가 지배했다. 함수 진입→복귀의 경과 시간이므로 outer KVM 처리와 스케줄링 영향을 포함할 수 있고, 26ms 전체를 순수 shadow EPT 계산으로 단정하지 않는다. EPT metadata의 신규 연결 작업이나 NFS 이미지 열기가 26ms였다는 뜻도 아니다. 이 workaround는 nested 환경에서만 켜며 그대로 제거하면 이 실험 환경의 오래된 변환을 사용할 수 있으므로 유지했다.
+
+### 같은 handoff의 제어별 비용
+
+위 `54725b6fc` 실행의 generation 2/3에서 VMM profile·controller API 시간·kernel trace를 맞췄다. 단위는 ms(0.001초)이며, 각 열은 **하나의 handoff**다. 목적지 준비·promotion/demotion의 RAM 복사는 제외하고 요청→목적지 Resume 응답까지 합산한다. 첫 B 방문이나 반복 중앙값으로 해석하지 않는다.
+
+| 처리 | 작업 후 B→A, generation 2 | 재promotion 완료 후 A→B, generation 3 |
+|---|---:|---:|
+| I/O drain·장치 상태 저장 | 0.051292 | 0.013322 |
+| Event subscriber 중단·mapper seal | 0.037440 | 0.022772 |
+| Source I/O·interrupt 연결 해제 | 0.220899 | 0.112666 |
+| KVM detach·실행 소유권 해제 | 0.255297 | 0.152220 |
+| Source RAM mapping PROT_NONE 교체 | **4.988882** | **0.184509** |
+| 작은 metadata 구성·검사·직렬화·해석 | 1.092309 | 0.608477 |
+| Destination mapper import | 0.532732 | 0.542834 |
+| Nested root 보완 함수 | **2.293000** | **26.003000** |
+| KVM attach에서 위 함수를 제외한 나머지 | 0.523798 | 0.329765 |
+| Destination 장치 복구·이벤트 재연결 | 0.452268 | 0.362945 |
+| Pause/Resume·로컬 IPC·스케줄링 등 API 잔여 | 1.268177 | 1.175480 |
+| 외부 제어 요청·노드 간 전달·응답 잔여 | 0.887735 | 1.302155 |
+| 진단 로그·profile 내부 미분리 구간 | 0.425979 | 0.246579 |
+| **전체** | **13.029808** | **31.056724** |
+
+Nested root는 attach 내부 구간이므로 attach에서 빼고 독립 행으로 표시했다. API 잔여는 send+receive API에서 export/import profile 전체를 뺀 값이다. Binary 경로의 pause/resume 각각은 별도 계측하지 않아 IPC 등과 분리할 수 없다. 외부 제어 잔여도 순수 network 지연을 의미하지 않는다. 이 실행은 상세 계측을 켰으며, 다른 실행의 무계측 4.092ms 중앙값을 이 표로 분해하지 않는다.
+
+두 import 모두 disk open·I/O engine 생성·vCPU thread 생성은 0회다. I/O drain·연결 해제·장치 복구 합계는 각각 0.724459/0.488933ms다. Source mapping 철회는 guest 데이터를 읽는 검사가 아니지만, 커널의 기존 PTE 정리 비용을 포함하며 물리 host에서도 남을 수 있다. 정상 handoff에 guest RAM 전수 검사를 넣지 않았다는 사실과 구분한다.
+
+로컬 원본은 `/tmp/cxl-revision-swe-ept-20261104/gin-gonic__gin-3741-direct/`의 `report.json`, `0209-final-vmm-log.bin`, `0212-final-vmm-log.bin`, `0117-kernel-trace.txt`, `0173-kernel-trace.txt`다. 게시 대상은 이 요약이며 원본 파일은 Git에 포함하지 않는다.
+
+### 물리 host에서는 무엇이 없어지나
+
+현재는 **L0 물리 KVM → L1 A/B 노드 VM → L2 sandbox**다. L0가 L1의 EPT를 반영한 shadow 변환을 유지하므로 다른 L1에서 바뀐 공유 EPT를 반영하도록 보완이 필요하다. 일반 물리 host가 직접 sandbox를 실행하면 outer shadow 계층이 없어 `kvm_dax_nested_root_sync()`는 제외할 수 있다. 코드의 `dax_nested_root_sync` 기본값은 false이며 nested harness가 명시적으로 켠다. 이는 코드·구조에 따른 판단이며 물리 다중 host의 실측 결과가 아니다. [KVM MMU 설명](https://docs.kernel.org/virt/kvm/x86/mmu.html#translation)
+
+`KVM_REQ_TLB_FLUSH_CURRENT`는 이 옵션과 별개로 attach에서 요청한다. 물리 host에서도 필요한 INVEPT/TLB 처리와 destination mapping, single-owner, CXL 데이터의 가시성은 보장해야 한다. `31.056724 - 26.003 = 5.053724ms`를 물리 환경의 handoff 성능으로 발표하지 않는다. [일반 VMX TLB flush 구현](https://github.com/torvalds/linux/blob/master/arch/x86/kvm/vmx/vmx.c)
+
+전체 파일별 변경량과 해당 함수들의 소스 위치는 [구현 지도](cxl-implementation-map.md)에 정리했다.
 
 실험 결과와 재현 입력은 [검증 자료](../implementation/virtual_machine/results/direct-resident-20261102/README.md)에 모았다. 이전 측정 범위와 NFS 병목은 [Direct API 비용 분석](cxl-direct-api-latency.md)을 참고한다.
 

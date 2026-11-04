@@ -25,6 +25,8 @@
 
 ## 현재 상태
 
+2026-11-04의 전체 구현 파일·기준 버전·변경 줄 수는 [구현 지도](cxl-implementation-map.md)에 정리했다. 최신 resident 경로는 UART FD 수명 수정과 native binary 전달을 포함한다. 같은 바이너리의 계측 비교는 중앙값 8.113→6.992ms, 무계측 실제 SWE 반복은 4.092ms이며 준비·promotion/demotion 비용과 분리한다. [지연 상세](cxl-resident-direct.md#같은-handoff의-제어별-비용)는 느린 표본의 source PTE 철회와 nested EPT 보완을 구분한다.
+
 | 영역 | 구현하거나 확인한 것 | 아직 남은 것 |
 |---|---|---|
 | Workload | Docker trace 재생, DRAM/CXL 비교, microVM 실행과 scheduling 관측 | 반복·순서 랜덤화, 실제 RL rollout으로 확대 |
@@ -34,7 +36,7 @@
 | DSA | Cache Flush capability와 preflush 순서 조사 | 실제 DSA 접근·완료 처리·성능 검증 |
 | MPTCP | Guest client가 A→B snapshot 복원 뒤 같은 연결로 통신 | 빠른 제어 경로, 반복 이동, server 이동, direct/reuse 장치 승계 |
 | Filesystem | RO lower + tmpfs upper의 trace, 별도 writable ext4 lifecycle, pooling의 RO block direct/state-only와 실제 OverlayFS copy-up | Writable disk의 direct 승계, 장애 복구·전원 장애 내구성, 일반 장치·다중 vCPU |
-| NFS와 RAM 배치 | Host NFS image 접근과 guest cache 유지, DRAM→CXL promotion·고향 DRAM 복귀 | 실제 다중 host·물리 network, 명령 실행 도중 이전, 최적화된 제어 경로와 통합 |
+| NFS와 RAM 배치 | Host NFS image·guest cache 유지, DRAM→CXL promotion·고향 DRAM 복귀, resident 제어와 실제 명령 실행 중 왕복 | 실제 다중 host·물리 network, NFS 장애 복구·다중 vCPU 및 일반 장치 |
 | 읽기 데이터 pooling | 현재 guest inode/folio 등록, CXL Bloom, promotion 공유·private CXL CoW, demotion 할당 반환, shared backing을 유지하는 두 handoff | 온라인 admission·동적 canonical 회수, 분산 allocator와 장애 복구, 비일관 CXL publish, PML/MPTCP 통합 |
 
 **환경을 구분해야 한다.** DRAM/CXL workload 실험과 microVM handoff 실험은 같은 종류의 측정이 아니다. 현재 handoff는 한 coherent 물리 host 위의 QEMU A/B와 nested KVM 환경이다. 독립된 Linux 사이의 실행 이전을 확인했지만, 실제 비일관 CXL에서 stale cache가 발생하는 상황을 검증한 것은 아니다.
