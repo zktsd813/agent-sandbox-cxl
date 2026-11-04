@@ -489,15 +489,19 @@ def prepare(trace, config, name, pull, image_id=None):
     if config.get("numa_bind_helper"):
         extra = ["--mount", f"type=bind,src={config['numa_bind_helper']},dst=/opt/mini-numa-bind,readonly", "--cap-add", "SYS_NICE"]
         init = ["/opt/mini-numa-bind", config["memory_nodes"], *init]
+    quota = config.get("cpus_per_container")  # hard cap (CFS quota), as `docker run --cpus` in Docker-based RL harnesses
     docker("run", "-d", "--name", name, "--cgroup-parent", config["budget_unit"], "--cpuset-cpus", config["workload_cpus"],
            "--cpuset-mems", memory_mask, "--memory", str(config["memory_limit_bytes"]),
            "--memory-swap", str(config["memory_limit_bytes"]), "--pids-limit", str(config["pids_limit"]),
-           "-w", trace["environment"]["cwd"], *extra, image_id, *init)
+           *(["--cpus", f"{quota:g}"] if quota else []), "-w", trace["environment"]["cwd"], *extra, image_id, *init)
     cgroup = container_group(name)
     cpus = (cgroup / "cpuset.cpus.effective").read_text().strip()
     mems = (cgroup / "cpuset.mems.effective").read_text().strip()
     if cpu_ids(cpus) != cpu_ids(config["workload_cpus"]) or cpu_ids(mems) != cpu_ids(memory_mask):
         raise RuntimeError(f"Unexpected effective cpuset for {name}: {cpus}, {mems}")
+    limit, period = (cgroup / "cpu.max").read_text().split()
+    if (limit == "max") != (not quota) or (quota and abs(int(limit) / int(period) - quota) > 1e-6):
+        raise RuntimeError(f"Unexpected cpu.max for {name}: {limit} {period}")
     if (cgroup / "memory.swap.max").read_text().strip() != "0":
         raise RuntimeError(f"Swap was not disabled for {name}")
     for filename, value in (("memory.max", config["memory_limit_bytes"]), ("pids.max", config["pids_limit"])):
@@ -645,7 +649,8 @@ def replay(session, origin, clock, arguments, record, stop, output):
                     log.flush()
                     record("command_start", session=session["name"], batch=index, action=action_index, started_s=started - clock)
                     returncode, timed_out = run_action([*command, action["command"]], log,
-                                                       environment.get("timeout", 60), session, stop)
+                                                       arguments.command_timeout or environment.get("timeout", 60),
+                                                       session, stop)
                     if session["numa_bind_helper"] and returncode == 125:
                         raise RuntimeError("NUMA binding or Docker execution failed; inspect the command log")
                     if timed_out:
@@ -873,6 +878,8 @@ def main():
     parser.add_argument("--setup", choices=("precreate", "on-arrival"), default="precreate")
     parser.add_argument("--max-active", type=int, help="Maximum resident containers; still subject to the memory budget")
     parser.add_argument("--workload-cpus", help="Shared workload CPU pool, restricted to the configured CPU NUMA node")
+    parser.add_argument("--cpus", type=float, help="Hard CPU cap per container (docker run --cpus, CFS quota)")
+    parser.add_argument("--command-timeout", type=float, help="Override the trace's command timeout (seconds)")
     parser.add_argument("--keep-going", action="store_true", help="Continue other sessions after an individual workload failure")
     parser.add_argument("--sequential", action="store_true", help="Execute each trace once, with one workload container at a time")
     parser.add_argument("--memory-node", type=int, choices=(0, 1, 2), help="Workload memory NUMA node; controller stays on the configured CPU node")
@@ -913,6 +920,12 @@ def main():
     if arguments.workload_cpus:
         config["workload_cpus"] = arguments.workload_cpus
     arguments.workload_cpus = config["workload_cpus"]
+    if arguments.cpus is not None:
+        if arguments.cpus <= 0:
+            parser.error("--cpus must be positive")
+        config["cpus_per_container"] = arguments.cpus
+    if arguments.command_timeout is not None:
+        config["command_timeout_override_s"] = arguments.command_timeout
     if arguments.perf_interval_ms < 100:
         parser.error("Use a perf interval of at least 100 ms to limit measurement overhead")
     if arguments.perf:
