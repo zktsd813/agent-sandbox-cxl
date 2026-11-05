@@ -1,0 +1,74 @@
+[
+ {
+  "condition": "none-k4",
+  "sim_policy": "cap16",
+  "seeds": 4,
+  "util": 0.046733633982668527,
+  "lost_over_run": 0.01610010926357812,
+  "solo_tool_ratio": 1.0,
+  "solo_cpu_weighted": 1.0,
+  "tool_vs_none_solo": 1.0161001092635782,
+  "trace_slowdown_p50": 1.0015083120240624,
+  "trace_slowdown_p90": 1.0020933979812519
+ },
+ {
+  "condition": "none-k32",
+  "sim_policy": "cap16",
+  "seeds": 4,
+  "util": 0.3807032422472327,
+  "lost_over_run": 0.1756611646572922,
+  "solo_tool_ratio": 1.0,
+  "solo_cpu_weighted": 1.0,
+  "tool_vs_none_solo": 1.175661164657292,
+  "trace_slowdown_p50": 1.0032310852297994,
+  "trace_slowdown_p90": 1.014341661427085
+ },
+ {
+  "condition": "cap4-k4",
+  "sim_policy": "cap4",
+  "seeds": 4,
+  "util": 0.046675297247801444,
+  "lost_over_run": 0.0,
+  "solo_tool_ratio": 1.1273618101643577,
+  "solo_cpu_weighted": 1.3305274221279486,
+  "tool_vs_none_solo": 1.1273618101643577,
+  "trace_slowdown_p50": 1.0026619870571236,
+  "trace_slowdown_p90": 1.0425765413180028
+ },
+ {
+  "condition": "cap4-k32",
+  "sim_policy": "cap4",
+  "seeds": 4,
+  "util": 0.3757428521677464,
+  "lost_over_run": 0.030552770222496754,
+  "solo_tool_ratio": 1.1273618101643577,
+  "solo_cpu_weighted": 1.3305274221279486,
+  "tool_vs_none_solo": 1.1618058365079273,
+  "trace_slowdown_p50": 1.0036054006437827,
+  "trace_slowdown_p90": 1.048043696263442
+ },
+ {
+  "condition": "cap1-k4",
+  "sim_policy": "cap1",
+  "seeds": 4,
+  "util": 0.041322869972040974,
+  "lost_over_run": 0.0,
+  "solo_tool_ratio": 2.068816533784687,
+  "solo_cpu_weighted": 3.5683305153675753,
+  "tool_vs_none_solo": 2.068816533784687,
+  "trace_slowdown_p50": 1.015408049854651,
+  "trace_slowdown_p90": 1.2817085667694292
+ },
+ {
+  "condition": "cap1-k32",
+  "sim_policy": "cap1",
+  "seeds": 4,
+  "util": 0.34222094069227355,
+  "lost_over_run": 0.0,
+  "solo_tool_ratio": 2.068816533784687,
+  "solo_cpu_weighted": 3.5683305153675753,
+  "tool_vs_none_solo": 2.068816533784687,
+  "trace_slowdown_p50": 1.0188720419571873,
+  "trace_slowdown_p90": 1.3851917172825412
+ }
+]

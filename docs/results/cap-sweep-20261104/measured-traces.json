@@ -1,0 +1,434 @@
+[
+ {
+  "name": "caddyserver__caddy-5404",
+  "trace": "harness/trace-replay/data/native/caddyserver__caddy-5404.traj.json",
+  "peak_cores_100ms": 9.84,
+  "tool_s": 8.84,
+  "gap_s": 108.87,
+  "cpu_s": 13.48,
+  "peak_gib": 0.2539
+ },
+ {
+  "name": "preactjs__preact-3567",
+  "trace": "harness/trace-replay/data/native/preactjs__preact-3567.traj.json",
+  "peak_cores_100ms": 9.26,
+  "tool_s": 22.23,
+  "gap_s": 328.98,
+  "cpu_s": 58.68,
+  "peak_gib": 0.6052
+ },
+ {
+  "name": "gin-gonic__gin-2755",
+  "trace": "harness/trace-replay/data/native/gin-gonic__gin-2755.traj.json",
+  "peak_cores_100ms": 11.06,
+  "tool_s": 13.04,
+  "gap_s": 89.6,
+  "cpu_s": 26.2,
+  "peak_gib": 0.4444
+ },
+ {
+  "name": "projectlombok__lombok-3312",
+  "trace": "harness/trace-replay/data/native/projectlombok__lombok-3312.traj.json",
+  "peak_cores_100ms": 11.52,
+  "tool_s": 39.41,
+  "gap_s": 130.64,
+  "cpu_s": 222.6,
+  "peak_gib": 1.6654
+ },
+ {
+  "name": "laravel__framework-52866",
+  "trace": "harness/trace-replay/data/native/laravel__framework-52866.traj.json",
+  "peak_cores_100ms": 16.94,
+  "tool_s": 59.31,
+  "gap_s": 80.55,
+  "cpu_s": 33.1,
+  "peak_gib": 1.404
+ },
+ {
+  "name": "projectlombok__lombok-3486",
+  "trace": "harness/trace-replay/data/native/projectlombok__lombok-3486.traj.json",
+  "peak_cores_100ms": 11.67,
+  "tool_s": 55.39,
+  "gap_s": 257.65,
+  "cpu_s": 299.39,
+  "peak_gib": 1.7495
+ },
+ {
+  "name": "preactjs__preact-4152",
+  "trace": "harness/trace-replay/data/native/preactjs__preact-4152.traj.json",
+  "peak_cores_100ms": 27.72,
+  "tool_s": 43.95,
+  "gap_s": 208.29,
+  "cpu_s": 141.66,
+  "peak_gib": 2.1408
+ },
+ {
+  "name": "sharkdp__bat-2201",
+  "trace": "harness/trace-replay/data/native/sharkdp__bat-2201.traj.json",
+  "peak_cores_100ms": 29.11,
+  "tool_s": 44.76,
+  "gap_s": 219.27,
+  "cpu_s": 155.76,
+  "peak_gib": 3.641
+ },
+ {
+  "name": "caddyserver__caddy-6345",
+  "trace": "harness/trace-replay/data/native/caddyserver__caddy-6345.traj.json",
+  "peak_cores_100ms": 29.49,
+  "tool_s": 32.66,
+  "gap_s": 261.85,
+  "cpu_s": 114.29,
+  "peak_gib": 1.9231
+ },
+ {
+  "name": "fmtlib__fmt-1683",
+  "trace": "harness/trace-replay/data/native/fmtlib__fmt-1683.traj.json",
+  "peak_cores_100ms": 24.02,
+  "tool_s": 44.91,
+  "gap_s": 157.23,
+  "cpu_s": 143.39,
+  "peak_gib": 3.1004
+ },
+ {
+  "name": "sharkdp__bat-562",
+  "trace": "harness/trace-replay/data/native/sharkdp__bat-562.traj.json",
+  "peak_cores_100ms": 29.37,
+  "tool_s": 50.36,
+  "gap_s": 112.9,
+  "cpu_s": 96.87,
+  "peak_gib": 0.915
+ },
+ {
+  "name": "google__gson-1100",
+  "trace": "harness/trace-replay/data/native/google__gson-1100.traj.json",
+  "peak_cores_100ms": 12.95,
+  "tool_s": 20.28,
+  "gap_s": 88.72,
+  "cpu_s": 111.19,
+  "peak_gib": 0.9186
+ },
+ {
+  "name": "projectlombok__lombok-3052",
+  "trace": "harness/trace-replay/data/native/projectlombok__lombok-3052.traj.json",
+  "peak_cores_100ms": 11.75,
+  "tool_s": 42.13,
+  "gap_s": 259.45,
+  "cpu_s": 204.99,
+  "peak_gib": 1.7316
+ },
+ {
+  "name": "preactjs__preact-3454",
+  "trace": "harness/trace-replay/data/native/preactjs__preact-3454.traj.json",
+  "peak_cores_100ms": 28.54,
+  "tool_s": 33.51,
+  "gap_s": 53.77,
+  "cpu_s": 100.32,
+  "peak_gib": 1.7537
+ },
+ {
+  "name": "gohugoio__hugo-12171",
+  "trace": "harness/trace-replay/data/native/gohugoio__hugo-12171.traj.json",
+  "peak_cores_100ms": 27.08,
+  "tool_s": 76.91,
+  "gap_s": 163.0,
+  "cpu_s": 144.97,
+  "peak_gib": 1.8246
+ },
+ {
+  "name": "preactjs__preact-2757",
+  "trace": "harness/trace-replay/data/native/preactjs__preact-2757.traj.json",
+  "peak_cores_100ms": 28.9,
+  "tool_s": 71.22,
+  "gap_s": 169.08,
+  "cpu_s": 250.87,
+  "peak_gib": 3.7811
+ },
+ {
+  "name": "caddyserver__caddy-6370",
+  "trace": "harness/trace-replay/data/native/caddyserver__caddy-6370.traj.json",
+  "peak_cores_100ms": 29.6,
+  "tool_s": 71.07,
+  "gap_s": 173.34,
+  "cpu_s": 224.4,
+  "peak_gib": 1.9706
+ },
+ {
+  "name": "gin-gonic__gin-3741",
+  "trace": "harness/trace-replay/data/native/gin-gonic__gin-3741.traj.json",
+  "peak_cores_100ms": 12.43,
+  "tool_s": 12.61,
+  "gap_s": 62.75,
+  "cpu_s": 31.56,
+  "peak_gib": 0.5396
+ },
+ {
+  "name": "micropython__micropython-12158",
+  "trace": "harness/trace-replay/data/native/micropython__micropython-12158.traj.json",
+  "peak_cores_100ms": 26.28,
+  "tool_s": 76.79,
+  "gap_s": 274.1,
+  "cpu_s": 183.21,
+  "peak_gib": 0.1254
+ },
+ {
+  "name": "caddyserver__caddy-5870",
+  "trace": "harness/trace-replay/data/native/caddyserver__caddy-5870.traj.json",
+  "peak_cores_100ms": 29.63,
+  "tool_s": 41.83,
+  "gap_s": 154.48,
+  "cpu_s": 271.32,
+  "peak_gib": 2.9321
+ },
+ {
+  "name": "caddyserver__caddy-5761",
+  "trace": "harness/trace-replay/data/native/caddyserver__caddy-5761.traj.json",
+  "peak_cores_100ms": 29.64,
+  "tool_s": 22.73,
+  "gap_s": 145.64,
+  "cpu_s": 119.19,
+  "peak_gib": 1.6902
+ },
+ {
+  "name": "laravel__framework-53696",
+  "trace": "harness/trace-replay/data/native/laravel__framework-53696.traj.json",
+  "peak_cores_100ms": 16.04,
+  "tool_s": 52.28,
+  "gap_s": 74.4,
+  "cpu_s": 28.83,
+  "peak_gib": 1.6365
+ },
+ {
+  "name": "gohugoio__hugo-12579",
+  "trace": "harness/trace-replay/data/native/gohugoio__hugo-12579.traj.json",
+  "peak_cores_100ms": 29.59,
+  "tool_s": 75.86,
+  "gap_s": 135.26,
+  "cpu_s": 399.52,
+  "peak_gib": 2.9053
+ },
+ {
+  "name": "redis__redis-13338",
+  "trace": "harness/trace-replay/data/native/redis__redis-13338.traj.json",
+  "peak_cores_100ms": 29.66,
+  "tool_s": 34.43,
+  "gap_s": 383.75,
+  "cpu_s": 124.49,
+  "peak_gib": 1.272
+ },
+ {
+  "name": "laravel__framework-48636",
+  "trace": "harness/trace-replay/data/native/laravel__framework-48636.traj.json",
+  "peak_cores_100ms": 1.03,
+  "tool_s": 6.0,
+  "gap_s": 78.52,
+  "cpu_s": 2.48,
+  "peak_gib": 0.0857
+ },
+ {
+  "name": "jqlang__jq-2598",
+  "trace": "harness/trace-replay/data/native/jqlang__jq-2598.traj.json",
+  "peak_cores_100ms": 2.37,
+  "tool_s": 23.61,
+  "gap_s": 68.24,
+  "cpu_s": 23.17,
+  "peak_gib": 0.1018
+ },
+ {
+  "name": "php-cs-fixer__php-cs-fixer-7663",
+  "trace": "harness/trace-replay/data/native/php-cs-fixer__php-cs-fixer-7663.traj.json",
+  "peak_cores_100ms": 1.02,
+  "tool_s": 68.49,
+  "gap_s": 539.77,
+  "cpu_s": 62.84,
+  "peak_gib": 0.0508
+ },
+ {
+  "name": "rubocop__rubocop-13680",
+  "trace": "harness/trace-replay/data/native/rubocop__rubocop-13680.traj.json",
+  "peak_cores_100ms": 1.91,
+  "tool_s": 44.8,
+  "gap_s": 219.16,
+  "cpu_s": 39.11,
+  "peak_gib": 0.086
+ },
+ {
+  "name": "laravel__framework-51890",
+  "trace": "harness/trace-replay/data/native/laravel__framework-51890.traj.json",
+  "peak_cores_100ms": 1.16,
+  "tool_s": 17.99,
+  "gap_s": 72.49,
+  "cpu_s": 4.83,
+  "peak_gib": 0.0641
+ },
+ {
+  "name": "faker-ruby__faker-2705",
+  "trace": "harness/trace-replay/data/native/faker-ruby__faker-2705.traj.json",
+  "peak_cores_100ms": 1.04,
+  "tool_s": 11.87,
+  "gap_s": 171.73,
+  "cpu_s": 9.89,
+  "peak_gib": 0.0821
+ },
+ {
+  "name": "redis__redis-12472",
+  "trace": "harness/trace-replay/data/native/redis__redis-12472.traj.json",
+  "peak_cores_100ms": 3.02,
+  "tool_s": 56.33,
+  "gap_s": 86.37,
+  "cpu_s": 59.12,
+  "peak_gib": 0.2922
+ },
+ {
+  "name": "php-cs-fixer__php-cs-fixer-8075",
+  "trace": "harness/trace-replay/data/native/php-cs-fixer__php-cs-fixer-8075.traj.json",
+  "peak_cores_100ms": 1.33,
+  "tool_s": 38.36,
+  "gap_s": 171.36,
+  "cpu_s": 36.02,
+  "peak_gib": 0.2317
+ },
+ {
+  "name": "jekyll__jekyll-8771",
+  "trace": "harness/trace-replay/data/native/jekyll__jekyll-8771.traj.json",
+  "peak_cores_100ms": 1.05,
+  "tool_s": 59.26,
+  "gap_s": 610.7,
+  "cpu_s": 47.47,
+  "peak_gib": 0.2882
+ },
+ {
+  "name": "briannesbitt__carbon-2762",
+  "trace": "harness/trace-replay/data/native/briannesbitt__carbon-2762.traj.json",
+  "peak_cores_100ms": 1.14,
+  "tool_s": 11.24,
+  "gap_s": 248.31,
+  "cpu_s": 4.31,
+  "peak_gib": 0.1319
+ },
+ {
+  "name": "laravel__framework-52451",
+  "trace": "harness/trace-replay/data/native/laravel__framework-52451.traj.json",
+  "peak_cores_100ms": 1.29,
+  "tool_s": 6.17,
+  "gap_s": 127.03,
+  "cpu_s": 3.13,
+  "peak_gib": 0.0369
+ },
+ {
+  "name": "briannesbitt__carbon-3073",
+  "trace": "harness/trace-replay/data/native/briannesbitt__carbon-3073.traj.json",
+  "peak_cores_100ms": 1.12,
+  "tool_s": 68.85,
+  "gap_s": 137.77,
+  "cpu_s": 61.41,
+  "peak_gib": 0.3171
+ },
+ {
+  "name": "rubocop__rubocop-13393",
+  "trace": "harness/trace-replay/data/native/rubocop__rubocop-13393.traj.json",
+  "peak_cores_100ms": 2.51,
+  "tool_s": 34.54,
+  "gap_s": 203.49,
+  "cpu_s": 30.29,
+  "peak_gib": 0.0876
+ },
+ {
+  "name": "briannesbitt__carbon-2752",
+  "trace": "harness/trace-replay/data/native/briannesbitt__carbon-2752.traj.json",
+  "peak_cores_100ms": 1.08,
+  "tool_s": 11.94,
+  "gap_s": 291.2,
+  "cpu_s": 5.41,
+  "peak_gib": 0.1312
+ },
+ {
+  "name": "redis__redis-10095",
+  "trace": "harness/trace-replay/data/native/redis__redis-10095.traj.json",
+  "peak_cores_100ms": 2.87,
+  "tool_s": 39.2,
+  "gap_s": 97.94,
+  "cpu_s": 11.73,
+  "peak_gib": 0.179
+ },
+ {
+  "name": "phpoffice__phpspreadsheet-4214",
+  "trace": "harness/trace-replay/data/native/phpoffice__phpspreadsheet-4214.traj.json",
+  "peak_cores_100ms": 1.35,
+  "tool_s": 15.47,
+  "gap_s": 140.11,
+  "cpu_s": 12.57,
+  "peak_gib": 0.1287
+ },
+ {
+  "name": "php-cs-fixer__php-cs-fixer-7635",
+  "trace": "harness/trace-replay/data/native/php-cs-fixer__php-cs-fixer-7635.traj.json",
+  "peak_cores_100ms": 1.11,
+  "tool_s": 24.67,
+  "gap_s": 302.62,
+  "cpu_s": 19.66,
+  "peak_gib": 0.0253
+ },
+ {
+  "name": "nlohmann__json-4237",
+  "trace": "harness/trace-replay/data/native/nlohmann__json-4237.traj.json",
+  "peak_cores_100ms": 1.08,
+  "tool_s": 15.92,
+  "gap_s": 142.85,
+  "cpu_s": 11.29,
+  "peak_gib": 0.3871
+ },
+ {
+  "name": "briannesbitt__carbon-3041",
+  "trace": "harness/trace-replay/data/native/briannesbitt__carbon-3041.traj.json",
+  "peak_cores_100ms": 1.12,
+  "tool_s": 9.56,
+  "gap_s": 205.85,
+  "cpu_s": 4.67,
+  "peak_gib": 0.0263
+ },
+ {
+  "name": "redis__redis-11510",
+  "trace": "harness/trace-replay/data/native/redis__redis-11510.traj.json",
+  "peak_cores_100ms": 3.02,
+  "tool_s": 77.85,
+  "gap_s": 96.82,
+  "cpu_s": 60.32,
+  "peak_gib": 0.3695
+ },
+ {
+  "name": "jqlang__jq-2750",
+  "trace": "harness/trace-replay/data/native/jqlang__jq-2750.traj.json",
+  "peak_cores_100ms": 3.54,
+  "tool_s": 34.86,
+  "gap_s": 527.86,
+  "cpu_s": 33.18,
+  "peak_gib": 0.1052
+ },
+ {
+  "name": "fluent__fluentd-4030",
+  "trace": "harness/trace-replay/data/native/fluent__fluentd-4030.traj.json",
+  "peak_cores_100ms": 1.01,
+  "tool_s": 57.25,
+  "gap_s": 139.02,
+  "cpu_s": 12.46,
+  "peak_gib": 0.0524
+ },
+ {
+  "name": "php-cs-fixer__php-cs-fixer-8331",
+  "trace": "harness/trace-replay/data/native/php-cs-fixer__php-cs-fixer-8331.traj.json",
+  "peak_cores_100ms": 1.02,
+  "tool_s": 8.31,
+  "gap_s": 96.65,
+  "cpu_s": 5.27,
+  "peak_gib": 0.0364
+ },
+ {
+  "name": "rubocop__rubocop-13479",
+  "trace": "harness/trace-replay/data/native/rubocop__rubocop-13479.traj.json",
+  "peak_cores_100ms": 2.21,
+  "tool_s": 8.5,
+  "gap_s": 91.42,
+  "cpu_s": 6.96,
+  "peak_gib": 0.0818
+ }
+]

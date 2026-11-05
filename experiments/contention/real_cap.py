@@ -7,16 +7,24 @@ cap, `--cpus 4` and `--cpus 1` (CFS quota, as in Docker-based RL harnesses). Unl
 contention is present: runqueue, quota throttling, LLC, memory bandwidth, frequency, I/O and the Docker daemon.
 Each policy runs at low load (K=4, the reference for its commands) and high load (K=32, every trace four times; the
 selected traces average 0.38 cores, so about 76% of the 16 cores before stretching).
+With schedutil the clock follows load (K=4 ran about 25% fewer cycles per CPU-second than K=32), so the low-load
+reference is slow; `run` refuses unless the workload CPUs and their SMT siblings use the performance governor (bud05
+keeps it on every CPU since 2026-11-05; turbo stays on, about 4 GHz). `simulate` replays the same configuration in
+fleet.py with the measured K=4 no-cap run as the demand profile, so measured and simulated slowdowns share one
+reference and differ only in what the simulator leaves out. The simulator's lost CPU is the CPU-weighted mean stretch
+minus one, so `analyze` reports that weighting too (`cpu_weighted`) next to the summed wall time (`wall_total`).
 
   python3 real_cap.py select     # 24 wide and 24 narrow traces from the 10-14 solo profile
-  python3 real_cap.py run        # conditions in order; finished ones are skipped
-  python3 real_cap.py analyze    # per-command comparison with the low-load run of each policy and with no cap
+  python3 real_cap.py run --runs runs-perf       # conditions in order; finished ones are skipped
+  python3 real_cap.py analyze --runs runs-perf   # per command vs the policy's K=4 run, no cap K=4 and no cap same K
+  python3 real_cap.py simulate --runs runs-perf  # fleet.py on 1 node x 16 cores, same K and policies
 """
 
 import argparse
 import bisect
 import csv
 import json
+import math
 from pathlib import Path
 import random
 import subprocess
@@ -27,6 +35,7 @@ import time
 import numpy as np
 
 import cap_sweep
+import fleet
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
@@ -36,12 +45,34 @@ CONFIG = REPO / "harness/trace-replay/configs/contention.json"
 WORKLOAD_CPUS = "2-17"
 CORES = 16
 MBM = Path("/sys/fs/resctrl/mon_data/mon_L3_00/mbm_total_bytes")  # socket 0 memory traffic, all tasks
+TSC_GHZ = 2.5  # Xeon Gold 6548Y+ base clock; ref-cycles tick at this rate, turbo is off in BIOS
 CONDITIONS = [(policy, cpus, k, repeats) for k, repeats in ((4, 1), (32, 4))
               for policy, cpus in (("none", None), ("cap4", 4), ("cap1", 1))]
+SIM_POLICY = {"none": "cap16", "cap4": "cap4", "cap1": "cap1"}  # no quota still sees only the 16 cpuset CPUs
 
 
 def cond_name(policy, k):
     return f"{policy}-k{k}"
+
+
+def cpu_list(spec):
+    out = []
+    for part in spec.split(","):
+        a, _, b = part.partition("-")
+        out += range(int(a), int(b or a) + 1)
+    return out
+
+
+def governor_path(cpu):
+    return Path(f"/sys/devices/system/cpu/cpu{cpu}/cpufreq/scaling_governor")
+
+
+def governor_cpus():
+    """Workload CPUs and their SMT siblings (a core's clock follows the busier thread's request)."""
+    cpus = set()
+    for c in cpu_list(WORKLOAD_CPUS):
+        cpus.update(cpu_list(Path(f"/sys/devices/system/cpu/cpu{c}/topology/thread_siblings_list").read_text().strip()))
+    return sorted(cpus)
 
 
 def cmd_select(args):
@@ -79,9 +110,10 @@ def cmd_select(args):
 
 
 def host_sampler(path, stop):
-    """Socket 0 memory bandwidth (resctrl MBM) every second, and workload-CPU IPC from a system-wide perf."""
+    """Socket 0 memory bandwidth (resctrl MBM) every second, and workload-CPU IPC and clock from a system-wide perf."""
     perf = subprocess.Popen(["sudo", "-n", "/usr/lib/linux-tools-6.8.0-146/perf", "stat", "-a", "-C", WORKLOAD_CPUS,
-                             "-e", "instructions,cycles", "-I", "1000", "-x", ",", "-o", str(path.with_suffix(".perf.csv"))],
+                             "-e", "instructions,cycles,ref-cycles", "-I", "1000", "-x", ",",
+                             "-o", str(path.with_suffix(".perf.csv"))],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     with path.open("w") as out:
         out.write("t_s,mbm_total_bytes\n")
@@ -97,8 +129,9 @@ def host_sampler(path, stop):
 
 def cmd_run(args):
     traces = json.loads((LOCAL / "traces.json").read_text())
-    runs = LOCAL / "runs"
+    runs = LOCAL / args.runs
     runs.mkdir(parents=True, exist_ok=True)
+    cpus_g = governor_cpus()
     for policy, cpus, k, repeats in CONDITIONS:
         name = cond_name(policy, k)
         if args.only and name not in args.only:
@@ -112,13 +145,17 @@ def cmd_run(args):
         while float(Path("/proc/loadavg").read_text().split()[0]) > args.max_load:  # other jobs would skew the run
             print(f"{name}: waiting for host load to drop", flush=True)
             time.sleep(60)
+        governors = sorted({governor_path(c).read_text().strip() for c in cpus_g})
+        if args.governor and governors != [args.governor]:
+            raise SystemExit(f"{name}: governor on CPUs {cpus_g} is {governors}, not {args.governor}")
         order = [t["trace"] for t in traces] * repeats
         random.Random(name).shuffle(order)
         command = [sys.executable, str(EXPERIMENT), *[str(REPO / t) for t in order], "--config", str(CONFIG),
                    "--output", str(out), "--schedule", "gaps", "--starts", "together", "--setup", "on-arrival",
                    "--max-active", str(k), "--keep-going", "--command-timeout", "600",
                    *(["--cpus", str(cpus)] if cpus else [])]
-        print(f"{name}: {len(order)} traces, K={k}, cpus={cpus}", flush=True)
+        print(f"{name}: {len(order)} traces, K={k}, cpus={cpus}, governor {'/'.join(governors)}", flush=True)
+        (runs / f"{name}-host.json").write_text(json.dumps({"governor": governors, "governor_cpus": cpus_g}))
         stop = threading.Event()
         sampler = threading.Thread(target=host_sampler, args=(runs / f"{name}-host.csv", stop))
         sampler.start()
@@ -179,7 +216,38 @@ def load_run(directory):
     full = [t for t, n in changes if n == max(n for _, n in changes)] if changes else [0.0]
     return {"commands": commands, "sessions": {s: (trace_of[s], v["start"], v["end"]) for s, v in sessions.items()
                                                if "start" in v and "end" in v},
-            "window": (min(full), max(full)), "changes": (times, [n for _, n in changes])}
+            "window": (min(full), max(full)), "changes": (times, [n for _, n in changes]), "series": arrays}
+
+
+def saturation(run, lo, hi, bin_s=0.1):
+    """Share of 100 ms bins where the containers together ran on >= CORES - 0.5 cores, and the share of all PSI
+    cpu-some time that fell in those bins (near 1: tasks waited only when the pool was full, i.e. no idle core)."""
+    grid = np.arange(lo, hi, bin_s)
+    use, some = np.zeros(len(grid) - 1), np.zeros(len(grid) - 1)
+    for a in run["series"].values():
+        if len(a) < 2:
+            continue
+        inside = (grid >= a[0, 0]) & (grid <= a[-1, 0])
+        inside = inside[:-1] & inside[1:]
+        use += np.where(inside, np.diff(np.interp(grid, a[:, 0], a[:, 1])), 0.0) / 1e6 / bin_s
+        some += np.where(inside, np.diff(np.interp(grid, a[:, 0], a[:, 3])), 0.0) / 1e6
+    full = use >= CORES - 0.5
+    return {"saturated_time": float(full.mean()), "some_when_saturated": float(some[full].sum() / some.sum())}
+
+
+def versus_1014(run):
+    """Tool and CPU seconds of each trace's first replay against the 10-14 solo profile in traces.json."""
+    old = {t["name"]: t for t in json.loads((LOCAL / "traces.json").read_text())}
+    tool, cpu = {}, {}
+    for (name, _), items in run["commands"].items():
+        tool[name] = tool.get(name, 0.0) + items[0]["wall"]
+        cpu[name] = cpu.get(name, 0.0) + items[0]["cpu"]
+    names = [n for n in tool if n in old]
+    gap = sum(old[n]["gap_s"] for n in names)
+    return {"tool_vs_1014": sum(tool[n] for n in names) / sum(old[n]["tool_s"] for n in names),
+            "cpu_vs_1014": sum(cpu[n] for n in names) / sum(old[n]["cpu_s"] for n in names),
+            "tool_share": sum(tool.values()) / (sum(tool.values()) + gap),
+            "tool_share_1014": sum(old[n]["tool_s"] for n in names) / (sum(old[n]["tool_s"] for n in names) + gap)}
 
 
 def host_stats(directory, name, window, clock0):
@@ -200,11 +268,13 @@ def host_stats(directory, name, window, clock0):
                 totals[parts[3]] = totals.get(parts[3], 0.0) + float(parts[1])
         if totals.get("cycles"):
             out["ipc"] = totals.get("instructions", 0.0) / totals["cycles"]
+        if totals.get("ref-cycles"):
+            out["busy_ghz"] = totals["cycles"] / totals["ref-cycles"] * TSC_GHZ  # mean clock while not halted
     return out
 
 
 def cmd_analyze(args):
-    runs = LOCAL / "runs"
+    runs = LOCAL / args.runs
     data = {}
     for policy, cpus, k, repeats in CONDITIONS:
         d = runs / cond_name(policy, k)
@@ -215,7 +285,9 @@ def cmd_analyze(args):
         name = cond_name(policy, k)
         if name not in data:
             continue
-        run, own, none = data[name], data.get(cond_name(policy, 4)), data.get(cond_name("none", 4))
+        run = data[name]
+        refs = {"own": data.get(cond_name(policy, 4)), "none": data.get(cond_name("none", 4)),
+                "none_same_k": data.get(cond_name("none", k))}
         lo, hi = run["window"] if k > 4 else (0.0, float("inf"))
         rows = []
         for key, items in run["commands"].items():
@@ -227,28 +299,112 @@ def cmd_analyze(args):
         result = {"condition": name, "commands": len(rows), "window_s": round(span, 1),
                   "util": cpu / (CORES * span) if k > 4 else None,
                   "over_60s": sum(c["wall"] > 60 for _, c in rows),
+                  "timed_out": sum(bool(c["timed_out"]) for _, c in rows),
                   "some_over_wall": sum(c["some"] for _, c in rows) / sum(c["wall"] for _, c in rows),
                   "throttled_over_wall": sum(c["throttled"] for _, c in rows) / sum(c["wall"] for _, c in rows)}
-        for label, ref in (("own", own), ("none", none)):
-            if ref is None or (label == "own" and ref is run):
+        used = [run]
+        for label, ref in refs.items():
+            if ref is None or any(ref is u for u in used):
                 continue
-            pairs = []
+            used.append(ref)
+            # Ratios leave out a command that hit the 600 s cut on either side (counted in timed_out) and one whose CPU
+            # time is off by more than 2x from the reference (diverged: it did other work, e.g. a stalled download)
+            pairs, diverged = [], 0
             for key, c in rows:
                 base = ref["commands"].get(key)
-                if base:
-                    pairs.append((c, {f: float(np.median([b[f] for b in base])) for f in ("wall", "cpu")}))
+                if not base or c["timed_out"] or any(b["timed_out"] for b in base):
+                    continue
+                b = {f: float(np.median([x[f] for x in base])) for f in ("wall", "cpu")}
+                if b["cpu"] >= 0.1 and not 0.5 <= c["cpu"] / b["cpu"] <= 2.0:
+                    diverged += 1
+                    continue
+                pairs.append((c, b))
+            result[f"vs_{label}_diverged"] = diverged
             heavy = [(c, b) for c, b in pairs if b["cpu"] >= 1.0]
             if not heavy:
                 continue
             ratios = np.array([c["wall"] / b["wall"] for c, b in heavy])
+            weighted = [(b["cpu"], c["wall"] / b["wall"]) for c, b in pairs if b["wall"] > 0]
             result.update({f"vs_{label}_heavy_commands": len(heavy),
                            f"vs_{label}_wall_total": sum(c["wall"] for c, _ in pairs) / sum(b["wall"] for _, b in pairs),
+                           f"vs_{label}_cpu_weighted": sum(w * r for w, r in weighted) / sum(w for w, _ in weighted),
                            f"vs_{label}_heavy_p50": float(np.median(ratios)), f"vs_{label}_heavy_p90": float(np.percentile(ratios, 90)),
                            f"vs_{label}_cpu_inflation": sum(c["cpu"] for c, _ in heavy) / sum(b["cpu"] for _, b in heavy)})
+        result.update(saturation(run, *(run["window"] if k > 4 else (0.0, span))))
+        if k == 4:
+            result.update(versus_1014(run))
         result.update(host_stats(runs / name, name, run["window"], 0.0))
         summary.append(result)
         print(json.dumps({k2: (round(v, 4) if isinstance(v, float) else v) for k2, v in result.items()}))
-    (LOCAL / "analysis.json").write_text(json.dumps(summary, indent=1))
+    (LOCAL / f"{args.runs}-analysis.json").write_text(json.dumps(summary, indent=1))
+
+
+def run_profiles(directory):
+    """cap_sweep profiles (recorded gap, demand per 10 ms) from a run where every trace ran once, e.g. none-k4."""
+    paths = {t["name"]: REPO / t["trace"] for t in json.loads((LOCAL / "traces.json").read_text())}
+    entries = {t["name"]: t for t in json.loads(cap_sweep.CANDIDATES.read_text())["traces"]}
+    events = [json.loads(line) for line in (directory / "events.jsonl").open()]
+    trace_of = next(({s["session"]: s["trace"] for s in e["sessions"]} for e in events
+                     if e["event"] == "replay_clock_start"), {})
+    series = {}
+    with (directory / "metrics.csv").open() as stream:
+        for r in csv.DictReader(stream):
+            if r["session"] and r["cpu_usec"]:
+                series.setdefault(r["session"], []).append((float(r["elapsed_s"]), float(r["cpu_usec"]) / 1e6))
+    commands = {}
+    for e in events:
+        if e["event"] == "command_end":
+            commands.setdefault(e["session"], {})[e["batch"]] = (e["started_s"], e["started_s"] + e["duration_s"])
+    out = {}
+    for session, spans in commands.items():
+        a = np.array(sorted(series.get(session, [])))
+        if len(a) < 2:
+            continue
+        name = trace_of[session]
+        batches = cap_sweep.replay.load_trace(str(paths[name]))["batches"]
+        profile = []
+        for b in sorted(spans):
+            start, end = spans[b]
+            n = max(1, math.ceil((end - start) / cap_sweep.DT - 1e-9))
+            edges = np.minimum(start + cap_sweep.DT * np.arange(n + 1), end)
+            demand = np.clip(np.diff(np.interp(edges, a[:, 0], a[:, 1])) / cap_sweep.DT, 0.0, CORES)
+            profile.append((batches[b]["gap"] if profile else 0.0, demand))
+        out[name] = {"commands": profile, "memory_gib": entries[name].get("memory_mib", 2048) / 1024}
+    return out
+
+
+def cmd_simulate(args):
+    """fleet.py (runqueue sharing only) on the measured configuration, demand from the run's no-cap K=4 replay."""
+    profiles = run_profiles(LOCAL / args.runs / cond_name("none", 4))
+    names = sorted(profiles)
+    fleet.TIMEOUT_S = 1e6
+    rows = []
+    for policy in SIM_POLICY:
+        sim_policy = SIM_POLICY[policy]
+        programs, base = cap_sweep.programs_for(profiles, sim_policy)
+        arrays = fleet.flatten(programs, names)
+        arrays["trace_cpu_s"] = np.array([base[n] for n in names])  # slowdowns against the uncapped K=4 profile
+        tool = cap_sweep.solo_summary(profiles, sim_policy)["tool_time_ratio"]
+        v = cap_sweep.vcpus_for(sim_policy, None)
+        slots = [d for p in profiles.values() for _, d in p["commands"]]  # cap stretch per command, CPU-weighted
+        cpu_weighted = sum(d.sum() * len(cap_sweep.stretch(d, v)) / len(d) for d in slots) / sum(d.sum() for d in slots)
+        for k in sorted({k for _, _, k, _ in CONDITIONS}):
+            results = []
+            for seed in range(1, args.seeds + 1):
+                config = fleet.DEFAULTS | dict(nodes=1, cores=CORES, per_node=k, floating=True, pool="none",
+                                               mechanism="none", seed=str(seed), ramp_s=args.ramp_s,
+                                               duration_s=args.duration_s, carry=True)
+                results.append(fleet.simulate({"arrays": arrays, "names": names, "config": config, "groups": [],
+                                               "images": names, "blocks": None}))
+            mean = lambda key: float(np.mean([r[key] for r in results if r[key] is not None]))
+            row = {"condition": cond_name(policy, k), "sim_policy": sim_policy, "seeds": len(results),
+                   "util": mean("run_cores_per_node") / CORES, "lost_over_run": mean("lost_over_run"),
+                   "solo_tool_ratio": tool, "solo_cpu_weighted": cpu_weighted,
+                   "tool_vs_none_solo": tool * (1 + mean("lost_over_run")),
+                   "trace_slowdown_p50": mean("trace_slowdown_p50"), "trace_slowdown_p90": mean("trace_slowdown_p90")}
+            rows.append(row)
+            print(json.dumps({k2: (round(v, 4) if isinstance(v, float) else v) for k2, v in row.items()}), flush=True)
+    (LOCAL / f"{args.runs}-sim.json").write_text(json.dumps(rows, indent=1))
 
 
 def main():
@@ -261,10 +417,21 @@ def main():
     p.add_argument("--seed", type=int, default=1)
     p.set_defaults(func=cmd_select)
     p = sub.add_parser("run")
+    p.add_argument("--runs", default="runs", help="output directory under .local/real")
     p.add_argument("--only", nargs="+", help="condition names, e.g. none-k4 cap1-k16")
     p.add_argument("--max-load", type=float, default=4.0, help="wait while the host 1-min load is above this")
+    p.add_argument("--governor", default="performance",
+                   help="refuse to run unless the workload CPUs and siblings use this governor ('' skips the check)")
     p.set_defaults(func=cmd_run)
-    sub.add_parser("analyze").set_defaults(func=cmd_analyze)
+    p = sub.add_parser("analyze")
+    p.add_argument("--runs", default="runs")
+    p.set_defaults(func=cmd_analyze)
+    p = sub.add_parser("simulate")
+    p.add_argument("--runs", default="runs")
+    p.add_argument("--seeds", type=int, default=4)
+    p.add_argument("--ramp-s", type=float, default=120)
+    p.add_argument("--duration-s", type=float, default=1200)
+    p.set_defaults(func=cmd_simulate)
     args = parser.parse_args()
     args.func(args)
 

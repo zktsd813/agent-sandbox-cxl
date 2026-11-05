@@ -28,7 +28,7 @@
 | [microVM handoff 초기 실험](microvm-handoff.md) | 10-14 | 상태 분류, NUMA 실행 실험, Firecracker 빌드 |
 | [microVM contention 실측](../experiments/contention/RESULTS-20261021.md) · [fleet 시뮬레이션](../experiments/contention/RESULTS-fleet.md) | 10-21 | 4 node × 5코어 microVM pilot(짧은 SWE trace 67개)과 DSec 규모 fleet simulation(trace 264개) |
 | [공개 RL rollout microVM 실측](results/virtual-node-rl-20261026/README.md) | 10-26~11-03 | virtual node 필요성 실측, fleet sim 보정, placement screen(`measured/placement-screen-*.json`) |
-| [sandbox 크기 정책 sweep](results/cap-sweep-20261104/README.md) | 11-04 | simulator. 다언어 trace에서 hard cap은 넓은 task를 늦추고(cap 1 tool ×3.2), cap 없음은 노드 사이 contention을 만든다(192코어·90% 잃은 CPU 14.6%). 10ms hand-off는 둘 다 줄인다. Python RL rollout은 폭이 좁아 cap 비용이 거의 없다. Docker 실측 진행 중 |
+| [sandbox 크기 정책 sweep](results/cap-sweep-20261104/README.md) | 11-04 | simulator. 다언어 trace에서 hard cap은 넓은 task를 늦추고(cap 1 tool ×3.2), cap 없음은 노드 사이 contention을 만든다(192코어·90% 잃은 CPU 14.6%). 10ms hand-off는 둘 다 줄인다. Python RL rollout은 폭이 좁아 cap 비용이 거의 없다. Docker 실측(11-05, 16코어): container 단위 CPU 분배 때문에 넓은 빌드의 경합이 simulator의 3.7배(CPU 가중 1.66 vs 1.18)이고 cap 4와 cap 없음이 비긴다. runqueue 밖 간섭은 4~8% |
 | [초기 16개 pilot](replay-report.md) | 10-07 | 첫 Docker replay |
 
 ## CXL microVM 구현 (hand-off, pooling)
