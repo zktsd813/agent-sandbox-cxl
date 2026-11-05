@@ -3,6 +3,8 @@
 작성일: 2026-10-19. claude.ai에서 진행한 설계·실험 계획 논의를 Claude Code 작업용으로 정리한 문서다. 프로젝트 `CLAUDE.md`가 이 파일을 import하므로 매 세션 자동으로 읽힌다.
 
 > **2026-11-03 현재 상태.** 문서 색인은 [docs/README.md](README.md)다. CPU 노드 사이 contention은 비용이 작았다. sandbox CPU가 critical path에서 얇기 때문이다([실험 계획 v2](experiment-plan-tail-placement.md) 8장). 다음 방향은 GPU 노드의 남는 CPU에 sandbox를 올리고, 학습이 CPU를 원하면 hand-off로 CPU만 비우는 시나리오다([GPU 노드 harvest 설계](gpu-node-harvest-design.md)). 아래 0~10장은 2026-10-19 기준 계획이다.
+>
+> **2026-11-05.** Docker로 15코어 pool 2개 사이 실제 이동을 쟀다([pool 이동 실측](results/pool-mover-20261105/README.md)). 배치 때 burst를 몰라 한 노드만 넘치는 때가 많다. 사용률 40~83%의 섞인 부하에서 60 ms 이동은 공유 pool 대비 대기 차이의 61~96%를 되찾고, 5초 이동은 10~14%만 되찾는다. 다만 명령·rollout 수준 이득은 작다(K=120 CPU 가중 −6%, rollout p99 1.58 → 1.50). 사용률 95%에서는 단순한 이동 규칙이 듣지 않는다.
 
 같은 날 repo 상태와 대조해 사실이 다른 부분을 고쳤다. 고친 곳은 **[repo 대조]**로 표시했다. 실행 방법과 설정은 [README](../README.md), 완료한 측정은 [DRAM/CXL 결과](results/numa-immediate-20261014/README.md)가 기준이다.
 

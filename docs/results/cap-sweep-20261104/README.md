@@ -26,16 +26,15 @@ simulator에는 runqueue 경합(코어 나눠 갖기)만 있다. cache, 메모�
    - cap 없음 + hand-off: 1.02
    - 이상적 공유: 1.02
 7. **Python RL rollout에서는 cap의 비용이 거의 없다.** 공개 RL rollout(SWE-rebench 계열, Python) 48개를 8 vCPU로 단독 실행했다. 1코어를 넘는 구간에서 쓴 CPU가 19%뿐이고, cap 1에서도 rollout이 0.8%만 늘어난다(6절). 1~6은 compile이 많은 다언어 task에만 해당한다.
-8. **실측에서는 cap 없음의 contention이 simulator보다 훨씬 크다(8절).** 16코어 pool 하나, 사용률 37%에서 cap 없음의 CPU 가중 slowdown은 실측 1.66, simulator 1.18이다.
-   - 넓은 빌드는 2~3배 느려진다. Docker는 경합 때 CPU를 container마다 똑같이 나눈다. simulator는 thread마다 나눠서 넓은 sandbox를 thread 수만큼 대접한다.
+8. **실측 contention은 sandbox 시작이 서로 독립이면 simulator와 맞는다. 같은 trace 사본이 함께 시작하면 훨씬 크다(8절).** 16코어 pool 하나, 사용률 37~39%.
+   - 시작 순서를 섞으면 cap 없음의 CPU 가중 slowdown은 실측 1.175, simulator 1.18이다(8.6절). 같은 부하에서 cap 4는 cap 없음보다 1.21배 느리고(simulator 1.16), cap 1은 2.8배 느리다.
+   - 처음 측정한 1.66은 harness가 대기열을 기록된 시작 시각으로 다시 정렬한 결과다. 같은 trace 사본 4개와 같은 repo trace가 나란히 시작했고, 넓은 빌드가 한꺼번에 겹쳐 2~3배 느려졌다. 처음에는 이 차이를 container 단위 CPU 분배 탓으로 봤다. 하지만 주원인은 시작 시점의 상관이었다.
    - cache·메모리 대역폭·clock 간섭은 4~8%로 작다.
-   - 같은 부하에서 cap 4와 cap 없음은 비긴다(0.97~0.98). cap 1은 1.5~2배 느리다.
-   - 그래서 2~5의 cap 없음 수치는 Docker·Kubernetes 환경에 낙관적이다. 대신 hand-off가 되찾을 몫은 더 크다.
-9. **실측만으로 본 hand-off(8.5절)는 시간 규모는 맞지만, 이점이 생각보다 좁다.**
-   - 손실은 넓은 빌드가 겹치는 수 초~20초 episode에 몰려 있다. 60 ms에 반응하면 tool 시간이 1.28에서 1.00이 된다. 하지만 5초 걸리는 이동도 1.09까지 줄인다.
-   - 빠른 이동만의 이점은 경합 초기에 sandbox 1개만 옮기면 된다는 점이다. 늦으면 3~4개를 옮겨야 한다.
+9. **실측만으로 본 hand-off(8.5, 8.6절)는 시간 규모가 맞지만, 사용률 40%에서는 되찾을 몫 자체가 작다.**
+   - 시작이 독립이면 경합 episode가 짧다(손실 가중 p50 5.6초). 늘어난 tool 시간 중 60 ms 반응은 90%, 1초는 73%, 5초는 48%를 되찾는다. 다만 늘어난 몫이 8.8%뿐이다.
+   - 같은 trace 사본이 함께 시작하면 손실이 3배 넘게 크고(28%), episode가 길어(p50 16.5초) 5초 이동도 66%를 되찾는다.
    - 옮길 대상은 CXL tax가 큰 넓은 sandbox다(p50 1.14).
-   - rollout 수준의 이득은 넓은 rollout에서 6.3% → 1.9%다.
+10. **두 pool 사이 실제 이동과 극단 부하는 [pool 이동 실측](../pool-mover-20261105/README.md)에 있다.**
 
 ## 1. 질문
 
@@ -209,6 +208,8 @@ simulator에 없는 간섭까지 넣어서 같은 구성을 bud05 NUMA 0에서 D
 | 지표 | 시간 합계 = Σ실측 시간 ÷ Σ기준 시간. CPU 가중 = 명령별 (실측 ÷ 기준) 시간 비를 기준 CPU로 가중 평균한 값. simulator의 1 + 잃은 CPU가 이 값과 같은 정의다. 무거운 명령 = 기준 CPU 1초 이상(K=32 구간에서 514~526개) |
 | simulator | `real_cap.py simulate`. fleet.py, 노드 1개 × 16코어, 같은 K와 정책. 수요는 이번 cap 없음 K=4 측정에서 만들고, seed 4개 |
 
+**시작 순서(11-05 교정).** 8.2~8.5의 K=32 수치는 같은 trace 사본 4개와 같은 repo trace가 나란히 시작한 "묶인 순서" 결과다. 섞은 순서로 다시 잰 값은 8.6절에 있다. 묶인 순서는 GRPO처럼 같은 task의 rollout 여러 개가 동시에 시작하는 경우의 상한으로 남겨 둔다.
+
 ### 8.1 governor: schedutil 기준은 느리다
 
 첫 실행(11-04)은 governor를 schedutil로 둔 채 돌렸다. 같은 일을 하는데 K=4가 K=32보다 CPU 시간을 1.35배 썼다(cycles 합은 같다). 부하가 낮으면 clock도 낮아지기 때문이다. 그래서 이 실행(`measured-schedutil-analysis.json`)은 부하 비교에 쓰지 않는다. bud05의 모든 CPU를 performance로 고정하고 다시 돌렸다. 아래는 모두 이 재실행 결과다.
@@ -244,12 +245,12 @@ simulator에 없는 간섭까지 넣어서 같은 구성을 bud05 NUMA 0에서 D
 
 1. **runqueue 밖 간섭은 작다.** K=32에서 같은 무거운 명령의 CPU 시간은 4~6% 늘고, IPC는 1.94에서 1.85로 4% 떨어지고, clock은 1.4% 낮아진다. 메모리 대역폭은 7 GB/s로 socket 대역폭에 한참 못 미친다. cap 1 K=32는 노드가 거의 포화되지 않는데(0.1%) 명령이 5~8% 느려진다. 이 몫이 runqueue 밖 간섭이다.
 2. **CPU를 기다리는 일은 노드가 꽉 찼을 때만 생긴다.** cap 없음 K=32에서 PSI some의 94%가 노드 포화 구간(시간의 18%)에 몰린다. 빈 코어가 있는데 기다리는 일은 거의 없다. scheduler는 work-conserving이다.
-3. **그런데 simulator는 넓은 명령의 대기를 크게 과소평가한다.** cap 없음 K=32의 CPU 가중 slowdown이 실측 1.66, simulator 1.18이다. 잃은 몫이 0.66 대 0.18로 3.7배다.
+3. **묶인 순서에서는 simulator가 넓은 명령의 대기를 크게 과소평가한다.** cap 없음 K=32의 CPU 가중 slowdown이 실측 1.66, simulator 1.18이다. 잃은 몫이 0.66 대 0.18로 3.7배다. 섞은 순서에서는 1.175로 simulator와 맞는다(8.6절). 아래 설명은 넓은 빌드가 동시에 겹쳤을 때 container 단위 분배가 손실을 키우는 방식이다.
    - fmt, caddy, hugo, preact 빌드는 4번 반복 모두 2~3배 느려졌다. 예를 들어 fmt 49번 명령은 K=4에서 20.7초 동안 평균 4.2코어를 썼고, K=32에서는 50~57초 동안 평균 1.85코어를 받았다.
    - 원인은 CPU를 나누는 단위다. simulator(`_water_fill`)는 수요 16코어인 sandbox를 thread 16개로 보고 thread마다 똑같이 나눈다. Docker는 container cgroup마다 같은 `cpu.weight`라 container마다 똑같이 나눈다.
    - 포화 구간에서는 평균 7개 container가 기다린다. 그래서 넓은 빌드는 16/8 ≈ 2코어를 받는다.
 4. **cap 자체의 비용은 simulator와 비슷하고 조금 작다.** CPU 가중으로 cap 4는 1.25(simulator 1.33), cap 1은 3.32(3.57)다. cap을 걸면 같은 명령의 CPU 시간이 4~5% 준다. tool이 quota에 맞춰 덜 병렬로 돌면서 병렬 overhead가 줄어든 것으로 보인다.
-5. **같은 부하에서 cap 4와 cap 없음은 비긴다.** K=32에서 cap 4 ÷ cap 없음은 시간 합계 0.97, CPU 가중 0.98, 무거운 명령 p90 1.12다. simulator는 cap 4가 1.16배 느리다고 봤다. cap 없음의 실제 경합이 커서 cap 4의 비용을 상쇄한다. cap 1은 같은 부하에서도 1.5~2배 느리다.
+5. **묶인 순서에서는 같은 부하의 cap 4와 cap 없음이 비긴다.** 섞은 순서에서는 cap 4가 1.21배 느리다(8.6절). K=32에서 cap 4 ÷ cap 없음은 시간 합계 0.97, CPU 가중 0.98, 무거운 명령 p90 1.12다. simulator는 cap 4가 1.16배 느리다고 봤다. cap 없음의 실제 경합이 커서 cap 4의 비용을 상쇄한다. cap 1은 같은 부하에서도 1.5~2배 느리다.
    - cap 4 K=32에서 caddy-5870의 35번 명령(보통 5초)이 4번 중 1번 600초 timeout까지 멈췄다. cap과 관계가 있는지는 이 측정으로 알 수 없다.
 
 ### 8.4 1~7절에 주는 뜻
@@ -257,10 +258,11 @@ simulator에 없는 간섭까지 넣어서 같은 구성을 bud05 NUMA 0에서 D
 - 1~7절의 cap 없음 경합은 thread 단위로 나눈다는 가정의 값이다. Docker·Kubernetes처럼 container 단위로 나누면 넓은 sandbox에 낙관적이다. 3.3절에서 작은 노드는 cap 없음이 고정 cap보다 낫다고 했지만, 16코어 실측에서는 cap 4와 비겼다.
 - 반대로 hand-off가 되찾을 몫은 simulator보다 크다. 손실은 넓은 빌드에 몰리고, 노드가 꽉 찬 시간은 18%뿐이다. 그 시간에 다른 노드에 빈 코어가 있으면 넓은 빌드나 그 이웃을 옮겨 되찾을 수 있다. 이번 측정은 노드 하나라 hand-off 자체는 재지 않았다.
 - 1~7절을 고치려면 fleet.py에 container 단위 분배(sandbox마다 같은 weight)를 넣고, 이번 측정으로 맞춘 뒤 고정 clock profile로 다시 돌려야 한다.
+- (11-05) 섞은 순서 재실행(8.6절)에서는 simulator와 실측이 맞는다. 위 두 항목은 넓은 빌드가 동시에 겹치는 상관 burst에만 해당한다. 독립 시작에서는 3.3절 결론(작은 노드는 cap 없음이 고정 cap보다 낫다)이 실측으로도 맞는다.
 
 ### 8.5 실측으로 본 hand-off 가능성
 
-simulator 없이, cap 없음 K=32 측정만으로 "옮기면 얼마나 되찾나"를 본다(`real_cap.py handoff`, 20 ms 해상도).
+simulator 없이, cap 없음 K=32 측정만으로 "옮기면 얼마나 되찾나"를 본다(`real_cap.py handoff`, 20 ms 해상도). 이 절은 묶인 순서 결과다. 섞은 순서는 8.6절에 나란히 있다.
 - **경합 구간**: 노드가 꽉 차고(15.5코어 이상), container가 평균 반 개 이상 기다리는 20 ms 구간이다.
 - **episode**: 경합 구간이 0.1초 이하의 틈을 두고 이어지면 하나로 본다.
 - **손실**: PSI some, 즉 container가 CPU를 기다린 시간이다.
@@ -309,6 +311,38 @@ episode가 시작된 뒤 시간에 따라 몇 개를 옮겨야 하는지 계산�
 
 이번 측정으로 못 잰 것은 실제 이동(노드 하나만 썼다), 이른 이동이 눈덩이를 막는지, 4 GHz에서의 CXL tax다.
 
+### 8.6 시작 순서를 섞은 재실행 (11-05)
+
+`experiment.py`는 `--starts together`일 때도 대기열을 기록된 첫 명령 시각으로 정렬했다. 그래서 K=32의 192개(48 trace × 4)는 같은 trace 사본 4개가 나란히 시작하고 같은 repo trace끼리 모였다. replay라서 사본은 같은 명령을 거의 같은 시각에 실행하고, 넓은 빌드가 한꺼번에 겹친다. 주어진 순서를 지키도록 harness를 고치고, 무작위로 섞은 순서로 K=32 세 조건을 다시 돌렸다. K=4 기준은 그대로 쓴다. 사용률이 5%라 순서 영향이 작다.
+
+| 비교 | 묶인 순서 (8.2~8.5) | 섞은 순서 | simulator |
+|---|---|---|---|
+| cap 없음 사용률 / 노드 포화 시간 | 37.4% / 18.1% | 39.3% / 13.5% | 38.1% / – |
+| 부하만, cap 없음: 시간 합계 / CPU 가중 | 1.28 / 1.66 | 1.09 / **1.175** | – / **1.18** |
+| 부하만, cap 없음: 무거운 명령 p50 / p90 | 1.09 / 1.95 | 1.06 / 1.36 | |
+| 부하만, cap 없음: 넓은 / 좁은 trace tool 시간 | 1.45 / 1.05 | 1.13 / 1.02 | |
+| 부하만, cap 4: 시간 합계 / CPU 가중 | 1.16 / 1.24 | 1.12 / 1.12 | – / 1.03 |
+| 부하만, cap 1: 시간 합계 / CPU 가중 | 1.07 / 1.08 | 1.05 / 1.06 | – / 1.00 |
+| 같은 부하 cap 4 ÷ cap 없음: 시간 합계 / CPU 가중 | 0.97 / 0.98 | 1.12 / 1.21 | – / 1.16 |
+| 같은 부하 cap 1 ÷ cap 없음: 시간 합계 / CPU 가중 | 1.52 / 2.01 | 1.81 / 2.80 | – / 3.03 |
+
+8.5절 hand-off 가능성(cap 없음 K=32)도 나란히 놓는다.
+
+| 항목 | 묶인 순서 | 섞은 순서 |
+|---|---|---|
+| 경합 시간 / episode 수 | 17.6% / 분당 8.6개 | 12.9% / 분당 10.8개 |
+| episode 길이(손실 가중) p10 / p50 / p90 | 2.4 / 16.5 / 21.3초 | 1.0 / 5.6 / 15.3초 |
+| 넓은 container가 기다린 몫 | 95% | 94% |
+| 8코어 이상 빈 시간 | 66% | 70% |
+| d 이후의 대기, d = 0.06 / 1 / 5초 | 93% / 83% / 55% | 83% / 63% / 27% |
+| 늘어난 tool 시간 중 되찾는 몫, d = 0.06 / 1 / 5초 | 96% / 86% / 66% | 90% / 73% / 48% |
+| 5초 넘은 episode의 수요 ÷ 16코어, 필요한 이동 p50 | 2.3~2.8, 3~4개 | 1.25~1.29, 1개 |
+
+1. **8.3절의 3.7배 차이는 대부분 시작 순서 때문이었다.** 섞으면 CPU 가중 slowdown이 실측과 simulator에서 맞는다(1.175 대 1.18). container 단위 분배가 넓은 빌드를 불리하게 만드는 효과는 넓은 빌드 여러 개가 동시에 겹칠 때 크게 드러난다.
+2. **같은 부하에서 cap 4는 cap 없음보다 1.21배 느리다.** 3.3절 simulator 결론과 같은 방향이다.
+3. **시작이 독립이면 반응 속도가 더 중요해진다.** episode가 짧아서 5초 이동은 늘어난 몫의 48%만 되찾고, 60 ms는 90%를 되찾는다. 하지만 늘어난 몫이 8.8%라 절대 이득은 작다. 경합이 눈덩이처럼 커지지도 않는다. 5초가 지난 episode도 sandbox 1개만 옮기면 된다.
+4. **묶인 순서는 상관 burst의 상한이다.** 같은 task의 rollout 여러 개가 동시에 시작하는 GRPO 상황과 비슷하다. 다만 replay 사본은 같은 명령을 같은 시각에 실행하고, 실제 rollout은 LLM 출력이 달라 곧 어긋난다. 그런 burst가 오면 늘어난 tool 시간이 3배 넘게 크고(28% 대 8.8%), episode가 길어 느린 이동도 상당 부분 되찾는다.
+
 ## 9. 파일과 재현
 
 | 파일 | 내용 |
@@ -322,6 +356,7 @@ episode가 시작된 뒤 시간에 따라 몇 개를 옮겨야 하는지 계산�
 | `measured-schedutil-analysis.json` | 11-04 schedutil 실행의 지표(8.1절, 부하 비교에는 쓰지 않음) |
 | `measured-traces.json` | 실측에 쓴 trace 48개 |
 | `measured-handoff.json` | 8.5절 hand-off 가능성(`real_cap.py handoff --runs runs-perf`) |
+| `measured-shuffled-analysis.json`, `measured-shuffled-handoff.json` | 8.6절 섞은 순서 K=32(`analyze`·`handoff --runs runs-shuffled --reference runs-perf`) |
 
 원시 결과(조건별 JSON 한 줄)는 bud05 `experiments/contention/.local/cap/`에 있다(Git 제외). Docker 실측 원시 결과(명령별 events, cgroup 시계열, host perf·MBM)는 `experiments/contention/.local/real/runs-perf/`에 있다.
 
@@ -347,4 +382,10 @@ $PY $C/real_cap.py run --runs runs-perf
 $PY $C/real_cap.py analyze --runs runs-perf
 $PY $C/real_cap.py simulate --runs runs-perf
 $PY $C/real_cap.py handoff --runs runs-perf
+# 8.6절: 섞은 순서 K=32 (약 1.5시간)
+$PY $C/real_cap.py run --runs runs-shuffled --only none-k32 cap4-k32 cap1-k32
+$PY $C/real_cap.py analyze --runs runs-shuffled --reference runs-perf
+$PY $C/real_cap.py handoff --runs runs-shuffled --reference runs-perf
 ```
+
+`runs-perf`의 K=32는 순서 정렬을 고치기 전 harness로 돌린 결과다. 지금 harness로 같은 명령을 돌리면 섞은 순서가 된다.
