@@ -31,6 +31,11 @@ simulator에는 runqueue 경합(코어 나눠 갖기)만 있다. cache, 메모�
    - cache·메모리 대역폭·clock 간섭은 4~8%로 작다.
    - 같은 부하에서 cap 4와 cap 없음은 비긴다(0.97~0.98). cap 1은 1.5~2배 느리다.
    - 그래서 2~5의 cap 없음 수치는 Docker·Kubernetes 환경에 낙관적이다. 대신 hand-off가 되찾을 몫은 더 크다.
+9. **실측만으로 본 hand-off(8.5절)는 시간 규모는 맞지만, 이점이 생각보다 좁다.**
+   - 손실은 넓은 빌드가 겹치는 수 초~20초 episode에 몰려 있다. 60 ms에 반응하면 tool 시간이 1.28에서 1.00이 된다. 하지만 5초 걸리는 이동도 1.09까지 줄인다.
+   - 빠른 이동만의 이점은 경합 초기에 sandbox 1개만 옮기면 된다는 점이다. 늦으면 3~4개를 옮겨야 한다.
+   - 옮길 대상은 CXL tax가 큰 넓은 sandbox다(p50 1.14).
+   - rollout 수준의 이득은 넓은 rollout에서 6.3% → 1.9%다.
 
 ## 1. 질문
 
@@ -253,6 +258,57 @@ simulator에 없는 간섭까지 넣어서 같은 구성을 bud05 NUMA 0에서 D
 - 반대로 hand-off가 되찾을 몫은 simulator보다 크다. 손실은 넓은 빌드에 몰리고, 노드가 꽉 찬 시간은 18%뿐이다. 그 시간에 다른 노드에 빈 코어가 있으면 넓은 빌드나 그 이웃을 옮겨 되찾을 수 있다. 이번 측정은 노드 하나라 hand-off 자체는 재지 않았다.
 - 1~7절을 고치려면 fleet.py에 container 단위 분배(sandbox마다 같은 weight)를 넣고, 이번 측정으로 맞춘 뒤 고정 clock profile로 다시 돌려야 한다.
 
+### 8.5 실측으로 본 hand-off 가능성
+
+simulator 없이, cap 없음 K=32 측정만으로 "옮기면 얼마나 되찾나"를 본다(`real_cap.py handoff`, 20 ms 해상도).
+- **경합 구간**: 노드가 꽉 차고(15.5코어 이상), container가 평균 반 개 이상 기다리는 20 ms 구간이다.
+- **episode**: 경합 구간이 0.1초 이하의 틈을 두고 이어지면 하나로 본다.
+- **손실**: PSI some, 즉 container가 CPU를 기다린 시간이다.
+
+| 항목 | 값 |
+|---|---|
+| 경합 시간 | 17.6%. episode 164개(분당 8.6개)이고, 기다린 시간의 95%가 episode 안에 있다 |
+| episode 길이(손실 가중) | p10 2.4초, p50 16.5초, p90 21.3초 |
+| 손실이 누구 몫인가 | 넓은 trace container가 기다린 시간의 95%, 늘어난 명령 시간의 89%를 차지한다. 경합 때 넓은 container가 14.9코어, 좁은 것은 1.0코어를 쓴다 |
+| tool 시간 (K=4 대비) | 전체 1.28, 넓은 trace 1.45, 좁은 trace 1.05 |
+| 빈 코어 | 이 노드에서 4코어 이상 빈 시간 75%, 8코어 이상 66% |
+| 같은 trace의 CXL tax | 10-14 trace 단위 CXL/DRAM 비율. 넓은 trace p50 1.14, p90 1.35, 좁은 trace 1.02, 1.10. 낮은 clock에서 1회 쟀다 |
+
+반응 시간 d별로 되찾을 수 있는 몫이다(상한).
+- 첫 행: episode가 시작되고 d초가 지난 뒤의 대기 비율.
+- 둘째 행: 명령이 d초 뒤 옮겨져 K=4 속도로 끝난다고 할 때의 tool 시간 합계. 늘어난 시간이 명령 동안 고르게 쌓인다고 가정했다.
+
+| 반응 시간 d | 0.06초 (감지 50ms + hand-off 10ms) | 0.25초 | 1초 | 5초 (pre-copy migration 수준) | 30초 |
+|---|---|---|---|---|---|
+| d 이후의 대기 | 93% | 90% | 83% | 55% | 0% |
+| tool 시간 합계 (지금 1.28) | 1.00 | 1.01 | 1.03 | 1.09 | 1.24 |
+
+episode가 시작된 뒤 시간에 따라 몇 개를 옮겨야 하는지 계산했다. 실행 중인 명령마다 K=4 평균 속도를 수요로 보고, 큰 것부터 빼서 수요가 16코어 이하가 될 때까지 센다. 평균 속도는 burst를 숨기므로 하한이다.
+
+| episode 나이 | 손실 비중 | 수요 ÷ 16코어 | 필요한 이동 p50 | 2개 이하로 끝나는 비율 |
+|---|---|---|---|---|
+| 0~0.25초 | 4% | 1.45 | 1 | 71% |
+| 0.25~1초 | 8% | 1.78 | 1 | 55% |
+| 1~5초 | 30% | 2.04 | 2 | 41% |
+| 5~15초 | 44% | 2.28 | 3 | 27% |
+| 15초 이후 | 14% | 2.80 | 4 | 9% |
+
+1. **시간 규모는 맞는다.** 손실은 넓은 빌드 여러 개가 겹치는 수 초~20초짜리 episode에 몰려 있다. 60 ms에 반응하면 대기의 93%, 늘어난 tool 시간의 96%를 되찾을 수 있다.
+2. **느린 이동도 절반은 되찾는다.** 5초 뒤에 옮겨도 대기의 55%, 늘어난 tool 시간의 66%를 되찾는다. "migration이 끝날 즈음 burst는 끝나 있다"는 원래 주장은 이 workload에서 성립하지 않는다. episode가 길기 때문이다. hand-off만의 몫은 1초 반응 대비 약 10%p, 5초 반응 대비 30~40%p다.
+3. **빠른 이동의 이점은 경합이 눈덩이처럼 커지는 것을 막는 데 있다.**
+   - 경합이 시작된 직후에는 수요가 1.45배라 sandbox 1개만 옮기면 된다. 5초 뒤에는 2.3배라 3개 이상, 15초 뒤에는 4개를 옮겨야 한다. 느려진 명령이 더 오래 겹치면서 경합이 스스로 커지기 때문이다.
+   - 늦게 도착하는 migration은 이미 꽉 찬 출발 노드의 CPU를 쓰면서 여러 VM을 옮겨야 한다.
+   - 다만 이른 이동 1개가 실제로 눈덩이를 막는지는 이 측정만으로는 알 수 없다.
+4. **옮길 대상은 넓은 sandbox뿐이고, 그쪽이 CXL tax가 크다.**
+   - 경합 때 좁은 sandbox는 다 합쳐 1코어만 쓰므로, 옮겨도 소용이 없다.
+   - 넓은 trace의 CXL tax(p50 1.14)는 좁은 trace(1.02)보다 크다. HANDOFF 7.11의 위험("CPU를 많이 쓰는 VM이 곧 tax가 큰 VM")이 일부 맞는다.
+   - 그래도 경합 손실보다는 작다. 넓은 sandbox를 늘 CXL에 두고 hand-off하면 tool 시간이 약 1.14(p90 1.35)로, 지금의 1.45보다 낫다.
+   - tax는 낮은 clock에서 잰 값이라 4 GHz에서는 더 클 수 있다.
+5. **rollout 수준에서는 작다.** 고정 clock에서 넓은 trace의 tool 비중은 13.9%다. 그래서 경합은 넓은 rollout을 6.3% 늘리고, hand-off와 CXL tax(p50)를 함께 넣으면 1.9%로 준다. LLM 대기에 묻히는 구조는 그대로다.
+6. **목적지는 대체로 있다.** 이 노드에서 8코어 이상 빈 시간이 66%다. 노드끼리 독립이라면, 노드 4개일 때 나머지 3개 중 하나에 8코어가 비어 있을 확률은 1 − 0.34³ ≈ 96%다. 사용률이 높아지면 이 확률은 준다.
+
+이번 측정으로 못 잰 것은 실제 이동(노드 하나만 썼다), 이른 이동이 눈덩이를 막는지, 4 GHz에서의 CXL tax다.
+
 ## 9. 파일과 재현
 
 | 파일 | 내용 |
@@ -265,6 +321,7 @@ simulator에 없는 간섭까지 넣어서 같은 구성을 bud05 NUMA 0에서 D
 | `measured-sim.json` | 8절과 같은 구성의 simulator(`real_cap.py simulate --runs runs-perf`) |
 | `measured-schedutil-analysis.json` | 11-04 schedutil 실행의 지표(8.1절, 부하 비교에는 쓰지 않음) |
 | `measured-traces.json` | 실측에 쓴 trace 48개 |
+| `measured-handoff.json` | 8.5절 hand-off 가능성(`real_cap.py handoff --runs runs-perf`) |
 
 원시 결과(조건별 JSON 한 줄)는 bud05 `experiments/contention/.local/cap/`에 있다(Git 제외). Docker 실측 원시 결과(명령별 events, cgroup 시계열, host perf·MBM)는 `experiments/contention/.local/real/runs-perf/`에 있다.
 
@@ -289,4 +346,5 @@ $PY $C/real_cap.py select
 $PY $C/real_cap.py run --runs runs-perf
 $PY $C/real_cap.py analyze --runs runs-perf
 $PY $C/real_cap.py simulate --runs runs-perf
+$PY $C/real_cap.py handoff --runs runs-perf
 ```

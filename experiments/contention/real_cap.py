@@ -407,6 +407,136 @@ def cmd_simulate(args):
     (LOCAL / f"{args.runs}-sim.json").write_text(json.dumps(rows, indent=1))
 
 
+def per_container(run, lo, hi, bin_s):
+    """CPU cores used and PSI cpu-some seconds per container and bin (rows follow run["series"])."""
+    grid = np.arange(lo, hi, bin_s)
+    use, some = np.zeros((len(run["series"]), len(grid) - 1)), np.zeros((len(run["series"]), len(grid) - 1))
+    for i, a in enumerate(run["series"].values()):
+        if len(a) < 2:
+            continue
+        inside = (grid >= a[0, 0]) & (grid <= a[-1, 0])
+        inside = inside[:-1] & inside[1:]
+        use[i] = np.where(inside, np.diff(np.interp(grid, a[:, 0], a[:, 1])), 0.0) / 1e6 / bin_s
+        some[i] = np.where(inside, np.diff(np.interp(grid, a[:, 0], a[:, 3])), 0.0) / 1e6
+    return use, some
+
+
+def episodes(hot, bin_s, merge_s):
+    """[start, end) bin spans of runs of hot bins, gaps up to merge_s joined, and each bin's age in its span (-1 outside)."""
+    edges = np.flatnonzero(np.diff(np.concatenate([[0], hot.astype(int), [0]])))
+    spans = []
+    for a, b in zip(edges[::2], edges[1::2]):
+        if spans and (a - spans[-1][1]) * bin_s <= merge_s:
+            spans[-1][1] = b
+        else:
+            spans.append([a, b])
+    age = np.full(len(hot), -1.0)
+    for a, b in spans:
+        age[a:b] = np.arange(b - a) * bin_s
+    return spans, age
+
+
+def cmd_handoff(args):
+    """What a mover could get back, from the measured K=32 runs alone (no simulator).
+
+    A contended bin has the pool full (>= CORES - 0.5 cores used) and on average at least half a container waiting
+    (PSI cpu some). Episodes are runs of contended bins, gaps up to --merge-s joined; the loss is PSI-some time.
+    - timing: a mover that reacts d seconds into an episode and ends it gets back at most the loss after age d. Per
+      command, if the extra time accrues evenly over the loaded run and the command finishes at its K=4 pace once
+      moved, a move after d seconds gives back wall32 - (d + (1 - d / wall32) * wall4).
+    - how many moves: each running command wants its K=4 mean rate (CPU / wall); the moves needed in a bin are the
+      fewest containers, largest first, whose removal brings the demand to the pool size. Mean rates hide bursts, so
+      this is a lower bound.
+    - who and at what cost: wide (100 ms peak >= 8 cores) vs narrow traces; CXL/DRAM trace latency of the same traces
+      from the 10-14 replay (one run each, schedutil low clock, Docker immediate schedule)."""
+    runs = LOCAL / args.runs
+    traces = json.loads((LOCAL / "traces.json").read_text())
+    wide = {t["name"] for t in traces if t["peak_cores_100ms"] >= 8}
+    ref = load_run(runs / cond_name("none", 4))
+    rate = {k: v[0]["cpu"] / v[0]["wall"] for k, v in ref["commands"].items() if v[0]["wall"] > 0}
+    rows = []
+    for policy in ("none", "cap4"):
+        name = cond_name(policy, 32)
+        run = load_run(runs / name)
+        lo, hi = run["window"]
+        use, some = per_container(run, lo, hi, args.bin_s)
+        node, waiting = use.sum(0), some.sum(0)
+        spans, age = episodes((node >= CORES - 0.5) & (waiting > 0.5 * args.bin_s), args.bin_s, args.merge_s)
+        hot = age >= 0
+        lengths = np.array([(b - a) * args.bin_s for a, b in spans])
+        loss = np.array([waiting[a:b].sum() for a, b in spans])
+        order = np.argsort(lengths)
+        cum = np.cumsum(loss[order]) / loss.sum()
+        w = waiting[hot] / waiting[hot].sum()  # loss weight of each contended bin
+        sessions = list(run["series"])
+        is_wide = np.array([run["sessions"].get(s, ("",))[0] in wide for s in sessions])
+        r = {"condition": name, "bin_s": args.bin_s, "contended_time": float(hot.mean()), "episodes": len(spans),
+             "episodes_per_min": len(spans) / ((hi - lo) / 60), "loss_in_episodes": float(loss.sum() / waiting.sum()),
+             **{f"loss_weighted_length_p{q}": float(lengths[order][min(len(cum) - 1, np.searchsorted(cum, q / 100))])
+                for q in (10, 50, 90)},
+             **{f"loss_after_{d:g}s": float(waiting[age >= d].sum() / waiting.sum()) for d in args.delays},
+             "wide_share_of_loss": float(some[is_wide][:, hot].sum() / some[:, hot].sum()),
+             "wide_cores_when_contended": float((w * use[is_wide][:, hot].sum(0)).sum()),
+             "narrow_cores_when_contended": float((w * use[~is_wide][:, hot].sum(0)).sum()),
+             **{f"free_ge{x}_cores_time": float((CORES - node >= x).mean()) for x in (4, 8, 12)}}
+        if policy == "none":
+            events = [json.loads(line) for line in (runs / name / "events.jsonl").open()]
+            trace_of = next({s["session"]: s["trace"] for s in e["sessions"]} for e in events
+                            if e["event"] == "replay_clock_start")
+            row_of = {s: i for i, s in enumerate(sessions)}
+            grid = np.arange(lo, hi, args.bin_s)[:use.shape[1]]
+            demand = np.zeros_like(use)
+            for e in events:
+                key = (trace_of.get(e.get("session")), e.get("batch"))
+                if e["event"] == "command_end" and e["session"] in row_of and key in rate:
+                    a, b = np.searchsorted(grid, [e["started_s"], e["started_s"] + e["duration_s"]])
+                    demand[row_of[e["session"]], a:b] = min(rate[key], CORES)
+            want = -np.sort(-demand[:, hot], axis=0)  # per contended bin, largest demand first
+            tail = want[::-1].cumsum(0)[::-1]  # demand left after removing the k largest = tail[k]
+            moves = (tail > CORES).sum(0)
+            for a0, a1 in ((0, 0.25), (0.25, 1), (1, 5), (5, 15), (15, None)):
+                m = (age[hot] >= a0) & (age[hot] < (a1 or np.inf))
+                mw = w[m] / w[m].sum()
+                r[f"age_{a0:g}_{a1 or 'end'}s"] = {"loss": float(w[m].sum()),
+                                                  "demand_over_pool": float((mw * want[:, m].sum(0) / CORES).sum()),
+                                                  "moves_p50": float(np.percentile(moves[m], 50)),
+                                                  "le2_moves": float(mw[moves[m] <= 2].sum())}
+            pairs = {True: [], False: []}
+            for key, items in run["commands"].items():
+                base = ref["commands"].get(key)
+                if not base or base[0]["timed_out"]:
+                    continue
+                for c in items:
+                    if lo <= c["t"] <= hi and not c["timed_out"] and (
+                            base[0]["cpu"] < 0.1 or 0.5 <= c["cpu"] / base[0]["cpu"] <= 2.0):
+                        pairs[key[0] in wide].append((c["wall"], base[0]["wall"]))
+            both = pairs[True] + pairs[False]
+            extra = sum(max(0.0, x - b) for x, b in both)
+            r.update({"commands": len(both), "tool_total": sum(x for x, _ in both) / sum(b for _, b in both),
+                      "tool_total_wide": sum(x for x, _ in pairs[True]) / sum(b for _, b in pairs[True]),
+                      "tool_total_narrow": sum(x for x, _ in pairs[False]) / sum(b for _, b in pairs[False]),
+                      "wide_share_of_extra": sum(max(0.0, x - b) for x, b in pairs[True]) / extra,
+                      **{f"extra_in_cmds_ge{x}s": sum(max(0.0, c - b) for c, b in both if c >= x) / extra
+                         for x in (1, 5, 10, 30)}})
+            for d in args.delays:
+                back = sum(max(0.0, x - (d + (1 - d / x) * b)) for x, b in both if d < x)
+                r[f"extra_back_after_{d:g}s"] = back / extra
+                r[f"tool_total_after_{d:g}s"] = (sum(x for x, _ in both) - back) / sum(b for _, b in both)
+        rows.append(r)
+        print(json.dumps({k: (round(v, 4) if isinstance(v, float) else v) for k, v in r.items()}), flush=True)
+    names = {t["name"] for t in traces}
+    tax = {"wide": [], "narrow": []}
+    with (REPO / "docs/results/numa-immediate-20261014/paired-traces.csv").open() as stream:
+        for t in csv.DictReader(stream):
+            if t["eligible"] == "True" and t["trace"] in names:
+                tax["wide" if t["trace"] in wide else "narrow"].append(float(t["trace_latency_ratio_cxl_over_dram"]))
+    cxl = {f"cxl_tax_{k}_{s}": float(f(v)) for k, v in tax.items() if v
+           for s, f in (("n", len), ("p50", np.median), ("p90", lambda x: np.percentile(x, 90)))}
+    rows.append(cxl)
+    print(json.dumps({k: round(v, 4) for k, v in cxl.items()}))
+    (LOCAL / f"{args.runs}-handoff.json").write_text(json.dumps(rows, indent=1))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -432,6 +562,13 @@ def main():
     p.add_argument("--ramp-s", type=float, default=120)
     p.add_argument("--duration-s", type=float, default=1200)
     p.set_defaults(func=cmd_simulate)
+    p = sub.add_parser("handoff")
+    p.add_argument("--runs", default="runs")
+    p.add_argument("--bin-s", type=float, default=0.02, help="container CPU is sampled every 20 ms")
+    p.add_argument("--merge-s", type=float, default=0.1, help="join episodes separated by a shorter gap")
+    p.add_argument("--delays", type=float, nargs="+", default=[0.02, 0.06, 0.25, 1.0, 5.0, 30.0],
+                   help="mover reaction + move time, s (0.06: 50 ms detection + 10 ms hand-off)")
+    p.set_defaults(func=cmd_handoff)
     args = parser.parse_args()
     args.func(args)
 
