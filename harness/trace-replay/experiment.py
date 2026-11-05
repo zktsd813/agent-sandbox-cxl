@@ -423,8 +423,9 @@ def container_group(name):
 
 def create_budget(config, name, image_id):
     allowed_mems = "0,2" if config.get("numa_bind_helper") and not config.get("write_tracking") else ",".join(str(n) for n in sorted({config["numa_node"], int(config["memory_nodes"])}))
+    # budget_cpus: a docker daemon started before SMT was enabled refuses sibling CPUs in --cpuset-cpus
     docker("run", "-d", "--name", name, "--cgroup-parent", config["budget_unit"],
-           "--cpuset-cpus", config["controller_cpus"], "--cpuset-mems", str(config["numa_node"]), "--memory", "64m",
+           "--cpuset-cpus", config.get("budget_cpus", config["controller_cpus"]), "--cpuset-mems", str(config["numa_node"]), "--memory", "64m",
            "--memory-swap", "64m", "--pids-limit", "64", "--network", "none", image_id, "sleep", "infinity")
     systemd("set-property", "--runtime", config["budget_unit"],
             f"MemoryMax={config['aggregate_memory_limit_bytes']}", "MemorySwapMax=0",
@@ -479,6 +480,26 @@ def resources(cgroup, memory=True, target_node=0):
             "pids_current": int((cgroup / "pids.current").read_text()), "pids_limit_events": int(pids.get("max", 0))}
 
 
+POOL_LOCK = threading.Lock()
+POOL_PENDING = {}
+
+
+def pick_pool(config):
+    """With --pools, the pool whose cpuset the fewest live containers have now (a mover may have changed them)."""
+    with POOL_LOCK:
+        count = {pool: POOL_PENDING.get(pool, 0) for pool in config["workload_pools"]}
+        for scope in Path(config["budget_cgroup"]).glob("docker-*.scope"):
+            try:
+                cpus = cpu_ids((scope / "cpuset.cpus").read_text().strip())
+            except (OSError, ValueError):  # a scope being created has an empty cpuset; POOL_PENDING counts it
+                continue
+            for pool in count:
+                count[pool] += cpus == cpu_ids(pool)
+        pool = min(count, key=count.get)
+        POOL_PENDING[pool] = POOL_PENDING.get(pool, 0) + 1
+        return pool
+
+
 def prepare(trace, config, name, pull, image_id=None):
     image = task_image(trace, config)
     if pull:
@@ -490,14 +511,20 @@ def prepare(trace, config, name, pull, image_id=None):
         extra = ["--mount", f"type=bind,src={config['numa_bind_helper']},dst=/opt/mini-numa-bind,readonly", "--cap-add", "SYS_NICE"]
         init = ["/opt/mini-numa-bind", config["memory_nodes"], *init]
     quota = config.get("cpus_per_container")  # hard cap (CFS quota), as `docker run --cpus` in Docker-based RL harnesses
-    docker("run", "-d", "--name", name, "--cgroup-parent", config["budget_unit"], "--cpuset-cpus", config["workload_cpus"],
-           "--cpuset-mems", memory_mask, "--memory", str(config["memory_limit_bytes"]),
-           "--memory-swap", str(config["memory_limit_bytes"]), "--pids-limit", str(config["pids_limit"]),
-           *(["--cpus", f"{quota:g}"] if quota else []), "-w", trace["environment"]["cwd"], *extra, image_id, *init)
+    cpuset = pick_pool(config) if config.get("workload_pools") else config["workload_cpus"]
+    try:
+        docker("run", "-d", "--name", name, "--cgroup-parent", config["budget_unit"], "--cpuset-cpus", cpuset,
+               "--cpuset-mems", memory_mask, "--memory", str(config["memory_limit_bytes"]),
+               "--memory-swap", str(config["memory_limit_bytes"]), "--pids-limit", str(config["pids_limit"]),
+               *(["--cpus", f"{quota:g}"] if quota else []), "-w", trace["environment"]["cwd"], *extra, image_id, *init)
+    finally:
+        if config.get("workload_pools"):
+            with POOL_LOCK:
+                POOL_PENDING[cpuset] -= 1
     cgroup = container_group(name)
     cpus = (cgroup / "cpuset.cpus.effective").read_text().strip()
     mems = (cgroup / "cpuset.mems.effective").read_text().strip()
-    if cpu_ids(cpus) != cpu_ids(config["workload_cpus"]) or cpu_ids(mems) != cpu_ids(memory_mask):
+    if cpu_ids(cpus) != cpu_ids(cpuset) or cpu_ids(mems) != cpu_ids(memory_mask):
         raise RuntimeError(f"Unexpected effective cpuset for {name}: {cpus}, {mems}")
     limit, period = (cgroup / "cpu.max").read_text().split()
     if (limit == "max") != (not quota) or (quota and abs(int(limit) / int(period) - quota) > 1e-6):
@@ -550,16 +577,20 @@ def sample(sessions, clock, intervals, stop, record, destination, keep_going=Fal
             stop.wait(max(0, intervals["cpu_interval_ms"] / 1000 - (time.monotonic() - started)))
 
 
-def remove_container(name, record):
-    try:
-        docker("rm", "-f", name)
-        return True
-    except subprocess.CalledProcessError as error:
-        if "No such container" in error.stderr:
+def remove_container(name, record, attempts=3):
+    # with every workload CPU busy, dockerd can miss the exit event of the killed container; a later attempt succeeds
+    for attempt in range(attempts):
+        try:
+            docker("rm", "-f", name)
             return True
-        record("error", session=name, error=f"Container cleanup failed: {error.stderr}")
-    except (OSError, subprocess.TimeoutExpired) as error:
-        record("error", session=name, error=f"Container cleanup failed: {error}")
+        except subprocess.CalledProcessError as error:
+            if "No such container" in error.stderr:
+                return True
+            failure = error.stderr
+        except (OSError, subprocess.TimeoutExpired) as error:
+            failure = str(error)
+        record("error", session=name, error=f"Container cleanup failed (attempt {attempt + 1}/{attempts}): {failure}")
+        time.sleep(5)
     return False
 
 
@@ -880,6 +911,8 @@ def main():
     parser.add_argument("--workload-cpus", help="Shared workload CPU pool, restricted to the configured CPU NUMA node")
     parser.add_argument("--cpus", type=float, help="Hard CPU cap per container (docker run --cpus, CFS quota)")
     parser.add_argument("--command-timeout", type=float, help="Override the trace's command timeout (seconds)")
+    parser.add_argument("--pools", nargs="+", help="Disjoint CPU pools that together form the workload CPUs; each new "
+                        "container starts in the pool with the fewest live containers (a mover may change it later)")
     parser.add_argument("--keep-going", action="store_true", help="Continue other sessions after an individual workload failure")
     parser.add_argument("--sequential", action="store_true", help="Execute each trace once, with one workload container at a time")
     parser.add_argument("--memory-node", type=int, choices=(0, 1, 2), help="Workload memory NUMA node; controller stays on the configured CPU node")
@@ -919,6 +952,12 @@ def main():
         arguments.sequential = True
     if arguments.workload_cpus:
         config["workload_cpus"] = arguments.workload_cpus
+    if arguments.pools:
+        if len(arguments.pools) < 2 or any(cpu_ids(a) & cpu_ids(b) for i, a in enumerate(arguments.pools)
+                                           for b in arguments.pools[i + 1:]):
+            parser.error("--pools needs at least two disjoint CPU lists")
+        config["workload_pools"] = arguments.pools
+        config["workload_cpus"] = ",".join(arguments.pools)
     arguments.workload_cpus = config["workload_cpus"]
     if arguments.cpus is not None:
         if arguments.cpus <= 0:
@@ -1046,6 +1085,7 @@ def main():
 
         try:
             budget = create_budget(config, budget_name, next(iter(images.values())))
+            config["budget_cgroup"] = str(budget)
             record("budget_ready", unit=config["budget_unit"], cgroup=str(budget), resources=resources(budget))
             names = [f"mini-replay-{run_id}-{index}" for index in range(len(traces))]
             if arguments.setup == "precreate":
@@ -1083,7 +1123,10 @@ def main():
                     replay(session, origin, clock, arguments, record, stop, arguments.output)
 
                 futures = []
-                for trace, name in sorted(zip(traces, names), key=lambda pair: pair[0]["first"]):
+                # --starts together keeps the command-line order: sorting by the recorded start would put copies of a
+                # trace (and traces of one repo) next to each other, so they would start and burst together
+                for trace, name in sorted(zip(traces, names),
+                                          key=lambda pair: pair[0]["first"] if arguments.starts == "recorded" else 0):
                     offset = trace["first"] - origin if arguments.starts == "recorded" else 0
                     planned = clock + offset * arguments.scale
                     if stop.wait(max(0, planned - time.monotonic())):

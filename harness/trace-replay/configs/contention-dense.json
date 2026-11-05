@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "status": "dense_cpu_contention",
+  "numa_node": 0,
+  "node_cpu_pool": "0-31,64-65",
+  "controller_cpus": "0-1,64-65",
+  "budget_cpus": "0-1",
+  "workload_cpus": "2-17",
+  "memory_nodes": "0",
+  "memory_limit_bytes": 8589934592,
+  "aggregate_memory_limit_bytes": 103079215104,
+  "swap_limit_bytes": 0,
+  "pids_limit": 16384,
+  "max_concurrent_sessions": 16,
+  "sampling": {
+    "cpu_interval_ms": 20,
+    "memory_interval_ms": 100,
+    "clock": "monotonic_with_actual_elapsed_interval"
+  },
+  "sample": {
+    "instance_id": "gin-gonic__gin-3741",
+    "image_reference_from_trace": "docker.io/swebench/sweb.eval.x86_64.gin-gonic_1776_gin-3741:latest",
+    "currently_observed_image": "docker.io/swebench/sweb.eval.x86_64.gin-gonic_1776_gin-3741@sha256:c134cc213a09fd5060dd3d3a70adde0eb6607750c111f397b163a306d0ee5a1e"
+  }
+}

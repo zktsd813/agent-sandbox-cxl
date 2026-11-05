@@ -22,9 +22,12 @@ minus one, so `analyze` reports that weighting too (`cpu_weighted`) next to the 
 
 import argparse
 import bisect
+import collections
 import csv
+import glob
 import json
 import math
+import os
 from pathlib import Path
 import random
 import subprocess
@@ -45,7 +48,7 @@ CONFIG = REPO / "harness/trace-replay/configs/contention.json"
 WORKLOAD_CPUS = "2-17"
 CORES = 16
 MBM = Path("/sys/fs/resctrl/mon_data/mon_L3_00/mbm_total_bytes")  # socket 0 memory traffic, all tasks
-TSC_GHZ = 2.5  # Xeon Gold 6548Y+ base clock; ref-cycles tick at this rate, turbo is off in BIOS
+TSC_GHZ = 2.5  # Xeon Gold 6548Y+ base clock; ref-cycles tick at this rate (turbo is on: busy cores run near 4 GHz)
 CONDITIONS = [(policy, cpus, k, repeats) for k, repeats in ((4, 1), (32, 4))
               for policy, cpus in (("none", None), ("cap4", 4), ("cap1", 1))]
 SIM_POLICY = {"none": "cap16", "cap4": "cap4", "cap1": "cap1"}  # no quota still sees only the 16 cpuset CPUs
@@ -67,10 +70,10 @@ def governor_path(cpu):
     return Path(f"/sys/devices/system/cpu/cpu{cpu}/cpufreq/scaling_governor")
 
 
-def governor_cpus():
+def governor_cpus(spec=WORKLOAD_CPUS):
     """Workload CPUs and their SMT siblings (a core's clock follows the busier thread's request)."""
     cpus = set()
-    for c in cpu_list(WORKLOAD_CPUS):
+    for c in cpu_list(spec):
         cpus.update(cpu_list(Path(f"/sys/devices/system/cpu/cpu{c}/topology/thread_siblings_list").read_text().strip()))
     return sorted(cpus)
 
@@ -109,9 +112,9 @@ def cmd_select(args):
           f"before stretching; mean window {span / len(chosen):.0f} s")
 
 
-def host_sampler(path, stop):
+def host_sampler(path, stop, cpus=WORKLOAD_CPUS):
     """Socket 0 memory bandwidth (resctrl MBM) every second, and workload-CPU IPC and clock from a system-wide perf."""
-    perf = subprocess.Popen(["sudo", "-n", "/usr/lib/linux-tools-6.8.0-146/perf", "stat", "-a", "-C", WORKLOAD_CPUS,
+    perf = subprocess.Popen(["sudo", "-n", "/usr/lib/linux-tools-6.8.0-146/perf", "stat", "-a", "-C", cpus,
                              "-e", "instructions,cycles,ref-cycles", "-I", "1000", "-x", ",",
                              "-o", str(path.with_suffix(".perf.csv"))],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -127,6 +130,16 @@ def host_sampler(path, stop):
     perf.wait(timeout=30)
 
 
+def finished(out):
+    """A run counts as done when every queued trace ended; an interrupted run also writes budget_end."""
+    events = out / "events.jsonl"
+    if not events.exists():
+        return False
+    text = events.read_text()
+    return '"budget_end"' in text and text.count('"session_queued"') == text.count('"session_end"') + text.count(
+        '"session_failed"') and '"session_queued"' in text
+
+
 def cmd_run(args):
     traces = json.loads((LOCAL / "traces.json").read_text())
     runs = LOCAL / args.runs
@@ -137,7 +150,7 @@ def cmd_run(args):
         if args.only and name not in args.only:
             continue
         out = runs / name
-        if (out / "events.jsonl").exists() and '"budget_end"' in (out / "events.jsonl").read_text():
+        if finished(out):
             print(f"{name}: done, skipped", flush=True)
             continue
         if out.exists():
@@ -276,10 +289,13 @@ def host_stats(directory, name, window, clock0):
 def cmd_analyze(args):
     runs = LOCAL / args.runs
     data = {}
+    dirs = {}
     for policy, cpus, k, repeats in CONDITIONS:
         d = runs / cond_name(policy, k)
+        if not (d / "events.jsonl").exists() and k == 4 and args.reference:
+            d = LOCAL / args.reference / cond_name(policy, k)  # K=4 runs alone at ~5% load; its order barely matters
         if (d / "events.jsonl").exists():
-            data[cond_name(policy, k)] = load_run(d)
+            data[cond_name(policy, k)], dirs[cond_name(policy, k)] = load_run(d), d
     summary = []
     for policy, cpus, k, repeats in CONDITIONS:
         name = cond_name(policy, k)
@@ -333,7 +349,7 @@ def cmd_analyze(args):
         result.update(saturation(run, *(run["window"] if k > 4 else (0.0, span))))
         if k == 4:
             result.update(versus_1014(run))
-        result.update(host_stats(runs / name, name, run["window"], 0.0))
+        result.update(host_stats(dirs[name], name, run["window"], 0.0))
         summary.append(result)
         print(json.dumps({k2: (round(v, 4) if isinstance(v, float) else v) for k2, v in result.items()}))
     (LOCAL / f"{args.runs}-analysis.json").write_text(json.dumps(summary, indent=1))
@@ -452,7 +468,10 @@ def cmd_handoff(args):
     runs = LOCAL / args.runs
     traces = json.loads((LOCAL / "traces.json").read_text())
     wide = {t["name"] for t in traces if t["peak_cores_100ms"] >= 8}
-    ref = load_run(runs / cond_name("none", 4))
+    ref_dir = runs / cond_name("none", 4)
+    if not (ref_dir / "events.jsonl").exists() and args.reference:
+        ref_dir = LOCAL / args.reference / cond_name("none", 4)
+    ref = load_run(ref_dir)
     rate = {k: v[0]["cpu"] / v[0]["wall"] for k, v in ref["commands"].items() if v[0]["wall"] > 0}
     rows = []
     for policy in ("none", "cap4"):
@@ -537,6 +556,284 @@ def cmd_handoff(args):
     (LOCAL / f"{args.runs}-handoff.json").write_text(json.dumps(rows, indent=1))
 
 
+CONTROLLER_CPUS = "0-1"
+POOLS = ("2-16", "17-31")  # two 15-core pools on NUMA 0 next to the controller CPUs
+POOL_K = 60  # 2 sandboxes per core, as K=32 on 16 cores
+POOL_REPEATS = 8  # 384 traces through 60 slots: about as long as the K=32 runs
+POOL_RUNS = [("move-0.06s", 0.06), ("static", None), ("move-1s", 1.0), ("move-5s", 5.0), ("shared", None)]
+MOVE_HOLD_S = 5.0  # a moved container stays put this long
+MOVE_MIN_FREE = 4.0  # the destination needs this many idle cores (mean over the last 0.5 s)
+MOVE_MIN_WAIT_S = 0.1  # a candidate waited at least this long in the last 0.5 s
+MOVE_DEST_COOL_S = 0.5  # a pool takes no new container for this long after one arrived (its free cores catch up)
+GAIN_RATIO = 1.5  # rule "gain": the candidate would get at least 1.5x its current cores in the destination
+GAIN_MIN_CORES = 1.0  # ... and at least one core more
+
+
+def water_level(uses, size):
+    """Cores a newcomer would get in a pool that shares CPU equally per container (cgroup v2, equal cpu.weight), taking
+    the others' current use as their demand: those under the level keep theirs, the rest drop to the level."""
+    rest, n = size, len(uses) + 1
+    for u in sorted(uses):
+        if u >= rest / n:
+            break
+        rest, n = rest - u, n - 1
+    return rest / n
+
+
+CPUSET_HELPER = r"""
+import re, sys
+target = re.compile(r"/sys/fs/cgroup/minireplay[0-9a-f]+\.slice/docker-[0-9a-f]{64}\.scope/cpuset\.cpus")
+for line in sys.stdin:
+    path, cpus = line.split()
+    try:
+        if not target.fullmatch(path) or not re.fullmatch(r"[0-9,-]+", cpus):
+            raise ValueError(path)
+        with open(path, "w") as stream:
+            stream.write(cpus)
+        print("ok", flush=True)
+    except Exception as error:
+        print("err", error, flush=True)
+"""
+
+
+class Mover(threading.Thread):
+    """Moves one container at a time out of a contended pool by writing its cgroup cpuset.cpus through a root helper
+    (`docker update --cpuset-cpus` took 0.05-2 s while dockerd was busy). Only the CPU moves (memory stays on node 0),
+    so this is an ideal hand-off; the write takes about a millisecond and the kernel moves the tasks at once.
+
+    Every 20 ms it reads each container's cgroup CPU usage and PSI cpu-some total. A pool is contended in a tick when
+    its containers use >= size - 0.5 cores and on average at least half a container waits, as in `handoff`; gaps up to
+    0.1 s are joined. After `delay` seconds of contention, while the pool is still contended, the container that waited
+    most over the last 0.5 s (at least MOVE_MIN_WAIT_S) moves to another pool that took no container in the last
+    MOVE_DEST_COOL_S; the clock then restarts, so each further move needs another `delay`. A moved container stays put
+    for `hold` seconds. delay None only records each container's pool. The destination rule:
+    - "free": the pool with the most idle cores, if it is not contended and has >= MOVE_MIN_FREE idle cores.
+    - "gain": the pool where the candidate would get the most cores (`water_level` over the 0.5 s mean use of the
+      containers there), if that is >= GAIN_RATIO x and GAIN_MIN_CORES more than it gets now. The destination may be
+      busy or even contended: a sandbox starved by a crowd of containers moves to a busy pool shared by fewer."""
+
+    def __init__(self, pools, delay, log_path, stop, rule="free", cpus=CONTROLLER_CPUS, hold=MOVE_HOLD_S):
+        super().__init__(daemon=True)
+        self.pools, self.delay, self.stop, self.rule, self.cpus, self.hold = pools, delay, stop, rule, cpus, hold
+        self.size = {p: len(cpu_list(p)) for p in pools}
+        self.log = log_path.open("w", newline="")
+        self.csv = csv.writer(self.log)  # quotes a pool like "2-16,17-31"
+        self.csv.writerow(["t_unix", "event", "container", "from_pool", "to_pool", "waited_s", "pool_use", "latency_s"])
+
+    def write(self, event, name, a="", b="", waited=0.0, use=0.0, latency=0.0):
+        self.csv.writerow([f"{time.time():.3f}", event, name, a, b, f"{waited:.3f}", f"{use:.2f}", f"{latency:.3f}"])
+        self.log.flush()
+
+    def run(self):
+        os.sched_setaffinity(0, cpu_list(self.cpus))  # this thread only
+        tick, window = 0.02, 25
+        known = {}
+        helper = None if self.delay is None else subprocess.Popen(
+            ["sudo", "-n", sys.executable, "-c", CPUSET_HELPER], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
+            bufsize=1)
+        hot_since, last_hot = dict.fromkeys(self.pools), dict.fromkeys(self.pools, -1e9)
+        arrived = dict.fromkeys(self.pools, -1e9)
+        free = {p: collections.deque(maxlen=window) for p in self.pools}
+        next_scan = 0.0
+        while not self.stop.is_set():
+            now = time.monotonic()
+            if now >= next_scan:
+                next_scan = now + 0.5
+                listing = subprocess.run(["docker", "ps", "--no-trunc", "--filter", "name=mini-replay-", "--format",
+                                          "{{.ID}} {{.Names}}"], capture_output=True, text=True).stdout
+                live = dict(line.split(" ", 1) for line in listing.splitlines() if " " in line)
+                for cid in [c for c in known if c not in live]:
+                    del known[cid]
+                for cid, name in live.items():
+                    paths = [] if cid in known else glob.glob(f"/sys/fs/cgroup/minireplay*.slice/docker-{cid}.scope")
+                    if not paths:
+                        continue
+                    try:
+                        cpus = cpu_list(Path(paths[0], "cpuset.cpus").read_text().strip())
+                    except OSError:
+                        continue
+                    pool = next((p for p in self.pools if cpu_list(p) == cpus), None)
+                    if pool:  # the budget container sits on the controller CPUs
+                        known[cid] = {"name": name, "path": Path(paths[0]), "pool": pool, "prev": None,
+                                      "wait": collections.deque(maxlen=window), "use": collections.deque(maxlen=window),
+                                      "moved_at": -1e9}
+                        self.write("seen", name, pool)
+            use, wait = dict.fromkeys(self.pools, 0.0), dict.fromkeys(self.pools, 0.0)
+            for c in known.values():
+                try:
+                    usage = int((c["path"] / "cpu.stat").read_text().split("\n", 1)[0].split()[1])
+                    some = int((c["path"] / "cpu.pressure").read_text().split("\n", 1)[0].rsplit("=", 1)[1])
+                except (OSError, IndexError, ValueError):
+                    continue
+                if c["prev"]:
+                    dt = now - c["prev"][0]
+                    u = (usage - c["prev"][1]) / 1e6 / dt
+                    use[c["pool"]] += u
+                    w = (some - c["prev"][2]) / 1e6 / dt
+                    wait[c["pool"]] += w
+                    c["wait"].append(w)
+                    c["use"].append(u)
+                c["prev"] = (now, usage, some)
+            for p in self.pools:
+                free[p].append(self.size[p] - use[p])
+                if use[p] >= self.size[p] - 0.5 and wait[p] > 0.5:
+                    if now - last_hot[p] > 0.1:
+                        hot_since[p] = now
+                    last_hot[p] = now
+                elif now - last_hot[p] > 0.1:
+                    hot_since[p] = None
+            for p in (self.pools if self.delay is not None else ()):
+                if hot_since[p] is None or now - hot_since[p] < self.delay or last_hot[p] != now:
+                    continue
+                movable = [(cid, c) for cid, c in known.items() if c["pool"] == p and now - c["moved_at"] >= self.hold
+                           and sum(c["wait"]) * tick >= MOVE_MIN_WAIT_S]
+                if not movable:
+                    continue
+                cid, c = max(movable, key=lambda item: sum(item[1]["wait"]))
+                if self.rule == "free":
+                    dests = [q for q in self.pools if q != p and hot_since[q] is None
+                             and now - arrived[q] >= MOVE_DEST_COOL_S and np.mean(free[q]) >= MOVE_MIN_FREE]
+                    dest = max(dests, key=lambda q: np.mean(free[q])) if dests else None
+                else:
+                    mine = np.mean(c["use"]) if c["use"] else 0.0
+                    level = {q: water_level([np.mean(o["use"]) for o in known.values() if o["pool"] == q and o["use"]],
+                                            self.size[q])
+                             for q in self.pools if q != p and now - arrived[q] >= MOVE_DEST_COOL_S}
+                    dest = max(level, key=level.get) if level else None
+                    if dest and not (level[dest] >= GAIN_RATIO * mine and level[dest] >= mine + GAIN_MIN_CORES):
+                        dest = None
+                if dest is None:
+                    continue
+                helper.stdin.write(f"{c['path'] / 'cpuset.cpus'} {dest}\n")
+                reply = helper.stdout.readline().strip()
+                self.write("move" if reply == "ok" else "move_failed", c["name"], p, dest, sum(c["wait"]) * tick, use[p],
+                           time.monotonic() - now)
+                if reply == "ok":
+                    c["pool"], c["moved_at"], hot_since[p], arrived[dest] = dest, now, now, now
+            time.sleep(max(0.0, tick - (time.monotonic() - now)))
+        if helper:
+            helper.stdin.close()
+            helper.wait(timeout=10)
+        self.log.close()
+
+
+def cmd_pools_run(args):
+    """Two 15-core pools with 60 sandboxes, static or with the mover at several delays, and one shared 30-core pool."""
+    traces = json.loads((LOCAL / "traces.json").read_text())
+    runs = LOCAL / args.runs
+    runs.mkdir(parents=True, exist_ok=True)
+    order = [t["trace"] for t in traces] * POOL_REPEATS
+    random.Random("two-pool").shuffle(order)  # same arrival order in every condition
+    union = ",".join(POOLS)
+    cpus_g = governor_cpus(union)
+    for name, delay in POOL_RUNS:
+        if args.only and name not in args.only:
+            continue
+        out = runs / name
+        if finished(out):
+            print(f"{name}: done, skipped", flush=True)
+            continue
+        if out.exists():
+            out.rename(runs / f"{name}-failed-{int(time.time())}")
+        while float(Path("/proc/loadavg").read_text().split()[0]) > args.max_load:
+            print(f"{name}: waiting for host load to drop", flush=True)
+            time.sleep(60)
+        governors = sorted({governor_path(c).read_text().strip() for c in cpus_g})
+        if governors != ["performance"]:
+            raise SystemExit(f"{name}: governor on CPUs {cpus_g} is {governors}, not performance")
+        traces_now = order[:args.limit] if args.limit else order
+        pools = POOLS if name != "shared" else (union,)
+        command = [sys.executable, str(EXPERIMENT), *[str(REPO / t) for t in traces_now], "--config", str(CONFIG),
+                   "--output", str(out), "--schedule", "gaps", "--starts", "together", "--setup", "on-arrival",
+                   "--max-active", str(args.k), "--keep-going", "--command-timeout", "600",
+                   *(["--pools", *POOLS] if len(pools) > 1 else ["--workload-cpus", union])]
+        print(f"{name}: {len(traces_now)} traces, K={args.k}, pools {pools}, move delay {delay}", flush=True)
+        stop = threading.Event()
+        sampler = threading.Thread(target=host_sampler, args=(runs / f"{name}-host.csv", stop, union))
+        mover = Mover(pools, delay, runs / f"{name}-moves.csv", stop)
+        sampler.start()
+        mover.start()
+        started = time.time()
+        try:
+            result = subprocess.run(command, cwd=REPO)
+        finally:
+            stop.set()
+            sampler.join()
+            mover.join()
+        print(f"{name}: exit {result.returncode}, {time.time() - started:.0f} s", flush=True)
+
+
+def cmd_pools_analyze(args):
+    """Per command against the 16-core no-cap K=4 run (runs-perf), contention per pool and the moves made."""
+    wide = {t["name"] for t in json.loads((LOCAL / "traces.json").read_text()) if t["peak_cores_100ms"] >= 8}
+    ref = load_run(LOCAL / args.reference / cond_name("none", 4))
+    runs = LOCAL / args.runs
+    rows = []
+    for name, delay in POOL_RUNS:
+        d = runs / name
+        if not (d / "events.jsonl").exists():
+            continue
+        run = load_run(d)
+        lo, hi = run["window"]
+        if hi - lo < 60:  # a short smoke run never holds K for long: use the whole run
+            lo, hi = min(s for _, s, _ in run["sessions"].values()), max(e for _, _, e in run["sessions"].values())
+        pairs = {True: [], False: []}
+        for key, items in run["commands"].items():
+            base = ref["commands"].get(key)
+            if not base or base[0]["timed_out"]:
+                continue
+            for c in items:
+                if lo <= c["t"] <= hi and not c["timed_out"] and (
+                        base[0]["cpu"] < 0.1 or 0.5 <= c["cpu"] / base[0]["cpu"] <= 2.0):
+                    pairs[key[0] in wide].append((c, base[0]))
+        both = pairs[True] + pairs[False]
+        heavy = np.array([c["wall"] / b["wall"] for c, b in both if b["cpu"] >= 1.0])
+        total = lambda ps: sum(c["wall"] for c, _ in ps) / sum(b["wall"] for _, b in ps)
+        span = hi - lo
+        r = {"condition": name, "delay_s": delay, "commands": len(both),
+             "util": sum(c["cpu"] for c, _ in both) / (len(cpu_list(",".join(POOLS))) * span),
+             "timed_out": sum(bool(c["timed_out"]) for items in run["commands"].values() for c in items
+                              if lo <= c["t"] <= hi),
+             "tool_total": total(both), "tool_total_wide": total(pairs[True]), "tool_total_narrow": total(pairs[False]),
+             "cpu_weighted": sum(b["cpu"] * c["wall"] / b["wall"] for c, b in both if b["wall"] > 0)
+             / sum(b["cpu"] for c, b in both if b["wall"] > 0),
+             "heavy_p50": float(np.median(heavy)), "heavy_p90": float(np.percentile(heavy, 90))}
+        moves = d.parent / f"{name}-moves.csv"
+        if moves.exists():
+            start = next(json.loads(line)["wall_time_unix"] for line in (d / "events.jsonl").open()
+                         if '"replay_clock_start"' in line)
+            log = list(csv.DictReader(moves.open()))
+            made = [m for m in log if m["event"] == "move" and lo <= float(m["t_unix"]) - start <= hi]
+            r.update({"moves": len(made), "moves_per_min": len(made) / (span / 60),
+                      "moves_failed": sum(m["event"] == "move_failed" for m in log),
+                      "move_latency_p50_s": float(np.median([float(m["latency_s"]) for m in made])) if made else None})
+            # contended time per pool from each container's pool over time
+            pool_at = collections.defaultdict(list)
+            if name == "shared":  # one pool (early logs wrote "2-16,17-31" unquoted)
+                for s in run["series"]:
+                    pool_at[s].append((-np.inf, ",".join(POOLS)))
+            for m in (log if name != "shared" else ()):
+                if m["event"] in ("seen", "move"):
+                    pool_at[m["container"]].append((float(m["t_unix"]) - start, m["to_pool"] or m["from_pool"]))
+            use, some = per_container(run, lo, hi, 0.02)
+            grid = np.arange(lo, hi, 0.02)[:use.shape[1]]
+            pools = sorted({p for v in pool_at.values() for _, p in v})
+            pool_use = {p: np.zeros(use.shape[1]) for p in pools}
+            pool_wait = {p: np.zeros(use.shape[1]) for p in pools}
+            for i, s in enumerate(run["series"]):
+                for j, (t0, p) in enumerate(sorted(pool_at.get(s, []))):
+                    t1 = sorted(pool_at[s])[j + 1][0] if j + 1 < len(pool_at[s]) else np.inf
+                    m = (grid >= t0) & (grid < t1)
+                    pool_use[p] += np.where(m, use[i], 0.0)
+                    pool_wait[p] += np.where(m, some[i], 0.0)
+            hot = [(pool_use[p] >= len(cpu_list(p)) - 0.5) & (pool_wait[p] > 0.01) for p in pools]
+            r.update({"contended_time_per_pool": float(np.mean([h.mean() for h in hot])),
+                      "wait_s_per_s": float(sum(pool_wait[p].sum() for p in pools) / span)})
+        rows.append(r)
+        print(json.dumps({k: (round(v, 4) if isinstance(v, float) else v) for k, v in r.items()}), flush=True)
+    (LOCAL / f"{args.runs}-analysis.json").write_text(json.dumps(rows, indent=1))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -555,6 +852,7 @@ def main():
     p.set_defaults(func=cmd_run)
     p = sub.add_parser("analyze")
     p.add_argument("--runs", default="runs")
+    p.add_argument("--reference", help="runs directory to take the K=4 conditions from when --runs has none")
     p.set_defaults(func=cmd_analyze)
     p = sub.add_parser("simulate")
     p.add_argument("--runs", default="runs")
@@ -566,9 +864,21 @@ def main():
     p.add_argument("--runs", default="runs")
     p.add_argument("--bin-s", type=float, default=0.02, help="container CPU is sampled every 20 ms")
     p.add_argument("--merge-s", type=float, default=0.1, help="join episodes separated by a shorter gap")
+    p.add_argument("--reference", help="runs directory to take none-k4 from when --runs has none")
     p.add_argument("--delays", type=float, nargs="+", default=[0.02, 0.06, 0.25, 1.0, 5.0, 30.0],
                    help="mover reaction + move time, s (0.06: 50 ms detection + 10 ms hand-off)")
     p.set_defaults(func=cmd_handoff)
+    p = sub.add_parser("pools-run", help="two 15-core pools: static, mover at several delays, one shared pool")
+    p.add_argument("--runs", default="runs-pools")
+    p.add_argument("--only", nargs="+", help="conditions, e.g. static move-0.06s")
+    p.add_argument("--k", type=int, default=POOL_K, help="sandboxes running at once across both pools")
+    p.add_argument("--limit", type=int, help="replay only the first N traces of the order (smoke test)")
+    p.add_argument("--max-load", type=float, default=4.0)
+    p.set_defaults(func=cmd_pools_run)
+    p = sub.add_parser("pools-analyze")
+    p.add_argument("--runs", default="runs-pools")
+    p.add_argument("--reference", default="runs-perf", help="runs directory whose none-k4 is the per-command reference")
+    p.set_defaults(func=cmd_pools_analyze)
     args = parser.parse_args()
     args.func(args)
 

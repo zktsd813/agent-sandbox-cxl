@@ -14,6 +14,7 @@ stretch as well as contention. Commands are not cut at 60 s (the agent's timeout
 
   python3 cap_sweep.py test
   python3 cap_sweep.py programs
+  python3 cap_sweep.py bursts
   python3 cap_sweep.py grid --out grids/cap.json
   numactl --cpunodebind=0 --membind=0 nice -n 19 python3 cap_sweep.py run --grid grids/cap.json --jobs 24 \
       --output .local/cap/cap.jsonl
@@ -168,6 +169,32 @@ def cmd_programs(args):
         print(json.dumps(solo_summary(profiles, policy)))
 
 
+def cmd_bursts(args):
+    """When a sandbox first runs wide (>= --cores over 100 ms) in its life, and how many separate wide bursts it has."""
+    profiles, rows = load_profiles(), []
+    for profile in profiles.values():
+        t, times, demand = 0.0, [], []
+        for gap, d in profile["commands"]:
+            t += gap
+            times.append(t + DT * np.arange(len(d)))
+            demand.append(d)
+            t += DT * len(d)
+        times, demand = np.concatenate(times), np.concatenate(demand)
+        k = max(1, int(round(0.1 / DT)))
+        wide = np.convolve(demand, np.ones(k) / k, "same") >= args.cores
+        if wide.any():
+            starts = times[wide]
+            rows.append((starts[0], starts[0] / t, 1 + int((np.diff(starts) > args.gap_s).sum())))
+    first, share, bursts = (np.array(c) for c in zip(*rows))
+    print(json.dumps({"traces": len(profiles), "wide": len(rows),
+                      "first_s_p10_p50_p90": np.percentile(first, [10, 50, 90]).round(1).tolist(),
+                      "first_share_of_life_p10_p50_p90": np.percentile(share, [10, 50, 90]).round(3).tolist(),
+                      "first_after_25pct": round(float((share > 0.25).mean()), 3),
+                      "first_after_50pct": round(float((share > 0.5).mean()), 3),
+                      "first_within_60s": round(float((first < 60).mean()), 3),
+                      "bursts_p50_p90": np.percentile(bursts, [50, 90]).tolist()}))
+
+
 def cmd_grid(args):
     profiles = load_profiles()
     demand = {p: solo_summary(profiles, p)["mean_demand_cores"] for p in args.policies}
@@ -295,6 +322,10 @@ def main():
     p = sub.add_parser("programs")
     p.add_argument("--policies", nargs="+", default=POLICIES)
     p.set_defaults(func=cmd_programs)
+    p = sub.add_parser("bursts", help="when wide bursts happen in a sandbox's life")
+    p.add_argument("--cores", type=float, default=8.0)
+    p.add_argument("--gap-s", type=float, default=5.0, help="wide spans further apart are separate bursts")
+    p.set_defaults(func=cmd_bursts)
     p = sub.add_parser("grid")
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--policies", nargs="+", default=POLICIES)
