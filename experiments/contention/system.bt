@@ -1,0 +1,131 @@
+// Host-side system work of Firecracker microVMs (sandbox.py pilot --sys-trace). Every 2 s it prints "T <monotonic ns>"
+// and these maps, then clears them; keys with a pid are per Firecracker process, i.e. per VM:
+//   @exits[pid, reason]       VM exits by VMX exit reason (12 HLT, 48 EPT violation, 49 EPT misconfig = virtio MMIO, ...)
+//   @exit_ns[pid, reason]     time from a non-HLT exit to the next guest entry: host handling, including the VMM's MMIO
+//                             emulation and any wait for a CPU on the way back
+//   @sc_n / @sc_ns[pid, id]   syscalls of the VMM thread (comm "firecracker", the device emulation loop) and time in them
+//   @sc_bytes[pid, id]        bytes of read/write-family syscalls
+//   @vmm_rq_ns / @vmm_wakes[pid]  how long the VMM thread waited for a CPU after each wakeup (it serves the guest's I/O)
+//   @lock_ns[pid]             time Firecracker threads waited on contended kernel locks; @lock_all for every task
+//   @jbd2_n / @jbd2_ns        ext4 journal commits and their duration; @bio_n / @bio_ns block requests and latency
+// At exit it prints @lock_site: kernel call sites of contended locks (all tasks) by total wait. A lock wait is matched
+// by task and lock address and dropped above 1 s (a begin without its end, e.g. under an interrupt, would leave it open).
+
+tracepoint:kvm:kvm_exit
+{
+	@exits[pid, args->exit_reason] = count();
+	if (args->exit_reason != 12) {
+		@exit_t[tid] = nsecs;
+		@exit_r[tid] = args->exit_reason;
+	}
+}
+
+tracepoint:kvm:kvm_entry
+/@exit_t[tid]/
+{
+	@exit_ns[pid, @exit_r[tid]] = sum(nsecs - @exit_t[tid]);
+	delete(@exit_t[tid]);
+	delete(@exit_r[tid]);
+}
+
+tracepoint:raw_syscalls:sys_enter
+/comm == "firecracker"/
+{
+	@sc_t[tid] = nsecs;
+	@sc_id[tid] = args->id;
+	@tgid[tid] = pid;
+}
+
+tracepoint:raw_syscalls:sys_exit
+/@sc_t[tid]/
+{
+	$id = @sc_id[tid];
+	@sc_n[pid, $id] = count();
+	@sc_ns[pid, $id] = sum(nsecs - @sc_t[tid]);
+	if (args->ret > 0 && ($id <= 1 || $id == 17 || $id == 18 || $id == 19 || $id == 20 || $id == 295 || $id == 296)) {
+		@sc_bytes[pid, $id] = sum(args->ret);
+	}
+	delete(@sc_t[tid]);
+	delete(@sc_id[tid]);
+}
+
+tracepoint:sched:sched_wakeup
+/args->comm == "firecracker"/
+{
+	@wake[args->pid] = nsecs;
+}
+
+tracepoint:sched:sched_switch
+/@wake[args->next_pid]/
+{
+	$tg = @tgid[args->next_pid];
+	if ($tg) {
+		@vmm_rq_ns[$tg] = sum(nsecs - @wake[args->next_pid]);
+		@vmm_wakes[$tg] = count();
+	}
+	delete(@wake[args->next_pid]);
+}
+
+tracepoint:lock:contention_begin
+{
+	@lk_t[tid, args->lock_addr] = nsecs;
+	@lk_site[tid, args->lock_addr] = kstack(8);
+}
+
+tracepoint:lock:contention_end
+/@lk_t[tid, args->lock_addr]/
+{
+	$d = nsecs - @lk_t[tid, args->lock_addr];
+	if ($d < 1000000000) {
+		@lock_all = sum($d);
+		if (comm == "firecracker" || strncmp(comm, "fc_vcpu", 7) == 0) {
+			@lock_ns[pid] = sum($d);
+		}
+		@lock_site[@lk_site[tid, args->lock_addr]] = sum($d);
+	}
+	delete(@lk_t[tid, args->lock_addr]);
+	delete(@lk_site[tid, args->lock_addr]);
+}
+
+tracepoint:jbd2:jbd2_start_commit
+{
+	@jbd2_t[args->dev, args->transaction] = nsecs;
+}
+
+tracepoint:jbd2:jbd2_end_commit
+/@jbd2_t[args->dev, args->transaction]/
+{
+	@jbd2_n = count();
+	@jbd2_ns = sum(nsecs - @jbd2_t[args->dev, args->transaction]);
+	delete(@jbd2_t[args->dev, args->transaction]);
+}
+
+tracepoint:block:block_rq_issue
+{
+	@bio_t[args->dev, args->sector] = nsecs;
+}
+
+tracepoint:block:block_rq_complete
+/@bio_t[args->dev, args->sector]/
+{
+	@bio_n = count();
+	@bio_ns = sum(nsecs - @bio_t[args->dev, args->sector]);
+	delete(@bio_t[args->dev, args->sector]);
+}
+
+interval:s:2
+{
+	printf("T %lld\n", nsecs);
+	print(@exits); print(@exit_ns); print(@sc_n); print(@sc_ns); print(@sc_bytes); print(@vmm_rq_ns); print(@vmm_wakes);
+	print(@lock_ns); print(@lock_all); print(@jbd2_n); print(@jbd2_ns); print(@bio_n); print(@bio_ns);
+	clear(@exits); clear(@exit_ns); clear(@sc_n); clear(@sc_ns); clear(@sc_bytes); clear(@vmm_rq_ns); clear(@vmm_wakes);
+	clear(@lock_ns); clear(@lock_all); clear(@jbd2_n); clear(@jbd2_ns); clear(@bio_n); clear(@bio_ns);
+}
+
+END
+{
+	printf("END %lld\n", nsecs);
+	print(@lock_site, 30);
+	clear(@lock_site); clear(@exit_t); clear(@exit_r); clear(@sc_t); clear(@sc_id); clear(@tgid); clear(@wake);
+	clear(@lk_t); clear(@lk_site); clear(@jbd2_t); clear(@bio_t);
+}

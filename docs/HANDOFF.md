@@ -6,7 +6,7 @@
 >
 > **2026-11-05.** Docker로 15코어 pool 2개 사이 실제 이동을 쟀다([pool 이동 실측](results/pool-mover-20261105/README.md)). 배치 때 burst를 몰라 한 노드만 넘치는 때가 많다. 사용률 40~83%의 섞인 부하에서 60 ms 이동은 공유 pool 대비 대기 차이의 61~96%를 되찾고, 5초 이동은 10~14%만 되찾는다. 다만 명령·rollout 수준 이득은 작다(K=120 CPU 가중 −6%, rollout p99 1.58 → 1.50). 사용률 95%에서 처음 이동 규칙이 안 들은 것은 문턱 탓이었고, 고쳐도 명령 시간은 3~5%만 준다.
 >
-> **2026-11-06.** 11-05 실험은 부하를 실제에서 정하지 않고 경합이 생기도록 골랐다(빌드가 무거운 다언어 trace, Gemini API 대기, CPU 제한 없음). 같은 기준으로 공개 GRPO rollout(Python)은 sandbox당 0.04코어라, 그 사용률에 닿으려면 메모리 한도를 넘는 밀도가 필요하다. GPU 없이 공개 trajectory와 iter2 RL serving 기록으로 workload를 넓히고, LLC 경합도 함께 보는 12시간 계획을 세웠다([workload-diversity-plan.md](workload-diversity-plan.md)).
+> **2026-11-06.** 11-05 실험은 부하를 실제에서 정하지 않고 경합이 생기도록 골랐다(빌드가 무거운 다언어 trace, Gemini API 대기, CPU 제한 없음). 같은 기준으로 공개 GRPO rollout(Python)은 sandbox당 0.04코어라, 그 사용률에 닿으려면 메모리 한도를 넘는 밀도가 필요하다. GPU 없이 공개 trajectory와 iter2 RL serving 기록으로 workload를 넓히고, LLC 경합도 함께 보는 12시간 계획을 세웠다([workload-diversity-plan.md](workload-diversity-plan.md)). 같은 날 CPU 밖 자원도 쟀다([microVM 시스템 자원 경합](results/microvm-system-20261106/README.md)). 32코어 kernel 하나에 동시 microVM을 192개까지 늘려도 exit·virtio·VMM syscall의 이벤트당 비용은 거의 그대로였고, 명령 ×1.10은 clock과 CPU 대기로 설명된다. L3를 pool마다 나눠도 slowdown이 같았다. CPU 밖에서 따로 생기는 hand-off 기회는 보이지 않았다.
 
 같은 날 repo 상태와 대조해 사실이 다른 부분을 고쳤다. 고친 곳은 **[repo 대조]**로 표시했다. 실행 방법과 설정은 [README](../README.md), 완료한 측정은 [DRAM/CXL 결과](results/numa-immediate-20261014/README.md)가 기준이다.
 

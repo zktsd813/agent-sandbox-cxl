@@ -49,6 +49,10 @@ WORKLOAD_CPUS = "2-17"
 CORES = 16
 MBM = Path("/sys/fs/resctrl/mon_data/mon_L3_00/mbm_total_bytes")  # socket 0 memory traffic, all tasks
 TSC_GHZ = 2.5  # Xeon Gold 6548Y+ base clock; ref-cycles tick at this rate (turbo is on: busy cores run near 4 GHz)
+RESCTRL = Path("/sys/fs/resctrl")
+# socket 0's L3 has 15 ways (cbm 7fff); ways 13-14 are shared with I/O (shareable_bits 6000), so each pool gets 6 private
+# ways and ways 12-14 stay with the default group. Socket 1 (domain 1) is never written.
+L3_SPLIT = ("003f", "0fc0")
 CONDITIONS = [(policy, cpus, k, repeats) for k, repeats in ((4, 1), (32, 4))
               for policy, cpus in (("none", None), ("cap4", 4), ("cap1", 1))]
 SIM_POLICY = {"none": "cap16", "cap4": "cap4", "cap1": "cap1"}  # no quota still sees only the 16 cpuset CPUs
@@ -112,22 +116,62 @@ def cmd_select(args):
           f"before stretching; mean window {span / len(chosen):.0f} s")
 
 
-def host_sampler(path, stop, cpus=WORKLOAD_CPUS):
-    """Socket 0 memory bandwidth (resctrl MBM) every second, and workload-CPU IPC and clock from a system-wide perf."""
+def sudo_write(path, text):
+    subprocess.run(["sudo", "-n", "tee", str(path)], input=text, text=True, stdout=subprocess.DEVNULL, check=True)
+
+
+def resctrl_pools(pools, split):
+    """One resctrl group per pool, chosen by CPU: a monitor group under the default group, or with split a control
+    group that also gives the pool its own L3 ways (L3_SPLIT, domain 0 only). Returns each group's socket-0 mon_data
+    directory; resctrl_clear() removes the groups."""
+    dirs = []
+    for i, pool in enumerate(pools):
+        group = RESCTRL / f"rc-pool{i}" if split else RESCTRL / "mon_groups" / f"rc-pool{i}"
+        subprocess.run(["sudo", "-n", "mkdir", str(group)], check=True)
+        if split:
+            sudo_write(group / "schemata", f"L3:0={L3_SPLIT[i]}\n")
+        sudo_write(group / "cpus_list", pool)
+        dirs.append(group / "mon_data/mon_L3_00")
+    return dirs
+
+
+def resctrl_clear(n):
+    for i in range(n):
+        for group in (RESCTRL / f"rc-pool{i}", RESCTRL / "mon_groups" / f"rc-pool{i}"):
+            if group.exists():
+                subprocess.run(["sudo", "-n", "rmdir", str(group)], check=False)
+
+
+def host_sampler(path, stop, cpus=WORKLOAD_CPUS, groups=()):
+    """Socket 0 memory bandwidth (resctrl MBM) every second, and workload-CPU IPC and clock from a system-wide perf.
+    With groups (resctrl_pools), perf counts per CPU and adds LLC references and misses, and each group's L3
+    occupancy and memory traffic is sampled too."""
+    perf_csv = path.with_suffix(".perf.csv")
+    events = "instructions,cycles,ref-cycles" + (",cache-references,cache-misses" if groups else "")
     perf = subprocess.Popen(["sudo", "-n", "/usr/lib/linux-tools-6.8.0-146/perf", "stat", "-a", "-C", cpus,
-                             "-e", "instructions,cycles,ref-cycles", "-I", "1000", "-x", ",",
-                             "-o", str(path.with_suffix(".perf.csv"))],
+                             *(["-A"] if groups else []), "-e", events, "-I", "1000", "-x", ",", "-o", str(perf_csv)],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if groups:
+        path.with_suffix(".perf.json").write_text(json.dumps({"start_unix": time.time()}))
+    files = ("llc_occupancy", "mbm_total_bytes", "mbm_local_bytes")
     with path.open("w") as out:
-        out.write("t_s,mbm_total_bytes\n")
+        out.write("t_s,mbm_total_bytes" + "".join(f",g{i}_{f}" for i in range(len(groups)) for f in files)
+                  + (",t_unix\n" if groups else "\n"))
         while not stop.wait(1.0):
             try:
-                out.write(f"{time.monotonic():.3f},{MBM.read_text().strip()}\n")
+                row = [f"{time.monotonic():.3f}", MBM.read_text().strip()]
+                row += [(g / f).read_text().strip() for g in groups for f in files]
+                out.write(",".join(row) + (f",{time.time():.3f}\n" if groups else "\n"))
                 out.flush()
             except OSError:
                 pass
     subprocess.run(["sudo", "-n", "kill", "-INT", str(perf.pid)], check=False)
-    perf.wait(timeout=30)
+    try:
+        perf.wait(timeout=30)
+    except subprocess.TimeoutExpired:
+        pass
+    # sudo may not pass the signal on, which left perf running after earlier runs
+    subprocess.run(["sudo", "-n", "pkill", "-INT", "-f", "--", f"[p]erf stat .*-o {perf_csv}"], check=False)
 
 
 def finished(out):
@@ -268,7 +312,7 @@ def host_stats(directory, name, window, clock0):
     out = {}
     host = directory.parent / f"{name}-host.csv"
     if host.exists():
-        rows = [tuple(map(float, r.values())) for r in csv.DictReader(host.open())]
+        rows = [(float(r["t_s"]), float(r["mbm_total_bytes"])) for r in csv.DictReader(host.open())]
         if len(rows) > 2:
             (t0, b0), (t1, b1) = rows[0], rows[-1]
             out["mem_bw_gbs"] = (b1 - b0) / (t1 - t0) / 1e9

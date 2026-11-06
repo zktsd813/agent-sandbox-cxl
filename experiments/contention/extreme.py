@@ -68,6 +68,10 @@ CONDITIONS = [
     ("k120-ratio", 120, None, False, "ratio", 0.06),
     ("k120-balance", 120, None, False, "balance", 0.06),
 ]
+# 11-06: resources other than CPU time. The k120-static setup with 3K traces (about 12 min) and per-pool L3 occupancy,
+# memory traffic and LLC misses. "mon" leaves socket 0's L3 shared by both pools; "split" gives each pool 6 private ways.
+LLC_CONDITIONS = [("llc-k120-shared", 120, "mon"), ("llc-k120-split", 120, "split")]
+LLC_TRACES = 360
 
 
 def wave_dirs(name):
@@ -89,7 +93,7 @@ def harness(traces, out, k, placement):
             "--max-active", str(k), "--keep-going", "--command-timeout", "600", *placement]
 
 
-def run_one(name, k, waves, shared, rule, delay, args, hold=rc.MOVE_HOLD_S):
+def run_one(name, k, waves, shared, rule, delay, args, hold=rc.MOVE_HOLD_S, l3=None, n=None):
     out = RUNS / name
     if rc.finished(out) and all(rc.finished(d) for d in (wave_dirs(name) if waves else [])):
         print(f"{name}: done, skipped", flush=True)
@@ -107,10 +111,12 @@ def run_one(name, k, waves, shared, rule, delay, args, hold=rc.MOVE_HOLD_S):
         raise SystemExit(f"{name}: governor on CPUs {cpus_g} is {governors}, not performance")
     pools = (UNION,) if shared else rc.POOLS
     spread = ["--workload-cpus", UNION] if shared else ["--pools", *rc.POOLS]
-    order = order_for(k, waves)
-    print(f"{name}: {len(order)} traces, K={k}, waves {waves}, shared {shared}, rule {rule}, delay {delay}", flush=True)
+    order = order_for(k, waves)[:n]
+    print(f"{name}: {len(order)} traces, K={k}, waves {waves}, shared {shared}, rule {rule}, delay {delay}, L3 {l3}",
+          flush=True)
     stop = threading.Event()
-    sampler = threading.Thread(target=rc.host_sampler, args=(RUNS / f"{name}-host.csv", stop, UNION))
+    groups = rc.resctrl_pools(rc.POOLS, l3 == "split") if l3 else ()
+    sampler = threading.Thread(target=rc.host_sampler, args=(RUNS / f"{name}-host.csv", stop, UNION, groups))
     mover = rc.Mover(pools, delay, RUNS / f"{name}-moves.csv", stop, rule=rule or "free", cpus=CONTROLLER, hold=hold)
     sampler.start()
     mover.start()
@@ -149,6 +155,16 @@ def cmd_run(args):
     for name, k, waves, shared, rule, delay, *hold in CONDITIONS:
         if not args.only or name in args.only:
             run_one(name, k, waves, shared, rule, delay, args, *hold)
+
+
+def cmd_llc(args):
+    RUNS.mkdir(parents=True, exist_ok=True)
+    for name, k, l3 in LLC_CONDITIONS:
+        if not args.only or name in args.only:
+            try:
+                run_one(name, k, None, False, None, None, args, l3=l3, n=LLC_TRACES)
+            finally:
+                rc.resctrl_clear(len(rc.POOLS))
 
 
 def start_unix(directory):
@@ -317,6 +333,100 @@ def cmd_analyze(args):
     path.write_text(json.dumps([old[s[0]] for s in CONDITIONS if s[0] in old], indent=1))
 
 
+PERF_EVENTS = ("instructions", "cycles", "ref-cycles", "cache-references", "cache-misses")
+
+
+def pool_seconds(name):
+    """Per pool and second (unix time): perf counts summed over the pool's CPUs; the pool's resctrl L3 occupancy (MiB)
+    and memory traffic (GB/s, total and local); and socket 0 traffic outside the pool groups (GB/s)."""
+    start = json.loads((RUNS / f"{name}-host.perf.json").read_text())["start_unix"]
+    pool_of = {c: i for i, p in enumerate(rc.POOLS) for c in rc.cpu_list(p)}
+    counts = collections.defaultdict(lambda: collections.defaultdict(float))
+    for line in (RUNS / f"{name}-host.perf.csv").read_text().splitlines():
+        parts = line.split(",")
+        if len(parts) > 4 and parts[1].startswith("CPU") and parts[2].isdigit() and int(parts[1][3:]) in pool_of:
+            counts[start + float(parts[0])][(pool_of[int(parts[1][3:])], parts[4])] += float(parts[2])
+    perf_t = np.array(sorted(counts))
+    perf = {(i, e): np.array([counts[t][(i, e)] for t in perf_t]) for i in range(len(rc.POOLS)) for e in PERF_EVENTS}
+    rows = list(csv.DictReader((RUNS / f"{name}-host.csv").open()))
+    t = np.array([float(r["t_unix"]) for r in rows])
+    res = {"rest": np.diff([float(r["mbm_total_bytes"]) for r in rows]) / np.diff(t) / 1e9}
+    for i in range(len(rc.POOLS)):
+        res[(i, "occupancy_mib")] = np.array([float(r[f"g{i}_llc_occupancy"]) for r in rows])[1:] / 2**20
+        for f in ("mbm_total_bytes", "mbm_local_bytes"):
+            res[(i, f)] = np.diff([float(r[f"g{i}_{f}"]) for r in rows]) / np.diff(t) / 1e9
+    return perf_t, perf, t[1:], res
+
+
+def psi_rates(directory, lo, hi):
+    """Containers' PSI 'some' time per second of the window (sum over containers), for cpu, memory and io."""
+    cols = {"cpu": "cpu_pressure_some_usec", "memory": "memory_pressure_some_usec", "io": "io_pressure_some_usec"}
+    series = collections.defaultdict(list)
+    with (directory / "metrics.csv").open() as stream:
+        for r in csv.DictReader(stream):
+            if r["session"] and r["cpu_usec"]:
+                series[r["session"]].append([float(r["elapsed_s"])] + [float(r[c] or 0) for c in cols.values()])
+    total = np.zeros(len(cols))
+    for rows in series.values():
+        a = np.array(sorted(rows))
+        a0, a1 = max(lo, a[0, 0]), min(hi, a[-1, 0])
+        if a1 > a0:
+            total += [np.interp(a1, a[:, 0], a[:, j]) - np.interp(a0, a[:, 0], a[:, j]) for j in range(1, len(cols) + 1)]
+    return {f"psi_{k}_s_per_s": float(v / 1e6 / (hi - lo)) for k, v in zip(cols, total)}
+
+
+def llc_one(name, l3, lo, hi):
+    """Per pool over the window [lo, hi] (unix): clock, IPC, LLC misses, L3 occupancy and memory traffic. The pools run
+    independent work (their loads are uncorrelated), so this pool's misses and IPC against how busy the other pool was
+    in the same second show interference across pools; against its own load they mostly show which commands ran."""
+    perf_t, perf, res_t, res = pool_seconds(name)
+    pin, rin = (perf_t >= lo) & (perf_t <= hi), (res_t >= lo) & (res_t <= hi)
+    # the default group's count includes its monitor groups ("mon") but not the pools' control groups ("split")
+    socket = res["rest"] + (sum(res[(i, "mbm_total_bytes")] for i in range(len(rc.POOLS))) if l3 == "split" else 0)
+    out = {"socket_gbs": float(socket[rin].mean())}
+    for i in range(len(rc.POOLS)):
+        ins, cyc, ref, refs, miss = (perf[(i, e)][pin] for e in PERF_EVENTS)
+        other = perf[(1 - i, "ref-cycles")][pin] / (rc.TSC_GHZ * 1e9)  # cores the other pool kept busy
+        q1, q3 = np.percentile(other, [25, 75])
+        low, high = other <= q1, other >= q3
+        occ, bw, loc = (res[(i, f)][rin] for f in ("occupancy_mib", "mbm_total_bytes", "mbm_local_bytes"))
+        out[f"pool{i}"] = {
+            "busy_cores": float((ref / (rc.TSC_GHZ * 1e9)).mean()), "ghz": cyc.sum() / ref.sum() * rc.TSC_GHZ,
+            "ipc": ins.sum() / cyc.sum(), "llc_mpki": 1000 * miss.sum() / ins.sum(), "llc_miss_ratio": miss.sum() / refs.sum(),
+            "occupancy_mib_p10_p50_p90": [float(np.percentile(occ, q)) for q in (10, 50, 90)],
+            "mem_gbs_mean_p99_max": [float(bw.mean()), float(np.percentile(bw, 99)), float(bw.max())],
+            "mem_local_share": float(loc.sum() / bw.sum()),
+            "other_busy_q1_q3": [float(q1), float(q3)],
+            "mpki_other_low_high": [1000 * miss[m].sum() / ins[m].sum() for m in (low, high)],
+            "ipc_other_low_high": [ins[m].sum() / cyc[m].sum() for m in (low, high)],
+            "ghz_other_low_high": [cyc[m].sum() / ref[m].sum() * rc.TSC_GHZ for m in (low, high)]}
+    return out
+
+
+def cmd_llc_analyze(args):
+    traces = json.loads((rc.LOCAL / "traces.json").read_text())
+    wide = {t["name"] for t in traces if t["peak_cores_100ms"] >= 8}
+    ref_dir = rc.LOCAL / args.reference / rc.cond_name("none", 4)
+    ref = rc.load_run(ref_dir)
+    solo = {t: e - s for t, s, e in ref["sessions"].values()}
+    rows = [{"condition": "reference-k4", **rc.host_stats(ref_dir, rc.cond_name("none", 4), None, 0.0)}]
+    for name, k, l3 in LLC_CONDITIONS:
+        out = RUNS / name
+        if not rc.finished(out):
+            continue
+        r = analyze_one(name, k, None, False, None, None, ref, wide, solo)
+        r = {key: r[key] for key in ("condition", "window_s", "util", "wait_s_per_s", "bg_cpu_weighted", "bg_cpu_inflation",
+                                     "bg_tool_total", "bg_heavy_p50") if key in r}
+        run = rc.load_run(out)
+        lo, hi = run["window"]
+        t0 = start_unix(out)
+        r.update({"l3": l3, **psi_rates(out, lo, hi), **llc_one(name, l3, t0 + lo, t0 + hi)})
+        rows.append(r)
+    for r in rows:
+        print(json.dumps(r, default=float), flush=True)
+    (rc.LOCAL / "runs-llc-analysis.json").write_text(json.dumps(rows, indent=1, default=float))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -324,6 +434,13 @@ def main():
     p.add_argument("--only", nargs="+", help="condition names")
     p.add_argument("--max-load", type=float, default=4.0)
     p.set_defaults(func=cmd_run)
+    p = sub.add_parser("llc", help="run LLC_CONDITIONS")
+    p.add_argument("--only", nargs="+", help="condition names")
+    p.add_argument("--max-load", type=float, default=4.0)
+    p.set_defaults(func=cmd_llc)
+    p = sub.add_parser("llc-analyze")
+    p.add_argument("--reference", default="runs-perf", help="runs directory whose none-k4 is the per-command reference")
+    p.set_defaults(func=cmd_llc_analyze)
     p = sub.add_parser("analyze")
     p.add_argument("--only", nargs="+")
     p.add_argument("--reference", default="runs-perf", help="runs directory whose none-k4 is the per-command reference")

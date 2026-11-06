@@ -964,7 +964,7 @@ class Sandbox:
         # SWE_MEM samples: [host_ns, uptime, MemFree, Cached, Buffers, AnonPages, Shmem, Dirty (KiB),
         #                   read and written sectors of vda, vdb, vdc]
         mem = [[t] + [float(x) for x in m.split()[1:]] for t, m in self.markers if m.startswith("SWE_MEM ")]
-        return {"trace": self.entry["name"], "node": self.node["index"], "slot": self.slot, "mem": mem,
+        return {"trace": self.entry["name"], "node": self.node["index"], "slot": self.slot, "mem": mem, "pid": self.process.pid,
                 "start_ns": self.started_ns, "ready_ns": ready,
                 "completed": any(m.startswith("SWE_COMPLETE") for _, m in self.markers),
                 "commands_total": len(self.commands), "commands_done": len(done),
@@ -1436,6 +1436,17 @@ def pilot(args):
     host_stop = threading.Event()
     host_log = threading.Thread(target=host_sampler, args=(directory, host_stop, used), daemon=True)
     host_log.start()
+    sys_trace = None
+    if args.sys_trace:
+        # bpftrace takes kernel headers from /lib/modules/<release>/build when it exists; on bud05 that link points at a
+        # build tree without them, so an empty header directory makes it use the kernel's BTF alone.
+        headers = LOCAL / "bpftrace-ksrc"
+        (headers / "include/linux").mkdir(parents=True, exist_ok=True)
+        (headers / "include/linux/kconfig.h").touch()
+        sys_trace = subprocess.Popen(
+            ["sudo", "-n", "taskset", "-c", str(sampler_cpu), "env", f"BPFTRACE_KERNEL_SOURCE={headers}",
+             f"BPFTRACE_KERNEL_BUILD={headers}", "BPFTRACE_MAX_MAP_KEYS=65536", "bpftrace", str(HERE / "system.bt"),
+             "-o", str(directory / "system.txt")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if co_load.kind and args.be_warmup_s:
         time.sleep(args.be_warmup_s)  # BE threads touch their memory and settle before the first sandbox
     sandboxes, lock, stop = {}, threading.Lock(), threading.Event()
@@ -1751,6 +1762,13 @@ def pilot(args):
         co_load.finish()
         host_stop.set()
         host_log.join(timeout=5)
+        if sys_trace:
+            # sudo may not pass a signal on to bpftrace; match it by its output file instead
+            sudo("pkill", "-INT", "-f", "--", f"[b]pftrace .*-o {directory / 'system.txt'}", check=False)
+            try:
+                sys_trace.wait(timeout=60)
+            except subprocess.TimeoutExpired:
+                pass
         events.close()
         steps.close()
     save_json(directory / "done.json", {"wall_s": round(time.monotonic() - started, 3), "sandboxes": counter[0]})
@@ -2073,6 +2091,10 @@ def main():
                    help="Base image as a read-only virtio-pmem device mounted with DAX (guest reads the host page cache)")
     p.add_argument("--mem-sample-s", type=float, default=0,
                    help="Guest memory/disk sampling interval (SWE_MEM serial lines, kept in sandboxes.jsonl); 0 = off")
+    p.add_argument("--sys-trace", action="store_true",
+                   help="Host-side system work per VM every 2 s with bpftrace (system.bt -> system.txt): VM exits and "
+                        "their handling time, VMM syscalls and its waits for a CPU, lock contention, journal commits, "
+                        "block latency")
     p.add_argument("--be", help="Co-located best-effort load KIND:LEVEL on the BE nodes' CPUs, e.g. mix:0.3 "
                                 "(kinds cpu, avx, mem, mix; LEVEL = busy fraction of every CPU)")
     p.add_argument("--be-nodes", help="Node indices that get the BE load, e.g. 0 or 0,1 (default: all)")
