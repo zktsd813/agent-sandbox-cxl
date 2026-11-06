@@ -62,6 +62,11 @@ CONDITIONS = [
     ("tsunami-local-free", 40, "local", False, "free", 0.06),
     ("tsunami-local-gain-hold30", 40, "local", False, "gain", 0.06, 30.0),
     ("k120-gain-hold30", 120, None, False, "gain", 0.06, 30.0),
+    # 11-06: "gain" needs one core more, which at 95% use means 2x; "ratio" drops that, "balance" evens waiting counts
+    ("k150-ratio", 150, None, False, "ratio", 0.06),
+    ("k150-balance", 150, None, False, "balance", 0.06),
+    ("k120-ratio", 120, None, False, "ratio", 0.06),
+    ("k120-balance", 120, None, False, "balance", 0.06),
 ]
 
 

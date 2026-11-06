@@ -565,8 +565,10 @@ MOVE_HOLD_S = 5.0  # a moved container stays put this long
 MOVE_MIN_FREE = 4.0  # the destination needs this many idle cores (mean over the last 0.5 s)
 MOVE_MIN_WAIT_S = 0.1  # a candidate waited at least this long in the last 0.5 s
 MOVE_DEST_COOL_S = 0.5  # a pool takes no new container for this long after one arrived (its free cores catch up)
-GAIN_RATIO = 1.5  # rule "gain": the candidate would get at least 1.5x its current cores in the destination
-GAIN_MIN_CORES = 1.0  # ... and at least one core more
+GAIN_RATIO = 1.5  # rules "gain" and "ratio": the candidate would get at least 1.5x its current cores in the destination
+GAIN_MIN_CORES = 1.0  # "gain" also wants one core more: at 95% use every container gets about one core, so this means 2x
+RATIO_MIN_CORES = 0.1  # "ratio" keeps only a noise floor
+BALANCE_MIN_DIFF = 2.0  # rule "balance": the source has this many more waiting containers than the destination (0.5 s)
 
 
 def water_level(uses, size):
@@ -610,7 +612,10 @@ class Mover(threading.Thread):
     - "free": the pool with the most idle cores, if it is not contended and has >= MOVE_MIN_FREE idle cores.
     - "gain": the pool where the candidate would get the most cores (`water_level` over the 0.5 s mean use of the
       containers there), if that is >= GAIN_RATIO x and GAIN_MIN_CORES more than it gets now. The destination may be
-      busy or even contended: a sandbox starved by a crowd of containers moves to a busy pool shared by fewer."""
+      busy or even contended: a sandbox starved by a crowd of containers moves to a busy pool shared by fewer.
+    - "ratio": as "gain" with RATIO_MIN_CORES instead of GAIN_MIN_CORES.
+    - "balance": the pool with the fewest waiting containers (PSI cpu-some summed over its containers, 0.5 s mean), if
+      the source has at least BALANCE_MIN_DIFF more. Like the kernel balancing one shared pool, but by containers."""
 
     def __init__(self, pools, delay, log_path, stop, rule="free", cpus=CONTROLLER_CPUS, hold=MOVE_HOLD_S):
         super().__init__(daemon=True)
@@ -634,6 +639,7 @@ class Mover(threading.Thread):
         hot_since, last_hot = dict.fromkeys(self.pools), dict.fromkeys(self.pools, -1e9)
         arrived = dict.fromkeys(self.pools, -1e9)
         free = {p: collections.deque(maxlen=window) for p in self.pools}
+        waiting = {p: collections.deque(maxlen=window) for p in self.pools}
         next_scan = 0.0
         while not self.stop.is_set():
             now = time.monotonic()
@@ -676,6 +682,7 @@ class Mover(threading.Thread):
                 c["prev"] = (now, usage, some)
             for p in self.pools:
                 free[p].append(self.size[p] - use[p])
+                waiting[p].append(wait[p])
                 if use[p] >= self.size[p] - 0.5 and wait[p] > 0.5:
                     if now - last_hot[p] > 0.1:
                         hot_since[p] = now
@@ -694,13 +701,20 @@ class Mover(threading.Thread):
                     dests = [q for q in self.pools if q != p and hot_since[q] is None
                              and now - arrived[q] >= MOVE_DEST_COOL_S and np.mean(free[q]) >= MOVE_MIN_FREE]
                     dest = max(dests, key=lambda q: np.mean(free[q])) if dests else None
+                elif self.rule == "balance":
+                    pending = {q: np.mean(waiting[q]) for q in self.pools
+                               if q != p and now - arrived[q] >= MOVE_DEST_COOL_S}
+                    dest = min(pending, key=pending.get) if pending else None
+                    if dest and np.mean(waiting[p]) - pending[dest] < BALANCE_MIN_DIFF:
+                        dest = None
                 else:
                     mine = np.mean(c["use"]) if c["use"] else 0.0
                     level = {q: water_level([np.mean(o["use"]) for o in known.values() if o["pool"] == q and o["use"]],
                                             self.size[q])
                              for q in self.pools if q != p and now - arrived[q] >= MOVE_DEST_COOL_S}
                     dest = max(level, key=level.get) if level else None
-                    if dest and not (level[dest] >= GAIN_RATIO * mine and level[dest] >= mine + GAIN_MIN_CORES):
+                    floor = GAIN_MIN_CORES if self.rule == "gain" else RATIO_MIN_CORES
+                    if dest and not (level[dest] >= GAIN_RATIO * mine and level[dest] >= mine + floor):
                         dest = None
                 if dest is None:
                     continue
