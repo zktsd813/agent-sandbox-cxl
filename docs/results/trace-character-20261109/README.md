@@ -1,8 +1,9 @@
-# trace 성격 다시 보기와 sandbox 밖 CPU 작업 (2026-11-09)
+# trace 성격 다시 보기, env 생성, sandbox 밖 CPU 작업 (2026-11-09)
 
-지금까지 trace는 sandbox당 평균 코어, burst 폭, LLM 대기 같은 수명 전체의 값으로만 봤다([workload-diversity-plan.md](../../workload-diversity-plan.md) 2절, [실험 계획 v2](../../experiment-plan-tail-placement.md) 8.5). 이 문서는 두 가지를 더 본다.
-- **sandbox가 무엇에 CPU를 쓰는지**: 명령 종류별로 나눈다. HANDOFF T1의 남은 일이다.
-- **sandbox 밖에서 생기는 CPU 작업**: 공개 RL job 기록과 문헌·framework 조사로 본다.
+지금까지 trace는 sandbox당 평균 코어, burst 폭, LLM 대기 같은 수명 전체의 값으로만 봤다([workload-diversity-plan.md](../../workload-diversity-plan.md) 2절, [실험 계획 v2](../../experiment-plan-tail-placement.md) 8.5). 이 문서는 세 가지를 더 본다.
+- **sandbox가 무엇에 CPU를 쓰는지**: 명령 종류별로 나눈다. HANDOFF T1의 남은 일이다(1절). reward 평가(채점)도 직접 다시 돌린다(2절).
+- **env 생성이 왜 느리고 step에 얼마나 들어가는지**: 기록된 생성 시간을 쪼개고, 생성 단계별 CPU를 재고, DSec의 방식과 비교한다(3절).
+- **sandbox 밖에서 생기는 CPU 작업**: 공개 RL job 기록과 문헌·framework 조사로 본다(4절).
 
 ## 0. 결론
 
@@ -23,21 +24,21 @@
      - 45개 중 11개는 코어를 주는 만큼 넓게 쓴다(peak 4코어 이상). C 확장 compile과 pytest-xdist 때문이다.
      - 처음에 시간 기록으로 추정한 "agent CPU의 0.6배"는 과대평가였다.
 4. **기록된 tool+agent 시간의 4분의 1은 sandbox 명령이 아니다.** 같은 trace를 재생한 명령 시간보다 중앙값 1.67배 길다. 명령마다 약 0.26초씩 agent·harness 쪽 시간이 붙는다.
-5. **sandbox 밖 CPU 작업 중 크고, 몰리고, 옮길 수 있는 것은 하나뿐이다.** 동기 RL에서 생성이 끝날 때 몰리는 reward·test 실행이다. 그 밖의 것은 다음과 같다.
+5. **env 생성은 기록된 job에서 image가 아니라 생성 대기열이 정했고, 병목은 아니다(3절).**
+   - 기록의 생성 시간(중앙값 94초)은 Azure 위 Kubernetes pod 경로의 값이다. 우리 microVM은 만들어 둔 image 디스크로 0.28초에 뜬다.
+   - 생성 한 번은 20~30초다. 같은 wave에서 2초 늦게 요청한 것은 147초가 걸린다. image 종류·크기·재사용과 무관하고, 앞 sandbox가 끝나기를 기다리는 것도 아니다.
+   - critical path 위에 있지만 가장 늦은 rollout의 4~6%다. 모두 1초로 줄여도 step은 약 3%(p90 8%) 준다. 추론이 4배 빠르면 group 기준 약 12%다.
+   - image가 노드에 없으면 image가 시간과 CPU를 정한다(펼치기에 압축 GiB당 약 15 CPU초). 다만 rollout은 풀린 image의 2%(p90 4%)만 읽는다.
+   - DSec도 생성을 critical path로 보고, EROFS image를 3FS에서 lazy로 읽는다(실행 중 4~13%). 8,192개 burst에서 eager pull은 60분 이상, on-demand는 35분이었고, CPU 차이는 거의 없었다.
+6. **sandbox 밖 CPU 작업 중 크고, 몰리고, 옮길 수 있는 것은 하나뿐이다.** 동기 RL에서 생성이 끝날 때 몰리는 reward·test 실행이다. 그 밖의 것은 다음과 같다.
    - GPU 노드의 CPU 작업(추론 엔진 host 쪽, tokenizer, optimizer offload, checkpoint)은 GPU process에 묶여 있고 대부분 꾸준하다. 직접 해 본 GPU harvest가 고정 분할에서 끝난 것과 같은 그림이다.
-   - env 생성은 step 시작에 크게 몰린다(2.2절).
-     - image가 노드에 없으면 CPU를 꽤 쓴다. 압축 해제와 펼치기에 압축 GiB당 약 15 CPU초가 들고, 중앙값 크기 image 하나가 rollout 하나의 agent CPU의 절반쯤이다.
-     - image가 이미 있으면 container 시작은 0.1초 CPU다.
-     - 기록된 job에서는 생성 시간이 image 크기나 첫 사용 여부와 무관했다. 그래서 pull보다 생성 경로의 대기가 시간을 정한 것으로 보인다.
-     - **2.3절에서 쪼개 보니 원인은 생성 대기열이다.** 생성 한 번은 20~30초다. 같은 wave 안에서 2초 늦게 요청한 것은 147초가 걸린다. image 종류·크기·재사용과는 무관하고, 앞 sandbox가 끝나기를 기다리는 것도 아니다.
-     - env 생성은 critical path 위에 있지만, 모두 1초로 줄여도 step은 약 3%(p90 8%) 준다. 추론이 4배 빠르면 group 기준 약 12%다.
-     - image가 노드에 없으면 image가 생성 시간과 CPU를 정한다. 다만 rollout은 풀린 image의 2%(p90 4%)만 읽는다. lazy loading이면 그 비용이 25~50배 준다.
-     - **DSec도 생성을 critical path로 보고 image를 lazy로 읽는다(2.4절).** EROFS 형식으로 바꾼 image를 3FS에서 필요할 때 읽고, 실행 중 읽는 양은 4~13%다. 8,192개 burst에서 eager pull은 60분 이상, on-demand는 35분이었다. CPU 차이는 거의 없었다고 적었다. warm pool은 쓰지 않는다.
+   - env 생성은 step 시작에 몰리지만, 푸는 방법은 이동이 아니라 image 저장 방식과 warm pool이다(3절).
    - browser나 desktop VM 같은 무거운 환경은 꾸준해서, 빠른 이동보다 배치의 문제다.
-6. **hand-off motivation으로 보면 이번에도 새 기회는 작다.**
+7. **hand-off motivation으로 보면 이번에도 새 기회는 작다.**
    - sandbox 안의 무거운 CPU는 미리 알 수 있다.
    - sandbox 밖에서 몰리는 reward burst는 이 job에서는 몰리지 않았다.
-   - 남은 후보는 "test가 무겁고, 동기 step이고, 평가를 한꺼번에 돌리는" RL 구성의 reward 단계다. rStar2-Agent는 step당 최대 4.5만 번 코드를 실행하고, RollPacker에서는 reward가 학습 시간의 약 22%다(3절).
+   - env 생성도 이동이 아니라 image 저장 방식과 warm pool의 문제다.
+   - 남은 후보는 "test가 무겁고, 동기 step이고, 평가를 한꺼번에 돌리는" RL 구성의 reward 단계다. rStar2-Agent는 step당 최대 4.5만 번 코드를 실행하고, RollPacker에서는 reward가 학습 시간의 약 22%다(4절).
 
 ## 1. sandbox가 CPU를 쓰는 곳: 명령 종류별
 
@@ -110,7 +111,7 @@
   | 2 | 154 | 2 | 14 | 25 |
 
   rollout의 turn 수가 달라 끝나는 시각이 퍼진다. 평가가 한 순간에 몰리지 않는다.
-- **CPU 양.** 재생한 Python RL trace 45개에서 평가 시간과 agent 명령 전체의 vCPU 시간을 비교했다. agent vCPU 시간 중앙값 30초, 평가 17초로, 비율은 중앙값 0.60, p90 2.09다. 평가 CPU는 재지 않았다. pytest가 대부분 단일 thread라 1코어 상한으로 본 값이다.
+- **CPU 양(시간 기록으로 본 첫 추정, 2.1에서 직접 재서 바로잡음).** 재생한 Python RL trace 45개에서 평가 시간과 agent 명령 전체의 vCPU 시간을 비교했다. agent vCPU 시간 중앙값 30초, 평가 17초로, 비율은 중앙값 0.60, p90 2.09다. 평가 CPU는 재지 않았다. pytest가 대부분 단일 thread라 1코어 상한으로 본 값이다.
 - **기록과 재생의 차이.** 같은 51개 trace에서 기록된 tool+agent 시간은 재생한 명령 시간의 중앙값 1.67배다. 명령마다 중앙값 0.26초가 더 붙는다. 전체로는 기록의 74%만 실제 명령 시간이다. 나머지는 agent 처리, 원격 sandbox 호출 경로, 첫 LLM 호출이다.
 
 ### 2.1 채점을 직접 다시 돌림
@@ -146,58 +147,26 @@
   - 1 vCPU sandbox였다면 이들은 더 길고 좁게 돌았을 것이다.
 - **결론**: 채점은 sandbox CPU를 약 11% 늘린다. 시간 기록만 보고 0.6배로 추정한 것보다 훨씬 작다. 지금까지의 "sandbox CPU가 얇다"는 결론은 바뀌지 않는다.
 
-### 2.2 env 생성 시간
+## 3. env 생성
 
-**기록의 의미.** raw 기록에는 `env_creation_time` 숫자 하나만 있다. sandbox 생성을 요청한 뒤 준비될 때까지의 시간이고, 단계별 분해는 없다. `trace_kinds.py env`로 무엇에 따라 달라지는지 봤다. 원값은 [env.json](env.json)에 있다.
+`trace_kinds.py env`(분포, 대기열 검정), `critical_path.py`(env 생성을 줄였을 때의 step), `env_cost.py`(생성 단계별 CPU, image 공유, 실제로 읽는 양). 원값은 [env.json](env.json), [env-cost.json](env-cost.json), [env-share.json](env-share.json)에 있다.
 
-| 기준 | 결과 |
-|---|---|
-| 전체 | p10 23초, p50 94초, p90 277초 |
-| 압축 image 크기(선택한 47개) | 순위 상관 −0.15. 0.4~0.7 GiB 99초, 0.7~1.2 GiB 44초, 1.2~1.9 GiB 33초 |
-| run 안에서 그 image를 처음 쓰는가 | 처음 98초, 이후 93초 |
-| 같은 image, 함께 시작한 group 8개 사이의 차이 | p50 84초, p90 259초 |
-| 생성 요청 시각(wave 시작 뒤 초) | 80%가 2초 안에 요청된다. 순위 상관 +0.27 |
+### 3.1 무엇을 재는 값인가
 
-wave마다 준비 완료 곡선을 보면 차이가 크다(wave 100개 이상인 step).
+- **기록의 `env_creation_time`은 sandbox 생성을 요청한 뒤 준비될 때까지의 시간이다.** 숫자 하나뿐이고 단계별 분해는 없다. p10 23초, p50 94초, p90 277초다.
+- **이 시간은 기록된 job의 sandbox 경로에서 나온 값이다.** 우리 microVM의 값이 아니다.
+  - sandbox는 Azure 위 Kubernetes pod로 보인다. dataset card는 채점 환경을 "azure-modal sandbox"라고만 적었다.
+  - tool 출력에 kernel `5.15.0-1102-azure`, `KUBERNETES_SERVICE_HOST`, 호스트 이름 `sandbox-<8hex>`가 보인다.
+  - host kernel을 공유하는 container다. pod 배치, container 시작, agent 연결이 들어 있을 것이다. 단계마다 얼마인지는 기록에 없다.
+- **우리 microVM은 1초가 안 걸린다.** image를 ext4 디스크로 한 번 바꿔 두면(3.4) 매번 하는 일은 아래뿐이다.
 
-| wave | 개수 | 처음 준비 | 10% | 50% | 90% | 마지막 | 10~90% 준비 속도 |
-|---|---|---|---|---|---|---|---|
-| step 첫 wave (53개) | 232 | 19초 | 24초 | 30초 | 49초 | 174초 | 초당 7.0개 |
-| 두 번째 wave (49개) | 210 | 22초 | 74초 | 183초 | 309초 | 408초 | 초당 0.9개 |
+| 단계 | 시간 | 근거 |
+|---|---|---|
+| job 디스크와 쓰기 디스크 준비 | step(192개)당 7~10초. VM당 약 0.05초 | 10-27 동기 step run의 `prepare_s` |
+| Firecracker 시작 → guest agent 준비 | 중앙값 0.28초, p90 0.29초, 최대 0.71초 | 11-06 pilot의 VM 4,293개. 동시 24~192개에서 같다 |
+| (비교) image가 있는 Docker container 시작 | 0.27~0.39초 | 3.4 |
 
-- **두 번째 wave는 첫 wave가 시작한 지 752초 뒤에 요청된다.** 그때 첫 wave 233개 중 167개가 아직 돌고 있다. 생성이 6~8배 느려지는 것은 이 겹침 때문으로 보인다.
-- **동시 sandbox 수에 고정 상한은 보이지 않았다.** 준비된 sandbox 수의 최댓값이 step마다 207~434로 달랐다.
-- **원인은 가리지 못했다.** 생성 host의 CPU·디스크 경합일 수도, provider의 생성 속도 제한일 수도 있다. 기록만으로는 구분이 안 된다.
-- **pull이 시간을 정하지는 않았다.** 크기나 첫 사용 여부와 무관하기 때문이다. image가 미리 있거나 provider가 cache했을 가능성이 크다.
-
-**생성 단계별 CPU (직접 측정).** `experiments/contention/env_cost.py`, CPU 26-31.
-- layer는 Docker Hub에서 curl로 하나씩 받았다.
-- `tar -xzf`로 차례로 펼쳤다(gunzip + untar).
-- microVM 디스크를 만들고(`mkfs.ext4 -d`), 한 번 복사했다.
-- image가 이미 있을 때는 `docker run --rm IMAGE true`의 dockerd·containerd CPU를 쟀다.
-
-원값은 [env-cost.json](env-cost.json)에 있다.
-
-| image (압축 / 풀린 크기) | pull 시간 / CPU | 펼치기 시간 / CPU | 압축 GiB당 CPU | ext4 만들기 / 복사 CPU |
-|---|---|---|---|---|
-| scaleswe eliot (0.41 / 1.16 GB) | 24초 / 0.7초 | 5.9초 / 7.0초 | 17초 | 1.9초 / 0.5초 |
-| scaleswe geopandas (0.99 / 2.43 GB) | 58초 / 1.5초 | 11.9초 / 14.0초 | 14초 | 3.2초 / 1.0초 |
-| swerebenchv2 qiskit (1.89 / 5.54 GB) | 667초 / 8.5초 | 26.3초 / 31.2초 | 17초 | (mkfs 실패, 재지 못함) |
-| image가 이미 있을 때 container 시작 (3개 × 5회) | – | 0.27~0.39초 / daemon 0.11~0.16초 | – | – |
-
-- **pull은 시간은 길지만 CPU는 적다.** 이 서버에서 Docker Hub는 약 3~18 MB/s다.
-- **펼치기는 CPU를 쓴다.** 압축 GiB당 약 15 CPU초, 실행 중 1.2코어다. gzip 해제가 단일 thread라서다.
-- **image 크기 중앙값(0.99 GiB)이면 펼치기 CPU는 14초다.** 같은 trace의 agent 명령 vCPU 중앙값(30초)의 절반이고, 채점 CPU(4초)의 3배다.
-- **image가 노드에 있으면 비용이 거의 없다.** 0.1초 CPU다.
-
-**CPU 관점의 정리**
-- **image가 노드에 없으면 env 생성이 sandbox 수명 전체에서 가장 큰 CPU 덩어리 중 하나다.** 0.5~1분 안에 몰려서 쓴다.
-- **동기 step에서는 wave 하나가 2초 안에 230개를 요청한다.** 노드마다 image를 새로 풀어야 한다면 230 × 약 15 CPU초 ≈ 3,500 CPU초다. 30~50초 안에 70~115코어가 필요한 burst다.
-- **image가 노드에 있으면 이 burst는 사라진다.** 이 RL job에서는 생성 시간이 크기·첫 사용과 무관했으므로 이쪽에 가까웠을 것이다. 그래서 env 생성 CPU가 문제인지는 image를 어디에 두고 언제 받는지(locality, lazy loading)에 달려 있다. 실험 계획 v2의 M1(locality)과 같은 축이다.
-
-### 2.3 env 생성은 왜 느린가, critical path인가
-
-`trace_kinds.py env`(분포, 대기열 검정), `critical_path.py`(env 생성을 줄였을 때의 step), `env_cost.py --layers --reads`(image 공유와 실제로 읽는 양). 원값은 [env.json](env.json), [env-share.json](env-share.json)에 있다.
+### 3.2 왜 느린가: image가 아니라 생성 대기열
 
 **image가 시간을 정하지 않는다.** 기록된 job의 image 2,430개는 run 안에서 대부분 한 번(GRPO group 하나, 8회)씩만 쓰였다.
 
@@ -216,6 +185,15 @@ wave마다 준비 완료 곡선을 보면 차이가 크다(wave 100개 이상인
 | 두 번째 wave | 9,898 | 125초 | 18% | 33% | 44% |
 | run 1 (08-14) | 8,502 | 33초 | 58% | 16% | 21% |
 | run 2 (08-15) | 14,637 | 104초 | 35% | 37% | 25% |
+
+**두 번째 wave가 6~8배 느리다.** wave 100개 이상인 step에서 준비 완료 곡선은 다음과 같다.
+
+| wave | 개수 | 처음 준비 | 10% | 50% | 90% | 마지막 | 10~90% 준비 속도 |
+|---|---|---|---|---|---|---|---|
+| step 첫 wave (53개) | 232 | 19초 | 24초 | 30초 | 49초 | 174초 | 초당 7.0개 |
+| 두 번째 wave (49개) | 210 | 22초 | 74초 | 183초 | 309초 | 408초 | 초당 0.9개 |
+
+두 번째 wave는 첫 wave가 시작한 지 752초 뒤에 요청된다. 그때 첫 wave 233개 중 167개가 아직 돌고 있다.
 
 **요청이 조금만 늦어도 늦게 준비된다.** wave 하나는 약 230개를 2초 안에 요청한다. 요청 시각에 따라 다음과 같이 갈린다.
 
@@ -238,15 +216,13 @@ wave마다 준비 완료 곡선을 보면 차이가 크다(wave 100개 이상인
 **해석**
 - **생성 한 번의 실제 길이는 20~30초다.** 비어 있는 cluster에서 먼저 요청한 것들의 값이다.
 - **나머지는 생성 경로의 대기열에서 기다린 시간이다.** 이 대기열은 한 번에 처리하는 양이 정해져 있고, 묶음 단위로 풀린다. 이미 sandbox가 많이 돌고 있으면 더 느리게 빠진다.
-- **provider 안에서 무엇이 막혔는지는 기록에 없다.** 동시 생성 상한이나 속도 제한일 수도 있고, node 추가(autoscaling) 대기일 수도 있다. 기록에는 숫자 하나뿐이다.
-- **sandbox는 Azure 위 Kubernetes pod로 보인다.** dataset card는 채점 환경을 "azure-modal sandbox"라고만 적었다. tool 출력에는 다음이 보인다.
-  - kernel `5.15.0-1102-azure`
-  - `KUBERNETES_SERVICE_HOST`
-  - 호스트 이름 `sandbox-<8hex>`
+- **provider 안에서 무엇이 막혔는지는 기록에 없다.** 동시 생성 상한이나 속도 제한일 수도 있고, node 추가(autoscaling) 대기일 수도 있다. 멈춰 있다가 한꺼번에 준비되는 모양은 pod가 node 자리를 기다리다가 node가 붙을 때 함께 뜨는 경우와 맞는다. 다만 이것은 추정이다.
 
-  host kernel을 공유하는 container이고, microVM은 아니다. 멈춰 있다가 한꺼번에 준비되는 모양은 pod가 node 자리를 기다리다가 node가 붙을 때 함께 뜨는 경우와 맞는다. 다만 이것은 추정이다.
+### 3.3 critical path 위에 있지만 병목은 아니다
 
-**critical path 위에 있지만 지금은 얇다.** 모든 rollout은 env 생성으로 시작하므로 step의 critical path에 그대로 들어간다. 모든 rollout의 env 생성을 25초(빠른 봉우리)나 1초(warm pool·snapshot)로 바꿔 단위 길이를 다시 계산했다. 나머지 시간은 기록대로 두었다.
+모든 rollout은 env 생성으로 시작하므로 step의 critical path에 그대로 들어간다. 다만 가장 늦은 rollout에서 LLM이 67%(step)~90%(group)이고, env 생성은 4~6%다.
+
+모든 rollout의 env 생성을 25초(빠른 봉우리)나 1초(우리 microVM, warm pool)로 바꿔 단위 길이를 다시 계산했다. 나머지 시간은 기록대로 두었다.
 
 | 단위 | 가장 늦은 rollout에서 env 생성의 몫 | 25초로 | 1초로 |
 |---|---|---|---|
@@ -256,9 +232,29 @@ wave마다 준비 완료 곡선을 보면 차이가 크다(wave 100개 이상인
 | group 8개, LLM ×0.25 | 12.4% (p90 39.6%) | −8.5% (p90 −29.6%) | −11.6% (p90 −33.5%) |
 
 - 지금 추론 속도에서는 env 생성을 없애도 step이 약 3% 준다. 추론이 4배 빨라지면 group 기준 약 12%(p90 34%)다.
-- step 길이의 22%는 두 번째 wave가 늦게 요청되는 시간이다(8.5). 이것은 env 생성과 별개라 위 계산에서 그대로다.
+- step 길이의 22%는 두 번째 wave가 늦게 요청되는 시간이다([실험 계획 v2](../../experiment-plan-tail-placement.md) 8.5). 이것은 env 생성과 별개라 위 계산에서 그대로다.
 
-**image가 중요해지는 조건: 노드에 없을 때.** 이 서버에서 Docker Hub pull은 image 하나에 24~667초였다(2.2). 이 job의 생성 시간이 크기와 무관했으므로, image는 미리 받아 두었거나 provider가 cache했을 것이다. image를 sandbox마다 새로 받는다면 image가 생성 시간과 CPU를 모두 정한다. 이 경우 줄일 여지는 두 가지다.
+### 3.4 image 비용: 노드에 없을 때
+
+**생성 단계별 CPU (직접 측정).** CPU 26-31에서 쟀다.
+- layer는 Docker Hub에서 curl로 하나씩 받았다.
+- `tar -xzf`로 차례로 펼쳤다(gunzip + untar).
+- microVM 디스크를 만들고(`mkfs.ext4 -d`), 한 번 복사했다.
+- image가 이미 있을 때는 `docker run --rm IMAGE true`의 dockerd·containerd CPU를 쟀다.
+
+| image (압축 / 풀린 크기) | pull 시간 / CPU | 펼치기 시간 / CPU | 압축 GiB당 CPU | ext4 만들기 / 복사 CPU |
+|---|---|---|---|---|
+| scaleswe eliot (0.41 / 1.16 GB) | 24초 / 0.7초 | 5.9초 / 7.0초 | 17초 | 1.9초 / 0.5초 |
+| scaleswe geopandas (0.99 / 2.43 GB) | 58초 / 1.5초 | 11.9초 / 14.0초 | 14초 | 3.2초 / 1.0초 |
+| swerebenchv2 qiskit (1.89 / 5.54 GB) | 667초 / 8.5초 | 26.3초 / 31.2초 | 17초 | (mkfs 실패, 재지 못함) |
+| image가 이미 있을 때 container 시작 (3개 × 5회) | – | 0.27~0.39초 / daemon 0.11~0.16초 | – | – |
+
+- **pull은 시간은 길지만 CPU는 적다.** 이 서버에서 Docker Hub는 약 3~18 MB/s다.
+- **펼치기는 CPU를 쓴다.** 압축 GiB당 약 15 CPU초, 실행 중 1.2코어다. gzip 해제가 단일 thread라서다.
+- **크기 중앙값 image(0.99 GiB)를 펼치면 CPU 14초다.** 같은 trace의 agent 명령 vCPU 중앙값(30초)의 절반이고, 채점 CPU(4초)의 3배다.
+- **image가 노드에 있으면 비용이 거의 없다.** 0.1초 CPU다.
+
+**image를 sandbox마다 새로 받으면 image가 생성 시간과 CPU를 정한다.** 이 job의 생성 시간이 크기와 무관했으므로, image는 미리 받아 두었거나 provider가 cache했을 것이다. 노드에 없는 경우 줄일 여지는 두 가지다.
 
 | 항목 | 값 |
 |---|---|
@@ -268,16 +264,20 @@ wave마다 준비 완료 곡선을 보면 차이가 크다(wave 100개 이상인
 | 풀린 image 대비 | 중앙값 2.0%, p90 4.0%, 최대 17% |
 
 - layer 공유는 받을 양을 3분의 1쯤 줄인다.
-- lazy loading은 받고 풀 바이트를 25~50배 줄인다. 바이트에 비례한다면 step wave 하나의 펼치기 CPU 약 3,500 CPU초가 70~140 CPU초가 된다.
-- 다만 읽은 양은 agent 명령만의 값이다. 채점의 `pip install -e`는 더 읽는다.
+- lazy loading은 받고 풀 바이트를 25~50배 줄인다. 읽은 양은 agent 명령만의 값이고, 채점의 `pip install -e`는 더 읽는다.
 
-### 2.4 DSec와 다른 시스템은 env 생성을 어떻게 하나
+**CPU 관점의 정리**
+- **image가 노드에 없으면 env 생성이 sandbox 수명에서 가장 큰 CPU 덩어리 중 하나다.** 0.5~1분 안에 몰려서 쓴다.
+- **동기 step에서는 wave 하나가 2초 안에 230개를 요청한다.** 노드마다 image를 새로 풀어야 한다면 230 × 약 15 CPU초 ≈ 3,500 CPU초다. 30~50초 안에 70~115코어가 필요한 burst다. lazy loading이면 바이트에 비례한다고 볼 때 70~140 CPU초다.
+- **image가 노드에 있으면 이 burst는 사라진다.** 그래서 env 생성 CPU가 문제인지는 image를 어디에 두고 언제 받는지(locality, lazy loading)에 달려 있다. 실험 계획 v2의 M1(locality)과 같은 축이다.
+
+### 3.5 DSec와 다른 시스템은 env 생성을 어떻게 하나
 
 subagent로 조사했고, DSec 8.2절의 수치와 CPU 문장은 원문에서 다시 확인했다.
 
 **DSec** ([arXiv 2609.22978](https://arxiv.org/html/2609.22978v1))
 - **생성은 critical path로 본다.**
-  - 규모: scale unit 하나에 노드 약 160대, 동시 최대 약 38만 개, 생성 초당 5,000개 이상(2.4절).
+  - 규모: scale unit 하나에 노드 약 160대, 동시 최대 약 38만 개, 생성 초당 5,000개 이상(DSec 2.4절).
   - job 하나가 sandbox를 최대 32K개 요청하고, 요청이 짧은 시간에 몰린다. 환경이 준비돼야 batch가 쓸 수 있기 때문이다(4.1절).
 - **image가 많다.** 한 주에 container base image 11,266개, workspace 102,171개, 82.8 TB였다(4.2절). image를 미리 받아 두는 것은 "비용을 앞으로 옮길 뿐 없애지 않는다"고 본다.
 - **image를 lazy로 읽는다.**
@@ -307,12 +307,12 @@ subagent로 조사했고, DSec 8.2절의 수치와 CPU 문장은 원문에서 �
 
 **우리 결과와 맞춰 보면**
 - **DSec도 env 생성을 critical path로 본다.** 다만 푸는 방식은 sandbox 이동이 아니라 image 저장 방식(lazy, 공유 저장소)이다.
-- **DSec에서 eager pull의 비용은 시간과 디스크 쓰기였다.** CPU 차이는 보고되지 않았다. 2.2의 "image를 새로 풀면 큰 CPU 덩어리"는 gzip layer를 노드마다 푸는 경우의 값이다. 그 비용이 학습 시간에 보일지는 따로 확인해야 한다.
+- **DSec에서 eager pull의 비용은 시간과 디스크 쓰기였다.** CPU 차이는 보고되지 않았다. 3.4의 "image를 새로 풀면 큰 CPU 덩어리"는 gzip layer를 노드마다 푸는 경우의 값이다. 그 비용이 학습 시간에 보일지는 따로 확인해야 한다.
 - **실행 중 읽는 비율은 우리 측정(2%)이 DSec(Python 6%)보다 작다.** 우리는 agent 명령만 쟀고 test·install은 뺐다.
-- **기록된 job의 느린 생성은 대기열이다(2.3).** image 저장 방식만으로는 줄지 않을 수 있다. warm pool이 이 대기열을 직접 없앤다(GKE 45~85초 → 1~9초).
+- **기록된 job의 느린 생성은 대기열이다(3.2).** image 저장 방식만으로는 줄지 않을 수 있다. warm pool이 이 대기열을 직접 없앤다(GKE 45~85초 → 1~9초).
 - **CXL과의 접점은 hand-off가 아니라 image 공유다.** DSec의 3FS 자리에 CXL 공유 메모리를 두는 방식이다([load balancing 조사](../../load-balancing-survey.md)). 이 경우 이득은 lazy read 지연과 노드 사이 page cache 중복 제거다.
 
-## 3. sandbox 밖 CPU 작업 (문헌·framework 조사)
+## 4. sandbox 밖 CPU 작업 (문헌·framework 조사)
 
 subagent로 조사했고, 1차 출처(논문, 공식 문서, 코드)를 우선했다. "미확인"은 2차 출처뿐인 값이다.
 
@@ -338,11 +338,11 @@ subagent로 조사했고, 1차 출처(논문, 공식 문서, 코드)를 우선�
 
 **순위: 크고, 몰리고, GPU process에 묶이지 않은 것**
 1. **동기 RL에서 생성이 끝날 때 몰리는 reward·test 실행.** 빠른 CPU 이동에 가장 잘 맞는 후보다. 다만 iter2 기록에서는 몰리지 않았다(2절). 비동기 pipeline(AReaL, SkyRL)도 이 몰림을 퍼뜨린다.
-2. **step 시작의 env 생성.** 크고 몰리지만 병목이 I/O와 registry다. hand-off보다 image 공유가 맞다.
+2. **step 시작의 env 생성.** 크고 몰리지만, 기록된 job에서는 생성 대기열이 시간을 정했고 step의 약 3%다(3절). image가 노드에 없을 때의 비용은 I/O, registry, 펼치기 CPU다. hand-off보다 image 공유와 warm pool이 맞다.
 3. **browser·desktop VM 환경.** 무겁지만 꾸준해서, 빠른 이동보다 배치의 문제다.
 4. **GPU process에 묶인 것.** 추론 엔진 host 쪽, tokenizer, optimizer offload, checkpoint다. 옮길 수 없다. 엔진은 코어를 잃는 순간 느려진다(vLLM 문서, 2603.22774). 고정 분할이 낫다는 직접 실험 결과와 같다.
 
-## 4. 한계
+## 5. 한계
 
 - **분류는 정규식이다.** compound 명령은 맨 앞에서 맞는 종류 하나로 센다.
 - **Python RL의 CPU는 51개 trace의 단독 재생 값이다.** 8 vCPU라 폭은 제한 없는 경우에 가깝다.
@@ -353,7 +353,7 @@ subagent로 조사했고, 1차 출처(논문, 공식 문서, 코드)를 우선�
 - **iter2 job 두 개뿐이다.** Qwen3.5-35B-A3B GRPO, Python SWE에 대한 결과다. 동기 step에 wave가 두 개다.
 - **조사 결과에는 미확인 값이 있다.** 2차 출처뿐인 값은 표에 표시했다. Chromium 수치, OSWorld 권장 사양, CPU:GPU 비율 전망은 신뢰할 출처를 찾지 못해 표에서 뺐다.
 
-## 5. 재현
+## 6. 재현
 
 ```bash
 cd experiments/contention
@@ -364,7 +364,7 @@ python3 reward_eval.py prepare --out .local/reward-eval
 python3 sandbox.py --candidates .local/reward-eval/candidates.json solo --cores 2-25 --vcpus 8 --node 0 --sibling-offset 64 --harness-cpus 0-1
 python3 reward_eval.py report .local/runs/20261109T015041Z-solo-jabedc2t --prep .local/reward-eval --out .local/reward-eval/report.json
 taskset -c 26-31 python3 env_cost.py aweaiteam/scaleswe:itamarst_eliot_pr421 aweaiteam/scaleswe:geopandas_geopandas_pr3504 docker.io/swerebenchv2/qiskit-qiskit-terra:9543-d4006dd --work .local/env-cost --docker <local images> --out .local/env-cost.json
-python3 env_cost.py --layers <image-sizes.json의 47개> --reads .local/runs/20261106T*-pilot-* --out .local/env-share.json
+python3 env_cost.py --layers <image-sizes.json의 47개> --reads .local/runs/20261106T*-pilot-* --out .local/env-share.json  # 읽은 양과 VM boot 시간
 python3 critical_path.py
 ```
 

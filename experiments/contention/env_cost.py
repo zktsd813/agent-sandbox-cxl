@@ -11,7 +11,8 @@ CPU is user + system seconds of the step's processes (/usr/bin/time), so "cores"
 
 How much of an image a sandbox needs (no CPU measured):
   layers   layer digests from the registry manifests of a set of images: bytes shared with other images in the set
-  reads    bytes the guest read from the read-only image disk over a whole replayed rollout (pilot runs)
+  reads    bytes the guest read from the read-only image disk over a whole replayed rollout, and the boot time
+           (Firecracker start to guest agent ready) of every VM (pilot runs)
 
   python3 env_cost.py IMAGE... --work DIR [--docker LOCAL_IMAGE...] [--out FILE]
   python3 env_cost.py [--layers IMAGE...] [--reads PILOT_RUN_DIR...] [--out FILE]
@@ -128,16 +129,20 @@ def image_reads(runs):
     sandboxes.jsonl, the most over all runs of a trace) against the image's unpacked size."""
     key = {e["name"]: e["image_key"] for e in json.loads((sandbox.HERE / "candidates-rl.json").read_text())["traces"]}
     read = collections.defaultdict(float)
+    boot = []  # Firecracker started -> guest agent ready, every VM of the runs
     for run in runs:
         for line in (run / "sandboxes.jsonl").open():
             r = json.loads(line)
+            if r.get("ready_ns") and r.get("start_ns"):
+                boot.append((r["ready_ns"] - r["start_ns"]) / 1e9)
             mem = [m for m in r.get("mem") or [] if len(m) > 13]  # host ns, uptime, 6 meminfo, then sectors per disk
             if mem and r["trace"] in key:
                 read[r["trace"]] = max(read[r["trace"]], max(m[8] for m in mem) * 512)
     rows = [{"trace": t, "read_bytes": b, "unpacked_bytes": json.loads(
         (sandbox.HERE / ".local/images" / key[t] / "image.json").read_text())["export_tar_bytes"]} for t, b in read.items()]
     frac = [r["read_bytes"] / r["unpacked_bytes"] for r in rows]
-    return {"traces": len(rows), "read_mib_p10_p50_p90_max": (np.percentile([r["read_bytes"] for r in rows],
+    return {"vms": len(boot), "boot_s_p50_p90_max": np.percentile(boot, [50, 90, 100]).tolist(),
+            "traces": len(rows), "read_mib_p10_p50_p90_max": (np.percentile([r["read_bytes"] for r in rows],
                                                                             [10, 50, 90, 100]) / 2**20).tolist(),
             "fraction_p10_p50_p90_max": np.percentile(frac, [10, 50, 90, 100]).tolist(), "rows": rows}
 

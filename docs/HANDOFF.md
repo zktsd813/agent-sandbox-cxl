@@ -12,6 +12,7 @@
 > - **GPU 노드 harvest도 성과가 없었다.** 사용자가 다른 서버에서 직접 해 봤다. GPU 작업이 CPU 하나를 계속 쓰기 때문에 hand-off할 틈이 없고, 고정 분할이 낫다(repo에 데이터 없음).
 > - **sandbox CPU는 미리 알 수 있다.** test·build·install 명령에 몰려 있어 명령 문자열만 보고 안다.
 > - **sandbox 밖에서 몰리는 CPU 작업은 동기 RL의 reward·test 실행 정도다.** 공개 RL job 기록에서는 그것도 작고 퍼져 있었다.
+> - **env 생성은 병목이 아니다.** 기록된 생성 시간(중앙값 94초)은 image가 아니라 provider의 생성 대기열이 정했고, 모두 1초로 줄여도 step은 약 3% 준다. 푸는 방법은 이동이 아니라 image 저장 방식(lazy, DSec의 EROFS + 3FS)과 warm pool이다.
 >
 > 근거는 [trace 성격 다시 보기](results/trace-character-20261109/README.md)에 있다.
 

@@ -320,5 +320,5 @@ pull은 노드 cache가 무제한일 때 (노드, image) 쌍의 수다. hand-off
 **해석**
 - **sandbox는 critical path 위에 있지만 얇다.** 가장 늦은 rollout도 LLM 호출과 명령을 번갈아 실행하므로, 명령 시간은 그대로 critical path에 들어간다. 다만 학습 엔진 속도에서는 그 몫이 5% 안팎이다. co-runner로 명령이 20% 느려져도 group과 step은 약 1% 늦어진다. 8.1~8.2의 측정과 같은 크기다.
 - **critical path의 tail은 turn이 많은 rollout이다.** 가장 늦은 rollout의 turn 수는 단위 중앙값의 1.19배(group), 1.47배(step)다.
-- **sandbox 쪽에서 더 민감한 것은 env 생성이다.** env 생성은 모든 rollout의 시작에 몰려 있고 p90이 277초다. ×1에서도 2배가 되면 step이 7% 늦어진다. 추론이 4배 빠르면(×0.25) group이 13%(p90 41%) 늦어진다. image pull과 locality(M1)가 바로 이 항목이다.
+- **sandbox 쪽에서 더 민감한 것은 env 생성이다.** env 생성은 모든 rollout의 시작에 몰려 있고 p90이 277초다. ×1에서도 2배가 되면 step이 7% 늦어진다. 추론이 4배 빠르면(×0.25) group이 13%(p90 41%) 늦어진다. image pull과 locality(M1)가 바로 이 항목이다. **[11-09]** 기록된 env 생성 시간은 image pull이 아니라 provider의 생성 대기열이 정했다. env 생성을 모두 1초로 줄여도 step은 약 3% 준다([trace 성격 다시 보기](results/trace-character-20261109/README.md) 3절).
 - **추론이 빨라지면 sandbox 몫이 커진다.** ×0.25에서 tool+agent가 group critical path의 15%(p90 33%), 첫 wave의 27%다. 명령이 20% 느려지면 3~6%(p90 7~11%) 늦어진다. CPU contention이 학습 시간에 보일 수 있는 조건은 추론이 빠르고 tool이 무거운 경우다.
