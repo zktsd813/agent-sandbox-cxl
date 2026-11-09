@@ -1,0 +1,1354 @@
+{
+ "summary": {
+  "evaluations": 45,
+  "same_outcome": 43,
+  "wall_over_recorded_p50": 0.38371203947992344,
+  "eval_vcpu_s_p10_p50_p90": [
+   0.6871636176,
+   3.9975703879999998,
+   20.102732855400003
+  ],
+  "eval_cores_while_running_p50": 0.7401018212455925,
+  "install_share_of_eval_vcpu": 0.5569837349346866,
+  "eval_over_agent_vcpu_p50_p90": [
+   0.11793610629140673,
+   0.593105635785776
+  ],
+  "eval_share_of_agent_plus_eval_vcpu": 0.11181238100180933,
+  "peak_cores_p50_p90": [
+   1.0524363598140114,
+   7.816105874620368
+  ]
+ },
+ "rows": [
+  {
+   "name": "Fatal1ty__mashumaro-116_14600",
+   "family": "Fatal1ty__mashumaro-116_14600",
+   "recorded_eval_s": 10.15177845954895,
+   "recorded_tests_passed": 51,
+   "recorded_counts": {
+    "passed": 51
+   },
+   "replayed_counts": {
+    "passed": 51
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 133.072,
+   "agent_command_s": 122.78,
+   "patch_wall_s": 0.039607244,
+   "patch_vcpu_s": 0.029297281,
+   "patch_peak_cores": 0.48530978211232745,
+   "install_wall_s": 3.456779004,
+   "install_vcpu_s": 2.758500142,
+   "install_peak_cores": 1.0308053247883036,
+   "test_wall_s": 1.167000277,
+   "test_vcpu_s": 1.033319788,
+   "test_peak_cores": 1.0446573518203959,
+   "eval_wall_s": 4.623779281,
+   "eval_vcpu_s": 3.79181993
+  },
+  {
+   "name": "NCAS-CMS__cf-python-551_13360",
+   "family": "NCAS-CMS__cf-python-551_13360",
+   "recorded_eval_s": 49.18385148048401,
+   "recorded_tests_passed": 123,
+   "recorded_counts": {
+    "failed": 10,
+    "passed": 123,
+    "skipped": 2
+   },
+   "replayed_counts": {
+    "failed": 10,
+    "passed": 123,
+    "skipped": 2
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 314.544,
+   "agent_command_s": 301.46,
+   "patch_wall_s": 0.067466551,
+   "patch_vcpu_s": 0.028342234,
+   "patch_peak_cores": 0.22817874260776078,
+   "install_wall_s": 5.087407984,
+   "install_vcpu_s": 2.661657141,
+   "install_peak_cores": 1.0368791025156703,
+   "test_wall_s": 13.901038266,
+   "test_vcpu_s": 15.427630883,
+   "test_peak_cores": 7.805338820044754,
+   "eval_wall_s": 18.988446250000003,
+   "eval_vcpu_s": 18.089288024000002
+  },
+  {
+   "name": "PyCQA__flake8-bugbear-129_14496",
+   "family": "PyCQA__flake8-bugbear-129_14496",
+   "recorded_eval_s": 16.956456899642944,
+   "recorded_tests_passed": 22,
+   "recorded_counts": {
+    "failed": 1,
+    "passed": 22
+   },
+   "replayed_counts": {
+    "failed": 1,
+    "passed": 22
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 42.787,
+   "agent_command_s": 45.0,
+   "patch_wall_s": 0.065306069,
+   "patch_vcpu_s": 0.02536005,
+   "patch_peak_cores": 0.2971645177699169,
+   "install_wall_s": 1.602320058,
+   "install_vcpu_s": 1.081012229,
+   "install_peak_cores": 1.0245626289309824,
+   "test_wall_s": 5.379989672,
+   "test_vcpu_s": 5.178949215,
+   "test_peak_cores": 1.1254391449731833,
+   "eval_wall_s": 6.98230973,
+   "eval_vcpu_s": 6.259961444
+  },
+  {
+   "name": "Turbo87__utm-31_14832",
+   "family": "Turbo87__utm-31_14832",
+   "recorded_eval_s": 9.318395137786865,
+   "recorded_tests_passed": 9,
+   "recorded_counts": {
+    "failed": 1,
+    "passed": 9
+   },
+   "replayed_counts": {
+    "failed": 1,
+    "passed": 9
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 3.179,
+   "agent_command_s": 2.72,
+   "patch_wall_s": 0.041224759,
+   "patch_vcpu_s": 0.027293708,
+   "patch_peak_cores": 0.5404506222162295,
+   "install_wall_s": 2.005577192,
+   "install_vcpu_s": 1.497937237,
+   "install_peak_cores": 1.022704963996544,
+   "test_wall_s": 1.570003211,
+   "test_vcpu_s": 1.43465567,
+   "test_peak_cores": 1.0476756134456289,
+   "eval_wall_s": 3.575580403,
+   "eval_vcpu_s": 2.932592907
+  },
+  {
+   "name": "adamchainz__flake8-comprehensions-205_13520",
+   "family": "adamchainz__flake8-comprehensions-205_13520",
+   "recorded_eval_s": 31.189475774765015,
+   "recorded_tests_passed": 81,
+   "recorded_counts": {
+    "passed": 162
+   },
+   "replayed_counts": {
+    "passed": 162
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 44.161,
+   "agent_command_s": 40.81,
+   "patch_wall_s": 0.049399799,
+   "patch_vcpu_s": 0.01858662,
+   "patch_peak_cores": 0.2898690385148995,
+   "install_wall_s": 10.24700394,
+   "install_vcpu_s": 4.340328164,
+   "install_peak_cores": 1.0379065242686296,
+   "test_wall_s": 16.084673903,
+   "test_vcpu_s": 16.385583515,
+   "test_peak_cores": 1.593665287542485,
+   "eval_wall_s": 26.331677843,
+   "eval_vcpu_s": 20.725911679
+  },
+  {
+   "name": "aws-cloudformation__cfn-lint-3684_13368",
+   "family": "aws-cloudformation__cfn-lint-3684_13368",
+   "recorded_eval_s": 37.21554160118103,
+   "recorded_tests_passed": 3,
+   "recorded_counts": {
+    "failed": 1,
+    "passed": 3
+   },
+   "replayed_counts": {
+    "failed": 1,
+    "passed": 3
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 61.385,
+   "agent_command_s": 60.02,
+   "patch_wall_s": 0.046882102,
+   "patch_vcpu_s": 0.028875402,
+   "patch_peak_cores": 0.3427014973499489,
+   "install_wall_s": 5.190680785,
+   "install_vcpu_s": 3.44777307,
+   "install_peak_cores": 1.065316109718148,
+   "test_wall_s": 1.874495177,
+   "test_vcpu_s": 1.399509051,
+   "test_peak_cores": 1.0412304021319883,
+   "eval_wall_s": 7.065175962,
+   "eval_vcpu_s": 4.847282121
+  },
+  {
+   "name": "aws-cloudformation__cfn-lint-3707_14640",
+   "family": "aws-cloudformation__cfn-lint-3707_14640",
+   "recorded_eval_s": 21.790207862854004,
+   "recorded_tests_passed": 2,
+   "recorded_counts": {
+    "failed": 1,
+    "passed": 3
+   },
+   "replayed_counts": {
+    "failed": 1,
+    "passed": 3
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 99.352,
+   "agent_command_s": 95.22,
+   "patch_wall_s": 0.039575524,
+   "patch_vcpu_s": 0.026739572,
+   "patch_peak_cores": 0.45744749417536507,
+   "install_wall_s": 6.06972935,
+   "install_vcpu_s": 3.480392907,
+   "install_peak_cores": 1.0268260820277086,
+   "test_wall_s": 1.833694863,
+   "test_vcpu_s": 1.3443637,
+   "test_peak_cores": 1.03766580203157,
+   "eval_wall_s": 7.903424213,
+   "eval_vcpu_s": 4.824756607
+  },
+  {
+   "name": "databricks__dbt-databricks-935_14680",
+   "family": "databricks__dbt-databricks-935_14680",
+   "recorded_eval_s": 14.299570322036743,
+   "recorded_tests_passed": 18,
+   "recorded_counts": {
+    "passed": 18,
+    "errors": 2
+   },
+   "replayed_counts": {
+    "passed": 18,
+    "errors": 2
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 42.404,
+   "agent_command_s": 34.24,
+   "patch_wall_s": 0.042195742,
+   "patch_vcpu_s": 0.025710872,
+   "patch_peak_cores": 0.44665062285508383,
+   "install_wall_s": 24.072258308,
+   "install_vcpu_s": 6.367058214,
+   "install_peak_cores": 1.024659654707921,
+   "test_wall_s": 4.139015819,
+   "test_vcpu_s": 3.972098778,
+   "test_peak_cores": 7.776669555695058,
+   "eval_wall_s": 28.211274127,
+   "eval_vcpu_s": 10.339156992
+  },
+  {
+   "name": "django-json-api__django-rest-framework-json-api-1231_14392",
+   "family": "django-json-api__django-rest-framework-json-api-1231_14392",
+   "recorded_eval_s": 10.176132917404175,
+   "recorded_tests_passed": 27,
+   "recorded_counts": {
+    "failed": 2,
+    "passed": 27
+   },
+   "replayed_counts": {
+    "failed": 2,
+    "passed": 27
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 89.28,
+   "agent_command_s": 102.33,
+   "patch_wall_s": 0.043291421,
+   "patch_vcpu_s": 0.026202236,
+   "patch_peak_cores": 0.3051210048818781,
+   "install_wall_s": 2.278573126,
+   "install_vcpu_s": 1.836188037,
+   "install_peak_cores": 1.0213424877221073,
+   "test_wall_s": 2.948127228,
+   "test_vcpu_s": 2.638733661,
+   "test_peak_cores": 1.9780219744943044,
+   "eval_wall_s": 5.226700354,
+   "eval_vcpu_s": 4.474921698
+  },
+  {
+   "name": "edoburu_sphinxcontrib-django_pr40_13592",
+   "family": "edoburu_sphinxcontrib-django_pr40_13592",
+   "recorded_eval_s": 5.246788501739502,
+   "recorded_tests_passed": 29,
+   "recorded_counts": {
+    "failed": 1,
+    "passed": 29
+   },
+   "replayed_counts": {
+    "failed": 1,
+    "passed": 29
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": false,
+   "agent_vcpu_s": 25.944,
+   "agent_command_s": 27.0,
+   "patch_wall_s": 0.035236896,
+   "patch_vcpu_s": 0.024864765,
+   "patch_peak_cores": 0.532989684635436,
+   "install_wall_s": 0.003701731,
+   "install_vcpu_s": 0.016893591,
+   "install_peak_cores": null,
+   "test_wall_s": 1.856579353,
+   "test_vcpu_s": 1.447667833,
+   "test_peak_cores": 1.0448516061231452,
+   "eval_wall_s": 1.8602810840000001,
+   "eval_vcpu_s": 1.464561424
+  },
+  {
+   "name": "enthought__okonomiyaki-418_13712",
+   "family": "enthought__okonomiyaki-418_13712",
+   "recorded_eval_s": 10.517245292663574,
+   "recorded_tests_passed": 12,
+   "recorded_counts": {
+    "failed": 3,
+    "passed": 12
+   },
+   "replayed_counts": {
+    "failed": 3,
+    "passed": 12
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 31.585,
+   "agent_command_s": 33.97,
+   "patch_wall_s": 0.066127136,
+   "patch_vcpu_s": 0.025192995,
+   "patch_peak_cores": 0.27279539887218485,
+   "install_wall_s": 2.299213946,
+   "install_vcpu_s": 1.716692386,
+   "install_peak_cores": 1.0186557901654425,
+   "test_wall_s": 1.164844772,
+   "test_vcpu_s": 1.061615537,
+   "test_peak_cores": 1.0407439019835316,
+   "eval_wall_s": 3.464058718,
+   "eval_vcpu_s": 2.778307923
+  },
+  {
+   "name": "frostming_marko_pr77_14664",
+   "family": "frostming_marko_pr77_14664",
+   "recorded_eval_s": 5.869136333465576,
+   "recorded_tests_passed": 404,
+   "recorded_counts": {
+    "passed": 405
+   },
+   "replayed_counts": {},
+   "same_outcome": false,
+   "patch_applied": true,
+   "has_install": false,
+   "agent_vcpu_s": 23.449,
+   "agent_command_s": 20.52,
+   "patch_wall_s": 0.042007696,
+   "patch_vcpu_s": 0.028225668,
+   "patch_peak_cores": 0.44265525939918166,
+   "install_wall_s": 0.00427115,
+   "install_vcpu_s": 0.017811039,
+   "install_peak_cores": null,
+   "test_wall_s": 0.840869949,
+   "test_vcpu_s": 0.659307411,
+   "test_peak_cores": 1.0103934712638323,
+   "eval_wall_s": 0.845141099,
+   "eval_vcpu_s": 0.67711845
+  },
+  {
+   "name": "fuhrysteve_marshmallow-jsonschema_pr139_14360",
+   "family": "fuhrysteve_marshmallow-jsonschema_pr139_14360",
+   "recorded_eval_s": 116.16009616851807,
+   "recorded_tests_passed": 48,
+   "recorded_counts": {
+    "passed": 48
+   },
+   "replayed_counts": {
+    "passed": 48
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": false,
+   "agent_vcpu_s": 7.536,
+   "agent_command_s": 6.48,
+   "patch_wall_s": 0.036060435,
+   "patch_vcpu_s": 0.033177544,
+   "patch_peak_cores": 0.45160925039462124,
+   "install_wall_s": 0.003153039,
+   "install_vcpu_s": 0.009931211,
+   "install_peak_cores": null,
+   "test_wall_s": 0.786138425,
+   "test_vcpu_s": 0.574224839,
+   "test_peak_cores": 1.009725827147596,
+   "eval_wall_s": 0.7892914639999999,
+   "eval_vcpu_s": 0.58415605
+  },
+  {
+   "name": "googleapis__proto-plus-python-348_13608",
+   "family": "googleapis__proto-plus-python-348_13608",
+   "recorded_eval_s": 32.329235553741455,
+   "recorded_tests_passed": 4,
+   "recorded_counts": {
+    "passed": 4
+   },
+   "replayed_counts": {
+    "passed": 4
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 17.533,
+   "agent_command_s": 16.01,
+   "patch_wall_s": 0.058340423,
+   "patch_vcpu_s": 0.021247832,
+   "patch_peak_cores": 0.2836184331351397,
+   "install_wall_s": 2.333986282,
+   "install_vcpu_s": 1.50215207,
+   "install_peak_cores": 1.0278822018278182,
+   "test_wall_s": 1.500461941,
+   "test_vcpu_s": 1.397080062,
+   "test_peak_cores": 1.0524363598140114,
+   "eval_wall_s": 3.834448223,
+   "eval_vcpu_s": 2.899232132
+  },
+  {
+   "name": "googlecloudplatform__cloud-sql-python-connector-906_13816",
+   "family": "googlecloudplatform__cloud-sql-python-connector-906_13816",
+   "recorded_eval_s": 12.038181781768799,
+   "recorded_tests_passed": 1,
+   "recorded_counts": {
+    "passed": 2
+   },
+   "replayed_counts": {
+    "passed": 2
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 22.697,
+   "agent_command_s": 62.2,
+   "patch_wall_s": 0.059689963,
+   "patch_vcpu_s": 0.021100326,
+   "patch_peak_cores": 0.3315393392008673,
+   "install_wall_s": 9.465348613,
+   "install_vcpu_s": 6.525873989,
+   "install_peak_cores": 1.0662177924722085,
+   "test_wall_s": 0.92037039,
+   "test_vcpu_s": 0.737745456,
+   "test_peak_cores": 1.1192682324209464,
+   "eval_wall_s": 10.385719003,
+   "eval_vcpu_s": 7.263619445
+  },
+  {
+   "name": "hhatto_autopep8_pr442_13392",
+   "family": "hhatto_autopep8_pr442_13392",
+   "recorded_eval_s": 31.10981321334839,
+   "recorded_tests_passed": 520,
+   "recorded_counts": {
+    "passed": 520
+   },
+   "replayed_counts": {
+    "passed": 520
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": false,
+   "agent_vcpu_s": 51.112,
+   "agent_command_s": 44.48,
+   "patch_wall_s": 0.07181166,
+   "patch_vcpu_s": 0.028040559,
+   "patch_peak_cores": 0.2360364899260738,
+   "install_wall_s": 0.004074416,
+   "install_vcpu_s": 0.016689084,
+   "install_peak_cores": null,
+   "test_wall_s": 6.430760452,
+   "test_vcpu_s": 6.350024318,
+   "test_peak_cores": 1.39866673468939,
+   "eval_wall_s": 6.434834868,
+   "eval_vcpu_s": 6.366713402
+  },
+  {
+   "name": "home-assistant-libs_voluptuous-openapi_pr23_14736",
+   "family": "home-assistant-libs_voluptuous-openapi_pr23_14736",
+   "recorded_eval_s": 4.917461633682251,
+   "recorded_tests_passed": 30,
+   "recorded_counts": {
+    "failed": 1,
+    "passed": 30
+   },
+   "replayed_counts": {
+    "failed": 1,
+    "passed": 30
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": false,
+   "agent_vcpu_s": 10.098,
+   "agent_command_s": 8.22,
+   "patch_wall_s": 0.06685477,
+   "patch_vcpu_s": 0.023454184,
+   "patch_peak_cores": 0.23272179677949228,
+   "install_wall_s": 0.004202928,
+   "install_vcpu_s": 0.016171999,
+   "install_peak_cores": null,
+   "test_wall_s": 0.411705246,
+   "test_vcpu_s": 0.273659059,
+   "test_peak_cores": 0.9123164700518164,
+   "eval_wall_s": 0.415908174,
+   "eval_vcpu_s": 0.289831058
+  },
+  {
+   "name": "influxdb_influxdb-python_pr812_14840",
+   "family": "influxdb_influxdb-python_pr812_14840",
+   "recorded_eval_s": 6.059244871139526,
+   "recorded_tests_passed": 94,
+   "recorded_counts": {
+    "passed": 94
+   },
+   "replayed_counts": {
+    "passed": 94
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": false,
+   "agent_vcpu_s": 119.19,
+   "agent_command_s": 51.78,
+   "patch_wall_s": 0.069900445,
+   "patch_vcpu_s": 0.030436422,
+   "patch_peak_cores": 0.23474208123821602,
+   "install_wall_s": 0.003779041,
+   "install_vcpu_s": 0.009022024,
+   "install_peak_cores": null,
+   "test_wall_s": 1.591099803,
+   "test_vcpu_s": 1.812863993,
+   "test_peak_cores": 7.621111942867161,
+   "eval_wall_s": 1.5948788440000001,
+   "eval_vcpu_s": 1.821886017
+  },
+  {
+   "name": "ipython_traitlets_pr438_14424",
+   "family": "ipython_traitlets_pr438_14424",
+   "recorded_eval_s": 13.816231727600098,
+   "recorded_tests_passed": 158,
+   "recorded_counts": {
+    "failed": 1,
+    "passed": 158
+   },
+   "replayed_counts": {
+    "failed": 1,
+    "passed": 158
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": false,
+   "agent_vcpu_s": 10.451,
+   "agent_command_s": 7.91,
+   "patch_wall_s": 0.060907901,
+   "patch_vcpu_s": 0.027908223,
+   "patch_peak_cores": 0.32038478179351454,
+   "install_wall_s": 0.004654115,
+   "install_vcpu_s": 0.015151721,
+   "install_peak_cores": null,
+   "test_wall_s": 0.731040057,
+   "test_vcpu_s": 0.578371458,
+   "test_peak_cores": 1.0085668130232552,
+   "eval_wall_s": 0.735694172,
+   "eval_vcpu_s": 0.593523179
+  },
+  {
+   "name": "kangasta__fdbk-77_14648",
+   "family": "kangasta__fdbk-77_14648",
+   "recorded_eval_s": 20.502071857452393,
+   "recorded_tests_passed": 13,
+   "recorded_counts": {
+    "passed": 13
+   },
+   "replayed_counts": {
+    "passed": 13
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 30.142,
+   "agent_command_s": 28.38,
+   "patch_wall_s": 0.064479183,
+   "patch_vcpu_s": 0.032610697,
+   "patch_peak_cores": 0.2699468079981594,
+   "install_wall_s": 1.488924017,
+   "install_vcpu_s": 1.048979028,
+   "install_peak_cores": 1.0269652952629669,
+   "test_wall_s": 1.149458757,
+   "test_vcpu_s": 1.034526701,
+   "test_peak_cores": 1.0497097170193852,
+   "eval_wall_s": 2.638382774,
+   "eval_vcpu_s": 2.083505729
+  },
+  {
+   "name": "kolonialno_django-api-decorator_pr13_13648",
+   "family": "kolonialno_django-api-decorator_pr13_13648",
+   "recorded_eval_s": 10.749026775360107,
+   "recorded_tests_passed": 27,
+   "recorded_counts": {
+    "failed": 3,
+    "passed": 28
+   },
+   "replayed_counts": {
+    "failed": 3,
+    "passed": 28
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": false,
+   "agent_vcpu_s": 16.626,
+   "agent_command_s": 15.29,
+   "patch_wall_s": 0.034662576,
+   "patch_vcpu_s": 0.026142542,
+   "patch_peak_cores": 0.5773318566118514,
+   "install_wall_s": 0.004666429,
+   "install_vcpu_s": 0.018228671,
+   "install_peak_cores": null,
+   "test_wall_s": 0.948849829,
+   "test_vcpu_s": 0.684002698,
+   "test_peak_cores": 1.0152727926271459,
+   "eval_wall_s": 0.9535162580000001,
+   "eval_vcpu_s": 0.702231369
+  },
+  {
+   "name": "marshmallow-code__marshmallow-2800_13312",
+   "family": "marshmallow-code__marshmallow-2800_13312",
+   "recorded_eval_s": 15.657978057861328,
+   "recorded_tests_passed": 189,
+   "recorded_counts": {
+    "failed": 1,
+    "passed": 189
+   },
+   "replayed_counts": {
+    "failed": 1,
+    "passed": 189
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 4.426,
+   "agent_command_s": 2.88,
+   "patch_wall_s": 0.068852358,
+   "patch_vcpu_s": 0.023771683,
+   "patch_peak_cores": 0.24715187423881796,
+   "install_wall_s": 18.398132582,
+   "install_vcpu_s": 2.567357528,
+   "install_peak_cores": 1.018559091941745,
+   "test_wall_s": 0.568630151,
+   "test_vcpu_s": 0.516638035,
+   "test_peak_cores": 1.0327413011714954,
+   "eval_wall_s": 18.966762733,
+   "eval_vcpu_s": 3.083995563
+  },
+  {
+   "name": "networkx__networkx-3072_14384",
+   "family": "networkx__networkx-3072_14384",
+   "recorded_eval_s": 8.322344303131104,
+   "recorded_tests_passed": 23,
+   "recorded_counts": {
+    "failed": 34,
+    "passed": 46
+   },
+   "replayed_counts": {
+    "failed": 34,
+    "passed": 46
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 7.774,
+   "agent_command_s": 6.38,
+   "patch_wall_s": 0.046909487,
+   "patch_vcpu_s": 0.031524203,
+   "patch_peak_cores": 0.4757291806141531,
+   "install_wall_s": 9.222324146,
+   "install_vcpu_s": 4.127665482,
+   "install_peak_cores": 1.033210508194015,
+   "test_wall_s": 0.723997251,
+   "test_vcpu_s": 0.704010743,
+   "test_peak_cores": 1.0397613957333294,
+   "eval_wall_s": 9.946321397,
+   "eval_vcpu_s": 4.831676225000001
+  },
+  {
+   "name": "numpy__numpydoc-347_13696",
+   "family": "numpy__numpydoc-347_13696",
+   "recorded_eval_s": 10.867271900177002,
+   "recorded_tests_passed": 53,
+   "recorded_counts": {
+    "failed": 40,
+    "passed": 53,
+    "xfailed": 2
+   },
+   "replayed_counts": {
+    "failed": 40,
+    "passed": 53,
+    "xfailed": 2
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 34.032,
+   "agent_command_s": 43.51,
+   "patch_wall_s": 0.073858696,
+   "patch_vcpu_s": 0.027741272,
+   "patch_peak_cores": 0.21228661518419945,
+   "install_wall_s": 2.178350638,
+   "install_vcpu_s": 1.527443068,
+   "install_peak_cores": 1.025486492396003,
+   "test_wall_s": 1.960172145,
+   "test_vcpu_s": 2.47012732,
+   "test_peak_cores": 7.673251777575294,
+   "eval_wall_s": 4.138522783,
+   "eval_vcpu_s": 3.9975703879999998
+  },
+  {
+   "name": "oauthlib_oauthlib_pr87_13688",
+   "family": "oauthlib_oauthlib_pr87_13688",
+   "recorded_eval_s": 8.323633432388306,
+   "recorded_tests_passed": 34,
+   "recorded_counts": {
+    "failed": 2,
+    "passed": 34
+   },
+   "replayed_counts": {
+    "failed": 2,
+    "passed": 34
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": false,
+   "agent_vcpu_s": 5.278,
+   "agent_command_s": 4.39,
+   "patch_wall_s": 0.064062635,
+   "patch_vcpu_s": 0.032714907,
+   "patch_peak_cores": 0.22360765121393117,
+   "install_wall_s": 0.003798301,
+   "install_vcpu_s": 0.009337153,
+   "install_peak_cores": null,
+   "test_wall_s": 0.575473792,
+   "test_vcpu_s": 0.376501018,
+   "test_peak_cores": 0.9724150283030629,
+   "eval_wall_s": 0.579272093,
+   "eval_vcpu_s": 0.385838171
+  },
+  {
+   "name": "oceanparcels__parcels-590_14776",
+   "family": "oceanparcels__parcels-590_14776",
+   "recorded_eval_s": 40.95774602890015,
+   "recorded_tests_passed": 40,
+   "recorded_counts": {
+    "failed": 44,
+    "passed": 80,
+    "xfailed": 4
+   },
+   "replayed_counts": {
+    "failed": 44,
+    "passed": 80,
+    "xfailed": 4
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 318.528,
+   "agent_command_s": 287.3,
+   "patch_wall_s": 0.056713884,
+   "patch_vcpu_s": 0.030396547,
+   "patch_peak_cores": 0.278164738381926,
+   "install_wall_s": 68.783222227,
+   "install_vcpu_s": 31.995432103,
+   "install_peak_cores": 1.6247036588986643,
+   "test_wall_s": 18.458209563,
+   "test_vcpu_s": 18.042405825,
+   "test_peak_cores": 2.2658976351393165,
+   "eval_wall_s": 87.24143179,
+   "eval_vcpu_s": 50.037837928
+  },
+  {
+   "name": "onnx_tensorflow-onnx_pr984_13336",
+   "family": "onnx_tensorflow-onnx_pr984_13336",
+   "recorded_eval_s": 26.941239833831787,
+   "recorded_tests_passed": 85,
+   "recorded_counts": {
+    "passed": 85
+   },
+   "replayed_counts": {
+    "failed": 1,
+    "passed": 84
+   },
+   "same_outcome": false,
+   "patch_applied": true,
+   "has_install": false,
+   "agent_vcpu_s": 241.206,
+   "agent_command_s": 161.95,
+   "patch_wall_s": 0.042810515,
+   "patch_vcpu_s": 0.022826145,
+   "patch_peak_cores": 0.38002139834635523,
+   "install_wall_s": 0.004549175,
+   "install_vcpu_s": 0.015708275,
+   "install_peak_cores": null,
+   "test_wall_s": 15.221758826,
+   "test_vcpu_s": 16.355493076,
+   "test_peak_cores": 7.785635421388705,
+   "eval_wall_s": 15.226308001,
+   "eval_vcpu_s": 16.371201351
+  },
+  {
+   "name": "pallets__werkzeug-2402_13624",
+   "family": "pallets__werkzeug-2402_13624",
+   "recorded_eval_s": 11.19499397277832,
+   "recorded_tests_passed": 22,
+   "recorded_counts": {
+    "failed": 2,
+    "passed": 44,
+    "errors": 48
+   },
+   "replayed_counts": {
+    "failed": 2,
+    "passed": 44,
+    "errors": 48
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 9.772,
+   "agent_command_s": 6.44,
+   "patch_wall_s": 0.063141338,
+   "patch_vcpu_s": 0.022121331,
+   "patch_peak_cores": 0.2424142077232844,
+   "install_wall_s": 13.020120788,
+   "install_vcpu_s": 7.18696823,
+   "install_peak_cores": 1.0560319913611647,
+   "test_wall_s": 0.69431145,
+   "test_vcpu_s": 0.632289178,
+   "test_peak_cores": 1.1026289914921428,
+   "eval_wall_s": 13.714432238,
+   "eval_vcpu_s": 7.8192574079999995
+  },
+  {
+   "name": "pennylaneai__pennylane-3369_13472",
+   "family": "pennylaneai__pennylane-3369_13472",
+   "recorded_eval_s": 30.126717567443848,
+   "recorded_tests_passed": 158,
+   "recorded_counts": {
+    "failed": 2,
+    "passed": 158,
+    "skipped": 17,
+    "xfailed": 1
+   },
+   "replayed_counts": {
+    "failed": 2,
+    "passed": 158,
+    "skipped": 17,
+    "xfailed": 1
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 161.187,
+   "agent_command_s": 87.14,
+   "patch_wall_s": 0.033151579,
+   "patch_vcpu_s": 0.023418756,
+   "patch_peak_cores": 0.4979120444695964,
+   "install_wall_s": 189.842476502,
+   "install_vcpu_s": 16.540283806,
+   "install_peak_cores": 1.6084388607781537,
+   "test_wall_s": 4.109711763,
+   "test_vcpu_s": 5.146026065,
+   "test_peak_cores": 7.823283911004112,
+   "eval_wall_s": 193.95218826500002,
+   "eval_vcpu_s": 21.686309871000002
+  },
+  {
+   "name": "postlund__pyatv-2077_15344",
+   "family": "postlund__pyatv-2077_15344",
+   "recorded_eval_s": 19.648568391799927,
+   "recorded_tests_passed": 43,
+   "recorded_counts": {
+    "passed": 86
+   },
+   "replayed_counts": {
+    "passed": 86
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 29.847,
+   "agent_command_s": 30.15,
+   "patch_wall_s": 0.063110899,
+   "patch_vcpu_s": 0.031354916,
+   "patch_peak_cores": 0.24271996828097717,
+   "install_wall_s": 86.363159821,
+   "install_vcpu_s": 18.1142797,
+   "install_peak_cores": 1.0395334972688046,
+   "test_wall_s": 1.393387481,
+   "test_vcpu_s": 1.05368492,
+   "test_peak_cores": 1.0390443301065733,
+   "eval_wall_s": 87.756547302,
+   "eval_vcpu_s": 19.16796462
+  },
+  {
+   "name": "pre-commit__pre-commit-hooks-582_14432",
+   "family": "pre-commit__pre-commit-hooks-582_14432",
+   "recorded_eval_s": 22.822433948516846,
+   "recorded_tests_passed": 2,
+   "recorded_counts": {
+    "failed": 1,
+    "passed": 2
+   },
+   "replayed_counts": {
+    "failed": 1,
+    "passed": 2
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 10.355,
+   "agent_command_s": 10.74,
+   "patch_wall_s": 0.037781542,
+   "patch_vcpu_s": 0.032359877,
+   "patch_peak_cores": 0.46663230241652104,
+   "install_wall_s": 1.866528857,
+   "install_vcpu_s": 1.649051801,
+   "install_peak_cores": 1.019945829780188,
+   "test_wall_s": 0.490337861,
+   "test_vcpu_s": 0.475609708,
+   "test_peak_cores": 1.0602679472565073,
+   "eval_wall_s": 2.356866718,
+   "eval_vcpu_s": 2.124661509
+  },
+  {
+   "name": "pycqa__pyflakes-374_14368",
+   "family": "pycqa__pyflakes-374_14368",
+   "recorded_eval_s": 32.58018660545349,
+   "recorded_tests_passed": 121,
+   "recorded_counts": {
+    "failed": 2,
+    "passed": 242,
+    "skipped": 8
+   },
+   "replayed_counts": {
+    "failed": 2,
+    "passed": 242,
+    "skipped": 8
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 18.173,
+   "agent_command_s": 13.72,
+   "patch_wall_s": 0.046841428,
+   "patch_vcpu_s": 0.031553889,
+   "patch_peak_cores": 0.347314819374282,
+   "install_wall_s": 8.210069637,
+   "install_vcpu_s": 2.63498053,
+   "install_peak_cores": 1.0175055859484126,
+   "test_wall_s": 0.719461892,
+   "test_vcpu_s": 0.707106051,
+   "test_peak_cores": 1.0379179852088378,
+   "eval_wall_s": 8.929531529,
+   "eval_vcpu_s": 3.3420865810000002
+  },
+  {
+   "name": "pypa__packaging-734_14800",
+   "family": "pypa__packaging-734_14800",
+   "recorded_eval_s": 7.06243634223938,
+   "recorded_tests_passed": 153,
+   "recorded_counts": {
+    "failed": 25,
+    "passed": 164
+   },
+   "replayed_counts": {
+    "failed": 25,
+    "passed": 164
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 18.867,
+   "agent_command_s": 14.81,
+   "patch_wall_s": 0.069688992,
+   "patch_vcpu_s": 0.027951356,
+   "patch_peak_cores": 0.2063361433925341,
+   "install_wall_s": 2.685056006,
+   "install_vcpu_s": 1.963740802,
+   "install_peak_cores": 1.0140756737591088,
+   "test_wall_s": 0.578371979,
+   "test_vcpu_s": 0.564345676,
+   "test_peak_cores": 1.037587255770247,
+   "eval_wall_s": 3.263427985,
+   "eval_vcpu_s": 2.528086478
+  },
+  {
+   "name": "rasbt__mlxtend-765_14344",
+   "family": "rasbt__mlxtend-765_14344",
+   "recorded_eval_s": 25.898401737213135,
+   "recorded_tests_passed": 19,
+   "recorded_counts": {
+    "passed": 19
+   },
+   "replayed_counts": {
+    "passed": 19
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 43.02,
+   "agent_command_s": 18.92,
+   "patch_wall_s": 0.046576995,
+   "patch_vcpu_s": 0.020926553,
+   "patch_peak_cores": 0.2972779507201502,
+   "install_wall_s": 5.932218375,
+   "install_vcpu_s": 3.387311782,
+   "install_peak_cores": 1.0318023928026396,
+   "test_wall_s": 1.542622777,
+   "test_vcpu_s": 2.720291055,
+   "test_peak_cores": 7.7938206785656385,
+   "eval_wall_s": 7.474841152,
+   "eval_vcpu_s": 6.107602837
+  },
+  {
+   "name": "rokam_midea-local_pr411_13432",
+   "family": "rokam_midea-local_pr411_13432",
+   "recorded_eval_s": 13.432929039001465,
+   "recorded_tests_passed": 65,
+   "recorded_counts": {
+    "failed": 1,
+    "passed": 65
+   },
+   "replayed_counts": {
+    "failed": 1,
+    "passed": 65
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": false,
+   "agent_vcpu_s": 12.252,
+   "agent_command_s": 28.79,
+   "patch_wall_s": 0.071994345,
+   "patch_vcpu_s": 0.026828141,
+   "patch_peak_cores": 0.2248304893261261,
+   "install_wall_s": 0.004697878,
+   "install_vcpu_s": 0.008218107,
+   "install_peak_cores": null,
+   "test_wall_s": 7.279196187,
+   "test_vcpu_s": 0.934588394,
+   "test_peak_cores": 1.0001455169099,
+   "eval_wall_s": 7.283894065,
+   "eval_vcpu_s": 0.9428065010000001
+  },
+  {
+   "name": "sebrut__pygrocy-64_13440",
+   "family": "sebrut__pygrocy-64_13440",
+   "recorded_eval_s": 27.44410538673401,
+   "recorded_tests_passed": 0,
+   "recorded_counts": {
+    "errors": 1
+   },
+   "replayed_counts": {
+    "errors": 1
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 14.313,
+   "agent_command_s": 11.85,
+   "patch_wall_s": 0.080516239,
+   "patch_vcpu_s": 0.021243739,
+   "patch_peak_cores": 0.21445815051393344,
+   "install_wall_s": 11.873149412,
+   "install_vcpu_s": 6.128239794,
+   "install_peak_cores": 1.1313828351403705,
+   "test_wall_s": 0.543916534,
+   "test_vcpu_s": 0.523571894,
+   "test_peak_cores": 1.0369180212209084,
+   "eval_wall_s": 12.417065946,
+   "eval_vcpu_s": 6.651811688
+  },
+  {
+   "name": "slackapi__python-slack-events-api-76_13752",
+   "family": "slackapi__python-slack-events-api-76_13752",
+   "recorded_eval_s": 7.343727111816406,
+   "recorded_tests_passed": 11,
+   "recorded_counts": {
+    "failed": 2,
+    "passed": 11
+   },
+   "replayed_counts": {
+    "failed": 2,
+    "passed": 11
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 16.747,
+   "agent_command_s": 19.44,
+   "patch_wall_s": 0.05484981,
+   "patch_vcpu_s": 0.022456296,
+   "patch_peak_cores": 0.27396041802793203,
+   "install_wall_s": 2.348172911,
+   "install_vcpu_s": 2.011749273,
+   "install_peak_cores": 1.024077768390241,
+   "test_wall_s": 0.942193024,
+   "test_vcpu_s": 0.781399549,
+   "test_peak_cores": 1.037828202132202,
+   "eval_wall_s": 3.2903659349999996,
+   "eval_vcpu_s": 2.793148822
+  },
+  {
+   "name": "streamlink__streamlink-3421_14656",
+   "family": "streamlink__streamlink-3421_14656",
+   "recorded_eval_s": 21.026829481124878,
+   "recorded_tests_passed": 4,
+   "recorded_counts": {
+    "failed": 1,
+    "passed": 4
+   },
+   "replayed_counts": {
+    "failed": 1,
+    "passed": 4
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 20.679,
+   "agent_command_s": 26.89,
+   "patch_wall_s": 0.080673067,
+   "patch_vcpu_s": 0.030469367,
+   "patch_peak_cores": 0.2025563118657471,
+   "install_wall_s": 2.296466087,
+   "install_vcpu_s": 1.579974319,
+   "install_peak_cores": 1.0180947729121168,
+   "test_wall_s": 1.067355336,
+   "test_vcpu_s": 0.858826423,
+   "test_peak_cores": 1.053432732114333,
+   "eval_wall_s": 3.363821423,
+   "eval_vcpu_s": 2.4388007419999997
+  },
+  {
+   "name": "tsdat__tsdat-222_13512",
+   "family": "tsdat__tsdat-222_13512",
+   "recorded_eval_s": 16.64993166923523,
+   "recorded_tests_passed": 2,
+   "recorded_counts": {
+    "failed": 1,
+    "passed": 2
+   },
+   "replayed_counts": {
+    "failed": 1,
+    "passed": 2
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 142.246,
+   "agent_command_s": 202.63,
+   "patch_wall_s": 0.051943613,
+   "patch_vcpu_s": 0.027815014,
+   "patch_peak_cores": 0.3103541272554345,
+   "install_wall_s": 13.828049603,
+   "install_vcpu_s": 7.991643861,
+   "install_peak_cores": 1.0793150208431201,
+   "test_wall_s": 5.375190216,
+   "test_vcpu_s": 5.770645444,
+   "test_peak_cores": 7.8291791654413245,
+   "eval_wall_s": 19.203239819,
+   "eval_vcpu_s": 13.762289305
+  },
+  {
+   "name": "vyperlang__vyper-2627_15848",
+   "family": "vyperlang__vyper-2627_15848",
+   "recorded_eval_s": 44.95233345031738,
+   "recorded_tests_passed": 14,
+   "recorded_counts": {
+    "passed": 14
+   },
+   "replayed_counts": {
+    "passed": 14
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 55.703,
+   "agent_command_s": 81.58,
+   "patch_wall_s": 0.053468289,
+   "patch_vcpu_s": 0.025079649,
+   "patch_peak_cores": 0.29019190298508785,
+   "install_wall_s": 7.507705971,
+   "install_vcpu_s": 4.675724035,
+   "install_peak_cores": 1.1422157115206355,
+   "test_wall_s": 10.747656491,
+   "test_vcpu_s": 25.9881089,
+   "test_peak_cores": 8.071285218356227,
+   "eval_wall_s": 18.255362462,
+   "eval_vcpu_s": 30.663832935000002
+  },
+  {
+   "name": "wtforms__wtforms-823_12496",
+   "family": "wtforms__wtforms-823_12496",
+   "recorded_eval_s": 30.938568592071533,
+   "recorded_tests_passed": 17,
+   "recorded_counts": {
+    "passed": 17
+   },
+   "replayed_counts": {
+    "passed": 17
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 7.872,
+   "agent_command_s": 6.72,
+   "patch_wall_s": 0.06802296,
+   "patch_vcpu_s": 0.028597207,
+   "patch_peak_cores": 0.22364780894369568,
+   "install_wall_s": 4.320190846,
+   "install_vcpu_s": 2.084701814,
+   "install_peak_cores": 1.0198624124063265,
+   "test_wall_s": 0.450282595,
+   "test_vcpu_s": 0.436382955,
+   "test_peak_cores": 1.030113425314208,
+   "eval_wall_s": 4.770473441,
+   "eval_vcpu_s": 2.5210847690000002
+  },
+  {
+   "name": "wyfo__apischema-342_13704",
+   "family": "wyfo__apischema-342_13704",
+   "recorded_eval_s": 9.28930139541626,
+   "recorded_tests_passed": 45,
+   "recorded_counts": {
+    "failed": 1,
+    "passed": 45
+   },
+   "replayed_counts": {
+    "failed": 1,
+    "passed": 45
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 35.523,
+   "agent_command_s": 41.4,
+   "patch_wall_s": 0.037174803,
+   "patch_vcpu_s": 0.023852129,
+   "patch_peak_cores": 0.5131120410307046,
+   "install_wall_s": 2.418670323,
+   "install_vcpu_s": 1.681394822,
+   "install_peak_cores": 1.020106190840859,
+   "test_wall_s": 1.061568364,
+   "test_vcpu_s": 0.866537851,
+   "test_peak_cores": 1.0301846529596665,
+   "eval_wall_s": 3.480238687,
+   "eval_vcpu_s": 2.547932673
+  },
+  {
+   "name": "yelp__bravado-core-84_14456",
+   "family": "yelp__bravado-core-84_14456",
+   "recorded_eval_s": 24.49572491645813,
+   "recorded_tests_passed": 0,
+   "recorded_counts": {
+    "failed": 4
+   },
+   "replayed_counts": {
+    "failed": 4
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 75.159,
+   "agent_command_s": 70.09,
+   "patch_wall_s": 0.066852817,
+   "patch_vcpu_s": 0.021590169,
+   "patch_peak_cores": 0.22986239553456264,
+   "install_wall_s": 16.80479518,
+   "install_vcpu_s": 4.023672001,
+   "install_peak_cores": 1.0210414713351836,
+   "test_wall_s": 0.543447276,
+   "test_vcpu_s": 0.481044405,
+   "test_peak_cores": 1.0340327294721476,
+   "eval_wall_s": 17.348242455999998,
+   "eval_vcpu_s": 4.504716406
+  },
+  {
+   "name": "yt-project__yt-4638_14440",
+   "family": "yt-project__yt-4638_14440",
+   "recorded_eval_s": 122.09405946731567,
+   "recorded_tests_passed": 14,
+   "recorded_counts": {
+    "passed": 14
+   },
+   "replayed_counts": {
+    "passed": 14
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 75.867,
+   "agent_command_s": 55.73,
+   "patch_wall_s": 0.051443216,
+   "patch_vcpu_s": 0.025429896,
+   "patch_peak_cores": 0.2775517452058898,
+   "install_wall_s": 69.449027101,
+   "install_vcpu_s": 35.869008205,
+   "install_peak_cores": 8.063674389596146,
+   "test_wall_s": 4.267768119,
+   "test_vcpu_s": 4.477345331,
+   "test_peak_cores": 7.730890813534396,
+   "eval_wall_s": 73.71679522,
+   "eval_vcpu_s": 40.346353536
+  },
+  {
+   "name": "zarr-developers__zarr-python-2755_13560",
+   "family": "zarr-developers__zarr-python-2755_13560",
+   "recorded_eval_s": 23.970096588134766,
+   "recorded_tests_passed": 156,
+   "recorded_counts": {
+    "passed": 156,
+    "skipped": 147
+   },
+   "replayed_counts": {
+    "passed": 156,
+    "skipped": 147
+   },
+   "same_outcome": true,
+   "patch_applied": true,
+   "has_install": true,
+   "agent_vcpu_s": 289.445,
+   "agent_command_s": 225.71,
+   "patch_wall_s": 0.067685959,
+   "patch_vcpu_s": 0.032976553,
+   "patch_peak_cores": 0.2512308894895085,
+   "install_wall_s": 5.334420524,
+   "install_vcpu_s": 3.312376916,
+   "install_peak_cores": 1.0376996516846597,
+   "test_wall_s": 1.819389953,
+   "test_vcpu_s": 2.347008127,
+   "test_peak_cores": 7.871590830446532,
+   "eval_wall_s": 7.153810477,
+   "eval_vcpu_s": 5.659385043
+  }
+ ]
+}

@@ -1,0 +1,177 @@
+{
+ "images": [
+  {
+   "image": "aweaiteam/scaleswe:itamarst_eliot_pr421",
+   "layers": 1,
+   "compressed_bytes": 441846394,
+   "pull": {
+    "wall_s": 24.33233406592626,
+    "cpu_s": 0.65
+   },
+   "unpack": {
+    "wall_s": 5.925139299943112,
+    "cpu_s": 6.99,
+    "bytes": 1162662174
+   },
+   "ext4": {
+    "wall_s": 2.060069550992921,
+    "cpu_s": 1.85
+   },
+   "copy": {
+    "wall_s": 0.4796839620685205,
+    "cpu_s": 0.47
+   }
+  },
+  {
+   "image": "aweaiteam/scaleswe:geopandas_geopandas_pr3504",
+   "layers": 1,
+   "compressed_bytes": 1059217470,
+   "pull": {
+    "wall_s": 57.9124546260573,
+    "cpu_s": 1.52
+   },
+   "unpack": {
+    "wall_s": 11.934884015005082,
+    "cpu_s": 14.0,
+    "bytes": 2429350687
+   },
+   "ext4": {
+    "wall_s": 3.5395775949582458,
+    "cpu_s": 3.21
+   },
+   "copy": {
+    "wall_s": 0.9685861059697345,
+    "cpu_s": 0.96
+   }
+  },
+  {
+   "image": "docker.io/swerebenchv2/qiskit-qiskit-terra:9543-d4006dd",
+   "layers": 11,
+   "compressed_bytes": 2026970475,
+   "pull": {
+    "wall_s": 667.1723609809997,
+    "cpu_s": 8.46
+   },
+   "unpack": {
+    "wall_s": 26.3448297760915,
+    "cpu_s": 31.240000000000002,
+    "bytes": 5539220374
+   },
+   "ext4": {
+    "wall_s": 0.035758804995566607,
+    "cpu_s": 0.0
+   },
+   "copy": {
+    "wall_s": 0.0030369660817086697,
+    "cpu_s": 0.0
+   }
+  }
+ ],
+ "start": [
+  {
+   "image": "swerebench/sweb.eval.x86_64.chimpler_1776_pyhocon-92:latest",
+   "runs": [
+    {
+     "wall_s": 0.38732313795480877,
+     "client_cpu_s": 0.01,
+     "daemon_cpu_s": 0.15618700000050012,
+     "rc": 0
+    },
+    {
+     "wall_s": 0.3141763999592513,
+     "client_cpu_s": 0.0,
+     "daemon_cpu_s": 0.11763399999472313,
+     "rc": 0
+    },
+    {
+     "wall_s": 0.2954449050594121,
+     "client_cpu_s": 0.0,
+     "daemon_cpu_s": 0.11500499999965541,
+     "rc": 0
+    },
+    {
+     "wall_s": 0.30000069295056164,
+     "client_cpu_s": 0.0,
+     "daemon_cpu_s": 0.11437800000567222,
+     "rc": 0
+    },
+    {
+     "wall_s": 0.2888341370271519,
+     "client_cpu_s": 0.0,
+     "daemon_cpu_s": 0.11390400000527734,
+     "rc": 0
+    }
+   ]
+  },
+  {
+   "image": "aweaiteam/scaleswe:openqasm_oqpy_pr75",
+   "runs": [
+    {
+     "wall_s": 0.2910791249014437,
+     "client_cpu_s": 0.0,
+     "daemon_cpu_s": 0.14215799999510637,
+     "rc": 0
+    },
+    {
+     "wall_s": 0.26913917204365134,
+     "client_cpu_s": 0.0,
+     "daemon_cpu_s": 0.11096900000120513,
+     "rc": 0
+    },
+    {
+     "wall_s": 0.28121454000938684,
+     "client_cpu_s": 0.01,
+     "daemon_cpu_s": 0.10715499999787426,
+     "rc": 0
+    },
+    {
+     "wall_s": 0.2764839139999822,
+     "client_cpu_s": 0.0,
+     "daemon_cpu_s": 0.11346100000082515,
+     "rc": 0
+    },
+    {
+     "wall_s": 0.2746638779062778,
+     "client_cpu_s": 0.01,
+     "daemon_cpu_s": 0.10584599999856437,
+     "rc": 0
+    }
+   ]
+  },
+  {
+   "image": "swerebenchv2/collective-icalendar:835-f47d59a",
+   "runs": [
+    {
+     "wall_s": 0.28968009003438056,
+     "client_cpu_s": 0.0,
+     "daemon_cpu_s": 0.11370800000440795,
+     "rc": 0
+    },
+    {
+     "wall_s": 0.2819333489751443,
+     "client_cpu_s": 0.0,
+     "daemon_cpu_s": 0.14875999999640044,
+     "rc": 0
+    },
+    {
+     "wall_s": 0.2802106720628217,
+     "client_cpu_s": 0.0,
+     "daemon_cpu_s": 0.1150500000003376,
+     "rc": 0
+    },
+    {
+     "wall_s": 0.282667231047526,
+     "client_cpu_s": 0.0,
+     "daemon_cpu_s": 0.10681699999986449,
+     "rc": 0
+    },
+    {
+     "wall_s": 0.2820062559330836,
+     "client_cpu_s": 0.0,
+     "daemon_cpu_s": 0.10669100000086473,
+     "rc": 0
+    }
+   ]
+  }
+ ]
+}

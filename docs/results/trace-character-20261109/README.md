@@ -17,11 +17,18 @@
    - reward 평가 시간: 중앙값 19초, p90 50초
    - 마지막 명령 뒤에 평가를 붙이면 step이 중앙값 0.7%(p90 5.7%) 길어진다.
    - 동시에 도는 평가는 살아 있는 rollout 150~190개 중 중앙값 2~3개, 최대 17~25개다. rollout마다 끝나는 시각이 달라서 평가가 퍼진다.
-   - CPU 양은 무시할 수 없다. 평가 시간이 agent 명령 전체의 vCPU 시간의 0.6배(중앙값)이고, p90은 2.1배다.
+   - **직접 재실행해도 평가 CPU는 작다(2.1절).** 45개를 microVM에서 다시 돌렸고, 43개가 기록과 같은 통과·실패 수를 냈다.
+     - 평가 CPU는 중앙값 4.0초(p90 20초)로, agent CPU의 0.12배(p90 0.59배)다. agent와 평가를 합친 sandbox CPU의 11%다.
+     - 그 절반 이상(56%)은 `pip install -e`다.
+     - 45개 중 11개는 코어를 주는 만큼 넓게 쓴다(peak 4코어 이상). C 확장 compile과 pytest-xdist 때문이다.
+     - 처음에 시간 기록으로 추정한 "agent CPU의 0.6배"는 과대평가였다.
 4. **기록된 tool+agent 시간의 4분의 1은 sandbox 명령이 아니다.** 같은 trace를 재생한 명령 시간보다 중앙값 1.67배 길다. 명령마다 약 0.26초씩 agent·harness 쪽 시간이 붙는다.
 5. **sandbox 밖 CPU 작업 중 크고, 몰리고, 옮길 수 있는 것은 하나뿐이다.** 동기 RL에서 생성이 끝날 때 몰리는 reward·test 실행이다. 그 밖의 것은 다음과 같다.
    - GPU 노드의 CPU 작업(추론 엔진 host 쪽, tokenizer, optimizer offload, checkpoint)은 GPU process에 묶여 있고 대부분 꾸준하다. 직접 해 본 GPU harvest가 고정 분할에서 끝난 것과 같은 그림이다.
-   - env 생성은 크게 몰리지만 병목이 CPU보다 image pull, 디스크, network다.
+   - env 생성은 step 시작에 크게 몰린다(2.2절).
+     - image가 노드에 없으면 CPU를 꽤 쓴다. 압축 해제와 펼치기에 압축 GiB당 약 15 CPU초가 들고, 중앙값 크기 image 하나가 rollout 하나의 agent CPU의 절반쯤이다.
+     - image가 이미 있으면 container 시작은 0.1초 CPU다.
+     - 기록된 job에서는 생성 시간이 image 크기나 첫 사용 여부와 무관했다. 그래서 pull보다 생성 경로의 대기가 시간을 정한 것으로 보인다.
    - browser나 desktop VM 같은 무거운 환경은 꾸준해서, 빠른 이동보다 배치의 문제다.
 6. **hand-off motivation으로 보면 이번에도 새 기회는 작다.**
    - sandbox 안의 무거운 CPU는 미리 알 수 있다.
@@ -102,6 +109,88 @@
 - **CPU 양.** 재생한 Python RL trace 45개에서 평가 시간과 agent 명령 전체의 vCPU 시간을 비교했다. agent vCPU 시간 중앙값 30초, 평가 17초로, 비율은 중앙값 0.60, p90 2.09다. 평가 CPU는 재지 않았다. pytest가 대부분 단일 thread라 1코어 상한으로 본 값이다.
 - **기록과 재생의 차이.** 같은 51개 trace에서 기록된 tool+agent 시간은 재생한 명령 시간의 중앙값 1.67배다. 명령마다 중앙값 0.26초가 더 붙는다. 전체로는 기록의 74%만 실제 명령 시간이다. 나머지는 agent 처리, 원격 sandbox 호출 경로, 첫 LLM 호출이다.
 
+### 2.1 채점을 직접 다시 돌림
+
+`experiments/contention/reward_eval.py`. 채점 스크립트를 이렇게 다시 만들었다.
+- 명령은 rewards archive의 `set -x` 기록에서 가져왔다.
+- 기록에는 test patch 내용이 heredoc이라 빠져 있다. 이것은 raw 기록의 `instance.test_patch`로 채웠다.
+- 깨끗한 image에서 agent의 최종 patch(`model_patch`)를 먼저 적용했다.
+
+그 뒤 명령 세 개를 8 vCPU microVM에서 하나씩 실행했다(`sandbox.py solo`). 대상은 agent 명령을 이미 재생한 51개 trace였다.
+1. patch 적용
+2. 설치(test 파일 checkout 전까지의 줄)
+3. test patch와 test 실행
+
+45개를 돌렸고, 6개는 기록된 출력이 잘려 있거나 reward 기록이 없어서 뺐다. 원값은 [reward-eval.json](reward-eval.json)에 있다.
+
+| 항목 | 값 |
+|---|---|
+| 기록과 같은 통과·실패 수 | 45개 중 43개. marko는 요약 줄을 못 읽었고, onnx는 1개가 실패로 바뀌었다 |
+| 채점 시간 (우리 재실행) | 중앙값 7.0초, p90 27.5초. 설치 2.7초(p90 21.8), test 1.4초(p90 9.4) |
+| 채점 시간 (기록) | 중앙값 17초, p90 40초. 같은 trace의 우리 시간은 기록의 중앙값 0.38배다 |
+| 채점 vCPU | p10 0.7초, p50 4.0초, p90 20.1초 |
+| 실행 중 코어 | 설치 0.60, test 0.91 (중앙값) |
+| 설치의 몫 | 채점 CPU의 56% |
+| agent CPU 대비 | 중앙값 0.12배, p90 0.59배. agent + 채점 sandbox CPU의 11% |
+| peak (100 ms) | 중앙값 1.05코어, p90 7.8코어. 45개 중 11개가 4코어를 넘는다 |
+
+- **기록 시간이 더 길다.** 기록된 채점은 원격 sandbox 호출과 그 job의 부하를 포함한다. 반대로 network에서 package를 받는 설치(pennylane, pyatv, oceanparcels)는 이 서버에서 더 오래 걸렸다.
+- **넓은 채점은 코어를 주는 만큼 쓴다.**
+  - yt는 Cython 확장을 OpenMP로 compile한다.
+  - vyper는 pytest-xdist가 vCPU 수만큼(8개) worker를 띄운다.
+  - cf-python, dbt 등은 wheel을 build한다.
+  - 1 vCPU sandbox였다면 이들은 더 길고 좁게 돌았을 것이다.
+- **결론**: 채점은 sandbox CPU를 약 11% 늘린다. 시간 기록만 보고 0.6배로 추정한 것보다 훨씬 작다. 지금까지의 "sandbox CPU가 얇다"는 결론은 바뀌지 않는다.
+
+### 2.2 env 생성 시간
+
+**기록의 의미.** raw 기록에는 `env_creation_time` 숫자 하나만 있다. sandbox 생성을 요청한 뒤 준비될 때까지의 시간이고, 단계별 분해는 없다. `trace_kinds.py env`로 무엇에 따라 달라지는지 봤다. 원값은 [env.json](env.json)에 있다.
+
+| 기준 | 결과 |
+|---|---|
+| 전체 | p10 23초, p50 94초, p90 277초 |
+| 압축 image 크기(선택한 47개) | 순위 상관 −0.15. 0.4~0.7 GiB 99초, 0.7~1.2 GiB 44초, 1.2~1.9 GiB 33초 |
+| run 안에서 그 image를 처음 쓰는가 | 처음 98초, 이후 93초 |
+| 같은 image, 함께 시작한 group 8개 사이의 차이 | p50 84초, p90 259초 |
+| 생성 요청 시각(wave 시작 뒤 초) | 80%가 2초 안에 요청된다. 순위 상관 +0.27 |
+
+wave마다 준비 완료 곡선을 보면 차이가 크다(wave 100개 이상인 step).
+
+| wave | 개수 | 처음 준비 | 10% | 50% | 90% | 마지막 | 10~90% 준비 속도 |
+|---|---|---|---|---|---|---|---|
+| step 첫 wave (53개) | 232 | 19초 | 24초 | 30초 | 49초 | 174초 | 초당 7.0개 |
+| 두 번째 wave (49개) | 210 | 22초 | 74초 | 183초 | 309초 | 408초 | 초당 0.9개 |
+
+- **두 번째 wave는 첫 wave가 시작한 지 752초 뒤에 요청된다.** 그때 첫 wave 233개 중 167개가 아직 돌고 있다. 생성이 6~8배 느려지는 것은 이 겹침 때문으로 보인다.
+- **동시 sandbox 수에 고정 상한은 보이지 않았다.** 준비된 sandbox 수의 최댓값이 step마다 207~434로 달랐다.
+- **원인은 가리지 못했다.** 생성 host의 CPU·디스크 경합일 수도, provider의 생성 속도 제한일 수도 있다. 기록만으로는 구분이 안 된다.
+- **pull이 시간을 정하지는 않았다.** 크기나 첫 사용 여부와 무관하기 때문이다. image가 미리 있거나 provider가 cache했을 가능성이 크다.
+
+**생성 단계별 CPU (직접 측정).** `experiments/contention/env_cost.py`, CPU 26-31.
+- layer는 Docker Hub에서 curl로 하나씩 받았다.
+- `tar -xzf`로 차례로 펼쳤다(gunzip + untar).
+- microVM 디스크를 만들고(`mkfs.ext4 -d`), 한 번 복사했다.
+- image가 이미 있을 때는 `docker run --rm IMAGE true`의 dockerd·containerd CPU를 쟀다.
+
+원값은 [env-cost.json](env-cost.json)에 있다.
+
+| image (압축 / 풀린 크기) | pull 시간 / CPU | 펼치기 시간 / CPU | 압축 GiB당 CPU | ext4 만들기 / 복사 CPU |
+|---|---|---|---|---|
+| scaleswe eliot (0.41 / 1.16 GB) | 24초 / 0.7초 | 5.9초 / 7.0초 | 17초 | 1.9초 / 0.5초 |
+| scaleswe geopandas (0.99 / 2.43 GB) | 58초 / 1.5초 | 11.9초 / 14.0초 | 14초 | 3.2초 / 1.0초 |
+| swerebenchv2 qiskit (1.89 / 5.54 GB) | 667초 / 8.5초 | 26.3초 / 31.2초 | 17초 | (mkfs 실패, 재지 못함) |
+| image가 이미 있을 때 container 시작 (3개 × 5회) | – | 0.27~0.39초 / daemon 0.11~0.16초 | – | – |
+
+- **pull은 시간은 길지만 CPU는 적다.** 이 서버에서 Docker Hub는 약 3~18 MB/s다.
+- **펼치기는 CPU를 쓴다.** 압축 GiB당 약 15 CPU초, 실행 중 1.2코어다. gzip 해제가 단일 thread라서다.
+- **image 크기 중앙값(0.99 GiB)이면 펼치기 CPU는 14초다.** 같은 trace의 agent 명령 vCPU 중앙값(30초)의 절반이고, 채점 CPU(4초)의 3배다.
+- **image가 노드에 있으면 비용이 거의 없다.** 0.1초 CPU다.
+
+**CPU 관점의 정리**
+- **image가 노드에 없으면 env 생성이 sandbox 수명 전체에서 가장 큰 CPU 덩어리 중 하나다.** 0.5~1분 안에 몰려서 쓴다.
+- **동기 step에서는 wave 하나가 2초 안에 230개를 요청한다.** 노드마다 image를 새로 풀어야 한다면 230 × 약 15 CPU초 ≈ 3,500 CPU초다. 30~50초 안에 70~115코어가 필요한 burst다.
+- **image가 노드에 있으면 이 burst는 사라진다.** 이 RL job에서는 생성 시간이 크기·첫 사용과 무관했으므로 이쪽에 가까웠을 것이다. 그래서 env 생성 CPU가 문제인지는 image를 어디에 두고 언제 받는지(locality, lazy loading)에 달려 있다. 실험 계획 v2의 M1(locality)과 같은 축이다.
+
 ## 3. sandbox 밖 CPU 작업 (문헌·framework 조사)
 
 subagent로 조사했고, 1차 출처(논문, 공식 문서, 코드)를 우선했다. "미확인"은 2차 출처뿐인 값이다.
@@ -136,7 +225,8 @@ subagent로 조사했고, 1차 출처(논문, 공식 문서, 코드)를 우선�
 
 - **분류는 정규식이다.** compound 명령은 맨 앞에서 맞는 종류 하나로 센다.
 - **Python RL의 CPU는 51개 trace의 단독 재생 값이다.** 8 vCPU라 폭은 제한 없는 경우에 가깝다.
-- **reward 평가 CPU는 재지 않았다.** 시간만 있다. pytest-xdist처럼 병렬로 도는 평가는 1코어 가정보다 클 수 있다.
+- **채점 재실행은 깨끗한 image에 agent patch를 적용한 상태에서 했다.** 기록된 job처럼 agent가 쓰던 sandbox에서 이어 돌린 것이 아니다. 8 vCPU라 xdist·compile이 넓게 퍼졌다.
+- **env 생성 CPU는 image 3개, 이 서버의 curl·tar 경로로만 쟀다.** containerd unpack, lazy loading, 원격 provider의 내부 비용은 다를 수 있다.
 - **iter2 job 두 개뿐이다.** Qwen3.5-35B-A3B GRPO, Python SWE에 대한 결과다. 동기 step에 wave가 두 개다.
 - **조사 결과에는 미확인 값이 있다.** 2차 출처뿐인 값은 표에 표시했다. Chromium 수치, OSWorld 권장 사양, CPU:GPU 비율 전망은 신뢰할 출처를 찾지 못해 표에서 뺐다.
 
@@ -146,6 +236,11 @@ subagent로 조사했고, 1차 출처(논문, 공식 문서, 코드)를 우선�
 cd experiments/contention
 python3 trace_kinds.py kinds --out .local/trace-kinds.json
 python3 trace_kinds.py eval --out .local/trace-eval.json
+python3 trace_kinds.py env --out .local/trace-env.json
+python3 reward_eval.py prepare --out .local/reward-eval
+python3 sandbox.py --candidates .local/reward-eval/candidates.json solo --cores 2-25 --vcpus 8 --node 0 --sibling-offset 64 --harness-cpus 0-1
+python3 reward_eval.py report .local/runs/20261109T015041Z-solo-jabedc2t --prep .local/reward-eval --out .local/reward-eval/report.json
+taskset -c 26-31 python3 env_cost.py aweaiteam/scaleswe:itamarst_eliot_pr421 aweaiteam/scaleswe:geopandas_geopandas_pr3504 docker.io/swerebenchv2/qiskit-qiskit-terra:9543-d4006dd --work .local/env-cost --docker <local images> --out .local/env-cost.json
 ```
 
-원값은 [kinds.json](kinds.json)과 [eval.json](eval.json)에 있다.
+원값은 [kinds.json](kinds.json), [eval.json](eval.json), [env.json](env.json), [reward-eval.json](reward-eval.json), [env-cost.json](env-cost.json)에 있다.

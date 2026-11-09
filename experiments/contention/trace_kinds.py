@@ -255,10 +255,81 @@ def cmd_eval(args):
         args.out.write_text(json.dumps(out, indent=1))
 
 
+def cmd_env(args):
+    """What env creation time follows: creations in flight at launch, position in the wave, first use of the image in
+    the run, image size, and the spread inside a GRPO group (same image, launched together)."""
+    from scipy.stats import spearmanr
+    rows = [r for r in rr.load_index() if r["first_ts"] is not None and r["env_creation_s"] is not None]
+    sizes = json.loads((rr.DATA / "image-sizes.json").read_text())
+    for r in rows:
+        r["launch"] = r["first_ts"] - r["env_creation_s"]
+    by_run = collections.defaultdict(list)
+    for r in rows:
+        by_run[r["run"]].append(r)
+    for members in by_run.values():
+        members.sort(key=lambda r: r["launch"])
+        launches = np.array([r["launch"] for r in members])
+        readies = np.sort([r["first_ts"] for r in members])
+        seen = set()
+        for r in members:
+            # in flight at this launch: launched before (or at) it and not ready yet
+            r["in_flight"] = int(np.searchsorted(launches, r["launch"], "right") - np.searchsorted(readies, r["launch"], "right")) - 1
+            r["first_use"] = r["image"] not in seen
+            seen.add(r["image"])
+    for run, steps in rr.job_steps(rows).items():
+        for st in steps:
+            for w in st:
+                t0 = w[0]["launch"]
+                for i, r in enumerate(w):
+                    r["wave_rank"], r["since_wave_s"], r["wave_size"] = i / max(1, len(w) - 1), r["launch"] - t0, len(w)
+    env = np.array([r["env_creation_s"] for r in rows])
+    out = {"rollouts": len(rows), "env_s_p10_p50_p90": np.percentile(env, [10, 50, 90]).tolist()}
+    print(f"{len(rows)} rollouts, env creation p10 {np.percentile(env, 10):.0f} s, p50 {np.median(env):.0f}, "
+          f"p90 {np.percentile(env, 90):.0f}")
+
+    def binned(name, key, edges=None, q=5):
+        sub = [r for r in rows if r.get(key) is not None]
+        x = np.array([float(r[key]) for r in sub])
+        y = np.array([r["env_creation_s"] for r in sub])
+        edges = edges if edges is not None else np.unique(np.quantile(x, np.linspace(0, 1, q + 1)))
+        table = []
+        for lo, hi in zip(edges[:-1], edges[1:]):
+            m = (x >= lo) & ((x < hi) | (hi == edges[-1]) & (x <= hi))
+            if m.any():
+                table.append({"from": float(lo), "to": float(hi), "n": int(m.sum()), "env_p50": float(np.median(y[m])),
+                              "env_p90": float(np.percentile(y[m], 90))})
+        rho = spearmanr(x, y)[0]
+        out[name] = {"spearman": float(rho), "bins": table}
+        print(f"{name}: Spearman {rho:+.2f}; " + "; ".join(f"[{b['from']:.3g}, {b['to']:.3g}] n {b['n']} "
+                                                          f"p50 {b['env_p50']:.0f} p90 {b['env_p90']:.0f}" for b in table))
+
+    binned("creations in flight at launch", "in_flight")
+    binned("position in the wave (0 first, 1 last)", "wave_rank", np.linspace(0, 1, 6))
+    binned("seconds since the wave started", "since_wave_s")
+    for r in rows:
+        r["size_gib"] = sizes.get(r["image"], {}).get("compressed_gib")
+    binned("compressed image GiB (selected 47 images)", "size_gib", q=3)
+    first = np.array([r["env_creation_s"] for r in rows if r["first_use"]])
+    later = np.array([r["env_creation_s"] for r in rows if not r["first_use"]])
+    out["image_first_use_in_run"] = {"n": len(first), "p50": float(np.median(first)), "later_n": len(later),
+                                     "later_p50": float(np.median(later))}
+    print(f"first use of the image in the run: n {len(first)}, p50 {np.median(first):.0f} s; later uses n {len(later)}, "
+          f"p50 {np.median(later):.0f} s")
+    by_key = {f"{r['instance_id']}_{r['sample']}@{r['shard']}": r for r in rows}
+    spread = [max(by_key[m]["env_creation_s"] for m in g["members"]) - min(by_key[m]["env_creation_s"] for m in g["members"])
+              for g in json.loads(rr.GROUPS.read_text())["groups"]
+              if len(g["members"]) == 8 and all(m in by_key for m in g["members"])]
+    out["group_spread_s_p50_p90"] = [float(np.median(spread)), float(np.percentile(spread, 90))]
+    print(f"spread inside a group of 8 (same image, launched together): p50 {np.median(spread):.0f} s, "
+          f"p90 {np.percentile(spread, 90):.0f} s")
+    if args.out:
+        args.out.write_text(json.dumps(out, indent=1))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="cmd", required=True)
-    for name, fn in (("kinds", cmd_kinds), ("eval", cmd_eval)):
+    for name, fn in (("kinds", cmd_kinds), ("eval", cmd_eval), ("env", cmd_env)):
         p = sub.add_parser(name)
         p.add_argument("--out", type=Path)
         p.set_defaults(fn=fn)
