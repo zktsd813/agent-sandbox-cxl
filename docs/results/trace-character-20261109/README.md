@@ -2,7 +2,7 @@
 
 지금까지 trace는 sandbox당 평균 코어, burst 폭, LLM 대기 같은 수명 전체의 값으로만 봤다([workload-diversity-plan.md](../../workload-diversity-plan.md) 2절, [실험 계획 v2](../../experiment-plan-tail-placement.md) 8.5). 이 문서는 세 가지를 더 본다.
 - **sandbox가 무엇에 CPU를 쓰는지**: 명령 종류별로 나눈다. HANDOFF T1의 남은 일이다(1절). reward 평가(채점)도 직접 다시 돌린다(2절).
-- **env 생성이 왜 느리고 step에 얼마나 들어가는지**: 기록된 생성 시간을 쪼개고, 생성 단계별 CPU를 재고, DSec의 방식과 비교한다(3절).
+- **env 생성이 왜 느리고 step에 얼마나 들어가는지**: 기록된 생성 시간을 쪼개고, 생성 단계별 CPU를 재고, DSec·TrEnv-X의 방식과 비교한다. microVM을 미리 만들 가치도 본다(3절).
 - **sandbox 밖에서 생기는 CPU 작업**: 공개 RL job 기록과 문헌·framework 조사로 본다(4절).
 
 ## 0. 결론
@@ -30,6 +30,9 @@
    - critical path 위에 있지만 가장 늦은 rollout의 4~6%다. 모두 1초로 줄여도 step은 약 3%(p90 8%) 준다. 추론이 4배 빠르면 group 기준 약 12%다.
    - image가 노드에 없으면 image가 시간과 CPU를 정한다(펼치기에 압축 GiB당 약 15 CPU초). 다만 rollout은 풀린 image의 2%(p90 4%)만 읽는다.
    - DSec도 생성을 critical path로 보고, EROFS image를 3FS에서 lazy로 읽는다(실행 중 4~13%). 8,192개 burst에서 eager pull은 60분 이상, on-demand는 35분이었고, CPU 차이는 거의 없었다.
+   - **우리 microVM 생성은 CPU 병목이 아니다(3.6).** 8코어에 VM 16개를 한꺼번에 만들 때 코어를 busy loop로 포화시켜도 boot는 0.46초에서 1.4초로 늘 뿐이다. VM당 0.24 CPU초이고, step 하나 전체로도 sandbox CPU의 1% 미만이다.
+   - **미리 만들어 둘 이득이 거의 없다(3.6).** 쉬는 VM이 84 MiB(돌고 있는 sandbox peak의 약 3분의 1)를 쥐고, 두 번째 wave는 크기·시각을 예측하기 어렵다. warm pool은 느린 생성 경로를 가리는 장치다.
+   - **snapshot·CXL fork(TrEnv-X, CXLfork)는 같은 agent 프로그램을 계속 쓰는 제품형 agent에 맞는다(3.5).** SWE RL에서는 template 하나를 약 7번만 쓰고, 시작 이득이 작아 남는 이득은 메모리 공유다.
 6. **sandbox 밖 CPU 작업 중 크고, 몰리고, 옮길 수 있는 것은 하나뿐이다.** 동기 RL에서 생성이 끝날 때 몰리는 reward·test 실행이다. 그 밖의 것은 다음과 같다.
    - GPU 노드의 CPU 작업(추론 엔진 host 쪽, tokenizer, optimizer offload, checkpoint)은 GPU process에 묶여 있고 대부분 꾸준하다. 직접 해 본 GPU harvest가 고정 분할에서 끝난 것과 같은 그림이다.
    - env 생성은 step 시작에 몰리지만, 푸는 방법은 이동이 아니라 image 저장 방식과 warm pool이다(3절).
@@ -149,7 +152,7 @@
 
 ## 3. env 생성
 
-`trace_kinds.py env`(분포, 대기열 검정), `critical_path.py`(env 생성을 줄였을 때의 step), `env_cost.py`(생성 단계별 CPU, image 공유, 실제로 읽는 양). 원값은 [env.json](env.json), [env-cost.json](env-cost.json), [env-share.json](env-share.json)에 있다.
+`trace_kinds.py env`(분포, 대기열 검정), `critical_path.py`(env 생성을 줄였을 때의 step), `env_cost.py`(생성 단계별 CPU, image 공유, 실제로 읽는 양), `boot_cost.py`(microVM 생성 시간·CPU·메모리). 원값은 [env.json](env.json), [env-cost.json](env-cost.json), [env-share.json](env-share.json), [boot-cost.json](boot-cost.json)에 있다.
 
 ### 3.1 무엇을 재는 값인가
 
@@ -271,7 +274,7 @@
 - **동기 step에서는 wave 하나가 2초 안에 230개를 요청한다.** 노드마다 image를 새로 풀어야 한다면 230 × 약 15 CPU초 ≈ 3,500 CPU초다. 30~50초 안에 70~115코어가 필요한 burst다. lazy loading이면 바이트에 비례한다고 볼 때 70~140 CPU초다.
 - **image가 노드에 있으면 이 burst는 사라진다.** 그래서 env 생성 CPU가 문제인지는 image를 어디에 두고 언제 받는지(locality, lazy loading)에 달려 있다. 실험 계획 v2의 M1(locality)과 같은 축이다.
 
-### 3.5 DSec와 다른 시스템은 env 생성을 어떻게 하나
+### 3.5 DSec·TrEnv-X와 다른 시스템은 env 생성을 어떻게 하나
 
 subagent로 조사했고, DSec 8.2절의 수치와 CPU 문장은 원문에서 다시 확인했다.
 
@@ -312,6 +315,71 @@ subagent로 조사했고, DSec 8.2절의 수치와 CPU 문장은 원문에서 �
 - **기록된 job의 느린 생성은 대기열이다(3.2).** image 저장 방식만으로는 줄지 않을 수 있다. warm pool이 이 대기열을 직접 없앤다(GKE 45~85초 → 1~9초).
 - **CXL과의 접점은 hand-off가 아니라 image 공유다.** DSec의 3FS 자리에 CXL 공유 메모리를 두는 방식이다([load balancing 조사](../../load-balancing-survey.md)). 이 경우 이득은 lazy read 지연과 노드 사이 page cache 중복 제거다.
 
+**snapshot·CXL fork: TrEnv-X와 CXLfork**
+- **TrEnv-X** ([arXiv 2509.09525](https://arxiv.org/html/2509.09525v2), TOCS)
+  - **template:** 프로세스마다 page table과 주소 공간 배치만 담은 template(1 MB 미만)을 둔다. 메모리 내용은 CXL·RDMA pool에 중복을 없애 둔다.
+  - **복원:** CXL에서는 PTE를 쓰기 금지로 매핑하고, 쓸 때 local로 복사한다. RDMA에서는 4 KB씩 필요할 때 가져온다.
+  - **sandbox 재사용:** 프로세스를 모두 끝내고, overlay 위층을 지우고, 네트워크 연결을 끊는다. namespace·cgroup과 네트워크 설정은 남긴다.
+  - **평가한 agent:** LangChain, Browser-Use, OWL, OpenManus 기반 agent 6개(코드 실행, 브라우저)다. SWE task는 없다.
+  - **수치:** E2B 대비 시작 35~49%, 메모리 10~61%, P99 최대 58%가 줄었다. 기준인 Cloud Hypervisor 시작은 0.77~1.7초다.
+  - **스스로 적은 비용:** CXL 판에서 일부 함수는 실행 시간이 거의 2배, 나머지는 약 10% 늘었다. 쓰기가 많은 함수는 메모리를 13%만 아꼈다. 복원한 sandbox끼리 ASLR 배치가 같고, dedup side channel과 브라우저 공유 때 cookie 섞임이 생길 수 있다.
+- **CXLfork** ([ASPLOS'25](https://tianyin.github.io/pub/cxlfork.pdf))
+  - 프로세스 상태와 page table을 CXL에 그대로 checkpoint한다. 자식은 읽기 전용으로 매핑하고 쓸 때 복사한다. hot page는 local로 옮긴다(migrate-on-write/access, hybrid).
+  - local fork보다 14% 느리고 cold start보다 11배 빠르다. CRIU 대비 local 메모리를 87% 아꼈다([요약](https://khale.github.io/mem-systems-w26/blog/cxlfork-fast-remote-fork-over-cxl-fabrics)).
+- **우리 조건과 맞춰 보면**
+  - **template 단위가 같은 agent 프로그램일 때 맞는다.** 제품형 agent(code interpreter, browser agent)는 같은 runtime을 입력만 바꿔 계속 쓴다. serverless 함수와 같은 조건이다.
+  - **SWE RL에서는 template 하나를 약 7번만 쓴다.** step당 sandbox 442개에 image가 64개다(3.6). 첫 하나는 cold로 만들어야 한다.
+  - **시작 이득은 작다.** 우리 microVM은 이미 0.2~1.4초에 뜬다(3.6). 남는 이득은 메모리 공유다.
+  - **읽기는 계속 CXL로 간다.** 우리 CXL tax는 trace 중앙값 +11%, p95 +43%였다. 30분짜리 rollout이면 이 비용을 계속 낸다.
+  - **쓰기가 많은 tool call이 공유를 빨리 깬다.** tool call 하나가 쓴 page는 중앙값 2 MB, p95 315 MB, p99 2 GB다([write footprint](../write-pages-node1-20261021/write-report.md)).
+  - **fork는 메모리만 복제한다.** task별 파일은 여전히 image·overlay로 가져와야 한다.
+  - **비일관 CXL에서는 조건이 붙는다.** template은 읽기 전용이어야 하고 만든 뒤 write-back이 필요하다. page table·EPT를 공유하려면 host마다 물리 주소가 같아야 한다.
+
+### 3.6 microVM을 미리 만들어 둘 가치
+
+**생성 비용 (직접 측정).** `boot_cost.py`로 쟀다. 원값은 [boot-cost.json](boot-cost.json)에 있다.
+- CPU 2-9(8코어)에 1 vCPU·2 GiB microVM 16개를 한꺼번에 만들었다.
+- 같은 코어에 busy loop를 코어당 0~4개 얹었고, 조건마다 3회 반복했다(VM 48개).
+- 디스크 구성은 `sandbox.py solo`와 같고, network(TAP)는 뺐다.
+
+| 코어당 busy loop | boot 중앙값 (p90, 최대) | boot CPU | CPU 대기 | 디스크 준비 시간 / CPU |
+|---|---|---|---|---|
+| 0 | 0.46초 (0.47, 0.49) | 0.23초 | 0.23초 | 0.05초 / 0.01초 |
+| 1 | 0.69초 (0.74, 0.78) | 0.23초 | 0.46초 | 0.06초 / 0.01초 |
+| 2 | 0.92초 (1.12, 1.35) | 0.23초 | 0.69초 | 0.07초 / 0.01초 |
+| 4 | 1.38초 (1.39, 1.40) | 0.23초 | 1.16초 | 0.11초 / 0.01초 |
+
+VM 하나만 띄우면 0.24초다.
+- **boot는 거의 CPU 일이다**(0.23 CPU초, 대부분 guest kernel boot). 코어가 바쁘면 받는 CPU 몫만큼 늘어난다. 코어마다 runnable이 6개(VM 2 + loop 4)면 약 6배지만, 그래도 1.4초다.
+- **생성 CPU는 VM당 약 0.24 CPU초다.** step 하나(sandbox 약 440개)면 약 105 CPU초로, sandbox agent CPU(중앙값 30초 × 440)의 1% 미만이다. image를 새로 펼치는 비용(압축 GiB당 15 CPU초)의 60분의 1이다.
+- **이 측정에 빠진 것:** TAP 생성·삭제(`rtnl_lock`)와 VM 종료(`rcu_barrier`)는 동시 VM이 많으면 host lock 대기를 키운다. VM 192개에서 host 전체 17.9 ms/s였다([microVM 시스템 자원 경합](../microvm-system-20261106/README.md)).
+
+**미리 만든 VM이 차지하는 메모리**
+- 막 boot해서 쉬고 있는 VM의 VMM RSS는 84 MiB다(1 vCPU, guest 2 GiB, boot 10초 뒤).
+- 돌고 있는 sandbox의 peak RSS는 중앙값 246 MiB, p90 666 MiB다(51개 단독 재생, 8 vCPU). 쉬는 VM 하나가 돌고 있는 sandbox의 약 3분의 1을 쥔다.
+- Python RL sandbox는 sandbox당 0.04코어만 써서 노드 밀도를 메모리가 정한다([workload-diversity-plan](../../workload-diversity-plan.md)). 그래서 쉬는 VM이 쥔 메모리만큼 돌 수 있는 sandbox 수가 준다.
+
+**수요는 얼마나 미리 아나** (iter2, step 53개)
+
+| 항목 | 값 |
+|---|---|
+| 첫 wave 크기 | 중앙값 232개, 변동계수 0.07 |
+| 두 번째 wave 크기 | 중앙값 210개(91~245), 변동계수 0.21 |
+| 두 번째 wave 요청 시각 | 첫 wave 뒤 중앙값 750초(288~1,795) |
+| 그때 첫 wave가 끝난 비율 | 중앙값 28%(4~98%) |
+| step당 서로 다른 image | 중앙값 64개 |
+| wave 밖에서 다시 만든 sandbox | 777개(3.4%) |
+| step 끝 → 다음 step 요청 | 중앙값 1,133초(p10 920초) |
+
+- **첫 wave는 미리 만들 수 있다.** 크기가 거의 일정하고 step 시작에 한꺼번에 요청된다. 다음 step의 task를 미리 뽑아 두면, step 사이 빈 시간(약 1,100초) 동안 만들어 둘 수 있다.
+- **두 번째 wave는 어렵다.** 크기와 시각이 크게 흔들리고, 첫 wave의 진행과도 일정한 관계가 없다.
+- **미리 만든 VM은 그 task에만 쓸 수 있다.** task마다 image가 달라서다(step당 64개). image를 boot 뒤에 붙이지 않는 한 공용 pool이 되지 않는다.
+
+**정리: 우리 microVM은 미리 만들 이유가 거의 없다**
+- **얻는 것은 생성 시간뿐이고, 그것이 0.2~1.4초다.** rollout(중앙값 약 28분)의 0.1% 미만이다. 3.3에서 env 생성을 1초로 둔 계산과 차이가 없다.
+- **잃는 것은 쉬는 VM당 84 MiB다.** 두 번째 wave나 재생성처럼 예측하기 어려운 수요까지 받으려면 pool을 크게 잡아야 한다.
+- **미리 만들기가 의미 있는 것은 생성 경로가 느릴 때뿐이다.** 원격 provider의 대기열(기록된 job), 생성 속도 제한(E2B 초당 1~5개), image pull·펼치기(3.4)가 그 경우다. warm pool은 느린 생성 경로를 가리는 장치이고, 빠른 로컬 microVM에는 필요 없다.
+
 ## 4. sandbox 밖 CPU 작업 (문헌·framework 조사)
 
 subagent로 조사했고, 1차 출처(논문, 공식 문서, 코드)를 우선했다. "미확인"은 2차 출처뿐인 값이다.
@@ -350,6 +418,8 @@ subagent로 조사했고, 1차 출처(논문, 공식 문서, 코드)를 우선�
 - **env 생성 CPU는 image 3개, 이 서버의 curl·tar 경로로만 쟀다.** containerd unpack, lazy loading, 원격 provider의 내부 비용은 다를 수 있다.
 - **env 생성의 원인은 모양으로만 추정했다.** 기록에는 생성 시간 숫자 하나뿐이고 provider 내부 단계가 없다. "대기열"은 요청 순서·준비 곡선과 맞는 설명이지, 측정한 단계가 아니다.
 - **image에서 읽은 양은 40개 trace의 agent 명령만 쟀다.** 채점, boot 뒤 page cache 상태, readahead 설정에 따라 달라진다. layer 공유는 선택한 47개 image(여러 step에서 고름)의 값이다.
+- **생성 비용은 image 하나, 1 vCPU, network 없이 쟀다.** 디스크 준비는 VM마다 차례로 했다. 쉬는 메모리는 boot 10초 뒤 값이고, 돌고 있는 sandbox의 peak RSS는 8 vCPU 단독 재생 값이다.
+- **TrEnv-X는 원문 v2의 앞뒤를 나눠 읽었고, CXLfork는 논문 요약 글로 봤다.**
 - **iter2 job 두 개뿐이다.** Qwen3.5-35B-A3B GRPO, Python SWE에 대한 결과다. 동기 step에 wave가 두 개다.
 - **조사 결과에는 미확인 값이 있다.** 2차 출처뿐인 값은 표에 표시했다. Chromium 수치, OSWorld 권장 사양, CPU:GPU 비율 전망은 신뢰할 출처를 찾지 못해 표에서 뺐다.
 
@@ -366,6 +436,7 @@ python3 reward_eval.py report .local/runs/20261109T015041Z-solo-jabedc2t --prep 
 taskset -c 26-31 python3 env_cost.py aweaiteam/scaleswe:itamarst_eliot_pr421 aweaiteam/scaleswe:geopandas_geopandas_pr3504 docker.io/swerebenchv2/qiskit-qiskit-terra:9543-d4006dd --work .local/env-cost --docker <local images> --out .local/env-cost.json
 python3 env_cost.py --layers <image-sizes.json의 47개> --reads .local/runs/20261106T*-pilot-* --out .local/env-share.json  # 읽은 양과 VM boot 시간
 python3 critical_path.py
+taskset -c 0-1 python3 boot_cost.py --candidates .local/reward-eval/candidates.json --entry Fatal1ty__mashumaro-116_14600-eval --cores 2-9 --vms 16 --loads 0 1 2 4 --rounds 3 --idle-s 10 --out .local/boot-cost.json
 ```
 
-원값은 [kinds.json](kinds.json), [eval.json](eval.json), [env.json](env.json), [reward-eval.json](reward-eval.json), [env-cost.json](env-cost.json), [env-share.json](env-share.json)에 있다.
+원값은 [kinds.json](kinds.json), [eval.json](eval.json), [env.json](env.json), [reward-eval.json](reward-eval.json), [env-cost.json](env-cost.json), [env-share.json](env-share.json), [boot-cost.json](boot-cost.json)에 있다.

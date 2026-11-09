@@ -359,6 +359,23 @@ def cmd_env(args):
                                   "alive_grew_share": float(grew), "steps_detail": slot}
     print(f"second waves ({len(slot)}): ready rate / rate earlier sandboxes end p10 {np.percentile(ratio, 10):.1f}, "
           f"p50 {np.median(ratio):.1f}; ready unfinished sandboxes grew in {grew:.0%}")
+    # How far ahead the demand is known: wave sizes, when the second wave comes (seconds after the first, share of the
+    # first wave already done), sandboxes outside the waves (relaunches), and the idle gap before the next step.
+    flat = [st for run in job.values() for st in run]
+    two = [st for st in flat if len(st) > 1]
+    launch = lambda r: r["first_ts"] - r["env_creation_s"]  # noqa: E731
+    in_wave = {id(r) for st in flat for w in st for r in w}
+    demand = {"wave0_size": [len(st[0]) for st in flat], "wave1_size": [len(st[1]) for st in two],
+              "wave1_after_s": [launch(st[1][0]) - launch(st[0][0]) for st in two],
+              "wave0_done_at_wave1": [float(np.mean([r["last_ts"] <= launch(st[1][0]) for r in st[0]])) for st in two],
+              "images_per_step": [len({r["image"] for w in st for r in w}) for st in flat],
+              "idle_before_next_step_s": [launch(b[0][0]) - max(r["last_ts"] for w in a for r in w)
+                                          for run in job.values() for a, b in zip(run, run[1:])]}
+    out["demand"] = {k: {"p10_p50_p90": np.percentile(v, [10, 50, 90]).tolist(), "min_max": [float(min(v)), float(max(v))],
+                         "cv": float(np.std(v) / np.mean(v))} for k, v in demand.items()}
+    out["demand"]["outside_waves"] = sum(id(r) not in in_wave for r in rows)
+    for k, v in out["demand"].items():
+        print(f"  {k}: " + (json.dumps(v, default=lambda x: round(x, 2)) if isinstance(v, dict) else str(v)))
     if args.out:
         args.out.write_text(json.dumps(out, indent=1))
 
