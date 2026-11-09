@@ -9,14 +9,22 @@
 
 CPU is user + system seconds of the step's processes (/usr/bin/time), so "cores" = CPU / wall.
 
+How much of an image a sandbox needs (no CPU measured):
+  layers   layer digests from the registry manifests of a set of images: bytes shared with other images in the set
+  reads    bytes the guest read from the read-only image disk over a whole replayed rollout (pilot runs)
+
   python3 env_cost.py IMAGE... --work DIR [--docker LOCAL_IMAGE...] [--out FILE]
+  python3 env_cost.py [--layers IMAGE...] [--reads PILOT_RUN_DIR...] [--out FILE]
 """
 import argparse
+import collections
 import json
 import shutil
 import subprocess
 import time
 from pathlib import Path
+
+import numpy as np
 
 import sandbox
 
@@ -103,13 +111,55 @@ def start_cost(image, runs=5):
     return {"image": image, "runs": rows}
 
 
+def layer_sharing(images):
+    """Compressed layers of each image from its registry manifest (nothing downloaded): the bytes no other image in
+    the set has, and the distinct bytes of the set against the sum of image sizes."""
+    layers = {image: [(x["digest"], x["size"]) for x in manifest(image)[2]] for image in images}
+    uses = collections.Counter(d for ls in layers.values() for d, _ in ls)
+    own = [sum(s for d, s in ls if uses[d] == 1) / sum(s for _, s in ls) for ls in layers.values()]
+    total = sum(s for ls in layers.values() for _, s in ls)
+    distinct = sum({d: s for ls in layers.values() for d, s in ls}.values())
+    return {"images": len(layers), "sum_gib": total / 2**30, "distinct_gib": distinct / 2**30,
+            "own_share_p10_p50_p90": np.percentile(own, [10, 50, 90]).tolist(), "layers": layers}
+
+
+def image_reads(runs):
+    """Bytes a rollout's guest read from the shared read-only image disk (vda: SWE_MEM samples in the pilot runs'
+    sandboxes.jsonl, the most over all runs of a trace) against the image's unpacked size."""
+    key = {e["name"]: e["image_key"] for e in json.loads((sandbox.HERE / "candidates-rl.json").read_text())["traces"]}
+    read = collections.defaultdict(float)
+    for run in runs:
+        for line in (run / "sandboxes.jsonl").open():
+            r = json.loads(line)
+            mem = [m for m in r.get("mem") or [] if len(m) > 13]  # host ns, uptime, 6 meminfo, then sectors per disk
+            if mem and r["trace"] in key:
+                read[r["trace"]] = max(read[r["trace"]], max(m[8] for m in mem) * 512)
+    rows = [{"trace": t, "read_bytes": b, "unpacked_bytes": json.loads(
+        (sandbox.HERE / ".local/images" / key[t] / "image.json").read_text())["export_tar_bytes"]} for t, b in read.items()]
+    frac = [r["read_bytes"] / r["unpacked_bytes"] for r in rows]
+    return {"traces": len(rows), "read_mib_p10_p50_p90_max": (np.percentile([r["read_bytes"] for r in rows],
+                                                                            [10, 50, 90, 100]) / 2**20).tolist(),
+            "fraction_p10_p50_p90_max": np.percentile(frac, [10, 50, 90, 100]).tolist(), "rows": rows}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("images", nargs="*")
-    parser.add_argument("--work", type=Path, required=True)
+    parser.add_argument("--work", type=Path)
     parser.add_argument("--docker", nargs="*", default=[], help="Local Docker images for the start step")
+    parser.add_argument("--layers", nargs="*", default=[], help="Images whose layer sharing to report (manifests only)")
+    parser.add_argument("--reads", nargs="*", type=Path, default=[], help="Pilot run dirs for the image bytes read")
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
+    if args.layers or args.reads:
+        report = {"layers": layer_sharing(args.layers) if args.layers else None,
+                  "reads": image_reads(args.reads) if args.reads else None}
+        for k, v in report.items():
+            if v:
+                print(k, json.dumps({x: y for x, y in v.items() if x not in ("layers", "rows")}, default=lambda x: round(x, 3)))
+        if args.out:
+            args.out.write_text(json.dumps(report, indent=1))
+        return
     report = {"images": [], "start": []}
     for kind, images, fn in (("images", args.images, lambda i: image_cost(i, args.work / i.replace("/", "_").replace(":", "_"))),
                              ("start", args.docker, start_cost)):

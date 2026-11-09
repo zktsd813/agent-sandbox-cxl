@@ -18,15 +18,17 @@ import rl_rollouts as rr
 COMPONENTS = ("env creation", "LLM", "tool+agent")
 
 
-def parts(r, scale=(1.0, 1.0, 1.0)):
+def parts(r, scale=(1.0, 1.0, 1.0), env_s=None):
     env, llm = r["env_creation_s"] or 0.0, r["llm_gap_sum_s"]
-    return r["first_ts"] - env, env * scale[0], llm * scale[1], (r["last_ts"] - r["first_ts"] - llm) * scale[2]
+    return (r["first_ts"] - env, env * scale[0] if env_s is None else env_s, llm * scale[1],
+            (r["last_ts"] - r["first_ts"] - llm) * scale[2])
 
 
-def span(members, scale=(1.0, 1.0, 1.0)):
-    """(span from the first launch to the last end, critical member) with components scaled."""
+def span(members, scale=(1.0, 1.0, 1.0), env_s=None):
+    """(span from the first launch to the last end, critical member) with components scaled, or with every
+    member's env creation set to `env_s` seconds."""
     start = min(parts(r)[0] for r in members)
-    return max(((lambda p: p[0] + sum(p[1:]) - start)(parts(r, scale)), r) for r in members), start
+    return max(((lambda p: p[0] + sum(p[1:]) - start)(parts(r, scale, env_s)), r) for r in members), start
 
 
 def report(name, units, llm_scale=1.0):
@@ -48,6 +50,11 @@ def report(name, units, llm_scale=1.0):
     print("  span increase, every member's component x1.2 / x2, p50 (p90): " +
           "; ".join(f"{n} " + " / ".join(f"{np.median(more[(n, x)]):+.1%} ({np.percentile(more[(n, x)], 90):+.1%})"
                                          for x in (1.2, 2.0)) for n in COMPONENTS))
+    # 25 s is the fast mode of the recorded creations, 1 s a sandbox from a warm pool or snapshot
+    short = {e: [span(m, (1.0, llm_scale, 1.0), e)[0][0] / span(m, (1.0, llm_scale, 1.0))[0][0] - 1 for m in units]
+             for e in (25.0, 1.0)}
+    print("  span change, every member's env creation set to 25 s / 1 s, p50 (p90 of the reduction): " +
+          " / ".join(f"{np.median(v):+.1%} ({np.percentile(v, 10):+.1%})" for v in short.values()))
 
 
 def main():

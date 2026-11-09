@@ -276,7 +276,8 @@ def cmd_env(args):
             r["in_flight"] = int(np.searchsorted(launches, r["launch"], "right") - np.searchsorted(readies, r["launch"], "right")) - 1
             r["first_use"] = r["image"] not in seen
             seen.add(r["image"])
-    for run, steps in rr.job_steps(rows).items():
+    job = rr.job_steps(rows)
+    for run, steps in job.items():
         for st in steps:
             for w in st:
                 t0 = w[0]["launch"]
@@ -322,6 +323,42 @@ def cmd_env(args):
     out["group_spread_s_p50_p90"] = [float(np.median(spread)), float(np.percentile(spread, 90))]
     print(f"spread inside a group of 8 (same image, launched together): p50 {np.median(spread):.0f} s, "
           f"p90 {np.percentile(spread, 90):.0f} s")
+
+    # The histogram has a fast mode at 20-30 s, a second at 90-130 s and a tail to about 430 s.
+    def modes(v):
+        v = np.array(v)
+        return {"n": len(v), "p50": float(np.median(v)), "under_45s": float(np.mean(v < 45)),
+                "80_140s": float(np.mean((v >= 80) & (v < 140))), "over_140s": float(np.mean(v >= 140))}
+    out["histogram_10s"] = np.histogram(env, bins=np.arange(0, 480, 10))[0].tolist()
+    out["modes"] = {f"wave {i}": modes([r["env_creation_s"] for st in (s for run in job.values() for s in run)
+                                         if len(st) > i for r in st[i]]) for i in (0, 1)}
+    out["modes"].update({f"run {run[:15]}": modes([r["env_creation_s"] for r in members]) for run, members in by_run.items()})
+    out["modes"].update({f"family {f}": modes([r["env_creation_s"] for r in rows if r["family"] == f])
+                         for f in sorted({r["family"] for r in rows}) if sum(r["family"] == f for r in rows) > 200})
+    for k, v in out["modes"].items():
+        print(f"{k:30s} n {v['n']:5d} p50 {v['p50']:4.0f} s | <45 s {v['under_45s']:.0%}, 80-140 s {v['80_140s']:.0%}, "
+              f">=140 s {v['over_140s']:.0%}")
+    # A slot-limited pool would make second-wave sandboxes ready only as earlier ones end. Compare the two rates over
+    # the 10-90% part of the second wave's readiness, and the count of ready, unfinished sandboxes over it.
+    slot = []
+    for run, steps in job.items():
+        members = by_run[run]
+        for st in steps:
+            if len(st) < 2 or len(st[1]) < 100:
+                continue
+            ready = np.sort([r["first_ts"] for r in st[1]])
+            lo, hi = ready[int(0.1 * len(ready))], ready[int(0.9 * len(ready))]
+            ended = sum(1 for r in members if r["launch"] < st[1][0]["launch"] and lo <= r["last_ts"] <= hi)
+            alive = [sum(1 for r in members if r["first_ts"] <= t < r["last_ts"]) for t in (lo, hi)]
+            slot.append({"ready_per_s": 0.8 * len(ready) / (hi - lo), "ended_per_s": ended / (hi - lo),
+                         "alive_at_10_90": alive})
+    ratio = [s["ready_per_s"] / max(s["ended_per_s"], 1e-6) for s in slot]
+    grew = np.mean([s["alive_at_10_90"][1] > s["alive_at_10_90"][0] for s in slot])
+    out["second_wave_vs_ends"] = {"steps": len(slot), "ready_over_end_rate_p10_p50": [float(np.percentile(ratio, 10)),
+                                                                                      float(np.median(ratio))],
+                                  "alive_grew_share": float(grew), "steps_detail": slot}
+    print(f"second waves ({len(slot)}): ready rate / rate earlier sandboxes end p10 {np.percentile(ratio, 10):.1f}, "
+          f"p50 {np.median(ratio):.1f}; ready unfinished sandboxes grew in {grew:.0%}")
     if args.out:
         args.out.write_text(json.dumps(out, indent=1))
 
