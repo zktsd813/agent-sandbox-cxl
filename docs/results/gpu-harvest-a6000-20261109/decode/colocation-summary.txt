@@ -1,0 +1,20 @@
+== engine side (mean over reps)
+vllm-sync   sb0 n=2 useful_tok_s=7.2e+03 proc_cpu_cores=1.01  tok/s per rep=[7208, 7198]
+vllm-sync   sb2 n=2 useful_tok_s=6.91e+03 proc_cpu_cores=1  tok/s per rep=[6908, 6915]
+            tok/s change with sandboxes: -4.0%
+vllm-async  sb0 n=2 useful_tok_s=9.12e+03 proc_cpu_cores=3.14  tok/s per rep=[9124, 9107]
+vllm-async  sb2 n=2 useful_tok_s=9.12e+03 proc_cpu_cores=2.66  tok/s per rep=[9136, 9113]
+            tok/s change with sandboxes: +0.1%
+K8-sync     sb0 n=2 useful_tok_s=1.27e+04 proc_cpu_cores=0.0807 boundary_cpu_ms_per_chunk=12.1 boundary_cpu_ms_p99=13.2 gpu_idle_frac=0.0732 wasted_frac=0.0119  tok/s per rep=[12728, 12691]
+K8-sync     sb2 n=2 useful_tok_s=1.31e+04 proc_cpu_cores=0.0446 boundary_cpu_ms_per_chunk=6.3 boundary_cpu_ms_p99=13.3 gpu_idle_frac=0.0398 wasted_frac=0.0119  tok/s per rep=[13073, 13138]
+            tok/s change with sandboxes: +3.1%
+K8-overlap  sb0 n=2 useful_tok_s=1.32e+04 proc_cpu_cores=0.0859 boundary_cpu_ms_per_chunk=12 boundary_cpu_ms_p99=13.3 gpu_idle_frac=-0.000119 wasted_frac=0.0379  tok/s per rep=[13222, 13223]
+K8-overlap  sb2 n=2 useful_tok_s=1.32e+04 proc_cpu_cores=0.0455 boundary_cpu_ms_per_chunk=6.16 boundary_cpu_ms_p99=13.2 gpu_idle_frac=-0.00013 wasted_frac=0.0379  tok/s per rep=[13214, 13222]
+            tok/s change with sandboxes: -0.0%
+== sandbox side
+sandbox alone: 288 command keys, container CPU per rollout median 4.28s
+K8-overlap-sb2   cmds=2564 keys=288 rollouts~ 73 sum ratio=1.009 median ratio=1.020 p90=1.094 heavy(>=0.5s,n=5) sum ratio=0.992
+K8-sync-sb2      cmds=2587 keys=288 rollouts~ 74 sum ratio=0.994 median ratio=1.001 p90=1.081 heavy(>=0.5s,n=5) sum ratio=0.983
+none-sb2         cmds=2599 keys=288 rollouts~ 74 sum ratio=1.000 median ratio=1.000 p90=1.000 heavy(>=0.5s,n=5) sum ratio=1.000
+vllm-async-sb2   cmds=2496 keys=288 rollouts~ 72 sum ratio=1.034 median ratio=1.062 p90=1.193 heavy(>=0.5s,n=5) sum ratio=1.009
+vllm-sync-sb2    cmds=2782 keys=288 rollouts~ 78 sum ratio=0.937 median ratio=0.962 p90=1.050 heavy(>=0.5s,n=5) sum ratio=0.908

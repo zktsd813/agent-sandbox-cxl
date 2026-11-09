@@ -10,6 +10,7 @@
 >
 > **2026-11-09.**
 > - **GPU 노드 harvest도 성과가 없었다.** 사용자가 다른 서버에서 직접 해 봤다. GPU 작업이 CPU 하나를 계속 쓰기 때문에 hand-off할 틈이 없고, 고정 분할이 낫다(repo에 데이터 없음).
+>   - A6000 × 2 서버에서 잰 결과도 같은 방향이다([A6000 G1과 decode CPU](results/gpu-harvest-a6000-20261109/README.md)). 학습 쪽 CPU는 GPU당 약 1 core로 평평하고 실제 agentic RL에서도 node0 core 대부분이 빈다. 그 1 core는 대부분 CUDA spin이라 SCHED_IDLE 같은 우선순위로 나눌 일이고, 추론 엔진이 K step마다 한 번만 CPU에 들르면 거의 비어 sandbox와 같은 core에서도 서로 손해가 noise 수준이다. harvest 자체는 근거가 있지만 hand-off가 필요한 순간은 없었다.
 > - **sandbox CPU는 미리 알 수 있다.** test·build·install 명령에 몰려 있어 명령 문자열만 보고 안다.
 > - **sandbox 밖에서 몰리는 CPU 작업은 동기 RL의 reward·test 실행 정도다.** 공개 RL job 기록에서는 그것도 작고 퍼져 있었다.
 > - **env 생성은 병목이 아니다.** 기록된 생성 시간(중앙값 94초)은 image가 아니라 provider의 생성 대기열이 정했고, 모두 1초로 줄여도 step은 약 3% 준다. 푸는 방법은 이동이 아니라 image 저장 방식(lazy, DSec의 EROFS + 3FS)과 warm pool이다.

@@ -1,0 +1,36 @@
+micro-spin mode=spin core=8
+micro-spin T1 gpu=0.05ms sync overhead us p50=-8.7 p90=-8.0
+micro-spin T1 gpu=1ms sync overhead us p50=-8.9 p90=-8.1
+micro-spin T1 gpu=10ms sync overhead us p50=-8.6 p90=-8.0
+micro-spin T2 gpu=0ms python work ms p50=1.047 p90=1.069 iter ms p50=1.323
+micro-spin T2 gpu=2ms python work ms p50=1.047 p90=1.065 iter ms p50=3.172
+micro-spin T2 gpu=10ms python work ms p50=1.047 p90=1.064 iter ms p50=10.545
+micro-spin c6_entries_per_s=19
+micro-blk mode=blocking core=8
+micro-blk T1 gpu=0.05ms sync overhead us p50=-8.0 p90=-7.7
+micro-blk T1 gpu=1ms sync overhead us p50=-8.1 p90=-7.0
+micro-blk T1 gpu=10ms sync overhead us p50=-8.4 p90=-7.5
+micro-blk T2 gpu=0ms python work ms p50=1.087 p90=1.106 iter ms p50=1.376
+micro-blk T2 gpu=2ms python work ms p50=1.972 p90=2.070 iter ms p50=4.377
+micro-blk T2 gpu=10ms python work ms p50=4.842 p90=5.157 iter ms p50=15.557
+micro-blk c6_entries_per_s=49
+micro-blk-fill mode=blocking core=8
+micro-blk-fill T1 gpu=0.05ms sync overhead us p50=-8.0 p90=-7.8
+micro-blk-fill T1 gpu=1ms sync overhead us p50=-8.5 p90=-7.8
+micro-blk-fill T1 gpu=10ms sync overhead us p50=-8.2 p90=-7.5
+micro-blk-fill T2 gpu=0ms python work ms p50=1.058 p90=1.075 iter ms p50=1.341
+micro-blk-fill T2 gpu=2ms python work ms p50=1.052 p90=1.072 iter ms p50=3.202
+micro-blk-fill T2 gpu=10ms python work ms p50=1.054 p90=1.074 iter ms p50=10.673
+micro-blk-fill c6_entries_per_s=0
+gen-spin RESULT spin batch=320 wall_s=8.411 ms_per_decode_step=32.86 all=[8.96, 8.437, 8.411]
+gen-spin RESULT spin batch=16 wall_s=1.853 ms_per_decode_step=7.24 all=[1.853, 1.856, 1.858]
+gen-spin RESULT spin process_cpu_s user=69.9 sys=5.0
+gen-spin c6_entries_per_s=511
+gen-blk RESULT blk batch=320 wall_s=8.372 ms_per_decode_step=32.70 all=[8.942, 8.416, 8.372]
+gen-blk RESULT blk batch=16 wall_s=1.852 ms_per_decode_step=7.23 all=[1.852, 1.852, 1.853]
+gen-blk RESULT blk process_cpu_s user=51.9 sys=7.7
+gen-blk c6_entries_per_s=447
+gen-blk-fill RESULT blk-fill batch=320 wall_s=8.407 ms_per_decode_step=32.84 all=[8.979, 8.46, 8.407]
+gen-blk-fill RESULT blk-fill batch=16 wall_s=1.856 ms_per_decode_step=7.25 all=[1.858, 1.856, 1.862]
+gen-blk-fill RESULT blk-fill process_cpu_s user=51.0 sys=7.0
+gen-blk-fill c6_entries_per_s=0

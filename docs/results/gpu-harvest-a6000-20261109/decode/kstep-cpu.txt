@@ -1,0 +1,8 @@
+RESULT {"batch": 320, "K": 1, "steps": 1024, "wall_ms_per_step": 25.113943179690068, "host_cpu_ms_per_step": 1.0967524316406254, "host_cpu_share": 0.04367105650408502, "tok_per_s": 12741.925778457111}
+RESULT {"batch": 320, "K": 4, "steps": 1024, "wall_ms_per_step": 24.488766204086687, "host_cpu_ms_per_step": 0.31772184472656295, "host_cpu_share": 0.01297418751433633, "tok_per_s": 13067.216099543568}
+RESULT {"batch": 320, "K": 16, "steps": 1024, "wall_ms_per_step": 24.432136870132126, "host_cpu_ms_per_step": 1.4729802949218773, "host_cpu_share": 0.060288639620489796, "tok_per_s": 13097.503574940863}
+RESULT {"batch": 320, "K": 64, "steps": 1024, "wall_ms_per_step": 24.4015845712795, "host_cpu_ms_per_step": 17.858369275390626, "host_cpu_share": 0.7318528525565429, "tok_per_s": 13113.902462573591}
+RESULT {"batch": 16, "K": 1, "steps": 3072, "wall_ms_per_step": 6.986380829099896, "host_cpu_ms_per_step": 0.5592624374999999, "host_cpu_share": 0.08005037961436946, "tok_per_s": 2290.1700310060814}
+RESULT {"batch": 16, "K": 4, "steps": 3072, "wall_ms_per_step": 6.6602929876372245, "host_cpu_ms_per_step": 0.2731913369140628, "host_cpu_share": 0.04101791579156624, "tok_per_s": 2402.296720234238}
+RESULT {"batch": 16, "K": 16, "steps": 3072, "wall_ms_per_step": 6.568792869141286, "host_cpu_ms_per_step": 0.22738868489583358, "host_cpu_share": 0.03461651012989838, "tok_per_s": 2435.7595556353144}
+RESULT {"batch": 16, "K": 64, "steps": 3584, "wall_ms_per_step": 6.5040739313612255, "host_cpu_ms_per_step": 4.73524904045759, "host_cpu_share": 0.728043544773569, "tok_per_s": 2459.996637315497}

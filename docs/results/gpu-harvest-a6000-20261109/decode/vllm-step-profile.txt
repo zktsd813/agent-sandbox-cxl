@@ -1,0 +1,56 @@
+RESULT {"label": "p-blkfill-b16", "batch": 16, "calls": 8, "engine_steps": 4096, "wall_ms_per_step": 7.337964031499666, "process_cpu_ms_per_step": 7.326660156249999, "process_cpu_share": 0.9984595352060677, "per_step_ms": {"schedule": {"wall": 0.1593717309660292, "cpu": 0.15963121655283244}, "update_states": {"wall": 0.03483678453619632, "cpu": 0.03502235229497271}, "prepare_inputs": {"wall": 0.2594709873662282, "cpu": 0.2606668742675816}, "preprocess": {"wall": 0.03102317432990276, "cpu": 0.031224803466789464}, "sample": {"wall": 0.23206565203537366, "cpu": 0.23229857421875819}, "to_list (D2H sync)": {"wall": 6.018922179542585, "cpu": 6.001691922119204}, "bookkeeping_sync": {"wall": 6.2068358200875196, "cpu": 6.1886707485350945}, "execute_model": {"wall": 6.995812518752587, "cpu": 6.975034086425792}, "update_from_output": {"wall": 0.06890264810266444, "cpu": 0.06906746801748231}, "engine_step": {"wall": 7.257789724967267, "cpu": 7.236216800048878}, "process_outputs (detok)": {"wall": 0.0631270029103348, "cpu": 0.06326955151362071}, "forward (dispatch+replay+logits)": {"wall": 0.2315801003973661, "cpu": 0.2271507336425952}}}
+p-blkfill-b16 batch=16 steps=4096 wall/step=7.34ms process cpu/step=7.33ms share=1.00
+  engine_step                        wall   7.258 ms  cpu   7.236 ms
+  execute_model                      wall   6.996 ms  cpu   6.975 ms
+  bookkeeping_sync                   wall   6.207 ms  cpu   6.189 ms
+  to_list (D2H sync)                 wall   6.019 ms  cpu   6.002 ms
+  prepare_inputs                     wall   0.259 ms  cpu   0.261 ms
+  sample                             wall   0.232 ms  cpu   0.232 ms
+  forward (dispatch+replay+logits)   wall   0.232 ms  cpu   0.227 ms
+  schedule                           wall   0.159 ms  cpu   0.160 ms
+  update_from_output                 wall   0.069 ms  cpu   0.069 ms
+  process_outputs (detok)            wall   0.063 ms  cpu   0.063 ms
+  update_states                      wall   0.035 ms  cpu   0.035 ms
+  preprocess                         wall   0.031 ms  cpu   0.031 ms
+RESULT {"label": "p-blkfill-b320", "batch": 320, "calls": 2, "engine_steps": 2048, "wall_ms_per_step": 17.12641251221214, "process_cpu_ms_per_step": 17.094726562500004, "process_cpu_share": 0.998149878166864, "per_step_ms": {"schedule": {"wall": 1.255798961338428, "cpu": 1.2503889804686836}, "update_states": {"wall": 0.15731427238563356, "cpu": 0.15755519238290147}, "prepare_inputs": {"wall": 0.3343157841726452, "cpu": 0.3357194833985867}, "preprocess": {"wall": 0.03378255908614847, "cpu": 0.03398460009757659}, "sample": {"wall": 1.2506329922103987, "cpu": 1.2465580898438215}, "to_list (D2H sync)": {"wall": 11.397413519262045, "cpu": 11.37144632812496}, "bookkeeping_sync": {"wall": 12.796300047625664, "cpu": 12.764406766601532}, "execute_model": {"wall": 14.776255960725848, "cpu": 14.736610218750148}, "update_from_output": {"wall": 0.4655735325798105, "cpu": 0.46443696728533035}, "engine_step": {"wall": 16.542438197888032, "cpu": 16.49228802880861}, "process_outputs (detok)": {"wall": 0.47486899266857563, "cpu": 0.4751570693359228}, "forward (dispatch+replay+logits)": {"wall": 0.20391030524535836, "cpu": 0.19838608642572947}}}
+p-blkfill-b320 batch=320 steps=2048 wall/step=17.13ms process cpu/step=17.09ms share=1.00
+  engine_step                        wall  16.542 ms  cpu  16.492 ms
+  execute_model                      wall  14.776 ms  cpu  14.737 ms
+  bookkeeping_sync                   wall  12.796 ms  cpu  12.764 ms
+  to_list (D2H sync)                 wall  11.397 ms  cpu  11.371 ms
+  schedule                           wall   1.256 ms  cpu   1.250 ms
+  sample                             wall   1.251 ms  cpu   1.247 ms
+  process_outputs (detok)            wall   0.475 ms  cpu   0.475 ms
+  update_from_output                 wall   0.466 ms  cpu   0.464 ms
+  prepare_inputs                     wall   0.334 ms  cpu   0.336 ms
+  forward (dispatch+replay+logits)   wall   0.204 ms  cpu   0.198 ms
+  update_states                      wall   0.157 ms  cpu   0.158 ms
+  preprocess                         wall   0.034 ms  cpu   0.034 ms
+RESULT {"label": "p-spin-b16", "batch": 16, "calls": 8, "engine_steps": 4096, "wall_ms_per_step": 7.355480589112062, "process_cpu_ms_per_step": 7.416992187500001, "process_cpu_share": 1.008362689241406, "per_step_ms": {"schedule": {"wall": 0.16208479252100005, "cpu": 0.1623318144531316}, "update_states": {"wall": 0.03557600380332815, "cpu": 0.03576121679689254}, "prepare_inputs": {"wall": 0.26732211073721146, "cpu": 0.26861968725594954}, "preprocess": {"wall": 0.03193073018792347, "cpu": 0.032171785400377656}, "sample": {"wall": 0.2356160522083428, "cpu": 0.23582284667972297}, "to_list (D2H sync)": {"wall": 6.008149088962966, "cpu": 6.008148493652363}, "bookkeeping_sync": {"wall": 6.201170186791671, "cpu": 6.200984442871056}, "execute_model": {"wall": 7.007510836864128, "cpu": 7.006930489257769}, "update_from_output": {"wall": 0.0698827486189657, "cpu": 0.07003650317385837}, "engine_step": {"wall": 7.27347426042968, "cpu": 7.27293993896485}, "process_outputs (detok)": {"wall": 0.06446053421171882, "cpu": 0.06461528027340568}, "forward (dispatch+replay+logits)": {"wall": 0.23589575313565092, "cpu": 0.23357051025377046}}}
+p-spin-b16 batch=16 steps=4096 wall/step=7.36ms process cpu/step=7.42ms share=1.01
+  engine_step                        wall   7.273 ms  cpu   7.273 ms
+  execute_model                      wall   7.008 ms  cpu   7.007 ms
+  bookkeeping_sync                   wall   6.201 ms  cpu   6.201 ms
+  to_list (D2H sync)                 wall   6.008 ms  cpu   6.008 ms
+  prepare_inputs                     wall   0.267 ms  cpu   0.269 ms
+  sample                             wall   0.236 ms  cpu   0.236 ms
+  forward (dispatch+replay+logits)   wall   0.236 ms  cpu   0.234 ms
+  schedule                           wall   0.162 ms  cpu   0.162 ms
+  update_from_output                 wall   0.070 ms  cpu   0.070 ms
+  process_outputs (detok)            wall   0.064 ms  cpu   0.065 ms
+  update_states                      wall   0.036 ms  cpu   0.036 ms
+  preprocess                         wall   0.032 ms  cpu   0.032 ms
+RESULT {"label": "p-spin-b320", "batch": 320, "calls": 2, "engine_steps": 2048, "wall_ms_per_step": 17.24092105762054, "process_cpu_ms_per_step": 17.3876953125, "process_cpu_share": 1.0085131330506607, "per_step_ms": {"schedule": {"wall": 1.2386648528490696, "cpu": 1.2391407958984615}, "update_states": {"wall": 0.15504331400961746, "cpu": 0.15530337207029024}, "prepare_inputs": {"wall": 0.33288790716312633, "cpu": 0.33402918115246416}, "preprocess": {"wall": 0.032898528104396974, "cpu": 0.03306738281255023}, "sample": {"wall": 1.2494968293736974, "cpu": 1.2496516455078668}, "to_list (D2H sync)": {"wall": 11.475014849921195, "cpu": 11.47454775439462}, "bookkeeping_sync": {"wall": 12.932757669048556, "cpu": 12.931945177734455}, "execute_model": {"wall": 14.90651935451126, "cpu": 14.90493889306636}, "update_from_output": {"wall": 0.4604474811316095, "cpu": 0.4607506201172069}, "engine_step": {"wall": 16.646397874012564, "cpu": 16.64466802343741}, "process_outputs (detok)": {"wall": 0.4840825070715482, "cpu": 0.48434967480458224}, "forward (dispatch+replay+logits)": {"wall": 0.20343510681186672, "cpu": 0.20094213378873266}}}
+p-spin-b320 batch=320 steps=2048 wall/step=17.24ms process cpu/step=17.39ms share=1.01
+  engine_step                        wall  16.646 ms  cpu  16.645 ms
+  execute_model                      wall  14.907 ms  cpu  14.905 ms
+  bookkeeping_sync                   wall  12.933 ms  cpu  12.932 ms
+  to_list (D2H sync)                 wall  11.475 ms  cpu  11.475 ms
+  sample                             wall   1.249 ms  cpu   1.250 ms
+  schedule                           wall   1.239 ms  cpu   1.239 ms
+  process_outputs (detok)            wall   0.484 ms  cpu   0.484 ms
+  update_from_output                 wall   0.460 ms  cpu   0.461 ms
+  prepare_inputs                     wall   0.333 ms  cpu   0.334 ms
+  forward (dispatch+replay+logits)   wall   0.203 ms  cpu   0.201 ms
+  update_states                      wall   0.155 ms  cpu   0.155 ms
+  preprocess                         wall   0.033 ms  cpu   0.033 ms

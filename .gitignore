@@ -36,6 +36,11 @@ __pycache__/
 # Contention experiment images, runs and copied binaries
 /experiments/contention/.local
 
+# GPU-node harvest runs, downloaded data and verl recipe checkout
+/experiments/gpu-harvest/results/
+/experiments/gpu-harvest/data/
+/experiments/gpu-harvest/.local/
+
 # Raw VM experiment evidence stays local; commit code and compact summaries only.
 /implementation/virtual_machine/results/**/*.tar
 /implementation/virtual_machine/results/**/*.tar.*

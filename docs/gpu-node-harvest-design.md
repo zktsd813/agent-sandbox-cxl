@@ -147,7 +147,7 @@ DGX H100은 노드당 112 core, 2 TB다. 30K core는 약 270대(GPU 약 2,100장
 
 ## 6. A6000 × 2 서버에서 먼저 할 것 (CXL 없이)
 
-이 서버는 [RL rollout 수집 계획](trace-collection-plan.md)의 시험 서버와 같다. 거기 기록된 상태는 A6000 두 장(NVLink bridge), CUDA와 Docker 설치다. 실행에 필요한 준비는 [부록](#부록-a6000에서-실행-준비)에 모았다. 이 실험을 위해 다른 문서를 읽을 필요는 없다.
+이 서버는 [RL rollout 수집 계획](trace-collection-plan.md)의 시험 서버와 같다. 거기 기록된 상태는 A6000 두 장(NVLink bridge), CUDA와 Docker 설치다. 실행에 필요한 준비는 [부록](#부록-a6000에서-실행-준비)에 모았다. 이 실험을 위해 다른 문서를 읽을 필요는 없다. 이 서버에서 확인한 사양과 구체적인 실험 행렬, 그림은 [A6000 실행 계획](gpu-node-harvest-a6000-plan.md)에, G1 결과는 [A6000 G1과 decode CPU 결과](results/gpu-harvest-a6000-20261109/README.md)에 있다.
 
 ### 6.1 볼 수 있는 것
 

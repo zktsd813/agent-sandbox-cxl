@@ -1,0 +1,38 @@
+# vLLM rows: prof_vllm.py (hogN = N SCHED_OTHER pause loops per core on CPUs 4-7); K rows: msdecode.py bench
+hogs/core=0 hog0 batch=320 steps=2048 wall/step=17.15ms process cpu/step=17.29ms share=1.01
+hogs/core=0 K=1 batch=320 wall/step=25.31ms host_cpu/step=1.118ms
+hogs/core=0 K=4 batch=320 wall/step=24.54ms host_cpu/step=0.335ms
+hogs/core=1 hog1 batch=320 steps=1024 wall/step=21.71ms process cpu/step=10.88ms share=0.50
+hogs/core=1 K=1 batch=320 wall/step=24.97ms host_cpu/step=0.361ms
+hogs/core=1 K=4 batch=320 wall/step=24.48ms host_cpu/step=0.100ms
+hogs/core=2 hog2 batch=320 steps=1024 wall/step=25.70ms process cpu/step=8.59ms share=0.33
+hogs/core=2 K=1 batch=320 wall/step=25.22ms host_cpu/step=0.359ms
+hogs/core=2 K=4 batch=320 wall/step=24.44ms host_cpu/step=0.095ms
+hogs/core=0 hog0 batch=16 steps=3072 wall/step=7.33ms process cpu/step=7.39ms share=1.01
+hogs/core=0 K=1 batch=16 wall/step=7.00ms host_cpu/step=0.576ms
+hogs/core=0 K=4 batch=16 wall/step=6.66ms host_cpu/step=0.279ms
+hogs/core=1 hog1 batch=16 steps=2560 wall/step=8.66ms process cpu/step=4.34ms share=0.50
+hogs/core=1 K=1 batch=16 wall/step=6.67ms host_cpu/step=0.104ms
+hogs/core=1 K=4 batch=16 wall/step=6.57ms host_cpu/step=0.075ms
+hogs/core=2 hog2 batch=16 steps=2560 wall/step=9.08ms process cpu/step=3.04ms share=0.33
+hogs/core=2 K=1 batch=16 wall/step=6.72ms host_cpu/step=0.105ms
+hogs/core=2 K=4 batch=16 wall/step=6.64ms host_cpu/step=0.074ms
+# second run, K-step engine only
+hogs/core=0 K=1 batch=320 wall/step=23.55ms host_cpu/step=1.110ms
+hogs/core=0 K=4 batch=320 wall/step=22.88ms host_cpu/step=0.331ms
+hogs/core=0 K=16 batch=320 wall/step=22.80ms host_cpu/step=1.554ms
+hogs/core=1 K=1 batch=320 wall/step=23.32ms host_cpu/step=0.378ms
+hogs/core=1 K=4 batch=320 wall/step=22.81ms host_cpu/step=0.095ms
+hogs/core=1 K=16 batch=320 wall/step=22.75ms host_cpu/step=0.081ms
+hogs/core=2 K=1 batch=320 wall/step=23.56ms host_cpu/step=0.357ms
+hogs/core=2 K=4 batch=320 wall/step=22.79ms host_cpu/step=0.096ms
+hogs/core=2 K=16 batch=320 wall/step=22.79ms host_cpu/step=0.079ms
+hogs/core=0 K=1 batch=16 wall/step=7.15ms host_cpu/step=0.586ms
+hogs/core=0 K=4 batch=16 wall/step=6.82ms host_cpu/step=0.299ms
+hogs/core=0 K=16 batch=16 wall/step=6.71ms host_cpu/step=0.242ms
+hogs/core=1 K=1 batch=16 wall/step=6.83ms host_cpu/step=0.106ms
+hogs/core=1 K=4 batch=16 wall/step=6.73ms host_cpu/step=0.074ms
+hogs/core=1 K=16 batch=16 wall/step=6.70ms host_cpu/step=0.067ms
+hogs/core=2 K=1 batch=16 wall/step=6.89ms host_cpu/step=0.107ms
+hogs/core=2 K=4 batch=16 wall/step=6.79ms host_cpu/step=0.076ms
+hogs/core=2 K=16 batch=16 wall/step=6.73ms host_cpu/step=0.069ms

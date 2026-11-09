@@ -16,6 +16,7 @@
 | 문서 | 내용 |
 |---|---|
 | [GPU 노드 harvest 설계](gpu-node-harvest-design.md) | GPU 노드의 남는 CPU에 sandbox를 올리고, 학습이 CPU를 원하면 hand-off로 CPU만 비운다. A6000 × 2에서 CXL 없이 G1~G3를 먼저 본다 |
+| [A6000 G1~G3 실행 계획](gpu-node-harvest-a6000-plan.md) | 이 서버의 노드 분할, 측정 도구, G1~G3 실험 행렬, 결과 그림과 관문 기준 |
 | [실험 계획 v2](experiment-plan-tail-placement.md) | locality 배치의 tail contention 가설과 sync·async screen 결과, 원본 job critical path. 방향 전환의 근거 |
 
 ## 완료한 측정
@@ -32,6 +33,7 @@
 | [pool 이동 실측과 극단 부하](results/pool-mover-20261105/README.md) | 11-05 | Docker, 15코어 pool 2개 사이 실제 이동(cpuset). slowdown은 사용률에 비선형(CPU 가중 1.35, 1.84, 2.52, 4.26 at 41/65/83/95%). 60 ms 이동은 사용률 40~83%에서 공유 pool 대비 대기 차이의 61~96%를 되찾고 5초 이동은 10~14%. 한 노드에 몰린 GRPO group은 tool ×2.87 → ×1.98이지만 5초 이동도 같다. 95%에서 처음 규칙이 안 들은 것은 문턱 탓이었고, 고친 규칙도 명령 시간은 3~5%만 줄인다. 부하를 골라 만든 조건(빌드가 무거운 다언어 task, 빠른 API LLM, CPU 제한 없음)의 값이다 |
 | [microVM 시스템 자원 경합](results/microvm-system-20261106/README.md) | 11-06 | Firecracker, 32코어 kernel 하나에 동시 VM 32~192개. exit·virtio·VMM syscall의 이벤트당 비용은 거의 그대로이고, 블록 latency(37배)·journal·lock 대기(VM 생성·종료)는 크게 오르지만 guest가 기다리지 않는다. 명령 ×1.10은 clock과 CPU 대기로 설명된다. task별 시스템 부하는 CPU를 따른다(순위 상관 0.71). 디스크 쓰기가 많은 task 3개만 예외다. Docker K=120에서 L3를 나눠도 slowdown 3.02 → 2.99. CPU 밖 자원에서 따로 생기는 기회는 없다 |
 | [trace 성격 다시 보기, env 생성, sandbox 밖 CPU 작업](results/trace-character-20261109/README.md) | 11-09 | 명령 종류별 CPU: 탐색이 명령의 36~45%지만 CPU 1~4%이고, test·build·install이 trace CPU의 60%(Python RL)·94%(다언어)라 문자열만으로 미리 안다. 채점 45개를 microVM에서 다시 돌리니 agent CPU의 0.12배이고, iter2 기록에서도 step +0.7%로 몰리지 않는다. env 생성(기록 중앙값 94초, Azure Kubernetes pod)은 image가 아니라 생성 대기열이 정했다. 생성 한 번은 20~30초이고 우리 microVM boot는 0.28초다. 모두 1초로 줄여도 step은 약 3% 준다. image를 새로 풀면 압축 GiB당 약 15 CPU초지만 rollout은 풀린 image의 2%만 읽는다. DSec은 EROFS image를 3FS에서 lazy로 읽는다. GPU 노드 CPU 작업은 GPU process에 묶여 꾸준하다 |
+| [GPU 노드 harvest: A6000 G1과 decode CPU](results/gpu-harvest-a6000-20261109/README.md) | 11-03~11-05 | verl GRPO 5구성과 실제 agentic RL(C4, Qwen3-32B LoRA). 학습 쪽 CPU는 GPU당 약 1 core + 0.8 core로 평평하고 관문 1은 CPU Adam(C2)만 넘었다(그것도 DDR 병목). C4는 학습 p99 5.1 core, node0 32 thread 중 27개가 99% 시간 빈다. 1 core의 대부분은 CUDA spin이고, blocking으로 바꾼 손해(+23%)는 schedutil 주파수 하락 탓이라 core를 깨워 두면 +5%다. vLLM decode는 launch가 1~3%이고 scheduler·출력 처리가 step의 1/3이다. K step을 graph 하나로 묶은 continuous batching 엔진은 0.08 core를 쓰고 경계 작업을 겹치면 GPU 유휴가 0이다. C4 sandbox 명령을 같은 core에서 재생하면 양쪽 손해는 대부분 noise이고 vLLM async 옆 sandbox만 중앙값 +6%다. harvest는 근거가 있고 hand-off는 약하다 |
 | [초기 16개 pilot](replay-report.md) | 10-07 | 첫 Docker replay |
 
 ## CXL microVM 구현 (hand-off, pooling)

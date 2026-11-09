@@ -1,0 +1,58 @@
+{
+  "config": "C2",
+  "budget_threads": 32,
+  "steps_analyzed": 2,
+  "step_seconds_mean": 831.94138251,
+  "demand_mean_cores": 8.845163438866681,
+  "demand_p99_cores": 28.655752252135894,
+  "gate1_swing_median_cores": 19.792882904951043,
+  "gate1_threshold_cores": 3.2,
+  "gate1_swing_pass": true,
+  "high_demand_seconds": 173.8,
+  "high_demand_in_nongen_phase": 1.0,
+  "per_step": [
+    {
+      "seconds": 830.81810303,
+      "mean": 8.854956269059812,
+      "p99": 28.615410449598034,
+      "max": 41.28844909629152,
+      "swing": 19.760454180538222
+    },
+    {
+      "seconds": 833.06466199,
+      "mean": 8.8353976444549,
+      "p99": 28.660709273818767,
+      "max": 41.790869931254925,
+      "swing": 19.825311629363867
+    }
+  ],
+  "phases": {
+    "gen": {
+      "count": 2.0,
+      "seconds_mean": 81.25569991649999,
+      "cores_mean": 2.6697518022196642,
+      "cores_p95": 3.977485749498165,
+      "cores_max": 6.963621816509418,
+      "ddr_s0_gbps_mean": 1.9737655902094295,
+      "ddr_s0_gbps_max": 40.280627609599996
+    },
+    "old_log_prob": {
+      "count": 2.0,
+      "seconds_mean": 45.4246398465,
+      "cores_mean": 2.888111177931365,
+      "cores_p95": 3.9696513646848732,
+      "cores_max": 5.383691392323251,
+      "ddr_s0_gbps_mean": 15.739230382500256,
+      "ddr_s0_gbps_max": 41.93182023679999
+    },
+    "update_actor": {
+      "count": 2.0,
+      "seconds_mean": 704.9915909985,
+      "cores_mean": 9.942095836143645,
+      "cores_p95": 17.99633611142776,
+      "cores_max": 41.790869931254925,
+      "ddr_s0_gbps_mean": 18.146479646808064,
+      "ddr_s0_gbps_max": 116.56044216320001
+    }
+  }
+}
