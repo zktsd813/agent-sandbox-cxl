@@ -1276,3 +1276,337 @@ Guest는 RO ext4 lower + tmpfs upper를 유지하고, B의 host image FD만 NFS�
 
 [완료한 9개 조건의 결과](results/swe-pool-traces-20261030/README.md)는 원본 315개 명령,
 promotion 12회·demotion 12회·handoff 12회, 독립 검증과 의미적 변조 거부 27건을 포함한다.
+
+## Donor guest cache의 온라인 읽기 공유 — 고정 CXL / 무한 수명 실험
+
+2026-11-11 게시 정리: 현재 구현 소스는 `06f440013`이다. 아래 11월 4–5일 실험은
+`5c9fcadb9` 위의 당시 미커밋 변경으로 실행했으며, 게시 후 커밋에서 새로 측정한 수치로
+바꾸어 표기하지 않는다. 최종 실행 경로는 **TCP/vsock 연결 재사용**이며 cxld busy polling은
+제거했다. [설계 논의·DSec 비교·다음 단계](../../docs/cxl-data-pooling.md#online-peer-cache)와
+[기준 소스 대비 추가 변경량](../../docs/cxl-implementation-map.md#peer-cache-source-delta)을 함께 읽는다.
+
+2026-11-04: 이미지 전체를 canonical 영역에 적재하는 기존 promotion 실험과 별도로,
+**이미 실행 중인 A의 guest page cache frame을 B의 cache miss에 직접 연결**하는 기능을
+`FC_PEER_CACHE_CONFIG` opt-in으로 추가했다. 아래는 구현·실험 당시의 기록이다.
+두 VM은 시작부터 CXL RAM을 사용한다. Promotion/demotion·CPU handoff·frame 회수는 범위 밖이다.
+
+```
+B guest cache miss → virtio-blk READ → CXL Bloom slot
+  negative → 기존 host local/NFS image read
+  positive → A VMM에 RPC → A guest의 GUEST_POOL_LOOKUP
+    absent/busy → MISS → B의 기존 image read
+    resident clean → A의 기존 CXL frame 공개 → B GPA에 RO 연결 → block 완료
+```
+
+- `guest-pool.c`의 `GUEST_POOL_LOOKUP`은 요청받은 파일 페이지 하나를 조회한다.
+  `filemap_get_folio()`에 생성/읽기 플래그를 주지 않으므로 miss에서 file data를 읽지 않는다.
+  immutable ext4의 inode/index·block offset·uptodate·clean 상태를 확인하고 folio lock/ref를 유지한다.
+  반복 요청은 donor 내부의 고정된 folio를 재확인한다. Guest의 inode/folio metadata는 공유하지 않는다.
+- `peer_cache.rs`는 `firecracker.patch`에 포함된다. 불변 image ID와 고정 extent 표로
+  virtio block offset을 donor의 file-page index에 연결한다. Bloom은 CXL의 4KiB 단일 donor slot이며
+  7개 bit만 확인한다. `advertise`는 실제 donor guest lookup이 성공한 페이지만 등록한다.
+- `CPM_PEER_PUBLISH`는 원래 donor frame의 writable PTE/EPT를 무효화하고 RO/CoW로 만든다.
+  `CPM_PEER_ATTACH`는 B의 대상 GPA를 같은 frame에 연결한다. 다른 canonical frame으로 복사하지 않는다.
+  공유 mapping을 만든 뒤 기존 block 완료 경로로 상태/used ring을 알리며 dirty tracking도 갱신한다.
+- 수명은 실험 종료까지 무한으로 가정한다. 선택된 donor folio는 FD를 닫기 전까지 고정한다.
+  B를 먼저 종료한 후 A를 종료한다. 기존 B private frame은 회수하지 않으므로 이번 결과는
+  **공유 mapping의 기능 검증**이며 allocator 가용 용량 증가를 측정한 결과는 아니다.
+- 현재는 trusted guest, read-only image, synchronous block I/O, 정렬된 전체 4KiB 요청만 지원한다.
+  초기 donor 조회는 TCP/serial, 최종 경로는 TCP/vsock이다. 각 측정은 해당 제어 비용을 포함한다.
+  실제 비일관 CXL host 간 cache-line 가시성은 아직 검증하지 않았다.
+
+2026-11-04 검증: 2개 nested Firecracker, 각 1 vCPU/256MiB CXL RAM, 동일 224MiB ext4 이미지,
+160MiB 파일의 두 extent에서 6개 페이지(24KiB)를 선택했다. A host는 local image,
+B host는 NFS image를 사용했다. 이미지의 CXL 사전 적재량은 **0B**다.
+
+| 확인 항목 | 결과 |
+|---|---|
+| B의 6개 실제 guest cache miss → A guest lookup → 공유 연결 | 통과 |
+| 공유 frame = A의 최초 RAM offset + donor GPA | 통과: 별도 canonical 복사 없음 |
+| A/B native PTE의 같은 CXL PFN, 양쪽 RO | 6/6 일치 |
+| 해당 블록의 backend read를 의도적으로 차단한 상태의 데이터 검증 | 6/6 통과 |
+| B 자신의 cache hit에서 peer 조회를 다시 하지 않음 | 통과 |
+| Bloom false positive + donor cache miss | NFS backing fallback, donor data fault-in 없음 |
+| Bloom 갱신 누락을 모사한 false negative | 올바른 데이터로 fallback |
+
+재현 도구는 `peer_cache_prepare.py`, `peer_cache_bench.py`, `peer_cache_guest.c`다.
+수정한 `guest-pool.c`/UAPI로 guest kernel을, `pool_memory_module.c`/UAPI로 mapper module을
+기존 빌드 절차에 따라 다시 빌드해야 한다. `peer_cache_prepare.py`는 그 빌드 산출물을 받으며
+새 소스 사본이나 실험 archive를 만들지 않는다.
+
+```bash
+python3 implementation/virtual_machine/peer_cache_prepare.py \
+  --base-assets "$BASE_ASSETS" --assets "$PEER_ASSETS" \
+  --firecracker "$FIRECRACKER" --guest-kernel "$GUEST_KERNEL" --mapper "$POOL_MAPPER"
+CXL_LAB_ASSETS="$PEER_ASSETS" CXL_LAB_SESSION=peer-cache \
+  python3 implementation/virtual_machine/lab.py start \
+  --qemu "$CXL_QEMU" --vcpus 2 --memory-mib 2048 --cxl-mib 4096 \
+  --dax-guest --dax-handoff --migration-network --network-backend socket \
+  --home-storage-image "$PEER_ASSETS/storage.raw" --memory-backing-dir /dev/shm
+CXL_LAB_SESSION=peer-cache python3 implementation/virtual_machine/peer_cache_bench.py \
+  --output /tmp/peer-cache-result
+CXL_LAB_SESSION=peer-cache python3 implementation/virtual_machine/lab.py stop
+```
+
+`--dax-handoff`는 기존 lab의 4KiB DAX/수동 microVM 실행 환경을 선택하는 옵션이다.
+이 실험은 실제 handoff API를 호출하지 않는다. `CXL_LAB_QEMU_ROOT`는 필요한 경우 기존 BIOS 자산
+경로를 지정한다. 전체 기능 검증은 새 VM 환경에서 2회 통과했다. 최종 원시 증거는 로컬
+`/tmp/peer-cache-20261104-final`에 두며 Git에 포함하지 않는다. 기존 guest 등록 protocol 단위 테스트 7개도 통과했다.
+
+### 공유 범위와 읽기 지연의 측정 기준
+
+2026-11-05: 공유 대상은 이미 donor guest cache에 존재하는 **데이터 frame**이다.
+각 VM의 inode/address_space/page-cache index는 독립적으로 유지한다. Bloom positive는
+후보일 뿐이고 donor guest가 자신의 metadata로 실제 resident clean page를 확인한다.
+현재 식별자는 trusted immutable image ID + disk offset이다. 같은 불변 base/layer를
+사용하는 VM끼리는 이 식별자를 재사용할 수 있다. 서로 다른 이미지에 우연히 같은 내용의
+파일이 있는 경우에는 공통 file-content ID와 각 이미지의 위치를 연결하는 별도 index가
+필요하며, 현재 prototype에는 없다. 이미지 전체의 canonical 적재는 하지 않는다.
+
+`peer_cache_latency_bench.py`는 일반 guest hit/miss와 Bloom positive→공유,
+positive→실제 miss→backend, negative→backend를 측정한다. 뒤의 세 경로는 모두
+**요청 VM의 guest cache miss**에서 시작하므로 추가 비용의 기준은 일반 guest miss다.
+일반 hit는 Bloom/virtio-blk를 거치지 않는다. 기준 VM에서는 peer cache 및 기존 read-hint를 끈다.
+동일한 patched Firecracker에서 기능을 끈 대조군이며 별도의 순정 바이너리 비교는 아니다.
+
+- Guest `CLOCK_MONOTONIC_RAW`로 4KiB `pread()` 진입 직전부터 반환까지 잰다.
+  수신 buffer prefault, mincore 확인, 데이터 검증, 실험 명령 전달은 타이머 밖이다.
+  요청 안에서 발생하는 donor TCP/serial RPC, guest 조회, 연결, block 완료는 타이머 안이다.
+- `FC_PEER_PROFILE=1`일 때만 VMM의 Bloom, TCP 연결/RPC, donor serial RPC,
+  donor guest ioctl, publish/attach ioctl, synchronous backend read를 별도로 기록한다.
+  RPC 시간 안에 donor 시간이 포함되므로 각 구간의 중앙값을 단순 합산하지 않는다.
+  attach ioctl 이후의 lazy PTE/EPT fault와 guest 재개 비용은 guest 전체 시간에 포함된다.
+- 두 nested VM은 각각 1 vCPU/256MiB CXL RAM, 동일한 224MiB ext4 이미지/160MiB 파일을 쓴다.
+  B의 host는 NFSv3 `actimeo=0`으로 이미지를 연다. Warm은 host client data cache가 있는 상태로
+  NFS READ가 0회이며 GETATTR 등은 가능하다. Cold는 **client cache만 비우고 server cache는
+  준비한 상태**이며 NFS READ 발생을 매 표본 확인한다. 디스크 cold 결과가 아니다.
+- 표본은 서로 다른 파일 페이지로 선택하고 guest readahead를 억제한다. 공유 성공에서는
+  해당 block의 backend read를 차단하며 양쪽 native PTE의 PFN/RO 및 데이터 일치를 확인한다.
+  False positive는 Bloom을 1로 채워 강제하며 donor 조회 전후의 비상주 상태를 확인한다.
+  실제 Bloom false-positive 비율을 측정하는 실험은 아니다.
+- Bloom advertise와 최초 donor pin/RO 준비는 측정 전에 수행한다. 읽기 때 현재 구현이
+  다시 호출하는 publish ioctl은 측정에 포함한다. 수명은 무한이며 전환/handoff는 실행하지 않는다.
+
+기존 시작 명령의 `--network-backend tap`을 사용한 뒤 다음을 실행한다.
+`--no-profile`은 VMM 세부 계측을 끄고 guest read 타이머만 유지하는 대조 실험이다.
+
+```bash
+CXL_LAB_SESSION=peer-cache python3 implementation/virtual_machine/peer_cache_latency_bench.py \
+  --output /tmp/peer-cache-latency --samples 64 --rounds 2
+```
+
+최종 TAP/vhost 결과: 기준 `5c9fcadb9` + 로컬 미게시 변경, 64페이지 × 2회,
+각 경로/조건당 128표본, 총 1,280회 측정. 단위는 **ms, 중앙값 / p95**다.
+
+| 경로 | Host client warm | Host client cold | 일반 guest miss 대비 중앙값 차이 (warm / cold) |
+|---|---:|---:|---:|
+| 일반 guest cache hit | 0.00835 / 0.00973 | 0.00785 / 0.01076 | 별도 기준 |
+| 일반 guest cache miss → backend | 1.245 / 1.631 | 2.318 / 2.776 | 기준 |
+| Guest miss → Bloom positive → 실제 존재 → 연결 | 14.409 / 15.998 | 14.870 / 16.131 | +13.164 / +12.552 |
+| Guest miss → Bloom positive → 실제 없음 → backend | 13.822 / 15.760 | 15.215 / 17.307 | +12.577 / +12.898 |
+| Guest miss → Bloom negative → backend | 1.344 / 1.674 | 2.316 / 2.889 | +0.099 / −0.002 |
+
+마지막 cold 차이 −2µs는 noise 범위이며 개선으로 해석하지 않는다. 중앙값 차이는
+서로 다른 표본군의 차이이지 개별 요청의 순수 Bloom 비용이 아니다. Bloom 자체 중앙값은
+1.2–1.5µs, negative 분기의 VMM 구간 전체는 약 17µs다. 공유 성공에서는 donor guest ioctl
+15–23µs, publish ioctl 22–23µs, attach ioctl 41–50µs였으나 **donor serial 왕복은
+11.36–11.46ms**, 이를 포함한 TCP RPC 전체는 13.19–13.84ms였다. Guest E2E에는 남은
+virtio 완료/재개와 mapping fault도 포함된다. 현재 주원인은 실험용 donor 제어 경로다.
+
+기존 QEMU socket 실험망에서는 같은 공유 코드가 중앙값 45.85ms(warm)/45.59ms(cold),
+실제 miss fallback은 89.58/131.04ms였다. 이 초기 대조군은 baseline에 기존 read-hint가
+남아 있었으므로 최종 baseline 표에는 쓰지 않았다. 격리 loopback의 packet header를
+12초 캡처한 결과 A→B 데이터의 ACK 지연 중 30–100ms 구간 140개의 중앙값이 41.01ms였다.
+사용한 QEMU `net/socket.c`는 connect 경로에는 NODELAY를 설정하지만 accept 경로에는
+설정하지 않는다. TAP 전환으로 이 outer TCP 경로를 제거한 결과를 위 최종 표에 썼다.
+따라서 socket 결과에 포함된 수십 ms를 CXL mapping 비용으로 해석하면 안 된다.
+
+최종 공유 256페이지 모두 backend 차단, 원래 donor frame 재사용, 양쪽 동일 PFN/RO,
+데이터 일치를 통과했다. 모든 fallback에서 NFS READ는 warm 0회, cold 표본당 1회였다.
+실제 donor miss 256회는 조회로 donor page를 읽어오지 않았다. 이는 coherent nested CXL의
+4KiB 단일 outstanding read 측정이며 물리 비일관 CXL, 다중 donor 확장성, 메모리 회수의
+검증은 포함하지 않는다. 원시 증거는 로컬 `/tmp/peer-latency-1105-final`, 실험망 비교는
+`/tmp/peer-latency-1105-socket` 및 `/tmp/peer-latency-1105-tap`에 두고 Git에서 제외한다.
+
+VMM 계측 off 대조(`--no-profile`, 경로/조건당 32표본, 총 320회)도 통과했다.
+공유 성공 중앙값은 warm 14.520ms / cold 14.746ms였고 실제 miss fallback은
+13.967 / 14.571ms였다. 상세 계측을 꺼도 ms 단위 donor 제어 비용이 남는다.
+원시 증거는 `/tmp/peer-latency-1105-noprofile`이며, read 타이머와 테스트용 guest
+lookup 타이머는 유지한다. 이 대조는 정밀한 계측 overhead 추정이 아니라 지배적인
+지연 원인이 상세 로그가 아님을 확인한다. 종료 후 소유 VM/TAP/backing은 정리했다.
+
+### 전용 guest 조회 채널과 TCP 재사용
+
+2026-11-05 후속 변경: donor 조회의 UART 명령/로그 polling을 **virtio-vsock 요청·응답**으로
+교체했다. `peer_cache_guest.c`의 worker가 포트 19000에서 32바이트 요청을 받고 기존
+`GUEST_POOL_LOOKUP` ioctl 결과를 48바이트 응답으로 반환한다. 같은 프로세스의 file 및
+guest-pool FD를 사용하므로 기존 pin 소유권을 유지한다. 요청 ID, protocol magic, disk offset,
+GPA 정렬을 확인하며 부분 응답·오류에서는 연결을 폐기한다. inode/index는 계속 donor 내부에
+있고, 실제 데이터 frame을 공유하는 publish/attach 경로는 유지한다.
+
+Host↔guest UDS/vsock과 host 간 TCP 모두 연결을 유지한다. TCP 서버는 연결마다 독립적으로
+요청을 처리하며 최대 16개 연결을 허용한다. 저장된 TCP 연결이 끊기면 한 번 재연결한다.
+응답 ID 불일치는 폐기하고 조회 오류는 backend fallback으로 처리한다. Guest worker는
+blocking receive를 사용한다. Serial은 실험 시작·페이지 준비 등 타이머 밖의 제어와 명시적
+구버전 경로 비교에만 남는다. 전수 메모리 조사나 이미지 canonical 선적재는 추가하지 않았다.
+
+Guest kernel에는 `CONFIG_VSOCKETS=y`, `CONFIG_VIRTIO_VSOCKETS=y`가 필요하다.
+`peer_cache_prepare.py`는 guest probe를 `-pthread`로 빌드한다. 동일 topology 비교를 위해
+baseline VM도 vsock 장치와 idle worker를 갖지만 peer cache/read-hint는 끈다. 위 TAP 환경에서
+다음 세 명령을 각각 새 lab 환경으로 실행했다. 기준 소스는 `5c9fcadb9` + 로컬 미게시 변경이다.
+
+```bash
+CXL_LAB_SESSION=peer-cache python3 implementation/virtual_machine/peer_cache_latency_bench.py \
+  --output /tmp/peer-vsock-1105-serial --samples 32 --rounds 2 --guest-transport serial --fresh-tcp
+CXL_LAB_SESSION=peer-cache python3 implementation/virtual_machine/peer_cache_latency_bench.py \
+  --output /tmp/peer-vsock-1105-fresh --samples 32 --rounds 2 --fresh-tcp
+CXL_LAB_SESSION=peer-cache python3 implementation/virtual_machine/peer_cache_latency_bench.py \
+  --output /tmp/peer-vsock-1105-final --samples 64 --rounds 2
+```
+
+공유 성공 경로의 중앙값(ms)을 같은 kernel·장치·TAP 구성에서 비교했다.
+
+| Donor 제어 경로 | Host client warm | Host client cold |
+|---|---:|---:|
+| Serial + 요청마다 TCP 연결 | 14.175 | 13.541 |
+| vsock + 요청마다 TCP 연결 | 3.554 | 3.869 |
+| vsock + TCP 연결 재사용 | **2.866** | **2.834** |
+
+두 변경을 모두 적용한 최종 5개 경로 결과다. 각 경로/조건당 128표본이며 단위는
+**ms, 중앙값 / p95**다. Cold는 앞 절과 동일하게 NFS client cache만 비운 조건이다.
+
+| 경로 | Host client warm | Host client cold |
+|---|---:|---:|
+| 일반 guest cache hit | 0.00873 / 0.01276 | 0.00712 / 0.01033 |
+| 일반 guest cache miss → backend | 1.255 / 1.717 | 2.066 / 2.499 |
+| Guest miss → Bloom positive → 실제 존재 → 연결 | 2.866 / 3.607 | 2.834 / 3.266 |
+| Guest miss → Bloom positive → 실제 없음 → backend | 3.018 / 3.712 | 3.815 / 4.435 |
+| Guest miss → Bloom negative → backend | 1.259 / 1.614 | 2.230 / 3.184 |
+
+공유 성공 중앙값은 serial 대조군보다 약 79–80% 줄었다. 같은 대조군의 실제 miss fallback
+13.461/14.427ms도 3.018/3.815ms로 줄었다. 최종 공유 성공의 donor vsock 왕복은
+0.990/0.995ms, 이를 포함한 TCP RPC 전체는 1.856/1.901ms다. Guest ioctl은 12.6/12.5µs,
+publish는 17.1/14.7µs, attach는 46.3/44.8µs다. 이 구간들은 서로 포함되므로 단순 합산하지
+않는다. 여전히 원격 공유는 이 환경의 일반 backend miss보다 느리며, 남은 통신·실행 재개
+비용을 제거한 결과는 아니다. Bloom negative의 VMM 구간은 약 16µs이고, baseline과 E2E
+중앙값 차이 전체를 Bloom 비용으로 해석하지 않는다.
+
+검증은 두 대조군 각 640회와 최종 1,280회, 합계 2,560회 read를 통과했다. 최종 공유
+256페이지에서 backend 차단, 동일 PFN/RO, 데이터 일치를 확인했고, fallback의 NFS READ는
+warm 0회/cold 표본당 1회였다. 512회 donor 조회에 TCP 연결은 4개(각 requester 실행당 1개),
+donor vsock 연결은 전체에서 1개였다. Donor serial 조회와 lookup error는 없었다. 최초 TCP
+연결은 각 requester의 첫 공유 read에 포함되며, 최초 vsock 연결은 advertise 준비 때 수행한다.
+
+Firecracker release 빌드와 4개 transport 단위 테스트도 통과했다. 테스트는 JSON framing,
+부분/초과 응답, guest 응답 검증, TCP 재사용과 강제 단절 후 1회 재연결, 잘못된 응답 ID의
+연결 폐기를 확인한다. 단절 주입은 loopback 단위 테스트이며 실제 VM 장애 실험은 아니다.
+원시 결과는 위 `/tmp/peer-vsock-1105-*` 디렉터리에만 보관한다. 종료 후 lab VM을 정리했다.
+이 결과는 static CXL·단일 donor·무한 수명 조건이며 promotion/demotion/handoff 측정이 아니다.
+
+후속 transport 검토: `zktsd813/Niagara-serverless`의 `c73c99ee4749cf1291caa55cb76c70120361a455`
+기준 `implement/cxld/{src/ring.cc,src/cache_visibility.cc,src/rpc_client.cc,src/rpc_server.cc}`를
+확인했다. Shared-DAX request/response SPSC ring, cache-line별 단일 writer, NT store + SFENCE,
+reader CLFLUSH + MFENCE를 사용한다. 알림은 tail busy polling이며 interrupt 방식이 아니다.
+TCP 대체는 기존 donor vsock/publish/attach와 결합할 수 있다. Donor microVM에 ring을 직접
+노출하려면 별도 CXL-backed GPA mapping과 guest endpoint가 필요하며 host publish/RO 보호는
+유지해야 한다. 기존 control cursor는 서로 다른 64B line이지만 같은 4KiB page에 있으므로,
+guest kernel까지 EPT로 writer 권한을 강제하려면 페이지 단위 소유권 분리가 필요하다.
+이어서 host 간 cxld 통합을 실험했으나, 아래 이유로 현재 실행 경로에서는 철회했다.
+
+### cxld 실험 철회와 TCP 복구
+
+2026-11-05: 사용자 요청에 따라 cxld adapter, Firecracker local RPC endpoint, CXL transport
+선택 옵션과 helper packaging을 제거했다. 현재 경로는 **유지되는 host 간 TCP + 유지되는
+host↔guest vsock**이다. 두 endpoint 모두 idle 시 blocking receive를 사용한다. 이전 serial
+경로는 명시적 비교 실험 옵션에만 남으며 기본 cache lookup에서는 사용하지 않는다.
+
+철회한 cxld 실험의 핵심 결과만 남긴다. 기준은 `5c9fcadb9` + 당시 로컬 미게시 변경이며,
+Niagara 라이브러리는 위 `c73c99ee4749`였다. 별도 CXL ring과 양끝 Unix socket을 사용했다.
+각 variant는 4KiB read 1,536회와 256페이지 PFN/RO 검증을 통과했다. 단위는 중앙값 ms다.
+
+| 이전 실험 variant | 최초 공유 warm | 최초 공유 cold | Donor adapter CPU, vCPU 1개 기준 |
+|---|---:|---:|---:|
+| 유지되는 TCP, poller 없음 | 2.885 | 2.943 | adapter 없음 |
+| 유지되는 TCP + idle cxld poller | 2.117 | 2.533 | 99.8% |
+| cxld + 두 local Unix socket | 2.142 | 1.791 | 99.5% |
+
+Cxld 결과에는 지속적인 busy polling의 CPU 실행 상태 효과가 포함됐다. 같은 poller를 켠 TCP
+대조에서는 warm 개선이 없었으므로 전체 감소를 CXL transport 자체의 효과로 해석하지 않는다.
+원시 증거는 로컬 `/tmp/peer-cxld-1105-{tcp-final,cxld-final,tcp-poller}`에 보존한다.
+현재 명령에서는 `--peer-transport`, `--idle-cxld-poller`, `--cxld-helper`를 지원하지 않는다.
+
+공유 후 다시 읽는 `shared_cache_hit` 검증은 유지했다. 해당 페이지가 resident인 동안 요청
+VM 자신의 page cache를 사용하며 추가 virtio-blk/peer RPC가 없다. 위 TCP 대조군에서 일반
+cache hit은 7.53/6.81µs, 공유 후 hit은 7.96/5.61µs였다. 동일 read 경로라는 뜻이며 모든
+표본의 지연이 정확히 같거나 DRAM/CXL 물리 접근 지연이 같다는 의미는 아니다.
+
+### TCP 경로의 남은 비용
+
+원래 언급한 약 **11ms는 전체 read가 아니라 donor serial 조회 구간**이었다. 구 경로는
+UART 명령 전달 → donor guest ioctl → serial JSON 출력 → host 로그 읽기와 1ms 간격 확인을
+거친다. 위 동일 환경 대조군에서 이 구간은 11.13/11.09ms, ioctl 자체는 15.3/17.8µs였다.
+Vsock으로 교체한 뒤 donor 왕복은 약 1ms가 됐다. TCP 연결 비용 0.59/0.62ms는 별도 구간이며,
+재사용으로 첫 연결 이후 제거됐다. 전체 read는 14.175/13.541 → 3.554/3.869 → 2.866/2.834ms로
+감소했다. 이는 serial → vsock, 이어서 TCP 재사용을 적용한 대조 실험이다.
+
+아래는 TCP 복구 후 `/tmp/peer-tcp-restored-1105/report.json`의 warm 64표본을
+**각 표본 안에서 포함 구간을 빼서** 분해한 평균이다. 평균을 사용하므로 항목 합이 전체 평균과
+맞는다. 개별 중앙값끼리 빼거나 포함 관계인 RPC와 donor 시간을 중복 합산하지 않았다.
+
+| 중복 없는 측정 구간 | 평균 ms |
+|---|---:|
+| Bloom 확인 | 0.002 |
+| Donor guest ioctl | 0.016 |
+| Donor vsock 왕복 중 ioctl 외 부분 | 0.986 |
+| Donor publish | 0.019 |
+| Host 간 RPC 중 donor 왕복·publish 외 부분 | 0.866 |
+| Requester attach | 0.051 |
+| 그 외 requester peer 함수 내부 | 0.048 |
+| Guest pread 중 requester peer 함수 외부 | 1.067 |
+| **전체 guest pread** | **3.053** |
+
+Donor vsock 잔여에는 메시지 전달·guest worker 실행·응답 및 대기가 포함된다. Host RPC 잔여는
+TCP 전달뿐 아니라 서버 실행 대기, JSON 처리, 로그 출력을 포함하므로 순수 wire 지연이 아니다.
+Peer 함수 외부에는 guest filesystem/virtio 요청·완료, 재실행, attach 이후 첫 접근 fault,
+측정용 로그 비용 등이 들어갈 수 있다. 현재 타이머만으로 각각의 비중은 분리하지 못한다.
+특히 이 잔여 전체를 EPT 동기화로 부를 근거가 없다. 공유 성공은 backend 차단 및 NFS READ 0을
+검증했으므로 NFS data read가 약 3ms의 원인은 아니다. 계측은 nested KVM/QEMU CXL 환경이며
+물리 CXL 하드웨어 지연으로 일반화하지 않는다.
+
+복구 버전은 같은 기준 `5c9fcadb9` + 로컬 미게시 변경으로 release 빌드와 TCP/vsock transport
+단위 테스트 4개를 통과했다. 실제 두 VM에서 다음 명령으로 재측정했다. 각 조건·경로당
+64표본, 총 768회 read이며 아래 값은 **ms, 중앙값 / p95**다.
+
+```bash
+CXL_LAB_SESSION=peer-tcp-restored-1105 python3 implementation/virtual_machine/peer_cache_latency_bench.py \
+  --output /tmp/peer-tcp-restored-1105 --samples 64 --rounds 1
+```
+
+| 경로 | Host client warm | Host client cold |
+|---|---:|---:|
+| 일반 guest cache hit | 0.00947 / 0.01151 | 0.00929 / 0.01110 |
+| 일반 guest cache miss → backend | 1.291 / 2.021 | 2.222 / 2.752 |
+| Bloom positive → 실제 존재 → 공유 | 3.036 / 3.647 | 3.046 / 3.820 |
+| Bloom positive → 실제 없음 → backend | 3.246 / 3.738 | 4.094 / 4.483 |
+| Bloom negative → backend | 1.309 / 1.824 | 2.291 / 2.936 |
+| 공유 후 guest cache hit | 0.00932 / 0.01198 | 0.00662 / 0.01012 |
+
+직전 poller 없는 TCP 대조군 2.885/2.943ms와 비교하면 이번 공유 중앙값은 5.3%/3.5% 높았다.
+Baseline도 변했으므로 복구가 더 빨라졌다고 주장하지 않는다. 제거 대상은 busy polling과
+cxld 실행 경로이며, 약 3ms의 TCP 경로가 정상 동작함을 확인했다.
+공유 128페이지 모두 backend 차단, 데이터 일치, 동일 donor PFN/RO를 통과했다. 반복 hit에
+추가 RPC가 없고, 공유 경로 NFS READ는 0회, fallback은 warm 0회/cold 표본당 1회였다.
+256회 donor 조회에 TCP 연결은 requester 실행별 1개씩 총 2개, donor vsock은 1개였다.
+새 initramfs에는 cxld helper가 없으며 시험 종료 후 VM/TAP/CXL backing을 정리했다.
+원시 로그·결과·바이너리는 로컬에만 둔다. Static CXL/단일 donor/무한 수명 실험이며
+promotion/demotion/handoff 또는 물리 비일관 CXL 검증은 포함하지 않는다.
+
+2026-11-11 게시 전 점검: upstream Firecracker `95f868c8e345b1cc8faccd1a3c910b4989dc3f58`
+위에서 누적 patch가 적용되고, 36개 결과 파일이 실제 작업 소스와 일치함을 임시 Git index로
+확인했다. Offline Cargo transport 테스트 4개, guest/discard/handoff/control/owner/proxy
+회귀 테스트 51개, guest helper의 `-static -pthread -Wall -Wextra -Werror` 빌드,
+Python 구문과 shell 구문 검사를 통과했다. 기존 11월 5일 로컬 보고서의 성공 상태·표본 수·요약값도
+다시 대조했다. 이번 게시 점검에서 VM 실험이나 latency 측정을 새로 실행하지는 않았다.
+`peer_cache_prepare.py`는 이후 실행의 manifest에 실제 HEAD와 미커밋 여부를 기록하며,
+기존 실험의 `uncommitted=true` 기록은 보존한다. 공급한 kernel/VMM binary의 출처는 별도로
+확인해야 하며 manifest의 HEAD만으로 그 바이너리의 빌드 출처를 보증하지 않는다.

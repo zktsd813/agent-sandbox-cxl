@@ -1,6 +1,14 @@
 # CXL microVM 구현 지도와 기준 소스 대비 변경량
 
-2026-11-04 정리. 구현 기준은 이 저장소의 `1c359875c`이며, 아래 누적 patch는 해당 커밋의 내용이다. 이 문서와 함께 게시하는 후속 문서 변경은 실행 코드를 바꾸지 않는다. 최초 구상부터의 배경은 [전체 개요](cxl-microvm-overview.md), 실행 명령은 [구현 README](../implementation/virtual_machine/README.md), 최신 제어 비용은 [resident direct](cxl-resident-direct.md)를 따른다.
+2026-11-11 갱신. 기존 handoff 구현의 기준은 `1c359875c`이며, 아래 원래 누적 변경량 표는 그 시점으로 고정한다. 후속 donor guest-cache 소스 `06f440013`의 추가 변경량은 별도 절에 기록한다. 최초 구상부터의 배경은 [전체 개요](cxl-microvm-overview.md), 실행 명령은 [구현 README](../implementation/virtual_machine/README.md), CPU handoff 제어 비용은 [resident direct](cxl-resident-direct.md)를 따른다.
+
+2026-11-04 후속: [고정 CXL VM 사이의 donor guest-cache 읽기 공유](../implementation/virtual_machine/README.md#donor-guest-cache의-온라인-읽기-공유--고정-cxl--무한-수명-실험)를 별도 opt-in으로 추가했다. 이미지 prefill 없이 동작하며 아래의 기존 전환 경로 및 기준 커밋의 변경량과 구분한다.
+
+2026-11-05 후속: [5개 cache 읽기 경로의 측정 기준과 결과](../implementation/virtual_machine/README.md#공유-범위와-읽기-지연의-측정-기준)를 추가했다. Guest hit/miss, Bloom positive 공유/실제 miss, Bloom negative를 구분하며 donor serial RPC 및 QEMU socket 실험망의 지연을 별도로 확인했다.
+
+2026-11-05 채널 최적화: [전용 vsock 조회와 TCP 재사용](../implementation/virtual_machine/README.md#전용-guest-조회-채널과-tcp-재사용)을 구현했다. 동일 환경의 serial 대조군 대비 공유 읽기 중앙값은 13.5–14.2ms에서 2.83–2.87ms로 줄었으며, 5개 경로·연결 재사용·동일 donor frame 공유를 검증했다.
+
+2026-11-05 TCP 복구: [cxld 실험을 철회하고 TCP/vsock 재사용 경로로 복구](../implementation/virtual_machine/README.md#cxld-실험-철회와-tcp-복구)했다. Busy polling이 donor vCPU 하나를 소비하므로 adapter·CXL transport 실행 옵션을 제거했다. 기존 실험 요약과 TCP의 남은 비용 분해, 공유 후 guest cache hit 검증은 유지한다.
 
 ## 현재 구현을 읽는 순서
 
@@ -9,6 +17,33 @@
 3. **CPU handoff:** CXL RAM을 유지한 채 state-only 또는 direct로 실행 owner를 옮긴다. Promotion/demotion과 다른 작업이다.
 4. **Pooling:** VM별 inode/folio/페이지 테이블은 private이다. immutable 데이터 backing만 공유하며 쓰기는 private CXL CoW, 폐기는 ACK 뒤 재사용한다.
 5. **Resident 제어:** 목적지 프로세스·disk FD·io_uring·제어 연결을 준비하고, 방문 이후 VM/vCPU FD·thread를 재사용한다. 정상 handoff의 전체 RAM 검사·mapping JSON·이미지 재해시는 없다.
+6. **온라인 guest-cache 공유:** 위 canonical 기반 promotion과 별도의 `FC_PEER_CACHE_CONFIG` 경로다. 요청 VM의 cache miss 때 Bloom → donor guest 조회 → 기존 CXL frame 연결을 수행한다. 수명 고정·전환 제외 조건이며, [식별자·guest 변경·DSec과의 차이](cxl-data-pooling.md#online-peer-cache)를 먼저 확인한다.
+
+<a id="peer-cache-source-delta"></a>
+
+## 온라인 donor cache의 추가 소스 변경
+
+구현 커밋은 `06f440013`이다. `5c9fcadb9`에 기록된 Firecracker patch와 현재 patch를
+동일한 upstream에 적용한 결과끼리 비교하면 다음 5개 파일, **+759/-2줄**이 추가된다.
+현재 upstream 대비 누적치는 **36개 파일, +7,013/-77줄**이다. 기존 표의 35개 파일 수치와
+시점을 혼동하지 않는다. 원본 vendor checkout은 Git에 추가하지 않는다.
+
+| Firecracker 경로 | 추가 | 삭제 | 역할 |
+|---|---:|---:|---|
+| `src/vmm/src/peer_cache.rs` | 733 | 0 | Bloom, donor TCP/vsock 조회, publish/attach, 선택적 계측, transport 테스트 |
+| `src/vmm/src/builder.rs` | 3 | 0 | opt-in peer-cache 초기화 |
+| `src/vmm/src/devices/virtio/block/virtio/device.rs` | 3 | 0 | RO·Sync 실험 경로의 구성 제한 |
+| `src/vmm/src/devices/virtio/block/virtio/request.rs` | 19 | 2 | read 요청의 공유 분기와 기존 backend fallback |
+| `src/vmm/src/lib.rs` | 1 | 0 | peer-cache 모듈 등록 |
+
+저장소 자체 소스에는 `guest-pool.c`/UAPI의 resident-only `GUEST_POOL_LOOKUP`,
+`pool_memory_module.c`/UAPI의 `CPM_PEER_PUBLISH`·`CPM_PEER_ATTACH`, guest vsock helper,
+init script, assets 준비 및 기능/latency 실험 도구가 추가됐다. 실행 시 메모리 전수 조사나
+이미지 canonical 사전 적재를 하지 않는다. donor pin 목록 검색은 최대 1,024개인 선형 탐색이고
+파일 extent 검색도 선형이므로, 이것을 다중 donor용 상수 시간 index로 설명하면 안 된다.
+
+게시 전 점검은 [구현 README](../implementation/virtual_machine/README.md#tcp-경로의-남은-비용)에
+기록한다. 원격 main에 먼저 게시된 CPU contention·trace 분석 커밋은 그대로 보존한다.
 
 ## 기준 소스와 변경 규모
 

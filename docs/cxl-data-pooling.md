@@ -1,6 +1,144 @@
 # CXL microVM의 읽기 데이터 페이지 pooling
 
-현재 guest metadata를 공유 자격의 근거로 사용하고 direct/state-only handoff에 연결하는 후속 구현은 [guest metadata 기반 pooling](cxl-guest-pool-handoff.md)에 설명한다. 이 문서는 이전 read-hint·전수 비교·full-RAM snapshot 실험의 기록이다.
+2026-11-11 정리. 현재 구현은 두 계열이다. 기존 canonical 기반 promotion과 direct/state-only
+handoff는 [guest metadata 기반 pooling](cxl-guest-pool-handoff.md)에, 이미지 사전 적재 없는
+donor guest-cache 공유는 아래에 설명한다. 둘의 검증 범위를 합쳐서 해석하지 않는다.
+
+<a id="online-peer-cache"></a>
+
+## 실제 guest page-cache 공유: 구현과 논의의 현재 상태
+
+소스는 `06f440013`, 재현과 측정값은 [구현 README](../implementation/virtual_machine/README.md#donor-guest-cache의-온라인-읽기-공유--고정-cxl--무한-수명-실험)에 있다.
+목표는 CXL에 이미 존재하는 guest의 파일 데이터 페이지를 여러 VM이 참조하여 중복을 줄이는
+것이다. VM별 inode, address_space/XArray, LRU, refcount, 페이지 테이블은 공유하지 않는다.
+
+| 구분 | 기존 promotion 경로 | 새 온라인 donor 경로 |
+|---|---|---|
+| 데이터 원본 | 준비한 canonical 이미지 영역 | donor가 실제로 읽어 둔 guest page-cache frame |
+| 공유 시점 | DRAM→CXL promotion/admission | 요청 VM의 guest cache miss에 따른 virtio-blk read |
+| 이미지 canonical 선적재 | 있음 | 0B |
+| 현재 검증 | direct/state-only와 전환·CoW·discard | 고정 CXL, 단일 donor, 수명 무한 가정 |
+| 이번 결과에서 주장하지 않는 것 | 온라인 donor 조회 지원 | 전환/handoff 호환, 회수·allocator 용량 증가 |
+
+### 실제 읽기 경로와 metadata의 위치
+
+```text
+요청 VM의 일반 guest page-cache lookup
+  hit  → 기존 GPA로 읽음; Bloom·virtio-blk·peer RPC 없음
+  miss → guest가 읽기 버퍼를 할당하고 virtio-blk 요청
+       → requester VMM이 CXL Bloom slot 확인
+         negative → local/NFS image backend 읽기
+         positive → TCP로 donor VMM에 (image ID, image offset) 요청
+                  → 고정 extent 표로 donor의 file-page index 결정
+                  → vsock으로 donor guest에 조회
+                  → donor가 자기 inode/address_space에서 resident folio 확인
+                    absent/busy/error → requester의 기존 backend 읽기
+                    clean·uptodate   → folio lock/ref 유지
+                                    → donor frame을 RO/CoW로 publish
+                                    → requester의 기존 GPA backing을 같은 frame에 연결
+                                    → 일반 virtio-blk 완료
+```
+
+다른 VM의 metadata를 원격 메모리 포인터로 따라가지 않는다. 정확한 조회는 **요청받은 donor
+guest**가 자기 커널 안에서 수행한다. 현재 helper는 미리 연 파일 하나의 FD를 사용하고,
+불변 plain ext4·4KiB 전체 페이지·일치하는 disk offset·clean 상태만 허용한다. Miss에서
+donor가 파일 내용을 새로 읽어오지는 않는다. Guest의 일반 page cache도 process ID가 아닌
+파일의 address_space와 파일 내 page index를 중심으로 조회하므로, 같은 파일을 여는 여러
+process는 한 guest 안에서는 같은 cache를 사용할 수 있다. 독립된 VM의 address_space는
+서로 다른 커널 객체이므로 동일 inode 번호나 pathname만으로 VM 간 동일성을 판단할 수 없다.
+
+초기 API는 이 guest 내부 판정을 추가하는 협력적 확장이다. Hypervisor가 원래부터 guest
+inode 의미를 알고 있었던 것이 아니다. Trusted guest를 전제로 하며, 이 실험은 악성 guest에
+대한 내용 증명이나 attestation을 제공하지 않는다. Donor pin/extent 목록에는 작은 선형 탐색이
+남아 있고, 전체 guest RAM을 훑는 경로는 없다.
+
+### 나누어 진행할 두 가지 식별 경로
+
+1. **같은 불변 image/layer:** 신뢰하는 `(image ID, 4KiB image offset)`을 공통 key로 사용한다.
+   Host local 경로와 NFS 경로의 문자열이나 host inode가 달라도 같은 image ID를 지정할 수 있다.
+   Guest의 clean bit만으로 공유를 승인하지 않고 실제 file-page 위치와 disk offset을 대조한다.
+   Image identity와 고정 extent 표는 준비 단계의 계약이며 요청마다 전체 image를 hash하지 않는다.
+2. **서로 다른 image 안의 같은 파일:** 현재 구현 범위 밖이다. 파일 버전/내용의 공통 ID와
+   각 image의 파일 위치를 연결하는 신뢰할 수 있는 manifest/index가 필요하다. 동일 경로,
+   동일 inode 번호, 우연히 같은 disk offset은 공통 ID가 아니다. 식별자 생성은 image 제작·등록
+   단계에 둘 수 있지만, 어느 수준에서 ID를 공급하고 검증할지는 후속 설계 사항이다.
+
+### Bloom과 후보 donor 힌트
+
+현재 Bloom은 **CXL의 4KiB slot 하나**, 32,768 bits, 7 probes이며 단일 donor가 사용한다.
+일반적인 근사 false-positive 확률은 삽입 key 수 n에 대해 `(1-exp(-7n/32768))^7`이다.
+실험의 all-one/all-zero 주입은 분기와 fallback 검증이며 자연 발생 실패율 측정이 아니다.
+표준 Bloom은 완료된 삽입을 정확히 관측하면 false negative가 없지만, 오래된 summary·유실된
+갱신·비일관 메모리의 가시성 문제는 시스템 수준의 false negative를 만들 수 있다. 이때는
+원래 backend로 읽어 공유 기회를 놓친다. Positive도 실제 존재나 내용·수명의 증거가 아니다.
+
+모든 VM의 hint slot을 CXL에 계속 두는 방안은 **발견 위치**를 promotion/demotion과 분리한다.
+하지만 DRAM으로 옮겨진 페이지의 CXL frame 유효성까지 보장하지는 않는다. 현재 새 prototype은
+고정 CXL만 시험했으며 이 동적 상태 전환 protocol은 구현하지 않았다.
+
+대안으로 논의한 `key → 후보 donor` 테이블은 key hash로 정해진 소수 bucket만 읽어 후보 VM을
+얻고, 그 VM에 정확 조회를 요청하는 lossy hint index다. Slot 전체 순회를 줄일 수 있지만 아직
+구현하지 않았다. 비일관 영역에서 여러 VM이 같은 slot을 동시에 수정하는 hash table로 만들지
+않고, 단일 publisher 또는 shard별 단일 writer가 hint를 갱신하는 구성이 필요하다. 충돌·오래된
+값은 누락과 추가 RPC로 처리하고, 읽은 값을 GPA나 권한으로 사용하지 않는다. 후보를 안정된
+VM registry에 대조하고 live 응답의 key/version을 확인해야 한다. 다중 shard를 무한히 탐색하면
+scan을 없앤 목적이 사라지므로 후보 수와 probe 수를 제한해야 한다.
+
+Hint가 부정확해도 되는 것과 데이터 publish가 부정확해도 되는 것은 다르다. 정확한 응답·RO
+보호·data visibility·frame 수명은 별도 계약으로 보장해야 한다. 지금의 coherent nested QEMU
+측정은 실제 비일관 CXL에서 cache-line flush/invalidate와 publish/acquire가 충분하다는 증거가
+아니다. 무한 수명 가정도 초기 데이터의 가시성 문제를 해결해 주지는 않는다.
+
+### Guest를 수정하지 않는 대안과 DSec
+
+표준 virtio-blk read는 guest가 정한 destination buffer를 device가 채우는 계약이다. 완료
+응답에 host pointer를 돌려줘도 guest는 그 pointer를 새 cache page로 사용하지 않는다.
+Guest GPA를 유지하고 host backing만 공유 frame으로 바꾸는 것은 VMM/mapper 계층에서 가능하며
+현재 requester의 연결도 이 방식이다. 반면 donor의 실제 cache residency 확인은 현재 custom
+guest ioctl/helper에 의존한다. 전체 guest가 무수정이라고 설명하면 안 된다.
+
+후속 대안은 첫 block read를 완료하기 전에 host가 내용의 출처를 아는 immutable frame을 만들고
+요청 버퍼 GPA를 연결하는 방식이다. 이 경우 guest의 inode를 직접 검색하는 과정은 줄일 수
+있으나, 기존 임의의 guest cache를 나중에 발견하는 문제와는 다르다. 정렬·부분 I/O·모든 writer의
+CoW·buffer 재사용/수명 처리가 필요하며 현재 구현·검증된 경로가 아니다.
+
+DSec도 guest kernel과 filesystem image가 필요하다. Base/toolkit은 독립된 EROFS 이미지이고,
+guest OverlayFS의 lower로 사용한다. Ext4 writable disk의 디렉터리가 upper다. RO 계층에는
+virtio-pmem+DAX를 사용해 같은 host의 backing page를 공유하고 일반 guest data-page-cache
+사본을 피한다. Writable ext4는 OverlayBD/ublk를 통해 제공하며 3FS에서 필요할 때 읽고 쓰기는
+로컬에 둔다. 관측된 base 2개와 task workspace 53,590개는 별도 항목이다.
+([DSec §4.2·§5](https://arxiv.org/html/2609.22978v1#S4.SS2))
+
+EROFS는 파일을 담은 read-only filesystem image이고 완성된 VM 전체나 실행 중 RAM을 뜻하지
+않는다. DAX의 `mmap`은 backing을 직접 매핑할 수 있지만 `read()`의 application buffer 복사나
+guest metadata 메모리까지 모두 없애지는 않는다. OverlayFS copy-up도 4KiB 메모리 CoW와
+다른 계층이다. DSec의 정확한 boot script나 RO pmem backing과 3FS 사이 adapter는 논문으로
+확정할 수 없으므로 추정 구현을 확정된 경로로 기록하지 않는다.
+([Linux DAX](https://docs.kernel.org/filesystems/dax.html),
+[virtio-pmem](https://www.qemu.org/docs/master/system/devices/virtio/virtio-pmem.html),
+[OverlayFS](https://docs.kernel.org/filesystems/overlayfs.html))
+
+따라서 공통 image backing을 처음부터 공유하는 구조와, 이미 CXL guest RAM에 들어온 실제
+cache page를 donor에서 발견하는 현재 연구를 구분한다. DSec의 동일 host 공유를 비일관 CXL의
+cross-host 공유나 여러 image의 임의 동일 파일 dedup으로 확대 해석하지 않는다.
+
+### 검증 경계와 이어서 할 일
+
+- 마지막 실제 VM 측정은 2026-11-05 TCP 복구 버전이다. 총 768회 읽기, 128페이지 동일 PFN/RO,
+  backend 차단 시 데이터 일치, fallback의 NFS READ, 공유 뒤 추가 RPC 없는 cache hit을 확인했다.
+  대조군은 같은 patched VMM의 기능-off이며 별도 순정 Firecracker 바이너리 측정이 아니다.
+- 측정 전 광고·최초 pin 준비와 read 자체의 timer를 구분한다. displaced private frame을 회수하지
+  않았으므로 sharing 성공만으로 allocator의 가용 메모리가 늘었다고 주장하지 않는다.
+- 우선 같은 image 경로와 cross-image 식별 경로를 분리한다. 제한된 후보 index와 단일 writer
+  publish를 설계하고, 실제 비일관 하드웨어에서 stale hint 및 data visibility를 검증한다.
+- 수명/회수와 promotion/demotion은 사용자가 후속 단계로 미룬 항목이다. 이를 해결한 뒤 새 경로를
+  기존 direct/state-only handoff와 통합해야 한다. 기존 canonical 경로의 전환 성공이 새 donor
+  경로의 성공을 대신하지 않는다. PML·MPTCP 통합 상태는 [구현 지도](cxl-implementation-map.md)를 따른다.
+
+## 2026-10-30 초기 canonical pooling 기록
+
+이하 내용은 이전 read-hint·전수 비교·full-RAM snapshot 실험의 기록이며 현재 온라인 경로의
+실행 명세가 아니다. 최신 재현 절차는 위 구현 README를 사용한다.
 
 2026-10-30. 이 문서는 **virtio-blk 읽기를 관찰하고, VM을 잠시 정지한 상태에서 같은 내용의 guest RAM 페이지를 하나의 CXL 데이터 페이지에 연결하는 첫 구현**을 설명한다. Guest의 inode, folio, XArray, LRU와 참조 횟수는 각 VM 안에 유지한다. 공유 대상은 읽기 전용 image에서 온 데이터 바이트다.
 

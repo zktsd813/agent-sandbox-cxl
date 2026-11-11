@@ -38,6 +38,11 @@
 
 다른 머신에서 진행한 메커니즘 구현이다. 전체 흐름은 [CXL microVM 연구와 구현 정리](cxl-microvm-overview.md), 실행 방법은 [구현·사용법](../implementation/virtual_machine/README.md)에 있다.
 
+2026-11-11: [실제 donor guest-cache 공유 설계와 DSec 비교](cxl-data-pooling.md#online-peer-cache),
+[TCP/vsock 구현·5개 읽기 경로 측정](../implementation/virtual_machine/README.md#donor-guest-cache의-온라인-읽기-공유--고정-cxl--무한-수명-실험),
+[추가 소스 변경량](cxl-implementation-map.md#peer-cache-source-delta)을 정리했다.
+새 경로는 canonical 사전 적재 없이 동작하는 static-tier prototype이며 CPU handoff와 별도다.
+
 | 문서 | 내용 |
 |---|---|
 | [구현 지도·기준 소스 대비 변경량](cxl-implementation-map.md) | 2026-11-04 누적 patch의 파일별 규모·역할, 자체 모듈, 두 handoff·NFS·pooling의 구현 흐름 |
