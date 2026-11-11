@@ -391,6 +391,39 @@ static long cpm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     if (!smp_load_acquire(&c->ready))
         return -EINVAL;
     if (c->header && !owns(c)) return -ESTALE;
+    if (cmd == CPM_PEER_PUBLISH || cmd == CPM_PEER_ATTACH) {
+        struct cpm_peer p;
+        struct vm_area_struct *vma;
+        /* Deliberately exclude persistent/handoff and canonical-image modes. */
+        if (c->header || c->cfg.canonical_bytes) return -EOPNOTSUPP;
+        if (copy_from_user(&p, user, sizeof(p))) return -EFAULT;
+        if (p.first >= c->cfg.count || p.address & (PAGE_SIZE - 1) ||
+            p.address > ULONG_MAX - PAGE_SIZE) return -EINVAL;
+        if (cmd == CPM_PEER_ATTACH && ((p.offset & (PAGE_SIZE - 1)) ||
+            p.offset >= c->cfg.device_bytes)) return -EINVAL;
+        mmap_write_lock(current->mm);
+        vma = find_vma(current->mm, p.address);
+        if (!vma || vma != c->owner_vma || p.address < vma->vm_start ||
+            p.address + PAGE_SIZE > vma->vm_end ||
+            ((p.address - vma->vm_start) >> PAGE_SHIFT) != p.first) {
+            ret = -EINVAL; goto peer_unlock_mm;
+        }
+        mutex_lock(&c->lock);
+        /* The cooperative donor has locked the clean folio; consumer owns a
+         * complete read buffer, synchronous I/O only. Revoke stale writable
+         * PTEs/EPT before exposing the frame. No RAM walk or payload copy. */
+        zap_vma_ptes(vma, p.address, PAGE_SIZE);
+        if (cmd == CPM_PEER_PUBLISH) p.offset = c->map[p.first].offset;
+        if (!(c->map[p.first].flags & CPM_SHARED)) c->state->shared_pages++;
+        c->map[p.first].offset = p.offset;
+        c->map[p.first].flags = CPM_SHARED;
+        c->state->generation++;
+        mutex_unlock(&c->lock);
+peer_unlock_mm:
+        mmap_write_unlock(current->mm);
+        if (!ret && copy_to_user(user, &p, sizeof(p))) ret = -EFAULT;
+        return ret;
+    }
     if (cmd == CPM_STATUS || cmd == CPM_SEAL || cmd == CPM_RETIRE) {
         struct cpm_handle h;
         if (!c->header) return -EOPNOTSUPP;

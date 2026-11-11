@@ -150,4 +150,13 @@ struct guest_pool_release {
 #define GUEST_POOL_RELEASE _IOWR('G', 0x72, struct guest_pool_release)
 #define GUEST_POOL_STATUS _IOR('G', 0x73, struct guest_pool_status)
 
+/* Functional peer-cache prototype: one resident page, pinned until FD close.
+ * No disk read on miss. Not compatible with a PREPARE session. */
+struct guest_pool_lookup {
+	__s32 fd;
+	__u32 found;
+	__u64 file_page, disk_offset, gpa;
+};
+#define GUEST_POOL_LOOKUP _IOWR('G', 0x74, struct guest_pool_lookup)
+
 #endif

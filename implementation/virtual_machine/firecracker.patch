@@ -1222,7 +1222,7 @@ index c4801646a..1faf62483 100644
      pub fn setup_irqchip(&self) -> Result<(), KvmVmError> {
          self.fd()
 diff --git a/src/vmm/src/builder.rs b/src/vmm/src/builder.rs
-index bcb0e027a..512cbc743 100644
+index bcb0e027a..f2acfce83 100644
 --- a/src/vmm/src/builder.rs
 +++ b/src/vmm/src/builder.rs
 @@ -42,7 +42,7 @@ use crate::initrd::{InitrdConfig, InitrdError};
@@ -1234,7 +1234,16 @@ index bcb0e027a..512cbc743 100644
  use crate::resources::VmResources;
  use crate::seccomp::BpfThreadMap;
  use crate::snapshot::Persist;
-@@ -146,6 +146,10 @@ pub fn build_microvm_for_boot(
+@@ -91,6 +91,8 @@ pub enum StartMicrovmError {
+     Initrd(#[from] InitrdError),
+     /// Internal error while starting microVM: {0}
+     Internal(#[from] VmmError),
++    /// Peer cache initialization failed: {0}
++    PeerCache(std::io::Error),
+     /// Failed to get CPU template: {0}
+     GetCpuTemplate(#[from] GetCpuTemplateError),
+     /// Invalid kernel command line: {0}
+@@ -146,6 +148,10 @@ pub fn build_microvm_for_boot(
      event_manager: &mut EventManager,
      seccomp_filters: &BpfThreadMap,
  ) -> Result<Arc<Mutex<Vmm>>, StartMicrovmError> {
@@ -1244,8 +1253,16 @@ index bcb0e027a..512cbc743 100644
 +    }
      // Timestamp for measuring microVM boot duration.
      let request_ts = TimestampUs::default();
- 
-@@ -325,10 +329,16 @@ pub fn build_microvm_for_boot(
+
+@@ -211,6 +217,7 @@ pub fn build_microvm_for_boot(
+     )?;
+
+     let guest_memory = kvm_vm.guest_memory();
++    crate::peer_cache::initialize(guest_memory).map_err(StartMicrovmError::PeerCache)?;
+     let entry_point = load_kernel(&boot_config.kernel_file, guest_memory)?;
+     let initrd = InitrdConfig::from_config(boot_config, guest_memory)?;
+
+@@ -325,10 +332,16 @@ pub fn build_microvm_for_boot(
          machine_config: vm_resources.machine_config.clone(),
          boot_source_config: vm_resources.boot_source.config.clone(),
          shutdown_exit_code: None,
@@ -1259,10 +1276,10 @@ index bcb0e027a..512cbc743 100644
 +    if std::env::var_os("FC_DAX_HEAP").is_some() {
 +        crate::logger::info!("DAX_VMM_OBJECT name=Vmm addr={:p}", Arc::as_ptr(&vmm));
 +    }
- 
+
      #[cfg(feature = "gdb")]
      let (gdb_tx, gdb_rx) = mpsc::channel();
-@@ -379,6 +389,12 @@ pub fn build_and_boot_microvm(
+@@ -379,6 +392,12 @@ pub fn build_and_boot_microvm(
      debug!("event_start: build microvm for boot");
      let vmm = build_microvm_for_boot(instance_info, vm_resources, event_manager, seccomp_filters)?;
      debug!("event_end: build microvm for boot");
@@ -1275,7 +1292,7 @@ index bcb0e027a..512cbc743 100644
      // The vcpus start off in the `Paused` state, let them run.
      debug!("event_start: boot microvm");
      vmm.lock().unwrap().resume_vm()?;
-@@ -434,21 +450,42 @@ pub fn build_microvm_from_snapshot(
+@@ -434,21 +453,42 @@ pub fn build_microvm_from_snapshot(
      vm_resources: &mut VmResources,
      clock_realtime: bool,
  ) -> Result<Arc<Mutex<Vmm>>, BuildMicrovmFromSnapshotError> {
@@ -1298,7 +1315,7 @@ index bcb0e027a..512cbc743 100644
      // Build Vmm.
      debug!("event_start: build microvm from snapshot");
 +    let mut timing = RestoreTiming::new("build");
- 
+
      let kvm = Kvm::new(microvm_state.kvm_state.kvm_cap_modifiers.clone())
          .map_err(StartMicrovmError::Kvm)?;
 +    timing.mark("kvm_open_capabilities");
@@ -1306,22 +1323,22 @@ index bcb0e027a..512cbc743 100644
      // Build custom CPU config if a custom template is provided.
      let mut vm = KvmVm::new(kvm).map_err(StartMicrovmError::KvmVm)?;
 +    timing.mark("vm_create");
- 
+
      let mut vcpus = vm
          .create_vcpus(vm_resources.machine_config.vcpu_count)
          .map_err(StartMicrovmError::KvmVm)?;
- 
+
 +    timing.mark("vcpus_create");
      vm.restore_memory_regions(guest_memory, &microvm_state.vm_state.memory)
          .map_err(StartMicrovmError::KvmVm)?;
 +    timing.mark("register_memory_slots");
- 
+
      #[cfg(target_arch = "x86_64")]
      {
-@@ -464,13 +501,20 @@ pub fn build_microvm_from_snapshot(
+@@ -464,13 +504,20 @@ pub fn build_microvm_from_snapshot(
          }
      }
- 
+
 +    timing.mark("tsc_scaling");
      // Restore vcpus kvm state.
      for (vcpu, state) in vcpus.iter_mut().zip(microvm_state.vcpu_states.iter()) {
@@ -1336,23 +1353,23 @@ index bcb0e027a..512cbc743 100644
 +        }
      }
 +    timing.mark("vcpu_state_restore");
- 
+
      #[cfg(target_arch = "aarch64")]
      {
-@@ -485,6 +529,7 @@ pub fn build_microvm_from_snapshot(
+@@ -485,6 +532,7 @@ pub fn build_microvm_from_snapshot(
      // Restore kvm vm state.
      #[cfg(target_arch = "x86_64")]
      vm.restore_state(&microvm_state.vm_state, clock_realtime)?;
 +    timing.mark("vm_irq_clock_restore");
- 
+
      // Restore the boot source config paths.
      vm_resources.boot_source.config = microvm_state.vm_info.boot_source;
-@@ -509,12 +554,16 @@ pub fn build_microvm_from_snapshot(
+@@ -509,12 +557,16 @@ pub fn build_microvm_from_snapshot(
      #[allow(unused_mut)]
      let mut device_manager =
          DeviceManager::restore(device_ctor_args, &microvm_state.device_states)?;
 +    timing.mark("devices_restore");
- 
+
      let vmm = Vmm {
          instance_info: instance_info.clone(),
          machine_config: vm_resources.machine_config.clone(),
@@ -1364,23 +1381,23 @@ index bcb0e027a..512cbc743 100644
          vm,
          device_manager,
      };
-@@ -527,12 +576,15 @@ pub fn build_microvm_from_snapshot(
+@@ -527,12 +579,15 @@ pub fn build_microvm_from_snapshot(
              .ok_or(BuildMicrovmFromSnapshotError::MissingVcpuSeccompFilters)?
              .clone(),
      )?;
 +    timing.mark("vcpu_threads_start");
- 
+
      let vmm = Arc::new(Mutex::new(vmm));
      vmm.lock().unwrap().instance_info.state = VmState::Paused;
      event_manager.add_subscriber(vmm.clone());
 +    timing.mark("event_loop_registration");
- 
+
      debug!("event_end: build microvm from snapshot");
 +    timing.finish();
- 
+
      Ok(vmm)
  }
-@@ -853,6 +905,9 @@ pub(crate) mod tests {
+@@ -853,6 +908,9 @@ pub(crate) mod tests {
              machine_config: MachineConfig::default(),
              boot_source_config: BootSourceConfig::default(),
              shutdown_exit_code: None,
@@ -1390,7 +1407,7 @@ index bcb0e027a..512cbc743 100644
              vm: Vm::Kvm(Arc::new(vm)),
              device_manager: default_device_manager(),
          }
-@@ -871,6 +926,9 @@ pub(crate) mod tests {
+@@ -871,6 +929,9 @@ pub(crate) mod tests {
              machine_config: MachineConfig::default(),
              boot_source_config: BootSourceConfig::default(),
              shutdown_exit_code: None,
@@ -2015,7 +2032,7 @@ index 6637d196e..13a129b81 100644
          if state.virtio_state.activated && balloon.stats_enabled() {
              // Restore the stats descriptor.
 diff --git a/src/vmm/src/devices/virtio/block/virtio/device.rs b/src/vmm/src/devices/virtio/block/virtio/device.rs
-index 78c1adde8..dbdd2e435 100644
+index 78c1adde8..a1d7d1d7f 100644
 --- a/src/vmm/src/devices/virtio/block/virtio/device.rs
 +++ b/src/vmm/src/devices/virtio/block/virtio/device.rs
 @@ -59,13 +59,27 @@ pub enum FileEngineType {
@@ -2028,7 +2045,7 @@ index 78c1adde8..dbdd2e435 100644
      pub nsectors: u64,
      pub image_id: [u8; VIRTIO_BLK_ID_BYTES as usize],
  }
- 
+
 +fn prepared_disk() -> &'static std::sync::Mutex<Option<DiskProperties>> {
 +    static DISK: std::sync::OnceLock<std::sync::Mutex<Option<DiskProperties>>> = std::sync::OnceLock::new();
 +    DISK.get_or_init(|| std::sync::Mutex::new(None))
@@ -2046,10 +2063,13 @@ index 78c1adde8..dbdd2e435 100644
      // Helper function that opens the file with the proper access permissions
      fn open_file(disk_image_path: &str, is_disk_read_only: bool) -> Result<File, VirtioBlockError> {
          OpenOptions::new()
-@@ -100,14 +114,45 @@ impl DiskProperties {
+@@ -100,14 +114,48 @@ impl DiskProperties {
          is_disk_read_only: bool,
          file_engine_type: FileEngineType,
      ) -> Result<Self, VirtioBlockError> {
++        if crate::peer_cache::enabled() && (!is_disk_read_only || file_engine_type != FileEngineType::Sync) {
++            return Err(VirtioBlockError::BackingFile(std::io::Error::other("peer prototype requires read-only synchronous drives"), disk_image_path));
++        }
 +        if crate::direct::resident_enabled() {
 +            let mut prepared = prepared_disk().lock().unwrap();
 +            if let Some(disk) = prepared.as_ref() {
@@ -2086,7 +2106,7 @@ index 78c1adde8..dbdd2e435 100644
 +            .map_err(VirtioBlockError::FileEngine)?;
 +        timing.mark("file_engine");
 +        timing.finish();
- 
+
          Ok(Self {
 +            pool_identity,
              file_path: disk_image_path,
@@ -2096,15 +2116,15 @@ index 78c1adde8..dbdd2e435 100644
              nsectors: disk_size >> SECTOR_SHIFT,
              image_id,
          })
-@@ -122,6 +167,7 @@ impl DiskProperties {
+@@ -122,6 +170,7 @@ impl DiskProperties {
          let mut disk_image = Self::open_file(&disk_image_path, is_disk_read_only)?;
          let disk_size = Self::file_size(&disk_image_path, &mut disk_image)?;
- 
+
 +        self.pool_identity = None; // A changed backing needs a fresh verified identity.
          self.image_id = Self::build_disk_image_id(&disk_image);
          self.file_engine
              .update_file_path(disk_image)
-@@ -162,6 +208,14 @@ impl DiskProperties {
+@@ -162,6 +211,14 @@ impl DiskProperties {
          }
          default_id
      }
@@ -2117,9 +2137,9 @@ index 78c1adde8..dbdd2e435 100644
 +        bytes
 +    }
  }
- 
+
  /// Internal type to store attributes of the block device
-@@ -403,6 +457,8 @@ pub struct VirtioBlock {
+@@ -403,6 +460,8 @@ pub struct VirtioBlock {
      pub disk: DiskProperties,
      pub rate_limiter: RateLimiter,
      pub is_io_engine_throttled: bool,
@@ -2127,8 +2147,8 @@ index 78c1adde8..dbdd2e435 100644
 +    pub(crate) snapshot_prepare_error: Option<String>,
      pub metrics: Arc<BlockDeviceMetrics>,
  }
- 
-@@ -504,6 +560,7 @@ impl VirtioBlock {
+
+@@ -504,6 +563,7 @@ impl VirtioBlock {
              disk: disk_properties,
              rate_limiter,
              is_io_engine_throttled: false,
@@ -2136,15 +2156,15 @@ index 78c1adde8..dbdd2e435 100644
              metrics: BlockMetricsPerDevice::alloc(config.drive_id),
          })
      }
-@@ -744,11 +801,23 @@ impl VirtioBlock {
- 
+@@ -744,11 +804,23 @@ impl VirtioBlock {
+
      /// Prepare device for being snapshotted.
      pub fn prepare_save(&mut self) {
 +        self.snapshot_prepare_error = None;
          if !self.is_activated() {
              return;
          }
- 
+
 -        self.drain_and_flush(false);
 +        // Persist::save is infallible. Retain a failure so Vmm::save_state can
 +        // reject the checkpoint before serializing it or collecting CPU state.
@@ -2161,8 +2181,8 @@ index 78c1adde8..dbdd2e435 100644
          if let FileEngine::Async(ref _engine) = self.disk.file_engine {
              self.process_async_completion_queue();
          }
-@@ -985,8 +1054,9 @@ mod tests {
- 
+@@ -985,8 +1057,9 @@ mod tests {
+
              assert_eq!(size, u64::from(SECTOR_SIZE) * num_sectors);
              assert_eq!(disk_properties.nsectors, num_sectors);
 -            // Testing `backing_file.virtio_block_disk_image_id()` implies
@@ -2170,13 +2190,13 @@ index 78c1adde8..dbdd2e435 100644
 +            // The single-metadata path must preserve the ID exposed by the
 +            // existing disk-update path, including truncation to virtio's ID.
 +            assert_eq!(disk_properties.image_id, DiskProperties::build_disk_image_id(f.as_file()));
- 
+
              let res = DiskProperties::new("invalid-disk-path".to_string(), true, engine);
              assert!(
-@@ -1968,6 +2038,29 @@ mod tests {
+@@ -1968,6 +2041,29 @@ mod tests {
          }
      }
- 
+
 +    #[test]
 +    fn test_prepare_save_flush_failure_is_reported_and_retryable() {
 +        for engine in [FileEngineType::Sync, FileEngineType::Async] {
@@ -2203,12 +2223,12 @@ index 78c1adde8..dbdd2e435 100644
      #[test]
      fn test_prepare_save() {
          for engine in [FileEngineType::Sync, FileEngineType::Async] {
-@@ -1983,6 +2076,7 @@ mod tests {
+@@ -1983,6 +2079,7 @@ mod tests {
              add_flush_requests_batch(&mut block, &vq, 5);
              simulate_queue_event(&mut block, None);
              block.prepare_save();
 +            assert!(block.snapshot_prepare_error.is_none());
- 
+
              // Check that all the pending flush requests were processed during `prepare_save()`.
              check_flush_requests_batch(5, &vq);
 diff --git a/src/vmm/src/devices/virtio/block/virtio/io/async_io.rs b/src/vmm/src/devices/virtio/block/virtio/io/async_io.rs
@@ -2266,11 +2286,11 @@ index 493c487bb..75154340f 100644
          })
      }
 diff --git a/src/vmm/src/devices/virtio/block/virtio/request.rs b/src/vmm/src/devices/virtio/block/virtio/request.rs
-index a6f5813ce..18bed9cca 100644
+index a6f5813ce..56e0975ab 100644
 --- a/src/vmm/src/devices/virtio/block/virtio/request.rs
 +++ b/src/vmm/src/devices/virtio/block/virtio/request.rs
 @@ -96,6 +96,8 @@ impl Status {
- 
+
  #[derive(Debug)]
  pub struct PendingRequest {
 +    pool_hint: Option<(String, u64, u64)>,
@@ -2289,7 +2309,7 @@ index a6f5813ce..18bed9cca 100644
                  status
              }
 @@ -425,6 +430,8 @@ impl Request {
- 
+
      fn to_pending_request(&self, desc_idx: u16) -> PendingRequest {
          PendingRequest {
 +            pool_hint: None,
@@ -2297,7 +2317,7 @@ index a6f5813ce..18bed9cca 100644
              r#type: self.r#type,
              data_len: self.data_len,
              status_addr: self.status_addr,
-@@ -440,7 +447,14 @@ impl Request {
+@@ -440,12 +447,36 @@ impl Request {
          block_metrics: &BlockDeviceMetrics,
          discard_supported: bool,
      ) -> ProcessingResult {
@@ -2313,10 +2333,34 @@ index a6f5813ce..18bed9cca 100644
          let res = match self.r#type {
              RequestType::In => {
                  let _metric = block_metrics.read_agg.record_latency_metrics();
-@@ -510,9 +524,36 @@ mod tests {
- 
+-                disk.file_engine
+-                    .read(self.offset(), mem, self.data_addr, self.data_len, pending)
++                if crate::peer_cache::enabled() {
++                    match crate::peer_cache::read(mem, disk.pool_identity.as_deref(), self.offset(),
++                        self.data_addr.0, self.data_len, self.status_addr.0) {
++                        Ok(true) => return ProcessingResult::Executed(pending.finish(mem, Ok(self.data_len), block_metrics)),
++                        Err(err) => { panic!("peer mapping failed: {err}"); }
++                        Ok(false) => {}
++                    }
++                    if crate::peer_cache::backend_denied(self.offset()) {
++                        eprintln!("PEER_BACKEND_DENIED offset={}", self.offset());
++                        return ProcessingResult::Executed(pending.finish(mem,
++                            Err(IoErr::UnsupportedRequest(VIRTIO_BLK_T_IN)), block_metrics));
++                    }
++                    eprintln!("PEER_BACKEND_READ offset={} bytes={}", self.offset(), self.data_len);
++                }
++                let start = crate::peer_cache::profile_start();
++                let result = disk.file_engine
++                    .read(self.offset(), mem, self.data_addr, self.data_len, pending);
++                crate::peer_cache::profile_backend(self.offset(), self.data_len, start);
++                result
+             }
+             RequestType::Out => {
+                 let _metric = block_metrics.write_agg.record_latency_metrics();
+@@ -510,9 +541,36 @@ mod tests {
+
      const NUM_DISK_SECTORS: u64 = 1024;
- 
+
 +    #[test]
 +    fn pool_cache_hints_require_complete_successful_read() {
 +        let mem = default_mem();
@@ -3171,20 +3215,21 @@ index 000000000..aacc566f3
 +    }
 +}
 diff --git a/src/vmm/src/lib.rs b/src/vmm/src/lib.rs
-index 41b7b8d69..a4123c7e7 100644
+index 41b7b8d69..5db75baf2 100644
 --- a/src/vmm/src/lib.rs
 +++ b/src/vmm/src/lib.rs
-@@ -78,6 +78,9 @@ pub mod builder;
+@@ -78,6 +78,10 @@ pub mod builder;
  /// Types for guest configuration.
  pub mod cpu_config;
  pub(crate) mod device_manager;
 +#[cfg(target_arch = "x86_64")]
 +pub(crate) mod direct;
 +pub(crate) mod pool_memory;
++pub(crate) mod peer_cache;
  /// Emulates virtual and hardware devices.
  #[allow(missing_docs)]
  pub mod devices;
-@@ -96,6 +99,9 @@ pub mod pci;
+@@ -96,6 +100,9 @@ pub mod pci;
  pub mod persist;
  /// Resource store for configured microVM resources.
  pub mod resources;
@@ -3194,17 +3239,17 @@ index 41b7b8d69..a4123c7e7 100644
  /// microVM RPC API adapters.
  pub mod rpc_interface;
  /// Seccomp filter utilities.
-@@ -169,6 +175,9 @@ pub use crate::vstate::vm::{StartVcpusError, Vm};
- 
+@@ -169,6 +176,9 @@ pub use crate::vstate::vm::{StartVcpusError, Vm};
+
  /// Shorthand type for the EventManager flavour used by Firecracker.
  pub type EventManager = BaseEventManager<Arc<Mutex<dyn MutEventSubscriber>>>;
 +/// Last laboratory control durations: vCPU channel, DAX ioctl, IRQFD binding.
 +pub static DAX_CONTROL_TIMINGS: [std::sync::atomic::AtomicU64; 3] =
 +    [const { std::sync::atomic::AtomicU64::new(0) }; 3];
- 
+
  // Since the exit code names e.g. `SIGBUS` are most appropriate yet trigger a test error with the
  // clippy lint `upper_case_acronyms` we have disabled this lint for this enum.
-@@ -217,6 +226,16 @@ pub const HTTP_MAX_PAYLOAD_SIZE: usize = 51200;
+@@ -217,6 +227,16 @@ pub const HTTP_MAX_PAYLOAD_SIZE: usize = 51200;
  /// have permissions to open the KVM fd).
  #[derive(Debug, thiserror::Error, displaydoc::Display)]
  pub enum VmmError {
@@ -3221,7 +3266,7 @@ index 41b7b8d69..a4123c7e7 100644
      #[cfg(target_arch = "aarch64")]
      /// Invalid command line error.
      Cmdline,
-@@ -303,6 +322,10 @@ pub struct Vmm {
+@@ -303,6 +323,10 @@ pub struct Vmm {
      pub machine_config: MachineConfig,
      boot_source_config: BootSourceConfig,
      shutdown_exit_code: Option<FcExitCode>,
@@ -3229,11 +3274,11 @@ index 41b7b8d69..a4123c7e7 100644
 +    reuse_restore_failed: bool,
 +    #[cfg(target_arch = "x86_64")]
 +    reuse_prepared: Option<reuse::ReusePrepared>,
- 
+
      /// VM object.
      pub vm: Vm,
-@@ -461,23 +484,150 @@ impl Vmm {
- 
+@@ -461,23 +485,150 @@ impl Vmm {
+
      /// Sends a resume command to the vCPUs.
      pub fn resume_vm(&mut self) -> Result<(), VmmError> {
 +        crate::pool_memory::check_execution_owner().map_err(VmmError::PoolCache)?;
@@ -3274,7 +3319,7 @@ index 41b7b8d69..a4123c7e7 100644
          self.instance_info.state = VmState::Running;
          Ok(())
      }
- 
+
 +    /// Reject unsupported direct devices before changing vCPU or IRQFD state.
 +    #[cfg(target_arch = "x86_64")]
 +    pub(crate) fn check_direct_handoff_configuration(&self) -> Result<(), VmmError> {
@@ -3385,8 +3430,8 @@ index 41b7b8d69..a4123c7e7 100644
          self.instance_info.state = VmState::Paused;
          Ok(())
      }
-@@ -498,6 +648,15 @@ impl Vmm {
- 
+@@ -498,6 +649,15 @@ impl Vmm {
+
      /// Saves the state of a paused Microvm.
      pub fn save_state(&mut self, vm_info: &VmInfo) -> Result<MicrovmState, MicrovmStateError> {
 +        if pool_cache::mapping_failed() {
@@ -3399,9 +3444,9 @@ index 41b7b8d69..a4123c7e7 100644
 +        }
 +        let mut timing = persist::RestoreTiming::new("save_state");
          self.check_unsnapshottable_devices()?;
- 
+
          // We need to save device state before saving KVM state.
-@@ -506,11 +665,18 @@ impl Vmm {
+@@ -506,11 +666,18 @@ impl Vmm {
          // state before we save device state, that interrupt will never be delivered to the guest
          // upon resuming from the snapshot.
          let device_states = self.device_manager.save();
@@ -3421,13 +3466,13 @@ index 41b7b8d69..a4123c7e7 100644
          let kvm_state = kvm_vm.kvm().save_state();
          let vm_state = {
              #[cfg(target_arch = "x86_64")]
-@@ -528,6 +694,8 @@ impl Vmm {
+@@ -528,6 +695,8 @@ impl Vmm {
                      .map_err(MicrovmStateError::SaveVmState)?
              }
          };
 +        timing.mark("kvm_vm_state");
 +        timing.finish();
- 
+
          Ok(MicrovmState {
              vm_info: vm_info.clone(),
 diff --git a/src/vmm/src/persist.rs b/src/vmm/src/persist.rs
@@ -7719,3 +7764,742 @@ index cfa847092..353f404ba 100644
              },
              SerialOut::new(SerialOutInner::Stdout(std::io::stdout()), None),
          ),
+diff --git a/src/vmm/src/peer_cache.rs b/src/vmm/src/peer_cache.rs
+new file mode 100644
+index 000000000..77ab91f3b
+--- /dev/null
++++ b/src/vmm/src/peer_cache.rs
+@@ -0,0 +1,733 @@
++// SPDX-License-Identifier: Apache-2.0
++//! Opt-in functional experiment: static CXL VMs, immortal donor folios.
++//! No image prefill, tier changes, handoff, reclamation, or async block I/O.
++//! Dedicated persistent virtio-vsock guest RPC and reusable bounded TCP.
++use crate::vstate::memory::{GuestMemoryExtension, GuestMemoryMmap};
++use serde::{Deserialize, Serialize};
++use serde_json::{json, Value};
++use std::fs::{File, OpenOptions};
++use std::io::{self, BufRead, BufReader, Read, Seek, SeekFrom, Write};
++use std::net::{SocketAddr, TcpListener, TcpStream};
++use std::os::fd::AsRawFd;
++use std::os::unix::net::UnixStream;
++use std::sync::atomic::{AtomicUsize, Ordering};
++use std::sync::{Mutex, OnceLock};
++use std::time::{Duration, Instant};
++use vm_memory::{Address, GuestAddress, GuestMemoryBackend, GuestMemoryRegion};
++
++const PAGE: u64 = 4096;
++#[derive(Deserialize)]
++#[serde(deny_unknown_fields)]
++struct Config {
++    image_id: String,
++    listen: SocketAddr,
++    peer: Option<SocketAddr>,
++    ram_offset: u64,
++    credit_offset: u64,
++    credit_pages: u64,
++    bloom_offset: u64,
++    // Frozen immutable-file extent identity, [file offset, image offset, length].
++    extents: Vec<[u64; 3]>,
++    input: String,
++    log: String,
++    // None selects the old serial path only for controlled ablation.
++    #[serde(default)]
++    guest_socket: Option<String>,
++    #[serde(default = "default_true")]
++    reuse_tcp: bool,
++    #[serde(default)]
++    deny_backend: Vec<u64>,
++}
++fn default_true() -> bool { true }
++#[repr(C)]
++struct Entry {
++    offset: u64,
++    flags: u64,
++}
++#[repr(C)]
++struct MapperConfig {
++    abi: u64,
++    phys_base: u64,
++    device_bytes: u64,
++    canonical_start: u64,
++    canonical_bytes: u64,
++    count: u64,
++    entries: u64,
++    credit_count: u64,
++    credits: u64,
++}
++#[repr(C)]
++struct PageMap {
++    address: u64,
++    first: u64,
++    offset: u64,
++}
++#[repr(C)]
++#[derive(Default, Serialize)]
++struct Pte {
++    pfn: u64,
++    flags: u64,
++}
++#[repr(C)]
++struct Audit {
++    address: u64,
++    count: u64,
++    ptes: u64,
++}
++struct State {
++    config: Config,
++    mapper: File,
++    base: usize,
++    bytes: u64,
++    device_bytes: u64,
++    bloom: usize,
++    sequence: Mutex<u64>,
++    guest_link: Mutex<Option<UnixStream>>,
++    peer_link: Mutex<PeerLink>,
++}
++static STATE: OnceLock<State> = OnceLock::new();
++pub(crate) fn profile_start() -> Option<Instant> {
++    static PROFILE: OnceLock<bool> = OnceLock::new();
++    PROFILE.get_or_init(|| std::env::var_os("FC_PEER_PROFILE").is_some())
++        .then(Instant::now)
++}
++fn elapsed(start: Option<Instant>) -> u64 {
++    start.map_or(0, |v| v.elapsed().as_nanos() as u64)
++}
++#[derive(Default, Serialize)]
++struct Timing {
++    offset: u64,
++    path: &'static str,
++    bloom_ns: u64,
++    connect_ns: u64,
++    tcp_connects: u64,
++    tcp_retries: u64,
++    rpc_ns: u64,
++    donor_rpc_ns: u64,
++    guest_connect_ns: u64,
++    donor_ioctl_ns: u64,
++    publish_ns: u64,
++    attach_ns: u64,
++    total_ns: u64,
++    #[serde(skip)]
++    start: Option<Instant>,
++}
++impl Drop for Timing {
++    fn drop(&mut self) {
++        if self.start.is_some() {
++            self.total_ns = elapsed(self.start);
++            eprintln!("PEER_LATENCY {}", serde_json::to_string(self).unwrap());
++        }
++    }
++}
++pub(crate) fn profile_backend(offset: u64, bytes: u32, start: Option<Instant>) {
++    if start.is_some() {
++        let ns = elapsed(start);
++        eprintln!("PEER_BACKEND_LATENCY {}", json!({"offset":offset,"bytes":bytes,"backend_ns":ns}));
++    }
++}
++fn invalid(s: &str) -> io::Error {
++    io::Error::new(io::ErrorKind::InvalidInput, s)
++}
++fn ioctl<T>(fd: &File, nr: u8, read: bool, arg: &mut T) -> io::Result<()> {
++    let cmd = 0x40000000u64
++        | if read { 0x80000000 } else { 0 }
++        | ((std::mem::size_of::<T>() as u64) << 16)
++        | (u64::from(b'P') << 8)
++        | u64::from(nr);
++    if unsafe { libc::ioctl(fd.as_raw_fd(), cmd as _, arg) } < 0 {
++        Err(io::Error::last_os_error())
++    } else {
++        Ok(())
++    }
++}
++fn geometry() -> io::Result<(u64, u64)> {
++    let read = |field: &str| -> io::Result<u64> {
++        let text = std::fs::read_to_string(format!("/sys/bus/dax/devices/dax0.0/{field}"))?;
++        let s = text.trim();
++        if let Some(h) = s.strip_prefix("0x") {
++            u64::from_str_radix(h, 16)
++        } else {
++            s.parse()
++        }
++        .map_err(io::Error::other)
++    };
++    if read("align")? != PAGE {
++        return Err(invalid("peer requires 4KiB DAX"));
++    }
++    Ok((read("resource")?, read("size")?))
++}
++pub(crate) fn initialize(mem: &GuestMemoryMmap) -> io::Result<()> {
++    let Ok(path) = std::env::var("FC_PEER_CACHE_CONFIG") else {
++        return Ok(());
++    };
++    if STATE.get().is_some()
++        || crate::pool_memory::enabled()
++        || std::env::var("FC_DAX_RAM").as_deref() != Ok("/dev/dax0.0")
++        || std::env::var_os("FC_DAX_DIRECT").is_some()
++    {
++        return Err(invalid("peer static-tier mode only"));
++    }
++    let config: Config = serde_json::from_reader(File::open(path)?)?;
++    if config.image_id.len() != 64 || !config.image_id.bytes().all(|b| b.is_ascii_hexdigit()) {
++        return Err(invalid("image identity"));
++    }
++    let region = mem.iter().next().ok_or_else(|| invalid("RAM missing"))?;
++    if mem.iter().count() != 1 || region.start_addr().raw_value() != 0 || region.len() % PAGE != 0 {
++        return Err(invalid("peer needs one aligned RAM region"));
++    }
++    let bytes = region.len();
++    let base = region.as_ptr() as usize;
++    let (phys, device_bytes) = geometry()?;
++    let ranges = [
++        (config.ram_offset, bytes),
++        (
++            config.credit_offset,
++            config
++                .credit_pages
++                .checked_mul(PAGE)
++                .ok_or_else(|| invalid("credits overflow"))?,
++        ),
++        (config.bloom_offset, PAGE),
++    ];
++    if config.credit_pages == 0
++        || config.credit_pages > 1 << 20
++        || bytes / PAGE > 1 << 20
++        || std::env::var("FC_DAX_OFFSET")
++            .ok()
++            .and_then(|s| s.parse::<u64>().ok())
++            != Some(config.ram_offset)
++    {
++        return Err(invalid("RAM/credit configuration"));
++    }
++    for (i, (start, len)) in ranges.iter().enumerate() {
++        if start % PAGE != 0 || *start > device_bytes || *len > device_bytes - start {
++            return Err(invalid("DAX range"));
++        }
++        for (s, l) in &ranges[..i] {
++            if *start < s + l && *s < start + len {
++                return Err(invalid("overlapping DAX ranges"));
++            }
++        }
++    }
++    let entries: Vec<_> = (0..bytes / PAGE)
++        .map(|i| Entry {
++            offset: config.ram_offset + i * PAGE,
++            flags: 0,
++        })
++        .collect();
++    let credits: Vec<_> = (0..config.credit_pages)
++        .map(|i| config.credit_offset + i * PAGE)
++        .collect();
++    let mapper = OpenOptions::new()
++        .read(true)
++        .write(true)
++        .open("/dev/cxl_pool")?;
++    let mut cfg = MapperConfig {
++        abi: 1,
++        phys_base: phys,
++        device_bytes,
++        canonical_start: 0,
++        canonical_bytes: 0,
++        count: bytes / PAGE,
++        entries: entries.as_ptr() as u64,
++        credit_count: config.credit_pages,
++        credits: credits.as_ptr() as u64,
++    };
++    ioctl(&mapper, 0x70, false, &mut cfg)?;
++    let dax = OpenOptions::new()
++        .read(true)
++        .write(true)
++        .open("/dev/dax0.0")?;
++    let bloom = unsafe {
++        libc::mmap(
++            std::ptr::null_mut(),
++            PAGE as usize,
++            libc::PROT_READ | libc::PROT_WRITE,
++            libc::MAP_SHARED,
++            dax.as_raw_fd(),
++            config.bloom_offset as libc::off_t,
++        )
++    };
++    if bloom == libc::MAP_FAILED {
++        return Err(io::Error::last_os_error());
++    }
++    // Same existing private CXL frames. This bootstrap copies no guest RAM/image.
++    let mapped = unsafe {
++        libc::mmap(
++            base as *mut _,
++            bytes as usize,
++            libc::PROT_READ | libc::PROT_WRITE,
++            libc::MAP_SHARED | libc::MAP_FIXED,
++            mapper.as_raw_fd(),
++            0,
++        )
++    };
++    if mapped == libc::MAP_FAILED {
++        return Err(io::Error::last_os_error());
++    }
++    let listener = TcpListener::bind(config.listen)?;
++    STATE
++        .set(State {
++            config,
++            mapper,
++            base,
++            bytes,
++            device_bytes,
++            bloom: bloom as usize,
++            sequence: Mutex::new(0),
++            guest_link: Mutex::new(None),
++            peer_link: Mutex::new(PeerLink::default()),
++        })
++        .map_err(|_| invalid("peer initialized twice"))?;
++    std::thread::Builder::new()
++        .name("peer-cache".into())
++        .spawn(move || {
++            static CLIENTS: AtomicUsize = AtomicUsize::new(0);
++            struct Client;
++            impl Drop for Client {
++                fn drop(&mut self) { CLIENTS.fetch_sub(1, Ordering::Relaxed); }
++            }
++            for stream in listener.incoming().flatten() {
++                // Idle persistent peers must not block audit/advertise clients.
++                if CLIENTS.fetch_update(Ordering::Relaxed, Ordering::Relaxed,
++                    |n| (n < 16).then_some(n + 1)).is_err() { continue; }
++                if std::thread::Builder::new().name("peer-rpc".into()).spawn(move || {
++                    let _client = Client;
++                    let _ = stream.set_nodelay(true);
++                    let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
++                    let mut reader = BufReader::new(stream);
++                    loop {
++                        // Block on readiness while idle; bound reads after the first byte.
++                        let _ = reader.get_mut().set_read_timeout(None);
++                        if !matches!(reader.fill_buf(), Ok(bytes) if !bytes.is_empty()) { break; }
++                        let _ = reader.get_mut().set_read_timeout(Some(Duration::from_secs(2)));
++                        let Ok(request) = read_json(&mut reader) else { break; };
++                        let keep = request["keep_alive"] == true;
++                        let id = request["id"].clone();
++                        let mut answer = serve(STATE.get().unwrap(), request)
++                            .unwrap_or_else(|e| json!({"found":false,"error":e.to_string()}));
++                        if !id.is_null() { answer["id"] = id; }
++                        if write_json(reader.get_mut(), &answer).is_err() || !keep { break; }
++                    }
++                }).is_err() { CLIENTS.fetch_sub(1, Ordering::Relaxed); }
++            }
++        })?;
++    eprintln!("PEER_INIT ram_bytes={bytes} canonical_prefill_bytes=0");
++    Ok(())
++}
++fn read_json<R: BufRead>(reader: &mut R) -> io::Result<Value> {
++    let mut line = String::new();
++    reader.take(4096).read_line(&mut line)?;
++    if !line.ends_with('\n') {
++        return Err(invalid("peer message too long/incomplete"));
++    }
++    serde_json::from_str(&line).map_err(io::Error::other)
++}
++fn write_json(writer: &mut impl Write, value: &Value) -> io::Result<()> {
++    let mut bytes = serde_json::to_vec(value).map_err(io::Error::other)?;
++    bytes.push(b'\n');
++    writer.write_all(&bytes)
++}
++#[derive(Default)]
++struct PeerLink {
++    stream: Option<BufReader<TcpStream>>,
++    sequence: u64,
++}
++impl PeerLink {
++    fn lookup(&mut self, peer: SocketAddr, image: &str, offset: u64,
++              reuse: bool, timing: &mut Timing) -> io::Result<Value> {
++        self.sequence = self.sequence.checked_add(1).ok_or_else(|| invalid("RPC sequence exhausted"))?;
++        let id = self.sequence;
++        if !reuse { self.stream = None; }
++        let attempts = if self.stream.is_some() { 2 } else { 1 };
++        let mut error = invalid("peer unavailable");
++        for attempt in 0..attempts {
++            timing.tcp_retries = attempt;
++            let result = (|| {
++                if self.stream.is_none() {
++                    let start = profile_start();
++                    let stream = TcpStream::connect_timeout(&peer, Duration::from_millis(100))?;
++                    timing.connect_ns += elapsed(start);
++                    timing.tcp_connects += 1;
++                    stream.set_nodelay(true)?;
++                    stream.set_read_timeout(Some(Duration::from_secs(3)))?;
++                    stream.set_write_timeout(Some(Duration::from_secs(1)))?;
++                    self.stream = Some(BufReader::new(stream));
++                    eprintln!("PEER_TCP_CONNECT peer={peer}");
++                }
++                let stream = self.stream.as_mut().unwrap();
++                write_json(stream.get_mut(), &json!({"op":"lookup","id":id,
++                    "image":image,"offset":offset,"keep_alive":reuse}))?;
++                read_json(stream)
++            })();
++            match result {
++                Ok(answer) => {
++                    if answer["id"].as_u64() != Some(id) {
++                        self.stream = None;
++                        return Err(invalid("peer response ID mismatch"));
++                    }
++                    if !reuse { self.stream = None; }
++                    return Ok(answer);
++                }
++                Err(e) => { self.stream = None; error = e; }
++            }
++        }
++        Err(error)
++    }
++}
++fn bit_positions(image: &str, offset: u64) -> [usize; 7] {
++    let mut hash = 0xcbf29ce484222325u64;
++    for b in image.bytes().chain(offset.to_le_bytes()) {
++        hash = (hash ^ u64::from(b)).wrapping_mul(0x100000001b3);
++    }
++    std::array::from_fn(|i| {
++        let mut x = hash.wrapping_add((i as u64).wrapping_mul(0x9e3779b97f4a7c15));
++        x = (x ^ (x >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
++        x = (x ^ (x >> 27)).wrapping_mul(0x94d049bb133111eb);
++        ((x ^ (x >> 31)) % (PAGE * 8)) as usize
++    })
++}
++fn bloom(s: &State, offset: u64, insert: bool) -> bool {
++    bit_positions(&s.config.image_id, offset)
++        .iter()
++        .all(|bit| unsafe {
++            let ptr = (s.bloom + bit / 8) as *mut u8;
++            let mask = 1 << (bit % 8);
++            let old = std::ptr::read_volatile(ptr);
++            if insert {
++                std::ptr::write_volatile(ptr, old | mask);
++                true
++            } else {
++                old & mask != 0
++            }
++        })
++}
++fn map_page(s: &State, gpa: u64, offset: u64, publish: bool) -> io::Result<u64> {
++    if gpa % PAGE != 0 || gpa >= s.bytes {
++        return Err(invalid("unaligned/outside GPA"));
++    }
++    let mut p = PageMap {
++        address: s.base as u64 + gpa,
++        first: gpa / PAGE,
++        offset,
++    };
++    ioctl(&s.mapper, if publish { 0x7b } else { 0x7c }, true, &mut p)?;
++    Ok(p.offset)
++}
++fn file_page(s: &State, offset: u64) -> Option<u64> {
++    s.config.extents.iter().find_map(|[file, disk, len]| {
++        if offset >= *disk && offset.checked_add(PAGE)? <= disk.checked_add(*len)? {
++            Some((file + offset - disk) / PAGE)
++        } else {
++            None
++        }
++    })
++}
++const LOOKUP_MAGIC: u64 = 0x5043434800000001;
++fn decode_guest_reply(bytes: &[u8; 48], id: u64, offset: u64,
++                      timing: &mut Timing) -> io::Result<Option<u64>> {
++    let words: [u64; 6] = std::array::from_fn(|i|
++        u64::from_le_bytes(bytes[i*8..i*8+8].try_into().unwrap()));
++    if words[0] != LOOKUP_MAGIC || words[1] != id || words[4] != offset {
++        return Err(invalid("guest reply identity mismatch"));
++    }
++    timing.donor_ioctl_ns = words[5];
++    match words[2] {
++        0 => Ok(None),
++        1 if words[3] % PAGE == 0 => Ok(Some(words[3])),
++        _ => Err(invalid("guest lookup failed/invalid GPA")),
++    }
++}
++fn guest_lookup(s: &State, offset: u64, timing: &mut Timing) -> io::Result<Option<u64>> {
++    let Some(path) = &s.config.guest_socket else {
++        return guest_lookup_serial(s, offset, timing);
++    };
++    let Some(page) = file_page(s, offset) else { return Ok(None); };
++    let mut seq = s.sequence.lock().unwrap();
++    *seq = seq.checked_add(1).ok_or_else(|| invalid("guest sequence exhausted"))?;
++    let id = *seq;
++    let mut link = s.guest_link.lock().unwrap();
++    let result = (|| {
++        if link.is_none() {
++            let start = profile_start();
++            let mut stream = UnixStream::connect(path)?;
++            stream.set_read_timeout(Some(Duration::from_secs(2)))?;
++            stream.set_write_timeout(Some(Duration::from_secs(1)))?;
++            stream.write_all(b"CONNECT 19000\n")?;
++            let mut hello = String::new();
++            BufReader::new(&mut stream).take(64).read_line(&mut hello)?;
++            if !hello.ends_with('\n') || hello.strip_prefix("OK ")
++                .and_then(|v| v.trim_end().parse::<u32>().ok()).is_none() {
++                return Err(invalid("guest channel handshake"));
++            }
++            *link = Some(stream);
++            timing.guest_connect_ns = elapsed(start);
++            eprintln!("PEER_GUEST_CONNECT transport=vsock");
++        }
++        let stream = link.as_mut().unwrap();
++        let mut request = [0u8; 32];
++        for (i, value) in [LOOKUP_MAGIC, id, page, offset].iter().enumerate() {
++            request[i*8..i*8+8].copy_from_slice(&value.to_le_bytes());
++        }
++        stream.write_all(&request)?;
++        let mut answer = [0u8; 48];
++        stream.read_exact(&mut answer)?;
++        decode_guest_reply(&answer, id, offset, timing)
++    })();
++    // Drop a partial/timed-out stream so stale bytes cannot match a later request.
++    if result.is_err() { *link = None; }
++    result
++}
++fn guest_lookup_serial(s: &State, offset: u64, timing: &mut Timing) -> io::Result<Option<u64>> {
++    let Some(page) = file_page(s, offset) else {
++        return Ok(None);
++    };
++    let mut seq = s.sequence.lock().unwrap();
++    *seq += 1;
++    let id = *seq;
++    let mut log = File::open(&s.config.log)?;
++    log.seek(SeekFrom::End(0))?;
++    let mut input = OpenOptions::new()
++        .write(true)
++        .custom_flags(libc::O_NONBLOCK)
++        .open(&s.config.input)?;
++    writeln!(input, "lookup {id} {page} {offset}")?;
++    let started = Instant::now();
++    let mut buffered = String::new();
++    while started.elapsed() < Duration::from_secs(2) {
++        log.read_to_string(&mut buffered)?;
++        for line in buffered.lines() {
++            if let Ok(v) = serde_json::from_str::<Value>(line) {
++                if v["event"] == "peer_lookup" && v["id"].as_u64() == Some(id) {
++                    timing.donor_ioctl_ns = v["lookup_ns"].as_u64().unwrap_or(0);
++                    if v["ok"] != true {
++                        return Err(invalid("guest lookup failed"));
++                    }
++                    if v["found"].as_u64() == Some(0) {
++                        return Ok(None);
++                    }
++                    if v["disk_offset"].as_u64() != Some(offset) {
++                        return Err(invalid("guest block mismatch"));
++                    }
++                    return v["gpa"]
++                        .as_u64()
++                        .map(Some)
++                        .ok_or_else(|| invalid("guest GPA missing"));
++                }
++            }
++        }
++        std::thread::sleep(Duration::from_millis(1));
++    }
++    Err(io::Error::new(
++        io::ErrorKind::TimedOut,
++        "guest lookup timeout",
++    ))
++}
++use std::os::unix::fs::OpenOptionsExt;
++fn serve(s: &State, q: Value) -> io::Result<Value> {
++    if q["op"] == "audit" {
++        let gpa = q["gpa"].as_u64().ok_or_else(|| invalid("audit GPA"))?;
++        if gpa % PAGE != 0 || gpa >= s.bytes {
++            return Err(invalid("audit range"));
++        }
++        let mut pte = Pte::default();
++        let mut a = Audit {
++            address: s.base as u64 + gpa,
++            count: 1,
++            ptes: (&mut pte as *mut Pte) as u64,
++        };
++        ioctl(&s.mapper, 0x74, true, &mut a)?;
++        return Ok(json!({"pte":pte}));
++    }
++    if q["image"] != s.config.image_id {
++        return Ok(json!({"found":false}));
++    }
++    let offset = q["offset"]
++        .as_u64()
++        .ok_or_else(|| invalid("image offset"))?;
++    if offset % PAGE != 0 || !(q["op"] == "lookup" || q["op"] == "advertise") {
++        return Err(invalid("peer request"));
++    }
++    let mut timing = Timing { offset, path: "donor", ..Default::default() };
++    let start = profile_start();
++    let gpa = guest_lookup(s, offset, &mut timing)?;
++    timing.donor_rpc_ns = elapsed(start);
++    let Some(gpa) = gpa else {
++        eprintln!("PEER_DONOR_MISS offset={offset}");
++        let mut answer = json!({"found":false});
++        if start.is_some() { answer["timing"] = serde_json::to_value(&timing).unwrap(); }
++        return Ok(answer);
++    };
++    let start = profile_start();
++    let frame = map_page(s, gpa, 0, true)?;
++    timing.publish_ns = elapsed(start);
++    if q["op"] == "advertise" {
++        bloom(s, offset, true);
++    }
++    eprintln!("PEER_DONOR_HIT offset={offset} gpa={gpa} frame={frame}");
++    let mut answer = json!({"found":true,"offset":offset,"image":s.config.image_id,"frame":frame,"donor_gpa":gpa});
++    if start.is_some() { answer["timing"] = serde_json::to_value(&timing).unwrap(); }
++    Ok(answer)
++}
++// Return true only when a whole page was remapped. All failures before remap
++// fall back; an ioctl failure after possible mutation is fatal, never silently read over it.
++pub(crate) fn read(
++    mem: &GuestMemoryMmap,
++    image: Option<&str>,
++    offset: u64,
++    gpa: u64,
++    len: u32,
++    status: u64,
++) -> io::Result<bool> {
++    let Some(s) = STATE.get() else {
++        return Ok(false);
++    };
++    let Some(peer) = s.config.peer else {
++        return Ok(false);
++    };
++    if image != Some(s.config.image_id.as_str())
++        || len != 4096
++        || gpa % PAGE != 0
++        || offset % PAGE != 0
++        || gpa >= s.bytes
++        || status / PAGE == gpa / PAGE
++        || file_page(s, offset).is_none()
++    {
++        return Ok(false);
++    }
++    let mut timing = Timing { offset, path: "bloom_negative", start: profile_start(), ..Default::default() };
++    let start = profile_start();
++    let present = bloom(s, offset, false);
++    timing.bloom_ns = elapsed(start);
++    if !present {
++        eprintln!("PEER_BLOOM_NEGATIVE offset={offset}");
++        return Ok(false);
++    }
++    timing.path = "lookup_error";
++    let rpc_start = profile_start();
++    let answer = s.peer_link.lock().unwrap().lookup(peer, &s.config.image_id, offset,
++        s.config.reuse_tcp, &mut timing);
++    timing.rpc_ns = elapsed(rpc_start);
++    let Ok(q) = answer else {
++        eprintln!("PEER_LOOKUP_ERROR offset={offset}");
++        return Ok(false);
++    };
++    timing.donor_rpc_ns = q["timing"]["donor_rpc_ns"].as_u64().unwrap_or(0);
++    timing.guest_connect_ns = q["timing"]["guest_connect_ns"].as_u64().unwrap_or(0);
++    timing.donor_ioctl_ns = q["timing"]["donor_ioctl_ns"].as_u64().unwrap_or(0);
++    timing.publish_ns = q["timing"]["publish_ns"].as_u64().unwrap_or(0);
++    if q["error"].is_string() {
++        eprintln!("PEER_LOOKUP_ERROR offset={offset} error={}", q["error"]);
++        return Ok(false);
++    }
++    if q["found"] != true || q["image"] != s.config.image_id || q["offset"].as_u64() != Some(offset)
++    {
++        timing.path = "exact_miss";
++        eprintln!("PEER_EXACT_MISS offset={offset}");
++        return Ok(false);
++    }
++    let frame = q["frame"]
++        .as_u64()
++        .ok_or_else(|| invalid("peer frame missing"))?;
++    if frame % PAGE != 0 || frame >= s.device_bytes {
++        return Err(invalid("peer frame bounds"));
++    }
++    let start = profile_start();
++    map_page(s, gpa, frame, false)?;
++    mem.mark_dirty(GuestAddress(gpa), 4096);
++    timing.attach_ns = elapsed(start);
++    timing.path = "shared_hit";
++    eprintln!("PEER_READ_HIT offset={offset} gpa={gpa} frame={frame} bytes=4096 backend_bytes=0");
++    Ok(true)
++}
++pub(crate) fn backend_denied(offset: u64) -> bool {
++    STATE
++        .get()
++        .is_some_and(|s| s.config.deny_backend.contains(&offset))
++}
++pub(crate) fn enabled() -> bool {
++    static ENABLED: OnceLock<bool> = OnceLock::new();
++    *ENABLED.get_or_init(|| std::env::var_os("FC_PEER_CACHE_CONFIG").is_some())
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use std::io::Cursor;
++
++    #[test]
++    fn framed_json_keeps_following_reply_and_bounds_partial_frames() {
++        let mut stream = BufReader::new(Cursor::new(b"{\"id\":1}\n{\"id\":2}\n"));
++        assert_eq!(read_json(&mut stream).unwrap()["id"], 1);
++        assert_eq!(read_json(&mut stream).unwrap()["id"], 2);
++        assert!(read_json(&mut stream).is_err());
++        let mut oversized = BufReader::new(Cursor::new(vec![b' '; 4097]));
++        assert!(read_json(&mut oversized).is_err());
++        let mut partial = BufReader::new(Cursor::new(b"{\"id\":"));
++        assert!(read_json(&mut partial).is_err());
++    }
++
++    #[test]
++    fn guest_reply_rejects_stale_identity_errors_and_unaligned_gpa() {
++        let encode = |words: [u64; 6]| -> [u8; 48] {
++            std::array::from_fn(|i| words[i / 8].to_le_bytes()[i % 8])
++        };
++        let valid = [LOOKUP_MAGIC, 9, 1, 4096, 8192, 17];
++        let mut timing = Timing::default();
++        assert_eq!(decode_guest_reply(&encode(valid), 9, 8192, &mut timing).unwrap(), Some(4096));
++        assert_eq!(timing.donor_ioctl_ns, 17);
++        for (field, value) in [(0, 0), (1, 8), (2, 2), (2, 3), (3, 4097), (4, 4096)] {
++            let mut invalid = valid;
++            invalid[field] = value;
++            assert!(decode_guest_reply(&encode(invalid), 9, 8192, &mut timing).is_err());
++        }
++        let mut absent = valid;
++        absent[2] = 0;
++        assert_eq!(decode_guest_reply(&encode(absent), 9, 8192, &mut timing).unwrap(), None);
++    }
++
++    #[test]
++    fn tcp_reuses_connection_and_recovers_once_after_peer_close() {
++        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
++        let address = listener.local_addr().unwrap();
++        let server = std::thread::spawn(move || {
++            for _ in 0..2 {
++                let (stream, _) = listener.accept().unwrap();
++                stream.set_read_timeout(Some(Duration::from_secs(3))).unwrap();
++                let mut reader = BufReader::new(stream);
++                for _ in 0..2 {
++                    let q = read_json(&mut reader).unwrap();
++                    assert_eq!(q["keep_alive"], true);
++                    write_json(reader.get_mut(), &json!({"id":q["id"],"found":false})).unwrap();
++                }
++                reader.get_mut().shutdown(std::net::Shutdown::Both).unwrap();
++            }
++        });
++        let mut link = PeerLink::default();
++        for (i, connects) in [1, 0, 1, 0].iter().enumerate() {
++            let mut timing = Timing::default();
++            let answer = link.lookup(address, "image", i as u64 * PAGE, true, &mut timing).unwrap();
++            assert_eq!(answer["id"], i + 1);
++            assert_eq!(timing.tcp_connects, *connects);
++            assert_eq!(timing.tcp_retries, if i == 2 { 1 } else { 0 });
++        }
++        server.join().unwrap();
++    }
++
++    #[test]
++    fn tcp_response_id_mismatch_discards_stream() {
++        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
++        let address = listener.local_addr().unwrap();
++        let server = std::thread::spawn(move || {
++            let mut reader = BufReader::new(listener.accept().unwrap().0);
++            let q = read_json(&mut reader).unwrap();
++            write_json(reader.get_mut(), &json!({"id":q["id"].as_u64().unwrap()+1,"found":true})).unwrap();
++        });
++        let mut link = PeerLink::default();
++        assert!(link.lookup(address, "image", 0, true, &mut Timing::default()).is_err());
++        assert!(link.stream.is_none());
++        server.join().unwrap();
++    }
++
++}

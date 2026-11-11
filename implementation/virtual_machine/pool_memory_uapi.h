@@ -47,4 +47,9 @@ struct cpm_select { __u64 first, count, selected; };
 #define CPM_IMPORT _IOWR('P', 0x78, struct cpm_handle)
 #define CPM_SELECT _IOWR('P', 0x79, struct cpm_select)
 #define CPM_RETIRE _IOWR('P', 0x7a, struct cpm_handle)
+/* Static-tier, infinite-lifetime experiment only. Reserved frames are never
+ * returned to credits. Publish changes the existing donor frame in place. */
+struct cpm_peer { __u64 address, first, offset; };
+#define CPM_PEER_PUBLISH _IOWR('P', 0x7b, struct cpm_peer)
+#define CPM_PEER_ATTACH _IOWR('P', 0x7c, struct cpm_peer)
 #endif

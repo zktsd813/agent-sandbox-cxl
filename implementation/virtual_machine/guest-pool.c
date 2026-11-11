@@ -8,6 +8,8 @@
  * The lock excludes migration/removal; the reference excludes physical reuse.
  * A permanent status page invalidates exported records before cleanup begins.
  *
+ * LOOKUP is a separate static-tier experiment: one resident folio per request,
+ * pinned until FD close, with a trusted live RPC reply instead of PREPARE export.
  * This is a trusted guest-kernel protocol, not attestation of a hostile guest.
  * Host policy must match image identity and inode/index against frozen extents,
  * and validate the ACTIVE status and digest while all vCPUs are paused.
@@ -31,6 +33,13 @@
 #include <linux/vmalloc.h>
 #include "guest-pool-uapi.h"
 
+struct guest_pool_pin {
+	struct list_head link;
+	struct file *file;
+	struct folio *folio;
+	u64 index, disk_offset;
+};
+
 struct guest_pool_session {
 	struct mutex mutex;
 	struct guest_pool_prepare *prepared;
@@ -39,6 +48,8 @@ struct guest_pool_session {
 	struct guest_pool_record *records;
 	unsigned int held;
 	bool active;
+	struct list_head pins;
+	unsigned int nr_pins;
 };
 
 static atomic_t guest_pool_opened = ATOMIC_INIT(0);
@@ -47,6 +58,15 @@ static struct guest_pool_status *guest_pool_status_page;
 static void guest_pool_drop(struct guest_pool_session *s)
 {
 	unsigned int i;
+	struct guest_pool_pin *pin, *next;
+	list_for_each_entry_safe(pin, next, &s->pins, link) {
+		folio_unlock(pin->folio);
+		folio_put(pin->folio);
+		fput(pin->file);
+		list_del(&pin->link);
+		kfree(pin);
+	}
+	s->nr_pins = 0;
 
 	/* Publish invalidity before permitting migration, reclaim or frame reuse. */
 	smp_store_release(&guest_pool_status_page->state, GUEST_POOL_INACTIVE);
@@ -86,6 +106,7 @@ static int guest_pool_open(struct inode *inode, struct file *file)
 		return -ENOMEM;
 	}
 	mutex_init(&s->mutex);
+	INIT_LIST_HEAD(&s->pins);
 	file->private_data = s;
 	return nonseekable_open(inode, file);
 }
@@ -249,7 +270,7 @@ static long guest_pool_prepare(struct guest_pool_session *s, void __user *user)
 	unsigned int i;
 	int error;
 
-	if (s->active)
+	if (s->active || s->nr_pins)
 		return -EBUSY;
 	p = memdup_user(user, sizeof(*p));
 	if (IS_ERR(p))
@@ -364,6 +385,68 @@ static long guest_pool_release(struct guest_pool_session *s, void __user *user)
 	return copy_to_user(user, &request, sizeof(request)) ? -EFAULT : 0;
 }
 
+static long guest_pool_lookup(struct guest_pool_session *s, void __user *user)
+{
+	struct guest_pool_lookup q;
+	struct guest_pool_pin *pin;
+	struct file *file;
+	struct inode *inode;
+	struct folio *folio;
+	sector_t block;
+	int ret = 0;
+	if (s->active) return -EBUSY;
+	if (copy_from_user(&q, user, sizeof(q))) return -EFAULT;
+	q.found = 0; q.gpa = 0;
+	file = fget(q.fd);
+	if (!file) return -EBADF;
+	inode = file_inode(file);
+	if (!(file->f_mode & FMODE_READ) || file->f_mode & FMODE_WRITE ||
+	    !S_ISREG(inode->i_mode) || strcmp(inode->i_sb->s_type->name, "ext4") ||
+	    !sb_rdonly(inode->i_sb) || !inode->i_sb->s_bdev ||
+	    !bdev_read_only(inode->i_sb->s_bdev) || inode->i_sb->s_blocksize != PAGE_SIZE ||
+	    IS_DAX(inode) || IS_ENCRYPTED(inode) || IS_VERITY(inode)) {
+		ret = -EOPNOTSUPP; goto done;
+	}
+	if (q.file_page >= i_size_read(inode) >> PAGE_SHIFT) goto done;
+	/* A tiny bounded prototype index; pins never leave this list until teardown. */
+	list_for_each_entry(pin, &s->pins, link) {
+		if (file_inode(pin->file) == inode && pin->index == q.file_page) {
+			if (pin->disk_offset == q.disk_offset &&
+			    folio_mapping(pin->folio) == inode->i_mapping &&
+			    folio_test_uptodate(pin->folio) && !folio_test_dirty(pin->folio) &&
+			    !folio_test_writeback(pin->folio)) {
+				q.found = 1; q.gpa = (u64)folio_pfn(pin->folio) << PAGE_SHIFT;
+			}
+			goto done;
+		}
+	}
+	if (s->nr_pins >= 1024) { ret = -ENOSPC; goto done; }
+	folio = filemap_get_folio(inode->i_mapping, q.file_page);
+	if (IS_ERR(folio)) goto done;
+	block = q.file_page;
+	if (folio_test_large(folio) || bmap(inode, &block) || !block ||
+	    ((u64)block << PAGE_SHIFT) != q.disk_offset || !folio_trylock(folio))
+		goto put;
+	if (folio_mapping(folio) != inode->i_mapping || folio->index != q.file_page ||
+	    !folio_test_uptodate(folio) || folio_test_dirty(folio) || folio_test_writeback(folio))
+		goto unlock;
+	pin = kzalloc(sizeof(*pin), GFP_KERNEL);
+	if (!pin) { ret = -ENOMEM; goto unlock; }
+	pin->file = get_file(file); pin->folio = folio;
+	pin->index = q.file_page; pin->disk_offset = q.disk_offset;
+	list_add_tail(&pin->link, &s->pins); s->nr_pins++;
+	q.found = 1; q.gpa = (u64)folio_pfn(folio) << PAGE_SHIFT;
+	goto done;
+unlock:
+	folio_unlock(folio);
+put:
+	folio_put(folio);
+done:
+	fput(file);
+	if (!ret && copy_to_user(user, &q, sizeof(q))) ret = -EFAULT;
+	return ret;
+}
+
 static long guest_pool_ioctl(struct file *file, unsigned int command, unsigned long arg)
 {
 	struct guest_pool_session *s = file->private_data;
@@ -373,6 +456,9 @@ static long guest_pool_ioctl(struct file *file, unsigned int command, unsigned l
 	if (mutex_lock_interruptible(&s->mutex))
 		return -ERESTARTSYS;
 	switch (command) {
+	case GUEST_POOL_LOOKUP:
+		result = guest_pool_lookup(s, user);
+		break;
 	case GUEST_POOL_PREPARE:
 		result = guest_pool_prepare(s, user);
 		break;
