@@ -513,7 +513,10 @@ def start(args):
                 raise RuntimeError("Runtime path is too long for UNIX sockets.")
             cmd = [str(qemu), "-name", "nested-lab-" + role,
                    "-machine", "q35,accel=kvm" + (",cxl=on" if cxl_backing else ""),
-                   "-cpu", "host," + ("vmx=on" if vendor == "intel" else "svm=on"),
+                   "-cpu", "host," + ("vmx=on" if vendor == "intel" else "svm=on") +
+                       # The DAX FPU allocator deliberately rejects dynamic XFD state.
+                       (",xfd=off,amx-tile=off,amx-bf16=off,amx-int8=off"
+                        if args.dax_handoff and vendor == "intel" else ""),
                    "-smp", str(args.vcpus), "-m", (f"{args.memory_mib}M,maxmem={args.memory_mib + args.cxl_mib}M,slots=8"
                                                              if cxl_backing else str(args.memory_mib)),
                    "-nodefaults", "-no-user-config", "-display", "none", "-monitor", "none", "-no-reboot",
