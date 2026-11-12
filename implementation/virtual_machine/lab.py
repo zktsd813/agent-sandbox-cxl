@@ -2371,7 +2371,7 @@ def handoff_bench(args):
                                 continue
                             profile_round = int(generation) - 1
                         profiles.append({"role": role, "round": profile_round, **parsed})
-            scopes = ("reuse", "reuse_vcpu") if args.reuse_kvm else ("restore", "build", "vm_new", "vm_common")
+            scopes = ("reuse", "reuse_vcpu") if args.reuse_kvm else ("restore", "build", "vm_new", "vm_common", "vm_local_wrapper")
             if len(profiles) != rounds * len(scopes):
                 raise RuntimeError(f"Expected {rounds * len(scopes)} restore profiles, got {len(profiles)}")
             if {(p["round"], p["scope"]) for p in profiles} != {(r, s) for r in range(rounds) for s in scopes}:
