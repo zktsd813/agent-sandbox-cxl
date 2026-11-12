@@ -324,6 +324,10 @@ struct heartbeat {
     _Atomic uint64_t first_sweep_ns, warm_sweep_ns, warm_done;
 };
 _Static_assert(sizeof(struct heartbeat) <= 4096, "heartbeat page");
+struct boundary_clock {
+    _Atomic uint64_t request, response;
+    uint64_t remote_tsc;
+};
 struct handoff_control {
     _Atomic uint64_t nonce, ready[2], preparing, published, acknowledged;
     uint64_t schema, state_round, state_size, state_hash, memory_bytes, sequence;
@@ -1918,9 +1922,50 @@ struct direct_control {
     uint64_t counter;
     _Atomic uint64_t preparing;
     _Atomic uint64_t dense_observed;
+    struct boundary_clock clock;
 };
 
 static void direct_interrupt(int signal_number) { (void)signal_number; }
+static off_t direct_layout_offset(unsigned mib);
+
+/* Cristian samples use L1 raw TSC, never the migrating L2's rebased TSC.
+ * Both controllers rendezvous outside the measured handoff loop. */
+static void boundary_clock_sync(struct boundary_clock *clock, char role,
+                                unsigned phase, const char *prefix)
+{
+    if (!env_enabled("LAB_DAX_RESUME_PROFILE")) return;
+    for (unsigned i = 0; i < 200; i++) {
+        uint64_t sequence = phase * 200 + i + 1;
+        double deadline = monotonic() + 30;
+        if (role == 'A') {
+            uint64_t begin = migration_tsc();
+            atomic_store_explicit(&clock->request, sequence, memory_order_release);
+            while (atomic_load_explicit(&clock->response, memory_order_acquire) != sequence) {
+                if (monotonic() > deadline) { fprintf(stderr, "Boundary clock timeout\n"); exit(1); }
+                __asm__ __volatile__("pause");
+            }
+            uint64_t end = migration_tsc(), remote = clock->remote_tsc;
+            printf("%s {\"event\":\"clock_sync\",\"role\":\"A\",\"phase\":%u,"
+                   "\"sample\":%u,\"a_begin_tsc\":%" PRIu64 ",\"b_tsc\":%" PRIu64
+                   ",\"a_end_tsc\":%" PRIu64 "}\n", prefix, phase, i, begin, remote, end);
+        } else {
+            while (atomic_load_explicit(&clock->request, memory_order_acquire) != sequence) {
+                if (monotonic() > deadline) { fprintf(stderr, "Boundary clock timeout\n"); exit(1); }
+                __asm__ __volatile__("pause");
+            }
+            clock->remote_tsc = migration_tsc();
+            atomic_store_explicit(&clock->response, sequence, memory_order_release);
+        }
+    }
+}
+
+static struct kvm_dax_resume_profile *boundary_profile(int dax)
+{
+    if (!env_enabled("LAB_DAX_RESUME_PROFILE")) return NULL;
+    void *page = mmap(NULL, 4096, PROT_READ, MAP_SHARED, dax, direct_layout_offset(256));
+    if (page == MAP_FAILED) die("Boundary profile map");
+    return (void *)((char *)page + KVM_DAX_RESUME_PROFILE_OFFSET);
+}
 
 static off_t direct_layout_offset(unsigned mib)
 {
@@ -2016,6 +2061,7 @@ static void direct_handoff(char role, unsigned rounds, uint64_t nonce)
     setvbuf(stdout, NULL, _IONBF, 0);
     int dax = open_dax("/dev/dax0.0"), kvm = open("/dev/kvm", O_RDWR | O_CLOEXEC);
     direct_telemetry(role,dax);
+    struct kvm_dax_resume_profile *boundary = boundary_profile(dax);
     if (kvm < 0) die("direct /dev/kvm");
     unsigned char *shared = mmap(NULL, 2 * 1024 * 1024, PROT_READ | PROT_WRITE, MAP_SHARED, dax, 0);
     unsigned char *ram = mmap((void *)UINT64_C(0x4000000000), 2 * 1024 * 1024,
@@ -2082,25 +2128,34 @@ static void direct_handoff(char role, unsigned rounds, uint64_t nonce)
     }
     atomic_store_explicit(&ctrl->ready[me], 1, memory_order_release);
     wait_value(&ctrl->ready[1-me], 1, "direct peer ready");
+    boundary_clock_sync(&ctrl->clock, role, 0, "DIRECT_JSON");
     for (unsigned r=0; r<rounds; r++) {
         if (me == r%2) {
             for (unsigned i=0; i<100; i++) counter=direct_step(vcpu,run,ram);
             struct kvm_dax_handoff token;
+            uint64_t request_tsc = migration_tsc();
             double start=monotonic();
             if (ioctl(vm,KVM_DAX_DETACH,&token)) die("direct DETACH");
             double detached=monotonic();
+            uint64_t detached_tsc = migration_tsc();
+            uint64_t exit_tsc = boundary ? boundary->last_exit_l1_tsc : 0;
             direct_revoked(vcpu);
             ctrl->token=token;
             ctrl->counter=counter;
+            uint64_t published_tsc = migration_tsc();
             atomic_store_explicit(&ctrl->published,r+1,memory_order_release);
             wait_value(&ctrl->acknowledged,r+1,"direct remote guest");
             double elapsed=(monotonic()-start)*1e6;
             printf("DIRECT_JSON {\"event\":\"source\",\"round\":%u,\"role\":\"%c\",\"detach_us\":%.3f,\"kernel_detach_us\":%.3f,\"handoff_us\":%.3f,\"counter\":%u,\"vm_offset\":%" PRIu64 ",\"vcpu_offset\":%" PRIu64 ",\"vmcs_offset\":%" PRIu64 ",\"pool_used\":%" PRIu64 ",\"ept_root_offset\":%" PRIu64 ",\"ept_page_count\":%" PRIu64 "}\n",
                 r,role,(detached-start)*1e6,(double)token.kernel_ns/1000,elapsed,counter,
                 (uint64_t)token.vm_offset,(uint64_t)token.vcpu_offset,(uint64_t)token.vmcs_offset,(uint64_t)token.pool_used,(uint64_t)token.ept_root_offset,(uint64_t)token.ept_page_count);
+            if (boundary) printf("DIRECT_JSON {\"event\":\"boundary_source\",\"round\":%u,\"role\":\"%c\","
+                "\"request_tsc\":%" PRIu64 ",\"exit_tsc\":%" PRIu64 ",\"detached_tsc\":%" PRIu64
+                ",\"published_tsc\":%" PRIu64 "}\n", r, role, request_tsc, exit_tsc, detached_tsc, published_tsc);
             munmap(run,run_size);close(vcpu);close(vm);vm=vcpu=-1;
         } else {
             wait_value(&ctrl->published,r+1,"direct source detached");
+            uint64_t notified_tsc = migration_tsc();
             struct kvm_dax_handoff token=ctrl->token;
             double start=monotonic();
             vm=ioctl(kvm,KVM_DAX_ATTACH,&token);
@@ -2109,6 +2164,7 @@ static void direct_handoff(char role, unsigned rounds, uint64_t nonce)
                 fprintf(stderr,"Direct VM/vCPU was recreated\n");exit(1);
             }
             double attached=monotonic();
+            uint64_t attached_tsc = migration_tsc();
             direct_duplicate(kvm,&token);
             if (token.vm_offset!=identity.vm_offset || token.vcpu_offset!=identity.vcpu_offset ||
                 token.run_offset!=identity.run_offset || token.vmcs_offset!=ctrl->token.vmcs_offset) {
@@ -2121,11 +2177,17 @@ static void direct_handoff(char role, unsigned rounds, uint64_t nonce)
             counter=direct_step(vcpu,run,ram);
             if(counter!=ctrl->counter+1){fprintf(stderr,"Direct continuation counter mismatch\n");exit(1);}
             double resumed=monotonic();
+            uint64_t observed_tsc = migration_tsc();
             atomic_store_explicit(&ctrl->acknowledged,r+1,memory_order_release);
             printf("DIRECT_JSON {\"event\":\"destination\",\"round\":%u,\"role\":\"%c\",\"attach_us\":%.3f,\"kernel_attach_us\":%.3f,\"run_to_hlt_us\":%.3f,\"counter\":%u,\"generation\":%" PRIu64 ",\"vm_creates\":1,\"vcpu_creates\":1}\n",
                 r,role,(attached-start)*1e6,(double)token.kernel_ns/1000,(resumed-attached)*1e6,counter,(uint64_t)token.generation);
+            if (boundary) printf("DIRECT_JSON {\"event\":\"boundary_destination\",\"round\":%u,\"role\":\"%c\","
+                "\"notified_tsc\":%" PRIu64 ",\"attached_tsc\":%" PRIu64 ",\"entry_tsc\":%" PRIu64
+                ",\"observed_tsc\":%" PRIu64 ",\"l1_tsc_khz\":%" PRIu64 "}\n", r, role,
+                notified_tsc, attached_tsc, (uint64_t)boundary->entry_l1_tsc, observed_tsc, (uint64_t)boundary->l1_tsc_khz);
         }
     }
+    boundary_clock_sync(&ctrl->clock, role, 1, "DIRECT_JSON");
     printf("DIRECT_JSON {\"event\":\"complete\",\"role\":\"%c\",\"rounds\":%u,\"result\":\"passed\"}\n",role,rounds);
     alarm(0);
     /* Shared graph is pinned until both outer kernels are shut down. */
@@ -2275,11 +2337,13 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
     if(me)wait_value(&ctrl->nonce,nonce,"Linux direct nonce");
     atomic_store_explicit(&ctrl->ready[me],1,memory_order_release);
     wait_value(&ctrl->ready[1-me],1,"Linux direct peer ready");
+    boundary_clock_sync(&ctrl->clock, role, 0, "LINUX_DIRECT_JSON");
     for(unsigned r=0;r<rounds;r++){
         if(me==r%2){
             linux_wait(&hb->verified,r,&executor);
             if(dense)linux_wait(&hb->warm_done,r,&executor);
             usleep(dwell_us);
+            uint64_t request_tsc = migration_tsc();
             double start=monotonic(),pause_us=0;
             atomic_store_explicit(&ctrl->preparing,r+1,memory_order_release);
             struct kvm_dax_handoff token={0};
@@ -2293,8 +2357,11 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
                 direct_revoked(vcpu);
             }
             double detached=monotonic();
+            uint64_t detached_tsc = migration_tsc();
+            uint64_t exit_tsc = resume_profile != MAP_FAILED ? resume_profile->last_exit_l1_tsc : 0;
             ctrl->token=token;ctrl->counter=atomic_load(&hb->sequence);
             atomic_store_explicit(&hb->epoch,r+1,memory_order_release);
+            uint64_t published_tsc = migration_tsc();
             atomic_store_explicit(&ctrl->published,r+1,memory_order_release);
             wait_value(&hb->acknowledged,r+1,"Linux direct guest heartbeat");
             double guest_observed=monotonic();
@@ -2322,11 +2389,15 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
             if(dense)printf(",\"pause_to_working_set_ready_us\":%.3f,\"pause_to_warm_ready_us\":%.3f",
                             working_set_ready_us,warm_ready_us);
             puts("}");
+            if (resume_profile != MAP_FAILED) printf("LINUX_DIRECT_JSON {\"event\":\"boundary_source\",\"round\":%u,\"role\":\"%c\","
+                "\"request_tsc\":%" PRIu64 ",\"exit_tsc\":%" PRIu64 ",\"detached_tsc\":%" PRIu64
+                ",\"published_tsc\":%" PRIu64 "}\n", r, role, request_tsc, exit_tsc, detached_tsc, published_tsc);
             /* The next source must not advance the epoch before these samples
              * have been consumed. This guard is outside the reported timings. */
             if(dense)atomic_store_explicit(&ctrl->dense_observed,r+1,memory_order_release);
         }else{
             linux_wait_published(ctrl,r+1);
+            uint64_t notified_tsc = migration_tsc();
             struct kvm_dax_handoff token=ctrl->token;
             if(token.vm_creates!=1 || token.vcpu_creates!=1){fprintf(stderr,"Linux direct VM recreated\n");exit(1);}
             double start=monotonic();
@@ -2356,11 +2427,13 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
                 syscall(SYS_futex,&executor.go,FUTEX_WAKE|FUTEX_PRIVATE_FLAG,1);
             }
             uint64_t attached_ns=monotonic_ns();
+            uint64_t attached_tsc = migration_tsc();
             double attached=attached_ns/1e9;
             direct_duplicate(kvm,&token);
             uint64_t wait_start_ns=monotonic_ns();
             linux_wait(&hb->acknowledged,r+1,&executor);
             uint64_t observed_ns=monotonic_ns();
+            uint64_t observed_tsc = migration_tsc();
             double acknowledged=observed_ns/1e9;
             struct kvm_dax_resume_profile resume={0};
             uint64_t guest_ack_tsc=0;
@@ -2405,6 +2478,10 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
             }
             if(!me)for(unsigned i=0;i<3;i++)printf(",\"destination_control_part_%u_us\":%.3f",i,bench_control_parts_us[i]);
             puts("}");
+            if (resume_profile != MAP_FAILED) printf("LINUX_DIRECT_JSON {\"event\":\"boundary_destination\",\"round\":%u,\"role\":\"%c\","
+                "\"notified_tsc\":%" PRIu64 ",\"attached_tsc\":%" PRIu64 ",\"entry_tsc\":%" PRIu64
+                ",\"observed_tsc\":%" PRIu64 ",\"l1_tsc_khz\":%" PRIu64 "}\n", r, role,
+                notified_tsc, attached_tsc, (uint64_t)resume.entry_l1_tsc, observed_tsc, (uint64_t)resume.l1_tsc_khz);
             if(dense){
                 linux_wait(&hb->verified,r+1,&executor);
                 double first_ready=monotonic();
@@ -2430,6 +2507,7 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
     }
     linux_wait(&hb->verified,rounds,&executor);
     if(dense)linux_wait(&hb->warm_done,rounds,&executor);
+    boundary_clock_sync(&ctrl->clock, role, 1, "LINUX_DIRECT_JSON");
     if(getrusage(RUSAGE_THREAD,&cpu_after))die("controller CPU accounting");
     double controller_cpu_us=(cpu_after.ru_utime.tv_sec-cpu_before.ru_utime.tv_sec+cpu_after.ru_stime.tv_sec-cpu_before.ru_stime.tv_sec)*1e6+cpu_after.ru_utime.tv_usec-cpu_before.ru_utime.tv_usec+cpu_after.ru_stime.tv_usec-cpu_before.ru_stime.tv_usec;
     printf("LINUX_DIRECT_JSON {\"event\":\"complete\",\"role\":\"%c\",\"rounds\":%u,\"heap_bytes\":%" PRIu64 ",\"errors\":%" PRIu64 ",\"clock_errors\":%" PRIu64 ",\"tsc_errors\":%" PRIu64 ",\"clock_ns\":%" PRIu64 ",\"controller_cpu_us\":%.3f,\"controller_wall_us\":%.3f}\n",role,rounds,dense?(uint64_t)atomic_load(&hb->working_set_bytes):UINT64_C(16777216),(uint64_t)atomic_load(&hb->errors),(uint64_t)atomic_load(&hb->clock_errors),(uint64_t)atomic_load(&hb->tsc_errors),(uint64_t)atomic_load(&hb->clock_ns),controller_cpu_us,(monotonic()-controller_start)*1e6);

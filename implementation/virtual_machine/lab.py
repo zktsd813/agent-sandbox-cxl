@@ -1008,8 +1008,6 @@ def direct_handoff_bench(args):
     layout_shift_mib = 2048 if linux and (args.memory_mib > 128 or args.dense_working_set) else 0
     if layout_shift_mib and config["cxl_mib"] < 4096:
         raise RuntimeError("Large/dense direct guests require --cxl-mib 4096 for nonoverlapping RAM, KVM and telemetry")
-    if args.resume_profile and not linux:
-        raise RuntimeError("--resume-profile requires --guest linux")
     if args.guest_cpu is not None and not 0 <= args.guest_cpu < config["l1_vcpus"]:
         raise RuntimeError("--guest-cpu requires an available L1 CPU")
     if args.executor_cpu is not None and (not linux or not 0 <= args.executor_cpu < config["l1_vcpus"]):
