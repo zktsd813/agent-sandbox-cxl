@@ -160,6 +160,13 @@ RAM 전체 promotion/demotion(2 GiB): promotion 첫 회 약 2.1~2.2초, 두 번�
 | 11-04 | resident, 무계측 실제 SWE(Gin) 반복 38회 | 4.09 (p95 5.33), promotion 직후 27.5 | [results/direct-resident-20261102](../implementation/virtual_machine/results/direct-resident-20261102/README.md) |
 | 11-12 | 같은 경로, bud05, socket | 1.34~1.36 (p95 1.87~2.08), promotion 직후 7.5~8.0 | [results/vm-handoff-lab-20261112](results/vm-handoff-lab-20261112/README.md) |
 
+**FragVisor와 같은 경계(11-12, node 1).** source에서 L2 vCPU가 마지막으로 guest를 나온 시각부터 목적지에서 처음 guest로 들어가기 직전까지를 한 방향으로 쟀다. 두 L1의 TSC 차이는 공유 메모리 ping-pong으로 보정했다(오차 약 0.09 µs). 원자료는 [results/vm-handoff-fragvisor-boundary-20261112](results/vm-handoff-fragvisor-boundary-20261112/README.md), 해석은 8.1.
+
+| direct, 목적지 busy-poll | one-way p50 / p95 (µs) | 평균 |
+|---|---:|---:|
+| 2 MiB CPU-only guest | 37 / 44 | 42 |
+| 128 MiB Linux guest | 288~295 / 343~348 | 301~314 |
+
 nested root 보완(`dax_nested_root_sync`)은 11-02에 hand-off마다 하던 RAM 전수 조회를 없앤 직후 들어갔다. 전수 조회를 없애자 nested 환경에서 데이터 불일치와 triple fault가 났기 때문이다.
 
 ### 3.4 lab 숫자를 읽을 때 주의
@@ -354,7 +361,7 @@ M4+P가 가장 강한 상대다. 관문 G2가 "hand-off 정지 시간 ≤ M4+P"�
 | Q8 생성 시점에 한 번 분류(Pond)하면? | 명령 단위 CXL/DRAM 비율이 p50 1.02, p95 1.22, 최대 3.54로 넓다(10-14, 1회). sandbox 안 분산과 sandbox 사이 분산을 아직 나눠 보지 않았다 | A4 |
 | Q9 작은 host라 생긴 contention 아닌가? | host 코어 수를 sweep한다 | A3 |
 | Q10 M4와의 차이는? | M4에서 하나씩 바꿔 KVM 객체 사전 생성 → EPT 이어받기 → device 연속성으로 3분해. `snapshot` → `reuse-prepared` → `direct`가 이 사다리의 일부다 | D3 |
-| Q11 FragVisor는 vCPU 이동이 86 µs인데 왜 더 느린가? | 86 µs는 상태(약 6.9 KB)만 넘기고 미리 만든 vCPU에 복원하는 구간이다. 메모리는 옮긴 뒤 DSM으로 page마다 가져오고 EPT도 다시 채운다. 우리 장점은 그 뒤 비용이 없는 데서 보여야 한다. 같은 경계의 bare-metal 숫자가 아직 없다 | D1, D3, 8.1 |
+| Q11 FragVisor는 vCPU 이동이 86 µs인데 왜 더 느린가? | 86 µs는 상태(약 6.9 KB)만 넘기고 미리 만든 vCPU에 복원하는 구간이다. 메모리는 옮긴 뒤 DSM으로 page마다 가져오고 EPT도 다시 채운다. 같은 경계로 잰 우리 nested 값은 CPU-only guest 37 µs, Linux guest 약 295 µs다(p50). Linux 쪽은 executor wake와 Firecracker detach가 대부분이다. 목적지 L1의 EPT 재구축은 0회다. 같은 경계의 bare-metal 숫자는 아직 없다 | D1, D3, 8.1 |
 
 ---
 
@@ -400,8 +407,41 @@ M4+P가 가장 강한 상대다. 관문 G2가 "hand-off 정지 시간 ≤ M4+P"�
 
 **우리 연구에 주는 의미**
 - FragVisor의 이동은 HANDOFF 원래 기본안(상태 직렬화 + 목적지에 미리 만든 vCPU)과 같은 단계다. 우리 표의 `reuse-prepared`(KVM 객체 사전 생성)에 해당하고, EPT 이어받기는 없다.
-- 그래서 "상태만 넘기는 부분은 bare metal + RDMA에서 100 µs 안쪽"이라는 참고값이 이미 있다. 우리 nested lab의 0.21~1.34 ms는 그보다 크다. 리뷰어가 이 차이를 물을 것이다. 우리 장점은 상태 전달 속도가 아니라 **옮긴 뒤 메모리를 끌어오거나 EPT를 다시 채우지 않는 것**에서 보여야 한다(6.2 D3, D4).
-- 공정한 비교에는 같은 경계(정지 요청 → 목적지 첫 guest 실행)와, 옮긴 뒤 working set을 다시 쓰는 시간까지 함께 재야 한다.
+- 그래서 "상태만 넘기는 부분은 bare metal + RDMA에서 100 µs 안쪽"이라는 참고값이 이미 있다. 리뷰어는 우리 숫자를 이것과 견줄 것이다. 우리 장점은 상태 전달 속도보다 **옮긴 뒤 메모리를 끌어오거나 EPT를 다시 채우지 않는 것**에서 보여야 한다(6.2 D3, D4).
+
+**같은 경계로 잰 우리 숫자 (2026-11-12, bud05 NUMA node 1, nested lab)**
+
+경계는 source L1에서 L2 vCPU의 마지막 VM-exit 직후(`__vmx_vcpu_run` 반환)부터 목적지 L1의 첫 `__vmx_vcpu_run` 호출 직전까지다. FragVisor의 경계는 공개되지 않아서 이 경계가 가장 가까운 해석이다. 두 L1의 TSC 차이는 공유 메모리 ping-pong(200회, 최소 RTT)으로 보정했고 오차는 약 0.09 µs다. A→B와 B→A를 평균해 보정과 무관하게 낸 값도 같았다. 조건마다 warmup 10 + 측정 100회다. 원자료는 [results/vm-handoff-fragvisor-boundary-20261112](results/vm-handoff-fragvisor-boundary-20261112/README.md).
+
+| 경로 | p50 / p95 (µs) | 평균 | 주된 구간 (p50, µs) |
+|---|---:|---:|---|
+| FragVisor (논문, bare metal + RDMA) | ? | 86 | register dump 38 |
+| direct, 2 MiB CPU-only guest | 37 / 44 | 42 | source detach 8, 알림 0.3, 목적지 attach~entry 29(그중 kernel attach 23) |
+| direct, 128 MiB Linux guest | 288~295 / 343~348 | 301~314 | source detach 96(Firecracker 쪽 129, native 쪽 50), 목적지 알림 관측 → entry 196(B가 목적지일 때 executor futex wake 약 104, kernel attach 38, `KVM_RUN` → entry 26) |
+| reuse-prepared (FragVisor와 같은 방식) | 구간 합 1,125 / 1,190 | | save API 442, restore API 586, 상태 14,264 B(MSR 190개) |
+
+- 목적지가 공유 메모리 알림을 50 µs 간격으로 확인하면 CPU guest가 93 µs, Linux guest가 402 µs로 늘어난다. 위 표는 busy-poll 기준이다. RDMA 수신 polling과 비슷한 조건이다.
+- direct가 hand-off 한 번에 넘기는 직렬화 상태와 RAM·EPT 복사는 0 B다. 공유 메모리에 쓰는 protocol 값은 160~184 B(token 136 B 포함)다.
+- Linux guest에서 가장 큰 덩어리는 목적지 executor를 futex로 깨우는 약 104 µs다. busy-poll executor로 바꾸면 줄어들 것으로 **추정**하지만 아직 안 해 봤다. source 쪽도 Firecracker 경로(129 µs)가 native 경로(50 µs)보다 길다.
+- reuse-prepared는 exit → entry를 정확히 재지 못했다. 표의 값은 pause가 끝난 뒤의 API 구간 합이다. FragVisor의 커널 안 저장(38 µs)보다 느린 이유는 Firecracker API·thread 통신·직렬화와 더 넓은 상태 범위다(ioctl별 기여는 나누지 않았다).
+
+**옮긴 뒤 작업 데이터 다시 읽기 (512 MiB guest, working set 약 430 MiB)**
+
+| 모드 | 반복 방문 first − warm scan (ms, p50) | 목적지 L1 EPT violation (첫 방문 / 반복) |
+|---|---:|---:|
+| direct | 0.09 | 0 / 0 |
+| reuse-prepared | 0.17 | 29 / 0 |
+| snapshot (매번 새 KVM VM) | 795 | 110,388 / 110,388 |
+
+- 반복 방문에서는 direct와 reuse-prepared 모두 비용이 거의 없다. reuse 계열은 노드마다 이전 방문의 EPT가 남기 때문이다. FragVisor도 노드별 EPT가 남는다. 다만 다른 노드에서 쓴 page는 DSM으로 다시 가져와야 하고, 그 비용은 이 lab이 재현하지 못한다.
+- 빈 EPT에서 시작하는 snapshot은 매번 약 11만 번의 L1 EPT violation과 0.8초를 쓴다(nested라서 한 번에 약 7 µs).
+- **첫 방문은 direct가 오히려 느렸다.** first − warm이 direct 75 ms, reuse 7 ms다(각 n=1). direct의 L1 EPT violation은 0이었다. 그래서 75 ms는 바깥 L0가 B용 shadow EPT를 새로 채우는 nested 전용 비용으로 **추정**한다. L0 tracing은 sudo가 필요해 하지 않았다. reuse의 B는 측정 전에 같은 backing으로 seed guest를 한 번 띄워 두어 이미 데워져 있었다. 그래서 첫 방문 비교는 한 가지 요인만 바꾼 비교가 아니다.
+- 하드웨어와 무관한 근거는 EPT violation 수다. direct는 목적지 L1이 EPT를 다시 채우지 않는다(0회). 시간 차이는 물리 서버에서 다시 재야 한다.
+
+**한계**
+- nested라 L1 → L2 VM-entry와 VMCS 명령이 L0를 거친다. kernel attach 23~38 µs에도 이 비용이 섞여 있다.
+- 두 L1이 coherent 메모리를 공유하므로 write-back·invalidate 비용이 없다.
+- 첫 방문은 n=1이다.
 
 ---
 
@@ -409,7 +449,7 @@ M4+P가 가장 강한 상대다. 관문 G2가 "hand-off 정지 시간 ≤ M4+P"�
 
 | 서버 | 구성 | 주의 |
 |---|---|---|
-| bud05 | Intel Xeon Gold 6548Y+ 2소켓. node 0 = CPU 0-31 + DRAM 약 128 GB, node 1 = CPU 32-63, node 2 = CPU 없는 CXL | **NUMA 0만 쓴다.** governor `performance`(영구), turbo 켬(약 4 GHz). nosmt로 부팅하지만 runtime에 SMT를 켰고 NUMA 1 sibling은 offline(재부팅하면 꺼짐). dockerd는 cpuset CPU 64 이상을 거부한다 |
+| bud05 | Intel Xeon Gold 6548Y+ 2소켓. node 0 = CPU 0-31 + DRAM 약 128 GB, node 1 = CPU 32-63 + DRAM 32 GB, node 2 = CPU 없는 CXL | **NUMA 0만 쓴다.** 예외: 11-12 FragVisor 경계 측정은 node 0이 다른 실험 중이라 사용자 지시로 node 1만 썼다(CPU 32-63, lab 10 GiB 이하). governor `performance`(영구), turbo 켬(약 4 GHz). nosmt로 부팅하지만 runtime에 SMT를 켰고 NUMA 1 sibling은 offline(재부팅하면 꺼짐). dockerd는 cpuset CPU 64 이상을 거부한다 |
 | bud05 node 2 | 4 host가 공유하는 CXL DCD. bud05는 host 2 | 부팅 뒤 `cxl_pci`를 다시 probe하고 `dcdctl add -H 2 -R 0`. **block을 손으로 online하지 않는다.** add/release는 사용자 승인 뒤에만. region 1은 다른 프로젝트가 쓴다 |
 | bud04 | kernel 6.18.0-m3, dax0.0·dax2.0 각 256 GiB devdax | NUMA 0만 쓴다. root는 되지만 `/Serverless` 아래 다른 내용은 건드리지 않는다. AC 전원 문제로 두 번 꺼졌다(10-18, 10-27) |
 
