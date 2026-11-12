@@ -5,7 +5,7 @@ lab_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_dir="$(cd -- "$lab_dir/../.." && pwd)"
 fc_source="${CXL_LAB_FC_SOURCE:-$repo_dir/firecracker}"
 
-fc_cargo() {
+fc_cargo() (
     [[ -f "$fc_source/Cargo.toml" ]] || {
         echo "Firecracker source missing: $fc_source (see README.md bootstrap steps)." >&2
         return 1
@@ -46,7 +46,7 @@ fc_cargo() {
         --volume "$fc_source/build/cargo_git_registry:/usr/local/rust/git" \
         --workdir /firecracker public.ecr.aws/firecracker/fcuvm:v93 \
         cargo "$@" --offline --locked --release --target x86_64-unknown-linux-musl
-}
+)
 
 build_firecracker() {
     # Never reapply an old patch over the working tree during a build.
