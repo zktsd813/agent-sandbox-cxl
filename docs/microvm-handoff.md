@@ -9,8 +9,8 @@
 기준 공유 DAX RAM, state snapshot·worker 재사용, KVM 객체 direct handoff, 크기별 migration
 비교와 PML cache 관리 계측은 [현재 구현·사용법](../implementation/virtual_machine/README.md)에
 정리했다. MPTCP 연결을 유지한 guest-client snapshot 이전 결과와 다음 구현 순서는
-[세션 인계](../implementation/virtual_machine/README.md#session-handoff)와
-[MPTCP 실행 검증](../implementation/virtual_machine/README.md#mptcp-session)에 있다.
+[세션 인계](https://github.com/zktsd813/agent-sandbox-cxl/blob/184167c/implementation/virtual_machine/README.md#session-handoff)와
+[MPTCP 실행 검증](https://github.com/zktsd813/agent-sandbox-cxl/blob/184167c/implementation/virtual_machine/README.md#mptcp-session)에 있다.
 EMR·DSA 및 주기적 preflush 논의도 그 문서에서 구현·측정 결과와 구분한다.
 이 문서의 `.local/` 도구·이미지·원시 로그는 Git 배포 대상이 아니며, 아래 명령은 당시 실행 기록이다.
 

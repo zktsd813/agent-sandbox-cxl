@@ -20,7 +20,7 @@
 
 mini-swe-agent의 기록된 명령을 Docker에서 재실행하고 CPU·메모리·동시성·LLC MPKI를 측정한다. Trace replay는 CPU NUMA node 0과 DRAM(node 0) / CXL(node 2) 메모리 비교를 지원한다. 별도 microVM 실험은 공유 DAX RAM 위의 상태 복원·KVM worker 재사용·direct handoff와 PML/cache 처리 비용을 검증한다. GPU, 모델 가중치, LLM API key는 사용하지 않는다.
 
-2026-10-23 기준 microVM 구현·측정·EMR/DSA 조사와 MPTCP 연결을 유지한 snapshot 이전 결과는 [실행 문서와 다음 세션 인계](implementation/virtual_machine/README.md#session-handoff)에 모았다. 현재 전환 실험은 한 물리 호스트의 두 Linux VM 사이이며 실제 비일관 CXL 다중 호스트 검증은 남아 있다. DSA와 주기적 preflush는 조사·설계 단계로, 해당 성능을 측정한 결과는 없다.
+2026-10-23 기준 microVM 구현·측정·EMR/DSA 조사와 MPTCP 연결을 유지한 snapshot 이전 결과는 [실행 문서와 다음 세션 인계](https://github.com/zktsd813/agent-sandbox-cxl/blob/184167c/implementation/virtual_machine/README.md#session-handoff)에 모았다. 현재 전환 실험은 한 물리 호스트의 두 Linux VM 사이이며 실제 비일관 CXL 다중 호스트 검증은 남아 있다. DSA와 주기적 preflush는 조사·설계 단계로, 해당 성능을 측정한 결과는 없다.
 
 2026-10-26 정리: 아래 Docker replay의 메모리·MPKI·write 관측 결과를 추가했다. 다른 머신에서 진행한 [microVM contention 실측](experiments/contention/RESULTS-20261021.md), [fleet 시뮬레이션](experiments/contention/RESULTS-fleet.md), [RL rollout trace 수집 계획](docs/trace-collection-plan.md)도 같은 저장소에서 이어간다. Docker의 write 관측 결과를 microVM의 PML/cache 처리 비용이나 실제 다중 호스트 coherence 비용으로 바로 환산하지 않는다.
 

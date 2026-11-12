@@ -233,7 +233,7 @@ DSA는 DMA 기반 데이터 처리 가속기다. 여기서는 Cache Flush를 실
 
 Flush 뒤에 dirty 기록을 지우면 그 사이의 재쓰기를 잃을 수 있다. Source가 이미 writeback한 페이지도 reader에는 오래된 복사본이 남으므로 최종 잔여 집합만 전달해서는 안 된다. 여러 노드로 확대할 때는 destination별 마지막 동기화 epoch 이후의 변경을 빠짐없이 합치거나 보수적으로 전체를 invalidate해야 한다. 현재 detach의 조기 `DETACHED` 게시도 flush 성공 뒤 ownership이 확정되도록 바꿔야 한다.
 
-DSA capability, DAX 주소 접근과 IOMMU/SVA, batch 부분 실패와 timeout을 먼저 검증한다. 단순 enqueue 성공이나 CPU fence는 DSA 완료가 아니다. Reader의 invalidate가 이전 dirty 데이터를 writeback하지 않도록 이전 owner의 쓰기도 먼저 정리해야 한다. [상세 설계와 근거](../implementation/virtual_machine/README.md#dsa-cache-flush와-주기적-preflush-조사후속-설계), [KVM dirty logging](https://docs.kernel.org/virt/kvm/api.html#kvm-cap-manual-dirty-log-protect2)
+DSA capability, DAX 주소 접근과 IOMMU/SVA, batch 부분 실패와 timeout을 먼저 검증한다. 단순 enqueue 성공이나 CPU fence는 DSA 완료가 아니다. Reader의 invalidate가 이전 dirty 데이터를 writeback하지 않도록 이전 owner의 쓰기도 먼저 정리해야 한다. [상세 설계와 근거](https://github.com/zktsd813/agent-sandbox-cxl/blob/184167c/implementation/virtual_machine/README.md#dsa-cache-flush와-주기적-preflush-조사후속-설계), [KVM dirty logging](https://docs.kernel.org/virt/kvm/api.html#kvm-cap-manual-dirty-log-protect2)
 
 ## MPTCP와 연결 유지
 

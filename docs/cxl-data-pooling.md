@@ -8,7 +8,7 @@ donor guest-cache 공유는 아래에 설명한다. 둘의 검증 범위를 합�
 
 ## 실제 guest page-cache 공유: 구현과 논의의 현재 상태
 
-소스는 `06f440013`, 재현과 측정값은 [구현 README](../implementation/virtual_machine/README.md#donor-guest-cache의-온라인-읽기-공유--고정-cxl--무한-수명-실험)에 있다.
+소스는 `06f440013`, 재현과 측정값은 [구현 README](https://github.com/zktsd813/agent-sandbox-cxl/blob/184167c/implementation/virtual_machine/README.md#donor-guest-cache의-온라인-읽기-공유--고정-cxl--무한-수명-실험)에 있다.
 목표는 CXL에 이미 존재하는 guest의 파일 데이터 페이지를 여러 VM이 참조하여 중복을 줄이는
 것이다. VM별 inode, address_space/XArray, LRU, refcount, 페이지 테이블은 공유하지 않는다.
 
@@ -211,7 +211,7 @@ Bloom이 실제 존재하는 후보를 놓치면 false negative다. 표준 Bloom
 
 ## 데이터 매핑과 CoW
 
-기존 devDAX는 private mapping을 거부한다. [devdax-pool-cow.patch](../implementation/virtual_machine/devdax-pool-cow.patch)는 4KiB private mapping을 허용하는 실험 기능을 추가한다. **기본값은 비활성화**이고 L1 boot parameter `device_dax.pool_cow=1`로 명시적으로 켠다. Huge private fault는 사용하지 않는다.
+기존 devDAX는 private mapping을 거부한다. [devdax-pool-cow.patch](https://github.com/zktsd813/agent-sandbox-cxl/blob/184167c/implementation/virtual_machine/devdax-pool-cow.patch)는 4KiB private mapping을 허용하는 실험 기능을 추가한다. **기본값은 비활성화**이고 L1 boot parameter `device_dax.pool_cow=1`로 명시적으로 켠다. Huge private fault는 사용하지 않는다.
 
 Read fault는 canonical CXL PFN을 매핑한다. 첫 접근부터 write인 경우에는 kernel이 준비한 `cow_page`에 원본을 복사한다. 이미 읽은 private PTE에 대한 쓰기는 일반 kernel CoW 경로를 거친다. KVM도 host PTE의 쓰기 가능 여부를 사용하므로 guest CPU 쓰기에 동일한 격리가 적용된다. Host가 `pread` 등의 destination으로 guest HVA에 쓰는 경우도 이 경로를 따른다. 별도의 4KiB KVM memory slot을 대량 생성하지 않는다.
 
