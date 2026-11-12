@@ -17,6 +17,7 @@ Model (identical to sim.py where they overlap; `test` checks it):
 
 import argparse
 import csv
+import hashlib
 from concurrent.futures import ProcessPoolExecutor
 import json
 import math
@@ -160,7 +161,13 @@ def flatten(programs, names):
         memory.append(info["memory_gib"])
         cpu_s.append(busy)
         gap_s.append(idle)
-    return dict(slot_demand=np.array(demand, dtype=np.float64), seg_kind=np.array(kind, dtype=np.int8),
+    seg_cpu = np.array([sum(demand[a:a + n]) * DT if k == 0 else 0.0
+                        for k, a, n in zip(kind, start, length)])
+    is_command = np.array([k == 0 for k in kind], dtype=np.bool_)
+    for i, name in enumerate(names):
+        if programs[name].get("boot", True) and count[i]:
+            is_command[first[i]] = False
+    return dict(seg_cpu_s=seg_cpu, seg_is_command=is_command, slot_demand=np.array(demand, dtype=np.float64), seg_kind=np.array(kind, dtype=np.int8),
                 seg_start=np.array(start, dtype=np.int64), seg_len=np.array(length, dtype=np.int64),
                 trace_first=np.array(first, dtype=np.int64), trace_count=np.array(count, dtype=np.int64),
                 trace_vcpus=np.array(vcpus, dtype=np.float64), trace_mem=np.array(memory, dtype=np.float64),
@@ -305,8 +312,46 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
               mech_kind, pause, latency_steps, handoff_cpu_s, dump_s_per_gib, xfer_s_per_gib,
               detect_steps, threshold, hold_steps, max_batch, job_size, train_steps, jitter, gap_scale,
               cfs, sleeper_credit_s, inflation, carry, bernoulli, kw_a, kw_b, kw_latency,
-              img_of_trace, n_images, place_mode, loc_bonus, retention_steps):
+              img_of_trace, n_images, place_mode, loc_bonus, retention_steps,
+              seg_heavy=None, seg_width=None, bnd_on=False, bnd_latency_steps=0.0, bnd_cpu_s=0.0,
+              bnd_margin=1.0, bnd_k=0, bnd_view=0, seg_cpu_s=None, seg_is_command=None, bnd_seed=1):
     n_slots = slot_home.shape[0]
+    # Optional metadata leaves old call sites valid. The first CPU segment is boot unless marked otherwise.
+    cpu_seconds = np.zeros(len(seg_len))
+    command = np.zeros(len(seg_len), np.bool_)
+    for t in range(len(trace_first)):
+        for g in range(trace_first[t], trace_first[t] + trace_count[t]):
+            command[g] = seg_kind[g] == 0 and g > trace_first[t]
+            if seg_kind[g] == 0:
+                for j in range(seg_len[g]):
+                    cpu_seconds[g] += slot_demand[seg_start[g] + j] * DT
+    if seg_cpu_s is not None:
+        cpu_seconds = seg_cpu_s
+    if seg_is_command is not None:
+        command = seg_is_command
+    heavy = cpu_seconds >= 1.0 if seg_heavy is None else seg_heavy
+    widths = np.zeros(len(seg_len))
+    for g in range(len(seg_len)):
+        widths[g] = cpu_seconds[g] / max(DT, seg_len[g] * DT)
+    if seg_width is not None:
+        widths = seg_width
+    # Local RNG for power-of-k boundary sampling; it never changes the placement draw stream.
+    np.random.seed(bnd_seed)
+    decided = np.full(n_slots, -1, np.int64)
+    previous_demand = np.zeros(n_slots)
+    previous_load = np.zeros(n_nodes)
+    cause = np.full(n_slots, 3, np.int64)  # 0 later overlap, 1 no fitting node, 2 light, 3 boot/residual
+    loss_by_cause = np.zeros(4)
+    initial_unfit_loss = 0.0
+    later_arrival_loss = 0.0
+    last_command_start = np.full(n_nodes, -1, np.int64)
+    initial_unfit = np.zeros(n_slots, np.bool_)
+    bnd_moves = 0
+    bnd_blocked = 0
+    # Rows: solo steps, elapsed steps, profile CPU-s, timeout, actually served CPU-s.
+    commands = np.zeros((100_000, 5))
+    n_commands = 0
+    command_cpu = np.zeros(n_slots)
     # image residency per node (a sandbox of the image is there, or one left within the retention time), for the
     # locality-aware placements and the page-cache replay (events: step, node, image, kind 0 start/1 end/2 in/3 out)
     res_count = np.zeros((n_nodes, max(1, n_images)), np.int64)
@@ -337,12 +382,12 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
     seg_t0 = np.zeros(n_slots, np.int64)
     t_start = np.zeros(n_slots, np.int64)
     node = slot_home.copy()
-    paused_until = np.full(n_slots, -1, np.int64)
+    paused_until = np.full(n_slots, -1.0)
     locked_until = np.full(n_slots, -1, np.int64)
     recent = np.zeros(n_slots)
     next_start = first_start.copy()
     choice_i = np.zeros(n_slots, np.int64)
-    move_eff = np.full(n_slots, -1, np.int64)
+    move_eff = np.full(n_slots, -1.0)
     move_dest = np.zeros(n_slots, np.int64)
     demand = np.zeros(n_slots)
     want = np.zeros(n_slots)
@@ -352,6 +397,7 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
     max_tasks = 200000
     task_node = np.zeros(max_tasks, np.int64)
     task_left = np.zeros(max_tasks)
+    task_fractional = np.zeros(max_tasks, np.bool_)
     n_tasks = 0
     nic_free = np.zeros(n_nodes, np.int64)
     history = np.zeros((n_pools, max(1, detect_steps)))
@@ -365,6 +411,7 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
     overhead = 0.0
     paused_want = 0.0
     moves = 0
+    measured_moves = 0
     blocked = 0
     finished = np.zeros(1_000_000)
     n_finished = 0
@@ -421,6 +468,8 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                 locked_until[s] = -1
                 move_eff[s] = -1
                 recent[s] = 0.0
+                decided[s] = -1
+                command_cpu[s] = 0.0
                 next_start[s] = -1
                 live[node[s]] += 1
                 img = img_of_trace[t]
@@ -433,9 +482,83 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                     ideal = trace_expected[t] + (step - job_begin[j]) * 0.01
                     if ideal > job_ideal[j]:
                         job_ideal[j] = ideal
-        # 2. moves that complete now
+        # Boundary decisions use the previous step, with reservations for all in-flight arrivals and
+        # decisions earlier in this step. A staying command reserves its width too.
+        boundary_load = previous_load.copy()
+        reserved = np.zeros(n_nodes)
+        if bnd_on and n_pools == n_nodes:
+            if bnd_view == 1:
+                predicted = np.zeros(n_nodes)
+                for s in range(n_slots):
+                    if active[s]:
+                        g = seg[s]
+                        if g <= seg_last[s] and command[g] and heavy[g] and decided[s] == g and move_eff[s] < 0:
+                            predicted[node[s]] += widths[g]
+                        else:
+                            predicted[node[s]] += previous_demand[s]
+                for n in range(n_nodes):
+                    boundary_load[n] = max(boundary_load[n], predicted[n])
+            for s in range(n_slots):
+                if active[s] and move_eff[s] >= 0:
+                    reserved[move_dest[s]] += widths[seg[s]]
         for s in range(n_slots):
-            if active[s] and move_eff[s] >= 0 and step >= move_eff[s]:
+            if not active[s]:
+                continue
+            g = seg[s]
+            if g > seg_last[s] or not command[g] or decided[s] == g:
+                continue
+            decided[s] = g
+            last_command_start[node[s]] = step
+            command_cpu[s] = 0.0
+            initial_unfit[s] = False
+            if cpu_seconds[g] < 1.0:
+                cause[s] = 2
+            else:
+                actual_width = cpu_seconds[g] / (seg_len[g] * DT)
+                fits = False
+                for n in range(n_nodes):
+                    if cores - boundary_load[n] - reserved[n] >= actual_width - 1e-9:
+                        fits = True
+                cause[s] = 0 if fits else 1
+            if not bnd_on or n_pools != n_nodes or not heavy[g] or move_eff[s] >= 0:
+                continue
+            source = node[s]
+            width = widths[g]
+            free_here = cores - boundary_load[source] - reserved[source]
+            dest = source
+            best_free = free_here
+            if free_here < width:
+                for j in range(n_nodes if bnd_k == 0 else bnd_k):
+                    cand = j if bnd_k == 0 else np.random.randint(n_nodes)
+                    if cand != source:
+                        spare = cores - boundary_load[cand] - reserved[cand]
+                        if spare > best_free:
+                            dest = cand
+                            best_free = spare
+                if dest != source and best_free - free_here >= bnd_margin:
+                    eff = step + bnd_latency_steps
+                    move_eff[s] = eff
+                    move_dest[s] = dest
+                    paused_until[s] = eff
+                    locked_until[s] = int(math.ceil(eff))
+                    if bnd_cpu_s > 0.0 and n_tasks < max_tasks:
+                        task_node[n_tasks] = source
+                        task_left[n_tasks] = bnd_cpu_s
+                        task_fractional[n_tasks] = True
+                        task_v[n_tasks] = min_v[pool_of_node[source]]
+                        n_tasks += 1
+                    if measuring:
+                        bnd_moves += 1
+                else:
+                    dest = source
+                    best_free = free_here
+                    if measuring:
+                        bnd_blocked += 1
+            initial_unfit[s] = cause[s] == 0 and best_free < cpu_seconds[g] / (seg_len[g] * DT) - 1e-9
+            reserved[dest] += width
+        # 2. moves that complete now (a fractional arrival runs the available fraction of this step).
+        for s in range(n_slots):
+            if active[s] and move_eff[s] >= 0 and step + 1 > move_eff[s]:
                 img = img_of_trace[tr[s]]
                 res_count[node[s], img] -= 1
                 res_last[node[s], img] = step
@@ -455,7 +578,16 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
             if active[s] and seg[s] <= seg_last[s] and seg_kind[seg[s]] == 0:
                 w = slot_demand[seg_start[seg[s]] + pos[s]]
             want[s] = w
-            demand[s] = 0.0 if step < paused_until[s] else w
+            available = max(0.0, min(1.0, step + 1 - paused_until[s]))
+            demand[s] = w * available
+            if measuring:
+                paused_want += w * (1.0 - available) * DT
+                if active[s] and seg[s] <= seg_last[s] and command[seg[s]]:
+                    loss_by_cause[cause[s]] += w * (1.0 - available) * DT
+                    if initial_unfit[s]:
+                        initial_unfit_loss += w * (1.0 - available) * DT
+                    elif cause[s] == 0 and last_command_start[node[s]] > seg_t0[s]:
+                        later_arrival_loss += w * (1.0 - available) * DT
             if cfs:
                 runnable_now = demand[s] > 0.0
                 if runnable_now and not was_runnable[s]:  # wakeup: GENTLE_FAIR_SLEEPERS placement
@@ -498,7 +630,7 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                     sandbox_load += demand[o]
                 else:
                     threads[j] = 1.0
-                    units[j] = 1.0
+                    units[j] = min(1.0, task_left[-1 - o] / DT) if task_fractional[-1 - o] else 1.0
             if cfs:
                 vs = np.empty(m)
                 caps = np.empty(m)
@@ -575,6 +707,11 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                     if measuring:
                         wait += (demand[o] - got[j]) * DT
                         run += got[j] * DT
+                        loss_by_cause[cause[o] if command[seg[o]] else 3] += (demand[o] - got[j]) * DT
+                        if initial_unfit[o]:
+                            initial_unfit_loss += (demand[o] - got[j]) * DT
+                        elif cause[o] == 0 and last_command_start[node[o]] > seg_t0[o]:
+                            later_arrival_loss += (demand[o] - got[j]) * DT
                 else:
                     task_left[-1 - o] -= got[j] * DT
                     if measuring:
@@ -593,26 +730,37 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
             if task_left[i] > 1e-12:
                 task_node[k] = task_node[i]
                 task_left[k] = task_left[i]
+                task_fractional[k] = task_fractional[i]
                 task_v[k] = task_v[i]
                 k += 1
         n_tasks = k
+        previous_load[:] = 0.0
+        for s in range(n_slots):
+            previous_demand[s] = demand[s]
+            previous_load[node[s]] += demand[s]
         # 5. advance sandboxes
         for s in range(n_slots):
             if not active[s]:
                 continue
             recent[s] = 0.9 * recent[s] + 0.1 * demand[s]
-            if step < paused_until[s]:
-                if measuring:
-                    paused_want += want[s] * DT
-                continue
+            if step + 1 <= paused_until[s]:
+                g = seg[s]
+                if not (g <= seg_last[s] and command[g] and step + 1 - seg_t0[s] >= timeout_steps):
+                    continue
             g = seg[s]
+            old_t0 = seg_t0[s]
+            timed_out = False
+            finish_slack = 0.0
+            if g <= seg_last[s] and command[g]:
+                command_cpu[s] += served[s] * DT if demand[s] > 0.0 else 0.0
             if g <= seg_last[s]:
                 if seg_kind[g] == 1:
                     gap_left[s] -= 1
                     if gap_left[s] <= 0:
                         seg[s], pos[s], gap_left[s], seg_t0[s] = _enter(g + 1, seg_last[s], seg_kind, seg_len, step + 1, gap_scale)
                         prog[s] = 0.0
-                elif g > trace_first[tr[s]] and step + 1 - seg_t0[s] >= timeout_steps:
+                elif command[g] and step + 1 - seg_t0[s] >= timeout_steps:
+                    timed_out = True
                     seg[s], pos[s], gap_left[s], seg_t0[s] = _enter(g + 1, seg_last[s], seg_kind, seg_len, step + 1, gap_scale)
                     prog[s] = 0.0
                 else:
@@ -625,8 +773,21 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                         # ones (docs-pre-merge:experiments/contention/RESULTS-fleet.md 1절). Scheduler wait is added separately (kernel_wait, 7절)
                         prog[s] = prog[s] - 1.0 if carry and prog[s] > 1.0 else 0.0
                         if pos[s] >= seg_len[g]:
+                            if carry and served[s] > 0.0:
+                                finish_slack = min(1.0, prog[s] * w * inflation / served[s])
                             prog[s] = 0.0
                             seg[s], pos[s], gap_left[s], seg_t0[s] = _enter(g + 1, seg_last[s], seg_kind, seg_len, step + 1, gap_scale)
+            if seg[s] != g and command[g] and old_t0 >= begin_step:
+                if n_commands >= len(commands):
+                    grown = np.zeros((2 * len(commands), 5))
+                    grown[:n_commands] = commands
+                    commands = grown
+                commands[n_commands, 0] = seg_len[g]
+                commands[n_commands, 1] = step + 1 - old_t0 - finish_slack
+                commands[n_commands, 2] = cpu_seconds[g]
+                commands[n_commands, 3] = 1.0 if timed_out else 0.0
+                commands[n_commands, 4] = command_cpu[s]
+                n_commands += 1
             if seg[s] > seg_last[s]:
                 if measuring and t_start[s] >= begin_step and n_finished < finished.shape[0]:
                     finished[n_finished] = (step + 1 - t_start[s]) * 0.01 / trace_expected[tr[s]]
@@ -698,6 +859,7 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                         if handoff_cpu_s > 0.0 and n_tasks < max_tasks:
                             task_node[n_tasks] = p
                             task_left[n_tasks] = handoff_cpu_s
+                            task_fractional[n_tasks] = False
                             task_v[n_tasks] = min_v[p]
                             n_tasks += 1
                     else:
@@ -712,6 +874,7 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                         if n_tasks < max_tasks:
                             task_node[n_tasks] = p
                             task_left[n_tasks] = dump_s_per_gib * mem
+                            task_fractional[n_tasks] = False
                             task_v[n_tasks] = min_v[p]
                             n_tasks += 1
                     move_eff[pick] = eff
@@ -722,11 +885,13 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                     if eff > last_eff:
                         last_eff = eff
                     moves += 1
+                    if measuring:
+                        measured_moves += 1
                     done += 1
                 if done > 0:
                     cooldown[p] = last_eff + hold_steps
     return wait, run, overhead, paused_want, moves, blocked, finished[:n_finished], step_secs[:n_steps_done], \
-        step_ratio[:n_steps_done], ev[:n_ev]
+        step_ratio[:n_steps_done], ev[:n_ev], commands[:n_commands], bnd_moves, bnd_blocked, loss_by_cause, initial_unfit_loss, measured_moves, later_arrival_loss
 
 
 _BLOCKS = {}
@@ -858,7 +1023,7 @@ def simulate(job):
     ramp_steps = int(round(config["ramp_s"] / DT))
     steps = int(round((config["ramp_s"] + config["duration_s"]) / DT))
     entries = list(range(len(names)))
-    width = 256
+    width = int(config.get("choice_width", 256))
     first_start = np.zeros(n_slots, np.int64)
     choices = np.zeros((n_slots, width), np.int64)
     jitter = np.zeros((n_slots, width), np.int64)
@@ -893,7 +1058,9 @@ def simulate(job):
             rng = random.Random(f"{config['seed']}-{n}-{slot}")  # same draws as sim.py and the pilot
             first_start[s] = int(math.ceil(rng.uniform(0, config["ramp_s"]) / DT - 1e-9))
             choices[s] = [rng.choice(entries) for _ in range(width)]
-    place = np.random.default_rng(abs(hash(("place", config["seed"]))) % 2**32).random((n_slots, width, max(1, config["place_k"])))
+    place_seed = (int(hashlib.sha256(f"place-{config['seed']}".encode()).hexdigest()[:8], 16)
+                  if config.get("stable_placement", False) else abs(hash(("place", config["seed"]))) % 2**32)
+    place = np.random.default_rng(place_seed).random((n_slots, width, max(1, config["place_k"])))
     mech = MECHANISMS[config["mechanism"]]
     scale = 37.0 / config.get("nic_gbps", mech.get("nic_gbps", 37.0)) if mech["kind"] == 2 else 1.0
     images = job.get("images") or ["?"] * len(names)
@@ -901,7 +1068,7 @@ def simulate(job):
     img_of_trace = np.array([image_names.index(i) for i in images], np.int64)
     retention_steps = int(round(config["retention_s"] / DT))
     started = time.time()
-    wait, run, overhead, paused_want, moves, blocked, finished, step_secs, step_ratio, events = run_fleet(
+    wait, run, overhead, paused_want, moves, blocked, finished, step_secs, step_ratio, events, commands, bnd_moves, bnd_blocked, causes, unfit, reactive_moves, later_arrival = run_fleet(
         arrays["slot_demand"], arrays["seg_kind"], arrays["seg_start"], arrays["seg_len"], arrays["trace_first"],
         arrays["trace_count"], arrays["trace_vcpus"], arrays["trace_mem"],
         arrays["trace_cpu_s"] + arrays["trace_gap_s"] * config["gap_scale"],
@@ -920,7 +1087,11 @@ def simulate(job):
         float(config["kernel_wait_b"] if config["kernel_wait_b"] is not None
               else KERNEL_WAIT[config["kernel_wait_mode"]]["b"]),
         config["kernel_wait_mode"] == "latency", img_of_trace, len(image_names), int(config["place_mode"]),
-        float(config["loc_bonus"]), retention_steps)
+        float(config["loc_bonus"]), retention_steps,
+        arrays.get("seg_heavy"), arrays.get("seg_width"), bool(config.get("bnd_on", False)),
+        float(config.get("bnd_latency_s", 0.0)) / DT, float(config.get("bnd_cpu_s", 0.0)),
+        float(config.get("bnd_margin", 1.0)), int(config.get("bnd_k", 0)), int(config.get("bnd_view", 0)),
+        arrays.get("seg_cpu_s"), arrays.get("seg_is_command"), int(config["seed"]) if str(config["seed"]).isdigit() else 1)
     cache = {}
     if job.get("blocks"):
         blocks, n_blocks, measured = image_blocks(job["blocks"], image_names)
@@ -928,6 +1099,7 @@ def simulate(job):
             stats = cache_replay(events, blocks, n_blocks, nodes, retention_steps, ramp_steps, steps, rho)
             cache.update({f"{k}_rho{rho:g}": v for k, v in stats.items()})
         cache["images_with_measured_blocks"] = measured
+    command_stats = command_summary(commands)
     q = lambda x: float(np.percentile(finished, x)) if len(finished) else None
     return {**{k: v for k, v in config.items()}, "wait_over_run": wait / run if run else None,
             "run_cores_per_node": run / config["duration_s"] / nodes, "move_cpu_over_run": overhead / run if run else None,
@@ -940,7 +1112,27 @@ def simulate(job):
             "step_s_mean": float(step_secs.mean()) if len(step_secs) else None,
             "step_slowdown_p50": float(np.percentile(step_ratio, 50)) if len(step_ratio) else None,
             "step_slowdown_mean": float(step_ratio.mean()) if len(step_ratio) else None,
-            "events": int(len(events)), **cache, "wall_s": round(time.time() - started, 2)}
+            "step_slowdown_p99": float(np.percentile(step_ratio, 99)) if len(step_ratio) else None,
+            "reactive_moves": int(reactive_moves), "bnd_moves": int(bnd_moves), "bnd_blocked": int(bnd_blocked),
+            "loss_cpu_s_by_cause": causes.tolist(), "initial_unfit_loss_cpu_s": float(unfit), "later_arrival_loss_cpu_s": float(later_arrival),
+            **command_stats, "events": int(len(events)), **cache, "wall_s": round(time.time() - started, 2)}
+
+
+def command_summary(commands):
+    """Completed-in-window command metrics; timeouts stay visible, including their downward censoring bias."""
+    out = {"commands_finished": len(commands), "commands_timed_out": int(commands[:, 3].sum()),
+           "command_cpu_s": float(commands[:, 2].sum()),
+           "command_solo_steps": float(commands[:, 0].sum()),
+           "command_elapsed_steps": float(commands[:, 1].sum())}
+    for label, subset in (("command", commands), ("heavy_command", commands[commands[:, 2] >= 1.0]),
+                          ("uncensored_command", commands[commands[:, 3] == 0])):
+        ratios = subset[:, 1] / subset[:, 0]
+        for q in (50, 90, 99):
+            out[f"{label}_slowdown_p{q}"] = float(np.percentile(ratios, q)) if len(ratios) else None
+    ratios = commands[:, 1] / commands[:, 0]
+    out["cpu_weighted_slowdown"] = float(np.average(ratios, weights=commands[:, 2])) if commands[:, 2].sum() else None
+    out["command_time_ratio"] = float(commands[:, 1].sum() / commands[:, 0].sum()) if len(commands) else None
+    return out
 
 
 DEFAULTS = dict(nodes=4, cores=5, pool="none", per_node=14, seed="1", ramp_s=60, duration_s=600, mechanism="none",
@@ -954,6 +1146,7 @@ DEFAULTS = dict(nodes=4, cores=5, pool="none", per_node=14, seed="1", ramp_s=60,
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("command", nargs="?", choices=["test"])
     parser.add_argument("--test", action="store_true", help="Run the hand-computed checks and exit")
     parser.add_argument("--solo", type=Path)
     parser.add_argument("--candidates", type=Path)
@@ -962,7 +1155,7 @@ def main():
     parser.add_argument("--output", type=Path)
     parser.add_argument("--blocks", type=Path, help="Per-image page-cache working sets (image_blocks.py merge)")
     args = parser.parse_args()
-    if args.test:
+    if args.test or args.command == "test":
         self_test()
         return
     programs = load_programs(args.solo, args.candidates)
@@ -1008,7 +1201,7 @@ def self_test():
     assert np.allclose(got, [0.007, 0.003]), got  # level L: (L - 0) + (L - 0.004) = 0.01
 
     def go(programs, nodes, cores, per_node, mechanism="none", steps=None, detect=1, hold=0, homes=None, job=0, train=0,
-           cfs=False, choice=None, kw=(0.0, 0.0), latency=False):
+           cfs=False, choice=None, kw=(0.0, 0.0), latency=False, boundary=False, boundary_latency=0.0):
         names = list(programs)
         arrays = flatten(programs, names)
         homes = np.repeat(np.arange(nodes), per_node) if homes is None else np.array(homes)
@@ -1024,7 +1217,9 @@ def self_test():
                          int(round(mech.get("latency_s", 0) / DT)), float(mech.get("cpu_s", 0)),
                          float(mech.get("dump_s_per_gib", 0)), float(mech.get("xfer_s_per_gib", 0)), detect, 0.1, hold, 1,
                          job, train, np.zeros((n_slots, 4), np.int64), 1.0, cfs, 0.012, 1.0, True, False,
-                         np.full(nodes, kw[0]), kw[1], latency, np.zeros(len(names), np.int64), 1, 0, 0.0, 0)
+                         np.full(nodes, kw[0]), kw[1], latency, np.zeros(len(names), np.int64), 1, 0, 0.0, 0,
+                         None, None, boundary, boundary_latency, 0.0, 1.0, 0, 0,
+                         arrays["seg_cpu_s"], arrays["seg_is_command"])
 
     # two 1-core sandboxes of 1 s each on one core: both run at 0.5 for 2 s -> 2 s of wait in total
     wait, run, *_ = go({"a": program(("cpu", 100, 1.0))}, nodes=1, cores=1, per_node=2, steps=200)
@@ -1072,6 +1267,36 @@ def self_test():
     out = go({"a": program(("cpu", 100, 1.0))}, nodes=1, cores=1, per_node=2, steps=1000, job=2, train=100)
     step_secs = out[7]
     assert len(step_secs) == 3 and np.allclose(step_secs, 2.0, atol=0.02), step_secs  # steps begin at 0, 3, 6 s
+    # Boundary: a new heavy command next to a boot hog moves before its first CPU step.
+    boundary_programs = {"hog": program(("cpu", 1000, 1.0)),
+                         "tool": program(("cpu", 1, 0.0), ("cpu", 100, 1.0))}
+    for lag in (0.0, 0.1, 3.0):
+        out = go(boundary_programs, nodes=2, cores=1, per_node=0, steps=300,
+                 homes=[0, 0], choice=[[0]*4, [1]*4], boundary=True, boundary_latency=lag)
+        assert out[11] == 1 and out[12] == 0, (lag, out[11:13])
+        assert len(out[10]) == 1 and abs(out[10][0, 1] - (100 + lag)) < 1e-7, (lag, out[10])
+        assert out[0] < 1e-9, (lag, out[0])
+        assert abs(out[3] - lag * DT) < 1e-9, (lag, out[3])
+    out = go(boundary_programs, nodes=2, cores=1, per_node=0, steps=300,
+             homes=[1, 0], choice=[[0]*4, [1]*4], boundary=True)
+    assert out[11] == 0 and out[10][0, 1] == 100, out[10:13]
+    out = go(boundary_programs, nodes=2, cores=1, per_node=0, steps=300,
+             homes=[0, 0], choice=[[0]*4, [1]*4], boundary=True, boundary_latency=3.0, mechanism="instant")
+    assert out[11] == 1 and out[4] == 0, out[4:13]  # reactive cannot select the boundary move in flight
+    # Two new commands cannot both reserve the one spare destination core.
+    out = go(boundary_programs, nodes=2, cores=1, per_node=0, steps=400,
+             homes=[0, 0, 0], choice=[[0]*4, [1]*4, [1]*4], boundary=True)
+    assert out[11] == 1 and out[12] == 1, out[11:13]
+    # Cap profiles have no boot: explicitly marked first segments are commands too.
+    capped = {"a": program(("cpu", 100, 1.0))}
+    capped["a"]["boot"] = False
+    out = go(capped, nodes=1, cores=1, per_node=2, steps=250)
+    assert len(out[10]) == 2 and np.allclose(out[10][:, 1], 200), out[10]
+    stats = command_summary(out[10])
+    assert abs(stats["cpu_weighted_slowdown"] - 2.0) < 1e-9 and stats["commands_timed_out"] == 0, stats
+    out = go({"a": program(("cpu", 1, 0.0), ("cpu", 7000, 1.0))}, nodes=1, cores=1,
+             per_node=1, steps=6500)
+    assert out[10][0, 3] == 1 and out[10][0, 1] == 6000, out[10]
     # page-cache replay: images {0,1,2,3} and {2,3,4,5} on two nodes from 0 to 100, dropped 50 steps later;
     # per node 4 blocks for 150 of 200 steps (8 fetched), shared cache 6 blocks for 150 steps (6 fetched)
     ev = np.array([[0, 0, 0, 0], [0, 1, 1, 0], [100, 0, 0, 1], [100, 1, 1, 1]], np.int64)

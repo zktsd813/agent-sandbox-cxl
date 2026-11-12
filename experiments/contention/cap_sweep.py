@@ -117,7 +117,7 @@ def programs_for(profiles, policy):
             if program and gap > 0:
                 program.append(("gap", gap))
             program.append(("cpu", stretch(demand, v)))
-        programs[name] = {"program": program, "vcpus": v, "memory_gib": p["memory_gib"]}
+        programs[name] = {"program": program, "vcpus": v, "memory_gib": p["memory_gib"], "boot": False}
         base[name] = sum(len(d) for _, d in p["commands"]) * DT
     return programs, base
 
