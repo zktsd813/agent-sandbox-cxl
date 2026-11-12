@@ -7,7 +7,7 @@ import time
 
 import lab
 import nfs_bench as nfs
-from home_storage_bench import require, json_lines
+from handoff_bench import require, json_lines
 
 
 def request(c,source,directory,nonce,first,label,peer,vm_id,epoch,start,size,kind,observe=False):

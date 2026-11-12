@@ -24,8 +24,8 @@ NAMES = ("gin-gonic__gin-3741", "php-cs-fixer__php-cs-fixer-8331",
 MODES = ("baseline", "state-only", "direct")
 SOURCES = ("experiment_sources.py", "swe_handoff_run.py", "handoff_bench.py", "swe_handoff_prepare.py",
     "verify_swe_handoff.py", "swe-handoff-l2-init.sh", "swe-handoff-guest-run.sh", "pool_memory_module.c",
-    "pool_memory_uapi.h", "home_storage_bench.py", "nfs_bench.py", "trace_bench.py", "trace_prepare.py",
-    "trace-guest-run.sh", "verify_trace_results.py", "lab.py", "shared_probe.c", "resident_fast.py",
+    "pool_memory_uapi.h", "nfs_bench.py", "trace_prepare.py",
+    "lab.py", "shared_probe.c", "resident_fast.py",
     "resident_control.c", "resident_bootstrap.c", "resident_prepare.py", "control_rpc.c", "control_rpc.py",
     "guest-init.sh", "resident_wire.h", "resident_proxy.py", "kernel_handoff_trace.py",
     "firecracker.patch", "kvm-dax-state.patch", "kvm-dax-source.json")

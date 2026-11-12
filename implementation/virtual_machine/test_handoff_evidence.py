@@ -63,7 +63,7 @@ class WorkloadEvidence(unittest.TestCase):
         import io
         import tarfile
         from verify_swe_handoff import sha
-        from verify_trace_results import SUBMIT
+        from verify_swe_handoff import SUBMIT
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)

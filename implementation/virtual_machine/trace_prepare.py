@@ -91,8 +91,6 @@ def prepare(args):
         shutil.copy2(baseline / name, destination / name)
     if args.shared_probe:
         shutil.copy2(args.shared_probe, destination / "shared-probe")
-    if args.ram_transfer:
-        shutil.copy2(args.ram_transfer, destination / "ram-transfer")
     if args.l1_kernel:
         shutil.copy2(args.l1_kernel, destination / "l1-kernel")
     with tempfile.TemporaryDirectory(prefix="trace-assets-", dir=destination) as tmp:
@@ -103,8 +101,6 @@ def prepare(args):
             checked(["cpio", "-id", "--quiet", "--no-absolute-filenames"], cwd=l1, stdin=stream)
         if args.shared_probe:
             shutil.copy2(args.shared_probe, l1 / "lab/shared-probe")
-        if args.ram_transfer:
-            shutil.copy2(args.ram_transfer, l1 / "lab/ram-transfer")
         if args.l2_kernel:
             shutil.copy2(args.l2_kernel, l1 / "lab/l2-vmlinux")
         if args.module_dir:
@@ -118,9 +114,7 @@ def prepare(args):
         for name, trace in traces.items():
             root = temporary / name
             lab.base_root(root, busybox)
-            shutil.copy2(HERE / "trace-l2-init.sh", root / "init")
-            (root / "init").chmod(0o755)
-            shutil.copy2(HERE / "trace-guest-run.sh", root / "lab/trace-guest-run.sh")
+            # Command payload only; swe_handoff_prepare installs the guest entrypoints.
             payload = root / "lab/trace"
             (payload / "cmd").mkdir(parents=True)
             shutil.copy2(busybox, payload / "busybox")
@@ -154,16 +148,12 @@ def prepare(args):
     manifest = {key: baseline_manifest[key] for key in
                 ("vendor", "l1_kernel_release", "modules", "qemu", "qemu_version", "firecracker_version", "inputs")}
     for name, path in (("l1_kernel", args.l1_kernel), ("l2_kernel", args.l2_kernel),
-                       ("shared_probe", args.shared_probe), ("ram_transfer", args.ram_transfer)):
+                       ("shared_probe", args.shared_probe)):
         if path:
             manifest["inputs"][name] = {"path": str(path.resolve()), "sha256": lab.sha256(path)}
     if args.shared_probe:
-        for key, name in (("probe_source", "shared_probe.c"), ("cache_probe_source", "cache_probe.h"),
-                          ("mptcp_probe_source", "mptcp_probe.h")):
+        for key, name in (("probe_source", "shared_probe.c"),):
             manifest["inputs"][key] = {"path": str(HERE / name), "sha256": lab.sha256(HERE / name)}
-    if args.ram_transfer:
-        manifest["inputs"]["ram_transfer_source"] = {
-            "path": str(HERE / "ram_transfer.c"), "sha256": lab.sha256(HERE / "ram_transfer.c")}
     if args.dependency_manifest:
         manifest["dependencies"] = json.loads(args.dependency_manifest.read_text())
         manifest["inputs"]["dependency_manifest"] = {"path": str(args.dependency_manifest.resolve()),
@@ -177,7 +167,7 @@ def prepare(args):
                 "storage": "read-only ext4 lower via virtio-blk; tmpfs overlay upper in guest RAM",
                 "timeout_policy": "TERM command process group after original timeout; KILL after 5 seconds; clean remaining group after completion",
                 "source_hashes": {name: lab.sha256(HERE / name) for name in
-                                  ("trace_prepare.py", "trace-l2-init.sh", "trace-guest-run.sh", "lab.py", "shared_probe.c")},
+                                  ("trace_prepare.py", "lab.py", "shared_probe.c")},
                 "artifacts": {p.name: lab.sha256(p) for p in destination.iterdir() if p.is_file()}})
     lab.save_json(destination / "manifest.json", manifest)
     print(json.dumps({"assets": str(destination), "traces": list(traces), "storage": str(destination / "storage.raw")}))
@@ -189,7 +179,6 @@ if __name__ == "__main__":
     parser.add_argument("--base-assets", type=Path, required=True)
     parser.add_argument("--assets", type=Path, required=True)
     parser.add_argument("--shared-probe", type=Path, help="Replace the native helper in the prepared L1 image")
-    parser.add_argument("--ram-transfer", type=Path, help="Embed the native RAM import/export helper for home-roundtrip")
     parser.add_argument("--l1-kernel", type=Path)
     parser.add_argument("--l2-kernel", type=Path)
     parser.add_argument("--module-dir", type=Path)

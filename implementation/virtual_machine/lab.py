@@ -227,7 +227,6 @@ def prepare(args):
     kernel_uapi = Path(os.environ.get("CXL_LAB_KERNEL_SOURCE", str(HERE / "../linux"))) / "include/uapi/linux"
     command(["gcc", "-std=c11", "-O2", "-static", "-pthread", "-Wall", "-Wextra", "-Werror",
              "-DCXL_KVM_DAX_HEADER=" + json.dumps(str(kernel_uapi / "kvm_dax.h")),
-             "-DCXL_MPTCP_HEADER=" + json.dumps(str(kernel_uapi / "mptcp.h")),
              HERE / "shared_probe.c", "-o", ASSETS / "shared-probe"])
     with tempfile.TemporaryDirectory(prefix="build-", dir=LOCAL) as temp:
         root = Path(temp)
@@ -255,10 +254,6 @@ def prepare(args):
               "l2_kernel": args.l2_kernel, "busybox": busybox,
               "probe_source": HERE / "shared_probe.c", "l1_init": HERE / "guest-init.sh",
               "l2_init": HERE / "l2-init.sh", "cxl_init": HERE / "guest-cxl.sh"}
-    if (HERE / "cache_probe.h").exists():
-        inputs["cache_probe_source"] = HERE / "cache_probe.h"
-    if (HERE / "mptcp_probe.h").exists():
-        inputs["mptcp_probe_source"] = HERE / "mptcp_probe.h"
     if l1_kernel.resolve() == (KERNEL_BUILD / "arch/x86/boot/bzImage").resolve():
         inputs["kernel_config"] = KERNEL_BUILD / ".config"
         inputs["kernel_source_metadata"] = HERE / "kernel-source.json"
@@ -472,7 +467,6 @@ def start(args):
               "qemu": str(qemu), "qemu_version": qemu_version,
               "qemu_sha256": sha256(qemu),
               "dax_guest": args.dax_guest,
-              "dax_kvm_state": args.dax_kvm_state,
               "dax_handoff": args.dax_handoff,
               "dax_4k": args.dax_4k or args.dax_handoff,
               "migration_network": migration_network,
@@ -494,7 +488,7 @@ def start(args):
     if args.dax_guest:
         config["source_patches"] = {name: sha256(HERE / name) for name in
                                     ["qemu-cxl-direct-ram.patch", "firecracker.patch", "ram-backend-source.json"]}
-    if args.dax_kvm_state or args.dax_handoff:
+    if args.dax_handoff:
         config["source_patches"].update({name: sha256(HERE / name) for name in
                                          ["kvm-dax-state.patch", "kvm-dax-source.json", "pointer-audit.json"]})
     save_json(run / "run.json", config)
@@ -522,7 +516,7 @@ def start(args):
                    "-nodefaults", "-no-user-config", "-display", "none", "-monitor", "none", "-no-reboot",
                    "-kernel", str(ASSETS / "l1-kernel"), "-initrd", str(ASSETS / "l1-initramfs.cpio"),
                    # Keep informational printk output from interleaving with result JSON.
-                   "-append", f"console=ttyS0 loglevel=4 rdinit=/init panic=1 lab.role={role} lab.nonce={nonce} lab.rounds={args.rounds} lab.cxl_bytes={args.cxl_mib * 1024 * 1024} lab.dax_guest={int(args.dax_guest)} lab.dax_kvm_state={int(args.dax_kvm_state)} lab.dax_handoff={int(args.dax_handoff)} lab.dax_4k={int(args.dax_4k or args.dax_handoff)}" + (" nokaslr kvm_dax_sync_init=1" if args.dax_handoff else ""),
+                   "-append", f"console=ttyS0 loglevel=4 rdinit=/init panic=1 lab.role={role} lab.nonce={nonce} lab.rounds={args.rounds} lab.cxl_bytes={args.cxl_mib * 1024 * 1024} lab.dax_guest={int(args.dax_guest)} lab.dax_handoff={int(args.dax_handoff)} lab.dax_4k={int(args.dax_4k or args.dax_handoff)}" + (" nokaslr kvm_dax_sync_init=1" if args.dax_handoff else ""),
                    "-object", f"memory-backend-file,id=shared,size={args.shared_mib}M,mem-path={backing},share=on",
                    "-device", "ivshmem-plain,memdev=shared",
                    "-chardev", f"socket,id=console,path={console_path},server=on,wait=off,logfile={prefix}.serial.log",
@@ -716,10 +710,6 @@ def verify(args):
         report["dax_guest_ram"] = {"owner": "A", "offset": 2097152, "bytes": 128 * 1024 * 1024}
         report["limitations"][1] = "VMM heap and KVM execution metadata remain local to VM A."
         report["limitations"][2] = "No execution handoff is implemented; QEMU direct RAM mode is limited to one fixed volatile CXL region."
-    if config.get("dax_kvm_state"):
-        report["scope"] += " Opt-in KVM execution objects use a reserved device-DAX arena; Firecracker uses a DAX heap."
-        report["limitations"][1] = "Host OS bindings (mm/task/PID/FD/per-CPU SRCU and scheduler state) remain local; kernel allocator metadata is local."
-        report["limitations"].append("KVM DAX is an experimental single-owner Intel/EPT path; use kvm-state-test to check actual placement and external references.")
     save_json(run / "report.json", report)
     print(json.dumps(report, indent=2))
 
@@ -951,62 +941,6 @@ def shared_test(args):
     save_json(run / name, report)
     print(json.dumps({k: v for k, v in report.items() if k != "transcripts"}, indent=2))
     print(f"Report: {run / name}")
-
-
-def context_bench(args):
-    """Measure pinned, blocking futex handoffs with actual switch counts."""
-    if not 1000 <= args.roundtrips <= 10000000 or not 1 <= args.samples <= 100:
-        raise RuntimeError("Require 1000..10000000 round trips and 1..100 samples")
-    directory = LOCAL / "context-switch"
-    directory.mkdir(exist_ok=True)
-    out = directory / str(time.time_ns())
-    out.mkdir()
-    cpu = args.cpu
-    config = vm = None
-    if args.scope == "host":
-        if cpu is None:
-            cpu = next((c for c in sorted(os.sched_getaffinity(0)) if c != 0), min(os.sched_getaffinity(0)))
-        binary = ASSETS / "shared-probe"
-        if not binary.is_file():
-            raise RuntimeError("Build the existing shared-probe with prepare first")
-    else:
-        _, config = current_run()
-        vm = config["vms"][args.role]
-        cpu = 0 if cpu is None else cpu
-    report = {"result": "running", "scope": args.scope, "cpu": cpu,
-              "host_kernel": os.uname().release, "roundtrips": args.roundtrips,
-              "samples_per_mode": args.samples, "warmup_roundtrips_per_sample": 10000,
-              "method": "two tasks pinned to the same CPU, blocking futex ping-pong; 2 handoffs per roundtrip; CLOCK_MONOTONIC_RAW",
-              "limits": ["includes futex wait/wake syscalls, scheduler and loop overhead; not isolated __switch_to instructions",
-                         "small hot working set; no CPU migration or large application cache working set",
-                         "percentiles summarize per-trial averages, not individual-switch latency percentiles"],
-              "samples": {}, "summary_us": {}}
-    if config:
-        report.update({"guest_role": args.role, "run": config["run"], "guest_kernel": config["prepared"]["l1_kernel_release"]})
-    else:
-        report["probe_sha256"] = sha256(binary)
-        report["cpu_model"] = next(line.split(":", 1)[1].strip() for line in Path("/proc/cpuinfo").read_text().splitlines() if line.startswith("model name"))
-    save_json(out / "report.json", report)
-    for mode in ("thread-private", "thread-shared", "process-shared"):
-        if vm:
-            text = guest_command(vm, f"/lab/shared-probe context {args.role} {mode} {cpu} {args.roundtrips} {args.samples}", timeout=110)
-        else:
-            text = output([binary, "context", "A", mode, cpu, args.roundtrips, args.samples], timeout=120)
-        (out / f"{mode}.log").write_text(text)
-        rows = [json.loads(line.removeprefix("CONTEXT_JSON ")) for line in text.splitlines() if line.startswith("CONTEXT_JSON ")]
-        if len(rows) != args.samples:
-            raise RuntimeError("Missing context-switch samples")
-        report["samples"][mode] = rows
-        values = sorted(row["ns_per_handoff"] / 1000 for row in rows)
-        report["summary_us"][mode] = {"median_trial_mean": statistics.median(values),
-            "p95_trial_mean": values[(95 * len(values) + 99) // 100 - 1],
-            "min_trial_mean": values[0], "max_trial_mean": values[-1],
-            "observed_switches": sum(row["observed_switches"] for row in rows),
-            "expected_handoffs": sum(row["expected_handoffs"] for row in rows)}
-    report["result"] = "passed"
-    save_json(out / "report.json", report)
-    print(json.dumps({"result": report["result"], "report": str(out / "report.json"), "summary_us": report["summary_us"]}, indent=2))
-
 
 
 def shared_dax_alignment(config):
@@ -1475,7 +1409,7 @@ fi
 def configure(args):
     """Inspect or explicitly configure KVM only inside the selected semantic pair."""
     run, config = current_run()
-    if (not (config.get("dax_guest") or config.get("migration_network")) or config.get("dax_kvm_state") or
+    if (not (config.get("dax_guest") or config.get("migration_network")) or
             config.get("dax_handoff") or set(config["vms"]) != {"A", "B"} or
             not all(alive(vm) for vm in config["vms"].values())):
         raise RuntimeError("configure requires two running native-KVM --dax-guest or --migration-network lab VMs")
@@ -1543,246 +1477,6 @@ done
     for role, transcript in report["transcripts"].items():
         print(f"VM {role}:\n{transcript}")
     print(f"Configuration report: {report_path}")
-
-
-def cache_bench(args):
-    """Measure cache maintenance with real KVM guest writes and epoch bitmaps."""
-    if not 128 <= args.memory_mib <= 2048 or args.memory_mib % 128:
-        raise RuntimeError("Require 128..2048MiB RAM in multiples of 128MiB")
-    if args.cpu < 0 or not 0 <= args.dirty_permyriad <= 10000 or not 2 <= args.iterations <= 500 or args.iterations % 2:
-        raise RuntimeError("Require dirty fraction 0..10000 and an even 2..500 iterations")
-    if not 0 <= args.warmup <= 100 or args.warmup % 2:
-        raise RuntimeError("Require an even 0..100 warmup iterations")
-    if args.mode == "dirty" and args.dirty_log == "off":
-        raise RuntimeError("Selective maintenance requires actual KVM dirty logging")
-    if not math.isfinite(args.timeout) or args.timeout <= 0:
-        raise RuntimeError("Require a finite positive timeout")
-    if args.scope == "guest":
-        run, config = current_run()
-        if (not config.get("dax_guest") or not config.get("dax_4k") or
-                not config.get("migration_network") or config.get("dax_handoff") or
-                config.get("dax_kvm_state") or set(config["vms"]) != {"A", "B"} or
-                not all(alive(vm) for vm in config["vms"].values())):
-            raise RuntimeError("Use two running --dax-guest --dax-4k --migration-network VMs with local KVM objects")
-        if config["cxl_mib"] < args.memory_mib + 2 or args.cpu >= config["l1_vcpus"]:
-            raise RuntimeError("DAX must hold RAM + 2MiB, and the selected L1 CPU must exist")
-        network = config["migration_network"]
-    else:
-        host_kvm()
-        run = LOCAL / "cache-host"
-        run.mkdir(exist_ok=True, parents=True)
-        config = None
-        network = {"backend": "loopback", "ips": {"A": "127.0.0.1", "B": "127.0.0.1"}}
-        allowed = os.sched_getaffinity(0)
-        if not {args.host_cpu_a, args.host_cpu_b} <= allowed or args.host_cpu_a == args.host_cpu_b:
-            raise RuntimeError("Select two distinct allowed host CPUs")
-    rounds = args.warmup + args.iterations
-    out = run / f"cache-{args.mode}-{args.memory_mib}m-d{args.dirty_permyriad}-w{args.write_bytes}-{time.time_ns()}"
-    out.mkdir()
-    nonce = secrets.token_hex(8)
-    transaction = f"/run/cache-bench-{nonce}"
-    port = 20000 + secrets.randbelow(20000)
-    report = {"result": "running", "output": str(out), "scope": args.scope, "nonce": nonce,
-              "ram_backing": "device-DAX" if config else "shared memfd",
-              "memory_mib": args.memory_mib, "dirty_permyriad": args.dirty_permyriad,
-              "write_bytes_per_dirty_page": args.write_bytes, "mode": args.mode,
-              "dirty_logging": args.dirty_log, "iterations": args.iterations, "warmup": args.warmup,
-              "require_pml": args.require_pml,
-              "rounds": rounds, "network": network, "cpu": args.cpu,
-              "run": str(run), "host_cpus": {"A": args.host_cpu_a, "B": args.host_cpu_b} if not config else None,
-              "assets": str(config["assets"] if config else ASSETS),
-              "probe_sha256": (config["prepared"]["artifacts"]["shared-probe"] if config else sha256(ASSETS / "shared-probe")),
-              "runtime_configuration": config.get("runtime_configuration") if config else None,
-              "qemu_backing_directory": config.get("ephemeral_memory_dir") if config else None,
-              "host_kernel": os.uname().release, "samples": [], "summary_ms": {},
-              "semantics": "alternating writers; epoch bitmap over TCP; CLWB/SFENCE writer and CLFLUSHOPT/MFENCE reader; no guest RAM copy",
-              "timing": "local CLOCK_MONOTONIC durations; source KVM_RUN/HLT completion to reader-maintenance ACK uses only source clock; guest run/stop is outside this pause interval; verification is separate",
-              "limitations": ["cache protocol microbenchmark, separate from Firecracker state/direct handoff",
-                              "one physical coherent host; does not reproduce stale caches of a physical noncoherent CXL fabric",
-                              "flush byte counts denote address ranges, not actual writeback traffic",
-                              "guest KVM_RUN includes VMEXIT and PML draining; GET_DIRTY_LOG is bitmap harvest, not pure PML drain",
-                              "nested PML is emulated" if config else "native KVM/PML control uses shared memfd RAM, not device-DAX",
-                              "dirty logging on/off includes tracking-induced translation state changes; it is not pure hardware log-instruction cost"]}
-    save_json(out / "report.json", report)
-    processes = {}
-    streams = []
-    backing_fd = None
-    cleanup = f"""if [ -f {transaction}/probe.pid ]; then
-read cache_pid cache_start < {transaction}/probe.pid
-case "$cache_pid" in ''|*[!0-9]*) exit 1 ;; esac
-case "$cache_start" in ''|*[!0-9]*) exit 1 ;; esac
-[ "$cache_pid" -gt 1 ] || exit 1
-cache_alive() {{ [ -r /proc/$cache_pid/stat ] && [ "$(awk '{{print $22}}' /proc/$cache_pid/stat)" = "$cache_start" ]; }}
-if cache_alive; then
-    kill "$cache_pid" 2>/dev/null || true
-    cache_attempt=0
-    while cache_alive && [ "$cache_attempt" -lt 30 ]; do sleep .1; cache_attempt=$((cache_attempt + 1)); done
-    if cache_alive; then kill -9 "$cache_pid"; fi
-    cache_attempt=0
-    while cache_alive && [ "$cache_attempt" -lt 30 ]; do sleep .1; cache_attempt=$((cache_attempt + 1)); done
-    if cache_alive; then exit 1; fi
-fi
-fi
-"""
-    try:
-        if config:
-            for vm in config["vms"].values():
-                guest_command(vm, snapshot_cleanup_script(include_boot_vm=True) +
-                              f"\ntaskset -p 1 $$\nmkdir -m 700 {transaction}", timeout=30)
-                if args.require_pml and args.dirty_log == "on":
-                    guest_command(vm, 'test "$(cat /sys/module/kvm_intel/parameters/pml)" = Y\n'
-                                  'test "$(cat /sys/module/kvm_intel/parameters/eptad)" = Y', timeout=15)
-        else:
-            if args.require_pml and args.dirty_log == "on":
-                if any(Path(f"/sys/module/kvm_intel/parameters/{name}").read_text().strip() != "Y"
-                       for name in ("pml", "eptad")):
-                    raise RuntimeError("Native KVM PML/EPT A/D is unavailable")
-            backing_fd = os.memfd_create("cxl-cache-native", os.MFD_CLOEXEC | os.MFD_ALLOW_SEALING)
-            os.ftruncate(backing_fd, (args.memory_mib + 2) * 1024 * 1024)
-            fcntl.fcntl(backing_fd, fcntl.F_ADD_SEALS, fcntl.F_SEAL_SHRINK | fcntl.F_SEAL_GROW)
-        for role in ("B", "A"):
-            peer = network["ips"]["A" if role == "B" else "B"]
-            argv = ["cache-bench", role, "DAX", peer, str(port), str(args.memory_mib),
-                    str(args.dirty_permyriad), str(args.write_bytes), str(rounds), nonce, args.mode]
-            if config:
-                argv[2] = '"$(cat /run/cxl-dax-device)"'
-                invocation = " ".join(argv)
-                script = (f"(set +e\nCACHE_BENCH_DIRTY_LOG={int(args.dirty_log == 'on')} "
-                          f"taskset {1 << args.cpu:x} /lab/shared-probe {invocation} > {transaction}/bench.log 2>&1 &\n"
-                          "cache_pid=$!\n"
-                          f"printf '%s %s\\n' \"$cache_pid\" \"$(awk '{{print $22}}' /proc/$cache_pid/stat)\" > {transaction}/probe.pid\n"
-                          f"wait \"$cache_pid\"\nprintf '%s\\n' \"$?\" > {transaction}/bench.status\n) </dev/null &")
-                guest_command(config["vms"][role], script, timeout=20)
-            else:
-                argv[2] = f"/proc/self/fd/{backing_fd}"
-                probe = ASSETS / "shared-probe"
-                if not probe.is_file():
-                    raise RuntimeError("Run prepare with the selected assets before host cache-bench")
-                env = {**os.environ, "CACHE_BENCH_DIRTY_LOG": str(int(args.dirty_log == "on")),
-                       "CACHE_BENCH_ALLOW_FILE": "1"}
-                cpu = args.host_cpu_a if role == "A" else args.host_cpu_b
-                stream = (out / f"{role}.log").open("wb")
-                streams.append(stream)
-                processes[role] = subprocess.Popen(["taskset", "-c", str(cpu), str(probe), *argv], env=env,
-                                                    stdin=subprocess.DEVNULL, stdout=stream, stderr=subprocess.STDOUT,
-                                                    pass_fds=(backing_fd,))
-        deadline = time.monotonic() + args.timeout
-        while True:
-            statuses = {}
-            if config:
-                # The console shell is pinned to CPU0; the probe runs on its selected CPU.
-                for role, vm in config["vms"].items():
-                    result = guest_command(vm, f"if [ -f {transaction}/bench.status ]; then printf 'CACHE_STATUS='; cat {transaction}/bench.status; fi", timeout=30)
-                    match = re.search(r"CACHE_STATUS=(\d+)", result)
-                    statuses[role] = int(match[1]) if match else None
-            else:
-                statuses = {role: process.poll() for role, process in processes.items()}
-            if any(value is not None and value != 0 for value in statuses.values()):
-                raise RuntimeError(f"Cache probe failed: {statuses}")
-            if all(value == 0 for value in statuses.values()):
-                break
-            if time.monotonic() >= deadline:
-                raise RuntimeError(f"Cache probe timed out: {statuses}")
-            time.sleep(1)
-        for role in ("A", "B"):
-            if config:
-                data, metadata = guest_fetch_file(config["vms"][role], f"{transaction}/bench.log")
-                (out / f"{role}.log").write_bytes(data)
-                report.setdefault("artifact_integrity", {})[role] = metadata
-            text_log = (out / f"{role}.log").read_text()
-            for line in text_log.splitlines():
-                if line.startswith("CACHE_BENCH_JSON "):
-                    row = json.loads(line.removeprefix("CACHE_BENCH_JSON "))
-                    if row.get("role") != role:
-                        raise RuntimeError("Cache probe role mismatch")
-                    report["samples"].append(row)
-        starts = [s for s in report["samples"] if s["event"] == "start"]
-        expected_pages = args.memory_mib * 256
-        expected_dirty = (expected_pages * args.dirty_permyriad + 9999) // 10000
-        expected_maintained = expected_pages if args.mode == "full" else expected_dirty if args.mode == "dirty" else 0
-        if len(starts) != 2 or {s["role"] for s in starts} != {"A", "B"}:
-            raise RuntimeError("Missing or duplicate cache probe start records")
-        for row in report["samples"]:
-            if row.get("nonce") != nonce or row.get("errors", 0) != 0:
-                raise RuntimeError("Cache probe nonce mismatch or data validation error")
-            if row["event"] in ("start", "source", "destination"):
-                if (row.get("memory_mib") != args.memory_mib or row.get("mode") != args.mode or
-                        row.get("logging_enabled") != (args.dirty_log == "on") or
-                        row.get("bitmap_bytes") != expected_pages // 8):
-                    raise RuntimeError("Cache probe configuration mismatch")
-            if row["event"] in ("source", "destination"):
-                if row.get("dirty_pages") != expected_dirty or row.get("maintained_pages") != expected_maintained:
-                    raise RuntimeError("Cache probe dirty/maintenance page counts mismatch")
-            if args.require_pml and args.dirty_log == "on" and row.get("module_pml") is not True:
-                if row["event"] in ("start", "source", "destination"):
-                    raise RuntimeError("Requested PML silently disabled")
-        for event in ("source", "destination"):
-            rows = sorted((s for s in report["samples"] if s["event"] == event), key=lambda s: s["round"])
-            if len(rows) != rounds or [s["round"] for s in rows] != list(range(rounds)):
-                raise RuntimeError(f"Missing or duplicate {event} rounds")
-            for row in rows:
-                source = "A" if row["round"] % 2 == 0 else "B"
-                if row["role"] != (source if event == "source" else ("B" if source == "A" else "A")):
-                    raise RuntimeError("Cache probe direction mismatch")
-            selected = [s for s in rows if s["round"] >= args.warmup]
-            for key in selected[0]:
-                if key.endswith("_ns") and all(isinstance(s.get(key), (int, float)) for s in selected):
-                    values = sorted(s[key] / 1e6 for s in selected)
-                    report["summary_ms"][event + "." + key.removesuffix("_ns")] = {
-                        "n": len(values), "mean": statistics.mean(values), "p50": statistics.median(values),
-                        "p95": values[(95 * len(values) + 99) // 100 - 1], "min": values[0], "max": values[-1]}
-        completed = [s for s in report["samples"] if s["event"] == "complete"]
-        if (len(completed) != 2 or {s["role"] for s in completed} != {"A", "B"} or
-                any(s.get("result") != "passed" or s.get("rounds") != rounds for s in completed)):
-            raise RuntimeError("Cache probe did not verify all epochs on both nodes")
-        for r in range(rounds):
-            pair = [s for s in report["samples"] if s["event"] in ("source", "destination") and s["round"] == r]
-            if pair[0]["bitmap_hash"] != pair[1]["bitmap_hash"]:
-                raise RuntimeError("Source/destination bitmap hashes differ")
-        report["validation"] = {"epochs": rounds, "data_errors": 0, "pages_verified_per_epoch": expected_pages,
-                                "dirty_pages_per_epoch": expected_dirty, "maintained_pages_per_node": expected_maintained,
-                                "cacheline_commands_per_node": expected_maintained * 64,
-                                "address_range_bytes_per_node": expected_maintained * 4096,
-                                "guest_ram_transfer_bytes": 0, "bitmap_bytes_per_epoch": expected_pages // 8,
-                                "one_kvm_vm_and_vcpu_per_node": all(s["vm_creates"] == s["vcpu_creates"] == 1 for s in starts)}
-        report["result"] = "passed"
-    except BaseException as exc:
-        report.update(result="failed", error=str(exc))
-        if config:
-            for role, vm in config["vms"].items():
-                try:
-                    data, _ = guest_fetch_file(vm, f"{transaction}/bench.log")
-                    (out / f"{role}.log").write_bytes(data)
-                except (OSError, RuntimeError):
-                    pass
-        raise
-    finally:
-        if config:
-            for role, vm in config["vms"].items():
-                try:
-                    guest_command(vm, cleanup, timeout=20)
-                    report.setdefault("cleanup", {})[role] = "recorded probe exited"
-                except (OSError, RuntimeError) as exc:
-                    report.setdefault("cleanup_errors", {})[role] = str(exc)
-        for process in processes.values():
-            if process.poll() is None:
-                process.terminate()
-                try:
-                    process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait()
-        for stream in streams:
-            stream.close()
-        if backing_fd is not None:
-            os.close(backing_fd)
-        if report.get("cleanup_errors"):
-            report.update(result="failed", error="Probe cleanup did not complete")
-        save_json(out / "report.json", report)
-    if report["result"] != "passed":
-        raise RuntimeError(report.get("error", "Cache benchmark failed"))
-    print(json.dumps({"result": report["result"], "report": str(out / "report.json"),
-                      "summary_ms": report["summary_ms"]}, indent=2))
 
 
 def migration_ept_functions(detail=False):
@@ -2053,7 +1747,7 @@ def migration_bench(args):
     detail = getattr(args, "trace_ept_detail", False)
     args.trace_ept = args.trace_ept or detail
     run, config = current_run()
-    if (not config.get("migration_network") or config.get("dax_kvm_state") or config.get("dax_handoff") or
+    if (not config.get("migration_network") or config.get("dax_handoff") or
             set(config["vms"]) != {"A", "B"} or not all(alive(vm) for vm in config["vms"].values())):
         raise RuntimeError("migration-bench requires two running --migration-network L1 VMs with private KVM objects")
     if not 128 <= args.memory_mib <= 2048 or not 1 <= args.iterations <= 500 or not 0 <= args.warmup <= 100:
@@ -2309,8 +2003,8 @@ def migration_bench(args):
 def handoff_bench(args):
     """State-only Firecracker checkpoints with guest RAM kept in shared DAX."""
     run, config = current_run()
-    if not config.get("dax_guest") or config.get("dax_kvm_state") or config.get("dax_handoff"):
-        raise RuntimeError("Use a fresh --dax-guest lab without --dax-kvm-state or --dax-handoff; each kernel needs private KVM objects/heap.")
+    if not config.get("dax_guest") or config.get("dax_handoff"):
+        raise RuntimeError("Use a fresh --dax-guest lab without --dax-handoff; each kernel needs private KVM objects/heap.")
     if not 128 <= args.memory_mib <= 2048 or args.memory_mib + 2 > config["cxl_mib"]:
         raise RuntimeError("Require 128..2048MiB guest RAM fitting the CXL allocation.")
     if not 1 <= args.iterations <= 500 or not 0 <= args.warmup <= 100:
@@ -2853,306 +2547,6 @@ def console(args):
             termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
 
-def mptcp_test(args):
-    """Exercise DAX-backed L2 sockets and optional semantic snapshot handoff."""
-    run, config = current_run()
-    if (not config.get("dax_guest") or not config.get("migration_network") or
-            config.get("dax_kvm_state") or config.get("dax_handoff") or
-            set(config["vms"]) != {"A", "B"} or not all(alive(vm) for vm in config["vms"].values())):
-        raise RuntimeError("mptcp-test requires two running --dax-guest --migration-network native-KVM lab VMs")
-    if not 100 <= args.rounds <= 100000 or not 1 <= args.interval_us <= 1000000:
-        raise RuntimeError("Require 100..100000 exchanges and 1..1000000us interval")
-    if args.switch_path and (args.protocol != "mptcp" or args.rounds * args.interval_us < 4000000):
-        raise RuntimeError("Path switching requires MPTCP and at least four seconds of exchanges")
-    if not 0 <= args.pause_ms <= 10000:
-        raise RuntimeError("Require 0..10000ms pause")
-    if args.snapshot_handoff and (not args.switch_path or args.protocol != "mptcp" or args.pause_ms):
-        raise RuntimeError("Snapshot handoff requires --protocol mptcp --switch-path and no --pause-ms")
-    # The normal boot proves nested KVM and DAX RAM before replacing only its recorded Firecracker.
-    verify(argparse.Namespace(timeout=180))
-    source, peer_vm = config["vms"]["A"], config["vms"]["B"]
-    if config["migration_network"]["ips"] != {"A": "172.30.0.1", "B": "172.30.0.2"}:
-        raise RuntimeError("Unexpected private lab network")
-    for vm in (source, peer_vm):
-        guest_command(vm, "test -c /dev/kvm\ngrep -q '^enabled=0 ' /sys/module/kvm/parameters/dax_pool")
-    guest_command(source, "test ! -d /sys/class/net/cxlmpt0\ntest -c \"$(cat /run/cxl-dax-device)\"")
-    guest_command(peer_vm, "test -z \"$(ip route show 10.88.0.0/24)\"\ntest -z \"$(ip route show 10.89.0.0/24)\"")
-    if args.snapshot_handoff:
-        guest_command(peer_vm, "test ! -d /sys/class/net/cxlmpt0\ntest -z \"$(ip route show 10.88.0.2/32)\"")
-        for vm in (source, peer_vm):
-            guest_command(vm, "test \"$(cat /run/cxl-dax-device)\" = /dev/dax0.0\ntest -c /dev/dax0.0")
-    nonce = secrets.token_hex(8)
-    transaction = f"/run/mptcp-{nonce}"
-    port = 19000 + secrets.randbelow(20000)
-    out = run / f"mptcp-{args.protocol}-{time.time_ns()}"
-    out.mkdir()
-    boot_args = ("console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init lab.role=A "
-                 f"lab.net_test={args.protocol} lab.net_peer=172.30.0.2 lab.net_port={port} "
-                 f"lab.net_rounds={args.rounds} lab.net_interval_us={args.interval_us} "
-                 f"lab.net_nonce={nonce} lab.net_switch={int(args.switch_path)}")
-    if args.snapshot_handoff:
-        boot_args += " lab.net_gate=1 memmap=2M$64M"
-    components = {"/machine-config": {"vcpu_count": 1, "mem_size_mib": 128},
-                  "/boot-source": {"kernel_image_path": "/lab/l2-vmlinux", "initrd_path": "/lab/l2-initramfs.cpio", "boot_args": boot_args},
-                  "/network-interfaces/eth0": {"iface_id": "eth0", "host_dev_name": "cxlmpt0", "guest_mac": "02:ca:00:00:88:02"}}
-    report = {"result": "running", "protocol": args.protocol, "switch_path": args.switch_path,
-              "snapshot_handoff": args.snapshot_handoff,
-              "rounds": args.rounds, "interval_us": args.interval_us, "pause_ms": args.pause_ms,
-              "run": str(run), "nonce": nonce, "port": port, "guest_directory": transaction,
-              "guest_configuration": components, "guest_ram": {"backing": "shared CXL device-DAX", "offset": 2097152, "bytes": 128 * 1024 * 1024},
-              "topology": "L2 on A -> virtio-net/TAP cxlmpt0 -> A IPv4 forwarding -> private L1 link -> L1 B peer",
-              "limitations": ["No VM migration, KVM detach/attach or CXL packet staging queue is exercised",
-                              "Both guest addresses use one virtio-net interface and the same A forwarding host",
-                              "Nested KVM and emulated networking on one coherent physical host; no noncoherent-CXL proof",
-                              "Per-exchange latency includes the echo application; this is not a bulk-throughput benchmark"],
-              "events": {}, "artifact_integrity": {}, "cleanup_errors": []}
-    if args.snapshot_handoff:
-        report["topology"] = "L2 on A -> shared-DAX state-only snapshot -> L2 restored on B; MPTCP peer remains L1 B"
-        report["limitations"][:2] = [
-            "Ordinary semantic snapshot with fresh destination KVM/vCPU/EPT; no direct shared-object detach/attach",
-            "Guest RAM remains shared DAX; serialized state crosses the controller's serial channels, not a CXL mailbox",
-            "Old source IP is blackholed and source TAP disabled before pause; 50ms quiet period is a controlled lab quiescence assumption",
-            "Host monotonic stage durations include serial API/control/file transport; they are diagnostic, not optimized handoff latency",
-            "The destination network and its peer run on L1 B; no CXL packet staging buffer or physical-fabric routing cutover"]
-        report["handoff"] = {"stages_ns": {}, "processes": {}}
-    save_json(out / "report.json", report)
-
-    active_vm = source
-    active_log = "firecracker"
-
-    def api(path, method, body):
-        return guest_command(active_vm, f"/lab/shared-probe api {transaction}/api.sock {method} {path} {shlex.quote(json.dumps(body))}", timeout=30)
-
-    def record_process(name):
-        return (f"recorded_pid=$!\nprocess_stat=$(cat /proc/$recorded_pid/stat)\n"
-                "process_fields=${process_stat##*) }\nset -- $process_fields\nshift 19\n"
-                f"printf '%s %s\\n' \"$recorded_pid\" \"$1\" > {transaction}/{name}.pid\n")
-
-    def stop_recorded(name):
-        # Include the existing incarnation-checked primitive, without matching any global processes.
-        return snapshot_cleanup_script("/run/snapshot-bench-" + nonce) + (
-            f"if [ -f {transaction}/{name}.pid ]; then\n"
-            f"read target_pid expected_start < {transaction}/{name}.pid\n"
-            "case \"$target_pid:$expected_start\" in *[!0-9:]*|:|*:) exit 1 ;; esac\n"
-            "[ \"$target_pid\" -gt 1 ]\nstop_snapshot_process\nfi\n")
-
-    initialized = set()
-    try:
-        for role, vm in config["vms"].items():
-            guest_command(vm, f"mkdir -m 700 {transaction}")
-            initialized.add(role)
-        guest_command(source, snapshot_cleanup_script(include_boot_vm=True) +
-                      f"cat /proc/sys/net/ipv4/ip_forward > {transaction}/ip_forward\n"
-                      "echo 1 > /proc/sys/net/ipv4/ip_forward\n")
-        peer_setup = (f"ip route add 10.88.0.0/24 via 172.30.0.1 dev eth0\n"
-                      f"touch {transaction}/route88\nip route add 10.89.0.0/24 via 172.30.0.1 dev eth0\n"
-                      f"touch {transaction}/route89\n")
-        if args.protocol == "mptcp":
-            peer_setup += ("test -r /proc/sys/net/mptcp/enabled\n"
-                           f"cat /proc/sys/net/mptcp/enabled > {transaction}/mptcp_enabled\n"
-                           "echo 1 > /proc/sys/net/mptcp/enabled\n/lab/shared-probe mptcp-pm B limits 2 2\n")
-        peer_setup += (f"MPTCP_PROTOCOL={args.protocol} /lab/shared-probe mptcp-stream B server 172.30.0.2 {port} "
-                       f"{args.rounds} {args.interval_us} {nonce} > {transaction}/server.log 2>&1 </dev/null &\n" + record_process("server"))
-        guest_command(peer_vm, peer_setup)
-        guest_command(peer_vm, f"attempt=0\nwhile ! grep -q '\"event\":\"listening\"' {transaction}/server.log; do\n"
-                      f"read server_pid unused < {transaction}/server.pid\nkill -0 \"$server_pid\"\n"
-                      "attempt=$((attempt + 1))\n[ \"$attempt\" -lt 250 ]\nsleep .02\ndone", timeout=10)
-        if args.snapshot_handoff:
-            guest_command(source, "/lab/shared-probe dax-word A /dev/dax0.0 69206016 0")
-        guest_command(source, f"FC_DAX_RAM=\"$(cat /run/cxl-dax-device)\" FC_DAX_OFFSET=2097152 FC_DAX_SNAPSHOT=1 "
-                      f"/lab/firecracker --api-sock {transaction}/api.sock > {transaction}/firecracker.log 2>&1 </dev/null &\n" + record_process("firecracker"))
-        guest_command(source, f"attempt=0\nwhile [ ! -S {transaction}/api.sock ]; do\n"
-                      f"read fc_pid unused < {transaction}/firecracker.pid\nkill -0 \"$fc_pid\"\n"
-                      "attempt=$((attempt + 1))\n[ \"$attempt\" -lt 250 ]\nsleep .02\ndone", timeout=10)
-        for path, body in components.items():
-            api(path, "PUT", body)
-        guest_command(source, "ifconfig cxlmpt0 10.88.0.1 netmask 255.255.255.0 up\n"
-                      "ifconfig cxlmpt0:1 10.89.0.1 netmask 255.255.255.0 up\n")
-        api("/actions", "PUT", {"action_type": "InstanceStart"})
-        if args.snapshot_handoff:
-            stages = report["handoff"]["stages_ns"]
-            guest_command(source, f"attempt=0\nwhile ! grep -q '^L2_NETWORK_CONNECTED' {transaction}/firecracker.log; do\n"
-                          f"read fc_pid unused < {transaction}/firecracker.pid\nkill -0 \"$fc_pid\"\n"
-                          f"! grep -q '^L2_NETWORK_RESULT=failed' {transaction}/firecracker.log\n"
-                          "attempt=$((attempt + 1))\n[ \"$attempt\" -lt 1000 ]\nsleep .02\ndone", timeout=30)
-            text = guest_command(source, f"printf 'TAP_MAC='; cat /sys/class/net/cxlmpt0/address\n"
-                                 f"printf 'SOURCE_FC='; cat {transaction}/firecracker.pid")
-            mac = re.search(r"^TAP_MAC=([0-9a-f]{2}(?::[0-9a-f]{2}){5})\s*$", text, re.MULTILINE)
-            source_pid = re.search(r"^SOURCE_FC=(\d+) (\d+)\s*$", text, re.MULTILINE)
-            if not mac or not source_pid:
-                raise RuntimeError("Missing source TAP/process identity")
-            report["handoff"]["source_tap_mac"] = mac[1]
-            report["handoff"]["processes"]["source"] = {"role": "A", "pid": int(source_pid[1]), "starttime": source_pid[2]}
-            start = time.monotonic_ns()
-            guest_command(peer_vm, f"ip route add blackhole 10.88.0.2/32\ntouch {transaction}/old_path_blackhole")
-            guest_command(source, "ifconfig cxlmpt0 down\nsleep .05")
-            stages["old_path_block_and_quiet"] = time.monotonic_ns() - start
-            start = time.monotonic_ns()
-            api("/vm", "PATCH", {"state": "Paused"})
-            stages["source_pause_api"] = time.monotonic_ns() - start
-            start = time.monotonic_ns()
-            api("/snapshot/create", "PUT", {"snapshot_type": "Full", "snapshot_path": transaction + "/state",
-                                            "mem_file_path": "/dev/dax0.0"})
-            stages["source_snapshot_api"] = time.monotonic_ns() - start
-            start = time.monotonic_ns()
-            guest_command(source, stop_recorded("firecracker"), timeout=15)
-            stages["source_fence"] = time.monotonic_ns() - start
-            start = time.monotonic_ns()
-            state, integrity = guest_fetch_file(source, transaction + "/state")
-            (out / "snapshot-state.bin").write_bytes(state)
-            report["handoff"]["state"] = integrity
-            encoded = base64.b64encode(state).decode()
-            guest_command(peer_vm, f"printf 'begin-base64 600 state\\n' > {transaction}/state.b64")
-            # BusyBox's interactive shell silently truncates long input lines,
-            # including their redirection. Keep the whole command below 1KiB.
-            for index in range(0, len(encoded), 512):
-                guest_command(peer_vm, f"printf '%s\\n' {shlex.quote(encoded[index:index + 512])} >> {transaction}/state.b64")
-            digest = hashlib.sha256(state).hexdigest()
-            guest_command(peer_vm, f"printf '====\\n' >> {transaction}/state.b64\n"
-                          f"uudecode -o {transaction}/state {transaction}/state.b64\n"
-                          f"printf '%s  %s\\n' {digest} {transaction}/state | sha256sum -c -")
-            stages["state_transfer_via_controller"] = time.monotonic_ns() - start
-            start = time.monotonic_ns()
-            guest_command(peer_vm, f"FC_DAX_RAM=/dev/dax0.0 FC_DAX_OFFSET=2097152 FC_DAX_SNAPSHOT=1 "
-                          f"/lab/firecracker --api-sock {transaction}/api.sock > {transaction}/firecracker-destination.log 2>&1 </dev/null &\n" + record_process("firecracker"))
-            guest_command(peer_vm, f"attempt=0\nwhile [ ! -S {transaction}/api.sock ]; do\n"
-                          f"read fc_pid unused < {transaction}/firecracker.pid\nkill -0 \"$fc_pid\"\n"
-                          "attempt=$((attempt + 1))\n[ \"$attempt\" -lt 250 ]\nsleep .02\ndone", timeout=10)
-            active_vm, active_log = peer_vm, "firecracker-destination"
-            stages["destination_process_start"] = time.monotonic_ns() - start
-            start = time.monotonic_ns()
-            api("/snapshot/load", "PUT", {"snapshot_path": transaction + "/state",
-                                          "mem_backend": {"backend_type": "File", "backend_path": "/dev/dax0.0"},
-                                          "network_overrides": [{"iface_id": "eth0", "host_dev_name": "cxlmpt0"}],
-                                          "resume_vm": False})
-            stages["destination_load_api"] = time.monotonic_ns() - start
-            guest_command(peer_vm, f"ip route del 10.88.0.0/24 via 172.30.0.1 dev eth0\nrm {transaction}/route88\n"
-                          f"ip route del 10.89.0.0/24 via 172.30.0.1 dev eth0\nrm {transaction}/route89\n"
-                          f"ifconfig cxlmpt0 hw ether {mac[1]}\n"
-                          "ifconfig cxlmpt0 10.88.0.1 netmask 255.255.255.0 up\n"
-                          "ifconfig cxlmpt0:1 10.89.0.1 netmask 255.255.255.0 up\n")
-            text = guest_command(peer_vm, f"printf 'DESTINATION_FC='; cat {transaction}/firecracker.pid")
-            destination_pid = re.search(r"^DESTINATION_FC=(\d+) (\d+)\s*$", text, re.MULTILINE)
-            if not destination_pid:
-                raise RuntimeError("Missing destination process identity")
-            report["handoff"]["processes"]["destination"] = {"role": "B", "pid": int(destination_pid[1]), "starttime": destination_pid[2]}
-            start = time.monotonic_ns()
-            api("/vm", "PATCH", {"state": "Resumed"})
-            guest_command(peer_vm, "/lab/shared-probe dax-word B /dev/dax0.0 69206016 1")
-            stages["destination_resume_and_gate"] = time.monotonic_ns() - start
-        deadline = time.monotonic() + 60 + args.rounds * args.interval_us / 250000
-        pause_done = not args.pause_ms
-        while time.monotonic() < deadline:
-            text = guest_command(active_vm, f"tail -n 4 {transaction}/{active_log}.log")
-            if "L2_NETWORK_RESULT=failed" in text:
-                raise RuntimeError("Guest network test failed")
-            if "L2_NETWORK_RESULT=passed" in text:
-                break
-            if not pause_done:
-                # Pause only after the peer has observed verified application traffic.
-                ready = guest_command(peer_vm, f"grep '\"event\":\"ready\"' {transaction}/server.log || true")
-                if re.search(r'^MPTCP_JSON .*"event":"ready"', ready, re.MULTILINE):
-                    api("/vm", "PATCH", {"state": "Paused"})
-                    time.sleep(args.pause_ms / 1000)
-                    api("/vm", "PATCH", {"state": "Resumed"})
-                    pause_done = True
-            time.sleep(.1)
-        else:
-            raise RuntimeError("Guest network test timed out")
-        if not pause_done:
-            raise RuntimeError("Test completed before requested pause")
-        logs = [("A", source, "firecracker"), ("B", peer_vm, "server")]
-        if args.snapshot_handoff:
-            logs.append(("A", peer_vm, "firecracker-destination"))
-        for role, vm, name in logs:
-            data, integrity = guest_fetch_file(vm, f"{transaction}/{name}.log")
-            (out / f"{role}-{name}.log").write_bytes(data)
-            report["artifact_integrity"][name] = integrity
-            report["events"].setdefault(role, []).extend(
-                json.loads(line[len("MPTCP_JSON "):]) for line in data.decode(errors="replace").splitlines()
-                if line.startswith("MPTCP_JSON "))
-        for role in ("A", "B"):
-            complete = [event for event in report["events"][role] if event.get("event") == "complete"]
-            if (len(complete) != 1 or complete[0].get("errors") != 0 or
-                    complete[0].get("rounds") != args.rounds or complete[0].get("nonce") != nonce):
-                raise RuntimeError(f"Peer {role} did not complete verified exchanges")
-            if args.protocol == "mptcp" and not any(event.get("event") == "ready" and event.get("fallback") is False
-                                                    for event in report["events"][role]):
-                raise RuntimeError(f"Peer {role} did not confirm native MPTCP")
-            if args.protocol == "mptcp":
-                ready = next(event for event in report["events"][role] if event.get("event") == "ready")
-                if (complete[0].get("token") != ready.get("token") or
-                        complete[0].get("socket_cookie") != ready.get("socket_cookie") or
-                        complete[0].get("connect_attempts") != (1 if role == "A" else 0)):
-                    raise RuntimeError(f"Peer {role} did not preserve its original MPTCP connection")
-        if args.switch_path:
-            switched = [event for event in report["events"]["A"] if event.get("paths") and
-                        {path.get("local_ip") for path in event["paths"]
-                         if path.get("tcp_state") == 1} == {"10.89.0.2"}]
-            if not switched:
-                raise RuntimeError("No MPTCP state observed with only the new source-address subflow established")
-            final = next(event for event in report["events"]["A"] if event.get("event") == "final_paths")
-            old = [path for path in final["paths"] if path.get("local_ip") == "10.88.0.2"]
-            new = [path for path in final["paths"]
-                   if path.get("local_ip") == "10.89.0.2" and path.get("tcp_state") == 1]
-            if (any(path.get("tcp_state") == 1 for path in old) or not new or
-                    not all(path.get("bytes_sent", 0) > 0 and path.get("bytes_received", 0) > 0 for path in new)):
-                raise RuntimeError("Final new MPTCP subflow did not carry bidirectional data with the old subflow retired")
-        report["result"] = "passed"
-    except BaseException as exc:
-        report.update(result="failed", error=str(exc))
-        raise
-    finally:
-        cleanup_actions = [("A", source, "stop_source_firecracker", stop_recorded("firecracker"))]
-        if args.snapshot_handoff:
-            cleanup_actions.append(("B", peer_vm, "stop_destination_firecracker", stop_recorded("firecracker")))
-        cleanup_actions.extend([
-            ("B", peer_vm, "stop_server", stop_recorded("server")),
-            ("A", source, "restore_ip_forward", f"if [ -f {transaction}/ip_forward ]; then cat {transaction}/ip_forward > /proc/sys/net/ipv4/ip_forward; fi"),
-            ("A", source, "delete_source_tap", "if [ -d /sys/class/net/cxlmpt0 ]; then ip link delete cxlmpt0; fi"),
-            ("B", peer_vm, "delete_route88", f"if [ -f {transaction}/route88 ]; then ip route del 10.88.0.0/24 via 172.30.0.1 dev eth0; fi"),
-            ("B", peer_vm, "delete_route89", f"if [ -f {transaction}/route89 ]; then ip route del 10.89.0.0/24 via 172.30.0.1 dev eth0; fi"),
-            ("B", peer_vm, "delete_old_path_blackhole", f"if [ -f {transaction}/old_path_blackhole ]; then ip route del blackhole 10.88.0.2/32; fi"),
-            ("B", peer_vm, "restore_mptcp_enabled", f"if [ -f {transaction}/mptcp_enabled ]; then cat {transaction}/mptcp_enabled > /proc/sys/net/mptcp/enabled; fi"),
-        ])
-        if args.snapshot_handoff:
-            cleanup_actions.append(("B", peer_vm, "delete_destination_tap", "if [ -d /sys/class/net/cxlmpt0 ]; then ip link delete cxlmpt0; fi"))
-        for role, vm, action, script in cleanup_actions:
-            if role not in initialized:
-                continue
-            try:
-                guest_command(vm, script, timeout=15)
-            except Exception as exc:
-                report["cleanup_errors"].append({"role": role, "action": action, "error": str(exc)})
-        if report["cleanup_errors"]:
-            report["result"] = "failed"
-            report.setdefault("error", "MPTCP test cleanup failed")
-        if report["result"] == "failed":
-            # Processes have been stopped before collecting partial logs, including a failed restore.
-            diagnostic_logs = [("A", source, "firecracker"), ("B", peer_vm, "server")]
-            if args.snapshot_handoff:
-                diagnostic_logs.append(("B", peer_vm, "firecracker-destination"))
-            for role, vm, name in diagnostic_logs:
-                if role not in initialized:
-                    continue
-                try:
-                    path = f"{transaction}/{name}.log"
-                    present = guest_command(vm, f"if [ -f {path} ]; then echo MPTCP_LOG_PRESENT; fi")
-                    if not re.search(r"^MPTCP_LOG_PRESENT\s*$", present, re.MULTILINE):
-                        continue
-                    data, integrity = guest_fetch_file(vm, path)
-                    (out / f"diagnostic-{role}-{name}.log").write_bytes(data)
-                    report["artifact_integrity"][f"diagnostic-{role}-{name}"] = integrity
-                except Exception as exc:
-                    report.setdefault("diagnostic_errors", []).append({"role": role, "log": name, "error": str(exc)})
-        save_json(out / "report.json", report)
-    if report["cleanup_errors"]:
-        raise RuntimeError(f"MPTCP test cleanup failed; inspect {out / 'report.json'}")
-    print(json.dumps({"result": report["result"], "report": str(out / "report.json"),
-                      "protocol": args.protocol, "switch_path": args.switch_path,
-                      "snapshot_handoff": args.snapshot_handoff}, indent=2))
-
-
 def dax_test(_):
     """Use only device-DAX mmap in guests; test both directions near start and end."""
     run, config = current_run()
@@ -3266,86 +2660,6 @@ grep '^L2_BOOTED' /run/l2.log
     print(f"Report: {run / 'dax-guest-ram.json'}")
 
 
-def kvm_state_test(_):
-    """Observe actual DAX allocations and read kernel pointer fields through B."""
-    run, config = current_run()
-    if not config.get("dax_kvm_state"):
-        raise RuntimeError("Start with --dax-guest --dax-kvm-state --cxl-mib 2048")
-    transcript = guest_command(config["vms"]["A"], """pid=$(cat /run/firecracker.pid)
-kill -0 "$pid"
-cat /sys/module/kvm/parameters/dax_pool
-dmesg | grep KVM_DAX_
-grep /dev/dax /proc/$pid/maps
-grep -E 'DAX_HEAP |DAX_VMM_OBJECT ' /run/l2.log
-""")
-    header = re.search(r"enabled=1 phys=([0-9a-f]+) bytes=(\d+) available=(\d+) failures=(\d+)", transcript)
-    if not header or int(header[2]) != 134217728 or int(header[4]):
-        raise RuntimeError("KVM DAX arena is not active or has allocation failures")
-    counts = {m[1]: {"live": int(m[2]), "allocs": int(m[3]), "frees": int(m[4]), "bytes": int(m[5])}
-              for m in re.finditer(r"^([A-Za-z_]+) live=(\d+) allocs=(\d+) frees=(\d+) bytes=(\d+)\s*$", transcript, re.MULTILINE)}
-    required = {"vm", "vcpu", "vmcs", "msr_bitmap", "memslot", "ept_page", "mmu_cache_object",
-                "guest_fpu", "kvm_run", "kvm_create_lapic", "kvm_create_pit", "kvm_ioapic_init",
-                "kvm_pic_init", "kvm_set_irq_routing", "cpuid", "alloc_emulate_ctxt"}
-    if any(not counts.get(kind, {}).get("live") for kind in required):
-        raise RuntimeError("Missing live KVM objects in the DAX arena")
-    fields = {m[1]: {"storage_offset": int(m[2]), "value": int(m[3], 16), "target": m[4]}
-              for m in re.finditer(r"KVM_DAX_FIELD field=(\S+) storage_offset=(\d+) value=([0-9a-f]+) target=(\w+)", transcript)}
-    pool_refs = {m[1]: {"target": m[2], "address": int(m[3], 16), "offset": int(m[4])}
-                 for m in re.finditer(r"KVM_DAX_REF field=(\S+) target=(\w+) kva=([0-9a-f]+) offset=(\d+)", transcript)}
-    if any(pool_refs.get(name, {}).get("target") != "pool" for name in ("vm", "vcpu", "ept.root")):
-        raise RuntimeError("VM/vCPU/EPT root is outside the DAX arena")
-    stable = ["vm.mm", "vcpu.kvm", "vcpu.run", "vcpu.apic", "vcpu.cpuid", "vcpu.fpu",
-              "vcpu.emulate_ctxt", "vmx.vmcs", "vmx.msr_bitmap", "lapic.regs"]
-    script = []
-    for name in stable:
-        field = fields[name]
-        offset = 268435456 + field["storage_offset"]
-        script.append(f"echo POINTER_FIELD={name}")
-        for word in (offset, offset + 4):
-            script.append(f"/lab/shared-probe dax-word B /dev/dax0.0 {word}")
-    observed = guest_command(config["vms"]["B"], "\n".join(script), timeout=30)
-    reads = re.findall(r"^POINTER_FIELD=(\S+)\s*\nLAB_DAX_WORD=(0x[0-9a-fA-F]+)\s*\nLAB_DAX_WORD=(0x[0-9a-fA-F]+)", observed, re.MULTILINE)
-    if len(reads) != len(stable):
-        raise RuntimeError("Missing kernel pointer reads from VM B")
-    checked = {}
-    with Path(config["cxl_backing"]).open("rb") as backing:
-        for name, low, high in reads:
-            value = int(low, 16) | (int(high, 16) << 32)
-            backing.seek(268435456 + fields[name]["storage_offset"])
-            host_value = struct.unpack("<Q", backing.read(8))[0]
-            if value != fields[name]["value"] or value != host_value:
-                raise RuntimeError(f"Kernel pointer {name} differs between A, B and backing")
-            checked[name] = {"value": hex(value), "target": fields[name]["target"], "B_and_host_match": True}
-        heap = re.search(r"DAX_HEAP path=/dev/dax0.0 offset=536870912 bytes=67108864 base=(0x[0-9a-f]+)", transcript)
-        if not heap:
-            raise RuntimeError("Missing Firecracker DAX heap allocation")
-        heap_base = int(heap[1], 16)
-        objects = {m[1]: int(m[2], 16) for m in re.finditer(r"DAX_VMM_OBJECT name=(\w+) addr=(0x[0-9a-f]+)", transcript)}
-        if any(not heap_base <= objects.get(name, 0) < heap_base + 67108864 for name in ("Vmm", "Vcpu")):
-            raise RuntimeError("Firecracker VM/vCPU wrapper is outside its DAX heap")
-        backing.seek(536870912)
-        magic, base, length, head, allocs, frees, live, failures = struct.unpack("<8Q", backing.read(64))
-        if magic != 0x4643444158484541 or base != heap_base or length != 67108864 or not allocs or not live or failures:
-            raise RuntimeError("Invalid Firecracker heap control or allocation failure")
-    if not re.search(r"rw-s\s+20000000\s+\S+\s+\d+\s+/dev/dax0.0", transcript):
-        raise RuntimeError("Missing shared DAX heap VMA")
-    report = {"result": "passed", "run": str(run), "kernel_arena": {"phys": hex(int(header[1], 16)),
-              "offset": 268435456, "bytes": int(header[2]), "available": int(header[3]), "failures": 0},
-              "allocations": counts, "object_refs": pool_refs, "pointer_fields": fields,
-              "cross_vm_pointer_reads": checked, "firecracker_heap": {"offset": 536870912,
-              "bytes": length, "base": hex(base), "allocs": allocs, "frees": frees,
-              "live_bytes": live, "failures": failures, "objects": {k: hex(v) for k, v in objects.items()}},
-              "host_refs": [name for name, field in fields.items() if field["target"] == "host"],
-              "limitations": ["Single execution owner; no handoff or serialization.",
-                              "Host mm/task/PID/FD/per-CPU data, kernel page metadata and host thread stacks are not moved.",
-                              "Kernel binding references remain host-specific even when the containing object is DAX-backed."],
-              "transcripts": {"A": transcript, "B": observed}}
-    save_json(run / "kvm-dax-state.json", report)
-    print(json.dumps({k: v for k, v in report.items() if k not in ("transcripts", "pointer_fields", "allocations")}, indent=2))
-    print(f"Report: {run / 'kvm-dax-state.json'}")
-
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     subs = parser.add_subparsers(dest="action", required=True)
@@ -3368,7 +2682,6 @@ def main():
     p.add_argument("--cxl-mib", type=int, default=0, help="Add shared CXL Type-3 RAM exposed as device-DAX (e.g. 2048)")
     p.add_argument("--dax-guest", action="store_true", help="Run one microVM on A with all 128MiB guest RAM in DAX; B observes")
     p.add_argument("--serial-control", action="store_true", help="Use the historical console transport even if the fixture has a dedicated control channel")
-    p.add_argument("--dax-kvm-state", action="store_true", help="Use the experimental KVM device-DAX state allocator on VM A")
     p.add_argument("--dax-handoff", action="store_true", help="Direct shared KVM handoff lab; fixed kernel addresses, 4KiB DAX, no automatic L2")
     p.add_argument("--dax-4k", action="store_true", help="Configure the shared device-DAX allocation with 4KiB alignment for matched EPT measurements")
     p.add_argument("--migration-network", action="store_true", help="Connect L1 A/B with a private virtio-net link for full RAM migration")
@@ -3395,38 +2708,6 @@ def main():
     p.set_defaults(func=shared_test)
     subs.add_parser("dax-test", help="Live A↔B mmap through CXL device-DAX at start/end offsets").set_defaults(func=dax_test)
     subs.add_parser("ram-test", help="Verify all guest RAM is DAX-backed and VM B sees guest CPU writes").set_defaults(func=ram_test)
-    subs.add_parser("kvm-state-test", help="Verify native KVM DAX objects, VMM heap and pointer fields observed by B").set_defaults(func=kvm_state_test)
-    p = subs.add_parser("mptcp-test", help="Verify DAX-backed guest TCP/MPTCP, with optional A-to-B state-only snapshot handoff")
-    p.add_argument("--protocol", choices=["tcp", "mptcp"], default="mptcp")
-    p.add_argument("--switch-path", action="store_true", help="Add a guest source address and retire the original MPTCP subflow")
-    p.add_argument("--snapshot-handoff", action="store_true", help="Move the paused guest from A to B through a state-only shared-DAX snapshot; requires --switch-path")
-    p.add_argument("--rounds", type=int, default=8000)
-    p.add_argument("--interval-us", type=int, default=1000)
-    p.add_argument("--pause-ms", type=int, default=0, help="Pause/resume the source microVM after traffic starts; no migration")
-    p.set_defaults(func=mptcp_test)
-    p = subs.add_parser("context-bench", help="Measure blocking futex context switches on one CPU")
-    p.add_argument("--scope", choices=["host", "guest"], default="host")
-    p.add_argument("--role", choices=["A", "B"], default="B")
-    p.add_argument("--cpu", type=int)
-    p.add_argument("--roundtrips", type=int, default=100000)
-    p.add_argument("--samples", type=int, default=9)
-    p.set_defaults(func=context_bench)
-    p = subs.add_parser("cache-bench", help="Measure writer writeback, reader invalidation and PML dirty epochs")
-    p.add_argument("--scope", choices=["guest", "host"], default="guest")
-    p.add_argument("--memory-mib", type=int, default=1024)
-    p.add_argument("--dirty-permyriad", type=int, default=100, help="Dirty pages per 10000 RAM pages")
-    p.add_argument("--write-bytes", type=int, choices=[64, 4096], default=64)
-    p.add_argument("--mode", choices=["full", "dirty", "none"], default="dirty")
-    p.add_argument("--dirty-log", choices=["on", "off"], default="on")
-    p.add_argument("--require-pml", action=argparse.BooleanOptionalAction, default=True,
-                   help="Reject silent PML fallback when dirty logging is enabled")
-    p.add_argument("--iterations", type=int, default=20)
-    p.add_argument("--warmup", type=int, default=4)
-    p.add_argument("--cpu", type=int, default=1, help="L1 CPU for the controller and its KVM vCPU")
-    p.add_argument("--host-cpu-a", type=int, default=0)
-    p.add_argument("--host-cpu-b", type=int, default=2)
-    p.add_argument("--timeout", type=float, default=600)
-    p.set_defaults(func=cache_bench)
     p = subs.add_parser("migration-bench", help="Full RAM snapshot migration over the private L1-to-L1 network, with near-full retained working set")
     p.add_argument("--memory-mib", type=int, default=128)
     p.add_argument("--iterations", type=int, default=20)
@@ -3541,8 +2822,8 @@ def main():
             parser.error("network-backend/socket-listener overrides require --migration-network")
         if args.network_backend == "tap" and args.socket_listener != "A":
             parser.error("--socket-listener applies only to --network-backend socket")
-        if args.dax_handoff and (not args.dax_guest or args.cxl_mib < 1024 or args.dax_kvm_state):
-            parser.error("--dax-handoff requires --dax-guest, --cxl-mib >= 1024, and excludes --dax-kvm-state")
+        if args.dax_handoff and (not args.dax_guest or args.cxl_mib < 1024):
+            parser.error("--dax-handoff requires --dax-guest, --cxl-mib >= 1024")
         if args.vcpus < 1 or args.memory_mib < 512 or not 1 <= args.rounds <= 1000000:
             parser.error("Require vcpus >= 1, memory-mib >= 512, and 1 <= rounds <= 1000000")
         if args.shared_mib < 1 or args.shared_mib & (args.shared_mib - 1):
@@ -3553,8 +2834,6 @@ def main():
             parser.error("--dax-4k requires --cxl-mib")
         if args.dax_guest and args.cxl_mib < 256:
             parser.error("dax-guest requires --cxl-mib >= 256")
-        if args.dax_kvm_state and (not args.dax_guest or args.cxl_mib < 1024):
-            parser.error("dax-kvm-state requires --dax-guest and --cxl-mib >= 1024")
     args.func(args)
 
 

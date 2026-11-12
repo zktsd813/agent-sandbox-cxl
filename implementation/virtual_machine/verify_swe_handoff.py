@@ -10,12 +10,19 @@ import collections
 import hashlib
 import json
 import math
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
+import shlex
+import tarfile
 
 from experiment_sources import verify_sources
-from verify_trace_results import (FATAL_KERNEL, SUBMIT, archive_files, block_stats,
-                                  fingerprint, original_trace, test_summary)
+
+WARNING = b"/root/.bashrc: line 1: /opt/miniconda3/etc/profile.d/conda.sh: No such file or directory\n"
+SUBMIT = b"COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT"
+FATAL_KERNEL = re.compile(r"Kernel panic|Out of memory:|oom-kill:|Killed process [0-9]+|"
+                          r"Buffer I/O error|EXT4-fs error|I/O error, dev vda|"
+                          r"blk_update_request: I/O error|\bBUG:|\bkernel BUG at|\bOops:", re.I)
+
 
 PAGE = 4096
 MIB = 1024**2
@@ -29,6 +36,92 @@ def need(ok, message):
 
 def sha(data):
     return hashlib.sha256(data).hexdigest()
+
+def fingerprint(data):
+    return {"sha256": sha(data), "without_startup_warning_sha256": sha(data.replace(WARNING, b"")),
+            "startup_warning_count": data.count(WARNING)}
+
+def original_trace(path):
+    """Parse source bytes directly instead of importing the replay implementation."""
+    raw = path.read_bytes()
+    source = json.loads(raw)
+    config = source["info"]["config"]
+    need(config["environment_type"].endswith(".DockerEnvironment"), "unsupported trace environment")
+    need(not config["environment"].get("forward_env"), "host environment forwarding")
+    need(source["info"]["exit_status"] == "Submitted", "source trace did not submit")
+    batches = []
+    for message in source["messages"]:
+        extra = message.get("extra", {})
+        if message["role"] == "assistant" and extra.get("actions"):
+            batches.append([extra["actions"], []])
+        elif batches and message["role"] in ("tool", "user") and "returncode" in extra:
+            batches[-1][1].append(extra)
+    need(bool(batches), "trace has no actions")
+    commands = []
+    for number, (actions, observations) in enumerate(batches):
+        need(len(actions) == len(observations) or (number == len(batches) - 1 and not observations),
+                f"incomplete recorded observations in batch {number}")
+        for index, action in enumerate(actions):
+            need(isinstance(action["command"], str), "non-text trace command")
+            data = action["command"].encode()
+            commands.append({"index": len(commands), "command": data,
+                             "command_sha256": sha(data),
+                             "expected_returncode": observations[index]["returncode"] if observations else None,
+                             "source_output": observations[index]["raw_output"].encode() if observations else None})
+    need(sum(c["expected_returncode"] is None for c in commands) == 1 and
+            commands[-1]["expected_returncode"] is None, "only final submission may lack recorded return code")
+    return {"sha256": sha(raw), "commands": commands, "environment": config["environment"],
+            "submission": fingerprint(source["info"]["submission"].encode())}
+
+def archive_files(path):
+    # Never extract guest-controlled paths to the host filesystem.
+    files = {}
+    with tarfile.open(path, "r:gz") as archive:
+        for member in archive:
+            name = PurePosixPath(member.name)
+            need(not name.is_absolute() and ".." not in name.parts, f"unsafe archive member {member.name}")
+            if member.isdir():
+                continue
+            need(member.isfile(), f"unexpected archive member type: {member.name}")
+            key = str(name)
+            need(key not in files, f"duplicate archive member: {key}")
+            files[key] = archive.extractfile(member).read()
+    return files
+
+def block_stats(data):
+    values = [int(value) for value in data.split()]
+    need(len(values) >= 11 and min(values) >= 0, "invalid guest block statistics")
+    return dict(zip(("read_ios", "read_sectors", "write_ios", "write_sectors"),
+                    (values[0], values[2], values[4], values[6])))
+
+def test_summary(command, output):
+    """Keep test outcomes/counts while dropping duration and scheduling noise."""
+    command = command.decode().strip()
+    output = output.decode(errors="replace")
+    if command.startswith("go test "):
+        packages = sorted(re.findall(r"^(ok|\?|FAIL)[ \t]+([^ \t\r\n]+)(?:[ \t].*)?$", output, re.M))
+        need(bool(packages), "Go test command produced no package results")
+        return {"kind": "go", "packages": packages}
+    if command.startswith("vendor/bin/phpunit ") and "--version" not in shlex.split(command)[1:]:
+        counts = re.findall(r"^Tests: ([0-9]+), Assertions: ([0-9]+)", output, re.M)
+        if not counts:
+            counts = re.findall(r"^OK \(([0-9]+) tests?, ([0-9]+) assertions?\)", output, re.M)
+        need(len(counts) == 1, "PHPUnit command produced no unique test/assertion summary")
+        return {"kind": "phpunit", "tests": int(counts[0][0]), "assertions": int(counts[0][1])}
+    if command.startswith("python3 tests/run-tests.py "):
+        performed = re.findall(r"^([0-9]+) tests performed \(([0-9]+) individual testcases\)$", output, re.M)
+        passed = re.findall(r"^([0-9]+) tests passed$", output, re.M)
+        need(len(performed) == len(passed) == 1, "MicroPython command produced no unique test summary")
+        result = {"kind": "micropython", "tests": int(performed[0][0]),
+                  "testcases": int(performed[0][1]), "passed": int(passed[0])}
+        for status in ("skipped", "failed"):
+            matches = re.findall(rf"^([0-9]+) tests {status}: ([^\r\n]+)$", output, re.M)
+            need(len(matches) <= 1, f"duplicate MicroPython {status} summary")
+            result[status] = {"count": int(matches[0][0]), "names": sorted(matches[0][1].split())} if matches else {"count": 0, "names": []}
+            need(result[status]["count"] == len(result[status]["names"]), f"MicroPython {status} count/names disagree")
+        need(result["passed"] + result["failed"]["count"] == result["tests"], "MicroPython test counts disagree")
+        return result
+    return None
 
 def document_sha(value):
     return sha(json.dumps(value, sort_keys=True, separators=(",", ":")).encode())

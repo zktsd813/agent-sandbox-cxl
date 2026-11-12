@@ -8,7 +8,7 @@ mkdir -p /dev/pts /run
 mount -t devpts devpts /dev/pts
 mount -t tmpfs tmpfs /run
 
-role= nonce= rounds=1000 cxl_bytes=0 dax_guest=0 dax_kvm_state=0 dax_handoff=0 dax_4k=0 migration_ip= control_rpc=0
+role= nonce= rounds=1000 cxl_bytes=0 dax_guest=0 dax_handoff=0 dax_4k=0 migration_ip= control_rpc=0
 for arg in $(cat /proc/cmdline); do
     case "$arg" in
         lab.role=*) role=${arg#*=} ;;
@@ -16,7 +16,6 @@ for arg in $(cat /proc/cmdline); do
         lab.rounds=*) rounds=${arg#*=} ;;
         lab.cxl_bytes=*) cxl_bytes=${arg#*=} ;;
         lab.dax_guest=*) dax_guest=${arg#*=} ;;
-        lab.dax_kvm_state=*) dax_kvm_state=${arg#*=} ;;
         lab.dax_handoff=*) dax_handoff=${arg#*=} ;;
         lab.dax_4k=*) dax_4k=${arg#*=} ;;
         lab.migration_ip=*) migration_ip=${arg#*=} ;;
@@ -73,7 +72,7 @@ else
 fi
 /lab/shared-probe exchange "$role" "$rounds" "$nonce" || fail "shared-memory exchange failed"
 if [ "$cxl_bytes" -gt 0 ]; then
-    dax_pages=$dax_kvm_state
+    dax_pages=0
     [ "$dax_4k" -eq 0 ] || dax_pages=1
     [ "$dax_handoff" -eq 0 ] || dax_pages=1
     /lab/guest-cxl.sh "$role" "$cxl_bytes" "$nonce" "$dax_pages" || fail "CXL device-DAX setup/exchange failed"
@@ -92,16 +91,6 @@ if [ "$dax_guest" -eq 1 ]; then
         shell
     fi
     export FC_DAX_RAM="$(cat /run/cxl-dax-device)" FC_DAX_OFFSET=2097152
-    if [ "$dax_kvm_state" -eq 1 ]; then
-        dax_name=$(basename "$FC_DAX_RAM")
-        resource=$(cat "/sys/bus/dax/devices/$dax_name/resource")
-        # [256MiB,384MiB) is exclusively reserved for KVM execution state.
-        pool_phys=$((resource + 268435456))
-        printf '%x,%x\n' "$pool_phys" 134217728 > /sys/module/kvm/parameters/dax_pool || fail "KVM DAX pool configuration failed"
-        cat /sys/module/kvm/parameters/dax_pool
-        # [512MiB,576MiB) is exclusively reserved for the VMM heap.
-        export FC_DAX_HEAP="$FC_DAX_RAM" FC_DAX_HEAP_OFFSET=536870912 FC_DAX_HEAP_BYTES=67108864
-    fi
     # Reserve a guest physical page range for an externally observable counter.
     extra_boot='memmap=2M$64M lab.dax_counter=1'
 fi

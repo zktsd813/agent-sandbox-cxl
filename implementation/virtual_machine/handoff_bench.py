@@ -22,12 +22,68 @@ import time
 import lab
 import nfs_bench as nfs
 from experiment_sources import record_sources
-from home_storage_bench import Controller, require, json_lines
-from trace_bench import source_fence_script
 
 HERE = Path(__file__).resolve().parent
 MIB = 1024 * 1024
 PAGE = 4096
+
+def require(condition, message):
+    if not condition:
+        raise RuntimeError(message)
+
+def json_lines(raw, prefix):
+    return [json.loads(line[len(prefix):]) for line in raw.splitlines() if line.startswith(prefix)]
+
+class Controller:
+    def __init__(self, config, out, memory_mib, vcpus):
+        self.config, self.vms, self.out = config, config["vms"], out
+        self.memory_mib, self.vcpus = memory_mib, vcpus
+        self.root = "/run/home-" + os.urandom(8).hex()
+        self.mailbox = "/run/trace-" + os.urandom(8).hex()
+        self.role, self.tier, self.directory = None, None, None
+        self.number = 0
+        self.receipts = []
+        self.transitions = []
+        self.active = []
+        self.nonce = None
+        self.round = 0
+    def raw(self, kind, text):
+        name = f"{len(self.receipts):04d}-{kind}.txt"
+        (self.out / name).write_text(text)
+        self.receipts.append({"file": name, "sha256": hashlib.sha256(text.encode()).hexdigest(), "kind": kind})
+        return name
+    def shell(self, role, body, kind, timeout=90):
+        import time
+        started = time.monotonic_ns()
+        raw = nfs.shell(self.vms[role], body, timeout=timeout)
+        name = self.raw(kind, raw)
+        if not hasattr(self, 'control_timings'):
+            self.control_timings = []
+        self.control_timings.append({'role': role, 'kind': kind, 'file': name,
+                                     'elapsed_ns': time.monotonic_ns() - started})
+        if self.vms[role].get('control_rpc'):
+            self.control_timings[-1]['rpc'] = dict(self.vms[role]['_last_control_timing'])
+        return raw, name
+    def api(self, role, directory, path, method, body):
+        raw = nfs.api(self.vms[role], directory, path, method, body)
+        name = self.raw("api", raw)
+        values = json_lines(raw, "LAB_API_JSON ")
+        require(len(values) == 1 and values[0]["status"] == 204, f"API failed: {raw}")
+        return {"file": name, "role": role, "path": path, "method": method, "request": body, "response": values[0]}
+
+def source_fence_script(directory):
+    # A zombie may be reaped between existence testing and reading /proc.
+    # Read first; a failed read is safe only if that process entry is gone.
+    return (f"read p expected < {directory}/fc.pid\n"
+        "case \"$p:$expected\" in *[!0-9:]*|:|*:) exit 1 ;; esac\n"
+        "[ \"$p\" -gt 1 ]\n[ \"$expected\" -gt 0 ]\n"
+        "observed=0\nreason=missing\nif record=$(cat /proc/$p/stat 2>/dev/null); then\n"
+        "record=${record##*) }\nset -- $record\nstate=$1\nshift 19\nobserved=$1\n"
+        "case \"$observed\" in ''|*[!0-9]*) exit 1 ;; esac\n[ \"$observed\" -gt 0 ]\n"
+        "if [ \"$observed\" != \"$expected\" ]; then reason=reused\n"
+        "else case \"$state\" in Z|X) reason=$state ;; *) exit 1 ;; esac\nfi\n"
+        "else [ ! -e /proc/$p/stat ] || exit 1\nfi\n"
+        "printf 'FENCED %s %s\\nFENCE_STATE %s %s\\n' \"$p\" \"$expected\" \"$reason\" \"$observed\"")
 
 @dataclass
 class Grant:
@@ -323,7 +379,6 @@ class HandoffController(Controller):
                 ("directory", "plan", "report", "manifest_path")}
             self.resident_workers[s.role]["imported"] = purpose != "resident-prepare"
             if native:
-                from home_storage_bench import json_lines
                 boots = json_lines(raw, 'RESIDENT_BOOT_JSON ')
                 answers = json_lines(raw, 'LAB_API_JSON ')
                 require(len(boots) == 1, 'Native process readiness missing')
@@ -679,7 +734,7 @@ def main():
             'Same patched DRAM baseline, not pristine Firecracker', 'One VM per trial; full private RAM copy for tier changes']}
     sources = ('experiment_sources.py', 'handoff_bench.py', 'swe-handoff-l2-init.sh', 'swe-handoff-guest-run.sh',
         'resident_fast.py', 'resident_control.c', 'resident_wire.h', 'resident_proxy.py', 'resident_bootstrap.c',
-        'control_rpc.c', 'control_rpc.py', 'guest-init.sh', 'home_storage_bench.py', 'nfs_bench.py', 'trace_bench.py', 'lab.py')
+        'control_rpc.c', 'control_rpc.py', 'guest-init.sh', 'nfs_bench.py', 'lab.py')
     report['source_hashes'], report['source_reference'] = record_sources(HERE, sources)
     source = Path(config['assets'])/'traces'/f'{args.name}.traj.json'
     shutil.copy2(source,out/'source.traj.json')
