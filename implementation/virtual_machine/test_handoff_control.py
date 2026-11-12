@@ -11,7 +11,6 @@ class AllocationTests(unittest.TestCase):
         layout = promotion_layout(self.a, 'v1', 4*PAGE)
         self.assertEqual([m['gpa'] for m in layout['mappings']], list(range(0, 4*PAGE, PAGE)))
         self.assertEqual({m['offset'] for m in layout['mappings']}, self.a.grants['v1'].frames)
-        self.assertFalse(layout['credits'])
 
     def test_live_release_and_double_release_rejected(self):
         self.a.allocate("v1", 4)
@@ -35,8 +34,8 @@ class AllocationTests(unittest.TestCase):
         self.a.release('v1', fenced=True, detached=True)
         new = promotion_layout(self.a, 'v1', 4*PAGE)
         self.assertEqual(old['mappings'], new['mappings'])
-        manifest = {'version': 3, 'allocation_generation': old['allocation_generation'], 'run_epoch': '1',
-                    'handle': {'abi': 3, 'count': 4, 'credit_count': 0, 'owner_epoch': 1, 'state': 1,
+        manifest = {'version': 4, 'allocation_generation': old['allocation_generation'], 'run_epoch': '1',
+                    'handle': {'abi': 4, 'count': 4, 'owner_epoch': 1, 'state': 1,
                                'allocation_generation': old['allocation_generation']}}
         with self.assertRaises(RuntimeError):
             validate_export(self.a, 'v1', manifest, 4*PAGE)
@@ -68,8 +67,8 @@ class AllocationTests(unittest.TestCase):
             def __iter__(self):
                 raise AssertionError('handoff scanned allocation')
         self.a.grants['v1'].frames = NoIteration(self.a.grants['v1'].frames)
-        manifest = {'version': 3, 'allocation_generation': self.a.grants['v1'].generation, 'run_epoch': '1',
-            'handle': {'abi': 3, 'count': 4, 'credit_count': 0, 'owner_epoch': 1, 'state': 1,
+        manifest = {'version': 4, 'allocation_generation': self.a.grants['v1'].generation, 'run_epoch': '1',
+            'handle': {'abi': 4, 'count': 4, 'owner_epoch': 1, 'state': 1,
                        'allocation_generation': self.a.grants['v1'].generation}}
         validate_export(self.a, 'v1', manifest, 4*PAGE)
 

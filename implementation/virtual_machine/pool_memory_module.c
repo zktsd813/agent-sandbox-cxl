@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /* Experimental, privileged VM-private CXL RAM. One execution owner per fd.
- * Allocation credits are assigned by the controller; no distributed allocator
+ * Private frames are assigned by the controller; no distributed allocator
  * metadata or cross-kernel locks are introduced here.
  */
 #include <linux/capability.h>
@@ -14,13 +14,12 @@
 #include <linux/sort.h>
 #include <linux/uaccess.h>
 #include <linux/vmalloc.h>
-#include <linux/bitmap.h>
 #include <linux/random.h>
 #include <linux/kvm_dax.h>
 #include "pool_memory_uapi.h"
 
 #define CPM_MAX_PAGES (1UL << 20)
-#define CPM_MAGIC 0x43584c504d415033ULL
+#define CPM_MAGIC 0x43584c504d415034ULL
 #define CPM_ACTIVE 1
 #define CPM_SEALED 2
 #define CPM_RETIRED 3
@@ -33,10 +32,8 @@ struct cpm {
     struct mutex lock;
     struct cpm_config cfg;
     struct cpm_entry *map;
-    u64 *credits;
     struct cpm_handle local, *state;
     struct cpm_header *header;
-    unsigned long *private_bitmap;
     u64 epoch, cookie_lo, cookie_hi;
     void *base;
     bool ready, mapped;
@@ -72,7 +69,7 @@ static int validate_private(struct cpm *c)
 {
     u64 i, n = 0, *all;
     int ret = 0;
-    all = kvmalloc_array(c->cfg.count + c->state->credit_count, sizeof(*all), GFP_KERNEL);
+    all = kvmalloc_array(c->cfg.count, sizeof(*all), GFP_KERNEL);
     if (!all)
         return -ENOMEM;
     for (i = 0; i < c->cfg.count; i++) {
@@ -82,14 +79,7 @@ static int validate_private(struct cpm *c)
         }
         all[n++] = c->map[i].offset;
     }
-    for (i = 0; i < c->state->credit_count; i++) {
-        u64 offset = c->credits[i];
-        if (!valid_offset(c, offset)) {
-            ret = -EINVAL;
-            goto out;
-        }
-        all[n++] = offset;
-    }
+
     sort(all, n, sizeof(*all), cmp_u64, NULL);
     for (i = 1; i < n; i++)
         if (all[i] == all[i - 1]) { ret = -EINVAL; break; }
@@ -166,28 +156,24 @@ static int cpm_mmap(struct file *file, struct vm_area_struct *vma)
     return 0;
 }
 
-static long configure(struct cpm *c, const void *arg, bool user)
+static long configure(struct cpm *c, const struct cpm_config *input)
 {
     struct cpm_config cfg;
     int ret;
     if (c->map) return -EBUSY;
-    if (user) { if (copy_from_user(&cfg, (void __user *)arg, sizeof(cfg))) return -EFAULT; }
-    else memcpy(&cfg, arg, sizeof(cfg));
+    cfg = *input;
     if (cfg.abi != CPM_ABI || !cfg.count || cfg.count > CPM_MAX_PAGES ||
-        cfg.credit_count > CPM_MAX_PAGES || !cfg.device_bytes ||
+        !cfg.device_bytes ||
         (cfg.phys_base | cfg.device_bytes) & (PAGE_SIZE - 1) ||
         cfg.phys_base + cfg.device_bytes < cfg.phys_base || cfg.reserved[0] || cfg.reserved[1])
         return -EINVAL;
     c->cfg = cfg;
     c->map = kvmalloc_array(cfg.count, sizeof(*c->map), GFP_KERNEL);
-    c->credits = kvmalloc_array(CPM_MAX_PAGES, sizeof(*c->credits), GFP_KERNEL);
-    if (!c->map || !c->credits) { ret = -ENOMEM; goto fail; }
-    if (copy_from_user(c->map, u64_to_user_ptr(cfg.entries), cfg.count * sizeof(*c->map)) ||
-        copy_from_user(c->credits, u64_to_user_ptr(cfg.credits), cfg.credit_count * sizeof(*c->credits))) {
+    if (!c->map) { ret = -ENOMEM; goto fail; }
+    if (copy_from_user(c->map, u64_to_user_ptr(cfg.entries), cfg.count * sizeof(*c->map))) {
         ret = -EFAULT;
         goto fail;
     }
-    c->state->credit_count = cfg.credit_count;
     ret = validate_private(c);
     if (ret)
         goto fail;
@@ -196,24 +182,11 @@ static long configure(struct cpm *c, const void *arg, bool user)
     c->state->generation = 1;
     c->state->count = cfg.count;
     c->state->full_scan_pages = cfg.count;
-    c->private_bitmap = bitmap_zalloc(cfg.device_bytes >> PAGE_SHIFT, GFP_KERNEL);
-    if (!c->private_bitmap) { ret = -ENOMEM; goto fail; }
-    {
-        u64 i;
-        for (i = 0; i < cfg.count; i++) {
-            __set_bit(c->map[i].offset >> PAGE_SHIFT, c->private_bitmap);
-        }
-        for (i = 0; i < c->state->credit_count; i++)
-            __set_bit(c->credits[i] >> PAGE_SHIFT, c->private_bitmap);
-    }
     smp_store_release(&c->ready, true);
     return 0;
 fail:
     if (c->base) { memunmap(c->base); c->base = NULL; }
-    bitmap_free(c->private_bitmap); c->private_bitmap = NULL;
-    kvfree(c->credits); c->credits = NULL;
     kvfree(c->map); c->map = NULL;
-    c->state->credit_count = 0;
     return ret;
 }
 
@@ -221,15 +194,12 @@ fail:
  * needed when a fenced owner hands this exact mapper to the next owner. */
 static u64 metadata_need(const struct cpm_config *cfg)
 {
-    return PAGE_ALIGN(PAGE_SIZE + cfg->count * sizeof(struct cpm_entry) +
-        CPM_MAX_PAGES * sizeof(u64) + BITS_TO_LONGS(cfg->device_bytes >> PAGE_SHIFT) * sizeof(long));
+    return PAGE_ALIGN(PAGE_SIZE + cfg->count * sizeof(struct cpm_entry));
 }
 static void persistent_pointers(struct cpm *c, struct cpm_header *h)
 {
     c->header = h; c->state = &h->handle; c->cfg = h->config;
     c->map = (void *)h + PAGE_SIZE;
-    c->credits = (void *)(c->map + c->cfg.count);
-    c->private_bitmap = (void *)(c->credits + CPM_MAX_PAGES);
     c->epoch = c->state->owner_epoch;
     c->cookie_lo = c->state->cookie_lo; c->cookie_hi = c->state->cookie_hi;
 }
@@ -238,8 +208,7 @@ static int create_persistent(struct cpm *c, void __user *user)
     struct cpm_create p;
     struct cpm_header *h;
     struct cpm_entry *old_map;
-    unsigned long *old_bitmap;
-    u64 *old_credits, i;
+    u64 i;
     int ret;
     if (copy_from_user(&p, user, sizeof(p))) return -EFAULT;
     if (!p.allocation_generation || p.metadata_offset & (PAGE_SIZE - 1) ||
@@ -249,18 +218,16 @@ static int create_persistent(struct cpm *c, void __user *user)
         p.config.count > CPM_MAX_PAGES || metadata_need(&p.config) > p.metadata_bytes)
         return -EINVAL;
     /* configure has the one required baseline admission/uniqueness check. */
-    ret = configure(c, &p.config, false);
+    ret = configure(c, &p.config);
     if (ret) return ret;
     h = c->base + p.metadata_offset;
     if (READ_ONCE(h->magic) == CPM_MAGIC && READ_ONCE(h->handle.state) != CPM_RETIRED)
         return -EBUSY;
     for (i = 0; i < c->cfg.count; i++)
         if (cpm_in_range(c->map[i].offset, p.metadata_offset, p.metadata_bytes)) return -EINVAL;
-    for (i = 0; i < c->state->credit_count; i++)
-        if (cpm_in_range(c->credits[i], p.metadata_offset, p.metadata_bytes)) return -EINVAL;
-    old_map = c->map; old_credits = c->credits; old_bitmap = c->private_bitmap;
+    old_map = c->map;
     memset(h, 0, PAGE_SIZE);
-    h->config = c->cfg; h->config.entries = h->config.credits = 0;
+    h->config = c->cfg; h->config.entries = 0;
     h->handle = c->local;
     h->handle.abi = CPM_ABI; h->handle.phys_base = p.config.phys_base;
     h->handle.device_bytes = p.config.device_bytes;
@@ -271,10 +238,7 @@ static int create_persistent(struct cpm *c, void __user *user)
     h->handle.state = CPM_ACTIVE;
     persistent_pointers(c, h);
     memcpy(c->map, old_map, c->cfg.count * sizeof(*c->map));
-    memcpy(c->credits, old_credits, c->state->credit_count * sizeof(u64));
-    memcpy(c->private_bitmap, old_bitmap,
-        BITS_TO_LONGS(c->cfg.device_bytes >> PAGE_SHIFT) * sizeof(long));
-    kvfree(old_map); kvfree(old_credits); bitmap_free(old_bitmap);
+    kvfree(old_map);
     smp_store_release(&h->magic, CPM_MAGIC);
     return 0;
 }
@@ -285,7 +249,7 @@ static int import_persistent(struct cpm *c, void __user *user)
     void *base;
     int ret = -ESTALE;
     if (c->ready || copy_from_user(&in, user, sizeof(in))) return -EINVAL;
-    if (in.abi != CPM_ABI || in.reserved[0] || in.reserved[1] || in.reserved[2] ||
+    if (in.abi != CPM_ABI || in.reserved[0] || in.reserved[1] || in.reserved[2] || in.reserved[3] ||
         in.state != CPM_SEALED || !in.allocation_generation ||
         !in.device_bytes || (in.phys_base | in.device_bytes | in.metadata_offset | in.metadata_bytes) & (PAGE_SIZE-1) ||
         in.phys_base + in.device_bytes < in.phys_base ||
@@ -346,10 +310,9 @@ static long cpm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     long ret = 0;
     if (!capable(CAP_SYS_RAWIO))
         return -EPERM;
-    if (cmd == CPM_CONFIG || cmd == CPM_CREATE || cmd == CPM_IMPORT) {
+    if (cmd == CPM_CREATE || cmd == CPM_IMPORT) {
         mutex_lock(&c->lock);
-        ret = cmd == CPM_CONFIG ? configure(c, user, true) :
-            cmd == CPM_CREATE ? create_persistent(c, user) : import_persistent(c, user);
+        ret = cmd == CPM_CREATE ? create_persistent(c, user) : import_persistent(c, user);
         mutex_unlock(&c->lock);
         return ret;
     }
@@ -372,19 +335,6 @@ status_done:
         mutex_unlock(&c->lock);
         if (ret) return ret;
         return copy_to_user(user, &h, sizeof(h)) ? -EFAULT : 0;
-    }
-    if (cmd == CPM_ADD_CREDITS && c->header &&
-        READ_ONCE(c->state->state) != CPM_ACTIVE) return -EPERM;
-    if (cmd == CPM_SELECT) {
-        struct cpm_select r;
-        u8 *out;
-        if (copy_from_user(&r, user, sizeof(r))) return -EFAULT;
-        if (!r.count || r.first >= c->cfg.count || r.count > c->cfg.count-r.first) return -EINVAL;
-        out = kvzalloc(r.count, GFP_KERNEL);
-        if (!out) return -ENOMEM;
-        /* Private RAM has no selected shared frames. */
-        ret = copy_to_user(u64_to_user_ptr(r.selected), out, r.count) ? -EFAULT : 0;
-        kvfree(out); return ret;
     }
     if (cmd == CPM_AUDIT) {
         struct cpm_audit a;
@@ -423,59 +373,20 @@ status_done:
     if (cmd == CPM_QUERY) {
         struct cpm_query q;
         struct cpm_entry *map;
-        u64 *credits;
-        if (copy_from_user(&q, user, sizeof(q)))
-            return -EFAULT;
-        if (q.count < c->cfg.count || q.credit_count > CPM_MAX_PAGES)
-            return -ENOSPC;
+        if (copy_from_user(&q, user, sizeof(q))) return -EFAULT;
+        if (q.count < c->cfg.count) return -ENOSPC;
         map = kvmalloc_array(c->cfg.count, sizeof(*map), GFP_KERNEL);
-        credits = kvmalloc_array(q.credit_count, sizeof(*credits), GFP_KERNEL);
-        if (!map || !credits) { kvfree(map); kvfree(credits); return -ENOMEM; }
+        if (!map) return -ENOMEM;
         mutex_lock(&c->lock);
-        if (q.credit_count < c->state->credit_count) {
-            ret = -ENOSPC;
-        } else {
-            c->state->full_scan_pages += c->cfg.count;
-            q.count = c->cfg.count; q.credit_count = c->state->credit_count;
-            q.generation = c->state->generation;
-            q.reserved[0] = q.reserved[1] = 0; q.faults = c->state->faults; q.exhausted = c->state->exhausted;
-            memcpy(map, c->map, q.count * sizeof(*map));
-            memcpy(credits, c->credits, q.credit_count * sizeof(*credits));
-        }
+        c->state->full_scan_pages += c->cfg.count;
+        q.count = c->cfg.count;
+        q.generation = c->state->generation;
+        q.reserved[0] = q.reserved[1] = 0; q.faults = c->state->faults; q.exhausted = c->state->exhausted;
+        memcpy(map, c->map, q.count * sizeof(*map));
         mutex_unlock(&c->lock);
-        if (!ret && (copy_to_user(u64_to_user_ptr(q.entries), map, q.count * sizeof(*map)) ||
-                     copy_to_user(u64_to_user_ptr(q.credits), credits, q.credit_count * sizeof(*credits)) ||
-                     copy_to_user(user, &q, sizeof(q)))) ret = -EFAULT;
-        kvfree(map); kvfree(credits);
-        return ret;
-    }
-    if (cmd == CPM_ADD_CREDITS) {
-        struct cpm_credits add;
-        u64 *offsets;
-        if (copy_from_user(&add, user, sizeof(add))) return -EFAULT;
-        if (!add.count || add.count > CPM_MAX_PAGES) return -EINVAL;
-        offsets = memdup_user(u64_to_user_ptr(add.offsets), add.count * sizeof(*offsets));
-        if (IS_ERR(offsets)) return PTR_ERR(offsets);
-        mutex_lock(&c->lock);
-        if (c->state->credit_count + add.count > CPM_MAX_PAGES) ret = -ENOSPC;
-        else {
-            u64 i;
-            /* Previously admitted frames stay in the membership bitmap even
-             * when a credit becomes mapped. Validate only the new grant. */
-            for (i = 0; i < add.count; i++) {
-                if (!valid_offset(c, offsets[i]) ||
-                    test_and_set_bit(offsets[i] >> PAGE_SHIFT, c->private_bitmap)) {
-                    ret = -EINVAL; break;
-                }
-            }
-            if (ret) while (i) __clear_bit(offsets[--i] >> PAGE_SHIFT, c->private_bitmap);
-        }
-        if (!ret) {
-            memcpy(c->credits + c->state->credit_count, offsets, add.count * sizeof(*offsets));
-            c->state->credit_count += add.count; c->state->generation++;
-        }
-        mutex_unlock(&c->lock);
-        kfree(offsets);
+        if (copy_to_user(u64_to_user_ptr(q.entries), map, q.count * sizeof(*map)) ||
+            copy_to_user(user, &q, sizeof(q))) ret = -EFAULT;
+        kvfree(map);
         return ret;
     }
     return -ENOTTY;
@@ -499,7 +410,7 @@ static int cpm_release(struct inode *inode, struct file *file)
         if (owns(c))
             cmpxchg(&c->state->state, CPM_ACTIVE, CPM_RETIRED);
     } else {
-        kvfree(c->map); kvfree(c->credits); bitmap_free(c->private_bitmap);
+        kvfree(c->map);
     }
     if (c->base) memunmap(c->base);
     kfree(c);

@@ -173,7 +173,7 @@ def main():
                     (out / (role + "-pool-setup.txt")).write_text(raw)
             env = {"FC_DAX_RAM": "/dev/dax0.0", "FC_DAX_OFFSET": "2097152", "FC_DAX_SNAPSHOT": "0" if direct else "1"}
             if direct:
-                env.update(FC_DAX_DIRECT="1", FC_DAX_HEAP="/dev/dax0.0", FC_DAX_HEAP_OFFSET="2684354560", FC_DAX_HEAP_BYTES="67108864")
+                env.update(FC_DAX_DIRECT="1")
             else:
                 env.update(FC_DAX_REUSE="1", FC_DAX_NO_NESTED_GUEST="1")
             report["firecracker_environment"] = env

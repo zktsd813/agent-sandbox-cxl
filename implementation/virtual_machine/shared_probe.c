@@ -642,13 +642,12 @@ static double bench_start(int boot, unsigned generation)
         close(fd);
         if (bench_private_ram) {
             /* This control deliberately exercises normal RAM + new KVM objects. */
-            const char *variables[] = {"FC_DAX_RAM", "FC_DAX_OFFSET", "FC_DAX_HEAP",
-                "FC_DAX_HEAP_OFFSET", "FC_DAX_HEAP_BYTES", "FC_DAX_SNAPSHOT",
+            const char *variables[] = {"FC_DAX_RAM", "FC_DAX_OFFSET", "FC_DAX_SNAPSHOT",
                 "FC_DAX_DIRECT", "FC_DAX_CONTROL", "FC_DAX_REUSE", "FC_DAX_REUSE_FD",
-                "FC_DAX_FIXED_HVA", "FC_DAX_REUSE_QUIET_IRQFD", "FC_DAX_EXACT_TSC",
+                "FC_DAX_FIXED_HVA", "FC_DAX_EXACT_TSC",
                 "FC_DAX_SNAPSHOT_COMPAT", "FC_DAX_IRQFD_BATCH",
-                "FC_DAX_CHANNEL_SPIN_US", "BENCH_REUSE_KVM",
-                "BENCH_REUSE_PREPARE", "BENCH_REUSE_PREPARE_ON_DEMAND"};
+                "BENCH_REUSE_KVM",
+                "BENCH_REUSE_PREPARE"};
             for (size_t i = 0; i < sizeof(variables) / sizeof(variables[0]); i++)
                 unsetenv(variables[i]);
         } else {
@@ -658,7 +657,6 @@ static double bench_start(int boot, unsigned generation)
         int direct = env_enabled("FC_DAX_DIRECT");
         int no_seccomp = direct || env_enabled("BENCH_NO_SECCOMP");
         if (!bench_private_ram) setenv("FC_DAX_SNAPSHOT", direct ? "0" : "1", 1);
-        if (!direct) unsetenv("FC_DAX_HEAP");
         if (no_seccomp && boot && !serial_file) execl("/lab/firecracker", "firecracker", "--no-seccomp", "--api-sock", bench_socket,
                         "--config-file", bench_config_path, (char *)NULL);
         if (no_seccomp) execl("/lab/firecracker", "firecracker", "--no-seccomp", "--api-sock", bench_socket, (char *)NULL);

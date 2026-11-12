@@ -90,7 +90,7 @@ index a3b3f3f..65d254f 100644
              parse_put_actions(&Body::new("invalid_body")).unwrap_err();
 
 diff --git a/src/firecracker/src/api_server_adapter.rs b/src/firecracker/src/api_server_adapter.rs
-index 70abff4..c5b32a5 100644
+index 70abff4..4b212bc 100644
 --- a/src/firecracker/src/api_server_adapter.rs
 +++ b/src/firecracker/src/api_server_adapter.rs
 @@ -2,10 +2,13 @@
@@ -107,7 +107,7 @@ index 70abff4..c5b32a5 100644
 
  use event_manager::{EventOps, Events, MutEventSubscriber, SubscriberOps};
  use vmm::logger::{ProcessTimeReporter, error_unrestricted, info_unrestricted, warn_unrestricted};
-@@ -48,6 +51,192 @@ struct ApiServerAdapter {
+@@ -48,6 +51,191 @@ struct ApiServerAdapter {
      request: Option<ApiRequest>,
  }
 
@@ -143,12 +143,11 @@ index 70abff4..c5b32a5 100644
 +                    Err(error) => { error_unrestricted!("Resident command failed: {error}"); libc::EIO as u64 }
 +                }
 +            }
-+            3 | 4 | 5 => {
++            3 | 4 => {
 +                let mut vm = vmm.lock().unwrap();
 +                let result = match command {
 +                    3 => vm.send_resident_memory(events).map(|bytes| payload = bytes),
-+                    4 => vm.receive_resident_memory(events, &input),
-+                    _ => vm.write_resident_evidence(),
++                    _ => vm.receive_resident_memory(events, &input),
 +                };
 +                match result {
 +                    Ok(()) => 0,
@@ -300,7 +299,7 @@ index 70abff4..c5b32a5 100644
  impl ApiServerAdapter {
      /// Runs the vmm to completion, while any arising control events are deferred
      /// to a `RuntimeApiController`.
-@@ -58,6 +247,9 @@ impl ApiServerAdapter {
+@@ -58,6 +246,9 @@ impl ApiServerAdapter {
          vmm: Arc<Mutex<Vmm>>,
          event_manager: &mut EventManager,
      ) -> Result<(), ApiServerError> {
@@ -310,7 +309,7 @@ index 70abff4..c5b32a5 100644
          let api_adapter = Arc::new(Mutex::new(Self {
              api_event_fd,
              from_api,
-@@ -66,10 +258,34 @@ impl ApiServerAdapter {
+@@ -66,10 +257,34 @@ impl ApiServerAdapter {
              request: None,
          }));
          event_manager.add_subscriber(api_adapter.clone());
@@ -345,7 +344,7 @@ index 70abff4..c5b32a5 100644
              api_adapter
                  .lock()
                  .expect("Poisoned lock")
-@@ -84,33 +300,36 @@ impl ApiServerAdapter {
+@@ -84,33 +299,36 @@ impl ApiServerAdapter {
          Ok(())
      }
 
@@ -389,7 +388,7 @@ index 70abff4..c5b32a5 100644
                          break;
                      }
                  }
-@@ -272,3 +491,107 @@ pub(crate) fn run_with_api(
+@@ -272,3 +490,107 @@ pub(crate) fn run_with_api(
 
      result
  }
@@ -1557,10 +1556,10 @@ index 2a75945..fe91a5d 100644
      type ConstructorArgs = MmioTransportConstructorArgs;
 diff --git a/src/vmm/src/direct.rs b/src/vmm/src/direct.rs
 new file mode 100644
-index 0000000..80de245
+index 0000000..c93019a
 --- /dev/null
 +++ b/src/vmm/src/direct.rs
-@@ -0,0 +1,787 @@
+@@ -0,0 +1,772 @@
 +// Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 +// SPDX-License-Identifier: Apache-2.0
 +
@@ -1632,10 +1631,7 @@ index 0000000..80de245
 +}
 +
 +// Optional diagnostic state, materialized only by an explicit post-handoff request.
-+fn last_memory_export() -> &'static Mutex<Option<(DirectState, crate::pool_memory::Manifest, Vec<u8>)>> {
-+    static LAST: std::sync::OnceLock<Mutex<Option<(DirectState, crate::pool_memory::Manifest, Vec<u8>)>>> = std::sync::OnceLock::new();
-+    LAST.get_or_init(|| Mutex::new(None))
-+}
++
 +
 +static PARKED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 +fn resident_token() -> &'static Mutex<Option<HandoffToken>> {
@@ -1894,24 +1890,12 @@ index 0000000..80de245
 +                })
 +            );
 +        }
-+        if let Some(mapper) = mapper { *last_memory_export().lock().unwrap() = Some((state, mapper, bytes.clone())); }
 +        timing.mark("log_receipt");
 +        timing.finish();
 +        Ok(bytes)
 +    }
 +
-+    /// Diagnostic only: no guest RAM reads. Never called by the handoff runtime.
-+    pub fn write_resident_evidence(&self) -> Result<(), VmmError> {
-+        let guard = last_memory_export().lock().unwrap();
-+        let (state, mapper, packet) = guard.as_ref().ok_or(VmmError::DaxPreflight("no memory export"))?;
-+        let dump = |name: &str, bytes: &[u8]| -> io::Result<()> { std::fs::write(env_path(name)?, bytes) };
-+        let result = (|| -> io::Result<()> {
-+            dump("FC_DAX_DIRECT_EXPORT", &serde_json::to_vec(state)?)?;
-+            dump("FC_POOL_MEMORY_MANIFEST", &serde_json::to_vec(mapper)?)?;
-+            std::fs::write(env_path("FC_DAX_DIRECT_EXPORT")?.with_extension("bin"), packet)
-+        })();
-+        result.map_err(VmmError::DaxHandoff)
-+    }
++
 +}
 +
 +impl Vmm {
@@ -2297,7 +2281,7 @@ index 0000000..80de245
 +    fn private_resident_packet_roundtrip_rejects_old_version_and_truncation() {
 +        let state = valid_state();
 +        let mapper: crate::pool_memory::Manifest = serde_json::from_value(serde_json::json!({
-+            "version":3,"vm_id":"1","run_epoch":"1","pool_path":"unused","phys_base":0,
++            "version":4,"vm_id":"1","run_epoch":"1","pool_path":"unused","phys_base":0,
 +            "device_bytes":1<<30,"reserved":[0,0],"generation":1,"faults":0,"exhausted":0,
 +            "allocation_generation":1
 +        })).unwrap();
@@ -2908,10 +2892,10 @@ index 71a0345..889ef50 100644
          let mut vmm = default_vmm();
 diff --git a/src/vmm/src/pool_memory.rs b/src/vmm/src/pool_memory.rs
 new file mode 100644
-index 0000000..55d4b18
+index 0000000..985aafb
 --- /dev/null
 +++ b/src/vmm/src/pool_memory.rs
-@@ -0,0 +1,793 @@
+@@ -0,0 +1,779 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! VM-private persistent CXL logical RAM and whole-RAM tier changes.
 +//! Private controller plans assign exclusive frames. The kernel owns the mapping
@@ -2971,8 +2955,6 @@ index 0000000..55d4b18
 +    reserved: [u64; 2],
 +    count: u64,
 +    entries: u64,
-+    credit_count: u64,
-+    credits: u64,
 +}
 +#[repr(C)]
 +#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
@@ -2980,7 +2962,7 @@ index 0000000..55d4b18
 +struct Handle {
 +    abi: u64, phys_base: u64, device_bytes: u64, metadata_offset: u64, metadata_bytes: u64,
 +    cookie_lo: u64, cookie_hi: u64, owner_epoch: u64, generation: u64, allocation_generation: u64,
-+    count: u64, credit_count: u64, reserved: [u64; 3],
++    count: u64, reserved: [u64; 4],
 +    faults: u64, exhausted: u64, full_scan_pages: u64, state: u64,
 +}
 +#[repr(C)]
@@ -2991,8 +2973,6 @@ index 0000000..55d4b18
 +struct Query {
 +    count: u64,
 +    entries: u64,
-+    credit_count: u64,
-+    credits: u64,
 +    generation: u64,
 +    reserved: [u64; 2],
 +    faults: u64,
@@ -3042,8 +3022,6 @@ index 0000000..55d4b18
 +    #[serde(default)]
 +    mappings: Vec<Mapping>,
 +    #[serde(default)]
-+    credits: Vec<u64>,
-+    #[serde(default)]
 +    allocation_generation: u64,
 +}
 +#[derive(Clone, Debug, Deserialize, Serialize)]
@@ -3058,8 +3036,6 @@ index 0000000..55d4b18
 +    reserved: [u64; 2],
 +    #[serde(default)]
 +    mappings: Vec<Mapping>,
-+    #[serde(default)]
-+    credits: Vec<u64>,
 +    #[serde(default)]
 +    handle: Option<Handle>,
 +    generation: u64,
@@ -3109,7 +3085,7 @@ index 0000000..55d4b18
 +            "private mapper requires one contiguous logical RAM region",
 +        ));
 +    }
-+    if m.version != 3 || m.mappings.len() > MAX_PAGES || m.credits.len() > MAX_PAGES {
++    if m.version != 4 || m.mappings.len() > MAX_PAGES {
 +        return Err(invalid("manifest version/size"));
 +    }
 +    let (base, size) = regions[0];
@@ -3163,14 +3139,12 @@ index 0000000..55d4b18
 +        })
 +        .collect();
 +    let config = Config {
-+        abi: 3,
++        abi: 4,
 +        phys_base: m.phys_base,
 +        device_bytes: m.device_bytes,
 +        reserved: [0; 2],
 +        count: entries.len() as u64,
 +        entries: entries.as_ptr() as u64,
-+        credit_count: m.credits.len() as u64,
-+        credits: m.credits.as_ptr() as u64,
 +    };
 +    let mut create = Create { config,
 +        metadata_offset: env("FC_POOL_MEMORY_METADATA_OFFSET")?.parse().map_err(io::Error::other)?,
@@ -3200,19 +3174,16 @@ index 0000000..55d4b18
 +    query(a)?;
 +    let h = a.manifest.handle.unwrap();
 +    let mut entries = vec![Entry::default(); h.count as usize];
-+    let mut credits = vec![0u64; h.credit_count as usize];
 +    let mut q = Query { count:h.count, entries:entries.as_mut_ptr() as u64,
-+        credit_count:h.credit_count, credits:credits.as_mut_ptr() as u64, ..Default::default() };
++        ..Default::default() };
 +    ioctl(&a.file, 0x71, true, &mut q)?;
 +    a.manifest.mappings = entries.into_iter().enumerate().map(|(i,e)| Mapping {
 +        gpa:i as u64*PAGE, offset:e.offset }).collect();
-+    credits.truncate(q.credit_count as usize);
-+    a.manifest.credits = credits;
 +    Ok(())
 +}
 +fn validate_handle_geometry(m: &Manifest, regions: &[(GuestAddress, usize)]) -> io::Result<()> {
 +    let h = m.handle.ok_or_else(|| invalid("persistent mapping handle missing"))?;
-+    if m.version != 3 || m.reserved != [0; 2] || h.abi != 3 || h.reserved != [0; 3] || h.count == 0 || h.count > MAX_PAGES as u64 ||
++    if m.version != 4 || m.reserved != [0; 2] || h.abi != 4 || h.reserved != [0; 4] || h.count == 0 || h.count > MAX_PAGES as u64 ||
 +        h.phys_base != m.phys_base || h.device_bytes != m.device_bytes ||
 +        h.allocation_generation != m.allocation_generation ||
 +        regions.len() != 1 || regions[0].0.raw_value() != 0 || regions[0].1 as u64 != h.count*PAGE {
@@ -3235,7 +3206,7 @@ index 0000000..55d4b18
 +    }
 +    // Full evidence is explicit. Drop the allocation as well as its contents;
 +    // a 2GiB VM must not retain a spare 524288-entry userspace table.
-+    a.manifest.mappings = Vec::new(); a.manifest.credits = Vec::new();
++    a.manifest.mappings = Vec::new();
 +    a.manifest.state_sha256 = None;
 +    if publish { write_json(&env("FC_POOL_MEMORY_MANIFEST")?, &a.manifest)?; }
 +    Ok(())
@@ -3290,7 +3261,7 @@ index 0000000..55d4b18
 +        offset += region.len() as i64;
 +    }
 +    m.handle = Some(h); m.run_epoch = new.to_string();
-+    m.mappings = Vec::new(); m.credits = Vec::new();
++    m.mappings = Vec::new();
 +    RESIDENT_EPOCH.store(new, std::sync::atomic::Ordering::Release);
 +    *guard = Some(Active {file, manifest:m});
 +    Ok(())
@@ -3380,7 +3351,7 @@ index 0000000..55d4b18
 +        ioctl(&file, 0x78, true, &mut h)?;
 +        if h.owner_epoch != new { return Err(invalid("mapper owner epoch mismatch")); }
 +        m.handle = Some(h);
-+        m.mappings = Vec::new(); m.credits = Vec::new();
++        m.mappings = Vec::new();
 +        Ok((file, m))
 +    };
 +    let (file, mut m) = load().map_err(|e| MemoryError::Dax(e.to_string()))?;
@@ -3494,7 +3465,7 @@ index 0000000..55d4b18
 +            }
 +            let (phys_base, device_bytes) = dax_geometry(&p.pool_path)?;
 +            let mut m = Manifest {
-+                version: 3,
++                version: 4,
 +                handle: None,
 +                vm_id: p.vm_id.clone(),
 +                run_epoch: p.run_epoch.clone(),
@@ -3503,7 +3474,6 @@ index 0000000..55d4b18
 +                device_bytes,
 +                reserved: [0; 2],
 +                mappings: p.mappings.clone(),
-+                credits: p.credits.clone(),
 +                generation: 1,
 +                faults: 0,
 +                exhausted: 0,
@@ -3591,7 +3561,7 @@ index 0000000..55d4b18
 +                })
 +                .collect();
 +            a.manifest.mappings = Vec::new();
-+            a.manifest.credits = Vec::new();
++
 +            return write_json(
 +                &env("FC_POOL_MEMORY_REPORT")?,
 +                &serde_json::json!({"version":1,"operation":"audit",
@@ -3656,7 +3626,7 @@ index 0000000..55d4b18
 +        _ => return Err(invalid("unknown pool memory operation")),
 +    }
 +    let summary=state().lock().unwrap().as_ref().map(|a|serde_json::json!({
-+        "generation":a.manifest.generation,"credit_pages":a.manifest.handle.map(|h|h.credit_count).unwrap_or(0),
++        "generation":a.manifest.generation,
 +        "exhausted":a.manifest.exhausted}));
 +    write_json(
 +        &env("FC_POOL_MEMORY_REPORT")?,
@@ -3671,10 +3641,10 @@ index 0000000..55d4b18
 +mod tests {
 +    use super::*;
 +    fn manifest() -> Manifest {
-+        Manifest { version: 3, vm_id: "1".into(), run_epoch: "2".into(), pool_path: "unused".into(),
++        Manifest { version: 4, vm_id: "1".into(), run_epoch: "2".into(), pool_path: "unused".into(),
 +            phys_base: 0, device_bytes: 4096*PAGE, reserved: [0; 2],
 +            mappings: vec![Mapping { gpa: 0, offset: PAGE }, Mapping { gpa: PAGE, offset: 2*PAGE }],
-+            credits: vec![], handle: Some(Handle { abi: 3, count: 2, device_bytes: 4096*PAGE,
++            handle: Some(Handle { abi: 4, count: 2, device_bytes: 4096*PAGE,
 +                allocation_generation: 7, ..Default::default() }),
 +            generation: 1, faults: 0, exhausted: 0, allocation_generation: 7, state_sha256: None }
 +    }
@@ -3700,9 +3670,9 @@ index 0000000..55d4b18
 +    }
 +    #[test]
 +    fn uapi_sizes_match_private_mapper() {
-+        assert_eq!(std::mem::size_of::<Config>(), 72);
++        assert_eq!(std::mem::size_of::<Config>(), 56);
 +        assert_eq!(std::mem::size_of::<Handle>(), 152);
-+        assert_eq!(std::mem::size_of::<Query>(), 72);
++        assert_eq!(std::mem::size_of::<Query>(), 56);
 +    }
 +}
 diff --git a/src/vmm/src/resources.rs b/src/vmm/src/resources.rs

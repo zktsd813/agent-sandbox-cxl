@@ -2717,8 +2717,8 @@ def main():
     p = subs.add_parser("direct-handoff-bench", help="Attach the same shared KVM/vCPU/VMCS across independent kernels")
     p.add_argument("--memory-mib", type=int, default=128, help="Linux guest RAM, 128..2048MiB (default 128)")
     p.add_argument("--dense-working-set", action="store_true", help="Retain and verify a near-full guest working set; measure first and warm page scans after every handoff")
-    p.add_argument("--kernel-mode", type=int, choices=[0, 2, 3], default=3,
-                   help="0 conservative, 2 deferred retirement, 3 retained EPT (default)")
+    p.add_argument("--kernel-mode", type=int, choices=[2, 3], default=3,
+                   help="2 deferred retirement, 3 retained EPT (default)")
     p.add_argument("--executor", choices=["firecracker"], default="firecracker",
                    help="A uses Firecracker; B uses the native shared-probe executor")
     p.add_argument("--control", choices=["http", "local"], default="http",

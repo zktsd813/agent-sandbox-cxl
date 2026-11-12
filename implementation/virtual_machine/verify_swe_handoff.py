@@ -369,13 +369,13 @@ class Evidence:
 
 
 def handle(raw, memory):
-    need(raw['version'] == 3 and not raw.get('mappings') and not raw.get('credits'), 'full mapping in normal export')
+    need(raw['version'] == 4 and not raw.get('mappings') and not raw.get('credits'), 'full mapping in normal export')
     h = raw['handle']
-    need(h['abi'] == 3 and h['count']*PAGE == memory and h['state'] in (1, 2)
+    need(h['abi'] == 4 and h['count']*PAGE == memory and h['state'] in (1, 2)
          and h['owner_epoch'] == int(raw['run_epoch'])
          and h['allocation_generation'] == raw['allocation_generation'] > 0
          and h['phys_base'] == raw['phys_base'] and h['device_bytes'] == raw['device_bytes']
-         and h['exhausted'] == 0 and h['reserved'] == [0, 0, 0], 'invalid ownership handle')
+         and h['exhausted'] == 0 and h['reserved'] == [0, 0, 0, 0], 'invalid ownership handle')
     return h
 
 
@@ -392,9 +392,7 @@ def placement(e, name, memory, requested):
              and offset % PAGE == 0 and PRIVATE_START <= offset < PRIVATE_END
              and offset not in private, 'promotion alias/geometry')
         private.add(offset)
-    credits = set(requested['credits'])
-    need(len(credits) == len(requested['credits']) == h['credit_count'] and not private & credits, 'credit alias/count')
-    return value, private, credits
+    return value, private
 
 
 def kernel_intervals(text):
@@ -484,9 +482,9 @@ def verify(path):
             need(raw == operation['report'] and raw['result'] == 'passed' and
                  raw['ram_snapshot_bytes'] == 0, 'Invalid tier-change operation')
             if kind == 'promotion':
-                value, private, credits = placement(e, transition['export']['file'], memory,
+                value, private = placement(e, transition['export']['file'], memory,
                                                     e.json(operation['plan_file']))
-                need(private | credits == initial[value['allocation_generation']], 'Promotion escaped grant')
+                need(private == initial[value['allocation_generation']], 'Promotion escaped grant')
                 need(len(private)*PAGE == raw['copied_private_bytes'] == memory, 'Promotion accounting')
                 identity_pair(e, transition['before'], transition['after'])
             else:

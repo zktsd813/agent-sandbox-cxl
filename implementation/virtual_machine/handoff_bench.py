@@ -172,21 +172,19 @@ def promotion_layout(allocator, owner, memory_bytes):
     require(owner not in allocator.grants, "owner already has a promotion allocation")
     frames = allocator.allocate(owner, memory_bytes // PAGE)
     return {"mappings": [{"gpa": i * PAGE, "offset": offset} for i, offset in enumerate(frames)],
-            "credits": [],
             "allocation_generation": allocator.grants[owner].generation}
 
 
 def validate_export(allocator, owner, manifest, memory_bytes):
     require(owner in allocator.grants, "export without allocation owner")
     h = manifest["handle"]
-    require(manifest["version"] == 3 and h["abi"] == 3 and h["count"] * PAGE == memory_bytes
+    require(manifest["version"] == 4 and h["abi"] == 4 and h["count"] * PAGE == memory_bytes
             and h["allocation_generation"] == manifest["allocation_generation"] == allocator.grants[owner].generation
             and h["owner_epoch"] == int(manifest["run_epoch"]) and h["state"] in (1, 2),
             "invalid persistent ownership handle")
     require(not manifest.get("mappings") and not manifest.get("credits"), "export contains full mapping")
-    require(h["count"] + h["credit_count"] == len(allocator.grants[owner].frames), "mapper differs from grant")
+    require(h["count"] == len(allocator.grants[owner].frames), "mapper differs from grant")
     return {"logical_bytes": memory_bytes, "private_mapped_bytes": memory_bytes,
-            "unused_credit_bytes": h["credit_count"] * PAGE,
             "allocated_private_bytes": len(allocator.grants[owner].frames) * PAGE}
 
 
@@ -666,7 +664,7 @@ class HandoffController(Controller):
         owner = f'vm{s.vm}:allocation{secrets.randbits(63) or 1}'
         layout = promotion_layout(self.allocator, owner, self.memory_mib * MIB)
         result, operation = self.memory_operation(s, 'promote', mappings=layout['mappings'],
-            credits=layout['credits'], allocation_generation=layout['allocation_generation'])
+            allocation_generation=layout['allocation_generation'])
         require(result['copied_private_bytes'] == self.memory_mib * MIB
                 and result['ram_snapshot_bytes'] == 0, 'Promotion accounting')
         s.owner, s.tier = owner, 'cxl'

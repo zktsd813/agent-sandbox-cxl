@@ -6,7 +6,7 @@
 #include <stdint.h>
 #define RESIDENT_MAGIC 0x43585233u
 struct request {
- uint32_t magic, state_len, manifest_len, first, operation, observe, persistent;
+ uint32_t magic, state_len, manifest_len, first, operation, reserved, persistent;
  uint64_t vm, epoch, reserved_start, reserved_bytes;
  char nonce[33], label[96], peer[16];
 };

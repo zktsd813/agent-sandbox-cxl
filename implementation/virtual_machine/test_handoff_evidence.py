@@ -14,13 +14,13 @@ class MapperEvidence(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.manifest = {'version': 3, 'run_epoch': '2', 'allocation_generation': 7,
-            'phys_base': 0x100000000, 'device_bytes': 16*1024*MIB, 'mappings': [], 'credits': [],
-            'handle': {'abi': 3, 'count': 2, 'state': 1, 'owner_epoch': 2, 'allocation_generation': 7,
+        self.manifest = {'version': 4, 'run_epoch': '2', 'allocation_generation': 7,
+            'phys_base': 0x100000000, 'device_bytes': 16*1024*MIB, 'mappings': [],
+            'handle': {'abi': 4, 'count': 2, 'state': 1, 'owner_epoch': 2, 'allocation_generation': 7,
                        'phys_base': 0x100000000, 'device_bytes': 16*1024*MIB,
-                       'exhausted': 0, 'reserved': [0, 0, 0], 'credit_count': 0}}
+                       'exhausted': 0, 'reserved': [0, 0, 0, 0]}}
         self.plan = {'mappings': [{'gpa': 0, 'offset': 2*MIB}, {'gpa': PAGE, 'offset': 2*MIB+PAGE}],
-                     'credits': [], 'allocation_generation': 7}
+                     'allocation_generation': 7}
 
     def evidence(self):
         data = json.dumps(self.manifest).encode()
@@ -28,9 +28,8 @@ class MapperEvidence(unittest.TestCase):
         return Evidence({'receipts': [{'file': 'mapper.json', 'sha256': hashlib.sha256(data).hexdigest()}]}, self.root)
 
     def test_private_coverage(self):
-        _, private, credits = placement(self.evidence(), 'mapper.json', 2*PAGE, self.plan)
+        _, private = placement(self.evidence(), 'mapper.json', 2*PAGE, self.plan)
         self.assertEqual(private, {2*MIB, 2*MIB+PAGE})
-        self.assertFalse(credits)
 
     def test_rehashed_alias_is_rejected(self):
         self.plan['mappings'][1]['offset'] = self.plan['mappings'][0]['offset']

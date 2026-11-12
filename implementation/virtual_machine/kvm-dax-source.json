@@ -43,7 +43,7 @@
       "base_sha256": "c60ba2cfdcb935509d37b861b3a65f6ccf7e43a328e6c671d32fba72975b2ed0"
     },
     "arch/x86/kvm/mmu/mmu.c": {
-      "patched_sha256": "b04bb1c0e3ef210886342bbccfe4375811da3b8bcd5de77d5d0245ba09daf577",
+      "patched_sha256": "b3b40c1d9cad30bb2d5c17e669adc8d5b63b38a2f99dbbcc8ac09cdb67c9d763",
       "base_sha256": "e687fdf436053dd0d41ffc403e89a82bc70663a519629da38ee4bd5a52d569a8"
     },
     "arch/x86/kvm/mmu/tdp_mmu.c": {
@@ -51,19 +51,15 @@
       "base_sha256": "416eb7932f2e3e12a039293eba4a958e173046ec62d786aa69f8b96217fb293a"
     },
     "arch/x86/kvm/vmx/vmx.c": {
-      "patched_sha256": "09eb8afe1585e25972f233444e9fa44378d3b10c07ef10a8142801d4271ede7e",
+      "patched_sha256": "44ac1c4f03a17a1183246b560c1441ea9b7777d4c8961d8af936d9d56a4b9d51",
       "base_sha256": "c54419b71478ec971c57dab1df7b0cebf3168989a27f3f65540d8d036d05c4ce"
-    },
-    "arch/x86/kvm/vmx/vmx.h": {
-      "patched_sha256": "82ed634613d6d9a193fa9422206848995a6291c5802a0d488080ccd9facdc888",
-      "base_sha256": "5a0a6e072cbced7cea5b76652a2a5c5b0875d33d99392f990d1d88c646ebeb16"
     },
     "arch/x86/kvm/x86.c": {
       "patched_sha256": "bab5ac8cf5bdf678030c8b1a04e0a1a5f63d521b61e7929de980a7eadfb80335",
       "base_sha256": "fe9ae905263db74ef5876a2ae49e0ce1d82a6e15866703b64fd6586c39eed2a4"
     },
     "include/linux/kvm_dax.h": {
-      "patched_sha256": "8d5f6d01ba700c14692716f92703ea8827d0b3048843816256620ec7a7160295",
+      "patched_sha256": "c45a2e538863be7a477e9499b6c47f568f6f39d5554353e684ae6508be7c344f",
       "new": true
     },
     "include/linux/kvm_host.h": {
@@ -83,7 +79,7 @@
       "base_sha256": "414f9b16edb7fd8562af7730ccdf47f6278c1b5ac17dcde46748b7f091fa8ffb"
     },
     "virt/kvm/dax_pool.c": {
-      "patched_sha256": "fbe221ab711abf35b8056d804867737ee2e36d318ce1bc1f6a09755aba81ed4f",
+      "patched_sha256": "93b3ccc1178ba95c84da093d16b5ae42531cd87c84ca338d1ad23f88705695bc",
       "new": true
     },
     "virt/kvm/eventfd.c": {
@@ -95,7 +91,7 @@
       "base_sha256": "2c9b22d33f02399d0a1503236b39d96a83e8c6dbe659a706f6ce10424042c64e"
     },
     "virt/kvm/kvm_main.c": {
-      "patched_sha256": "0d524c56a30373c0fbb283d1eca3cca8ac8424fdc249fe8714c0a1e9a7fd38f6",
+      "patched_sha256": "01cfc421c4f757d284ef90f97dbf80e955b6e8dc937d2b4f57397cd1ce9b954e",
       "base_sha256": "0f70d265644639479a3fc4c7ecfccd3adb44134b4fe682612f236cae16f3dcf3"
     },
     "arch/x86/kvm/mmu/mmu_internal.h": {
@@ -116,7 +112,6 @@
     "report": "implementation/virtual_machine/.local/latency-refinement-summary.json",
     "default_mode": 3,
     "modes": {
-      "0": "conservative invalidation and barriers",
       "2": "invalidation with deferred retirement",
       "3": "retained EPT and expedited source IRQFD SRCU; cached per-kernel PIT worker"
     },

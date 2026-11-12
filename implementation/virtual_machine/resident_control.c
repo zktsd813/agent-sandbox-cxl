@@ -166,18 +166,6 @@ static struct api_result api(const char *method,const char *route,const char *bo
  while(got<sizeof(response)-1){ssize_t n=read(fd,response+got,sizeof(response)-1-got);if(n<=0)fail("API response");got+=n;response[got]=0;if(strstr(response,"\r\n\r\n"))break;}
  result.us=(ns()-start)/1000.;check(sscanf(response,"HTTP/1.1 %d",&result.status)==1&&result.status==204,"API did not return 204");return result;
 }
-static size_t guest_ack(const char *label,char *out,off_t offset,uint64_t *elapsed) {
- check(strlen(label)<90&&strspn(label,"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-:.")==strlen(label),"ACK label");
- char p[256],command[128],needle[128];path(p,sizeof(p),"input");int input=open(p,O_WRONLY|O_NONBLOCK|O_CLOEXEC);if(input<0)fail("guest input");
- snprintf(command,sizeof(command),"ping %s\n",label);uint64_t start=ns();write_all(input,command,strlen(command));close(input);
- path(p,sizeof(p),"fc.log");int log=open(p,O_RDONLY|O_CLOEXEC);if(log<0)fail("guest log");snprintf(needle,sizeof(needle),"\"label\":\"%s\"",label);
- char buffer[8192];size_t used=0;
- while(ns()-start<30000000000ull){ssize_t n=pread(log,buffer+used,sizeof(buffer)-1-used,offset);if(n<0)fail("guest log read");offset+=n;used+=n;buffer[used]=0;
-  char *line=buffer,*end;while((end=strchr(line,'\n'))){*end=0;if(strstr(line,"{\"event\":\"trace_ping\"")==line&&strstr(line,needle)){size_t size=strlen(line);if(size&&line[size-1]=='\r')line[--size]=0;check(size<4096,"ACK bound");memcpy(out,line,size+1);close(log);*elapsed=ns()-start;return size;}line=end+1;}
-  size_t remaining=buffer+used-line;memmove(buffer,line,remaining);used=remaining;check(used<sizeof(buffer)-1,"guest serial line bound");struct timespec delay={.tv_nsec=50000};nanosleep(&delay,NULL);
- }
- check(0,"guest ACK timeout");return 0;
-}
 static int tcp(const char *ip,int listen_mode) {
  int fd=socket(AF_INET,SOCK_STREAM|SOCK_CLOEXEC,0);if(fd<0)fail("TCP socket");
  // A parked VM may stay away for an arbitrarily long workload. Bound active
@@ -204,7 +192,7 @@ static void print_api(const char *name,const struct api_result *a) {
 
 static void validate_request(const struct request *q,const char *nonce) {
  check(q->magic==MAGIC && q->nonce[32]==0 && !strcmp(q->nonce,nonce)
-       && q->label[95]==0 && q->label[0] && q->first<=1 && q->operation<=3 && q->observe<=1 && q->persistent<=1,"request identity");
+       && q->label[95]==0 && q->label[0] && q->first<=1 && q->operation<=2 && !q->reserved && q->persistent<=1,"request identity");
  check(strlen(q->label)<90 && strspn(q->label,"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-:.")==strlen(q->label),"request label");
  if(q->operation==1 || q->operation==2) {
   struct in_addr address;
@@ -264,7 +252,7 @@ static uint64_t number(const char *s) {
 }
 int main(int argc,char **argv) {
  const char *profile_env=getenv("FC_RESIDENT_PROFILE");profile_enabled=profile_env&&!strcmp(profile_env,"1");
- check(argc==5||argc==6||argc==7||argc==12||argc==13,"usage: serve DIR IP NONCE | handoff DIR PEER NONCE FIRST LABEL | request DIR LOCAL_IP NONCE FIRST LABEL PEER VM EPOCH START BYTES [OBSERVE]");
+ check(argc==5||argc==6||argc==12,"usage: serve DIR IP NONCE | request DIR LOCAL_IP NONCE FIRST LABEL PEER VM EPOCH START BYTES");
  check(strlen(argv[2])<sizeof(directory)&&!strncmp(argv[2],"/run/swe-handoff-",17),"owned directory required");strcpy(directory,argv[2]);path(socket_path,sizeof(socket_path),"api.sock");
  check(strlen(argv[4])==32&&strspn(argv[4],"0123456789abcdef")==32,"session nonce");signal(SIGPIPE,SIG_IGN);
 
@@ -318,17 +306,13 @@ int main(int argc,char **argv) {
     if(!trigger){int one=1;if(setsockopt(fd,IPPROTO_TCP,TCP_NODELAY,&one,sizeof(one)))fail("accepted TCP_NODELAY");}}
    struct request q;recv_all(fd,&q,sizeof(q));validate_request(&q,argv[4]);
    if(q.operation==2) {
-    check(!trigger && peer_fd<0 && q.persistent && !q.state_len && !q.manifest_len && !q.epoch && !q.observe,
+    check(!trigger && peer_fd<0 && q.persistent && !q.state_len && !q.manifest_len && !q.epoch && !q.reserved,
           "invalid peer preparation");
     struct sockaddr_in address;socklen_t size=sizeof(address);
     if(getpeername(fd,(void*)&address,&size)||!inet_ntop(AF_INET,&address.sin_addr,peer_ip,sizeof(peer_ip)))fail("prepared peer identity");
     peer_fd=fd;uint32_t marker=MAGIC;send_all(fd,&marker,sizeof(marker));continue;
    }
-   if(q.operation==3) {
-    check(trigger&&connect_native()&&!q.state_len&&!q.manifest_len,"evidence channel");
-    unsigned char command=5;uint64_t response[2];send_all(native_fd,&command,1);recv_all(native_fd,response,sizeof(response));
-    check(response[0]==0,"evidence command failed");uint32_t marker=MAGIC;send_all(fd,&marker,sizeof(marker));close(fd);continue;
-   }
+
    check(q.operation==(unsigned)trigger,"wrong request channel");
    char ack[4096];
    if(q.operation==1) {
@@ -352,8 +336,8 @@ int main(int argc,char **argv) {
    if(q.manifest_len) { overwrite_metadata(&import_file,state,q.state_len);overwrite_metadata(&manifest_file,manifest,q.manifest_len); }
    phase_mark(&profile,"metadata_publish");
    int owner=owner_pid();phase_mark(&profile,"owner_check");select_owner(owner);phase_mark(&profile,"owner_select");
-   struct reply r={.magic=MAGIC};off_t offset=0;
-   if(q.observe){char p[256];path(p,sizeof(p),"fc.log");struct stat st;if(stat(p,&st))fail("log offset");offset=st.st_size;}
+   struct reply r={.magic=MAGIC};
+
    if(!q.manifest_len) {
     check(connect_native(),"memory receiver not ready");uint64_t begin=ns(),response[2];
     unsigned char wire[5+CAP]={4};memcpy(wire+1,&q.state_len,4);memcpy(wire+5,state,q.state_len);
@@ -362,21 +346,16 @@ int main(int argc,char **argv) {
    } else { r.receive=api("PUT","/actions","{\"action_type\": \"DirectReceive\"}"); }
    phase_mark(&profile,"import_api");
    uint32_t marker=MAGIC;send_all(fd,&marker,sizeof(marker));
-   if(q.observe)r.ack_len=guest_ack(q.label,ack,offset,&r.ack_ns);
    send_all(fd,&r,sizeof(r));send_all(fd,ack,r.ack_len);if(!q.persistent)close(fd);
    phase_print(&profile,&q,"receive");
   }
  }
- if(!strcmp(argv[1],"evidence")) {
-  check(argc==5,"evidence arguments");struct request q={.magic=MAGIC,.operation=3};strcpy(q.nonce,argv[4]);strcpy(q.label,"evidence");
-  int fd=local_socket(0);send_all(fd,&q,sizeof(q));uint32_t marker;recv_all(fd,&marker,sizeof(marker));check(marker==MAGIC,"evidence reply");close(fd);return 0;
- }
- check((!strcmp(argv[1],"handoff")&&argc==7)||(!strcmp(argv[1],"request")&&(argc==12||argc==13)),"command arguments");
+
+ check(!strcmp(argv[1],"request")&&argc==12,"command arguments");
  check(!strcmp(argv[5],"0")||!strcmp(argv[5],"1"),"first import flag");
  struct request q={.magic=MAGIC,.first=(uint32_t)atoi(argv[5])};strcpy(q.nonce,argv[4]);check(strlen(argv[6])<sizeof(q.label),"label length");strcpy(q.label,argv[6]);
  char ack[4096];struct outcome o;
- if(argc>=12) {
-  if(argc==13){check(!strcmp(argv[12],"1"),"observe argument");q.observe=1;}
+ {
   q.operation=1;check(strlen(argv[7])<sizeof(q.peer),"peer length");strcpy(q.peer,argv[7]);
   q.vm=number(argv[8]);q.epoch=number(argv[9]);q.reserved_start=number(argv[10]);q.reserved_bytes=number(argv[11]);validate_request(&q,argv[4]);
   uint64_t start=ns();int fd=local_socket(0);send_all(fd,&q,sizeof(q));
@@ -384,8 +363,6 @@ int main(int argc,char **argv) {
   recv_all(fd,&o,sizeof(o));check(o.target.magic==MAGIC&&o.target.ack_len<sizeof(ack),"request reply bounds");
   recv_all(fd,ack,o.target.ack_len);ack[o.target.ack_len]=0;uint64_t elapsed=ns()-start;close(fd);
   print_outcome(&o,ack,elapsed,resumed);
- } else {
-  validate_request(&q,argv[4]);o=handoff(q,argv[3],-1,ack);print_outcome(&o,ack,0,0);
  }
  return 0;
 }

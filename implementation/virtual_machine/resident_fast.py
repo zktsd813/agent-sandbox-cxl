@@ -10,9 +10,9 @@ import nfs_bench as nfs
 from handoff_bench import require, json_lines
 
 
-def request(c,source,directory,nonce,first,label,peer,vm_id,epoch,start,size,kind,observe=False):
+def request(c,source,directory,nonce,first,label,peer,vm_id,epoch,start,size,kind):
     vm=c.vms[source]
-    if 3 in vm.get('control_rpc_operations',[]) and not observe:
+    if 3 in vm.get('control_rpc_operations',[]):
         import resident_proxy
         started=time.monotonic_ns()
         require(lab.alive(vm),'VM is not running')
@@ -24,7 +24,7 @@ def request(c,source,directory,nonce,first,label,peer,vm_id,epoch,start,size,kin
         return raw,name
     source_ip='172.30.0.1' if source=='A' else '172.30.0.2'
     result=c.shell(source,f'/lab/resident-control request {directory} {source_ip} {nonce} '
-        f'{int(first)} {label} {peer} {vm_id} {epoch} {start} {size}'+(' 1' if observe else ''),kind,120)
+        f'{int(first)} {label} {peer} {vm_id} {epoch} {start} {size}',kind,120)
     c.control_timings[-1]['request_transport']='exec'
     return result
 
