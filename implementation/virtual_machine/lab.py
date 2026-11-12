@@ -758,7 +758,7 @@ def stop_config(config):
     memory_dir = config.get("ephemeral_memory_dir")
     if memory_dir and not any(alive(vm) for vm in config["vms"].values()):
         directory = Path(memory_dir)
-        if directory.name.startswith("cxl-lab-") and not directory.is_symlink():
+        if directory.exists() and directory.name.startswith("cxl-lab-") and not directory.is_symlink():
             for name in ("shared-memory.bin", "cxl-memory.bin"):
                 (directory / name).unlink(missing_ok=True)
             directory.rmdir()
