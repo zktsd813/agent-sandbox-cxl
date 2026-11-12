@@ -158,7 +158,7 @@ def main():
             prefix = ["taskset", "-c", args.cpus, sys.executable, "-u"]
             start = prefix + [str(HERE / "lab.py"), "start", "--vcpus", "4", "--memory-mib", "8192",
                 "--shared-mib", "64", "--cxl-mib", "16384", "--dax-guest", "--dax-4k",
-                "--migration-network", "--network-backend", "tap", "--memory-backing-dir", "/dev/shm",
+                "--migration-network", "--network-backend", "socket", "--memory-backing-dir", "/dev/shm",
                 "--home-storage-image", str(assets / "storage.raw"), "--qemu", str(qemu)]
             if mode == "direct":
                 start.append("--dax-handoff")

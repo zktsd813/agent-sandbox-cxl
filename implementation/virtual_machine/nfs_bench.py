@@ -257,6 +257,8 @@ def pin_vms(config, args):
                 raise RuntimeError("Owned QEMU exited before CPU affinity setup")
             for thread in Path(f"/proc/{vm['pid']}/task").iterdir():
                 os.sched_setaffinity(int(thread.name), cpus)
+            if (config.get("migration_network") or {}).get("backend") != "tap":
+                continue
             # vhost-net workers are kernel threads outside QEMU's thread group.
             # Match only this live, incarnation-checked lab VM's exact worker name.
             if not lab.alive(vm):

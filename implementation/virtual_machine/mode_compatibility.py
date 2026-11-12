@@ -129,7 +129,7 @@ def main():
         if direct:
             arguments.append("--dax-handoff")
         if args.case != "direct-baseline":
-            arguments += ["--migration-network", "--network-backend", "tap", "--storage-image", args.assets / "storage.raw"]
+            arguments += ["--migration-network", "--network-backend", "socket", "--storage-image", args.assets / "storage.raw"]
         command(arguments, "start.log")
         started = True
         run_path, config = lab.current_run()
