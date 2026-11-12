@@ -10,6 +10,24 @@ fc_cargo() {
         echo "Firecracker source missing: $fc_source (see README.md bootstrap steps)." >&2
         return 1
     }
+    # Debian musl packages extracted locally, without installing host packages.
+    local musl_root="${CXL_LAB_MUSL_ROOT:-$lab_dir/.local/musl}"
+    if [[ -f "$musl_root/usr/lib/x86_64-linux-musl/musl-gcc.specs" ]]; then
+        musl_root="$(cd -- "$musl_root" && pwd)"
+        sed "s|/usr/|$musl_root/usr/|g; s|/lib/ld-musl|$musl_root/lib/ld-musl|g" \
+            "$musl_root/usr/lib/x86_64-linux-musl/musl-gcc.specs" > "$musl_root/musl-gcc.specs"
+        printf '#!/bin/sh\nexec x86_64-linux-gnu-gcc "$@" -specs "%s/musl-gcc.specs"\n' \
+            "$musl_root" > "$musl_root/musl-gcc"
+        chmod +x "$musl_root/musl-gcc"
+        mkdir -p "$musl_root/uapi"
+        ln -sfn /usr/include/linux "$musl_root/uapi/linux"
+        ln -sfn /usr/include/asm-generic "$musl_root/uapi/asm-generic"
+        ln -sfn /usr/include/x86_64-linux-gnu/asm "$musl_root/uapi/asm"
+        export CC_x86_64_unknown_linux_musl="${CC_x86_64_unknown_linux_musl:-$musl_root/musl-gcc}"
+        export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER="${CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER:-$CC_x86_64_unknown_linux_musl}"
+        export CFLAGS_x86_64_unknown_linux_musl="${CFLAGS_x86_64_unknown_linux_musl:-} -isystem $musl_root/uapi"
+        export BINDGEN_EXTRA_CLANG_ARGS_x86_64_unknown_linux_musl="${BINDGEN_EXTRA_CLANG_ARGS_x86_64_unknown_linux_musl:-} -isystem $musl_root/usr/include/x86_64-linux-musl -isystem $musl_root/uapi"
+    fi
     if [[ -x "$lab_dir/.local/rust/bin/cargo" ]]; then
         (cd "$fc_source" && PATH="$lab_dir/.local/rust/bin:$PATH" CARGO_HOME="$lab_dir/.local/cargo" \
             "$lab_dir/.local/rust/bin/cargo" "$@" \

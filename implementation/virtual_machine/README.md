@@ -67,10 +67,10 @@ V="$PWD/implementation/virtual_machine"
 export CXL_LAB_FC_SOURCE="$V/.local/fc-work"
 export CXL_LAB_KERNEL_SOURCE="$V/.local/linux-work"
 export CXL_LAB_KERNEL_BUILD="$V/.local/kernel-build"
-numactl --cpunodebind=0 --membind=0 bash "$V/build.sh" kernel
-numactl --cpunodebind=0 --membind=0 bash "$V/build.sh" firecracker
-numactl --cpunodebind=0 --membind=0 bash "$V/build.sh" test
-numactl --cpunodebind=0 --membind=0 python3 -m unittest discover -s "$V" -p 'test_*.py'
+numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 bash "$V/build.sh" kernel
+numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 bash "$V/build.sh" firecracker
+numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 bash "$V/build.sh" test
+numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 python3 -m unittest discover -s "$V" -p 'test_*.py'
 ```
 
 Firecracker 원본 commit은 `95f868c8e345b1cc8faccd1a3c910b4989dc3f58`이다.
@@ -78,7 +78,7 @@ Firecracker 원본 commit은 `95f868c8e345b1cc8faccd1a3c910b4989dc3f58`이다.
 로컬 `.local/rust/bin/cargo`(standalone) 또는 `.local/cargo/bin/cargo`(rustup)가 있으면 Rust 1.97.0의 musl target을
 `--offline --locked --release`로 빌드한다. 없으면 기존 Firecracker Docker 개발 환경을 사용한다.
 로컬 binary는 `$CXL_LAB_FC_SOURCE/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker`다.
-Musl target에는 C cross compiler도 필요하다. 이번 서버의 GNU target 확인은 컴파일·순수 단위 시험에 한정한다.
+Musl target에는 C cross compiler도 필요하다. bud05에서는 `apt-get download musl musl-dev musl-tools`로 받은 패키지를 `.local/musl`에 `dpkg -x`로 추출한다. `build.sh`는 이 디렉터리(또는 `CXL_LAB_MUSL_ROOT`)의 specs를 재배치하고 로컬 wrapper·Linux UAPI 경로를 설정하여 static musl binary를 빌드한다.
 
 Linux는 `kernel-source.json`과 `kvm-dax-source.json`의 원본 identity를 확인한다.
 `cxl-static-capacity.patch` → `kvm-dax-state.patch` 순서다.
@@ -90,9 +90,9 @@ Mapper는 해당 kernel build tree를 대상으로 빌드한다.
 mkdir -p "$V/.local/mapper"
 cp "$V/pool_memory_module.c" "$V/pool_memory_uapi.h" "$V/.local/mapper/"
 printf 'obj-m += pool_memory_module.o\n' > "$V/.local/mapper/Makefile"
-numactl --cpunodebind=0 --membind=0 make -C "$CXL_LAB_KERNEL_BUILD" \
+numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 make -C "$CXL_LAB_KERNEL_BUILD" \
   M="$V/.local/mapper" -j24 modules
-numactl --cpunodebind=0 --membind=0 bash "$V/build.sh" qemu /path/to/qemu-upstream
+numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 bash "$V/build.sh" qemu /path/to/qemu-upstream
 ```
 
 QEMU 기반은 v10.2.2의 `f8ed81651e61d9c2166df6121ce2af0f44f06b3e`다.
@@ -111,17 +111,17 @@ SWE guest kernel은 별도 `O=` 디렉터리에서 `kernel.config` 위에 `guest
 export CXL_LAB_SESSION=handoff-test
 export CXL_LAB_ASSETS="$V/.local/assets-handoff-test"
 FC="$CXL_LAB_FC_SOURCE/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker"
-numactl --cpunodebind=0 --membind=0 python3 "$V/lab.py" prepare \
+numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 python3 "$V/lab.py" prepare \
   --firecracker "$FC" --l1-kernel /path/to/bzImage \
   --module-dir /path/to/modules/RELEASE --l2-kernel /path/to/vmlinux
-numactl --cpunodebind=0 --membind=0 python3 "$V/lab.py" start \
+numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 python3 "$V/lab.py" start \
   --vcpus 2 --memory-mib 2048 --cxl-mib 2048 --dax-guest \
   --qemu /path/to/qemu-system-x86_64
-numactl --cpunodebind=0 --membind=0 python3 "$V/lab.py" verify
-numactl --cpunodebind=0 --membind=0 python3 "$V/lab.py" handoff-bench --preset snapshot
-numactl --cpunodebind=0 --membind=0 python3 "$V/lab.py" handoff-bench --preset reuse
-numactl --cpunodebind=0 --membind=0 python3 "$V/lab.py" handoff-bench --preset reuse-prepared
-numactl --cpunodebind=0 --membind=0 python3 "$V/lab.py" stop
+numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 python3 "$V/lab.py" verify
+numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 python3 "$V/lab.py" handoff-bench --preset snapshot
+numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 python3 "$V/lab.py" handoff-bench --preset reuse
+numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 python3 "$V/lab.py" handoff-bench --preset reuse-prepared
+numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 python3 "$V/lab.py" stop
 ```
 
 새 프로세스 direct 기준선은 **별도 fresh pair**를 `lab.py start --dax-handoff --dax-guest --dax-4k`
@@ -137,17 +137,17 @@ numactl --cpunodebind=0 --membind=0 python3 "$V/lab.py" stop
 다음 단계는 kernel·mapper·상주 제어기를 새 fixture에 넣는다.
 
 ```bash
-numactl --cpunodebind=0 --membind=0 python3 "$V/swe_handoff_prepare.py" \
+numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 python3 "$V/swe_handoff_prepare.py" \
   --trace-assets /path/to/trace-assets --assets "$V/.local/swe-handoff-assets" \
   --firecracker "$FC" --guest-kernel /path/to/vmlinux --guest-config /path/to/guest.config \
   --l1-kernel /path/to/bzImage --mapper-module "$V/.local/mapper/pool_memory_module.ko" \
   --kvm-module-dir /path/to/rebuilt-kvm-modules
-numactl --cpunodebind=0 --membind=0 python3 "$V/swe_handoff_run.py" \
+numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 python3 "$V/swe_handoff_run.py" \
   --assets "$V/.local/swe-handoff-assets" --qemu /path/to/qemu-system-x86_64 \
   --qemu-root /path/to/qemu-root --session swe-handoff --cpus 0-7 \
   --names gin-gonic__gin-3741 --modes baseline state-only direct \
   --output "$V/.local/swe-handoff-run"
-numactl --cpunodebind=0 --membind=0 python3 "$V/verify_swe_handoff.py" \
+numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 python3 "$V/verify_swe_handoff.py" \
   --suite "$V/.local/swe-handoff-run/report.json"
 ```
 
