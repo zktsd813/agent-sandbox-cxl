@@ -28,11 +28,11 @@ def decode(data):
                           'receive':{'status':receive_status,'duration_us':round(receive_us,3)}}}
 
 
-def request(vm,directory,nonce,first,label,peer,vm_id,epoch,canonical_start,canonical_bytes):
+def request(vm,directory,nonce,first,label,peer,vm_id,epoch,reserved_start,reserved_bytes):
     nonce,label,peer=(value.encode() for value in (nonce,label,peer))
     if len(nonce)!=32 or not 0<len(label)<90 or not 0<len(peer)<16:
         raise ValueError('Resident request strings')
-    wire=REQUEST.pack(MAGIC,0,0,int(first),1,0,0,vm_id,epoch,canonical_start,canonical_bytes,nonce,label,peer)
+    wire=REQUEST.pack(MAGIC,0,0,int(first),1,0,0,vm_id,epoch,reserved_start,reserved_bytes,nonce,label,peer)
     data=control_rpc.unix_exchange(vm,directory+'/control/request.sock',wire,4+OUTCOME.size,4)
     value=decode(data)
     return 'RESIDENT_PROXY_WIRE '+data.hex()+'\nRESIDENT_FAST_JSON '+json.dumps(value,separators=(',',':'))+'\n'

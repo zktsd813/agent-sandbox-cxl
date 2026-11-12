@@ -17,7 +17,7 @@ class Wire(unittest.TestCase):
 #include "resident_wire.h"
 int main(void) {
  struct request q;memset(&q,0,sizeof(q));q.magic=RESIDENT_MAGIC;q.first=1;q.operation=1;
- q.vm=4;q.epoch=9;q.canonical_start=4096;q.canonical_bytes=8192;
+ q.vm=4;q.epoch=9;q.reserved_start=4096;q.reserved_bytes=8192;
  strcpy(q.nonce,"0123456789abcdef0123456789abcdef");strcpy(q.label,"example");strcpy(q.peer,"172.30.0.2");
  fwrite(&q,sizeof(q),1,stdout);
  struct outcome o;memset(&o,0,sizeof(o));o.send.us=12.125;o.send.status=204;

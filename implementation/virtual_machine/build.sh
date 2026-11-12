@@ -3,13 +3,25 @@
 set -euo pipefail
 lab_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_dir="$(cd -- "$lab_dir/../.." && pwd)"
-fc_source="$repo_dir/firecracker"
+fc_source="${CXL_LAB_FC_SOURCE:-$repo_dir/firecracker}"
 
 fc_cargo() {
     [[ -f "$fc_source/Cargo.toml" ]] || {
         echo "Firecracker source missing: $fc_source (see README.md bootstrap steps)." >&2
         return 1
     }
+    if [[ -x "$lab_dir/.local/rust/bin/cargo" ]]; then
+        (cd "$fc_source" && PATH="$lab_dir/.local/rust/bin:$PATH" CARGO_HOME="$lab_dir/.local/cargo" \
+            "$lab_dir/.local/rust/bin/cargo" "$@" \
+            --offline --locked --release --target x86_64-unknown-linux-musl)
+        return
+    fi
+    if [[ -x "$lab_dir/.local/cargo/bin/cargo" ]]; then
+        (cd "$fc_source" && RUSTUP_HOME="$lab_dir/.local/rustup" CARGO_HOME="$lab_dir/.local/cargo" \
+            "$lab_dir/.local/cargo/bin/cargo" +1.97.0 "$@" \
+            --offline --locked --release --target x86_64-unknown-linux-musl)
+        return
+    fi
     docker run --rm --pull never --network none --user "$(id -u):$(id -g)" \
         --volume "$fc_source:/firecracker" \
         --volume "$fc_source/build/cargo_registry:/usr/local/rust/registry" \
@@ -25,7 +37,7 @@ build_firecracker() {
 }
 
 build_kernel() (
-    kernel_source="$(cd -- "$lab_dir/../linux" && pwd)"
+    kernel_source="$(cd -- "${CXL_LAB_KERNEL_SOURCE:-$lab_dir/../linux}" && pwd)"
     kernel_build="${CXL_LAB_KERNEL_BUILD:-$lab_dir/.local/kernel-build}"
     kernel_modules="${CXL_LAB_KERNEL_MODULES:-$lab_dir/.local/kernel-modules}"
     kernel_config="${CXL_LAB_KERNEL_CONFIG:-$lab_dir/kernel.config}"
@@ -145,6 +157,8 @@ test_sources() {
     local probe_test
     probe_test="$(mktemp "${TMPDIR:-/tmp}/cxl-shared-probe.XXXXXX")"
     if ! gcc -O2 -Wall -Wextra -Werror -static -pthread \
+            "-DCXL_KVM_DAX_HEADER=\"${CXL_LAB_KERNEL_SOURCE:-$lab_dir/../linux}/include/uapi/linux/kvm_dax.h\"" \
+            "-DCXL_MPTCP_HEADER=\"${CXL_LAB_KERNEL_SOURCE:-$lab_dir/../linux}/include/uapi/linux/mptcp.h\"" \
             "$lab_dir/shared_probe.c" -o "$probe_test"; then
         rm -f "$probe_test"
         return 1
@@ -153,6 +167,8 @@ test_sources() {
     # Filter to the modified pure contracts and the actions API parser.
     fc_cargo test -p vmm reuse::tests
     fc_cargo test -p firecracker test_parse_put_actions
+    fc_cargo test -p vmm direct::tests
+    fc_cargo test -p vmm pool_memory::tests
 }
 
 usage() {
@@ -167,7 +183,8 @@ test         Check Python/C and the related Firecracker unit tests.
 
 Optional environment: JOBS=24, CXL_EMULATION_TEST=1, KVM_DAX_TEST=1, MPTCP_TEST=0.
 Isolated kernel paths: CXL_LAB_KERNEL_BUILD, CXL_LAB_KERNEL_MODULES,
-                      CXL_LAB_KERNEL_CONFIG (defaults preserve the lab paths).
+                      CXL_LAB_KERNEL_CONFIG, CXL_LAB_KERNEL_SOURCE.
+Firecracker source: CXL_LAB_FC_SOURCE (defaults to repo/firecracker).
 USAGE
 }
 

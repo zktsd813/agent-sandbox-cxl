@@ -28,7 +28,7 @@
 static char directory[160], socket_path[192];
 static int readiness_pipe = -1;
 static int api_fd = -1;
-static int native_fd = -1, native_enabled, memory_enabled;
+static int native_fd = -1;
 static int peer_fd = -1;
 static int owner_fd = -1, prepared_owner_pid, selector_fd = -1;
 struct metadata_file { int fd; size_t length; };
@@ -133,7 +133,6 @@ static void connect_api(void) {
  }
 }
 static int connect_native(void) {
- if(!native_enabled)return 0;
  if(native_fd>=0)return 1;
  int fd=socket(AF_UNIX,SOCK_STREAM|SOCK_CLOEXEC,0);if(fd<0)fail("native socket");timeout(fd);
  struct sockaddr_un address={.sun_family=AF_UNIX};
@@ -211,8 +210,7 @@ static void validate_request(const struct request *q,const char *nonce) {
   struct in_addr address;
   check(q->peer[15]==0 && inet_pton(AF_INET,q->peer,&address)==1 && (q->operation==2 || q->epoch>0),"handoff peer/epoch");
  }
- if(q->epoch) check(q->canonical_start%4096==0 && q->canonical_bytes>0
-                  && q->canonical_bytes%4096==0 && q->canonical_start<=UINT64_MAX-q->canonical_bytes,"plan bounds");
+ check(!q->reserved_start && !q->reserved_bytes,"reserved request fields");
 }
 static struct outcome handoff(struct request q,const char *peer,int client,char *ack) {
  struct phase_profile profile;phase_start(&profile);
@@ -225,7 +223,7 @@ static struct outcome handoff(struct request q,const char *peer,int client,char 
  }
  phase_mark(&profile,"peer_connection");
  char wire[sizeof(q)+2*CAP],*state=wire+sizeof(q),*manifest;
- int memory=memory_enabled&&!q.first;
+ int memory=!q.first;
  uint64_t start=ns();
  if(memory) {
   check(connect_native(),"memory sender not ready");
@@ -265,12 +263,9 @@ static uint64_t number(const char *s) {
  check(s[0] && strspn(s,"0123456789")==strlen(s) && !errno && !*end,"integer argument");return n;
 }
 int main(int argc,char **argv) {
- const char *native_env=getenv("FC_RESIDENT_NATIVE");native_enabled=native_env&&!strcmp(native_env,"1");
- const char *memory_env=getenv("FC_RESIDENT_MEMORY");memory_enabled=memory_env&&!strcmp(memory_env,"1");
- check(!memory_enabled||native_enabled,"memory wire needs native control");
  const char *profile_env=getenv("FC_RESIDENT_PROFILE");profile_enabled=profile_env&&!strcmp(profile_env,"1");
  check(argc==5||argc==6||argc==7||argc==12||argc==13,"usage: serve DIR IP NONCE | handoff DIR PEER NONCE FIRST LABEL | request DIR LOCAL_IP NONCE FIRST LABEL PEER VM EPOCH START BYTES [OBSERVE]");
- check(strlen(argv[2])<sizeof(directory)&&!strncmp(argv[2],"/run/swe-pool-",14),"owned directory required");strcpy(directory,argv[2]);path(socket_path,sizeof(socket_path),"api.sock");
+ check(strlen(argv[2])<sizeof(directory)&&!strncmp(argv[2],"/run/swe-handoff-",17),"owned directory required");strcpy(directory,argv[2]);path(socket_path,sizeof(socket_path),"api.sock");
  check(strlen(argv[4])==32&&strspn(argv[4],"0123456789abcdef")==32,"session nonce");signal(SIGPIPE,SIG_IGN);
 
  if(!strcmp(argv[1],"launch")) {
@@ -330,7 +325,7 @@ int main(int argc,char **argv) {
     peer_fd=fd;uint32_t marker=MAGIC;send_all(fd,&marker,sizeof(marker));continue;
    }
    if(q.operation==3) {
-    check(trigger&&memory_enabled&&connect_native()&&!q.state_len&&!q.manifest_len,"evidence channel");
+    check(trigger&&connect_native()&&!q.state_len&&!q.manifest_len,"evidence channel");
     unsigned char command=5;uint64_t response[2];send_all(native_fd,&command,1);recv_all(native_fd,response,sizeof(response));
     check(response[0]==0,"evidence command failed");uint32_t marker=MAGIC;send_all(fd,&marker,sizeof(marker));close(fd);continue;
    }
@@ -346,7 +341,7 @@ int main(int argc,char **argv) {
     peer_fd=fd;
    }
    check(!q.persistent||peer_fd==fd,"multiple peer connections");
-   check(q.state_len>0&&q.state_len<CAP&&q.manifest_len<CAP&&(q.manifest_len>0||(memory_enabled&&!q.first)),"request bounds");
+   check(q.state_len>0&&q.state_len<CAP&&q.manifest_len<CAP&&(q.manifest_len>0||!q.first),"request bounds");
    struct phase_profile profile;phase_start(&profile);
    char state[CAP],manifest[CAP];recv_all(fd,state,q.state_len);recv_all(fd,manifest,q.manifest_len);
    phase_mark(&profile,"metadata_receive");
@@ -383,7 +378,7 @@ int main(int argc,char **argv) {
  if(argc>=12) {
   if(argc==13){check(!strcmp(argv[12],"1"),"observe argument");q.observe=1;}
   q.operation=1;check(strlen(argv[7])<sizeof(q.peer),"peer length");strcpy(q.peer,argv[7]);
-  q.vm=number(argv[8]);q.epoch=number(argv[9]);q.canonical_start=number(argv[10]);q.canonical_bytes=number(argv[11]);validate_request(&q,argv[4]);
+  q.vm=number(argv[8]);q.epoch=number(argv[9]);q.reserved_start=number(argv[10]);q.reserved_bytes=number(argv[11]);validate_request(&q,argv[4]);
   uint64_t start=ns();int fd=local_socket(0);send_all(fd,&q,sizeof(q));
   uint32_t marker;recv_all(fd,&marker,sizeof(marker));check(marker==MAGIC,"request resume marker");uint64_t resumed=ns()-start;
   recv_all(fd,&o,sizeof(o));check(o.target.magic==MAGIC&&o.target.ack_len<sizeof(ack),"request reply bounds");

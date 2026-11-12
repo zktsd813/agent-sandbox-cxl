@@ -1,117 +1,92 @@
+/* Run only in a disposable, owned 4 GiB CXL lab. Exercises ABI 3 ownership,
+ * mutation continuity and stale/duplicate handle rejection without full QUERY. */
 #define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>
-#include <inttypes.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#include <sys/resource.h>
-#include <sys/wait.h>
-#include <signal.h>
 #include <unistd.h>
 #include "pool_memory_uapi.h"
-
+_Static_assert(sizeof(struct cpm_config)==72 && sizeof(struct cpm_query)==72 &&
+    sizeof(struct cpm_handle)==152 && offsetof(struct cpm_handle,owner_epoch)==56 &&
+    offsetof(struct cpm_handle,full_scan_pages)==136,"private mapper UAPI layout");
 #define PAGE 4096ULL
 #define MIB (1024ULL*1024ULL)
-static void fail(const char *what) { perror(what);exit(1); }
-static void check(int condition,const char *what) { if(!condition){errno=EINVAL;fail(what);} }
-static uint64_t number_file(const char *path) {
-    char b[96];FILE *f=fopen(path,"r");if(!f||!fgets(b,sizeof(b),f))fail(path);
-    if(fclose(f))fail("close attribute");
-    char *end;errno=0;
-    uint64_t n=strtoull(b,&end,0);check(!errno&&end!=b,"attribute number");return n;
+static void check(int ok,const char *why) { if(!ok){perror(why);exit(1);} }
+static uint64_t number(const char *path) {
+    FILE *f=fopen(path,"r"); char s[100]; check(f&&fgets(s,sizeof(s),f),path);
+    check(!fclose(f),"fclose"); return strtoull(s,NULL,0);
 }
-static int configured(uint64_t base,uint64_t bytes,uint64_t canonical,
-                      struct cpm_entry *entries,size_t count,uint64_t *credits,size_t ncredits) {
-    int fd=open("/dev/cxl_pool",O_RDWR|O_CLOEXEC);if(fd<0)fail("open cxl pool");
-    struct cpm_config cfg={.abi=CPM_ABI,.phys_base=base,.device_bytes=bytes,
-        .canonical_start=canonical,.canonical_bytes=PAGE,.count=count,.entries=(uintptr_t)entries,
-        .credit_count=ncredits,.credits=(uintptr_t)credits};
-    if(ioctl(fd,CPM_CONFIG,&cfg))fail("CPM_CONFIG");
-    return fd;
+static int open_pool(void) { int fd=open("/dev/cxl_pool",O_RDWR);check(fd>=0,"open");return fd; }
+static void rejected(struct cpm_handle h,const char *why) {
+    int fd=open_pool();errno=0;check(ioctl(fd,CPM_IMPORT,&h)==-1,why);close(fd);
 }
 int main(void) {
-    uint64_t base=number_file("/sys/bus/dax/devices/dax0.0/resource");
-    uint64_t bytes=number_file("/sys/bus/dax/devices/dax0.0/size");
-    uint64_t canonical=3500*MIB,private=3490*MIB;
-    check(bytes>=canonical+PAGE,"smoke requires 4GiB isolated DAX");
-    int dax=open("/dev/dax0.0",O_RDWR|O_CLOEXEC);if(dax<0)fail("open dax");
-    volatile uint64_t *original=mmap(NULL,PAGE,PROT_READ|PROT_WRITE,MAP_SHARED,dax,(off_t)canonical);
-    if(original==MAP_FAILED)fail("canonical map");
-    for(uint64_t i=0;i<PAGE/8;i++)original[i]=UINT64_C(0xabcddcba00000000)^i;
-    struct cpm_entry entries[3]={{canonical,CPM_SHARED},{canonical,CPM_SHARED},{private,0}};
-    uint64_t credits[3]={private+PAGE,private+2*PAGE,private+3*PAGE};
-    int fd=configured(base,bytes,canonical,entries,3,credits,3);
-    volatile uint64_t *ram=mmap(NULL,3*PAGE,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
-    if(ram==MAP_FAILED)fail("logical RAM map");
-    struct cpm_entry peer_entry={canonical,CPM_SHARED};
-    int peer_fd=configured(base,bytes,canonical,&peer_entry,1,NULL,0);
-    volatile uint64_t *peer=mmap(NULL,PAGE,PROT_READ,MAP_SHARED,peer_fd,0);
-    if(peer==MAP_FAILED)fail("peer map");
-    for(uint64_t i=0;i<PAGE/8;i++)check(ram[i]==original[i]&&ram[PAGE/8+i]==original[i]&&peer[i]==original[i],"initial aliases");
-    ram[0]=UINT64_C(0x1111222233334444);
-    for(uint64_t i=0;i<PAGE/8;i++) {
-        check(original[i]==(UINT64_C(0xabcddcba00000000)^i)&&peer[i]==original[i],"CoW changed canonical/peer");
-        check(ram[i]==(i?original[i]:UINT64_C(0x1111222233334444)),"CoW lost untouched bytes");
-    }
-    struct cpm_range range={.address=(uintptr_t)ram+PAGE,.first=1,.count=1};
-    if(ioctl(fd,CPM_DISCARD,&range))fail("CPM_DISCARD");
-    for(uint64_t i=0;i<PAGE/8;i++)check(ram[PAGE/8+i]==0&&peer[i]==original[i],"discard copied old canonical");
-    ram[PAGE/8]=UINT64_C(0x5555666677778888);
-    ram[2*PAGE/8]=UINT64_C(0x9999aaaabbbbcccc);
-    struct cpm_entry actual[3];uint64_t unused[3];
-    struct cpm_query query={.count=3,.entries=(uintptr_t)actual,.credit_count=3,.credits=(uintptr_t)unused};
-    if(ioctl(fd,CPM_QUERY,&query))fail("CPM_QUERY");
-    check(query.cow_pages==1&&query.discard_pages==1&&query.credit_count==1&&!query.exhausted,"unexpected mapper accounting");
-    check(actual[0].flags==0&&actual[1].flags==0&&actual[2].offset==private,"incorrect mapper transitions");
-    check(actual[0].offset!=actual[1].offset&&actual[0].offset!=private&&actual[1].offset!=private,"private alias");
-    uint64_t generation=query.generation;
-    struct cpm_credits duplicate={.count=1,.offsets=(uintptr_t)unused};
-    errno=0;check(ioctl(fd,CPM_ADD_CREDITS,&duplicate)==-1&&errno==EINVAL,"duplicate unused credit accepted");
-    query.count=3;query.credit_count=3;
-    if(ioctl(fd,CPM_QUERY,&query))fail("query after invalid credit");
-    check(query.generation==generation&&query.credit_count==1,"invalid credit mutated context");
-    errno=0;check(mremap((void*)ram,3*PAGE,4*PAGE,MREMAP_MAYMOVE)==MAP_FAILED,"unsupported mremap accepted");
-    void *relocation=mmap(NULL,3*PAGE,PROT_NONE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
-    if(relocation==MAP_FAILED)fail("reserve mremap target");
-    errno=0;check(mremap((void*)ram,3*PAGE,3*PAGE,MREMAP_MAYMOVE|MREMAP_FIXED,relocation)==MAP_FAILED,
-                  "same-size relocation accepted");
-    check(ram[0]==UINT64_C(0x1111222233334444),"failed relocation lost original owner mapping");
-    /* Failure may already have removed the target reservation; munmap accepts
-     * unmapped pages and never touches the original owner range. */
-    if(munmap(relocation,3*PAGE))fail("release relocation reservation");
-    void *alias=mmap(NULL,3*PAGE,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
-    check(alias==MAP_FAILED,"second VMA alias accepted after rejected mremap");
-    errno=0;check(mprotect((void*)(ram+PAGE/8),PAGE,PROT_READ)==-1,"partial protection split accepted");
-    ram[2*PAGE/8]=UINT64_C(0x123456789abcdef0);
-    check(ram[2*PAGE/8]==UINT64_C(0x123456789abcdef0),"private read-to-write failed");
-    uint64_t first_credit=private+4*PAGE;
-    int first_fd=configured(base,bytes,canonical,&peer_entry,1,&first_credit,1);
-    volatile uint64_t *first=mmap(NULL,PAGE,PROT_READ|PROT_WRITE,MAP_SHARED,first_fd,0);
-    if(first==MAP_FAILED)fail("first-write map");
-    first[0]=UINT64_C(0x4321123443211234); /* no read installed a PTE first */
-    for(uint64_t i=0;i<PAGE/8;i++)check(first[i]==(i?original[i]:UINT64_C(0x4321123443211234)),"first-write CoW content");
-    if(munmap((void*)first,PAGE)||close(first_fd))fail("close first-write context");
-    pid_t child=fork();if(child<0)fail("fork no-credit test");
-    if(!child) {
-        struct rlimit limit={0,0};setrlimit(RLIMIT_CORE,&limit);
-        int exhausted=configured(base,bytes,canonical,&peer_entry,1,NULL,0);
-        volatile uint64_t *p=mmap(NULL,PAGE,PROT_READ|PROT_WRITE,MAP_SHARED,exhausted,0);
-        if(p==MAP_FAILED)_exit(22);
-        p[0]=0;_exit(23);
-    }
-    int status;if(waitpid(child,&status,0)!=child)fail("wait no-credit child");
-    check(WIFSIGNALED(status)&&WTERMSIG(status)==SIGBUS,"no-credit write did not fail closed");
-    for(uint64_t i=0;i<PAGE/8;i++)check(original[i]==(UINT64_C(0xabcddcba00000000)^i)&&peer[i]==original[i],"negative test changed canonical");
-    printf("POOL_MEMORY_SMOKE_JSON {\"result\":\"passed\",\"pages\":3,\"cow_pages\":%llu,\"discard_pages\":%llu,"
-           "\"unused_credits\":%llu,\"faults\":%llu,\"canonical_full_words_checked\":512,\"peer_full_words_checked\":512,"
-           "\"alias_rejected\":true,\"mremap_rejected\":true,\"split_rejected\":true,\"duplicate_credit_rejected\":true,"
-           "\"no_credit_sigbus\":true,\"first_write_cow\":true,\"private_write\":true}\n",
-           query.cow_pages,query.discard_pages,query.credit_count,query.faults);
-    if(munmap((void*)ram,3*PAGE)||munmap((void*)peer,PAGE)||munmap((void*)original,PAGE)||
-       close(fd)||close(peer_fd)||close(dax))fail("close smoke");
+    uint64_t base=number("/sys/bus/dax/devices/dax0.0/resource");
+    uint64_t bytes=number("/sys/bus/dax/devices/dax0.0/size");
+    check(bytes>=4096*MIB,"requires disposable 4GiB pool");
+    struct cpm_entry map[3]={{3490*MIB,0},{3490*MIB+PAGE,0},{3490*MIB+2*PAGE,0}};
+    uint64_t credits[3]={3490*MIB+3*PAGE,3490*MIB+4*PAGE,3490*MIB+5*PAGE};
+    struct cpm_create create={.config={.abi=CPM_ABI,.phys_base=base,.device_bytes=bytes,
+        .count=3,.entries=(uintptr_t)map,.credit_count=3,.credits=(uintptr_t)credits},
+        .metadata_offset=3584*MIB,.metadata_bytes=64*MIB,.owner_epoch=1,.allocation_generation=100};
+    int configured=open_pool();struct cpm_config config=create.config;
+    config.abi=2;check(ioctl(configured,CPM_CONFIG,&config)==-1,"old config ABI accepted");
+    config.abi=CPM_ABI;map[0].flags=1;
+    check(ioctl(configured,CPM_CONFIG,&config)==-1,"nonprivate frame accepted");
+    map[0].flags=0;check(!ioctl(configured,CPM_CONFIG,&config),"config");close(configured);
+    int old=open_pool();check(!ioctl(old,CPM_CREATE,&create),"create");
+    uint64_t *ram=mmap(NULL,3*PAGE,PROT_READ|PROT_WRITE,MAP_SHARED,old,0);
+    check(ram!=MAP_FAILED,"map"); ram[0]=42;ram[PAGE/8]=99;ram[2*PAGE/8]=73;
+    struct cpm_handle h;check(!ioctl(old,CPM_STATUS,&h),"status");
+    check(h.abi==CPM_ABI&&h.credit_count==3,"private RAM counters");
+    struct cpm_handle bad=h;bad.state=2;rejected(bad,"unsealed imported");
+    check(ioctl(old,CPM_RETIRE,&h)==-1,"retired live mapping");
+    check(!ioctl(old,CPM_SEAL,&h),"seal");
+    struct cpm_handle sealed=h;
+    bad=h;bad.reserved[0]=1;rejected(bad,"nonzero reserved handle accepted");
+    bad=h;bad.cookie_lo^=1;rejected(bad,"wrong cookie accepted");
+    bad=h;bad.generation++;rejected(bad,"wrong map generation accepted");
+    bad=h;bad.allocation_generation++;rejected(bad,"wrong lease accepted");
+    bad=h;bad.owner_epoch++;rejected(bad,"wrong epoch accepted");
+    uint64_t extra=3490*MIB+6*PAGE;
+    struct cpm_credits grant={1,(uintptr_t)&extra};
+    check(ioctl(old,CPM_ADD_CREDITS,&grant)==-1,"sealed mutation accepted");
+    check(!munmap(ram,3*PAGE),"unmap source"); /* no runnable source remains */
+    int next=open_pool();check(!ioctl(next,CPM_IMPORT,&h),"import");
+    check(h.owner_epoch==2&&h.full_scan_pages==sealed.full_scan_pages,"import scanned or epoch wrong");
+    rejected(sealed,"duplicate import accepted");
+    check(ioctl(old,CPM_STATUS,&bad)==-1,"old fd still owns mapper");
+    ram=mmap(NULL,3*PAGE,PROT_READ|PROT_WRITE,MAP_SHARED,next,0);check(ram!=MAP_FAILED,"target map");
+    check(ram[0]==42&&ram[2*PAGE/8]==73&&ram[PAGE/8]==99,"handoff content");
+    unsigned char selected[3];struct cpm_select select={0,3,(uintptr_t)selected};
+    check(!ioctl(next,CPM_SELECT,&select)&&!selected[0]&&!selected[1]&&!selected[2],"private selection");
+    struct cpm_entry actual[3];uint64_t unused[4];
+    struct cpm_query query={.count=3,.entries=(uintptr_t)actual,.credit_count=4,.credits=(uintptr_t)unused};
+    check(!ioctl(next,CPM_QUERY,&query)&&query.credit_count==3,"query");
+    for(size_t i=0;i<3;i++)check(actual[i].offset==map[i].offset&&!actual[i].flags,"mapping continuity");
+    struct cpm_pte ptes[3];struct cpm_audit audit={(uintptr_t)ram,3,(uintptr_t)ptes};
+    check(!ioctl(next,CPM_AUDIT,&audit),"audit");
+    for(size_t i=0;i<3;i++)check((ptes[i].flags&3)==3&&ptes[i].pfn==(base+map[i].offset)/PAGE,"private PTE");
+    check(!ioctl(next,CPM_STATUS,&h),"audit status");sealed.full_scan_pages=h.full_scan_pages;
+    uint64_t mixed[2]={extra,credits[0]};struct cpm_credits duplicate={2,(uintptr_t)mixed};
+    check(ioctl(next,CPM_ADD_CREDITS,&duplicate)==-1,"duplicate credit accepted");
+    check(!ioctl(next,CPM_ADD_CREDITS,&grant),"failed grant did not roll back bitmap");
+    check(!ioctl(next,CPM_STATUS,&h)&&h.full_scan_pages==sealed.full_scan_pages,"normal operations scanned");
+    check(!munmap(ram,3*PAGE)&&!ioctl(next,CPM_RETIRE,&h),"retire");
+    /* Simulate re-promotion while GuestMemory still retains the old fd. A new
+     * cookie must isolate it, even at the same VM epoch/metadata address. */
+    create.owner_epoch=2;create.allocation_generation=101;
+    int reused=open_pool();check(!ioctl(reused,CPM_CREATE,&create),"recreate metadata extent");
+    check(!close(next)&&!close(old),"close stale contexts");
+    check(!ioctl(reused,CPM_STATUS,&h)&&h.state==1,"old close retired new owner");
+    rejected(sealed,"old incarnation accepted after slot reuse");
+    check(!ioctl(reused,CPM_RETIRE,&h),"retire reused");
+    close(reused);
+    puts("POOL_HANDLE_SMOKE_JSON {\"result\":\"passed\",\"handoff_full_scan_pages\":0,\"stale_cookie_rejected\":true,\"stale_epoch_rejected\":true,\"stale_generation_rejected\":true,\"stale_lease_rejected\":true,\"duplicate_import_rejected\":true,\"private_mapping_restored\":true,\"credit_rollback\":true,\"slot_reuse_safe\":true}");
     return 0;
 }

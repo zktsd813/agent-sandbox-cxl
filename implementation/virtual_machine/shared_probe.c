@@ -7,7 +7,10 @@
 #include <linux/ethtool.h>
 #include <linux/kvm.h>
 #include <linux/sockios.h>
-#include "../linux/include/uapi/linux/kvm_dax.h"
+#ifndef CXL_KVM_DAX_HEADER
+#define CXL_KVM_DAX_HEADER "../linux/include/uapi/linux/kvm_dax.h"
+#endif
+#include CXL_KVM_DAX_HEADER
 #include <linux/futex.h>
 #include <net/if.h>
 #include <netinet/tcp.h>
@@ -643,7 +646,7 @@ static double bench_start(int boot, unsigned generation)
                 "FC_DAX_HEAP_OFFSET", "FC_DAX_HEAP_BYTES", "FC_DAX_SNAPSHOT",
                 "FC_DAX_DIRECT", "FC_DAX_CONTROL", "FC_DAX_REUSE", "FC_DAX_REUSE_FD",
                 "FC_DAX_FIXED_HVA", "FC_DAX_REUSE_QUIET_IRQFD", "FC_DAX_EXACT_TSC",
-                "FC_DAX_SNAPSHOT_COMPAT", "FC_DAX_NO_RESUME_KICK", "FC_DAX_IRQFD_BATCH",
+                "FC_DAX_SNAPSHOT_COMPAT", "FC_DAX_IRQFD_BATCH",
                 "FC_DAX_CHANNEL_SPIN_US", "BENCH_REUSE_KVM",
                 "BENCH_REUSE_PREPARE", "BENCH_REUSE_PREPARE_ON_DEMAND"};
             for (size_t i = 0; i < sizeof(variables) / sizeof(variables[0]); i++)

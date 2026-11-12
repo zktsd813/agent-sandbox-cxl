@@ -12,7 +12,7 @@ from home_storage_bench import require, json_lines
 
 def request(c,source,directory,nonce,first,label,peer,vm_id,epoch,start,size,kind,observe=False):
     vm=c.vms[source]
-    if 3 in vm.get('control_rpc_operations',[]) and not observe and not getattr(c.args,'exec_request',False):
+    if 3 in vm.get('control_rpc_operations',[]) and not observe:
         import resident_proxy
         started=time.monotonic_ns()
         require(lab.alive(vm),'VM is not running')
@@ -39,35 +39,22 @@ def prepare_servers(c):
         if role in c.resident_servers: continue
         directory=worker['directory'];control=directory+'/control'
         ip='172.30.0.1' if role=='A' else '172.30.0.2'
-        if getattr(c.args,'resident_ready_control',False):
-            command=f'/lab/resident-control launch {directory} {ip} {c.resident_control_nonce}'
-            if role == 'B':
-                command += ' 172.30.0.1'
-                command += f'\ncat {control}/log'
-        else:
-            command=(f'mkdir -p {control}\n'
-                f'/lab/resident-control serve {directory} {ip} {c.resident_control_nonce} > {control}/log 2>&1 &\n'
-                + nfs.record_pid(control)
-                +f'n=0\nwhile ! grep -q RESIDENT_CONTROL_READY {control}/log; do\n'
-                 f'read p t < {control}/fc.pid\nkill -0 $p\nn=$((n+1))\n[ $n -lt 500 ]\nsleep .01\ndone\n'
-                 ':')
+        command=f'/lab/resident-control launch {directory} {ip} {c.resident_control_nonce}'
+        if role == 'B':
+            command += ' 172.30.0.1'
+            command += f'\ncat {control}/log'
         if getattr(c.args,'restore_timing',False):
             command='export FC_RESIDENT_PROFILE=1\n'+command
-        if getattr(c.args,'resident_native_control',False) or getattr(c.args,'resident_memory_control',False):
-            command='export FC_RESIDENT_NATIVE=1\n'+command
-        if getattr(c.args,'resident_memory_control',False):
-            command='export FC_RESIDENT_MEMORY=1\n'+command
         raw,name=c.shell(role,command,'resident-controller-prepare')
         c.resident_servers[role]={'directory':control,'file':name}
-        if getattr(c.args,'resident_ready_control',False):
-            boots=json_lines(raw,'RESIDENT_SERVER_BOOT_JSON ')
-            require(len(boots)==1,'Native controller readiness missing')
-            c.resident_servers[role]['native_boot']=boots[0]
-            if role == 'B':
-                peers=json_lines(raw,'RESIDENT_PEER_READY_JSON ')
-                require(len(peers)==1 and peers[0]['connection_prepare_ns']>0 and peers[0]['owner_changed'] is False,
-                        'Peer preparation did not complete')
-                c.resident_servers[role]['peer_ready']=peers[0]
+        boots=json_lines(raw,'RESIDENT_SERVER_BOOT_JSON ')
+        require(len(boots)==1,'Native controller readiness missing')
+        c.resident_servers[role]['native_boot']=boots[0]
+        if role == 'B':
+            peers=json_lines(raw,'RESIDENT_PEER_READY_JSON ')
+            require(len(peers)==1 and peers[0]['connection_prepare_ns']>0 and peers[0]['owner_changed'] is False,
+                    'Peer preparation did not complete')
+            c.resident_servers[role]['peer_ready']=peers[0]
     return time.monotonic_ns()-started
 
 
@@ -103,29 +90,17 @@ def handoff(c,s,destination):
     Correctness experiments observe the guest separately. The runtime returns
     when the destination has resumed; it does not collect manifests or logs.
     """
-    ready = getattr(c.args,'resident_ready_control',False)
-    preparation=prepared_target(c,s,destination) if ready else c.prepare_resident_target(s,destination)
-    preparation['control_server_prepare_ns']=0 if ready else prepare_servers(c)
+    preparation=prepared_target(c,s,destination)
+    preparation['control_server_prepare_ns']=0
     source,old_dir,old_epoch=s.role,s.directory,s.epoch
     worker=c.resident_workers[destination]
     target=worker['directory'];new_epoch=old_epoch+1
     c.serial_number+=1
     label=f'v{s.vm}e{new_epoch}c{c.serial_number}'
     target_ip='172.30.0.1' if destination=='A' else '172.30.0.2'
-    source_ip='172.30.0.1' if source=='A' else '172.30.0.2'
-    command=(f'/lab/resident-control {"request" if ready else "handoff"} {old_dir} '
-        f'{source_ip if ready else target_ip} {c.resident_control_nonce} '
-        f'{int(not worker["imported"])} {label}')
-    if ready:
-        command += f' {target_ip} {s.vm} {new_epoch} {c.pool_offset} {c.image_bytes}'
     control_start=time.monotonic_ns()
-    if getattr(c.args,'alternate_request',False):
-        c.args.exec_request=bool(((new_epoch-1)//2)%2)
-    if ready:
-        raw,fast_file=request(c,source,old_dir,c.resident_control_nonce,not worker['imported'],label,
-            target_ip,s.vm,new_epoch,c.pool_offset,c.image_bytes,'resident-fast-run')
-    else:
-        raw,fast_file=c.shell(source,command,'resident-fast-run',120)
+    raw,fast_file=request(c,source,old_dir,c.resident_control_nonce,not worker['imported'],label,
+        target_ip,s.vm,new_epoch,0,0,'resident-fast-run')
     controller_ns=time.monotonic_ns()-control_start
     controller_rpc=c.control_timings[-1].get('rpc')
     values=json_lines(raw,'RESIDENT_FAST_JSON ')
@@ -135,9 +110,9 @@ def handoff(c,s,destination):
             all(a['status']==204 for a in fast['apis'].values()),'Handoff failed')
     worker['imported']=True
     s.role,s.epoch,s.manifest=destination,new_epoch,None
-    for key in ('directory','plan','report','manifest_path','hints'): setattr(s,key,worker[key])
+    for key in ('directory','plan','report','manifest_path'): setattr(s,key,worker[key])
     row={'kind':'direct','runtime_path':'resident-v2','resident':True,'fast_control':True,
-         'ready_control':ready,'fast_file':fast_file,'fast':fast,
+         'ready_control':True,'fast_file':fast_file,'fast':fast,
          'vm':s.vm,'source':source,'destination':destination,'source_epoch':old_epoch,'destination_epoch':s.epoch,
          'source_tier':'cxl','destination_tier':'cxl','source_directory':old_dir,'destination_directory':target,
          'preparation':preparation,'controller_command_wall_ns':controller_ns,

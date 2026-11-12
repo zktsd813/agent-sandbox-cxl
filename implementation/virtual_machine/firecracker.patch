@@ -1,5 +1,5 @@
 diff --git a/src/firecracker/src/api_server/mod.rs b/src/firecracker/src/api_server/mod.rs
-index ecc11186d..672acecaf 100644
+index ecc1118..672acec 100644
 --- a/src/firecracker/src/api_server/mod.rs
 +++ b/src/firecracker/src/api_server/mod.rs
 @@ -149,6 +149,13 @@ impl ApiServer {
@@ -42,14 +42,14 @@ index ecc11186d..672acecaf 100644
              && let Some((metric, action)) = metric_with_action
          {
 diff --git a/src/firecracker/src/api_server/request/actions.rs b/src/firecracker/src/api_server/request/actions.rs
-index a3b3f3f3a..5eb4bbaf1 100644
+index a3b3f3f..b3002c7 100644
 --- a/src/firecracker/src/api_server/request/actions.rs
 +++ b/src/firecracker/src/api_server/request/actions.rs
 @@ -16,8 +16,16 @@ use super::StatusCode;
  #[derive(Debug, Deserialize, Serialize)]
  enum ActionType {
      FlushMetrics,
-+    PoolCache,
++    MemoryTier,
 +    DirectExport,
 +    DirectPrepare,
 +    DirectImport,
@@ -66,7 +66,7 @@ index a3b3f3f3a..5eb4bbaf1 100644
      })?;
  
      match action_body.action_type {
-+        ActionType::PoolCache => Ok(ParsedRequest::new_sync(VmmAction::PoolCache)),
++        ActionType::MemoryTier => Ok(ParsedRequest::new_sync(VmmAction::MemoryTier)),
 +        ActionType::DirectPrepare => Ok(ParsedRequest::new_sync(VmmAction::DirectPrepare)),
 +        ActionType::DirectImport => Ok(ParsedRequest::new_sync(VmmAction::DirectImport)),
 +        ActionType::DirectSend => Ok(ParsedRequest::new_sync(VmmAction::DirectSend)),
@@ -83,8 +83,8 @@ index a3b3f3f3a..5eb4bbaf1 100644
  
      #[test]
      fn test_parse_put_actions_request() {
-+        assert_eq!(parse_put_actions(&Body::new(r#"{"action_type":"PoolCache"}"#)).unwrap(),
-+            ParsedRequest::new_sync(VmmAction::PoolCache));
++        assert_eq!(parse_put_actions(&Body::new(r#"{"action_type":"MemoryTier"}"#)).unwrap(),
++            ParsedRequest::new_sync(VmmAction::MemoryTier));
 +        #[cfg(target_arch = "x86_64")]
 +        assert_eq!(parse_put_actions(&Body::new(r#"{"action_type":"PrepareReuse"}"#)).unwrap(),
 +            ParsedRequest::new_sync(VmmAction::PrepareReuse));
@@ -92,7 +92,7 @@ index a3b3f3f3a..5eb4bbaf1 100644
              parse_put_actions(&Body::new("invalid_body")).unwrap_err();
  
 diff --git a/src/firecracker/src/api_server_adapter.rs b/src/firecracker/src/api_server_adapter.rs
-index 70abff48c..6ca24573a 100644
+index 70abff4..6ca2457 100644
 --- a/src/firecracker/src/api_server_adapter.rs
 +++ b/src/firecracker/src/api_server_adapter.rs
 @@ -2,10 +2,13 @@
@@ -501,7 +501,7 @@ index 70abff48c..6ca24573a 100644
 +}
 diff --git a/src/firecracker/src/dax_heap.rs b/src/firecracker/src/dax_heap.rs
 new file mode 100644
-index 000000000..84fb71000
+index 0000000..84fb710
 --- /dev/null
 +++ b/src/firecracker/src/dax_heap.rs
 @@ -0,0 +1,395 @@
@@ -901,7 +901,7 @@ index 000000000..84fb71000
 +    }
 +}
 diff --git a/src/firecracker/src/main.rs b/src/firecracker/src/main.rs
-index 8baa66ac6..d8e94758e 100644
+index 8baa66a..d8e9475 100644
 --- a/src/firecracker/src/main.rs
 +++ b/src/firecracker/src/main.rs
 @@ -9,6 +9,7 @@ compile_error!(
@@ -924,7 +924,7 @@ index 8baa66ac6..d8e94758e 100644
      if let Err(err) = result {
          error_unrestricted!("{err}");
 diff --git a/src/vmm/src/arch/x86_64/vcpu.rs b/src/vmm/src/arch/x86_64/vcpu.rs
-index 26c82dd43..2ff45da83 100644
+index 26c82dd..2ff45da 100644
 --- a/src/vmm/src/arch/x86_64/vcpu.rs
 +++ b/src/vmm/src/arch/x86_64/vcpu.rs
 @@ -16,6 +16,7 @@ use kvm_bindings::{
@@ -1118,7 +1118,7 @@ index 26c82dd43..2ff45da83 100644
          self.fd
              .set_vcpu_events(&state.vcpu_events)
 diff --git a/src/vmm/src/arch/x86_64/vm.rs b/src/vmm/src/arch/x86_64/vm.rs
-index c4801646a..1faf62483 100644
+index c480164..1faf624 100644
 --- a/src/vmm/src/arch/x86_64/vm.rs
 +++ b/src/vmm/src/arch/x86_64/vm.rs
 @@ -2,7 +2,7 @@
@@ -1222,7 +1222,7 @@ index c4801646a..1faf62483 100644
      pub fn setup_irqchip(&self) -> Result<(), KvmVmError> {
          self.fd()
 diff --git a/src/vmm/src/builder.rs b/src/vmm/src/builder.rs
-index bcb0e027a..f2acfce83 100644
+index bcb0e02..a3ac188 100644
 --- a/src/vmm/src/builder.rs
 +++ b/src/vmm/src/builder.rs
 @@ -42,7 +42,7 @@ use crate::initrd::{InitrdConfig, InitrdError};
@@ -1234,16 +1234,7 @@ index bcb0e027a..f2acfce83 100644
  use crate::resources::VmResources;
  use crate::seccomp::BpfThreadMap;
  use crate::snapshot::Persist;
-@@ -91,6 +91,8 @@ pub enum StartMicrovmError {
-     Initrd(#[from] InitrdError),
-     /// Internal error while starting microVM: {0}
-     Internal(#[from] VmmError),
-+    /// Peer cache initialization failed: {0}
-+    PeerCache(std::io::Error),
-     /// Failed to get CPU template: {0}
-     GetCpuTemplate(#[from] GetCpuTemplateError),
-     /// Invalid kernel command line: {0}
-@@ -146,6 +148,10 @@ pub fn build_microvm_for_boot(
+@@ -146,6 +146,10 @@ pub fn build_microvm_for_boot(
      event_manager: &mut EventManager,
      seccomp_filters: &BpfThreadMap,
  ) -> Result<Arc<Mutex<Vmm>>, StartMicrovmError> {
@@ -1253,16 +1244,8 @@ index bcb0e027a..f2acfce83 100644
 +    }
      // Timestamp for measuring microVM boot duration.
      let request_ts = TimestampUs::default();
-
-@@ -211,6 +217,7 @@ pub fn build_microvm_for_boot(
-     )?;
-
-     let guest_memory = kvm_vm.guest_memory();
-+    crate::peer_cache::initialize(guest_memory).map_err(StartMicrovmError::PeerCache)?;
-     let entry_point = load_kernel(&boot_config.kernel_file, guest_memory)?;
-     let initrd = InitrdConfig::from_config(boot_config, guest_memory)?;
-
-@@ -325,10 +332,16 @@ pub fn build_microvm_for_boot(
+ 
+@@ -325,10 +329,16 @@ pub fn build_microvm_for_boot(
          machine_config: vm_resources.machine_config.clone(),
          boot_source_config: vm_resources.boot_source.config.clone(),
          shutdown_exit_code: None,
@@ -1276,10 +1259,10 @@ index bcb0e027a..f2acfce83 100644
 +    if std::env::var_os("FC_DAX_HEAP").is_some() {
 +        crate::logger::info!("DAX_VMM_OBJECT name=Vmm addr={:p}", Arc::as_ptr(&vmm));
 +    }
-
+ 
      #[cfg(feature = "gdb")]
      let (gdb_tx, gdb_rx) = mpsc::channel();
-@@ -379,6 +392,12 @@ pub fn build_and_boot_microvm(
+@@ -379,6 +389,12 @@ pub fn build_and_boot_microvm(
      debug!("event_start: build microvm for boot");
      let vmm = build_microvm_for_boot(instance_info, vm_resources, event_manager, seccomp_filters)?;
      debug!("event_end: build microvm for boot");
@@ -1292,7 +1275,7 @@ index bcb0e027a..f2acfce83 100644
      // The vcpus start off in the `Paused` state, let them run.
      debug!("event_start: boot microvm");
      vmm.lock().unwrap().resume_vm()?;
-@@ -434,21 +453,42 @@ pub fn build_microvm_from_snapshot(
+@@ -434,21 +450,42 @@ pub fn build_microvm_from_snapshot(
      vm_resources: &mut VmResources,
      clock_realtime: bool,
  ) -> Result<Arc<Mutex<Vmm>>, BuildMicrovmFromSnapshotError> {
@@ -1302,20 +1285,20 @@ index bcb0e027a..f2acfce83 100644
 +        let unsupported = match &microvm_state.device_states.virtio_state {
 +            crate::device_manager::VirtioDevicesState::Mmio(s) => s.memory_device.is_some()
 +                || !s.pmem_devices.is_empty()
-+                || (s.balloon_device.is_some() && !crate::pool_cache::discard_enabled()),
++                || s.balloon_device.is_some(),
 +            crate::device_manager::VirtioDevicesState::Pci(s) => s.memory_device.is_some()
 +                || !s.pmem_devices.is_empty()
-+                || (s.balloon_device.is_some() && !crate::pool_cache::discard_enabled()),
++                || s.balloon_device.is_some(),
 +        };
 +        if unsupported {
 +            return Err(BuildMicrovmFromSnapshotError::RestoreMmioDevice(MicrovmStateError::NotAllowed(
-+                "DAX restore permits only opt-in reporting-only balloon, no hotplug/pmem".into())));
++                "DAX restore forbids balloon, hotplug and pmem".into())));
 +        }
 +    }
      // Build Vmm.
      debug!("event_start: build microvm from snapshot");
 +    let mut timing = RestoreTiming::new("build");
-
+ 
      let kvm = Kvm::new(microvm_state.kvm_state.kvm_cap_modifiers.clone())
          .map_err(StartMicrovmError::Kvm)?;
 +    timing.mark("kvm_open_capabilities");
@@ -1323,22 +1306,22 @@ index bcb0e027a..f2acfce83 100644
      // Build custom CPU config if a custom template is provided.
      let mut vm = KvmVm::new(kvm).map_err(StartMicrovmError::KvmVm)?;
 +    timing.mark("vm_create");
-
+ 
      let mut vcpus = vm
          .create_vcpus(vm_resources.machine_config.vcpu_count)
          .map_err(StartMicrovmError::KvmVm)?;
-
+ 
 +    timing.mark("vcpus_create");
      vm.restore_memory_regions(guest_memory, &microvm_state.vm_state.memory)
          .map_err(StartMicrovmError::KvmVm)?;
 +    timing.mark("register_memory_slots");
-
+ 
      #[cfg(target_arch = "x86_64")]
      {
-@@ -464,13 +504,20 @@ pub fn build_microvm_from_snapshot(
+@@ -464,13 +501,20 @@ pub fn build_microvm_from_snapshot(
          }
      }
-
+ 
 +    timing.mark("tsc_scaling");
      // Restore vcpus kvm state.
      for (vcpu, state) in vcpus.iter_mut().zip(microvm_state.vcpu_states.iter()) {
@@ -1353,23 +1336,23 @@ index bcb0e027a..f2acfce83 100644
 +        }
      }
 +    timing.mark("vcpu_state_restore");
-
+ 
      #[cfg(target_arch = "aarch64")]
      {
-@@ -485,6 +532,7 @@ pub fn build_microvm_from_snapshot(
+@@ -485,6 +529,7 @@ pub fn build_microvm_from_snapshot(
      // Restore kvm vm state.
      #[cfg(target_arch = "x86_64")]
      vm.restore_state(&microvm_state.vm_state, clock_realtime)?;
 +    timing.mark("vm_irq_clock_restore");
-
+ 
      // Restore the boot source config paths.
      vm_resources.boot_source.config = microvm_state.vm_info.boot_source;
-@@ -509,12 +557,16 @@ pub fn build_microvm_from_snapshot(
+@@ -509,12 +554,16 @@ pub fn build_microvm_from_snapshot(
      #[allow(unused_mut)]
      let mut device_manager =
          DeviceManager::restore(device_ctor_args, &microvm_state.device_states)?;
 +    timing.mark("devices_restore");
-
+ 
      let vmm = Vmm {
          instance_info: instance_info.clone(),
          machine_config: vm_resources.machine_config.clone(),
@@ -1381,23 +1364,23 @@ index bcb0e027a..f2acfce83 100644
          vm,
          device_manager,
      };
-@@ -527,12 +579,15 @@ pub fn build_microvm_from_snapshot(
+@@ -527,12 +576,15 @@ pub fn build_microvm_from_snapshot(
              .ok_or(BuildMicrovmFromSnapshotError::MissingVcpuSeccompFilters)?
              .clone(),
      )?;
 +    timing.mark("vcpu_threads_start");
-
+ 
      let vmm = Arc::new(Mutex::new(vmm));
      vmm.lock().unwrap().instance_info.state = VmState::Paused;
      event_manager.add_subscriber(vmm.clone());
 +    timing.mark("event_loop_registration");
-
+ 
      debug!("event_end: build microvm from snapshot");
 +    timing.finish();
-
+ 
      Ok(vmm)
  }
-@@ -853,6 +908,9 @@ pub(crate) mod tests {
+@@ -853,6 +905,9 @@ pub(crate) mod tests {
              machine_config: MachineConfig::default(),
              boot_source_config: BootSourceConfig::default(),
              shutdown_exit_code: None,
@@ -1407,7 +1390,7 @@ index bcb0e027a..f2acfce83 100644
              vm: Vm::Kvm(Arc::new(vm)),
              device_manager: default_device_manager(),
          }
-@@ -871,6 +929,9 @@ pub(crate) mod tests {
+@@ -871,6 +926,9 @@ pub(crate) mod tests {
              machine_config: MachineConfig::default(),
              boot_source_config: BootSourceConfig::default(),
              shutdown_exit_code: None,
@@ -1418,7 +1401,7 @@ index bcb0e027a..f2acfce83 100644
              device_manager,
          }
 diff --git a/src/vmm/src/device_manager/acpi.rs b/src/vmm/src/device_manager/acpi.rs
-index 53aba9be8..981786178 100644
+index 53aba9b..9817861 100644
 --- a/src/vmm/src/device_manager/acpi.rs
 +++ b/src/vmm/src/device_manager/acpi.rs
 @@ -32,6 +32,36 @@ pub struct ACPIDeviceManager {
@@ -1459,7 +1442,7 @@ index 53aba9be8..981786178 100644
      pub fn new(vmgenid: VmGenId, vmclock: VmClock) -> Self {
          ACPIDeviceManager {
 diff --git a/src/vmm/src/device_manager/mmio.rs b/src/vmm/src/device_manager/mmio.rs
-index 689a446be..be039d1ab 100644
+index 689a446..be039d1 100644
 --- a/src/vmm/src/device_manager/mmio.rs
 +++ b/src/vmm/src/device_manager/mmio.rs
 @@ -136,6 +136,41 @@ pub struct MMIOVirtioDevices {
@@ -1505,7 +1488,7 @@ index 689a446be..be039d1ab 100644
      pub fn new() -> MMIOVirtioDevices {
          Default::default()
 diff --git a/src/vmm/src/device_manager/mod.rs b/src/vmm/src/device_manager/mod.rs
-index 37d00db6d..7e38a1a97 100644
+index 37d00db..7e38a1a 100644
 --- a/src/vmm/src/device_manager/mod.rs
 +++ b/src/vmm/src/device_manager/mod.rs
 @@ -431,6 +431,11 @@ impl DeviceManager {
@@ -1521,7 +1504,7 @@ index 37d00db6d..7e38a1a97 100644
          match &self.virtio_devices {
              VirtioDevices::Mmio(mmio_devices) => mmio_devices.for_each_virtio_device(&mut f),
 diff --git a/src/vmm/src/device_manager/persist.rs b/src/vmm/src/device_manager/persist.rs
-index 82518eb6f..e67ac82e8 100644
+index 82518eb..7b40f22 100644
 --- a/src/vmm/src/device_manager/persist.rs
 +++ b/src/vmm/src/device_manager/persist.rs
 @@ -7,6 +7,7 @@ use std::fmt::{self, Debug};
@@ -1574,13 +1557,13 @@ index 82518eb6f..e67ac82e8 100644
  
          Ok(acpi_devices)
      }
-@@ -266,6 +276,34 @@ impl<'a> Persist<'a> for MMIOPlatformDevices {
+@@ -266,6 +276,27 @@ impl<'a> Persist<'a> for MMIOPlatformDevices {
      }
  }
  
 +impl MMIOVirtioDevices {
 +    pub(crate) fn restore_direct_resident(&mut self, mem: &GuestMemoryMmap, state: &DeviceStates) -> Result<(), String> {
-+        if self.virtio_devices.len() != state.block_devices.len() + usize::from(state.balloon_device.is_some()) {
++        if self.virtio_devices.len() != state.block_devices.len() {
 +            return Err("resident device count mismatch".into());
 +        }
 +        for s in &state.block_devices {
@@ -1595,13 +1578,6 @@ index 82518eb6f..e67ac82e8 100644
 +            }
 +            transport.direct_restore(&s.transport_state);
 +        }
-+        if let Some(s) = &state.balloon_device {
-+            let device = self.virtio_devices.get(&(VirtioDeviceType::Balloon, s.device_id.clone())).ok_or("resident balloon missing")?;
-+            if device.resources != s.device_info { return Err("resident balloon layout changed".into()); }
-+            let mut transport = device.inner.lock().unwrap();
-+            transport.locked_device().as_mut_any().downcast_mut::<Balloon>().ok_or("resident balloon type")?.direct_restore(mem, &s.device_state)?;
-+            transport.direct_restore(&s.transport_state);
-+        }
 +        Ok(())
 +    }
 +}
@@ -1610,7 +1586,7 @@ index 82518eb6f..e67ac82e8 100644
      type State = DeviceStates;
      type ConstructorArgs = MMIODevManagerConstructorArgs<'a>;
 diff --git a/src/vmm/src/devices/acpi/vmclock.rs b/src/vmm/src/devices/acpi/vmclock.rs
-index a480d907f..1ddd42243 100644
+index a480d90..1ddd422 100644
 --- a/src/vmm/src/devices/acpi/vmclock.rs
 +++ b/src/vmm/src/devices/acpi/vmclock.rs
 @@ -73,6 +73,10 @@ pub struct VmClock {
@@ -1625,7 +1601,7 @@ index a480d907f..1ddd42243 100644
      pub fn new(resource_allocator: &mut ResourceAllocator) -> Result<VmClock, VmClockError> {
          let addr = resource_allocator
 diff --git a/src/vmm/src/devices/legacy/i8042.rs b/src/vmm/src/devices/legacy/i8042.rs
-index 2f1b6b95c..429214603 100644
+index 2f1b6b9..4292146 100644
 --- a/src/vmm/src/devices/legacy/i8042.rs
 +++ b/src/vmm/src/devices/legacy/i8042.rs
 @@ -118,6 +118,16 @@ pub struct I8042Device {
@@ -1646,7 +1622,7 @@ index 2f1b6b95c..429214603 100644
      pub fn new(reset_evt: EventFd) -> Result<I8042Device, std::io::Error> {
          Ok(I8042Device {
 diff --git a/src/vmm/src/devices/legacy/serial.rs b/src/vmm/src/devices/legacy/serial.rs
-index e38480179..3b6792029 100644
+index e384801..3b67920 100644
 --- a/src/vmm/src/devices/legacy/serial.rs
 +++ b/src/vmm/src/devices/legacy/serial.rs
 @@ -94,7 +94,7 @@ impl<EV: SerialEvents + Debug, W: Write + Debug> RawIOHandler for Serial<EventFd
@@ -1720,332 +1696,14 @@ index e38480179..3b6792029 100644
      #[test]
      fn test_is_fifo() {
          // invalid file descriptors arent fifos
-diff --git a/src/vmm/src/devices/virtio/balloon/device.rs b/src/vmm/src/devices/virtio/balloon/device.rs
-index 4008b154b..c1cde166e 100644
---- a/src/vmm/src/devices/virtio/balloon/device.rs
-+++ b/src/vmm/src/devices/virtio/balloon/device.rs
-@@ -278,6 +278,12 @@ impl Balloon {
-         free_page_hinting: bool,
-         free_page_reporting: bool,
-     ) -> Result<Balloon, BalloonError> {
-+        if crate::pool_cache::discard_enabled()
-+            && (amount_mib != 0 || deflate_on_oom || stats_polling_interval_s != 0
-+                || free_page_hinting || !free_page_reporting)
-+        {
-+            return Err(BalloonError::PoolDiscard("requires zero target, reporting only, no stats/hinting/OOM deflation".into()));
-+        }
-         let mut avail_features = 1u64 << VIRTIO_F_VERSION_1;
- 
-         if deflate_on_oom {
-@@ -374,6 +380,9 @@ impl Balloon {
-     }
- 
-     pub(crate) fn process_inflate(&mut self) -> Result<(), BalloonError> {
-+        if crate::pool_cache::discard_enabled() {
-+            return Err(BalloonError::PoolDiscard("inflation is disabled for pool reporting".into()));
-+        }
-         // This is safe since we checked in the event handler that the device is activated.
-         let mem = &self
-             .device_state
-@@ -467,6 +476,9 @@ impl Balloon {
-     }
- 
-     pub(crate) fn process_deflate_queue(&mut self) -> Result<(), BalloonError> {
-+        if crate::pool_cache::discard_enabled() {
-+            return Err(BalloonError::PoolDiscard("deflation is disabled for pool reporting".into()));
-+        }
-         METRICS.deflate_count.inc();
- 
-         let queue = &mut self.queues[DEFLATE_INDEX];
-@@ -616,6 +628,9 @@ impl Balloon {
-     }
- 
-     pub(crate) fn process_free_page_reporting_queue(&mut self) -> Result<(), BalloonError> {
-+        if crate::pool_cache::discard_enabled() {
-+            return self.process_pool_reporting_queue();
-+        }
-         let mem = &self
-             .device_state
-             .active_state()
-@@ -652,6 +667,87 @@ impl Balloon {
-         Ok(())
-     }
- 
-+    /// Runtime form of the narrow opt-in contract; also checked after restore.
-+    pub(crate) fn pool_reporting_only(&self) -> bool {
-+        let allowed = (1u64 << VIRTIO_F_VERSION_1) | (1u64 << VIRTIO_BALLOON_F_FREE_PAGE_REPORTING);
-+        self.config_space.num_pages == 0 && self.config_space.actual_pages == 0
-+            && self.stats_polling_interval_s == 0 && self.avail_features == allowed
-+            && self.acked_features & !allowed == 0 && self.queues.len() == 3
-+            && (!self.is_activated() || self.acked_features & (1u64 << VIRTIO_BALLOON_F_FREE_PAGE_REPORTING) != 0)
-+    }
-+
-+    fn process_pool_reporting_queue(&mut self) -> Result<(), BalloonError> {
-+        use crate::pool_cache::{DiscardRange, discard_reported, log_discard};
-+        if !self.pool_reporting_only() {
-+            return Err(BalloonError::PoolDiscard("invalid reporting-only device state".into()));
-+        }
-+        let mem = &self.device_state.active_state().ok_or(BalloonError::DeviceNotActive)?.mem;
-+        // Snapshot all of this device's active ring extents before mutably borrowing
-+        // its report queue. A guest may not discard the queue used to acknowledge it.
-+        let protected: Vec<(u64, u64)> = self.queues.iter().filter(|q| q.ready).flat_map(|q| {
-+            [(q.desc_table_address.0, 16 * u64::from(q.size)),
-+             (q.avail_ring_address.0, 6 + 2 * u64::from(q.size)),
-+             (q.used_ring_address.0, 6 + 8 * u64::from(q.size))]
-+        }).collect();
-+        let idx = self.free_page_reporting_idx();
-+        let queue = &mut self.queues[idx];
-+        let mut needs_interrupt = false;
-+        while let Some(head) = queue.pop()? {
-+            let queue_head = head.index;
-+            let mut chain = Some(head);
-+            let mut ranges = Vec::new();
-+            let mut seen = std::collections::BTreeSet::new();
-+            // Freeze the entire chain before touching any target mapping.
-+            while let Some(desc) = chain {
-+                if !seen.insert(desc.index) || !desc.is_write_only() || ranges.len() >= 256
-+                    || desc.flags & !(crate::devices::virtio::queue::VIRTQ_DESC_F_NEXT
-+                        | crate::devices::virtio::queue::VIRTQ_DESC_F_WRITE) != 0 {
-+                    return Err(BalloonError::PoolDiscard("cyclic, oversized or non-writable report chain".into()));
-+                }
-+                let end = desc.addr.0.checked_add(u64::from(desc.len))
-+                    .ok_or_else(|| BalloonError::PoolDiscard("descriptor range overflow".into()))?;
-+                if protected.iter().any(|&(start, bytes)| desc.addr.0 < start.saturating_add(bytes) && start < end) {
-+                    return Err(BalloonError::PoolDiscard("reported page overlaps balloon queue metadata".into()));
-+                }
-+                ranges.push(DiscardRange { gpa: desc.addr.0, bytes: u64::from(desc.len) });
-+                // Inspect the raw NEXT bit: has_next() masks TTL exhaustion,
-+                // which must be rejected rather than silently truncating a cycle.
-+                let has_next = desc.flags & crate::devices::virtio::queue::VIRTQ_DESC_F_NEXT != 0;
-+                chain = desc.next_descriptor();
-+                if has_next && chain.is_none() {
-+                    return Err(BalloonError::PoolDiscard("truncated report chain".into()));
-+                }
-+            }
-+            let mut report = match discard_reported(mem, queue_head, ranges) {
-+                Ok(report) => report,
-+                Err(err) => {
-+                    METRICS.free_page_report_fails.inc();
-+                    if crate::pool_cache::mapping_failed() {
-+                        // Runtime MAP_FIXED may already have removed a mapping.
-+                        // No ACK, resume, or snapshot is safe; stop all vCPUs now.
-+                        error!("fatal pool discard mapping failure: {err}");
-+                        std::process::abort();
-+                    }
-+                    return Err(BalloonError::PoolDiscard(err.to_string()));
-+                }
-+            };
-+            METRICS.free_page_report_count.add(report.requested.len() as u64);
-+            METRICS.free_page_report_freed.add(report.discarded_pages * 4096);
-+            log_discard(&report);
-+            queue.add_used(queue_head, 0)?;
-+            // Release publication is the protocol ACK. Guest retains isolation
-+            // until this becomes visible, irrespective of interrupt delivery.
-+            queue.advance_used_ring_idx();
-+            report.phase = "ack";
-+            log_discard(&report);
-+            needs_interrupt = true;
-+        }
-+        if needs_interrupt {
-+            self.signal_used_queue(idx)?;
-+        }
-+        Ok(())
-+    }
-+
-     pub(crate) fn signal_used_queue(&self, qidx: usize) -> Result<(), BalloonError> {
-         self.interrupt_trigger()
-             .trigger(VirtioInterruptType::Queue(
-@@ -710,6 +806,9 @@ impl Balloon {
- 
-     /// Update the target size of the balloon.
-     pub fn update_size(&mut self, amount_mib: u32) -> Result<(), BalloonError> {
-+        if crate::pool_cache::discard_enabled() && amount_mib != 0 {
-+            return Err(BalloonError::PoolDiscard("pool reporting target must remain zero".into()));
-+        }
-         if self.is_activated() {
-             let mem = &self.device_state.active_state().unwrap().mem;
-             // The balloon cannot have a target size greater than the size of
-@@ -1577,6 +1676,108 @@ pub(crate) mod tests {
-         }
-     }
- 
-+    #[test]
-+    fn pool_discard_reporting_ack_and_rejection_protocol() {
-+        const NAME: &str = "devices::virtio::balloon::device::tests::pool_discard_reporting_ack_and_rejection_protocol";
-+        if std::env::var("FC_POOL_DISCARD_UNIT_CHILD").as_deref() != Ok("1") {
-+            // Isolate opt-in process configuration and shared pool state from
-+            // unrelated tests, even when cargo runs them concurrently.
-+            let result = std::process::Command::new(std::env::current_exe().unwrap())
-+                .args(["--exact", NAME, "--test-threads=1", "--nocapture"])
-+                .env("FC_POOL_DISCARD_UNIT_CHILD", "1").env("FC_POOL_DISCARD", "1")
-+                .env("FC_POOL_VM_ID", "test-vm").env("FC_POOL_RUN_EPOCH", "test-epoch")
-+                .env_remove("FC_POOL_HINTS_RESTORE").output().unwrap();
-+            assert!(result.status.success(), "{}{}", String::from_utf8_lossy(&result.stdout), String::from_utf8_lossy(&result.stderr));
-+            return;
-+        }
-+        use crate::devices::virtio::queue::VIRTQ_DESC_F_WRITE;
-+        let page = 4096u64;
-+        let mem = create_virtio_mem();
-+        let mut th = VirtioTestHelper::<Balloon>::new(&mem, Balloon::new(0,false,0,false,true).unwrap());
-+        {
-+            let mut b = th.device();
-+            b.acked_features = b.avail_features;
-+        }
-+        th.activate_device(&mem);
-+        let idx = th.device().free_page_reporting_idx();
-+        let addr = align_up!(th.data_address(), page);
-+        mem.write_slice(&vec![0x7c; page as usize], GuestAddress(addr)).unwrap();
-+        crate::pool_cache::test_set_pooled(addr);
-+        let guard = crate::pool_cache::protect_io(addr + 17, 1, 0).unwrap();
-+        th.add_scatter_gather(idx, &[(0,addr,page as u32,VIRTQ_DESC_F_WRITE)]);
-+        th.device().process_free_page_reporting_queue().unwrap();
-+        let mut data = vec![0;page as usize];
-+        mem.read_slice(&mut data, GuestAddress(addr)).unwrap();
-+        assert_eq!(data,vec![0x7c;page as usize]); // Busy skip is ACKed unchanged.
-+        assert_eq!(th.device().queues[idx].next_used.0,1);
-+        drop(guard);
-+        th.add_scatter_gather(idx, &[(1,addr,page as u32,VIRTQ_DESC_F_WRITE)]);
-+        th.device().process_free_page_reporting_queue().unwrap();
-+        mem.read_slice(&mut data, GuestAddress(addr)).unwrap();
-+        assert_eq!(data,vec![0;page as usize]);
-+        assert_eq!(th.device().queues[idx].next_used.0,2);
-+        assert!(th.device().update_size(1).is_err());
-+        assert!(th.device().process_inflate().is_err());
-+        assert!(th.device().process_deflate_queue().is_err());
-+        assert!(Balloon::new(1,false,0,false,true).is_err());
-+        assert!(Balloon::new(0,true,0,false,true).is_err());
-+        assert!(Balloon::new(0,false,1,false,true).is_err());
-+        assert!(Balloon::new(0,false,0,true,true).is_err());
-+        // Final restored configuration must be checked after overriding new().
-+        use crate::snapshot::Persist;
-+        use crate::devices::virtio::balloon::persist::BalloonConstructorArgs;
-+        let mut saved = serde_json::to_value(th.device().save()).unwrap();
-+        saved["config_space"]["num_pages"] = serde_json::json!(1);
-+        assert!(Balloon::restore(BalloonConstructorArgs {mem:mem.clone()}, &serde_json::from_value(saved.clone()).unwrap()).is_err());
-+        saved["config_space"]["num_pages"] = serde_json::json!(0);
-+        saved["config_space"]["actual_pages"] = serde_json::json!(1);
-+        assert!(Balloon::restore(BalloonConstructorArgs {mem:mem.clone()}, &serde_json::from_value(saved).unwrap()).is_err());
-+        // Entire chain preflight: a valid prefix must not be changed if a later
-+        // descriptor is unaligned. The used index must stay unchanged (no ACK).
-+        mem.write_slice(&vec![0x53; page as usize], GuestAddress(addr)).unwrap();
-+        crate::pool_cache::test_set_pooled(addr);
-+        th.add_scatter_gather(idx, &[(2,addr,page as u32,VIRTQ_DESC_F_WRITE),
-+            (3,addr+page+1,page as u32,VIRTQ_DESC_F_WRITE)]);
-+        assert!(th.device().process_free_page_reporting_queue().is_err());
-+        assert_eq!(th.device().queues[idx].next_used.0,2);
-+        mem.read_slice(&mut data, GuestAddress(addr)).unwrap();
-+        assert_eq!(data,vec![0x53;page as usize]);
-+        th.add_scatter_gather(idx, &[(4,addr,page as u32,0)]);
-+        assert!(th.device().process_free_page_reporting_queue().is_err());
-+        assert_eq!(th.device().queues[idx].next_used.0,2);
-+        th.add_scatter_gather(idx, &[(5,0,page as u32,VIRTQ_DESC_F_WRITE)]);
-+        assert!(th.device().process_free_page_reporting_queue().is_err());
-+        assert_eq!(th.device().queues[idx].next_used.0,2);
-+        // Full queue-size cycles would otherwise be silently truncated by the
-+        // DescriptorChain TTL helper; the raw NEXT bit must make this an error.
-+        let full: Vec<_> = (0..16).map(|i| (i,addr,page as u32,VIRTQ_DESC_F_WRITE)).collect();
-+        th.add_scatter_gather(idx, &full);
-+        let last = th.device().queues[idx].desc_table_address.0 + 15 * 16;
-+        mem.write_obj(crate::devices::virtio::queue::Descriptor {addr,len:page as u32,
-+            flags:VIRTQ_DESC_F_WRITE | crate::devices::virtio::queue::VIRTQ_DESC_F_NEXT,next:0}, GuestAddress(last)).unwrap();
-+        let err = th.device().process_free_page_reporting_queue().unwrap_err();
-+        assert!(format!("{err:?}").contains("truncated"));
-+        assert_eq!(th.device().queues[idx].next_used.0,2);
-+    }
-+
-+    #[test]
-+    fn pool_reporting_only_config_is_narrow() {
-+        let mut b = Balloon::new(0, false, 0, false, true).unwrap();
-+        assert!(b.pool_reporting_only());
-+        b.config_space.num_pages = 1;
-+        assert!(!b.pool_reporting_only());
-+        b.config_space.num_pages = 0;
-+        b.config_space.actual_pages = 1;
-+        assert!(!b.pool_reporting_only());
-+        b.config_space.actual_pages = 0;
-+        b.avail_features |= 1u64 << VIRTIO_BALLOON_F_FREE_PAGE_HINTING;
-+        assert!(!b.pool_reporting_only());
-+        for (mib, oom, stats, hints, reporting) in [(1,false,0,false,true),
-+            (0,true,0,false,true),(0,false,1,false,true),(0,false,0,true,true),(0,false,0,false,false)] {
-+            assert!(!Balloon::new(mib,oom,stats,hints,reporting).unwrap().pool_reporting_only());
-+        }
-+    }
-+
-     #[test]
-     fn test_process_reporting() {
-         let mem = create_virtio_mem();
-diff --git a/src/vmm/src/devices/virtio/balloon/mod.rs b/src/vmm/src/devices/virtio/balloon/mod.rs
-index cf8da2cec..a7ea5541b 100644
---- a/src/vmm/src/devices/virtio/balloon/mod.rs
-+++ b/src/vmm/src/devices/virtio/balloon/mod.rs
-@@ -76,6 +76,8 @@ const VIRTIO_BALLOON_S_DIRECT_RECLAIM: u16 = 15;
- pub enum BalloonError {
-     /// Device not activated yet.
-     DeviceNotActive,
-+    /// Pool discard reporting rejected: {0}
-+    PoolDiscard(String),
-     /// Attempting to use hinting when not enabled
-     HintingNotEnabled,
-     /// EventFd error: {0}
-diff --git a/src/vmm/src/devices/virtio/balloon/persist.rs b/src/vmm/src/devices/virtio/balloon/persist.rs
-index 6637d196e..13a129b81 100644
---- a/src/vmm/src/devices/virtio/balloon/persist.rs
-+++ b/src/vmm/src/devices/virtio/balloon/persist.rs
-@@ -112,6 +112,25 @@ pub struct BalloonConstructorArgs {
-     pub mem: GuestMemoryMmap,
- }
- 
-+impl Balloon {
-+    pub(crate) fn direct_restore(&mut self, mem: &crate::vstate::memory::GuestMemoryMmap, state: &BalloonState) -> Result<(), String> {
-+        if !self.pool_reporting_only() || state.stats_polling_interval_s != 0
-+            || self.avail_features != state.virtio_state.avail_features
-+            || self.acked_features != state.virtio_state.acked_features || !state.virtio_state.activated {
-+            return Err("resident balloon contract mismatch".into());
-+        }
-+        let queues = state.virtio_state.build_queues_checked(mem, VirtioDeviceType::Balloon,
-+            self.queues.len(), FIRECRACKER_MAX_QUEUE_SIZE).map_err(|e| e.to_string())?;
-+        for event in &self.queue_evts { while event.read().is_ok() {} }
-+        self.queues = queues;
-+        self.latest_stats = state.latest_stats.create_stats();
-+        self.config_space.num_pages = state.config_space.num_pages;
-+        self.config_space.actual_pages = state.config_space.actual_pages;
-+        self.hinting_state = state.hinting_state;
-+        Ok(())
-+    }
-+}
-+
- impl Persist<'_> for Balloon {
-     type State = BalloonState;
-     type ConstructorArgs = BalloonConstructorArgs;
-@@ -185,6 +204,13 @@ impl Persist<'_> for Balloon {
-             free_page_hint_cmd_id: FREE_PAGE_HINT_DONE,
-         };
-         balloon.hinting_state = state.hinting_state;
-+        if crate::pool_cache::discard_enabled()
-+            && (!balloon.pool_reporting_only()
-+                || (state.virtio_state.activated
-+                    && balloon.acked_features & (1u64 << VIRTIO_BALLOON_F_FREE_PAGE_REPORTING) == 0))
-+        {
-+            return Err(super::BalloonError::PoolDiscard("restored balloon is not reporting-only".into()));
-+        }
- 
-         if state.virtio_state.activated && balloon.stats_enabled() {
-             // Restore the stats descriptor.
 diff --git a/src/vmm/src/devices/virtio/block/virtio/device.rs b/src/vmm/src/devices/virtio/block/virtio/device.rs
-index 78c1adde8..a1d7d1d7f 100644
+index 78c1add..ad6facd 100644
 --- a/src/vmm/src/devices/virtio/block/virtio/device.rs
 +++ b/src/vmm/src/devices/virtio/block/virtio/device.rs
-@@ -59,13 +59,27 @@ pub enum FileEngineType {
- /// Helper object for setting up all `Block` fields derived from its backing file.
- #[derive(Debug)]
- pub struct DiskProperties {
-+    pub pool_identity: Option<String>,
-     pub file_path: String,
-     pub file_engine: FileEngine,
-     pub nsectors: u64,
+@@ -65,7 +65,20 @@ pub struct DiskProperties {
      pub image_id: [u8; VIRTIO_BLK_ID_BYTES as usize],
  }
-
+ 
 +fn prepared_disk() -> &'static std::sync::Mutex<Option<DiskProperties>> {
 +    static DISK: std::sync::OnceLock<std::sync::Mutex<Option<DiskProperties>>> = std::sync::OnceLock::new();
 +    DISK.get_or_init(|| std::sync::Mutex::new(None))
@@ -2053,7 +1711,7 @@ index 78c1adde8..a1d7d1d7f 100644
 +
  impl DiskProperties {
 +    pub(crate) fn prepare_direct() -> Result<(), VirtioBlockError> {
-+        let path = std::env::var("FC_POOL_IMAGE_PATH").unwrap_or_default();
++        let path = std::env::var("FC_RESIDENT_BLOCK_PATH").unwrap_or_default();
 +        if prepared_disk().lock().unwrap().is_some() { return Ok(()); }
 +        let disk = Self::new(path, true, FileEngineType::Async)?;
 +        *prepared_disk().lock().unwrap() = Some(disk);
@@ -2063,13 +1721,10 @@ index 78c1adde8..a1d7d1d7f 100644
      // Helper function that opens the file with the proper access permissions
      fn open_file(disk_image_path: &str, is_disk_read_only: bool) -> Result<File, VirtioBlockError> {
          OpenOptions::new()
-@@ -100,14 +114,48 @@ impl DiskProperties {
+@@ -100,14 +113,42 @@ impl DiskProperties {
          is_disk_read_only: bool,
          file_engine_type: FileEngineType,
      ) -> Result<Self, VirtioBlockError> {
-+        if crate::peer_cache::enabled() && (!is_disk_read_only || file_engine_type != FileEngineType::Sync) {
-+            return Err(VirtioBlockError::BackingFile(std::io::Error::other("peer prototype requires read-only synchronous drives"), disk_image_path));
-+        }
 +        if crate::direct::resident_enabled() {
 +            let mut prepared = prepared_disk().lock().unwrap();
 +            if let Some(disk) = prepared.as_ref() {
@@ -2100,15 +1755,12 @@ index 78c1adde8..a1d7d1d7f 100644
 +        timing.mark("size");
 +        let image_id = Self::image_id_from_metadata(&metadata);
 +        timing.mark("image_id");
-+        let pool_identity = crate::pool_cache::disk_identity(&disk_image_path, is_disk_read_only);
-+        timing.mark("pool_identity");
 +        let file_engine = FileEngine::from_file(disk_image, file_engine_type)
 +            .map_err(VirtioBlockError::FileEngine)?;
 +        timing.mark("file_engine");
 +        timing.finish();
-
+ 
          Ok(Self {
-+            pool_identity,
              file_path: disk_image_path,
 -            file_engine: FileEngine::from_file(disk_image, file_engine_type)
 -                .map_err(VirtioBlockError::FileEngine)?,
@@ -2116,15 +1768,7 @@ index 78c1adde8..a1d7d1d7f 100644
              nsectors: disk_size >> SECTOR_SHIFT,
              image_id,
          })
-@@ -122,6 +170,7 @@ impl DiskProperties {
-         let mut disk_image = Self::open_file(&disk_image_path, is_disk_read_only)?;
-         let disk_size = Self::file_size(&disk_image_path, &mut disk_image)?;
-
-+        self.pool_identity = None; // A changed backing needs a fresh verified identity.
-         self.image_id = Self::build_disk_image_id(&disk_image);
-         self.file_engine
-             .update_file_path(disk_image)
-@@ -162,6 +211,14 @@ impl DiskProperties {
+@@ -162,6 +203,14 @@ impl DiskProperties {
          }
          default_id
      }
@@ -2137,9 +1781,9 @@ index 78c1adde8..a1d7d1d7f 100644
 +        bytes
 +    }
  }
-
+ 
  /// Internal type to store attributes of the block device
-@@ -403,6 +460,8 @@ pub struct VirtioBlock {
+@@ -403,6 +452,8 @@ pub struct VirtioBlock {
      pub disk: DiskProperties,
      pub rate_limiter: RateLimiter,
      pub is_io_engine_throttled: bool,
@@ -2147,8 +1791,8 @@ index 78c1adde8..a1d7d1d7f 100644
 +    pub(crate) snapshot_prepare_error: Option<String>,
      pub metrics: Arc<BlockDeviceMetrics>,
  }
-
-@@ -504,6 +563,7 @@ impl VirtioBlock {
+ 
+@@ -504,6 +555,7 @@ impl VirtioBlock {
              disk: disk_properties,
              rate_limiter,
              is_io_engine_throttled: false,
@@ -2156,15 +1800,15 @@ index 78c1adde8..a1d7d1d7f 100644
              metrics: BlockMetricsPerDevice::alloc(config.drive_id),
          })
      }
-@@ -744,11 +804,23 @@ impl VirtioBlock {
-
+@@ -744,11 +796,23 @@ impl VirtioBlock {
+ 
      /// Prepare device for being snapshotted.
      pub fn prepare_save(&mut self) {
 +        self.snapshot_prepare_error = None;
          if !self.is_activated() {
              return;
          }
-
+ 
 -        self.drain_and_flush(false);
 +        // Persist::save is infallible. Retain a failure so Vmm::save_state can
 +        // reject the checkpoint before serializing it or collecting CPU state.
@@ -2181,8 +1825,8 @@ index 78c1adde8..a1d7d1d7f 100644
          if let FileEngine::Async(ref _engine) = self.disk.file_engine {
              self.process_async_completion_queue();
          }
-@@ -985,8 +1057,9 @@ mod tests {
-
+@@ -985,8 +1049,9 @@ mod tests {
+ 
              assert_eq!(size, u64::from(SECTOR_SIZE) * num_sectors);
              assert_eq!(disk_properties.nsectors, num_sectors);
 -            // Testing `backing_file.virtio_block_disk_image_id()` implies
@@ -2190,13 +1834,13 @@ index 78c1adde8..a1d7d1d7f 100644
 +            // The single-metadata path must preserve the ID exposed by the
 +            // existing disk-update path, including truncation to virtio's ID.
 +            assert_eq!(disk_properties.image_id, DiskProperties::build_disk_image_id(f.as_file()));
-
+ 
              let res = DiskProperties::new("invalid-disk-path".to_string(), true, engine);
              assert!(
-@@ -1968,6 +2041,29 @@ mod tests {
+@@ -1968,6 +2033,29 @@ mod tests {
          }
      }
-
+ 
 +    #[test]
 +    fn test_prepare_save_flush_failure_is_reported_and_retryable() {
 +        for engine in [FileEngineType::Sync, FileEngineType::Async] {
@@ -2223,32 +1867,16 @@ index 78c1adde8..a1d7d1d7f 100644
      #[test]
      fn test_prepare_save() {
          for engine in [FileEngineType::Sync, FileEngineType::Async] {
-@@ -1983,6 +2079,7 @@ mod tests {
+@@ -1983,6 +2071,7 @@ mod tests {
              add_flush_requests_batch(&mut block, &vq, 5);
              simulate_queue_event(&mut block, None);
              block.prepare_save();
 +            assert!(block.snapshot_prepare_error.is_none());
-
+ 
              // Check that all the pending flush requests were processed during `prepare_save()`.
              check_flush_requests_batch(5, &vq);
-diff --git a/src/vmm/src/devices/virtio/block/virtio/io/async_io.rs b/src/vmm/src/devices/virtio/block/virtio/io/async_io.rs
-index 26a1f9aa9..c97e0a0f4 100644
---- a/src/vmm/src/devices/virtio/block/virtio/io/async_io.rs
-+++ b/src/vmm/src/devices/virtio/block/virtio/io/async_io.rs
-@@ -104,6 +104,11 @@ impl AsyncFileEngine {
-     }
- 
-     pub fn update_file(&mut self, file: File) -> Result<(), AsyncIoError> {
-+        if crate::pool_cache::discard_enabled() {
-+            // Keep pending GPA guards alive until every old-ring operation is
-+            // complete before replacing/dropping its request slab.
-+            self.drain(false)?;
-+        }
-         let ring = Self::new_ring(&file, self.completion_evt.as_raw_fd())
-             .map_err(AsyncIoError::IoUring)?;
- 
 diff --git a/src/vmm/src/devices/virtio/block/virtio/persist.rs b/src/vmm/src/devices/virtio/block/virtio/persist.rs
-index 493c487bb..75154340f 100644
+index 493c487..7515434 100644
 --- a/src/vmm/src/devices/virtio/block/virtio/persist.rs
 +++ b/src/vmm/src/devices/virtio/block/virtio/persist.rs
 @@ -66,6 +66,25 @@ pub struct VirtioBlockState {
@@ -2285,117 +1913,8 @@ index 493c487bb..75154340f 100644
              metrics: BlockMetricsPerDevice::alloc(state.id.clone()),
          })
      }
-diff --git a/src/vmm/src/devices/virtio/block/virtio/request.rs b/src/vmm/src/devices/virtio/block/virtio/request.rs
-index a6f5813ce..56e0975ab 100644
---- a/src/vmm/src/devices/virtio/block/virtio/request.rs
-+++ b/src/vmm/src/devices/virtio/block/virtio/request.rs
-@@ -96,6 +96,8 @@ impl Status {
-
- #[derive(Debug)]
- pub struct PendingRequest {
-+    pool_hint: Option<(String, u64, u64)>,
-+    _pool_io_guard: Option<crate::pool_cache::IoGuard>,
-     r#type: RequestType,
-     data_len: u32,
-     status_addr: GuestAddress,
-@@ -161,6 +163,9 @@ impl PendingRequest {
-                 block_metrics.read_bytes.add(transferred_data_len.into());
-                 if let Status::Ok { .. } = status {
-                     block_metrics.read_count.inc();
-+                    if let Some((identity, gpa, offset)) = &self.pool_hint {
-+                        crate::pool_cache::observe(identity, *gpa, *offset, self.data_len);
-+                    }
-                 }
-                 status
-             }
-@@ -425,6 +430,8 @@ impl Request {
-
-     fn to_pending_request(&self, desc_idx: u16) -> PendingRequest {
-         PendingRequest {
-+            pool_hint: None,
-+            _pool_io_guard: None,
-             r#type: self.r#type,
-             data_len: self.data_len,
-             status_addr: self.status_addr,
-@@ -440,12 +447,36 @@ impl Request {
-         block_metrics: &BlockDeviceMetrics,
-         discard_supported: bool,
-     ) -> ProcessingResult {
--        let pending = self.to_pending_request(desc_idx);
-+        let mut pending = self.to_pending_request(desc_idx);
-+        if matches!(self.r#type, RequestType::In | RequestType::Out | RequestType::GetDeviceID) {
-+            pending._pool_io_guard = crate::pool_cache::protect_io(self.data_addr.0, self.data_len, self.status_addr.0);
-+        }
-+        if self.r#type == RequestType::In {
-+            pending.pool_hint = disk.pool_identity.as_ref().map(|id|
-+                (id.clone(), self.data_addr.0, self.offset()));
-+        }
-         let res = match self.r#type {
-             RequestType::In => {
-                 let _metric = block_metrics.read_agg.record_latency_metrics();
--                disk.file_engine
--                    .read(self.offset(), mem, self.data_addr, self.data_len, pending)
-+                if crate::peer_cache::enabled() {
-+                    match crate::peer_cache::read(mem, disk.pool_identity.as_deref(), self.offset(),
-+                        self.data_addr.0, self.data_len, self.status_addr.0) {
-+                        Ok(true) => return ProcessingResult::Executed(pending.finish(mem, Ok(self.data_len), block_metrics)),
-+                        Err(err) => { panic!("peer mapping failed: {err}"); }
-+                        Ok(false) => {}
-+                    }
-+                    if crate::peer_cache::backend_denied(self.offset()) {
-+                        eprintln!("PEER_BACKEND_DENIED offset={}", self.offset());
-+                        return ProcessingResult::Executed(pending.finish(mem,
-+                            Err(IoErr::UnsupportedRequest(VIRTIO_BLK_T_IN)), block_metrics));
-+                    }
-+                    eprintln!("PEER_BACKEND_READ offset={} bytes={}", self.offset(), self.data_len);
-+                }
-+                let start = crate::peer_cache::profile_start();
-+                let result = disk.file_engine
-+                    .read(self.offset(), mem, self.data_addr, self.data_len, pending);
-+                crate::peer_cache::profile_backend(self.offset(), self.data_len, start);
-+                result
-             }
-             RequestType::Out => {
-                 let _metric = block_metrics.write_agg.record_latency_metrics();
-@@ -510,9 +541,36 @@ mod tests {
-
-     const NUM_DISK_SECTORS: u64 = 1024;
-
-+    #[test]
-+    fn pool_cache_hints_require_complete_successful_read() {
-+        let mem = default_mem();
-+        let metrics = BlockDeviceMetrics::default();
-+        let request = |gpa, kind| PendingRequest {
-+            pool_hint: Some(("a".repeat(64), gpa, 0x20000)),
-+            _pool_io_guard: None,
-+            r#type: kind,
-+            data_len: 8192,
-+            status_addr: GuestAddress(0),
-+            desc_idx: 0,
-+        };
-+        request(0x10000, RequestType::In).finish(&mem, Ok(4096), &metrics);
-+        assert!(crate::pool_cache::test_hint(0x10000).is_none());
-+        request(0x20000, RequestType::In)
-+            .finish(&mem, Err(IoErr::UnsupportedRequest(99)), &metrics);
-+        assert!(crate::pool_cache::test_hint(0x20000).is_none());
-+        request(0x30000, RequestType::Out).finish(&mem, Ok(8192), &metrics);
-+        assert!(crate::pool_cache::test_hint(0x30000).is_none());
-+        request(0x40000, RequestType::In).finish(&mem, Ok(8192), &metrics);
-+        assert_eq!(crate::pool_cache::test_hint(0x40000).unwrap().image_offset, 0x20000);
-+        assert_eq!(crate::pool_cache::test_hint(0x41000).unwrap().image_offset, 0x21000);
-+        assert!(crate::pool_cache::test_hint(0x42000).is_none());
-+    }
-+
-     impl Default for PendingRequest {
-         fn default() -> Self {
-             PendingRequest {
-+                pool_hint: None,
-+            _pool_io_guard: None,
-                 r#type: RequestType::In,
-                 data_len: 0,
-                 status_addr: Default::default(),
 diff --git a/src/vmm/src/devices/virtio/persist.rs b/src/vmm/src/devices/virtio/persist.rs
-index 2a75945f6..fe91a5d09 100644
+index 2a75945..fe91a5d 100644
 --- a/src/vmm/src/devices/virtio/persist.rs
 +++ b/src/vmm/src/devices/virtio/persist.rs
 @@ -216,6 +216,18 @@ pub struct MmioTransportConstructorArgs {
@@ -2419,10 +1938,10 @@ index 2a75945f6..fe91a5d09 100644
      type ConstructorArgs = MmioTransportConstructorArgs;
 diff --git a/src/vmm/src/direct.rs b/src/vmm/src/direct.rs
 new file mode 100644
-index 000000000..aacc566f3
+index 0000000..9df9df4
 --- /dev/null
 +++ b/src/vmm/src/direct.rs
-@@ -0,0 +1,791 @@
+@@ -0,0 +1,805 @@
 +// Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 +// SPDX-License-Identifier: Apache-2.0
 +
@@ -2443,7 +1962,6 @@ index 000000000..aacc566f3
 +use crate::device_manager::{
 +    DeviceManager, DeviceRestoreArgs, DevicesState, VirtioDevices, VirtioDevicesState,
 +};
-+use crate::devices::virtio::balloon::Balloon;
 +use crate::devices::virtio::block::device::Block;
 +use crate::devices::virtio::block::persist::BlockState;
 +use crate::devices::virtio::device::VirtioDeviceType;
@@ -2538,7 +2056,7 @@ index 000000000..aacc566f3
 +fn decode_resident_packet(bytes: &[u8]) -> io::Result<ResidentPacket> {
 +    if bytes.is_empty() || bytes.len() >= 65536 { return Err(invalid("resident packet size")); }
 +    let packet: ResidentPacket = bitcode::deserialize(bytes).map_err(|e| invalid(e.to_string()))?;
-+    if packet.0 != 1 { return Err(invalid("resident packet version")); }
++    if packet.0 != 2 { return Err(invalid("resident packet version")); }
 +    Ok(packet)
 +}
 +
@@ -2619,14 +2137,12 @@ index 000000000..aacc566f3
 +    vmm.device_manager.for_each_virtio_device(|kind, dev| {
 +        valid &= match kind {
 +            VirtioDeviceType::Block => matches!(dev.as_any().downcast_ref::<Block>(), Some(Block::Virtio(b)) if b.read_only),
-+            VirtioDeviceType::Balloon => crate::pool_cache::discard_enabled()
-+                && dev.as_any().downcast_ref::<Balloon>().is_some_and(Balloon::pool_reporting_only),
 +            _ => false,
 +        };
 +    });
 +    if !valid {
 +        return Err(VmmError::DaxPreflight(
-+            "direct I/O permits read-only virtio block and opt-in reporting-only balloon",
++            "direct I/O permits read-only virtio block only",
 +        ));
 +    }
 +    Ok(())
@@ -2634,7 +2150,7 @@ index 000000000..aacc566f3
 +
 +impl Vmm {
 +    /// Transfer only device bindings and publish the retained kernel-object token.
-+    /// Ordinary Pause intentionally retains ownership, so pooling can run first.
++    /// Ordinary Pause intentionally retains ownership, so RAM tier changes can run first.
 +    pub fn direct_export(&mut self, events: &mut EventManager) -> Result<(), VmmError> {
 +        self.export_inner(events, false).map(|_| ())
 +    }
@@ -2650,7 +2166,7 @@ index 000000000..aacc566f3
 +        let mut timing = crate::persist::RestoreTiming::new("direct_export");
 +        if !io_enabled()
 +            || self.instance_info.state != VmState::Paused
-+            || crate::pool_cache::mapping_failed()
++            || crate::pool_memory::mapping_failed()
 +        {
 +            return Err(VmmError::DaxPreflight(
 +                "DirectExport requires opted-in paused owner",
@@ -2734,7 +2250,7 @@ index 000000000..aacc566f3
 +                timing.mark("park_resident");
 +            }
 +            let bytes = if let Some(mapper) = &mapper {
-+                bitcode::serialize(&(1u32, &state.token, &state.devices, mapper)).map_err(io::Error::other)?
++                bitcode::serialize(&(2u32, &state.token, &state.devices, mapper)).map_err(io::Error::other)?
 +            } else { serde_json::to_vec(&state).map_err(io::Error::other)? };
 +            if bytes.len() >= 65536 { return Err(invalid("resident packet too large")); }
 +            timing.mark("serialize_devices");
@@ -2950,7 +2466,7 @@ index 000000000..aacc566f3
 +            !matches!(&b.device_state,
 +            BlockState::Virtio(b) if b.virtio_state.avail_features & (1 << 5) != 0)
 +        })
-+        || (devs.balloon_device.is_some() && !crate::pool_cache::discard_enabled())
++        || devs.balloon_device.is_some()
 +    {
 +        return Err(invalid("unsupported direct device state"));
 +    }
@@ -3177,6 +2693,23 @@ index 000000000..aacc566f3
 +    }
 +
 +    #[test]
++    fn private_resident_packet_roundtrip_rejects_old_version_and_truncation() {
++        let state = valid_state();
++        let mapper: crate::pool_memory::Manifest = serde_json::from_value(serde_json::json!({
++            "version":3,"vm_id":"1","run_epoch":"1","pool_path":"unused","phys_base":0,
++            "device_bytes":1<<30,"reserved":[0,0],"generation":1,"faults":0,"exhausted":0,
++            "allocation_generation":1
++        })).unwrap();
++        let bytes = bitcode::serialize(&(2u32, &state.token, &state.devices, &mapper)).unwrap();
++        let packet = decode_resident_packet(&bytes).unwrap();
++        assert_eq!(packet.1, state.token);
++        assert_eq!(serde_json::to_value(packet.3).unwrap(), serde_json::to_value(&mapper).unwrap());
++        for end in 0..bytes.len() { assert!(decode_resident_packet(&bytes[..end]).is_err()); }
++        let old = bitcode::serialize(&(1u32, &state.token, &state.devices, &mapper)).unwrap();
++        assert!(decode_resident_packet(&old).is_err());
++    }
++
++    #[test]
 +    #[ignore = "requires a completed disposable VM trial via CXL_RESIDENT_TRIAL"]
 +    fn resident_binary_evidence_matches_wire_and_rejects_truncation() {
 +        let path = std::path::PathBuf::from(std::env::var_os("CXL_RESIDENT_TRIAL").expect("trial report"));
@@ -3215,46 +2748,44 @@ index 000000000..aacc566f3
 +    }
 +}
 diff --git a/src/vmm/src/lib.rs b/src/vmm/src/lib.rs
-index 41b7b8d69..5db75baf2 100644
+index 41b7b8d..a85be4a 100644
 --- a/src/vmm/src/lib.rs
 +++ b/src/vmm/src/lib.rs
-@@ -78,6 +78,10 @@ pub mod builder;
+@@ -78,6 +78,9 @@ pub mod builder;
  /// Types for guest configuration.
  pub mod cpu_config;
  pub(crate) mod device_manager;
 +#[cfg(target_arch = "x86_64")]
 +pub(crate) mod direct;
 +pub(crate) mod pool_memory;
-+pub(crate) mod peer_cache;
  /// Emulates virtual and hardware devices.
  #[allow(missing_docs)]
  pub mod devices;
-@@ -96,6 +100,9 @@ pub mod pci;
+@@ -96,6 +99,8 @@ pub mod pci;
  pub mod persist;
  /// Resource store for configured microVM resources.
  pub mod resources;
 +#[cfg(target_arch = "x86_64")]
 +mod reuse;
-+mod pool_cache;
  /// microVM RPC API adapters.
  pub mod rpc_interface;
  /// Seccomp filter utilities.
-@@ -169,6 +176,9 @@ pub use crate::vstate::vm::{StartVcpusError, Vm};
-
+@@ -169,6 +174,9 @@ pub use crate::vstate::vm::{StartVcpusError, Vm};
+ 
  /// Shorthand type for the EventManager flavour used by Firecracker.
  pub type EventManager = BaseEventManager<Arc<Mutex<dyn MutEventSubscriber>>>;
 +/// Last laboratory control durations: vCPU channel, DAX ioctl, IRQFD binding.
 +pub static DAX_CONTROL_TIMINGS: [std::sync::atomic::AtomicU64; 3] =
 +    [const { std::sync::atomic::AtomicU64::new(0) }; 3];
-
+ 
  // Since the exit code names e.g. `SIGBUS` are most appropriate yet trigger a test error with the
  // clippy lint `upper_case_acronyms` we have disabled this lint for this enum.
-@@ -217,6 +227,16 @@ pub const HTTP_MAX_PAYLOAD_SIZE: usize = 51200;
+@@ -217,6 +225,16 @@ pub const HTTP_MAX_PAYLOAD_SIZE: usize = 51200;
  /// have permissions to open the KVM fd).
  #[derive(Debug, thiserror::Error, displaydoc::Display)]
  pub enum VmmError {
-+    /// Experimental block-data pool operation failed: {0}
-+    PoolCache(io::Error),
++    /// Experimental private RAM tier operation failed: {0}
++    MemoryTier(io::Error),
 +    /// A failed experimental reuse restore must not be resumed.
 +    ReuseRestoreFailed,
 +    /// A prepared experimental reuse worker needs a successful snapshot load before Resume.
@@ -3266,7 +2797,7 @@ index 41b7b8d69..5db75baf2 100644
      #[cfg(target_arch = "aarch64")]
      /// Invalid command line error.
      Cmdline,
-@@ -303,6 +323,10 @@ pub struct Vmm {
+@@ -303,6 +321,10 @@ pub struct Vmm {
      pub machine_config: MachineConfig,
      boot_source_config: BootSourceConfig,
      shutdown_exit_code: Option<FcExitCode>,
@@ -3274,16 +2805,16 @@ index 41b7b8d69..5db75baf2 100644
 +    reuse_restore_failed: bool,
 +    #[cfg(target_arch = "x86_64")]
 +    reuse_prepared: Option<reuse::ReusePrepared>,
-
+ 
      /// VM object.
      pub vm: Vm,
-@@ -461,23 +485,150 @@ impl Vmm {
-
+@@ -461,23 +483,142 @@ impl Vmm {
+ 
      /// Sends a resume command to the vCPUs.
      pub fn resume_vm(&mut self) -> Result<(), VmmError> {
-+        crate::pool_memory::check_execution_owner().map_err(VmmError::PoolCache)?;
-+        if pool_cache::mapping_failed() {
-+            return Err(VmmError::PoolCache(io::Error::other("failed pool mapping: this process cannot resume")));
++        crate::pool_memory::check_execution_owner().map_err(VmmError::MemoryTier)?;
++        if pool_memory::mapping_failed() {
++            return Err(VmmError::MemoryTier(io::Error::other("failed pool mapping: this process cannot resume")));
 +        }
 +        #[cfg(target_arch = "x86_64")]
 +        if self.reuse_prepared.is_some() {
@@ -3292,9 +2823,6 @@ index 41b7b8d69..5db75baf2 100644
 +        if self.reuse_restore_failed {
 +            return Err(VmmError::ReuseRestoreFailed);
 +        }
-+        let fast_resume = self.instance_info.state == VmState::Paused
-+            && std::env::var("FC_DAX_DIRECT").as_deref() == Ok("1");
-+        let no_kick = fast_resume && std::env::var("FC_DAX_NO_RESUME_KICK").as_deref() == Ok("1");
          let kvm_vm = self
              .vm
              .as_kvm()
@@ -3309,9 +2837,7 @@ index 41b7b8d69..5db75baf2 100644
 +            .map_err(VmmError::DaxHandoff)?;
 +        let vcpu_start = std::time::Instant::now();
          self.device_manager.kick_virtio_devices();
--        kvm_vm.resume_vcpus()?;
-+        if no_kick { kvm_vm.resume_vcpus_without_kick()?; }
-+        else { kvm_vm.resume_vcpus()?; }
+         kvm_vm.resume_vcpus()?;
 +        #[cfg(target_arch = "x86_64")]
 +        for (slot, value) in DAX_CONTROL_TIMINGS.iter().zip([vcpu_start.elapsed().as_nanos() as u64, times[0], times[1]]) {
 +            slot.store(value, std::sync::atomic::Ordering::Relaxed);
@@ -3319,7 +2845,7 @@ index 41b7b8d69..5db75baf2 100644
          self.instance_info.state = VmState::Running;
          Ok(())
      }
-
+ 
 +    /// Reject unsupported direct devices before changing vCPU or IRQFD state.
 +    #[cfg(target_arch = "x86_64")]
 +    pub(crate) fn check_direct_handoff_configuration(&self) -> Result<(), VmmError> {
@@ -3358,41 +2884,37 @@ index 41b7b8d69..5db75baf2 100644
 +        }
 +    }
 +
-+    /// Install immutable CXL data overlays while every guest/device writer is stopped.
-+    pub fn pool_cache(&mut self) -> Result<(), VmmError> {
-+        if pool_cache::mapping_failed() {
-+            return Err(VmmError::PoolCache(io::Error::other("failed pool mapping: restart from the last valid snapshot")));
++    /// Move whole VM-private RAM while every guest/device writer is stopped.
++    pub fn memory_tier(&mut self) -> Result<(), VmmError> {
++        if pool_memory::mapping_failed() {
++            return Err(VmmError::MemoryTier(io::Error::other("failed pool mapping: restart from the last valid snapshot")));
 +        }
 +        if self.instance_info.state != VmState::Paused {
-+            return Err(VmmError::PoolCache(io::Error::other("PoolCache requires a paused VM")));
++            return Err(VmmError::MemoryTier(io::Error::other("MemoryTier requires a paused VM")));
 +        }
 +        let mut unsupported_memory_device = false;
-+        self.device_manager.for_each_virtio_device(|kind, device| {
-+            unsupported_memory_device |= matches!(kind, VirtioDeviceType::Mem | VirtioDeviceType::Pmem);
-+            if kind == VirtioDeviceType::Balloon {
-+                unsupported_memory_device |= !pool_cache::discard_enabled()
-+                    || !device.as_any().downcast_ref::<Balloon>().is_some_and(Balloon::pool_reporting_only);
-+            }
++        self.device_manager.for_each_virtio_device(|kind, _| {
++            unsupported_memory_device |= matches!(kind, VirtioDeviceType::Mem | VirtioDeviceType::Pmem | VirtioDeviceType::Balloon);
 +        });
 +        if unsupported_memory_device {
-+            return Err(VmmError::PoolCache(io::Error::other(
-+                "PoolCache allows only reporting-only opt-in balloon, no memory hotplug or pmem")));
++            return Err(VmmError::MemoryTier(io::Error::other(
++                "MemoryTier forbids balloon, memory hotplug and pmem")));
 +        }
 +        // Preparing devices drains asynchronous block writes and publishes completion
 +        // rings before any host address is remapped. The main event loop is locked
 +        // throughout this action, so no net/balloon event can mutate RAM here.
 +        self.check_unsnapshottable_devices()
-+            .map_err(|e| VmmError::PoolCache(io::Error::other(e.to_string())))?;
++            .map_err(|e| VmmError::MemoryTier(io::Error::other(e.to_string())))?;
 +        self.device_manager.prepare_memory_remap();
 +        self.check_block_snapshot_preparation()
-+            .map_err(|e| VmmError::PoolCache(io::Error::other(e.to_string())))?;
++            .map_err(|e| VmmError::MemoryTier(io::Error::other(e.to_string())))?;
 +        let vm = self.vm.as_kvm()
-+            .ok_or_else(|| VmmError::PoolCache(io::Error::other("PoolCache requires KVM")))?;
++            .ok_or_else(|| VmmError::MemoryTier(io::Error::other("MemoryTier requires KVM")))?;
 +        #[cfg(target_arch = "x86_64")]
 +        if crate::direct::io_enabled() && crate::pool_memory::enabled() {
 +            vm.direct_set_local_ram(true).map_err(VmmError::DaxHandoff)?;
 +        }
-+        pool_cache::apply(vm.guest_memory()).map_err(VmmError::PoolCache)?;
++        pool_memory::apply(vm.guest_memory()).map_err(VmmError::MemoryTier)?;
 +        #[cfg(target_arch = "x86_64")]
 +        if crate::direct::io_enabled() && crate::pool_memory::enabled() {
 +            vm.direct_set_local_ram(!crate::pool_memory::active()).map_err(VmmError::DaxHandoff)?;
@@ -3430,11 +2952,11 @@ index 41b7b8d69..5db75baf2 100644
          self.instance_info.state = VmState::Paused;
          Ok(())
      }
-@@ -498,6 +649,15 @@ impl Vmm {
-
+@@ -498,6 +639,15 @@ impl Vmm {
+ 
      /// Saves the state of a paused Microvm.
      pub fn save_state(&mut self, vm_info: &VmInfo) -> Result<MicrovmState, MicrovmStateError> {
-+        if pool_cache::mapping_failed() {
++        if pool_memory::mapping_failed() {
 +            return Err(MicrovmStateError::NotAllowed("failed pool mapping: this process cannot snapshot".into()));
 +        }
 +        #[cfg(target_arch = "x86_64")]
@@ -3444,14 +2966,13 @@ index 41b7b8d69..5db75baf2 100644
 +        }
 +        let mut timing = persist::RestoreTiming::new("save_state");
          self.check_unsnapshottable_devices()?;
-
+ 
          // We need to save device state before saving KVM state.
-@@ -506,11 +666,18 @@ impl Vmm {
+@@ -506,11 +656,17 @@ impl Vmm {
          // state before we save device state, that interrupt will never be delivered to the guest
          // upon resuming from the snapshot.
          let device_states = self.device_manager.save();
 +        self.check_block_snapshot_preparation()?;
-+        pool_cache::dump_hints().map_err(|e| MicrovmStateError::NotAllowed(e.to_string()))?;
 +        timing.mark("device_state");
          let kvm_vm = self
              .vm
@@ -3466,17 +2987,17 @@ index 41b7b8d69..5db75baf2 100644
          let kvm_state = kvm_vm.kvm().save_state();
          let vm_state = {
              #[cfg(target_arch = "x86_64")]
-@@ -528,6 +695,8 @@ impl Vmm {
+@@ -528,6 +684,8 @@ impl Vmm {
                      .map_err(MicrovmStateError::SaveVmState)?
              }
          };
 +        timing.mark("kvm_vm_state");
 +        timing.finish();
-
+ 
          Ok(MicrovmState {
              vm_info: vm_info.clone(),
 diff --git a/src/vmm/src/persist.rs b/src/vmm/src/persist.rs
-index 71a0345cb..e02ee98cc 100644
+index 71a0345..4580a8c 100644
 --- a/src/vmm/src/persist.rs
 +++ b/src/vmm/src/persist.rs
 @@ -7,14 +7,17 @@ use std::fmt::Debug;
@@ -3512,7 +3033,7 @@ index 71a0345cb..e02ee98cc 100644
  };
  use crate::vstate::vcpu::{VcpuSendEventError, VcpuState};
  use crate::vstate::vm::{VmError, VmState};
-@@ -165,38 +170,163 @@ pub enum CreateSnapshotError {
+@@ -165,38 +170,158 @@ pub enum CreateSnapshotError {
  /// Snapshot version
  pub const SNAPSHOT_VERSION: Version = Version::new(12, 0, 0);
  
@@ -3591,9 +3112,6 @@ index 71a0345cb..e02ee98cc 100644
 +    let dax_offset = dax_snapshot_offset(&params.mem_file_path)?;
 +    if crate::pool_memory::enabled() && dax_offset.is_none() {
 +        return Err(MemoryError::Dax("pool handoff forbids full RAM snapshots; promote before state-only export or demote in place".into()).into());
-+    }
-+    if dax_offset.is_some() && crate::pool_cache::has_overlays() && !crate::pool_memory::active() {
-+        return Err(MemoryError::Dax("pooled RAM requires a materialized logical snapshot, not a state-only DAX snapshot".into()).into());
 +    }
 +    if dax_offset.is_some() && params.snapshot_type != SnapshotType::Full {
 +        return Err(MemoryError::Dax("state-only DAX snapshot requires Full".into()).into());
@@ -3676,12 +3194,10 @@ index 71a0345cb..e02ee98cc 100644
          .mark_virtio_queue_memory_dirty(kvm_vm.guest_memory());
 +    timing.mark("memory_and_queue_handling");
 +    timing.finish();
-+
-+    crate::pool_cache::log_discard_snapshot(&params.snapshot_path, &params.mem_file_path);
  
      Ok(())
  }
-@@ -381,7 +511,9 @@ pub fn restore_from_snapshot(
+@@ -381,7 +506,9 @@ pub fn restore_from_snapshot(
      params: &LoadSnapshotParams,
      vm_resources: &mut VmResources,
  ) -> Result<Arc<Mutex<Vmm>>, RestoreFromSnapshotError> {
@@ -3691,7 +3207,7 @@ index 71a0345cb..e02ee98cc 100644
      for entry in &params.network_overrides {
          // Only the active transport carries virtio device state, so we look at whichever
          // variant this snapshot was saved with. The MMIO and PCI transports wrap their net
-@@ -448,6 +580,7 @@ pub fn restore_from_snapshot(
+@@ -448,6 +575,7 @@ pub fn restore_from_snapshot(
  
      // Some sanity checks before building the microvm.
      snapshot_state_sanity_check(&microvm_state)?;
@@ -3699,7 +3215,7 @@ index 71a0345cb..e02ee98cc 100644
  
      let mem_backend_path = &params.mem_backend.backend_path;
      let mem_state = &microvm_state.vm_state.memory;
-@@ -479,7 +612,8 @@ pub fn restore_from_snapshot(
+@@ -479,7 +607,8 @@ pub fn restore_from_snapshot(
          )
          .map_err(RestoreFromSnapshotGuestMemoryError::Uffd)?,
      };
@@ -3709,7 +3225,7 @@ index 71a0345cb..e02ee98cc 100644
          instance_info,
          event_manager,
          microvm_state,
-@@ -489,7 +623,10 @@ pub fn restore_from_snapshot(
+@@ -489,7 +618,10 @@ pub fn restore_from_snapshot(
          vm_resources,
          params.clock_realtime,
      )
@@ -3721,7 +3237,7 @@ index 71a0345cb..e02ee98cc 100644
  }
  
  /// Error type for [`snapshot_state_from_file`]
-@@ -505,9 +642,10 @@ pub enum SnapshotStateFromFileError {
+@@ -505,9 +637,10 @@ pub enum SnapshotStateFromFileError {
      UnknownVsockDevice,
  }
  
@@ -3733,7 +3249,7 @@ index 71a0345cb..e02ee98cc 100644
      let mut snapshot_reader = File::open(snapshot_path)?;
      let snapshot = Snapshot::load(&mut snapshot_reader)?;
  
-@@ -531,6 +669,30 @@ fn guest_memory_from_file(
+@@ -531,6 +664,30 @@ fn guest_memory_from_file(
      track_dirty_pages: bool,
      huge_pages: HugePageConfig,
  ) -> Result<Vec<GuestRegionMmap>, GuestMemoryFromFileError> {
@@ -3764,7 +3280,7 @@ index 71a0345cb..e02ee98cc 100644
      let mem_file = File::open(mem_file_path)?;
      let guest_mem =
          memory::snapshot_file(mem_file, mem_state.regions(), track_dirty_pages, huge_pages)?;
-@@ -687,6 +849,61 @@ mod tests {
+@@ -687,6 +844,61 @@ mod tests {
      use crate::vmm_config::vsock::tests::default_config;
      use crate::vstate::memory::{GuestMemoryRegionState, GuestRegionType};
  
@@ -3826,837 +3342,16 @@ index 71a0345cb..e02ee98cc 100644
      fn default_vmm_with_devices() -> Vmm {
          let mut event_manager = EventManager::new().expect("Cannot create EventManager");
          let mut vmm = default_vmm();
-diff --git a/src/vmm/src/pool_cache.rs b/src/vmm/src/pool_cache.rs
-new file mode 100644
-index 000000000..bcb56bda7
---- /dev/null
-+++ b/src/vmm/src/pool_cache.rs
-@@ -0,0 +1,813 @@
-+// Copyright 2026
-+// SPDX-License-Identifier: Apache-2.0
-+
-+//! Experimental immutable block-data pooling. Hints are I/O history, not guest
-+//! page-cache residency. The controller owns immutable image identity, the
-+//! approximate Bloom directory and frozen CXL frame lifetime. Admission runs only
-+//! with vCPUs paused and all device writes drained, and validates every byte.
-+//! Private devDAX mappings require the lab kernel's opt-in CoW extension.
-+
-+use std::collections::{BTreeMap, BTreeSet};
-+use std::fs::{File, OpenOptions};
-+use std::io::{self, BufReader, BufWriter, Write};
-+use std::os::fd::AsRawFd;
-+use std::os::unix::fs::{FileTypeExt, MetadataExt};
-+use std::sync::{Mutex, OnceLock};
-+use std::time::Instant;
-+
-+use serde::{Deserialize, Serialize};
-+use vm_memory::{GuestMemoryBackend, GuestMemoryRegion};
-+
-+use crate::vstate::memory::{Bytes, GuestAddress, GuestMemoryExtension, GuestMemoryMmap};
-+
-+const PAGE: usize = 4096;
-+// serde_json performs small reads/writes; buffering is essential when a
-+// checkpoint sidecar lives on an NFS mount with attribute-cache validation.
-+const JSON_BUFFER: usize = 64 * 1024;
-+
-+#[derive(Clone, Debug, Deserialize, Serialize)]
-+#[serde(deny_unknown_fields)]
-+pub(crate) struct Hint {
-+    pub gpa: u64,
-+    pub image_id: String,
-+    pub image_offset: u64,
-+    pub sequence: u64,
-+}
-+
-+#[derive(Debug, Deserialize, Serialize)]
-+#[serde(deny_unknown_fields)]
-+struct HintFile {
-+    version: u32,
-+    vm_id: String,
-+    run_epoch: String,
-+    hints: Vec<Hint>,
-+}
-+
-+#[derive(Debug, Default)]
-+struct State {
-+    hints: BTreeMap<u64, Hint>,
-+    sequence: u64,
-+    overlays: bool,
-+    pooled_gpas: BTreeSet<u64>,
-+    pending_io: BTreeMap<u64, Vec<(u64, u64)>>,
-+    next_io: u64,
-+    discard_sequence: u64,
-+    mapping_failed: bool,
-+    restore_error: Option<String>,
-+}
-+
-+fn invalid(message: impl Into<String>) -> io::Error {
-+    io::Error::new(io::ErrorKind::InvalidInput, message.into())
-+}
-+
-+fn required(name: &str) -> io::Result<String> {
-+    std::env::var(name)
-+        .ok()
-+        .filter(|v| !v.is_empty())
-+        .ok_or_else(|| invalid(format!("{name} is required")))
-+}
-+
-+fn valid_identity(id: &str) -> bool {
-+    id.len() == 64 && id.bytes().all(|b| b.is_ascii_hexdigit())
-+}
-+
-+fn state() -> &'static Mutex<State> {
-+    static STATE: OnceLock<Mutex<State>> = OnceLock::new();
-+    STATE.get_or_init(|| {
-+        let mut s = State::default();
-+        if let Ok(path) = std::env::var("FC_POOL_HINTS_RESTORE") {
-+            let result = (|| -> io::Result<()> {
-+                let saved: HintFile = serde_json::from_reader(BufReader::with_capacity(
-+                    JSON_BUFFER,
-+                    File::open(path)?,
-+                ))?;
-+                let image_id = required("FC_POOL_IMAGE_ID")?;
-+                if saved.version != 1
-+                    || saved.vm_id != required("FC_POOL_VM_ID")?
-+                    || !valid_identity(&image_id)
-+                {
-+                    return Err(invalid("restored pool hint identity/version mismatch"));
-+                }
-+                for h in saved.hints {
-+                    if h.gpa % PAGE as u64 != 0
-+                        || h.image_offset % PAGE as u64 != 0
-+                        || h.image_id != image_id
-+                        || s.hints.contains_key(&h.gpa)
-+                    {
-+                        return Err(invalid("invalid restored pool hint"));
-+                    }
-+                    s.sequence = s.sequence.max(h.sequence);
-+                    s.hints.insert(h.gpa, h);
-+                }
-+                Ok(())
-+            })();
-+            if let Err(error) = result {
-+                s.hints.clear();
-+                s.restore_error = Some(error.to_string());
-+            }
-+        }
-+        Mutex::new(s)
-+    })
-+}
-+
-+/// Only an explicitly identified read-only drive can contribute hints.
-+pub(crate) fn disk_identity(path: &str, read_only: bool) -> Option<String> {
-+    // Guest authority and the mapper own admission in this mode. Historical
-+    // block-read hints have no consumer; pending I/O protection is independent.
-+    if crate::pool_memory::enabled() {
-+        return None;
-+    }
-+    if !read_only || std::env::var("FC_POOL_IMAGE_PATH").as_deref() != Ok(path) {
-+        return None;
-+    }
-+    let id = std::env::var("FC_POOL_IMAGE_ID").ok()?;
-+    if !valid_identity(&id)
-+        || required("FC_POOL_VM_ID").is_err()
-+        || required("FC_POOL_RUN_EPOCH").is_err()
-+    {
-+        return None;
-+    }
-+    Some(id)
-+}
-+
-+/// Call only after a complete successful read and before used-ring publication.
-+pub(crate) fn observe(image_id: &str, gpa: u64, image_offset: u64, length: u32) {
-+    if gpa % PAGE as u64 != 0 || image_offset % PAGE as u64 != 0 {
-+        return;
-+    }
-+    let mut s = state().lock().expect("pool state poisoned");
-+    for delta in (0..u64::from(length) / PAGE as u64).map(|n| n * PAGE as u64) {
-+        let Some(address) = gpa.checked_add(delta) else {
-+            break;
-+        };
-+        let Some(offset) = image_offset.checked_add(delta) else {
-+            break;
-+        };
-+        s.sequence += 1;
-+        let sequence = s.sequence;
-+        s.hints.insert(
-+            address,
-+            Hint {
-+                gpa: address,
-+                image_id: image_id.to_owned(),
-+                image_offset: offset,
-+                sequence,
-+            },
-+        );
-+    }
-+}
-+
-+pub(crate) fn dump_hints() -> io::Result<()> {
-+    let Ok(path) = std::env::var("FC_POOL_HINTS") else {
-+        return Ok(());
-+    };
-+    let s = state().lock().expect("pool state poisoned");
-+    if let Some(error) = &s.restore_error {
-+        return Err(invalid(error));
-+    }
-+    let hints = HintFile {
-+        version: 1,
-+        vm_id: required("FC_POOL_VM_ID")?,
-+        run_epoch: required("FC_POOL_RUN_EPOCH")?,
-+        hints: s.hints.values().cloned().collect(),
-+    };
-+    let temporary = format!("{path}.new");
-+    let mut writer = BufWriter::with_capacity(JSON_BUFFER, File::create(&temporary)?);
-+    serde_json::to_writer(&mut writer, &hints)?;
-+    writer.flush()?;
-+    std::fs::rename(temporary, path)
-+}
-+
-+pub(crate) fn mapping_failed() -> bool {
-+    state().lock().expect("pool state poisoned").mapping_failed
-+}
-+
-+pub(crate) fn set_mapping_failed(value: bool) {
-+    state().lock().expect("pool state poisoned").mapping_failed = value;
-+}
-+
-+pub(crate) fn set_pool_lineage(gpas: impl Iterator<Item=u64>) {
-+    let mut s=state().lock().expect("pool state poisoned");
-+    s.pooled_gpas=gpas.collect();
-+    s.overlays=true;
-+}
-+
-+pub(crate) fn has_overlays() -> bool {
-+    state().lock().expect("pool state poisoned").overlays
-+}
-+
-+/// Explicitly opt into the reporting-only guest/host discard handshake.
-+pub(crate) fn discard_enabled() -> bool {
-+    static ENABLED: OnceLock<bool> = OnceLock::new();
-+    *ENABLED.get_or_init(|| std::env::var("FC_POOL_DISCARD").as_deref() == Ok("1"))
-+}
-+
-+/// RAII ownership covers io_uring pins until completion/cancellation releases
-+/// the PendingRequest. A report overlapping an active buffer is acknowledged as
-+/// a conservative no-op: the original CoW mapping remains available.
-+#[derive(Debug)]
-+pub(crate) struct IoGuard(u64);
-+impl Drop for IoGuard {
-+    fn drop(&mut self) {
-+        state().lock().expect("pool state poisoned").pending_io.remove(&self.0);
-+    }
-+}
-+
-+pub(crate) fn protect_io(gpa: u64, bytes: u32, status: u64) -> Option<IoGuard> {
-+    if !discard_enabled() {
-+        return None;
-+    }
-+    let mut s = state().lock().expect("pool state poisoned");
-+    s.next_io = s.next_io.checked_add(1).expect("pool I/O sequence exhausted");
-+    let id = s.next_io;
-+    // Overflow is conservatively protected through the top of the address space.
-+    s.pending_io.insert(id, vec![(gpa, gpa.saturating_add(u64::from(bytes))),
-+                                (status, status.saturating_add(1))]);
-+    Some(IoGuard(id))
-+}
-+
-+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
-+pub(crate) struct DiscardRange {
-+    pub gpa: u64,
-+    pub bytes: u64,
-+}
-+
-+#[derive(Debug, Serialize)]
-+pub(crate) struct DiscardReport {
-+    pub phase: &'static str,
-+    vm_id: String,
-+    run_epoch: String,
-+    pub batch: u64,
-+    pub queue_head: u16,
-+    pub requested: Vec<DiscardRange>,
-+    pub discarded: Vec<DiscardRange>,
-+    pub requested_pages: u64,
-+    pub discarded_pages: u64,
-+    pub skipped_busy_pages: u64,
-+    pub hints_removed: u64,
-+    pub copied_bytes: u64,
-+    pub host_work_ns: u64,
-+}
-+
-+fn overlaps(a: (u64, u64), b: (u64, u64)) -> bool {
-+    a.0 < b.1 && b.0 < a.1
-+}
-+
-+fn checked_report_ranges(mem: &GuestMemoryMmap, ranges: &[DiscardRange]) -> io::Result<()> {
-+    if ranges.is_empty() || ranges.len() > 256 {
-+        return Err(invalid("discard descriptor count must be 1..256"));
-+    }
-+    let mut intervals = Vec::with_capacity(ranges.len());
-+    for r in ranges {
-+        let end = r.gpa.checked_add(r.bytes).ok_or_else(|| invalid("discard address overflow"))?;
-+        let length = usize::try_from(r.bytes).map_err(|_| invalid("discard length overflow"))?;
-+        if r.bytes == 0 || r.gpa % PAGE as u64 != 0 || r.bytes % PAGE as u64 != 0 {
-+            return Err(invalid("discard must cover complete aligned nonempty pages"));
-+        }
-+        mem.get_slice(GuestAddress(r.gpa), length).map_err(|_| invalid("discard outside a contiguous guest RAM region"))?;
-+        intervals.push((r.gpa, end));
-+    }
-+    intervals.sort_unstable();
-+    if intervals.windows(2).any(|w| w[0].1 > w[1].0) {
-+        return Err(invalid("overlapping discard descriptors"));
-+    }
-+    Ok(())
-+}
-+
-+fn discard_with(
-+    mem: &GuestMemoryMmap,
-+    ranges: &[DiscardRange],
-+    s: &mut State,
-+    mut replace: impl FnMut(*mut u8, usize) -> io::Result<()>,
-+) -> io::Result<(Vec<DiscardRange>, u64, u64)> {
-+    checked_report_ranges(mem, ranges)?;
-+    if s.mapping_failed || s.restore_error.is_some() {
-+        return Err(invalid("pool state is not usable"));
-+    }
-+    let mut selected = BTreeSet::new();
-+    let mut busy = 0;
-+    for r in ranges {
-+        let current = crate::pool_memory::reported_lineage(r.gpa, r.bytes)?;
-+        let candidates: Vec<u64> = current.unwrap_or_else(||
-+            s.pooled_gpas.range(r.gpa..r.gpa+r.bytes).copied().collect());
-+        for gpa in candidates {
-+            if s.pending_io.values().flatten().any(|&v| overlaps((gpa, gpa + PAGE as u64), v)) {
-+                busy += 1;
-+            } else {
-+                selected.insert(gpa);
-+            }
-+        }
-+    }
-+    let mut mapped: Vec<DiscardRange> = Vec::new();
-+    for &gpa in &selected {
-+        if let Some(last) = mapped.last_mut()
-+            && last.gpa + last.bytes == gpa {
-+                last.bytes += PAGE as u64;
-+                continue;
-+            }
-+        mapped.push(DiscardRange { gpa, bytes: PAGE as u64 });
-+    }
-+    // Resolve every target before any MAP_FIXED. Guest reporting quarantines all
-+    // listed pages until used-ring publication; pending device buffers are skipped.
-+    let targets: Vec<_> = mapped.iter().map(|r| {
-+        mem.get_slice(GuestAddress(r.gpa), r.bytes as usize)
-+            .map_err(|_| invalid("discard target crosses guest region"))?;
-+        mem.get_host_address(GuestAddress(r.gpa)).map(|hva| (hva, r))
-+            .map_err(|_| invalid("discard target has no host address"))
-+    }).collect::<io::Result<_>>()?;
-+    for (hva, r) in targets {
-+        s.mapping_failed = true; // MAP_FIXED failure can leave the old VMA unmapped.
-+        if !crate::pool_memory::discard(r.gpa, hva as usize, r.bytes)? {
-+            replace(hva, r.bytes as usize)?;
-+        }
-+        s.mapping_failed = false;
-+        s.overlays = true; // Anonymous zero backing still invalidates DAX-only snapshots.
-+        mem.mark_dirty(GuestAddress(r.gpa), r.bytes as usize);
-+    }
-+    for gpa in selected {
-+        s.pooled_gpas.remove(&gpa);
-+    }
-+    let stale: Vec<_> = ranges.iter().flat_map(|r| s.hints.range(r.gpa..r.gpa + r.bytes).map(|(&gpa, _)| gpa))
-+        .filter(|&gpa| !s.pending_io.values().flatten().any(|&v| overlaps((gpa, gpa + PAGE as u64), v)))
-+        .collect();
-+    let removed = stale.len() as u64;
-+    for gpa in stale { s.hints.remove(&gpa); }
-+    Ok((mapped, busy, removed))
-+}
-+
-+fn replace_private_zero(hva: *mut u8, bytes: usize) -> io::Result<()> {
-+    // SAFETY: caller validates and owns the entire target range and guarantees
-+    // no access until return. Anonymous backing never reads the canonical file.
-+    let mapped = unsafe { libc::mmap(hva.cast(), bytes, libc::PROT_READ | libc::PROT_WRITE,
-+        libc::MAP_PRIVATE | libc::MAP_ANONYMOUS | libc::MAP_FIXED | libc::MAP_NORESERVE, -1, 0) };
-+    if mapped == libc::MAP_FAILED { Err(io::Error::last_os_error()) } else { Ok(()) }
-+}
-+
-+/// No canonical bytes are read or written. The guest driver owns/quarantines
-+/// these pages until the caller publishes the used-ring ACK. This function only
-+/// detaches previously installed pool aliases, not every free DAX RAM page.
-+pub(crate) fn discard_reported(mem: &GuestMemoryMmap, queue_head: u16,
-+                              requested: Vec<DiscardRange>) -> io::Result<DiscardReport> {
-+    let start = Instant::now();
-+    let vm_id = required("FC_POOL_VM_ID")?;
-+    let run_epoch = required("FC_POOL_RUN_EPOCH")?;
-+    let mut s = state().lock().expect("pool state poisoned");
-+    let (discarded, skipped_busy_pages, hints_removed) =
-+        discard_with(mem, &requested, &mut s, replace_private_zero)?;
-+    s.discard_sequence = s.discard_sequence.checked_add(1).expect("discard sequence exhausted");
-+    Ok(DiscardReport { phase: "mapped", vm_id, run_epoch, batch: s.discard_sequence, queue_head,
-+        requested_pages: requested.iter().map(|r| r.bytes / PAGE as u64).sum(),
-+        discarded_pages: discarded.iter().map(|r| r.bytes / PAGE as u64).sum(),
-+        requested, discarded, skipped_busy_pages, hints_removed, copied_bytes: 0,
-+        host_work_ns: start.elapsed().as_nanos().try_into().unwrap_or(u64::MAX) })
-+}
-+
-+pub(crate) fn log_discard(report: &DiscardReport) {
-+    // Native timing stops before serialization/log output. Exact coalesced ranges
-+    // support independent guest submit/ACK and host PFN correlation.
-+    static TRACE: OnceLock<bool> = OnceLock::new();
-+    if *TRACE.get_or_init(|| std::env::var("FC_POOL_DISCARD_TRACE").as_deref() == Ok("1")) {
-+        // Lab-only lossless evidence: ordinary rate-limited info would suppress
-+        // descriptor transactions and make submit/ACK joins incomplete.
-+        crate::logger::info_unrestricted!("POOL_DISCARD_JSON {}", serde_json::to_string(report).expect("discard report serialization"));
-+    }
-+}
-+
-+/// The snapshot caller and reporting callbacks share one event loop. This last
-+/// batch is therefore the exact cut represented by saved queue state and RAM;
-+/// later paused-source reports are outside the checkpoint.
-+pub(crate) fn log_discard_snapshot(snapshot_path: &std::path::Path,
-+                                   mem_file_path: &std::path::Path) {
-+    if std::env::var("FC_POOL_DISCARD_TRACE").as_deref() != Ok("1") {
-+        return;
-+    }
-+    let discard_sequence = state().lock().expect("pool state poisoned").discard_sequence;
-+    let marker = serde_json::json!({
-+        "version": 1,
-+        "phase": "complete",
-+        "vm_id": std::env::var("FC_POOL_VM_ID").ok(),
-+        "run_epoch": std::env::var("FC_POOL_RUN_EPOCH").ok(),
-+        "discard_sequence": discard_sequence,
-+        "snapshot_path": snapshot_path,
-+        "mem_file_path": mem_file_path,
-+    });
-+    crate::logger::info_unrestricted!("POOL_DISCARD_SNAPSHOT_JSON {}", marker);
-+}
-+
-+#[cfg(test)]
-+pub(crate) fn test_set_pooled(gpa: u64) {
-+    let mut s = state().lock().unwrap();
-+    s.pooled_gpas.clear();
-+    s.pooled_gpas.insert(gpa);
-+    s.overlays = true;
-+}
-+
-+#[cfg(test)]
-+pub(crate) fn test_hint(gpa: u64) -> Option<Hint> {
-+    state()
-+        .lock()
-+        .expect("pool state poisoned")
-+        .hints
-+        .get(&gpa)
-+        .cloned()
-+}
-+
-+#[derive(Debug, Deserialize)]
-+#[serde(deny_unknown_fields)]
-+struct PlanPage {
-+    gpa: u64,
-+    image_id: String,
-+    image_offset: u64,
-+    pool_offset: u64,
-+}
-+
-+#[derive(Debug, Deserialize)]
-+#[serde(deny_unknown_fields)]
-+struct Plan {
-+    vm_id: String,
-+    run_epoch: String,
-+    pool_path: String,
-+    pages: Vec<PlanPage>,
-+}
-+
-+#[derive(Debug, Serialize)]
-+struct MappedPage {
-+    gpa: u64,
-+    pool_offset: u64,
-+    hva: u64,
-+}
-+
-+#[derive(Debug, Default, Serialize)]
-+struct Report {
-+    version: u32,
-+    vm_id: String,
-+    run_epoch: String,
-+    requested: usize,
-+    mapped: usize,
-+    rejected_hint: usize,
-+    rejected_content: usize,
-+    mapped_bytes: usize,
-+    mapped_gpas: Vec<u64>,
-+    mapped_pages: Vec<MappedPage>,
-+}
-+
-+/// A temporary read-only view of canonical CXL bytes. Drop does not release the
-+/// controller's frame pin; the prototype freezes all published frames forever.
-+struct View(*mut libc::c_void);
-+impl Drop for View {
-+    fn drop(&mut self) {
-+        // SAFETY: this object owns exactly one page-long mmap.
-+        unsafe {
-+            libc::munmap(self.0, PAGE);
-+        }
-+    }
-+}
-+
-+fn view(file: &File, offset: u64) -> io::Result<View> {
-+    let offset = libc::off_t::try_from(offset).map_err(|_| invalid("pool offset overflow"))?;
-+    // SAFETY: a fresh read-only page mapping; file and bounds were validated.
-+    let ptr = unsafe {
-+        libc::mmap(
-+            std::ptr::null_mut(),
-+            PAGE,
-+            libc::PROT_READ,
-+            libc::MAP_SHARED,
-+            file.as_raw_fd(),
-+            offset,
-+        )
-+    };
-+    if ptr == libc::MAP_FAILED {
-+        return Err(io::Error::last_os_error());
-+    }
-+    Ok(View(ptr))
-+}
-+
-+fn key_matches(hint: Option<&Hint>, p: &PlanPage) -> bool {
-+    hint.is_some_and(|h| h.image_id == p.image_id && h.image_offset == p.image_offset)
-+}
-+
-+/// Caller guarantees a paused VM, a drained device manager, and no concurrent
-+/// host writes. mmap's MMU notifier invalidates KVM translations before return.
-+pub(crate) fn apply(mem: &GuestMemoryMmap) -> io::Result<()> {
-+    if crate::pool_memory::enabled() {
-+        return crate::pool_memory::apply(mem);
-+    }
-+    dump_hints()?;
-+    let plan: Plan = serde_json::from_reader(BufReader::with_capacity(
-+        JSON_BUFFER,
-+        File::open(required("FC_POOL_PLAN")?)?,
-+    ))?;
-+    let vm_id = required("FC_POOL_VM_ID")?;
-+    let epoch = required("FC_POOL_RUN_EPOCH")?;
-+    if plan.vm_id != vm_id || plan.run_epoch != epoch {
-+        return Err(invalid("pool plan VM identity/run epoch mismatch"));
-+    }
-+    let mut report = Report {
-+        version: 1,
-+        vm_id,
-+        run_epoch: epoch,
-+        requested: plan.pages.len(),
-+        ..Report::default()
-+    };
-+    if !plan.pages.is_empty() {
-+        if std::fs::read_to_string("/sys/module/device_dax/parameters/pool_cow")?.trim() != "Y" {
-+            return Err(invalid("lab devDAX pool CoW support is not enabled"));
-+        }
-+        let image_id = required("FC_POOL_IMAGE_ID")?;
-+        if !valid_identity(&image_id) {
-+            return Err(invalid("invalid immutable image identity"));
-+        }
-+        let file = OpenOptions::new().read(true).open(&plan.pool_path)?;
-+        if !file.metadata()?.file_type().is_char_device() {
-+            return Err(invalid("pool backing must be a devDAX character device"));
-+        }
-+        let name = std::path::Path::new(&plan.pool_path)
-+            .file_name()
-+            .and_then(|s| s.to_str())
-+            .ok_or_else(|| invalid("invalid pool path"))?;
-+        if !name.starts_with("dax") || !name[3..].chars().all(|c| c.is_ascii_digit() || c == '.') {
-+            return Err(invalid("pool backing must be /dev/daxX.Y"));
-+        }
-+        let attribute = |attr: &str| -> io::Result<u64> {
-+            std::fs::read_to_string(format!("/sys/bus/dax/devices/{name}/{attr}"))?
-+                .trim()
-+                .parse()
-+                .map_err(|_| invalid("invalid devDAX attribute"))
-+        };
-+        if attribute("align")? != PAGE as u64 {
-+            return Err(invalid("pool requires 4 KiB devDAX alignment"));
-+        }
-+        let capacity = attribute("size")?;
-+        let dev = std::fs::read_to_string(format!("/sys/bus/dax/devices/{name}/dev"))?;
-+        let (major, minor) = dev
-+            .trim()
-+            .split_once(':')
-+            .ok_or_else(|| invalid("invalid devDAX device number"))?;
-+        let major: u32 = major.parse().map_err(|_| invalid("invalid devDAX major"))?;
-+        let minor: u32 = minor.parse().map_err(|_| invalid("invalid devDAX minor"))?;
-+        let rdev = file.metadata()?.rdev();
-+        if rdev != libc::makedev(major, minor) {
-+            return Err(invalid(
-+                "opened pool backing does not match devDAX sysfs identity",
-+            ));
-+        }
-+        let pool_base: u64 = required("FC_POOL_OFFSET")?
-+            .parse()
-+            .map_err(|_| invalid("invalid FC_POOL_OFFSET"))?;
-+        let pool_size: u64 = required("FC_POOL_BYTES")?
-+            .parse()
-+            .map_err(|_| invalid("invalid FC_POOL_BYTES"))?;
-+        let pool_end = pool_base
-+            .checked_add(pool_size)
-+            .ok_or_else(|| invalid("pool allocation overflow"))?;
-+        if pool_base % PAGE as u64 != 0
-+            || pool_size == 0
-+            || pool_size % PAGE as u64 != 0
-+            || pool_end > capacity
-+        {
-+            return Err(invalid("invalid frozen pool allocation bounds"));
-+        }
-+        for region in mem.iter() {
-+            if let Some(backing) = region.file_offset() {
-+                let metadata = backing.file().metadata()?;
-+                if metadata.file_type().is_char_device() && metadata.rdev() == rdev {
-+                    let ram_end = backing
-+                        .start()
-+                        .checked_add(region.len())
-+                        .ok_or_else(|| invalid("RAM allocation overflow"))?;
-+                    if pool_base < ram_end && backing.start() < pool_end {
-+                        return Err(invalid(
-+                            "frozen pool allocation overlaps this VM's mutable RAM reservation",
-+                        ));
-+                    }
-+                }
-+            }
-+        }
-+        let mut unique = BTreeSet::new();
-+        // Complete structural preflight before replacing any mapping.
-+        for p in &plan.pages {
-+            if p.gpa % PAGE as u64 != 0
-+                || p.image_offset % PAGE as u64 != 0
-+                || p.pool_offset % PAGE as u64 != 0
-+                || p.image_id != image_id
-+                || p.pool_offset < pool_base
-+                || p.pool_offset
-+                    .checked_add(PAGE as u64)
-+                    .is_none_or(|end| end > pool_end)
-+                || !unique.insert(p.gpa)
-+            {
-+                return Err(invalid(
-+                    "unaligned, duplicate, out-of-range or wrong-image pool page",
-+                ));
-+            }
-+            mem.get_slice(GuestAddress(p.gpa), PAGE)
-+                .map_err(|e| invalid(e.to_string()))?;
-+        }
-+        let mut s = state().lock().expect("pool state poisoned");
-+        if let Some(error) = &s.restore_error {
-+            return Err(invalid(error));
-+        }
-+        for p in plan.pages {
-+            if !key_matches(s.hints.get(&p.gpa), &p) {
-+                report.rejected_hint += 1;
-+                continue;
-+            }
-+            let canonical = view(&file, p.pool_offset)?;
-+            let mut current = [0u8; PAGE];
-+            mem.read_slice(&mut current, GuestAddress(p.gpa))
-+                .map_err(|e| invalid(e.to_string()))?;
-+            // SAFETY: canonical is a valid immutable read-only page until dropped.
-+            let expected = unsafe { std::slice::from_raw_parts(canonical.0.cast::<u8>(), PAGE) };
-+            if current != expected {
-+                report.rejected_content += 1;
-+                continue;
-+            }
-+            let destination = mem
-+                .get_host_address(GuestAddress(p.gpa))
-+                .map_err(|e| invalid(e.to_string()))?;
-+            // SAFETY: the whole destination page belongs to paused guest RAM;
-+            // all I/O has drained, contents match exactly, and the pool remains
-+            // immutable. Kernel private CoW covers later CPU and host writes.
-+            s.mapping_failed = true; // MAP_FIXED may unmap before a later failure.
-+            let ptr = unsafe {
-+                libc::mmap(
-+                    destination.cast(),
-+                    PAGE,
-+                    libc::PROT_READ | libc::PROT_WRITE,
-+                    libc::MAP_PRIVATE | libc::MAP_FIXED,
-+                    file.as_raw_fd(),
-+                    p.pool_offset as libc::off_t,
-+                )
-+            };
-+            if ptr == libc::MAP_FAILED {
-+                return Err(io::Error::last_os_error());
-+            }
-+            s.mapping_failed = false;
-+            s.overlays = true;
-+            s.pooled_gpas.insert(p.gpa);
-+            report.mapped += 1;
-+            report.mapped_bytes += PAGE;
-+            report.mapped_gpas.push(p.gpa);
-+            report.mapped_pages.push(MappedPage {
-+                gpa: p.gpa,
-+                pool_offset: p.pool_offset,
-+                hva: destination as u64,
-+            });
-+        }
-+    }
-+    let mut writer =
-+        BufWriter::with_capacity(JSON_BUFFER, File::create(required("FC_POOL_REPORT")?)?);
-+    serde_json::to_writer(&mut writer, &report)?;
-+    writer.flush()
-+}
-+
-+#[cfg(test)]
-+mod tests {
-+    use super::*;
-+
-+    #[test]
-+    fn candidate_key_is_not_just_gpa() {
-+        let h = Hint {
-+            gpa: 4096,
-+            image_id: "a".repeat(64),
-+            image_offset: 8192,
-+            sequence: 7,
-+        };
-+        let mut p = PlanPage {
-+            gpa: 4096,
-+            image_id: "a".repeat(64),
-+            image_offset: 8192,
-+            pool_offset: 0,
-+        };
-+        assert!(key_matches(Some(&h), &p));
-+        p.image_offset += 4096;
-+        assert!(!key_matches(Some(&h), &p));
-+        p.image_offset = 8192;
-+        p.image_id = "b".repeat(64);
-+        assert!(!key_matches(Some(&h), &p));
-+        assert!(!key_matches(None, &p));
-+    }
-+
-+    #[test]
-+    fn identity_must_be_full_digest() {
-+        assert!(valid_identity(&"a".repeat(64)));
-+        assert!(!valid_identity(&"a".repeat(63)));
-+        assert!(!valid_identity(&"z".repeat(64)));
-+    }
-+
-+    fn discard_test_mem(pages: usize) -> GuestMemoryMmap {
-+        use crate::vmm_config::machine_config::HugePageConfig;
-+        use crate::vstate::memory::{anonymous, test_utils::into_region_ext};
-+        into_region_ext(anonymous(std::iter::once((GuestAddress(0), pages * PAGE)),
-+            true, HugePageConfig::None).unwrap())
-+    }
-+
-+    fn range(gpa: u64, pages: u64) -> DiscardRange {
-+        DiscardRange { gpa, bytes: pages * PAGE as u64 }
-+    }
-+
-+    fn bytes(mem: &GuestMemoryMmap, gpa: u64) -> Vec<u8> {
-+        let mut value = vec![0; PAGE];
-+        mem.read_slice(&mut value, GuestAddress(gpa)).unwrap();
-+        value
-+    }
-+
-+    #[test]
-+    fn pool_discard_private_zero_preserves_canonical_peer_and_dirty_tracking() {
-+        use std::os::unix::fs::FileExt;
-+        use crate::vstate::memory::Bitmap;
-+        use vmm_sys_util::tempfile::TempFile;
-+        let mut file = TempFile::new().unwrap().into_file();
-+        file.write_all(&vec![0x6a; PAGE]).unwrap();
-+        let mem = discard_test_mem(3);
-+        let peer = discard_test_mem(3);
-+        for m in [&mem, &peer] {
-+            m.write_slice(&vec![0x9c; 3 * PAGE], GuestAddress(0)).unwrap();
-+            let hva = m.get_host_address(GuestAddress(PAGE as u64)).unwrap();
-+            // SAFETY: test owns the live guest allocation and maps exactly one page.
-+            assert_ne!(unsafe { libc::mmap(hva.cast(), PAGE, libc::PROT_READ | libc::PROT_WRITE,
-+                libc::MAP_PRIVATE | libc::MAP_FIXED, file.as_raw_fd(), 0) }, libc::MAP_FAILED);
-+        }
-+        assert_eq!(bytes(&mem, PAGE as u64), vec![0x6a; PAGE]);
-+        let mut s = State::default();
-+        s.pooled_gpas.insert(PAGE as u64);
-+        mem.reset_dirty();
-+        let (mapped, busy, _) = discard_with(&mem, &[range(0, 3)], &mut s, replace_private_zero).unwrap();
-+        assert_eq!(mapped, vec![range(PAGE as u64, 1)]);
-+        assert_eq!(busy, 0);
-+        assert!(s.pooled_gpas.is_empty() && s.overlays && !s.mapping_failed);
-+        assert_eq!(bytes(&mem, 0), vec![0x9c; PAGE]);
-+        assert_eq!(bytes(&mem, PAGE as u64), vec![0; PAGE]);
-+        assert_eq!(bytes(&mem, (2 * PAGE) as u64), vec![0x9c; PAGE]);
-+        assert_eq!(bytes(&peer, PAGE as u64), vec![0x6a; PAGE]);
-+        let region = mem.iter().next().unwrap();
-+        assert!(!region.bitmap().dirty_at(0));
-+        assert!(region.bitmap().dirty_at(PAGE));
-+        assert!(!region.bitmap().dirty_at(2 * PAGE));
-+        // Reuse the detached page; neither peer nor canonical backing changes.
-+        mem.write_slice(&vec![0xdd; PAGE], GuestAddress(PAGE as u64)).unwrap();
-+        assert_eq!(bytes(&peer, PAGE as u64), vec![0x6a; PAGE]);
-+        let mut actual = vec![0; PAGE];
-+        file.read_exact_at(&mut actual, 0).unwrap();
-+        assert_eq!(actual, vec![0x6a; PAGE]);
-+    }
-+
-+    #[test]
-+    fn pool_discard_preflight_rejects_all_before_any_mapping() {
-+        let mem = discard_test_mem(3);
-+        let invalid = vec![vec![], vec![DiscardRange {gpa: 1, bytes: PAGE as u64}],
-+            vec![DiscardRange {gpa: 0, bytes: 1}], vec![DiscardRange {gpa: 0, bytes: 0}],
-+            vec![range(0, 2), range(PAGE as u64, 1)],
-+            vec![range(0, 1), range((3 * PAGE) as u64, 1)],
-+            vec![DiscardRange {gpa: u64::MAX - 4095, bytes: 4096}]];
-+        for ranges in invalid {
-+            let mut s = State::default();
-+            s.pooled_gpas.extend([0, PAGE as u64]);
-+            assert!(discard_with(&mem, &ranges, &mut s, |_, _| panic!("preflight mapped bytes")).is_err());
-+            assert!(!s.mapping_failed && !s.overlays && s.pooled_gpas.len() == 2);
-+        }
-+    }
-+
-+    #[test]
-+    fn pool_discard_coalesces_and_busy_partial_byte_defers_whole_page() {
-+        let mem = discard_test_mem(4);
-+        mem.write_slice(&vec![0x82; 4 * PAGE], GuestAddress(0)).unwrap();
-+        let mut s = State::default();
-+        s.pooled_gpas.extend([0, PAGE as u64, (2 * PAGE) as u64]);
-+        s.pending_io.insert(77, vec![(2 * PAGE as u64 + 17, 2 * PAGE as u64 + 18)]);
-+        for gpa in [0, PAGE as u64, 2 * PAGE as u64, 3 * PAGE as u64] {
-+            s.hints.insert(gpa, Hint {gpa, image_id: "a".repeat(64), image_offset: gpa, sequence: 1});
-+        }
-+        let mut calls = 0;
-+        let (mapped, busy, removed) = discard_with(&mem, &[range(0, 4)], &mut s, |hva, len| {
-+            calls += 1; replace_private_zero(hva, len)
-+        }).unwrap();
-+        assert_eq!(calls, 1);
-+        assert_eq!(mapped, vec![range(0, 2)]);
-+        assert_eq!((busy, removed), (1, 3));
-+        assert_eq!(bytes(&mem, 2 * PAGE as u64), vec![0x82; PAGE]);
-+        assert_eq!(s.pooled_gpas, BTreeSet::from([2 * PAGE as u64]));
-+        assert_eq!(s.hints.keys().copied().collect::<Vec<_>>(), vec![2 * PAGE as u64]);
-+        s.pending_io.remove(&77);
-+        let (mapped, busy, removed) = discard_with(&mem, &[range(2 * PAGE as u64, 1)], &mut s, replace_private_zero).unwrap();
-+        assert_eq!(mapped, vec![range(2 * PAGE as u64, 1)]);
-+        assert_eq!((busy, removed), (0, 1));
-+    }
-+
-+    #[test]
-+    fn pool_discard_mapping_failure_poison_prevents_further_use() {
-+        let mem = discard_test_mem(3);
-+        let mut s = State::default();
-+        s.pooled_gpas.extend([0, 2 * PAGE as u64]);
-+        let mut calls = 0;
-+        assert!(discard_with(&mem, &[range(0, 3)], &mut s, |hva, len| {
-+            calls += 1;
-+            if calls == 2 { Err(io::Error::from_raw_os_error(libc::ENOMEM)) }
-+            else { replace_private_zero(hva, len) }
-+        }).is_err());
-+        assert_eq!(calls, 2);
-+        assert!(s.mapping_failed && s.overlays);
-+        assert!(discard_with(&mem, &[range(0, 1)], &mut s, |_, _| panic!("poisoned mapping retried")).is_err());
-+    }
-+
-+}
 diff --git a/src/vmm/src/pool_memory.rs b/src/vmm/src/pool_memory.rs
 new file mode 100644
-index 000000000..9ac943fd2
+index 0000000..87334d5
 --- /dev/null
 +++ b/src/vmm/src/pool_memory.rs
-@@ -0,0 +1,1162 @@
+@@ -0,0 +1,823 @@
 +// SPDX-License-Identifier: Apache-2.0
-+//! Guest-authorized pooling and persistent CXL logical RAM. Control plans are
-+//! private, trusted controller files. Only the kernel-owned ACTIVE registration
-+//! grants permission to replace a current lower file page without comparing its
-+//! bytes. The CXL mapper performs CPU and device-write CoW into private CXL.
-+use std::collections::{BTreeMap, BTreeSet};
++//! VM-private persistent CXL logical RAM and whole-RAM tier changes.
++//! Private controller plans assign exclusive frames. The kernel owns the mapping
++//! and epoch; handoff carries a bounded handle and never scans guest RAM.
 +use std::fs::{File, OpenOptions};
 +use std::io::{self, BufReader, BufWriter, Write};
 +use std::os::fd::AsRawFd;
@@ -4665,11 +3360,10 @@ index 000000000..9ac943fd2
 +
 +use crate::vstate::memory::{GuestMemoryMmap, GuestRegionMmap, MemoryError};
 +use serde::{Deserialize, Serialize};
-+use vm_memory::{Address, Bytes, FileOffset, GuestAddress, GuestMemoryBackend, GuestMemoryRegion};
++use vm_memory::{Address, FileOffset, GuestAddress, GuestMemoryBackend, GuestMemoryRegion};
 +
 +const PAGE: u64 = 4096;
 +const MAX_PAGES: usize = 1 << 20;
-+const SHARED: u64 = 1;
 +fn invalid(s: impl Into<String>) -> io::Error {
 +    io::Error::new(io::ErrorKind::InvalidInput, s.into())
 +}
@@ -4699,17 +3393,6 @@ index 000000000..9ac943fd2
 +        .try_into()
 +        .unwrap()
 +}
-+fn unhex<const N: usize>(s: &str) -> io::Result<[u8; N]> {
-+    if s.len() != N * 2 || !s.is_ascii() {
-+        return Err(invalid("invalid hexadecimal length"));
-+    }
-+    let mut out = [0; N];
-+    for (i, b) in out.iter_mut().enumerate() {
-+        *b = u8::from_str_radix(&s[2 * i..2 * i + 2], 16)
-+            .map_err(|_| invalid("invalid hexadecimal value"))?;
-+    }
-+    Ok(out)
-+}
 +#[repr(C)]
 +#[derive(Clone, Copy, Debug, Default)]
 +struct Entry {
@@ -4721,8 +3404,7 @@ index 000000000..9ac943fd2
 +    abi: u64,
 +    phys_base: u64,
 +    device_bytes: u64,
-+    canonical_start: u64,
-+    canonical_bytes: u64,
++    reserved: [u64; 2],
 +    count: u64,
 +    entries: u64,
 +    credit_count: u64,
@@ -4734,14 +3416,12 @@ index 000000000..9ac943fd2
 +struct Handle {
 +    abi: u64, phys_base: u64, device_bytes: u64, metadata_offset: u64, metadata_bytes: u64,
 +    cookie_lo: u64, cookie_hi: u64, owner_epoch: u64, generation: u64, allocation_generation: u64,
-+    count: u64, credit_count: u64, shared_pages: u64, cow_pages: u64, discard_pages: u64,
++    count: u64, credit_count: u64, reserved: [u64; 3],
 +    faults: u64, exhausted: u64, full_scan_pages: u64, state: u64,
 +}
 +#[repr(C)]
 +struct Create { config: Config, metadata_offset: u64, metadata_bytes: u64,
 +    owner_epoch: u64, allocation_generation: u64 }
-+#[repr(C)]
-+struct Select { first: u64, count: u64, selected: u64 }
 +#[repr(C)]
 +#[derive(Debug, Default)]
 +struct Query {
@@ -4750,16 +3430,9 @@ index 000000000..9ac943fd2
 +    credit_count: u64,
 +    credits: u64,
 +    generation: u64,
-+    cow_pages: u64,
-+    discard_pages: u64,
++    reserved: [u64; 2],
 +    faults: u64,
 +    exhausted: u64,
-+}
-+#[repr(C)]
-+struct Range {
-+    address: u64,
-+    first: u64,
-+    count: u64,
 +}
 +#[repr(C)]
 +struct Credits {
@@ -4797,40 +3470,6 @@ index 000000000..9ac943fd2
 +pub(crate) struct Mapping {
 +    pub gpa: u64,
 +    pub offset: u64,
-+    pub shared: bool,
-+}
-+#[derive(Clone, Debug, Deserialize, Serialize)]
-+#[serde(deny_unknown_fields)]
-+struct Identity {
-+    inode: u64,
-+    file_bytes: u64,
-+    start_page: u64,
-+    page_count: u64,
-+    inode_generation: u32,
-+    file_slot: u32,
-+    fs_uuid: String,
-+    dev_major: u32,
-+    dev_minor: u32,
-+}
-+#[derive(Clone, Debug, Deserialize, Serialize)]
-+#[serde(deny_unknown_fields)]
-+struct Record {
-+    file_slot: u32,
-+    flags: u32,
-+    file_page: u64,
-+    gpa: u64,
-+    disk_offset: u64,
-+}
-+#[derive(Debug, Deserialize)]
-+#[serde(deny_unknown_fields)]
-+struct Registration {
-+    status_gpa: u64,
-+    session_cookie: u64,
-+    vm_epoch: u64,
-+    plan_generation: u64,
-+    image_id: String,
-+    files: Vec<Identity>,
-+    records: Vec<Record>,
 +}
 +#[derive(Debug, Deserialize)]
 +#[serde(deny_unknown_fields)]
@@ -4841,15 +3480,9 @@ index 000000000..9ac943fd2
 +    #[serde(default)]
 +    pool_path: String,
 +    #[serde(default)]
-+    canonical_start: u64,
-+    #[serde(default)]
-+    canonical_bytes: u64,
-+    #[serde(default)]
 +    mappings: Vec<Mapping>,
 +    #[serde(default)]
 +    credits: Vec<u64>,
-+    #[serde(default)]
-+    registration: Option<Registration>,
 +    #[serde(default)]
 +    allocation_generation: u64,
 +}
@@ -4862,8 +3495,7 @@ index 000000000..9ac943fd2
 +    pool_path: String,
 +    phys_base: u64,
 +    device_bytes: u64,
-+    canonical_start: u64,
-+    canonical_bytes: u64,
++    reserved: [u64; 2],
 +    #[serde(default)]
 +    mappings: Vec<Mapping>,
 +    #[serde(default)]
@@ -4871,8 +3503,6 @@ index 000000000..9ac943fd2
 +    #[serde(default)]
 +    handle: Option<Handle>,
 +    generation: u64,
-+    cow_pages: u64,
-+    discard_pages: u64,
 +    faults: u64,
 +    exhausted: u64,
 +    allocation_generation: u64,
@@ -4882,6 +3512,13 @@ index 000000000..9ac943fd2
 +struct Active {
 +    file: Arc<File>,
 +    manifest: Manifest,
++}
++static MAPPING_FAILED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
++pub(crate) fn mapping_failed() -> bool {
++    MAPPING_FAILED.load(std::sync::atomic::Ordering::Acquire)
++}
++fn set_mapping_failed(value: bool) {
++    MAPPING_FAILED.store(value, std::sync::atomic::Ordering::Release);
 +}
 +fn state() -> &'static Mutex<Option<Active>> {
 +    static STATE: OnceLock<Mutex<Option<Active>>> = OnceLock::new();
@@ -4901,119 +3538,6 @@ index 000000000..9ac943fd2
 +        .is_some_and(|a| Path::new(&a.manifest.pool_path) == path)
 +}
 +
-+fn registration_bytes(r: &Registration) -> io::Result<Vec<u8>> {
-+    if r.files.is_empty() || r.files.len() > 16 || r.records.len() > 65536 {
-+        return Err(invalid("registration bounds"));
-+    }
-+    let mut b = b"GPOOL_RECORDS_V1".to_vec();
-+    b.extend(1u32.to_le_bytes());
-+    b.extend((r.files.len() as u32).to_le_bytes());
-+    for n in [
-+        r.records.len() as u64,
-+        r.session_cookie,
-+        r.vm_epoch,
-+        r.plan_generation,
-+    ] {
-+        b.extend(n.to_le_bytes());
-+    }
-+    b.extend(unhex::<32>(&r.image_id)?);
-+    for (slot, f) in r.files.iter().enumerate() {
-+        if f.file_slot as usize != slot {
-+            return Err(invalid("registration file order"));
-+        }
-+        for n in [f.inode, f.file_bytes, f.start_page, f.page_count] {
-+            b.extend(n.to_le_bytes());
-+        }
-+        b.extend(f.inode_generation.to_le_bytes());
-+        b.extend(f.file_slot.to_le_bytes());
-+        b.extend(unhex::<16>(&f.fs_uuid)?);
-+        b.extend(f.dev_major.to_le_bytes());
-+        b.extend(f.dev_minor.to_le_bytes());
-+    }
-+    let mut gpas = BTreeSet::new();
-+    let mut last = None;
-+    for p in &r.records {
-+        let f = r
-+            .files
-+            .get(p.file_slot as usize)
-+            .ok_or_else(|| invalid("record file slot"))?;
-+        if p.flags != 63
-+            || p.gpa % PAGE != 0
-+            || p.disk_offset % PAGE != 0
-+            || !gpas.insert(p.gpa)
-+            || p.file_page < f.start_page
-+            || p.file_page - f.start_page >= f.page_count
-+            || p.file_page >= f.file_bytes / PAGE
-+            || last.is_some_and(|x| x >= (p.file_slot, p.file_page))
-+        {
-+            return Err(invalid("invalid guest registration record"));
-+        }
-+        last = Some((p.file_slot, p.file_page));
-+        b.extend(p.file_slot.to_le_bytes());
-+        b.extend(p.flags.to_le_bytes());
-+        for n in [p.file_page, p.gpa, p.disk_offset] {
-+            b.extend(n.to_le_bytes());
-+        }
-+    }
-+    Ok(b)
-+}
-+
-+fn validate_registration(mem: &GuestMemoryMmap, plan: &Plan) -> io::Result<[u8; 208]> {
-+    validate_registration_for_image(mem, plan, &env("FC_POOL_IMAGE_ID")?)
-+}
-+fn validate_registration_for_image(
-+    mem: &GuestMemoryMmap,
-+    plan: &Plan,
-+    image: &str,
-+) -> io::Result<[u8; 208]> {
-+    let r = plan
-+        .registration
-+        .as_ref()
-+        .ok_or_else(|| invalid("promotion requires current guest registration"))?;
-+    if r.image_id != image
-+        || r.vm_epoch.to_string() != plan.run_epoch
-+        || r.status_gpa % PAGE != 0
-+        || r.session_cookie == 0
-+    {
-+        return Err(invalid("registration identity/epoch"));
-+    }
-+    let bytes = registration_bytes(r)?;
-+    let mut status = [0u8; 208];
-+    mem.read_slice(&mut status, GuestAddress(r.status_gpa))
-+        .map_err(io::Error::other)?;
-+    let u64_at = |i| u64::from_le_bytes(status[i..i + 8].try_into().unwrap());
-+    let u32_at = |i| u32::from_le_bytes(status[i..i + 4].try_into().unwrap());
-+    if u64_at(0) != 0x47504f4f4c535431
-+        || u32_at(8) != 2
-+        || u32_at(12) != 1
-+        || u64_at(16) != r.session_cookie
-+        || u64_at(24) != r.vm_epoch
-+        || u64_at(32) != r.plan_generation
-+        || u64_at(40) != r.records.len() as u64
-+        || u32_at(48) != r.files.len() as u32
-+        || u32_at(52) != 32
-+        || status[56..88] != unhex::<32>(&r.image_id)?
-+        || status[88..120] != digest(&bytes)
-+        || status[144..].iter().any(|x| *x != 0)
-+    {
-+        return Err(invalid(
-+            "guest registration no longer ACTIVE or digest mismatch",
-+        ));
-+    }
-+    let by_gpa: BTreeMap<_, _> = r.records.iter().map(|x| (x.gpa, x.disk_offset)).collect();
-+    for p in plan.mappings.iter().filter(|p| p.shared) {
-+        if p.gpa == r.status_gpa
-+            || by_gpa
-+                .get(&p.gpa)
-+                .and_then(|o| plan.canonical_start.checked_add(*o))
-+                != Some(p.offset)
-+        {
-+            return Err(invalid("shared mapping lacks registered lower page"));
-+        }
-+    }
-+    Ok(status)
-+}
-+
 +fn geometry(mem: &GuestMemoryMmap) -> Vec<(GuestAddress, usize)> {
 +    mem.iter()
 +        .map(|r| (r.start_addr(), r.len() as usize))
@@ -5022,10 +3546,10 @@ index 000000000..9ac943fd2
 +fn validate_geometry(m: &Manifest, regions: &[(GuestAddress, usize)]) -> io::Result<()> {
 +    if regions.len() != 1 {
 +        return Err(invalid(
-+            "pool mapper v1 requires one contiguous logical RAM region",
++            "private mapper requires one contiguous logical RAM region",
 +        ));
 +    }
-+    if m.version != 2 || m.mappings.len() > MAX_PAGES || m.credits.len() > MAX_PAGES {
++    if m.version != 3 || m.mappings.len() > MAX_PAGES || m.credits.len() > MAX_PAGES {
 +        return Err(invalid("manifest version/size"));
 +    }
 +    let (base, size) = regions[0];
@@ -5075,15 +3599,14 @@ index 000000000..9ac943fd2
 +        .iter()
 +        .map(|p| Entry {
 +            offset: p.offset,
-+            flags: if p.shared { SHARED } else { 0 },
++            flags: 0,
 +        })
 +        .collect();
 +    let config = Config {
-+        abi: 1,
++        abi: 3,
 +        phys_base: m.phys_base,
 +        device_bytes: m.device_bytes,
-+        canonical_start: m.canonical_start,
-+        canonical_bytes: m.canonical_bytes,
++        reserved: [0; 2],
 +        count: entries.len() as u64,
 +        entries: entries.as_ptr() as u64,
 +        credit_count: m.credits.len() as u64,
@@ -5105,8 +3628,6 @@ index 000000000..9ac943fd2
 +    let mut h = a.manifest.handle.ok_or_else(|| invalid("persistent handle required"))?;
 +    ioctl(&a.file, 0x76, true, &mut h)?;
 +    a.manifest.generation = h.generation;
-+    a.manifest.cow_pages = h.cow_pages;
-+    a.manifest.discard_pages = h.discard_pages;
 +    a.manifest.faults = h.faults;
 +    a.manifest.exhausted = h.exhausted;
 +    a.manifest.handle = Some(h);
@@ -5124,14 +3645,14 @@ index 000000000..9ac943fd2
 +        credit_count:h.credit_count, credits:credits.as_mut_ptr() as u64, ..Default::default() };
 +    ioctl(&a.file, 0x71, true, &mut q)?;
 +    a.manifest.mappings = entries.into_iter().enumerate().map(|(i,e)| Mapping {
-+        gpa:i as u64*PAGE, offset:e.offset, shared:e.flags & SHARED != 0 }).collect();
++        gpa:i as u64*PAGE, offset:e.offset }).collect();
 +    credits.truncate(q.credit_count as usize);
 +    a.manifest.credits = credits;
 +    Ok(())
 +}
 +fn validate_handle_geometry(m: &Manifest, regions: &[(GuestAddress, usize)]) -> io::Result<()> {
 +    let h = m.handle.ok_or_else(|| invalid("persistent mapping handle missing"))?;
-+    if m.version != 2 || h.abi != 2 || h.count == 0 || h.count > MAX_PAGES as u64 ||
++    if m.version != 3 || m.reserved != [0; 2] || h.abi != 3 || h.reserved != [0; 3] || h.count == 0 || h.count > MAX_PAGES as u64 ||
 +        h.phys_base != m.phys_base || h.device_bytes != m.device_bytes ||
 +        h.allocation_generation != m.allocation_generation ||
 +        regions.len() != 1 || regions[0].0.raw_value() != 0 || regions[0].1 as u64 != h.count*PAGE {
@@ -5333,7 +3854,6 @@ index 000000000..9ac943fd2
 +        fixed = fixed.map(|p| p + size);
 +    }
 +    m.run_epoch = env("FC_POOL_RUN_EPOCH").map_err(|e| MemoryError::Dax(e.to_string()))?;
-+    crate::pool_cache::set_pool_lineage(std::iter::empty());
 +    *state().lock().unwrap() = Some(Active { file, manifest: m });
 +    Ok(Some(out))
 +}
@@ -5414,8 +3934,6 @@ index 000000000..9ac943fd2
 +        return Err(invalid("pool plan VM/epoch mismatch"));
 +    }
 +    let mut copied = 0u64;
-+    let mut shared = 0u64;
-+    let mut registration_status_hex = None::<String>;
 +    let mut dram_vmas = Vec::new();
 +    match p.operation.as_str() {
 +        "promote" => {
@@ -5427,24 +3945,19 @@ index 000000000..9ac943fd2
 +                    "promotion requires controller allocation generation",
 +                ));
 +            }
-+            let status = validate_registration(mem, &p)?;
-+            registration_status_hex = Some(status.iter().map(|b| format!("{b:02x}")).collect());
 +            let (phys_base, device_bytes) = dax_geometry(&p.pool_path)?;
 +            let mut m = Manifest {
-+                version: 2,
++                version: 3,
 +                handle: None,
 +                vm_id: p.vm_id.clone(),
 +                run_epoch: p.run_epoch.clone(),
 +                pool_path: p.pool_path.clone(),
 +                phys_base,
 +                device_bytes,
-+                canonical_start: p.canonical_start,
-+                canonical_bytes: p.canonical_bytes,
++                reserved: [0; 2],
 +                mappings: p.mappings.clone(),
 +                credits: p.credits.clone(),
 +                generation: 1,
-+                cow_pages: 0,
-+                discard_pages: 0,
 +                faults: 0,
 +                exhausted: 0,
 +                state_sha256: None,
@@ -5460,9 +3973,8 @@ index 000000000..9ac943fd2
 +            let mut index = 0;
 +            while index < m.mappings.len() {
 +                let page = &m.mappings[index];
-+                if page.shared { shared += PAGE; index += 1; continue; }
 +                let mut end = index + 1;
-+                while end < m.mappings.len() && !m.mappings[end].shared
++                while end < m.mappings.len()
 +                    && m.mappings[end].offset == page.offset + (end-index) as u64*PAGE {
 +                    end += 1;
 +                }
@@ -5478,9 +3990,9 @@ index 000000000..9ac943fd2
 +            }
 +            let mut offset = 0;
 +            for region in mem.iter() {
-+                crate::pool_cache::set_mapping_failed(true);
++                set_mapping_failed(true);
 +                // SAFETY: paused VM, drained devices, same HVA/geometry, complete
-+                // private copies and canonical registration validated above.
++                // private copies validated above.
 +                let mapped = unsafe {
 +                    libc::mmap(
 +                        region.as_ptr().cast(),
@@ -5496,8 +4008,7 @@ index 000000000..9ac943fd2
 +                }
 +                offset += region.len() as i64;
 +            }
-+            crate::pool_cache::set_mapping_failed(false);
-+            crate::pool_cache::set_pool_lineage(std::iter::empty());
++            set_mapping_failed(false);
 +            *state().lock().unwrap() = Some(Active { file, manifest: m });
 +            checkpoint_ready(mem)?;
 +        }
@@ -5505,10 +4016,6 @@ index 000000000..9ac943fd2
 +            checkpoint_ready(mem)?;
 +        }
 +        "audit" => {
-+            if p.registration.is_some() {
-+                let status = validate_registration(mem, &p)?;
-+                registration_status_hex = Some(status.iter().map(|b| format!("{b:02x}")).collect());
-+            }
 +            let mut guard = state().lock().unwrap();
 +            let a = guard
 +                .as_mut()
@@ -5532,7 +4039,7 @@ index 000000000..9ac943fd2
 +                .zip(rows)
 +                .map(|(m, pte)| {
 +                    serde_json::json!({
-+                "gpa":m.gpa,"offset":m.offset,"shared":m.shared,"actual_pfn":pte.pfn,
++                "gpa":m.gpa,"offset":m.offset,"actual_pfn":pte.pfn,
 +                "present":pte.flags&1!=0,"writable":pte.flags&2!=0})
 +                })
 +                .collect();
@@ -5542,7 +4049,7 @@ index 000000000..9ac943fd2
 +                &env("FC_POOL_MEMORY_REPORT")?,
 +                &serde_json::json!({"version":1,"operation":"audit",
 +                "vm_id":p.vm_id,"run_epoch":p.run_epoch,"phys_base":a.manifest.phys_base,"pages":evidence,
-+                "registration_status_hex":registration_status_hex,"result":"passed"}),
++                "result":"passed"}),
 +            );
 +        }
 +        "grow" => {
@@ -5585,7 +4092,7 @@ index 000000000..9ac943fd2
 +                copied += bytes as u64;
 +            }
 +            for (mut copy, target) in copies {
-+                crate::pool_cache::set_mapping_failed(true);
++                set_mapping_failed(true);
 +                // SAFETY: prepared private bytes replace precisely the paused
 +                // logical region; mremap performs MMU notifier invalidation.
 +                let result = unsafe {
@@ -5609,229 +4116,79 @@ index 000000000..9ac943fd2
 +                ioctl(&a.file, 0x7a, true, &mut h)?;
 +                *guard = None;
 +            }
-+            crate::pool_cache::set_pool_lineage(std::iter::empty());
-+            crate::pool_cache::set_mapping_failed(false);
++            set_mapping_failed(false);
 +            dram_vmas = dram_evidence(mem)?;
 +        }
 +        _ => return Err(invalid("unknown pool memory operation")),
 +    }
 +    let summary=state().lock().unwrap().as_ref().map(|a|serde_json::json!({
-+        "generation":a.manifest.generation,"cow_pages":a.manifest.cow_pages,
-+        "discard_pages":a.manifest.discard_pages,"credit_pages":a.manifest.handle.map(|h|h.credit_count).unwrap_or(0),
-+        "shared_pages":a.manifest.handle.map(|h|h.shared_pages).unwrap_or(0),"exhausted":a.manifest.exhausted}));
++        "generation":a.manifest.generation,"credit_pages":a.manifest.handle.map(|h|h.credit_count).unwrap_or(0),
++        "exhausted":a.manifest.exhausted}));
 +    write_json(
 +        &env("FC_POOL_MEMORY_REPORT")?,
 +        &serde_json::json!({"version":1,"operation":p.operation,
-+        "vm_id":p.vm_id,"run_epoch":p.run_epoch,"copied_private_bytes":copied,"shared_bytes":shared,
-+        "file_page_compare_bytes":0,"ram_snapshot_bytes":0,"module":summary,
-+        "registration_status_hex":registration_status_hex,"dram_vmas":dram_vmas,"result":"passed"}),
++        "vm_id":p.vm_id,"run_epoch":p.run_epoch,"copied_private_bytes":copied,
++        "ram_snapshot_bytes":0,"module":summary,
++        "dram_vmas":dram_vmas,"result":"passed"}),
 +    )
-+}
-+
-+pub(crate) fn discard(gpa: u64, address: usize, bytes: u64) -> io::Result<bool> {
-+    let guard = state().lock().unwrap();
-+    let Some(a) = guard.as_ref() else {
-+        return Ok(false);
-+    };
-+    let h = a.manifest.handle.ok_or_else(||invalid("discard without mapper"))?;
-+    if gpa % PAGE != 0 || bytes % PAGE != 0 || gpa/PAGE >= h.count || bytes/PAGE > h.count-gpa/PAGE {
-+        return Err(invalid("discard GPA range"));
-+    }
-+    let first = gpa/PAGE;
-+    let mut range = Range {
-+        address: address as u64,
-+        first: first as u64,
-+        count: bytes / PAGE,
-+    };
-+    ioctl(&a.file, 0x72, false, &mut range)?;
-+    Ok(true)
-+}
-+
-+/// Query only the guest-reported interval, never enumerate full RAM at restore.
-+pub(crate) fn reported_lineage(gpa: u64, bytes: u64) -> io::Result<Option<Vec<u64>>> {
-+    let guard = state().lock().unwrap();
-+    let Some(a) = guard.as_ref() else { return Ok(None); };
-+    let h = a.manifest.handle.ok_or_else(||invalid("missing mapper"))?;
-+    if gpa%PAGE != 0 || bytes%PAGE != 0 || gpa/PAGE >= h.count || bytes/PAGE > h.count-gpa/PAGE {
-+        return Err(invalid("lineage range"));
-+    }
-+    let mut flags = vec![0u8; (bytes/PAGE) as usize];
-+    let mut r = Select {first:gpa/PAGE, count:bytes/PAGE, selected:flags.as_mut_ptr() as u64};
-+    ioctl(&a.file,0x79,true,&mut r)?;
-+    Ok(Some(flags.into_iter().enumerate().filter(|(_,f)| *f != 0)
-+        .map(|(i,_)| gpa+i as u64*PAGE).collect()))
 +}
 +
 +#[cfg(test)]
 +mod tests {
 +    use super::*;
-+    use crate::vmm_config::machine_config::HugePageConfig;
-+    use crate::vstate::memory::{anonymous, test_utils::into_region_ext};
-+
-+    fn fixture() -> (GuestMemoryMmap, Plan) {
-+        let mem = into_region_ext(
-+            anonymous(
-+                std::iter::once((GuestAddress(0), 3 * PAGE as usize)),
-+                false,
-+                HugePageConfig::None,
-+            )
-+            .unwrap(),
-+        );
-+        let file = Identity {
-+            inode: 12,
-+            file_bytes: PAGE,
-+            start_page: 0,
-+            page_count: 1,
-+            inode_generation: 0,
-+            file_slot: 0,
-+            fs_uuid: "11".repeat(16),
-+            dev_major: 254,
-+            dev_minor: 0,
-+        };
-+        let r = Registration {
-+            status_gpa: 0,
-+            session_cookie: 7,
-+            vm_epoch: 0,
-+            plan_generation: 9,
-+            image_id: "aa".repeat(32),
-+            files: vec![file],
-+            records: vec![Record {
-+                file_slot: 0,
-+                flags: 63,
-+                file_page: 0,
-+                gpa: PAGE,
-+                disk_offset: 8 * PAGE,
-+            }],
-+        };
-+        let p = Plan {
-+            operation: "promote".into(),
-+            vm_id: "1".into(),
-+            run_epoch: "0".into(),
-+            pool_path: "/dev/dax0.0".into(),
-+            canonical_start: 1024 * PAGE,
-+            canonical_bytes: 16 * PAGE,
-+            mappings: vec![
-+                Mapping {
-+                    gpa: 0,
-+                    offset: 16 * PAGE,
-+                    shared: false,
-+                },
-+                Mapping {
-+                    gpa: PAGE,
-+                    offset: 1032 * PAGE,
-+                    shared: true,
-+                },
-+                Mapping {
-+                    gpa: 2 * PAGE,
-+                    offset: 17 * PAGE,
-+                    shared: false,
-+                },
-+            ],
-+            credits: vec![],
-+            registration: Some(r),
-+            allocation_generation: 1,
-+        };
-+        publish(&mem, &p);
-+        (mem, p)
-+    }
-+    fn publish(mem: &GuestMemoryMmap, p: &Plan) {
-+        let r = p.registration.as_ref().unwrap();
-+        let mut s = [0u8; 208];
-+        for (offset, value) in [
-+            (0, 0x47504f4f4c535431u64),
-+            (16, r.session_cookie),
-+            (24, r.vm_epoch),
-+            (32, r.plan_generation),
-+            (40, r.records.len() as u64),
-+        ] {
-+            s[offset..offset + 8].copy_from_slice(&value.to_le_bytes());
-+        }
-+        for (offset, value) in [(8, 2u32), (12, 1), (48, r.files.len() as u32), (52, 32)] {
-+            s[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
-+        }
-+        s[56..88].copy_from_slice(&unhex::<32>(&r.image_id).unwrap());
-+        s[88..120].copy_from_slice(&digest(&registration_bytes(r).unwrap()));
-+        mem.write_slice(&s, GuestAddress(0)).unwrap();
++    fn manifest() -> Manifest {
++        Manifest { version: 3, vm_id: "1".into(), run_epoch: "2".into(), pool_path: "unused".into(),
++            phys_base: 0, device_bytes: 4096*PAGE, reserved: [0; 2],
++            mappings: vec![Mapping { gpa: 0, offset: PAGE }, Mapping { gpa: PAGE, offset: 2*PAGE }],
++            credits: vec![], handle: Some(Handle { abi: 3, count: 2, device_bytes: 4096*PAGE,
++                allocation_generation: 7, ..Default::default() }),
++            generation: 1, faults: 0, exhausted: 0, allocation_generation: 7, state_sha256: None }
 +    }
 +    #[test]
-+    fn current_guest_registration_authorizes_only_its_page_without_reading_payload() {
-+        let (mem, p) = fixture();
-+        mem.write_slice(&[0x7b; 4096], GuestAddress(PAGE)).unwrap();
-+        // No image data is supplied to this check. Current guest authority and
-+        // exact immutable key, not old I/O history or payload bytes, decide.
-+        validate_registration_for_image(&mem, &p, &"aa".repeat(32)).unwrap();
++    fn private_promotion_needs_exact_ram_coverage() {
++        let mut m = manifest();
++        validate_geometry(&m, &[(GuestAddress(0), 2*PAGE as usize)]).unwrap();
++        m.mappings[1].gpa = 0;
++        assert!(validate_geometry(&m, &[(GuestAddress(0), 2*PAGE as usize)]).is_err());
++        m = manifest(); m.mappings.pop();
++        assert!(validate_geometry(&m, &[(GuestAddress(0), 2*PAGE as usize)]).is_err());
 +    }
 +    #[test]
-+    fn closed_registration_rejects_old_plan() {
-+        let (mem, p) = fixture();
-+        mem.write_slice(&3u32.to_le_bytes(), GuestAddress(8))
-+            .unwrap();
-+        assert!(validate_registration_for_image(&mem, &p, &"aa".repeat(32)).is_err());
++    fn persistent_handle_rejects_old_abi_and_foreign_lease() {
++        let mut m = manifest(); let geometry = [(GuestAddress(0), 2*PAGE as usize)];
++        validate_handle_geometry(&m, &geometry).unwrap();
++        m.handle.as_mut().unwrap().abi = 2;
++        assert!(validate_handle_geometry(&m, &geometry).is_err());
++        m = manifest(); m.handle.as_mut().unwrap().allocation_generation += 1;
++        assert!(validate_handle_geometry(&m, &geometry).is_err());
++        m = manifest(); m.handle.as_mut().unwrap().reserved[0] = 1;
++        assert!(validate_handle_geometry(&m, &geometry).is_err());
 +    }
 +    #[test]
-+    fn stale_cookie_epoch_token_or_changed_record_rejected() {
-+        for which in 0..4 {
-+            let (mem, mut p) = fixture();
-+            let r = p.registration.as_mut().unwrap();
-+            match which {
-+                0 => r.session_cookie += 1,
-+                1 => r.vm_epoch += 1,
-+                2 => r.plan_generation += 1,
-+                _ => r.records[0].gpa = 2 * PAGE,
-+            };
-+            assert!(validate_registration_for_image(&mem, &p, &"aa".repeat(32)).is_err());
-+        }
-+    }
-+    #[test]
-+    fn bloom_or_controller_cannot_add_unregistered_gpa_or_wrong_offset() {
-+        for which in 0..2 {
-+            let (mem, mut p) = fixture();
-+            if which == 0 {
-+                p.mappings[2].shared = true;
-+                p.mappings[2].offset = 1032 * PAGE;
-+            } else {
-+                p.mappings[1].offset += PAGE;
-+            }
-+            assert!(validate_registration_for_image(&mem, &p, &"aa".repeat(32)).is_err());
-+        }
-+    }
-+    #[test]
-+    fn incomplete_dirty_or_duplicate_records_never_authorize() {
-+        for which in 0..3 {
-+            let (_, mut p) = fixture();
-+            let r = p.registration.as_mut().unwrap();
-+            match which {
-+                0 => r.records[0].flags = 31,
-+                1 => r.records.push(r.records[0].clone()),
-+                _ => r.files[0].file_bytes = PAGE - 1,
-+            };
-+            assert!(registration_bytes(r).is_err());
-+        }
-+    }
-+    #[test]
-+    fn malformed_unicode_digest_fails_without_panic() {
-+        assert!(unhex::<32>(&"é".repeat(32)).is_err());
++    fn uapi_sizes_match_private_mapper() {
++        assert_eq!(std::mem::size_of::<Config>(), 72);
++        assert_eq!(std::mem::size_of::<Handle>(), 152);
++        assert_eq!(std::mem::size_of::<Query>(), 72);
 +    }
 +}
 diff --git a/src/vmm/src/resources.rs b/src/vmm/src/resources.rs
-index 55f784a8d..9806c079b 100644
+index 55f784a..e64bb70 100644
 --- a/src/vmm/src/resources.rs
 +++ b/src/vmm/src/resources.rs
-@@ -491,6 +491,32 @@ impl VmResources {
+@@ -491,6 +491,31 @@ impl VmResources {
              .iter()
              .any(|b| b.lock().expect("Poisoned lock").is_vhost_user());
  
 +        // Explicit lab opt-in; ordinary Firecracker configuration is unchanged.
 +        if let Some(path) = std::env::var_os("FC_DAX_RAM") {
 +            if self.memory_hotplug.is_some()
-+                || self.balloon.get().is_some_and(|b| !(crate::pool_cache::discard_enabled()
-+                    && b.lock().expect("Poisoned balloon lock").pool_reporting_only()))
++                || self.balloon.get().is_some()
 +                || vhost_user_device_used
 +                || self.machine_config.huge_pages
 +                    != crate::vmm_config::machine_config::HugePageConfig::None
 +            {
 +                return Err(MemoryError::Dax(
-+                    "DAX RAM requires reporting-only opt-in balloon, no hotplug, vhost-user or huge-page override".into(),
++                    "DAX RAM forbids balloon, hotplug, vhost-user and huge-page override".into(),
 +                ));
 +            }
 +            let offset = std::env::var("FC_DAX_OFFSET")
@@ -5852,7 +4209,7 @@ index 55f784a8d..9806c079b 100644
          // if a vhost-user-blk device is configured in the VM, otherwise we fall back to
 diff --git a/src/vmm/src/reuse.rs b/src/vmm/src/reuse.rs
 new file mode 100644
-index 000000000..0f90a81c0
+index 0000000..0f90a81
 --- /dev/null
 +++ b/src/vmm/src/reuse.rs
 @@ -0,0 +1,715 @@
@@ -6572,15 +4929,15 @@ index 000000000..0f90a81c0
 +    }
 +}
 diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
-index ca743fa6f..f7b33116f 100644
+index ca743fa..990981a 100644
 --- a/src/vmm/src/rpc_interface.rs
 +++ b/src/vmm/src/rpc_interface.rs
 @@ -100,6 +100,18 @@ pub enum VmmAction {
      PatchMMDS(Value),
      /// Pause the guest, by pausing the microVM VCPUs.
      Pause,
-+    /// Admit observed immutable block data to the experimental CXL pool while paused.
-+    PoolCache,
++    /// Move all VM-private RAM between DRAM and CXL while paused.
++    MemoryTier,
 +    /// Hand over the retained KVM graph and device bindings without a CPU snapshot.
 +    DirectExport,
 +    /// Prepare the immutable disk backend without guest memory access.
@@ -6641,7 +4998,7 @@ index ca743fa6f..f7b33116f 100644
              CreateSnapshot(_)
              | FlushMetrics
              | Pause
-+            | PoolCache
++            | MemoryTier
 +            | DirectExport
 +            | DirectSend
 +            | DirectImport
@@ -6680,8 +5037,8 @@ index ca743fa6f..f7b33116f 100644
                  .hot_unplug_device(device_id, event_manager)
                  .map(|()| VmmData::Empty),
              Pause => self.pause(),
-+            PoolCache => {
-+                self.vmm.lock().expect("Poisoned lock").pool_cache()?;
++            MemoryTier => {
++                self.vmm.lock().expect("Poisoned lock").memory_tier()?;
 +                Ok(VmmData::Empty)
 +            }
 +            DirectPrepare => {
@@ -6736,7 +5093,7 @@ index ca743fa6f..f7b33116f 100644
                  self.vmm
                      .lock()
 diff --git a/src/vmm/src/vstate/memory.rs b/src/vmm/src/vstate/memory.rs
-index 888e8c573..6fea6948f 100644
+index 888e8c5..6fea694 100644
 --- a/src/vmm/src/vstate/memory.rs
 +++ b/src/vmm/src/vstate/memory.rs
 @@ -6,11 +6,13 @@
@@ -7050,7 +5407,7 @@ index 888e8c573..6fea6948f 100644
      fn test_extract_huge_tlb_mmap_flags() {
          let cases = [
 diff --git a/src/vmm/src/vstate/vcpu.rs b/src/vmm/src/vstate/vcpu.rs
-index 5af0b76dc..1c17787a1 100644
+index 5af0b76..ae914b1 100644
 --- a/src/vmm/src/vstate/vcpu.rs
 +++ b/src/vmm/src/vstate/vcpu.rs
 @@ -71,6 +71,8 @@ pub struct VcpuConfig {
@@ -7339,17 +5696,10 @@ index 5af0b76dc..1c17787a1 100644
              event_sender,
              response_receiver,
              vcpu_fd,
-@@ -636,6 +789,32 @@ impl VcpuHandle {
+@@ -636,6 +789,25 @@ impl VcpuHandle {
          Ok(())
      }
  
-+    /// Only for a vCPU already known to be paused: the channel wakes recv().
-+    pub(crate) fn resume_without_kick(&mut self) -> Result<(), VcpuSendEventError> {
-+        self.vcpu_fd.set_kvm_immediate_exit(0);
-+        self.event_sender.send(VcpuEvent::Resume).expect("vcpu event channel closed");
-+        Ok(())
-+    }
-+
 +    /// Queue work for a vCPU known to be blocked in its Paused receive loop.
 +    #[cfg(target_arch = "x86_64")]
 +    pub(crate) fn restore_without_kick(&mut self, state: VcpuState, translation_prepared: bool) {
@@ -7372,7 +5722,7 @@ index 5af0b76dc..1c17787a1 100644
      /// Returns a reference to the [`Received`] from which the vcpu's responses can be read.
      pub fn response_receiver(&self) -> &Receiver<VcpuResponse> {
          &self.response_receiver
-@@ -841,11 +1020,12 @@ pub(crate) mod tests {
+@@ -841,11 +1013,12 @@ pub(crate) mod tests {
              use crate::VcpuResponse::*;
              // Guard match with no wildcard to make sure we catch new enum variants.
              match self {
@@ -7388,7 +5738,7 @@ index 5af0b76dc..1c17787a1 100644
                  (NotAllowed(_), NotAllowed(_))
                  | (SavedState(_), SavedState(_))
 diff --git a/src/vmm/src/vstate/vm.rs b/src/vmm/src/vstate/vm.rs
-index dfedd6474..ab044b3b1 100644
+index dfedd64..34d3718 100644
 --- a/src/vmm/src/vstate/vm.rs
 +++ b/src/vmm/src/vstate/vm.rs
 @@ -7,9 +7,10 @@
@@ -7487,16 +5837,13 @@ index dfedd6474..ab044b3b1 100644
              })
              .any(|response| !matches!(response, Ok(crate::VcpuResponse::Paused)))
          {
-@@ -305,18 +327,42 @@ impl KvmVm {
+@@ -305,6 +327,28 @@ impl KvmVm {
  
      /// Sends a resume event to all vCPUs and waits for acknowledgement.
      pub fn resume_vcpus(&self) -> Result<(), crate::VmmError> {
-+        self.resume_vcpus_impl(false)
++        self.resume_vcpus_impl()
 +    }
 +
-+    pub(crate) fn resume_vcpus_without_kick(&self) -> Result<(), crate::VmmError> {
-+        self.resume_vcpus_impl(true)
-+    }
 +
 +    fn receive_vcpu_response(handle: &VcpuHandle) -> Result<crate::VcpuResponse, std::sync::mpsc::RecvTimeoutError> {
 +        let spin_us = std::env::var("FC_DAX_CHANNEL_SPIN_US").ok()
@@ -7515,15 +5862,11 @@ index dfedd6474..ab044b3b1 100644
 +        handle.response_receiver().recv_timeout(crate::RECV_TIMEOUT_SEC)
 +    }
 +
-+    fn resume_vcpus_impl(&self, no_kick: bool) -> Result<(), crate::VmmError> {
++    fn resume_vcpus_impl(&self) -> Result<(), crate::VmmError> {
          let mut handles = self.vcpus_handles();
          handles
              .iter_mut()
--            .try_for_each(|handle| handle.send_event(crate::VcpuEvent::Resume))
-+            .try_for_each(|handle| if no_kick { handle.resume_without_kick() }
-+                else { handle.send_event(crate::VcpuEvent::Resume) })
-             .map_err(|_| crate::VmmError::VcpuMessage)?;
- 
+@@ -314,9 +358,7 @@ impl KvmVm {
          if handles
              .iter()
              .map(|handle| {
@@ -7534,7 +5877,7 @@ index dfedd6474..ab044b3b1 100644
              })
              .any(|response| !matches!(response, Ok(crate::VcpuResponse::Resumed)))
          {
-@@ -329,10 +375,25 @@ impl KvmVm {
+@@ -329,10 +371,25 @@ impl KvmVm {
      pub fn save_vcpu_states(
          &self,
      ) -> Result<Vec<crate::vstate::vcpu::VcpuState>, crate::persist::MicrovmStateError> {
@@ -7560,7 +5903,7 @@ index dfedd6474..ab044b3b1 100644
              handle
                  .send_event(crate::VcpuEvent::SaveState)
                  .map_err(MicrovmStateError::SignalVcpu)?;
-@@ -542,11 +603,176 @@ impl KvmVm {
+@@ -542,11 +599,176 @@ impl KvmVm {
          Ok(())
      }
  
@@ -7737,7 +6080,7 @@ index dfedd6474..ab044b3b1 100644
      /// Gets a reference to this [`KvmVm`]'s [`GuestMemoryMmap`] object
      pub fn guest_memory(&self) -> &GuestMemoryMmap {
          &self.common.guest_memory
-@@ -666,6 +892,13 @@ impl KvmVm {
+@@ -666,6 +888,13 @@ impl KvmVm {
      /// Register a device IRQ
      pub fn register_irq(&self, fd: &EventFd, gsi: u32) -> Result<(), errno::Error> {
          self.common.fd.register_irqfd(fd, gsi)?;
@@ -7752,7 +6095,7 @@ index dfedd6474..ab044b3b1 100644
          let mut entry = kvm_irq_routing_entry {
              gsi,
 diff --git a/src/vmm/tests/devices.rs b/src/vmm/tests/devices.rs
-index cfa847092..353f404ba 100644
+index cfa8470..353f404 100644
 --- a/src/vmm/tests/devices.rs
 +++ b/src/vmm/tests/devices.rs
 @@ -29,7 +29,7 @@ fn create_serial(
@@ -7764,742 +6107,3 @@ index cfa847092..353f404ba 100644
              },
              SerialOut::new(SerialOutInner::Stdout(std::io::stdout()), None),
          ),
-diff --git a/src/vmm/src/peer_cache.rs b/src/vmm/src/peer_cache.rs
-new file mode 100644
-index 000000000..77ab91f3b
---- /dev/null
-+++ b/src/vmm/src/peer_cache.rs
-@@ -0,0 +1,733 @@
-+// SPDX-License-Identifier: Apache-2.0
-+//! Opt-in functional experiment: static CXL VMs, immortal donor folios.
-+//! No image prefill, tier changes, handoff, reclamation, or async block I/O.
-+//! Dedicated persistent virtio-vsock guest RPC and reusable bounded TCP.
-+use crate::vstate::memory::{GuestMemoryExtension, GuestMemoryMmap};
-+use serde::{Deserialize, Serialize};
-+use serde_json::{json, Value};
-+use std::fs::{File, OpenOptions};
-+use std::io::{self, BufRead, BufReader, Read, Seek, SeekFrom, Write};
-+use std::net::{SocketAddr, TcpListener, TcpStream};
-+use std::os::fd::AsRawFd;
-+use std::os::unix::net::UnixStream;
-+use std::sync::atomic::{AtomicUsize, Ordering};
-+use std::sync::{Mutex, OnceLock};
-+use std::time::{Duration, Instant};
-+use vm_memory::{Address, GuestAddress, GuestMemoryBackend, GuestMemoryRegion};
-+
-+const PAGE: u64 = 4096;
-+#[derive(Deserialize)]
-+#[serde(deny_unknown_fields)]
-+struct Config {
-+    image_id: String,
-+    listen: SocketAddr,
-+    peer: Option<SocketAddr>,
-+    ram_offset: u64,
-+    credit_offset: u64,
-+    credit_pages: u64,
-+    bloom_offset: u64,
-+    // Frozen immutable-file extent identity, [file offset, image offset, length].
-+    extents: Vec<[u64; 3]>,
-+    input: String,
-+    log: String,
-+    // None selects the old serial path only for controlled ablation.
-+    #[serde(default)]
-+    guest_socket: Option<String>,
-+    #[serde(default = "default_true")]
-+    reuse_tcp: bool,
-+    #[serde(default)]
-+    deny_backend: Vec<u64>,
-+}
-+fn default_true() -> bool { true }
-+#[repr(C)]
-+struct Entry {
-+    offset: u64,
-+    flags: u64,
-+}
-+#[repr(C)]
-+struct MapperConfig {
-+    abi: u64,
-+    phys_base: u64,
-+    device_bytes: u64,
-+    canonical_start: u64,
-+    canonical_bytes: u64,
-+    count: u64,
-+    entries: u64,
-+    credit_count: u64,
-+    credits: u64,
-+}
-+#[repr(C)]
-+struct PageMap {
-+    address: u64,
-+    first: u64,
-+    offset: u64,
-+}
-+#[repr(C)]
-+#[derive(Default, Serialize)]
-+struct Pte {
-+    pfn: u64,
-+    flags: u64,
-+}
-+#[repr(C)]
-+struct Audit {
-+    address: u64,
-+    count: u64,
-+    ptes: u64,
-+}
-+struct State {
-+    config: Config,
-+    mapper: File,
-+    base: usize,
-+    bytes: u64,
-+    device_bytes: u64,
-+    bloom: usize,
-+    sequence: Mutex<u64>,
-+    guest_link: Mutex<Option<UnixStream>>,
-+    peer_link: Mutex<PeerLink>,
-+}
-+static STATE: OnceLock<State> = OnceLock::new();
-+pub(crate) fn profile_start() -> Option<Instant> {
-+    static PROFILE: OnceLock<bool> = OnceLock::new();
-+    PROFILE.get_or_init(|| std::env::var_os("FC_PEER_PROFILE").is_some())
-+        .then(Instant::now)
-+}
-+fn elapsed(start: Option<Instant>) -> u64 {
-+    start.map_or(0, |v| v.elapsed().as_nanos() as u64)
-+}
-+#[derive(Default, Serialize)]
-+struct Timing {
-+    offset: u64,
-+    path: &'static str,
-+    bloom_ns: u64,
-+    connect_ns: u64,
-+    tcp_connects: u64,
-+    tcp_retries: u64,
-+    rpc_ns: u64,
-+    donor_rpc_ns: u64,
-+    guest_connect_ns: u64,
-+    donor_ioctl_ns: u64,
-+    publish_ns: u64,
-+    attach_ns: u64,
-+    total_ns: u64,
-+    #[serde(skip)]
-+    start: Option<Instant>,
-+}
-+impl Drop for Timing {
-+    fn drop(&mut self) {
-+        if self.start.is_some() {
-+            self.total_ns = elapsed(self.start);
-+            eprintln!("PEER_LATENCY {}", serde_json::to_string(self).unwrap());
-+        }
-+    }
-+}
-+pub(crate) fn profile_backend(offset: u64, bytes: u32, start: Option<Instant>) {
-+    if start.is_some() {
-+        let ns = elapsed(start);
-+        eprintln!("PEER_BACKEND_LATENCY {}", json!({"offset":offset,"bytes":bytes,"backend_ns":ns}));
-+    }
-+}
-+fn invalid(s: &str) -> io::Error {
-+    io::Error::new(io::ErrorKind::InvalidInput, s)
-+}
-+fn ioctl<T>(fd: &File, nr: u8, read: bool, arg: &mut T) -> io::Result<()> {
-+    let cmd = 0x40000000u64
-+        | if read { 0x80000000 } else { 0 }
-+        | ((std::mem::size_of::<T>() as u64) << 16)
-+        | (u64::from(b'P') << 8)
-+        | u64::from(nr);
-+    if unsafe { libc::ioctl(fd.as_raw_fd(), cmd as _, arg) } < 0 {
-+        Err(io::Error::last_os_error())
-+    } else {
-+        Ok(())
-+    }
-+}
-+fn geometry() -> io::Result<(u64, u64)> {
-+    let read = |field: &str| -> io::Result<u64> {
-+        let text = std::fs::read_to_string(format!("/sys/bus/dax/devices/dax0.0/{field}"))?;
-+        let s = text.trim();
-+        if let Some(h) = s.strip_prefix("0x") {
-+            u64::from_str_radix(h, 16)
-+        } else {
-+            s.parse()
-+        }
-+        .map_err(io::Error::other)
-+    };
-+    if read("align")? != PAGE {
-+        return Err(invalid("peer requires 4KiB DAX"));
-+    }
-+    Ok((read("resource")?, read("size")?))
-+}
-+pub(crate) fn initialize(mem: &GuestMemoryMmap) -> io::Result<()> {
-+    let Ok(path) = std::env::var("FC_PEER_CACHE_CONFIG") else {
-+        return Ok(());
-+    };
-+    if STATE.get().is_some()
-+        || crate::pool_memory::enabled()
-+        || std::env::var("FC_DAX_RAM").as_deref() != Ok("/dev/dax0.0")
-+        || std::env::var_os("FC_DAX_DIRECT").is_some()
-+    {
-+        return Err(invalid("peer static-tier mode only"));
-+    }
-+    let config: Config = serde_json::from_reader(File::open(path)?)?;
-+    if config.image_id.len() != 64 || !config.image_id.bytes().all(|b| b.is_ascii_hexdigit()) {
-+        return Err(invalid("image identity"));
-+    }
-+    let region = mem.iter().next().ok_or_else(|| invalid("RAM missing"))?;
-+    if mem.iter().count() != 1 || region.start_addr().raw_value() != 0 || region.len() % PAGE != 0 {
-+        return Err(invalid("peer needs one aligned RAM region"));
-+    }
-+    let bytes = region.len();
-+    let base = region.as_ptr() as usize;
-+    let (phys, device_bytes) = geometry()?;
-+    let ranges = [
-+        (config.ram_offset, bytes),
-+        (
-+            config.credit_offset,
-+            config
-+                .credit_pages
-+                .checked_mul(PAGE)
-+                .ok_or_else(|| invalid("credits overflow"))?,
-+        ),
-+        (config.bloom_offset, PAGE),
-+    ];
-+    if config.credit_pages == 0
-+        || config.credit_pages > 1 << 20
-+        || bytes / PAGE > 1 << 20
-+        || std::env::var("FC_DAX_OFFSET")
-+            .ok()
-+            .and_then(|s| s.parse::<u64>().ok())
-+            != Some(config.ram_offset)
-+    {
-+        return Err(invalid("RAM/credit configuration"));
-+    }
-+    for (i, (start, len)) in ranges.iter().enumerate() {
-+        if start % PAGE != 0 || *start > device_bytes || *len > device_bytes - start {
-+            return Err(invalid("DAX range"));
-+        }
-+        for (s, l) in &ranges[..i] {
-+            if *start < s + l && *s < start + len {
-+                return Err(invalid("overlapping DAX ranges"));
-+            }
-+        }
-+    }
-+    let entries: Vec<_> = (0..bytes / PAGE)
-+        .map(|i| Entry {
-+            offset: config.ram_offset + i * PAGE,
-+            flags: 0,
-+        })
-+        .collect();
-+    let credits: Vec<_> = (0..config.credit_pages)
-+        .map(|i| config.credit_offset + i * PAGE)
-+        .collect();
-+    let mapper = OpenOptions::new()
-+        .read(true)
-+        .write(true)
-+        .open("/dev/cxl_pool")?;
-+    let mut cfg = MapperConfig {
-+        abi: 1,
-+        phys_base: phys,
-+        device_bytes,
-+        canonical_start: 0,
-+        canonical_bytes: 0,
-+        count: bytes / PAGE,
-+        entries: entries.as_ptr() as u64,
-+        credit_count: config.credit_pages,
-+        credits: credits.as_ptr() as u64,
-+    };
-+    ioctl(&mapper, 0x70, false, &mut cfg)?;
-+    let dax = OpenOptions::new()
-+        .read(true)
-+        .write(true)
-+        .open("/dev/dax0.0")?;
-+    let bloom = unsafe {
-+        libc::mmap(
-+            std::ptr::null_mut(),
-+            PAGE as usize,
-+            libc::PROT_READ | libc::PROT_WRITE,
-+            libc::MAP_SHARED,
-+            dax.as_raw_fd(),
-+            config.bloom_offset as libc::off_t,
-+        )
-+    };
-+    if bloom == libc::MAP_FAILED {
-+        return Err(io::Error::last_os_error());
-+    }
-+    // Same existing private CXL frames. This bootstrap copies no guest RAM/image.
-+    let mapped = unsafe {
-+        libc::mmap(
-+            base as *mut _,
-+            bytes as usize,
-+            libc::PROT_READ | libc::PROT_WRITE,
-+            libc::MAP_SHARED | libc::MAP_FIXED,
-+            mapper.as_raw_fd(),
-+            0,
-+        )
-+    };
-+    if mapped == libc::MAP_FAILED {
-+        return Err(io::Error::last_os_error());
-+    }
-+    let listener = TcpListener::bind(config.listen)?;
-+    STATE
-+        .set(State {
-+            config,
-+            mapper,
-+            base,
-+            bytes,
-+            device_bytes,
-+            bloom: bloom as usize,
-+            sequence: Mutex::new(0),
-+            guest_link: Mutex::new(None),
-+            peer_link: Mutex::new(PeerLink::default()),
-+        })
-+        .map_err(|_| invalid("peer initialized twice"))?;
-+    std::thread::Builder::new()
-+        .name("peer-cache".into())
-+        .spawn(move || {
-+            static CLIENTS: AtomicUsize = AtomicUsize::new(0);
-+            struct Client;
-+            impl Drop for Client {
-+                fn drop(&mut self) { CLIENTS.fetch_sub(1, Ordering::Relaxed); }
-+            }
-+            for stream in listener.incoming().flatten() {
-+                // Idle persistent peers must not block audit/advertise clients.
-+                if CLIENTS.fetch_update(Ordering::Relaxed, Ordering::Relaxed,
-+                    |n| (n < 16).then_some(n + 1)).is_err() { continue; }
-+                if std::thread::Builder::new().name("peer-rpc".into()).spawn(move || {
-+                    let _client = Client;
-+                    let _ = stream.set_nodelay(true);
-+                    let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
-+                    let mut reader = BufReader::new(stream);
-+                    loop {
-+                        // Block on readiness while idle; bound reads after the first byte.
-+                        let _ = reader.get_mut().set_read_timeout(None);
-+                        if !matches!(reader.fill_buf(), Ok(bytes) if !bytes.is_empty()) { break; }
-+                        let _ = reader.get_mut().set_read_timeout(Some(Duration::from_secs(2)));
-+                        let Ok(request) = read_json(&mut reader) else { break; };
-+                        let keep = request["keep_alive"] == true;
-+                        let id = request["id"].clone();
-+                        let mut answer = serve(STATE.get().unwrap(), request)
-+                            .unwrap_or_else(|e| json!({"found":false,"error":e.to_string()}));
-+                        if !id.is_null() { answer["id"] = id; }
-+                        if write_json(reader.get_mut(), &answer).is_err() || !keep { break; }
-+                    }
-+                }).is_err() { CLIENTS.fetch_sub(1, Ordering::Relaxed); }
-+            }
-+        })?;
-+    eprintln!("PEER_INIT ram_bytes={bytes} canonical_prefill_bytes=0");
-+    Ok(())
-+}
-+fn read_json<R: BufRead>(reader: &mut R) -> io::Result<Value> {
-+    let mut line = String::new();
-+    reader.take(4096).read_line(&mut line)?;
-+    if !line.ends_with('\n') {
-+        return Err(invalid("peer message too long/incomplete"));
-+    }
-+    serde_json::from_str(&line).map_err(io::Error::other)
-+}
-+fn write_json(writer: &mut impl Write, value: &Value) -> io::Result<()> {
-+    let mut bytes = serde_json::to_vec(value).map_err(io::Error::other)?;
-+    bytes.push(b'\n');
-+    writer.write_all(&bytes)
-+}
-+#[derive(Default)]
-+struct PeerLink {
-+    stream: Option<BufReader<TcpStream>>,
-+    sequence: u64,
-+}
-+impl PeerLink {
-+    fn lookup(&mut self, peer: SocketAddr, image: &str, offset: u64,
-+              reuse: bool, timing: &mut Timing) -> io::Result<Value> {
-+        self.sequence = self.sequence.checked_add(1).ok_or_else(|| invalid("RPC sequence exhausted"))?;
-+        let id = self.sequence;
-+        if !reuse { self.stream = None; }
-+        let attempts = if self.stream.is_some() { 2 } else { 1 };
-+        let mut error = invalid("peer unavailable");
-+        for attempt in 0..attempts {
-+            timing.tcp_retries = attempt;
-+            let result = (|| {
-+                if self.stream.is_none() {
-+                    let start = profile_start();
-+                    let stream = TcpStream::connect_timeout(&peer, Duration::from_millis(100))?;
-+                    timing.connect_ns += elapsed(start);
-+                    timing.tcp_connects += 1;
-+                    stream.set_nodelay(true)?;
-+                    stream.set_read_timeout(Some(Duration::from_secs(3)))?;
-+                    stream.set_write_timeout(Some(Duration::from_secs(1)))?;
-+                    self.stream = Some(BufReader::new(stream));
-+                    eprintln!("PEER_TCP_CONNECT peer={peer}");
-+                }
-+                let stream = self.stream.as_mut().unwrap();
-+                write_json(stream.get_mut(), &json!({"op":"lookup","id":id,
-+                    "image":image,"offset":offset,"keep_alive":reuse}))?;
-+                read_json(stream)
-+            })();
-+            match result {
-+                Ok(answer) => {
-+                    if answer["id"].as_u64() != Some(id) {
-+                        self.stream = None;
-+                        return Err(invalid("peer response ID mismatch"));
-+                    }
-+                    if !reuse { self.stream = None; }
-+                    return Ok(answer);
-+                }
-+                Err(e) => { self.stream = None; error = e; }
-+            }
-+        }
-+        Err(error)
-+    }
-+}
-+fn bit_positions(image: &str, offset: u64) -> [usize; 7] {
-+    let mut hash = 0xcbf29ce484222325u64;
-+    for b in image.bytes().chain(offset.to_le_bytes()) {
-+        hash = (hash ^ u64::from(b)).wrapping_mul(0x100000001b3);
-+    }
-+    std::array::from_fn(|i| {
-+        let mut x = hash.wrapping_add((i as u64).wrapping_mul(0x9e3779b97f4a7c15));
-+        x = (x ^ (x >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
-+        x = (x ^ (x >> 27)).wrapping_mul(0x94d049bb133111eb);
-+        ((x ^ (x >> 31)) % (PAGE * 8)) as usize
-+    })
-+}
-+fn bloom(s: &State, offset: u64, insert: bool) -> bool {
-+    bit_positions(&s.config.image_id, offset)
-+        .iter()
-+        .all(|bit| unsafe {
-+            let ptr = (s.bloom + bit / 8) as *mut u8;
-+            let mask = 1 << (bit % 8);
-+            let old = std::ptr::read_volatile(ptr);
-+            if insert {
-+                std::ptr::write_volatile(ptr, old | mask);
-+                true
-+            } else {
-+                old & mask != 0
-+            }
-+        })
-+}
-+fn map_page(s: &State, gpa: u64, offset: u64, publish: bool) -> io::Result<u64> {
-+    if gpa % PAGE != 0 || gpa >= s.bytes {
-+        return Err(invalid("unaligned/outside GPA"));
-+    }
-+    let mut p = PageMap {
-+        address: s.base as u64 + gpa,
-+        first: gpa / PAGE,
-+        offset,
-+    };
-+    ioctl(&s.mapper, if publish { 0x7b } else { 0x7c }, true, &mut p)?;
-+    Ok(p.offset)
-+}
-+fn file_page(s: &State, offset: u64) -> Option<u64> {
-+    s.config.extents.iter().find_map(|[file, disk, len]| {
-+        if offset >= *disk && offset.checked_add(PAGE)? <= disk.checked_add(*len)? {
-+            Some((file + offset - disk) / PAGE)
-+        } else {
-+            None
-+        }
-+    })
-+}
-+const LOOKUP_MAGIC: u64 = 0x5043434800000001;
-+fn decode_guest_reply(bytes: &[u8; 48], id: u64, offset: u64,
-+                      timing: &mut Timing) -> io::Result<Option<u64>> {
-+    let words: [u64; 6] = std::array::from_fn(|i|
-+        u64::from_le_bytes(bytes[i*8..i*8+8].try_into().unwrap()));
-+    if words[0] != LOOKUP_MAGIC || words[1] != id || words[4] != offset {
-+        return Err(invalid("guest reply identity mismatch"));
-+    }
-+    timing.donor_ioctl_ns = words[5];
-+    match words[2] {
-+        0 => Ok(None),
-+        1 if words[3] % PAGE == 0 => Ok(Some(words[3])),
-+        _ => Err(invalid("guest lookup failed/invalid GPA")),
-+    }
-+}
-+fn guest_lookup(s: &State, offset: u64, timing: &mut Timing) -> io::Result<Option<u64>> {
-+    let Some(path) = &s.config.guest_socket else {
-+        return guest_lookup_serial(s, offset, timing);
-+    };
-+    let Some(page) = file_page(s, offset) else { return Ok(None); };
-+    let mut seq = s.sequence.lock().unwrap();
-+    *seq = seq.checked_add(1).ok_or_else(|| invalid("guest sequence exhausted"))?;
-+    let id = *seq;
-+    let mut link = s.guest_link.lock().unwrap();
-+    let result = (|| {
-+        if link.is_none() {
-+            let start = profile_start();
-+            let mut stream = UnixStream::connect(path)?;
-+            stream.set_read_timeout(Some(Duration::from_secs(2)))?;
-+            stream.set_write_timeout(Some(Duration::from_secs(1)))?;
-+            stream.write_all(b"CONNECT 19000\n")?;
-+            let mut hello = String::new();
-+            BufReader::new(&mut stream).take(64).read_line(&mut hello)?;
-+            if !hello.ends_with('\n') || hello.strip_prefix("OK ")
-+                .and_then(|v| v.trim_end().parse::<u32>().ok()).is_none() {
-+                return Err(invalid("guest channel handshake"));
-+            }
-+            *link = Some(stream);
-+            timing.guest_connect_ns = elapsed(start);
-+            eprintln!("PEER_GUEST_CONNECT transport=vsock");
-+        }
-+        let stream = link.as_mut().unwrap();
-+        let mut request = [0u8; 32];
-+        for (i, value) in [LOOKUP_MAGIC, id, page, offset].iter().enumerate() {
-+            request[i*8..i*8+8].copy_from_slice(&value.to_le_bytes());
-+        }
-+        stream.write_all(&request)?;
-+        let mut answer = [0u8; 48];
-+        stream.read_exact(&mut answer)?;
-+        decode_guest_reply(&answer, id, offset, timing)
-+    })();
-+    // Drop a partial/timed-out stream so stale bytes cannot match a later request.
-+    if result.is_err() { *link = None; }
-+    result
-+}
-+fn guest_lookup_serial(s: &State, offset: u64, timing: &mut Timing) -> io::Result<Option<u64>> {
-+    let Some(page) = file_page(s, offset) else {
-+        return Ok(None);
-+    };
-+    let mut seq = s.sequence.lock().unwrap();
-+    *seq += 1;
-+    let id = *seq;
-+    let mut log = File::open(&s.config.log)?;
-+    log.seek(SeekFrom::End(0))?;
-+    let mut input = OpenOptions::new()
-+        .write(true)
-+        .custom_flags(libc::O_NONBLOCK)
-+        .open(&s.config.input)?;
-+    writeln!(input, "lookup {id} {page} {offset}")?;
-+    let started = Instant::now();
-+    let mut buffered = String::new();
-+    while started.elapsed() < Duration::from_secs(2) {
-+        log.read_to_string(&mut buffered)?;
-+        for line in buffered.lines() {
-+            if let Ok(v) = serde_json::from_str::<Value>(line) {
-+                if v["event"] == "peer_lookup" && v["id"].as_u64() == Some(id) {
-+                    timing.donor_ioctl_ns = v["lookup_ns"].as_u64().unwrap_or(0);
-+                    if v["ok"] != true {
-+                        return Err(invalid("guest lookup failed"));
-+                    }
-+                    if v["found"].as_u64() == Some(0) {
-+                        return Ok(None);
-+                    }
-+                    if v["disk_offset"].as_u64() != Some(offset) {
-+                        return Err(invalid("guest block mismatch"));
-+                    }
-+                    return v["gpa"]
-+                        .as_u64()
-+                        .map(Some)
-+                        .ok_or_else(|| invalid("guest GPA missing"));
-+                }
-+            }
-+        }
-+        std::thread::sleep(Duration::from_millis(1));
-+    }
-+    Err(io::Error::new(
-+        io::ErrorKind::TimedOut,
-+        "guest lookup timeout",
-+    ))
-+}
-+use std::os::unix::fs::OpenOptionsExt;
-+fn serve(s: &State, q: Value) -> io::Result<Value> {
-+    if q["op"] == "audit" {
-+        let gpa = q["gpa"].as_u64().ok_or_else(|| invalid("audit GPA"))?;
-+        if gpa % PAGE != 0 || gpa >= s.bytes {
-+            return Err(invalid("audit range"));
-+        }
-+        let mut pte = Pte::default();
-+        let mut a = Audit {
-+            address: s.base as u64 + gpa,
-+            count: 1,
-+            ptes: (&mut pte as *mut Pte) as u64,
-+        };
-+        ioctl(&s.mapper, 0x74, true, &mut a)?;
-+        return Ok(json!({"pte":pte}));
-+    }
-+    if q["image"] != s.config.image_id {
-+        return Ok(json!({"found":false}));
-+    }
-+    let offset = q["offset"]
-+        .as_u64()
-+        .ok_or_else(|| invalid("image offset"))?;
-+    if offset % PAGE != 0 || !(q["op"] == "lookup" || q["op"] == "advertise") {
-+        return Err(invalid("peer request"));
-+    }
-+    let mut timing = Timing { offset, path: "donor", ..Default::default() };
-+    let start = profile_start();
-+    let gpa = guest_lookup(s, offset, &mut timing)?;
-+    timing.donor_rpc_ns = elapsed(start);
-+    let Some(gpa) = gpa else {
-+        eprintln!("PEER_DONOR_MISS offset={offset}");
-+        let mut answer = json!({"found":false});
-+        if start.is_some() { answer["timing"] = serde_json::to_value(&timing).unwrap(); }
-+        return Ok(answer);
-+    };
-+    let start = profile_start();
-+    let frame = map_page(s, gpa, 0, true)?;
-+    timing.publish_ns = elapsed(start);
-+    if q["op"] == "advertise" {
-+        bloom(s, offset, true);
-+    }
-+    eprintln!("PEER_DONOR_HIT offset={offset} gpa={gpa} frame={frame}");
-+    let mut answer = json!({"found":true,"offset":offset,"image":s.config.image_id,"frame":frame,"donor_gpa":gpa});
-+    if start.is_some() { answer["timing"] = serde_json::to_value(&timing).unwrap(); }
-+    Ok(answer)
-+}
-+// Return true only when a whole page was remapped. All failures before remap
-+// fall back; an ioctl failure after possible mutation is fatal, never silently read over it.
-+pub(crate) fn read(
-+    mem: &GuestMemoryMmap,
-+    image: Option<&str>,
-+    offset: u64,
-+    gpa: u64,
-+    len: u32,
-+    status: u64,
-+) -> io::Result<bool> {
-+    let Some(s) = STATE.get() else {
-+        return Ok(false);
-+    };
-+    let Some(peer) = s.config.peer else {
-+        return Ok(false);
-+    };
-+    if image != Some(s.config.image_id.as_str())
-+        || len != 4096
-+        || gpa % PAGE != 0
-+        || offset % PAGE != 0
-+        || gpa >= s.bytes
-+        || status / PAGE == gpa / PAGE
-+        || file_page(s, offset).is_none()
-+    {
-+        return Ok(false);
-+    }
-+    let mut timing = Timing { offset, path: "bloom_negative", start: profile_start(), ..Default::default() };
-+    let start = profile_start();
-+    let present = bloom(s, offset, false);
-+    timing.bloom_ns = elapsed(start);
-+    if !present {
-+        eprintln!("PEER_BLOOM_NEGATIVE offset={offset}");
-+        return Ok(false);
-+    }
-+    timing.path = "lookup_error";
-+    let rpc_start = profile_start();
-+    let answer = s.peer_link.lock().unwrap().lookup(peer, &s.config.image_id, offset,
-+        s.config.reuse_tcp, &mut timing);
-+    timing.rpc_ns = elapsed(rpc_start);
-+    let Ok(q) = answer else {
-+        eprintln!("PEER_LOOKUP_ERROR offset={offset}");
-+        return Ok(false);
-+    };
-+    timing.donor_rpc_ns = q["timing"]["donor_rpc_ns"].as_u64().unwrap_or(0);
-+    timing.guest_connect_ns = q["timing"]["guest_connect_ns"].as_u64().unwrap_or(0);
-+    timing.donor_ioctl_ns = q["timing"]["donor_ioctl_ns"].as_u64().unwrap_or(0);
-+    timing.publish_ns = q["timing"]["publish_ns"].as_u64().unwrap_or(0);
-+    if q["error"].is_string() {
-+        eprintln!("PEER_LOOKUP_ERROR offset={offset} error={}", q["error"]);
-+        return Ok(false);
-+    }
-+    if q["found"] != true || q["image"] != s.config.image_id || q["offset"].as_u64() != Some(offset)
-+    {
-+        timing.path = "exact_miss";
-+        eprintln!("PEER_EXACT_MISS offset={offset}");
-+        return Ok(false);
-+    }
-+    let frame = q["frame"]
-+        .as_u64()
-+        .ok_or_else(|| invalid("peer frame missing"))?;
-+    if frame % PAGE != 0 || frame >= s.device_bytes {
-+        return Err(invalid("peer frame bounds"));
-+    }
-+    let start = profile_start();
-+    map_page(s, gpa, frame, false)?;
-+    mem.mark_dirty(GuestAddress(gpa), 4096);
-+    timing.attach_ns = elapsed(start);
-+    timing.path = "shared_hit";
-+    eprintln!("PEER_READ_HIT offset={offset} gpa={gpa} frame={frame} bytes=4096 backend_bytes=0");
-+    Ok(true)
-+}
-+pub(crate) fn backend_denied(offset: u64) -> bool {
-+    STATE
-+        .get()
-+        .is_some_and(|s| s.config.deny_backend.contains(&offset))
-+}
-+pub(crate) fn enabled() -> bool {
-+    static ENABLED: OnceLock<bool> = OnceLock::new();
-+    *ENABLED.get_or_init(|| std::env::var_os("FC_PEER_CACHE_CONFIG").is_some())
-+}
-+
-+#[cfg(test)]
-+mod tests {
-+    use super::*;
-+    use std::io::Cursor;
-+
-+    #[test]
-+    fn framed_json_keeps_following_reply_and_bounds_partial_frames() {
-+        let mut stream = BufReader::new(Cursor::new(b"{\"id\":1}\n{\"id\":2}\n"));
-+        assert_eq!(read_json(&mut stream).unwrap()["id"], 1);
-+        assert_eq!(read_json(&mut stream).unwrap()["id"], 2);
-+        assert!(read_json(&mut stream).is_err());
-+        let mut oversized = BufReader::new(Cursor::new(vec![b' '; 4097]));
-+        assert!(read_json(&mut oversized).is_err());
-+        let mut partial = BufReader::new(Cursor::new(b"{\"id\":"));
-+        assert!(read_json(&mut partial).is_err());
-+    }
-+
-+    #[test]
-+    fn guest_reply_rejects_stale_identity_errors_and_unaligned_gpa() {
-+        let encode = |words: [u64; 6]| -> [u8; 48] {
-+            std::array::from_fn(|i| words[i / 8].to_le_bytes()[i % 8])
-+        };
-+        let valid = [LOOKUP_MAGIC, 9, 1, 4096, 8192, 17];
-+        let mut timing = Timing::default();
-+        assert_eq!(decode_guest_reply(&encode(valid), 9, 8192, &mut timing).unwrap(), Some(4096));
-+        assert_eq!(timing.donor_ioctl_ns, 17);
-+        for (field, value) in [(0, 0), (1, 8), (2, 2), (2, 3), (3, 4097), (4, 4096)] {
-+            let mut invalid = valid;
-+            invalid[field] = value;
-+            assert!(decode_guest_reply(&encode(invalid), 9, 8192, &mut timing).is_err());
-+        }
-+        let mut absent = valid;
-+        absent[2] = 0;
-+        assert_eq!(decode_guest_reply(&encode(absent), 9, 8192, &mut timing).unwrap(), None);
-+    }
-+
-+    #[test]
-+    fn tcp_reuses_connection_and_recovers_once_after_peer_close() {
-+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-+        let address = listener.local_addr().unwrap();
-+        let server = std::thread::spawn(move || {
-+            for _ in 0..2 {
-+                let (stream, _) = listener.accept().unwrap();
-+                stream.set_read_timeout(Some(Duration::from_secs(3))).unwrap();
-+                let mut reader = BufReader::new(stream);
-+                for _ in 0..2 {
-+                    let q = read_json(&mut reader).unwrap();
-+                    assert_eq!(q["keep_alive"], true);
-+                    write_json(reader.get_mut(), &json!({"id":q["id"],"found":false})).unwrap();
-+                }
-+                reader.get_mut().shutdown(std::net::Shutdown::Both).unwrap();
-+            }
-+        });
-+        let mut link = PeerLink::default();
-+        for (i, connects) in [1, 0, 1, 0].iter().enumerate() {
-+            let mut timing = Timing::default();
-+            let answer = link.lookup(address, "image", i as u64 * PAGE, true, &mut timing).unwrap();
-+            assert_eq!(answer["id"], i + 1);
-+            assert_eq!(timing.tcp_connects, *connects);
-+            assert_eq!(timing.tcp_retries, if i == 2 { 1 } else { 0 });
-+        }
-+        server.join().unwrap();
-+    }
-+
-+    #[test]
-+    fn tcp_response_id_mismatch_discards_stream() {
-+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-+        let address = listener.local_addr().unwrap();
-+        let server = std::thread::spawn(move || {
-+            let mut reader = BufReader::new(listener.accept().unwrap().0);
-+            let q = read_json(&mut reader).unwrap();
-+            write_json(reader.get_mut(), &json!({"id":q["id"].as_u64().unwrap()+1,"found":true})).unwrap();
-+        });
-+        let mut link = PeerLink::default();
-+        assert!(link.lookup(address, "image", 0, true, &mut Timing::default()).is_err());
-+        assert!(link.stream.is_none());
-+        server.join().unwrap();
-+    }
-+
-+}

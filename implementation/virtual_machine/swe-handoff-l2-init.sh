@@ -24,4 +24,4 @@ ip link set lo up
 hostname swe-microvm
 printf '127.0.0.1 localhost swe-microvm\n::1 localhost ip6-localhost ip6-loopback\n' > /newroot/etc/hosts
 stty -F /dev/ttyS0 -echo
-exec /bin/busybox sh /lab/swe-pool-guest-run.sh </dev/ttyS0 >/dev/ttyS0 2>&1
+exec /bin/busybox sh /lab/swe-handoff-guest-run.sh </dev/ttyS0 >/dev/ttyS0 2>&1

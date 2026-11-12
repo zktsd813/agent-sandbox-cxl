@@ -6,11 +6,15 @@ import sys
 import tempfile
 import unittest
 
-from verify_swe_runtime import verify
+from verify_swe_handoff import verify
 
 
 class InflightEvidenceTest(unittest.TestCase):
     source = None
+
+    def setUp(self):
+        if self.source is None:
+            self.skipTest('Pass a completed handoff trial directory for raw evidence mutation tests')
 
     @staticmethod
     def command(report):

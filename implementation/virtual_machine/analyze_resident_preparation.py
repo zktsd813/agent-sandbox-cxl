@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 import statistics
 
-from verify_swe_pool import verify
+from verify_swe_handoff import verify
 
 NFS3 = ('NULL','GETATTR','SETATTR','LOOKUP','ACCESS','READLINK','READ','WRITE',
         'CREATE','MKDIR','SYMLINK','MKNOD','REMOVE','RMDIR','RENAME','LINK',
@@ -46,7 +46,7 @@ def analyze(path):
         'unattributed_control_ms':cold['unattributed_control_ns']/1e6}
     if 'native_boot' in cold:
         boot=cold['native_boot']
-        before,after=boot['nfs_proc3_before'],boot['nfs_proc3_after']
+        before,after=boot.get('nfs_proc3_before'),boot.get('nfs_proc3_after')
         result['native_vmm_ms']={k:v/1e6 for k,v in boot.items() if k.endswith('_ns')}
         if 'servers' in cold:
             result['native_server_ms']={role:s['native_boot']['native_ready_ns']/1e6 for role,s in cold['servers'].items()}
@@ -58,16 +58,17 @@ def analyze(path):
             return list(map(int,lines[0][2:]))
         before=counters(cold['nfs_counters']['before_file'])
         after=counters(cold['nfs_counters']['after_file'])
-    result['prepare_nfs_rpc_delta']={k:a-b for k,a,b in zip(NFS3,after,before)}
+    result['prepare_nfs_rpc_delta']=({k:a-b for k,a,b in zip(NFS3,after,before)}
+                                      if before is not None and after is not None else None)
     fast=[t for t in hops if t.get('fast_control')]
-    result['fast_samples']=[{'generation':t['token']['generation'],
-        'first_import':not t['import_event'].get('resident',False),
+    result['fast_samples']=[{'generation':t['destination_epoch'],
+        'first_import':t['destination_epoch']==1,
         **{k:v/1e6 for k,v in t['fast'].items() if k.endswith('_ns')}} for t in fast]
     result['fast_ms']={k[:-3]+'_ms':stats([t['fast'][k]/1e6 for t in fast])
         for k in ('handoff_ns','guest_ack_ns','connection_prepare_ns','request_ns',
                   'request_to_resume_response_ns','pause_to_resume_response_ns')
         if all(k in t['fast'] for t in fast)}
-    result['fast_export_import_api_ms']=stats([sum(t[k]['response']['duration_us'] for k in ('export_api','attach_api'))/1000 for t in fast])
+    result['fast_export_import_api_ms']=stats([sum(a['duration_us'] for a in t['fast']['apis'].values())/1000 for t in fast])
     result['disk_properties_profiles']=[]
     for launch in report['launches']:
         if launch['role']!='B': continue
@@ -88,8 +89,8 @@ def main():
     result={'schema':'resident-preparation-audit-v1','baseline':analyze(args.baseline),'ready':analyze(args.ready),
         'notes':['All samples, including first visits and slow guest ACKs, retained.',
                  'Native preparation intervals are inside controller wall time; do not sum overlapping clocks.',
-                 'Full prewarm controller time includes console transfers, executable hash checks and resource audit.',
-                 'Request includes local and peer TCP connections, metadata transport and all five VMM APIs.',
+                 'Full prewarm controller time includes launch upload and native/server preparation.',
+                 'Request includes local relay, prepared peer transport and two native endpoint operations.',
                  'Resume response is API acceptance; guest serial ACK is a separate completion milestone.',
                  'No conventional RAM migration was measured in this comparison.']}
     if result['baseline']['vmm_sha256']!=result['ready']['vmm_sha256']:

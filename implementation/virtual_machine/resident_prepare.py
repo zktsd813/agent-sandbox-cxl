@@ -51,7 +51,7 @@ def main():
                 source_module=(args.kvm_module_dir/name).resolve(strict=True)
                 shutil.copy2(source_module,root/'modules'/name)
                 modules[name]={'path':str(source_module),'sha256':lab.sha256(source_module)}
-                original['inputs']['pool_kernel_modules'][name]=modules[name]['sha256']
+                original['inputs']['kvm_modules'][name]=modules[name]['sha256']
                 original['handoff']['inputs'][name]=modules[name]
             original['kvm_module_override']={'modules':modules,
                 'source_patch_sha256':lab.sha256(HERE/'kvm-dax-state.patch'),
@@ -62,7 +62,7 @@ def main():
                 guest=Path(nested);guest.chmod(0o755)
                 with (base/archive).open('rb') as stream:
                     subprocess.run(['cpio','-id','--quiet','--no-absolute-filenames'],cwd=guest,stdin=stream,check=True)
-                shutil.copy2(HERE/'swe-pool-guest-run.sh',guest/'lab/swe-pool-guest-run.sh')
+                shutil.copy2(HERE/'swe-handoff-guest-run.sh',guest/'lab/swe-handoff-guest-run.sh')
                 lab.pack_initramfs(guest,dest/archive)
                 shutil.copy2(dest/archive,root/'lab'/archive)
                 original['traces'][name]['initramfs_path']=str(dest/archive)
@@ -72,9 +72,8 @@ def main():
     vmm={'path':str(dest/'firecracker'),'sha256':lab.sha256(dest/'firecracker')}
     original['inputs']['firecracker']=vmm
     original['handoff']['inputs']['firecracker']=vmm
-    original['comparison']['patched']['sha256']=vmm['sha256']
     if not args.keep_guest_images:
-        original['source_hashes']['swe-pool-guest-run.sh']=lab.sha256(HERE/'swe-pool-guest-run.sh')
+        original['source_hashes']['swe-handoff-guest-run.sh']=lab.sha256(HERE/'swe-handoff-guest-run.sh')
     original['resident_control']={'source_sha256':lab.sha256(source),
         'wire_sha256':lab.sha256(HERE/'resident_wire.h'),
         'binary_sha256':lab.sha256(dest/'resident-control'),'build_argv':command,

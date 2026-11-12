@@ -22,19 +22,13 @@ HERE = Path(__file__).resolve().parent
 NAMES = ("gin-gonic__gin-3741", "php-cs-fixer__php-cs-fixer-8331",
          "micropython__micropython-13039")
 MODES = ("baseline", "state-only", "direct")
-SOURCES = ("experiment_sources.py", "swe_pool_run.py", "swe_pool_bench.py", "swe_pool_prepare.py",
-           "swe_pool_protocol.py", "verify_swe_pool.py", "verify_swe_runtime.py", "verify_pool_handles.py", "swe-pool-l2-init.sh",
-           "swe-pool-guest-run.sh", "guest-pool-cli.c", "guest-pool-uapi.h",
-           "guest-pool.c", "guest_pool_protocol.py", "pool_handoff_bench.py",
-           "pool_handoff_control.py", "pool_memory_module.c", "pool_memory_uapi.h",
-           "pool_bench.py", "pool_control.py", "home_storage_bench.py", "nfs_bench.py",
-           "pool_compare_bench.py", "pool_discard_bench.py", "trace_bench.py",
-           "trace_prepare.py", "trace-guest-run.sh", "verify_trace_results.py",
-           "verify_pool_handoff.py", "verify_pool_discard_protocol.py", "lab.py",
-           "shared_probe.c", "resident_fast.py", "resident_control.c", "resident_bootstrap.c", "resident_prepare.py", "analyze_resident_direct.py",
-           "analyze_resident_preparation.py", "control_rpc.c", "control_rpc.py", "guest-init.sh",
-           "resident_wire.h", "resident_proxy.py", "kernel_handoff_trace.py",
-           "firecracker.patch", "kvm-dax-state.patch", "kvm-dax-source.json")
+SOURCES = ("experiment_sources.py", "swe_handoff_run.py", "handoff_bench.py", "swe_handoff_prepare.py",
+    "verify_swe_handoff.py", "swe-handoff-l2-init.sh", "swe-handoff-guest-run.sh", "pool_memory_module.c",
+    "pool_memory_uapi.h", "home_storage_bench.py", "nfs_bench.py", "trace_bench.py", "trace_prepare.py",
+    "trace-guest-run.sh", "verify_trace_results.py", "lab.py", "shared_probe.c", "resident_fast.py",
+    "resident_control.c", "resident_bootstrap.c", "resident_prepare.py", "control_rpc.c", "control_rpc.py",
+    "guest-init.sh", "resident_wire.h", "resident_proxy.py", "kernel_handoff_trace.py",
+    "firecracker.patch", "kvm-dax-state.patch", "kvm-dax-source.json")
 
 
 def arguments():
@@ -49,17 +43,7 @@ def arguments():
     parser.add_argument("--memory-mib", type=int, default=2048)
     parser.add_argument("--restore-timing", action="store_true")
     parser.add_argument("--kernel-trace", action="store_true")
-    parser.add_argument("--resume-nokick", action="store_true")
-    parser.add_argument("--exec-request", action="store_true")
     parser.add_argument("--inflight-handoff-index", type=int)
-    parser.add_argument("--alternate-request", action="store_true")
-    parser.add_argument("--resident-direct", action="store_true")
-    parser.add_argument("--resident-fast-control", action="store_true")
-    parser.add_argument("--resident-ready-control", action="store_true")
-    parser.add_argument("--resident-native-control", action="store_true")
-    parser.add_argument("--resident-memory-control", action="store_true")
-    parser.add_argument("--immutable-nfs-cache", action="store_true",
-                        help="Remount the image filesystem readonly and allow 60s NFS attribute caching/nocto")
     parser.add_argument("--direct-profile-roundtrips", type=int, default=0)
     parser.add_argument("--keep-storage", action="store_true",
                         help="Retain each recorded private outer disk after its pair stops")
@@ -104,7 +88,7 @@ def main():
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     source_hashes, source_reference = record_sources(HERE, SOURCES)
-    suite = {"schema": "swe-pool-suite-v1", "result": "running",
+    suite = {"schema": "swe-handoff-suite-v1", "result": "running",
              "arguments": {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()},
              "fixture_manifest": manifest, "fixture_manifest_sha256": lab.sha256(manifest_path),
              "source_hashes": source_hashes, "source_reference": source_reference, "qemu_sha256": lab.sha256(qemu), "trials": [],
@@ -178,33 +162,17 @@ def main():
                 "--home-storage-image", str(assets / "storage.raw"), "--qemu", str(qemu)]
             if mode == "direct":
                 start.append("--dax-handoff")
-            bench = prefix + [str(HERE / "swe_pool_bench.py"), "--mode", mode, "--name", name,
+            bench = prefix + [str(HERE / "handoff_bench.py"), "--mode", mode, "--name", name,
                               "--memory-mib", str(args.memory_mib),
                               "--direct-profile-roundtrips", str(args.direct_profile_roundtrips)]
-            if mode == "direct" and args.resident_fast_control:
-                bench.append("--resident-fast-control")
-            if mode == "direct" and args.resident_ready_control:
-                bench.append("--resident-ready-control")
-            if mode == "direct" and args.resident_memory_control:
-                bench.append("--resident-memory-control")
-            if mode == "direct" and args.resident_native_control:
-                bench.append("--resident-native-control")
-            if mode == "direct" and args.resident_direct:
-                bench.extend(["--resident-direct", "--resident-repromote-handoff"])
+            if mode == "direct":
+                bench.append("--resident-repromote-handoff")
             if args.restore_timing:
                 bench.append("--restore-timing")
             if args.kernel_trace:
                 bench.append("--kernel-trace")
-            if args.resume_nokick and mode == 'direct':
-                bench.append('--resume-nokick')
-            if args.exec_request and mode == 'direct':
-                bench.append('--exec-request')
             if args.inflight_handoff_index is not None:
                 bench.extend(["--inflight-handoff-index", str(args.inflight_handoff_index)])
-            if args.alternate_request and mode == 'direct':
-                bench.append('--alternate-request')
-            if args.immutable_nfs_cache:
-                bench.append("--immutable-nfs-cache")
             save()
             failure = None
             try:
@@ -228,7 +196,7 @@ def main():
                     arm["config"] = {"file": trial_id + "-config.json", **record_file(run / "run.json")}
                     for source in sorted(run.glob("vm-*.log")):
                         shutil.copy2(source, output / (trial_id + "-" + source.name))
-                    reports = list(run.glob("swe-pool-*/report.json"))
+                    reports = list(run.glob("swe-handoff-*/report.json"))
                     if len(reports) == 1:
                         shutil.copytree(reports[0].parent, output / trial_id)
                         arm.update(report_file=trial_id + "/report.json", report_sha256=lab.sha256(reports[0]))
@@ -247,12 +215,12 @@ def main():
             if failure:
                 raise failure
             if "report_file" not in arm:
-                raise RuntimeError("Expected exactly one SWE pooling report for " + trial_id)
+                raise RuntimeError("Expected exactly one SWE handoff report for " + trial_id)
             if args.defer_verification:
                 arm["result"] = "execution-passed-unverified"
             else:
                 verification = output / (trial_id + "-verification.json")
-                arm["verification"] = command([sys.executable, str(HERE / "verify_swe_pool.py"),
+                arm["verification"] = command([sys.executable, str(HERE / "verify_swe_handoff.py"),
                     str(output / arm["report_file"]), "--output", str(verification)], env,
                     output / (trial_id + "-verification.log"))
                 if arm["verification"]["returncode"]:
@@ -261,12 +229,12 @@ def main():
                 arm["result"] = "passed"
             release_storage(arm)
             save()
-            print("SWE_POOL_TRIAL_DONE " + trial_id, flush=True)
+            print("SWE_HANDOFF_TRIAL_DONE " + trial_id, flush=True)
         suite["result"] = "execution-passed-unverified" if args.defer_verification else "passed"
         save()
         if not args.defer_verification:
             verification = output / "suite-verification.json"
-            suite["verification"] = command([sys.executable, str(HERE / "verify_swe_pool.py"),
+            suite["verification"] = command([sys.executable, str(HERE / "verify_swe_handoff.py"),
                 "--suite", str(output / "report.json"), "--output", str(verification)], os.environ,
                 output / "suite-verification.log")
             if suite["verification"]["returncode"]:
@@ -279,7 +247,7 @@ def main():
         raise
     finally:
         save()
-        print("SWE_POOL_SUITE " + str(output / "report.json"), flush=True)
+        print("SWE_HANDOFF_SUITE " + str(output / "report.json"), flush=True)
 
 
 if __name__ == "__main__":

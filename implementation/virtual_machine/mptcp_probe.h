@@ -4,7 +4,10 @@
 #define LAB_MPTCP_PROBE_H
 #include <linux/genetlink.h>
 #include <linux/netlink.h>
-#include "../linux/include/uapi/linux/mptcp.h"
+#ifndef CXL_MPTCP_HEADER
+#define CXL_MPTCP_HEADER "../linux/include/uapi/linux/mptcp.h"
+#endif
+#include CXL_MPTCP_HEADER
 
 #ifndef SOL_MPTCP
 #define SOL_MPTCP 284

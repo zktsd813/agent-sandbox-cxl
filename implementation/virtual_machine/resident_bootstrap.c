@@ -54,12 +54,10 @@ static void file(const char *name, const char *data) {
     if (close(fd)) die("close owned file");
 }
 int main(int argc, char **argv) {
-    need(argc == 3 || (argc == 4 && !strcmp(argv[3], "--no-prepare")),
-         "usage: resident-bootstrap DIRECTORY LAUNCH_SCRIPT [--no-prepare]");
-    int prepare_disk = argc == 3;
-    need(!strncmp(argv[1], "/run/swe-pool-", 14) && strlen(argv[1]) < 90,
+    need(argc == 3, "usage: resident-bootstrap DIRECTORY LAUNCH_SCRIPT");
+    need(!strncmp(argv[1], "/run/swe-handoff-", 17) && strlen(argv[1]) < 90,
          "owned bounded directory required");
-    need(!strncmp(argv[2], "/run/swe-pool-", 14), "owned launch script required");
+    need(!strncmp(argv[2], "/run/swe-handoff-", 17), "owned launch script required");
     uint64_t begin = now();
     if (mkdir(argv[1], 0700)) die("fresh directory");
     char input[128], log[128], error[128], socket_name[108], pidfile[128];
@@ -113,14 +111,6 @@ int main(int argc, char **argv) {
     if (owner < 0) die("owner parameter");
     snprintf(record, sizeof(record), "%d\n", pid);
     write_all(owner, record, strlen(record)); close(owner);
-    if (!prepare_disk) {
-        close(fd);
-        printf("RESIDENT_BOOT_JSON {\"pid\":%d,\"starttime\":%llu,\"fork_ns\":%"PRIu64
-               ",\"fork_to_api_ready_ns\":%"PRIu64",\"prepare_api_ns\":0,\"disk_prepared\":false"
-               ",\"native_ready_ns\":%"PRIu64"}\n", pid, identity,
-               fork_end - fork_start, ready - fork_start, now() - begin);
-        return 0;
-    }
     uint64_t prepare_start = now();
     struct timeval timeout = {.tv_sec = 30};
     if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) ||

@@ -172,8 +172,7 @@
     "pfnmap_cow": "opt-in retry invokes pfn_mkwrite for an already-read canonical page before a guest write",
     "patch_order": [
       "cxl-static-capacity.patch",
-      "kvm-dax-state.patch",
-      "devdax-pool-cow.patch"
+      "kvm-dax-state.patch"
     ],
     "new_private_ioctl_abi": [
       "KVM_DAX_LOCAL_RAM"

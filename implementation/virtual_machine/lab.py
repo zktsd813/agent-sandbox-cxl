@@ -224,7 +224,10 @@ def prepare(args):
             raise RuntimeError(f"Required input missing: {path}")
     vendor = "amd" if "AuthenticAMD" in Path("/proc/cpuinfo").read_text() else "intel"
     ASSETS.mkdir(exist_ok=True)
+    kernel_uapi = Path(os.environ.get("CXL_LAB_KERNEL_SOURCE", str(HERE / "../linux"))) / "include/uapi/linux"
     command(["gcc", "-std=c11", "-O2", "-static", "-pthread", "-Wall", "-Wextra", "-Werror",
+             "-DCXL_KVM_DAX_HEADER=" + json.dumps(str(kernel_uapi / "kvm_dax.h")),
+             "-DCXL_MPTCP_HEADER=" + json.dumps(str(kernel_uapi / "mptcp.h")),
              HERE / "shared_probe.c", "-o", ASSETS / "shared-probe"])
     with tempfile.TemporaryDirectory(prefix="build-", dir=LOCAL) as temp:
         root = Path(temp)
@@ -414,8 +417,6 @@ def start(args):
         if not storage_image.is_file():
             raise RuntimeError("--storage-image must be a regular raw image file")
     home_storage_image = getattr(args, "home_storage_image", None)
-    if getattr(args, "replicated_home_storage", False) and not home_storage_image:
-        raise RuntimeError("Replicated storage control requires --home-storage-image")
     if home_storage_image:
         home_storage_image = home_storage_image.resolve(strict=True)
         if not home_storage_image.is_file() or "," in str(home_storage_image):
@@ -474,7 +475,6 @@ def start(args):
               "dax_kvm_state": args.dax_kvm_state,
               "dax_handoff": args.dax_handoff,
               "dax_4k": args.dax_4k or args.dax_handoff,
-              "pool_cow": getattr(args, "pool_cow", False),
               "migration_network": migration_network,
               "prepared": prepared, "assets": str(ASSETS), "host_kernel": os.uname().release, "vms": {}}
     if storage_image:
@@ -482,7 +482,7 @@ def start(args):
                                    "readonly": True, "format": "raw", "cache": "none"}
     if home_storage_image:
         # Never attach the user's template writable. A owns the per-run copy;
-        # B uses NFS unless the replicated readonly ablation control is selected.
+        # B uses the owner's NFS export.
         private_storage = run / "home-storage.raw"
         command(["cp", "--reflink=auto", "--sparse=always", "--", home_storage_image, private_storage])
         config["home_storage_image"] = {
@@ -491,9 +491,6 @@ def start(args):
             "owner": "A", "readonly": False, "format": "raw", "cache": "none",
             "guest_device": "/dev/vdb" if storage_image else "/dev/vda",
         }
-        if getattr(args, "replicated_home_storage", False):
-            config["replicated_home_storage"] = {"owner": "B", "path": str(home_storage_image),
-                "readonly": True, "sha256": config["home_storage_image"]["template_sha256"]}
     if args.dax_guest:
         config["source_patches"] = {name: sha256(HERE / name) for name in
                                     ["qemu-cxl-direct-ram.patch", "firecracker.patch", "ram-backend-source.json"]}
@@ -532,8 +529,6 @@ def start(args):
                 cmd.extend(["-device", "virtio-serial-pci,id=labcontrol",
                     "-chardev", f"socket,id=labcmd,path={command_path},server=on,wait=off",
                     "-device", "virtserialport,bus=labcontrol.0,nr=1,chardev=labcmd,name=cxl.control"])
-            if getattr(args, "pool_cow", False):
-                cmd[cmd.index("-append") + 1] += " device_dax.pool_cow=1"
             if migration_network:
                 cmd[cmd.index("-append") + 1] += " lab.migration_ip=" + migration_network["ips"][role]
                 if args.network_backend == "socket":
@@ -550,9 +545,6 @@ def start(args):
             if home_storage_image and role == "A":
                 cmd.extend(["-drive", f"file={private_storage},if=none,id=home-storage,format=raw,cache=none",
                             "-device", "virtio-blk-pci,drive=home-storage"])
-            if home_storage_image and role == "B" and getattr(args, "replicated_home_storage", False):
-                cmd.extend(["-drive", f"file={home_storage_image},if=none,id=replicated-home,format=raw,readonly=on,cache=none",
-                            "-device", "virtio-blk-pci,drive=replicated-home"])
             if cxl_backing:
                 cmd.extend(["-object", f"memory-backend-file,id=cxl-shared,size={args.cxl_mib}M,mem-path={cxl_backing},share=on",
                             "-device", "pxb-cxl,bus_nr=12,bus=pcie.0,id=cxl.0",
@@ -1122,7 +1114,6 @@ def direct_handoff_bench(args):
               "heartbeat_spins": args.heartbeat_spins,
               "executor_cpu": args.executor_cpu,
               "irqfd_batch": args.irqfd_batch,
-              "resume_nokick": args.resume_nokick,
               "channel_spin_us": args.channel_spin_us,
               "timer_slack_ns": args.timer_slack_ns,
               "telemetry": args.telemetry, "dwell_ms": args.dwell_ms,
@@ -1200,8 +1191,6 @@ def direct_handoff_bench(args):
                     env += f"LAB_DAX_EXECUTOR_CPU={args.executor_cpu} FC_DAX_VCPU_CPU={args.executor_cpu} "
                 if args.irqfd_batch:
                     env += "FC_DAX_IRQFD_BATCH=1 "
-                if args.resume_nokick:
-                    env += "FC_DAX_NO_RESUME_KICK=1 "
                 env += f"FC_DAX_CHANNEL_SPIN_US={args.channel_spin_us} LAB_DAX_STOP_SPIN_US={args.channel_spin_us} "
                 if args.timer_slack_ns:
                     env += f"LAB_DAX_TIMER_SLACK_NS={args.timer_slack_ns} "
@@ -1403,7 +1392,7 @@ def direct_handoff_report(args):
     for key, default in {"executor":"firecracker", "guest_cpu":None, "poll_us":50,
                          "spin_us":0, "control":"http",
                          "reuse_fds":False, "profile":False, "resume_profile":False, "heartbeat_spins":128,
-                         "executor_cpu":None, "irqfd_batch":False, "resume_nokick":False,
+                         "executor_cpu":None, "irqfd_batch":False,
                          "channel_spin_us":0,
                          "timer_slack_ns":0,
                          "telemetry":"dax", "dwell_ms":20, "heartbeat":"busy",
@@ -3371,14 +3360,11 @@ def main():
     p.add_argument("--dax-kvm-state", action="store_true", help="Use the experimental KVM device-DAX state allocator on VM A")
     p.add_argument("--dax-handoff", action="store_true", help="Direct shared KVM handoff lab; fixed kernel addresses, 4KiB DAX, no automatic L2")
     p.add_argument("--dax-4k", action="store_true", help="Configure the shared device-DAX allocation with 4KiB alignment for matched EPT measurements")
-    p.add_argument("--pool-cow", action="store_true", help="Opt in to experimental device-DAX MAP_PRIVATE CoW in the disposable L1 kernels")
     p.add_argument("--migration-network", action="store_true", help="Connect L1 A/B with a private virtio-net link for full RAM migration")
     p.add_argument("--network-backend", choices=["socket", "tap"], default="socket", help="Use a QEMU socket or isolated host TAP/bridge with vhost-net (default socket)")
     p.add_argument("--socket-listener", choices=["A", "B"], default="A", help="Choose the QEMU socket listener; starts it before the connecting peer (default A)")
     p.add_argument("--storage-image", type=Path, help="Attach the same read-only raw disk to both L1s for storage experiments; QEMU uses cache=none")
     p.add_argument("--home-storage-image", type=Path, help="Copy a raw storage template into this run and attach it writable only to L1 A; B must use NFS")
-    p.add_argument("--replicated-home-storage", action="store_true",
-                   help="Backend ablation only: also attach the immutable template readonly to L1 B")
     p.set_defaults(func=start)
     p = subs.add_parser("verify", help="Wait for guest checks and validate host backing")
     p.add_argument("--timeout", type=float, default=180)
@@ -3505,7 +3491,6 @@ def main():
                    help="Guest PAUSE instructions per busy heartbeat loop (default 128); does not change sleep mode")
     p.add_argument("--executor-cpu", type=int, choices=range(0, 2), help="Pin native and Firecracker vCPU threads independently of the controller")
     p.add_argument("--irqfd-batch", action="store_true", help="Quiesce simple IRQFDs synchronously with one SRCU grace period")
-    p.add_argument("--resume-nokick", action="store_true", help="Wake an acknowledged paused Firecracker vCPU through its channel without a signal")
     p.add_argument("--channel-spin-us", type=int, choices=range(0, 501), default=0, metavar="0..500", help="Bounded spin before blocking for vCPU stop/resume completion")
     p.add_argument("--timer-slack-ns", type=int, choices=[0, 1], default=0, help="0 keeps native timer slack; 1 disables sleep batching for controller polling")
     p.add_argument("--guest-cpu", type=int,
@@ -3555,8 +3540,6 @@ def main():
             parser.error("cxl-mib must be zero or a power of two >= 256")
         if args.dax_4k and not args.cxl_mib:
             parser.error("--dax-4k requires --cxl-mib")
-        if args.pool_cow and (not args.dax_guest or not args.dax_4k or args.dax_handoff or args.dax_kvm_state):
-            parser.error("--pool-cow requires --dax-guest --dax-4k and ordinary snapshot mode")
         if args.dax_guest and args.cxl_mib < 256:
             parser.error("dax-guest requires --cxl-mib >= 256")
         if args.dax_kvm_state and (not args.dax_guest or args.cxl_mib < 1024):

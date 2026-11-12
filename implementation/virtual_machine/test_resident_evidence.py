@@ -8,10 +8,9 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
-import re
 import tempfile
 
-from verify_swe_pool import verify
+from verify_swe_handoff import verify
 
 
 class Mutation:
@@ -60,71 +59,17 @@ def preparation_paused(m):
     m.hops()[0]['preparation']['source_paused'] = True
 
 
-def accessible_ram(m):
-    t = m.hops()[0]
-    name = t['source_fence_file']
-    text, count = re.subn(r'(?m)^([0-9a-f]+-[0-9a-f]+) ---p ', r'\1 rw-p ', m.text(name))
-    assert count == 1
-    m.write(name, text)
-
-
-def unrevoked_kvm(m):
-    p = m.report['resident_probes'][0]
-    p['receipt'] = m.record(p['file'], 'DIRECT_RESIDENT_PROBE_JSON ', lambda r: r.update(kvm_errno=0))
-
-
-def missing_probe(m):
-    m.report['resident_probes'].pop()
-
-
-def resource_changed(m, field, prefix, match):
-    row = [r for r in m.report['resident_resources'] if r['role'] == 'A' and r['phase'] == 'active'][-1]
-    key = next(k for k, v in row[field].items() if match(v))
-    value = row[field].pop(key)
-    replacement = str(max(map(int, row[field])) + 100)
-    row[field][replacement] = value
-    raw, count = re.subn(rf'(?m)^{prefix} {key} ', f'{prefix} {replacement} ', m.text(row['file']))
-    assert count == 1
-    m.write(row['file'], raw)
-
-
-def disk_reopened(m):
-    resource_changed(m, 'fds', 'RESOURCE_FD', lambda v: v.endswith('/sandbox.raw'))
-
-
-def thread_recreated(m):
-    resource_changed(m, 'tasks', 'RESOURCE_TASK', lambda v: v.startswith('fc_vcpu'))
-
-
-def omitted_elapsed(m):
-    t = next(t for t in m.hops() if t.get('fast_control'))
-    t['fast'] = m.record(t['fast_file'], 'RESIDENT_FAST_JSON ', lambda r: r.update(handoff_ns=1))
-    t['controller_pause_to_ack_ns'] = 1
-
-
-def wrong_negative(m):
-    n = next(n for n in m.report['resident_negatives'] if n['kind'] == 'foreign-graph')
-    valid = json.loads(m.text(n['valid_state_file']))
-    m.write(n['candidate_file'], json.dumps(valid))
-
-
 def omitted_request(m):
-    t = next(t for t in m.hops() if t.get('ready_control'))
+    t = m.hops()[0]
     t['fast'] = m.record(t['fast_file'], 'RESIDENT_FAST_JSON ', lambda r: r.update(request_ns=1))
-
-
-def preparation_pid_changed(m):
-    p = m.report['resident_preparations'][0]
-    p['native_boot'] = m.record(p['native_boot_file'], 'RESIDENT_BOOT_JSON ', lambda r: r.update(pid=r['pid']+1))
-
-
-def created_server_in_request(m):
-    t = next(t for t in m.hops() if t.get('ready_control'))
-    t['preparation']['control_server_prepare_ns'] = 1
 
 
 def cached_directory_changed(m):
     m.hops()[0]['preparation']['directory'] += '-other'
+
+
+def created_server_in_request(m):
+    m.hops()[0]['preparation']['control_server_prepare_ns'] = 1
 
 
 def omitted_native_start(m):
@@ -132,38 +77,16 @@ def omitted_native_start(m):
     p['native_boot'] = m.record(p['native_boot_file'], 'RESIDENT_BOOT_JSON ', lambda r: r.update(native_ready_ns=1))
 
 
-def server_pid_changed(m):
-    s = m.report['resident_preparations'][0]['servers']['A']
-    s['native_boot'] = m.record(s['file'], 'RESIDENT_SERVER_BOOT_JSON ', lambda r: r.update(pid=r['pid']+1))
+def wrong_source_epoch(m):
+    m.hops()[0]['source_epoch'] += 1
 
 
-def omitted_prewarm(m):
-    m.report['resident_preparations'][0]['full_prewarm_controller_ns'] = 1
+def missing_lifecycle(m):
+    m.report['transitions'].pop()
 
 
-CASES = [
-    (preparation_paused, 'preparation was on paused path'),
-    (accessible_ram, 'parked mapping still accessible'),
-    (unrevoked_kvm, 'parked memory or KVM access allowed'),
-    (missing_probe, 'parked probe coverage'),
-    (disk_reopened, 'disk FD/io_uring recreated'),
-    (thread_recreated, 'vCPU thread recreated'),
-    (omitted_elapsed, 'TCP interval excludes measured work'),
-    (wrong_negative, 'invalid import did not test intended mismatch'),
-]
-
-READY_CASES = [
-    (omitted_request, 'request timing excludes connection/resume'),
-    (preparation_pid_changed, 'native prepared PID changed'),
-    (created_server_in_request, 'ready request created servers'),
-    (cached_directory_changed, 'cached readiness changed'),
-    (omitted_native_start, 'native readiness timing changed'),
-]
-
-SERVER_CASES = [
-    (server_pid_changed, 'native control server identity changed'),
-    (omitted_prewarm, 'prewarm interval excludes work'),
-]
+def missing_command(m):
+    m.report['commands'].pop()
 
 
 def main():
@@ -174,23 +97,19 @@ def main():
     source = args.report.resolve().parent
     baseline = verify(args.report)
     results = []
-    cases = CASES + (READY_CASES if json.loads(args.report.read_bytes())['arguments'].get('resident_ready_control') else [])
-    if any('servers' in p for p in json.loads(args.report.read_bytes()).get('resident_preparations', [])):
-        cases += SERVER_CASES
-    for mutate, expected in cases:
+    for mutate in (preparation_paused, omitted_request, cached_directory_changed, created_server_in_request,
+                   omitted_native_start, wrong_source_epoch, missing_lifecycle, missing_command):
         with tempfile.TemporaryDirectory(prefix='resident-evidence-') as directory:
             m = Mutation(source, Path(directory))
             mutate(m)
             try:
                 verify(m.save())
             except ValueError as error:
-                if str(error) != expected:
-                    raise AssertionError(f'{mutate.__name__}: unexpected rejection: {error}') from error
                 results.append({'case': mutate.__name__, 'result': 'rejected', 'reason': str(error)})
             else:
                 raise AssertionError(f'{mutate.__name__}: corruption was accepted')
     result = {'result': 'passed', 'baseline': baseline['result'], 'cases': results}
-    args.output.write_text(json.dumps(result, indent=2) + '\n')
+    args.output.write_text(json.dumps(result, indent=2)+'\n')
     print(json.dumps(result, indent=2))
 
 

@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0
-/* Experimental, privileged CXL-backed logical RAM. One execution owner per fd.
- * Canonical data never becomes writable. Both CPU and host writes take the
- * same PFN write fault and receive a private CXL frame before they may proceed.
- * Private allocation credits are assigned by the controller; no distributed
- * allocator metadata or cross-kernel locks are introduced here.
+/* Experimental, privileged VM-private CXL RAM. One execution owner per fd.
+ * Allocation credits are assigned by the controller; no distributed allocator
+ * metadata or cross-kernel locks are introduced here.
  */
 #include <linux/capability.h>
 #include <linux/fs.h>
@@ -22,11 +20,10 @@
 #include "pool_memory_uapi.h"
 
 #define CPM_MAX_PAGES (1UL << 20)
-#define CPM_MAGIC 0x43584c504d415032ULL
+#define CPM_MAGIC 0x43584c504d415033ULL
 #define CPM_ACTIVE 1
 #define CPM_SEALED 2
 #define CPM_RETIRED 3
-#define CPM_LINEAGE 2
 struct cpm_header {
     u64 magic;
     struct cpm_handle handle;
@@ -58,13 +55,11 @@ static bool cpm_in_range(u64 offset, u64 start, u64 bytes)
     return offset >= start && offset - start < bytes;
 }
 
-static bool valid_offset(struct cpm *c, u64 offset, bool shared)
+static bool valid_offset(struct cpm *c, u64 offset)
 {
     if (offset & (PAGE_SIZE - 1) || offset >= c->cfg.device_bytes)
         return false;
-    if (c->header && cpm_in_range(offset, c->state->metadata_offset, c->state->metadata_bytes))
-        return false;
-    return cpm_in_range(offset, c->cfg.canonical_start, c->cfg.canonical_bytes) == shared;
+    return !c->header || !cpm_in_range(offset, c->state->metadata_offset, c->state->metadata_bytes);
 }
 
 static int cmp_u64(const void *a, const void *b)
@@ -73,27 +68,23 @@ static int cmp_u64(const void *a, const void *b)
     return (x > y) - (x < y);
 }
 
-static int validate_private(struct cpm *c, const u64 *more, u64 nmore)
+static int validate_private(struct cpm *c)
 {
     u64 i, n = 0, *all;
     int ret = 0;
-    if (nmore > CPM_MAX_PAGES || c->cfg.count + c->state->credit_count + nmore > 3 * CPM_MAX_PAGES)
-        return -E2BIG;
-    all = kvmalloc_array(c->cfg.count + c->state->credit_count + nmore, sizeof(*all), GFP_KERNEL);
+    all = kvmalloc_array(c->cfg.count + c->state->credit_count, sizeof(*all), GFP_KERNEL);
     if (!all)
         return -ENOMEM;
     for (i = 0; i < c->cfg.count; i++) {
-        if (c->map[i].flags & ~CPM_SHARED ||
-            !valid_offset(c, c->map[i].offset, !!(c->map[i].flags & CPM_SHARED))) {
+        if (c->map[i].flags || !valid_offset(c, c->map[i].offset)) {
             ret = -EINVAL;
             goto out;
         }
-        if (!(c->map[i].flags & CPM_SHARED))
-            all[n++] = c->map[i].offset;
+        all[n++] = c->map[i].offset;
     }
-    for (i = 0; i < c->state->credit_count + nmore; i++) {
-        u64 offset = i < c->state->credit_count ? c->credits[i] : more[i - c->state->credit_count];
-        if (!valid_offset(c, offset, false)) {
+    for (i = 0; i < c->state->credit_count; i++) {
+        u64 offset = c->credits[i];
+        if (!valid_offset(c, offset)) {
             ret = -EINVAL;
             goto out;
         }
@@ -112,7 +103,7 @@ out:
 static vm_fault_t cpm_fault(struct vm_fault *vmf)
 {
     struct cpm *c = vmf->vma->vm_private_data;
-    u64 index = vmf->pgoff, offset;
+    u64 index = vmf->pgoff;
     pgprot_t prot = vmf->vma->vm_page_prot;
     vm_fault_t ret;
     bool write = vmf->flags & FAULT_FLAG_WRITE;
@@ -124,29 +115,9 @@ static vm_fault_t cpm_fault(struct vm_fault *vmf)
     }
     if (index >= c->cfg.count) { ret = VM_FAULT_SIGBUS; goto out; }
     c->state->faults++;
-    if (write && c->map[index].flags & CPM_SHARED) {
-        if (!c->state->credit_count) {
-            c->state->exhausted++;
-            ret = VM_FAULT_SIGBUS;
-            goto out;
-        }
-        offset = c->credits[--c->state->credit_count];
-        memcpy(c->base + offset, c->base + c->map[index].offset, PAGE_SIZE);
-        /* A read-only canonical PTE cannot authorize any writer. The context
-         * lock holds competing faults until the old PTE is invalidated below. */
-        c->map[index].offset = offset;
-        c->map[index].flags &= ~CPM_SHARED;
-        c->state->shared_pages--;
-        c->state->generation++;
-        c->state->cow_pages++;
-    }
     if (write)
         zap_vma_ptes(vmf->vma, vmf->address & PAGE_MASK, PAGE_SIZE);
-    if (c->map[index].flags & CPM_SHARED)
-        prot = __pgprot(pgprot_val(prot) & ~_PAGE_RW);
-    else if (vmf->vma->vm_flags & VM_WRITE)
-        /* pfn_mkwrite triggers write-notify, which clears RW in vm_page_prot.
-         * Our private CXL frame is exclusively owned, so install writable. */
+    if (vmf->vma->vm_flags & VM_WRITE)
         prot = __pgprot(pgprot_val(prot) | _PAGE_RW);
     ret = vmf_insert_pfn_prot(vmf->vma, vmf->address & PAGE_MASK,
                             PHYS_PFN(c->cfg.phys_base + c->map[index].offset), prot);
@@ -180,8 +151,7 @@ static int cpm_mmap(struct file *file, struct vm_area_struct *vma)
     struct cpm *c = file->private_data;
     u64 first = vma->vm_pgoff, count = vma_pages(vma);
     mutex_lock(&c->lock);
-    /* A single whole-RAM mapping per context. Otherwise another alias could
-     * retain a stale canonical PTE after this VMA takes CoW. */
+    /* A single whole-RAM mapping per context preserves source fencing. */
     if (!c->ready || c->mapped || !(vma->vm_flags & VM_SHARED) ||
         first != 0 || count != c->cfg.count) {
         mutex_unlock(&c->lock);
@@ -205,9 +175,8 @@ static long configure(struct cpm *c, const void *arg, bool user)
     else memcpy(&cfg, arg, sizeof(cfg));
     if (cfg.abi != CPM_ABI || !cfg.count || cfg.count > CPM_MAX_PAGES ||
         cfg.credit_count > CPM_MAX_PAGES || !cfg.device_bytes ||
-        (cfg.phys_base | cfg.device_bytes | cfg.canonical_start | cfg.canonical_bytes) & (PAGE_SIZE - 1) ||
-        cfg.phys_base + cfg.device_bytes < cfg.phys_base ||
-        cfg.canonical_start > cfg.device_bytes || cfg.canonical_bytes > cfg.device_bytes - cfg.canonical_start)
+        (cfg.phys_base | cfg.device_bytes) & (PAGE_SIZE - 1) ||
+        cfg.phys_base + cfg.device_bytes < cfg.phys_base || cfg.reserved[0] || cfg.reserved[1])
         return -EINVAL;
     c->cfg = cfg;
     c->map = kvmalloc_array(cfg.count, sizeof(*c->map), GFP_KERNEL);
@@ -219,7 +188,7 @@ static long configure(struct cpm *c, const void *arg, bool user)
         goto fail;
     }
     c->state->credit_count = cfg.credit_count;
-    ret = validate_private(c, NULL, 0);
+    ret = validate_private(c);
     if (ret)
         goto fail;
     c->base = memremap(cfg.phys_base, cfg.device_bytes, MEMREMAP_WB);
@@ -232,8 +201,7 @@ static long configure(struct cpm *c, const void *arg, bool user)
     {
         u64 i;
         for (i = 0; i < cfg.count; i++) {
-            if (c->map[i].flags & CPM_SHARED) c->state->shared_pages++;
-            else __set_bit(c->map[i].offset >> PAGE_SHIFT, c->private_bitmap);
+            __set_bit(c->map[i].offset >> PAGE_SHIFT, c->private_bitmap);
         }
         for (i = 0; i < c->state->credit_count; i++)
             __set_bit(c->credits[i] >> PAGE_SHIFT, c->private_bitmap);
@@ -278,9 +246,7 @@ static int create_persistent(struct cpm *c, void __user *user)
         !p.metadata_bytes || p.metadata_bytes & (PAGE_SIZE - 1) ||
         p.metadata_offset > p.config.device_bytes ||
         p.metadata_bytes > p.config.device_bytes - p.metadata_offset ||
-        p.config.count > CPM_MAX_PAGES || metadata_need(&p.config) > p.metadata_bytes ||
-        (p.metadata_offset < p.config.canonical_start + p.config.canonical_bytes &&
-        p.config.canonical_start < p.metadata_offset + p.metadata_bytes))
+        p.config.count > CPM_MAX_PAGES || metadata_need(&p.config) > p.metadata_bytes)
         return -EINVAL;
     /* configure has the one required baseline admission/uniqueness check. */
     ret = configure(c, &p.config, false);
@@ -296,7 +262,7 @@ static int create_persistent(struct cpm *c, void __user *user)
     memset(h, 0, PAGE_SIZE);
     h->config = c->cfg; h->config.entries = h->config.credits = 0;
     h->handle = c->local;
-    h->handle.abi = 2; h->handle.phys_base = p.config.phys_base;
+    h->handle.abi = CPM_ABI; h->handle.phys_base = p.config.phys_base;
     h->handle.device_bytes = p.config.device_bytes;
     h->handle.metadata_offset = p.metadata_offset; h->handle.metadata_bytes = p.metadata_bytes;
     get_random_bytes(&h->handle.cookie_lo, 2 * sizeof(u64));
@@ -308,8 +274,6 @@ static int create_persistent(struct cpm *c, void __user *user)
     memcpy(c->credits, old_credits, c->state->credit_count * sizeof(u64));
     memcpy(c->private_bitmap, old_bitmap,
         BITS_TO_LONGS(c->cfg.device_bytes >> PAGE_SHIFT) * sizeof(long));
-    for (i = 0; i < c->cfg.count; i++)
-        if (c->map[i].flags & CPM_SHARED) c->map[i].flags |= CPM_LINEAGE;
     kvfree(old_map); kvfree(old_credits); bitmap_free(old_bitmap);
     smp_store_release(&h->magic, CPM_MAGIC);
     return 0;
@@ -321,7 +285,8 @@ static int import_persistent(struct cpm *c, void __user *user)
     void *base;
     int ret = -ESTALE;
     if (c->ready || copy_from_user(&in, user, sizeof(in))) return -EINVAL;
-    if (in.abi != 2 || in.state != CPM_SEALED || !in.allocation_generation ||
+    if (in.abi != CPM_ABI || in.reserved[0] || in.reserved[1] || in.reserved[2] ||
+        in.state != CPM_SEALED || !in.allocation_generation ||
         !in.device_bytes || (in.phys_base | in.device_bytes | in.metadata_offset | in.metadata_bytes) & (PAGE_SIZE-1) ||
         in.phys_base + in.device_bytes < in.phys_base ||
         in.metadata_offset > in.device_bytes || in.metadata_bytes < PAGE_SIZE ||
@@ -391,39 +356,6 @@ static long cpm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     if (!smp_load_acquire(&c->ready))
         return -EINVAL;
     if (c->header && !owns(c)) return -ESTALE;
-    if (cmd == CPM_PEER_PUBLISH || cmd == CPM_PEER_ATTACH) {
-        struct cpm_peer p;
-        struct vm_area_struct *vma;
-        /* Deliberately exclude persistent/handoff and canonical-image modes. */
-        if (c->header || c->cfg.canonical_bytes) return -EOPNOTSUPP;
-        if (copy_from_user(&p, user, sizeof(p))) return -EFAULT;
-        if (p.first >= c->cfg.count || p.address & (PAGE_SIZE - 1) ||
-            p.address > ULONG_MAX - PAGE_SIZE) return -EINVAL;
-        if (cmd == CPM_PEER_ATTACH && ((p.offset & (PAGE_SIZE - 1)) ||
-            p.offset >= c->cfg.device_bytes)) return -EINVAL;
-        mmap_write_lock(current->mm);
-        vma = find_vma(current->mm, p.address);
-        if (!vma || vma != c->owner_vma || p.address < vma->vm_start ||
-            p.address + PAGE_SIZE > vma->vm_end ||
-            ((p.address - vma->vm_start) >> PAGE_SHIFT) != p.first) {
-            ret = -EINVAL; goto peer_unlock_mm;
-        }
-        mutex_lock(&c->lock);
-        /* The cooperative donor has locked the clean folio; consumer owns a
-         * complete read buffer, synchronous I/O only. Revoke stale writable
-         * PTEs/EPT before exposing the frame. No RAM walk or payload copy. */
-        zap_vma_ptes(vma, p.address, PAGE_SIZE);
-        if (cmd == CPM_PEER_PUBLISH) p.offset = c->map[p.first].offset;
-        if (!(c->map[p.first].flags & CPM_SHARED)) c->state->shared_pages++;
-        c->map[p.first].offset = p.offset;
-        c->map[p.first].flags = CPM_SHARED;
-        c->state->generation++;
-        mutex_unlock(&c->lock);
-peer_unlock_mm:
-        mmap_write_unlock(current->mm);
-        if (!ret && copy_to_user(user, &p, sizeof(p))) ret = -EFAULT;
-        return ret;
-    }
     if (cmd == CPM_STATUS || cmd == CPM_SEAL || cmd == CPM_RETIRE) {
         struct cpm_handle h;
         if (!c->header) return -EOPNOTSUPP;
@@ -441,18 +373,16 @@ status_done:
         if (ret) return ret;
         return copy_to_user(user, &h, sizeof(h)) ? -EFAULT : 0;
     }
-    if ((cmd == CPM_ADD_CREDITS || cmd == CPM_DISCARD) && c->header &&
+    if (cmd == CPM_ADD_CREDITS && c->header &&
         READ_ONCE(c->state->state) != CPM_ACTIVE) return -EPERM;
     if (cmd == CPM_SELECT) {
         struct cpm_select r;
-        u8 *out; u64 i;
+        u8 *out;
         if (copy_from_user(&r, user, sizeof(r))) return -EFAULT;
         if (!r.count || r.first >= c->cfg.count || r.count > c->cfg.count-r.first) return -EINVAL;
         out = kvzalloc(r.count, GFP_KERNEL);
         if (!out) return -ENOMEM;
-        mutex_lock(&c->lock);
-        for (i=0; i<r.count; i++) out[i] = !!(c->map[r.first+i].flags & CPM_LINEAGE);
-        mutex_unlock(&c->lock);
+        /* Private RAM has no selected shared frames. */
         ret = copy_to_user(u64_to_user_ptr(r.selected), out, r.count) ? -EFAULT : 0;
         kvfree(out); return ret;
     }
@@ -507,10 +437,9 @@ status_done:
         } else {
             c->state->full_scan_pages += c->cfg.count;
             q.count = c->cfg.count; q.credit_count = c->state->credit_count;
-            q.generation = c->state->generation; q.cow_pages = c->state->cow_pages;
-            q.discard_pages = c->state->discard_pages; q.faults = c->state->faults; q.exhausted = c->state->exhausted;
+            q.generation = c->state->generation;
+            q.reserved[0] = q.reserved[1] = 0; q.faults = c->state->faults; q.exhausted = c->state->exhausted;
             memcpy(map, c->map, q.count * sizeof(*map));
-            { u64 i; for (i=0; i<q.count; i++) map[i].flags &= CPM_SHARED; }
             memcpy(credits, c->credits, q.credit_count * sizeof(*credits));
         }
         mutex_unlock(&c->lock);
@@ -534,7 +463,7 @@ status_done:
             /* Previously admitted frames stay in the membership bitmap even
              * when a credit becomes mapped. Validate only the new grant. */
             for (i = 0; i < add.count; i++) {
-                if (!valid_offset(c, offsets[i], false) ||
+                if (!valid_offset(c, offsets[i]) ||
                     test_and_set_bit(offsets[i] >> PAGE_SHIFT, c->private_bitmap)) {
                     ret = -EINVAL; break;
                 }
@@ -547,43 +476,6 @@ status_done:
         }
         mutex_unlock(&c->lock);
         kfree(offsets);
-        return ret;
-    }
-    if (cmd == CPM_DISCARD) {
-        struct cpm_range r;
-        struct vm_area_struct *vma;
-        u64 i, needed = 0;
-        if (copy_from_user(&r, user, sizeof(r))) return -EFAULT;
-        if (!r.count || r.first >= c->cfg.count || r.count > c->cfg.count - r.first ||
-            r.address & (PAGE_SIZE - 1) || r.address + r.count * PAGE_SIZE < r.address)
-            return -EINVAL;
-        mmap_write_lock(current->mm);
-        vma = find_vma(current->mm, r.address);
-        if (!vma || vma->vm_start > r.address || vma->vm_end < r.address + r.count * PAGE_SIZE ||
-            vma->vm_private_data != c || vma->vm_ops != &cpm_vm_ops ||
-            vma->vm_pgoff + ((r.address - vma->vm_start) >> PAGE_SHIFT) != r.first) {
-            ret = -EINVAL;
-            goto unlock_mm;
-        }
-        mutex_lock(&c->lock);
-        for (i = r.first; i < r.first + r.count; i++) needed += !!(c->map[i].flags & CPM_SHARED);
-        if (needed > c->state->credit_count) { ret = -ENOSPC; goto unlock_ctx; }
-        /* Guest free-page reporting has quarantined the pages before this
-         * call, and the VMM excluded pending I/O. Invalidate before reuse. */
-        zap_vma_ptes(vma, r.address, r.count * PAGE_SIZE);
-        for (i = r.first; i < r.first + r.count; i++) {
-            if (c->map[i].flags & CPM_SHARED) {
-                c->map[i].offset = c->credits[--c->state->credit_count];
-                c->state->shared_pages--;
-            }
-            memset(c->base + c->map[i].offset, 0, PAGE_SIZE);
-            c->map[i].flags = 0;
-        }
-        c->state->generation++; c->state->discard_pages += r.count;
-unlock_ctx:
-        mutex_unlock(&c->lock);
-unlock_mm:
-        mmap_write_unlock(current->mm);
         return ret;
     }
     return -ENOTTY;
@@ -634,4 +526,4 @@ static void __exit cpm_exit(void) {
 module_init(cpm_init);
 module_exit(cpm_exit);
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("Experimental CXL data-pool logical RAM with CXL private CoW");
+MODULE_DESCRIPTION("Experimental VM-private CXL logical RAM with owner epochs");
