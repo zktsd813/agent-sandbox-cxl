@@ -19,7 +19,7 @@ Page cache 공유 실험은 별도 `cxl-page-cache` 저장소로 옮겼다.
 | `snapshot` / state-only | 작은 CPU·장치 상태 저장, source 종료, 목적지 복원 | CXL guest RAM; KVM 객체와 EPT는 새로 생성 |
 | `reuse` | 의미적 상태를 이미 실행 이력이 있는 worker에 복원 | 목적지의 VM/vCPU FD·thread·RAM mapping |
 | `reuse-prepared` | 비어 있는 worker의 연결 정리를 먼저 수행한 뒤 복원 | `reuse`와 같음 |
-| direct, 새 프로세스 | KVM 객체를 detach한 뒤 새 VMM에서 attach | CXL의 지정 VM/vCPU·VMCS·EPT 객체 |
+| 명시적 direct API | DirectExport 뒤 preboot DirectReceive로 새 VMM wrapper 구성 | CXL의 지정 VM/vCPU·VMCS·EPT 객체 |
 | resident direct | 양쪽 VMM·I/O backend·제어기를 준비하고 소유권과 최신 장치 상태 전달 | 위 KVM 객체와 host별 FD·thread; 첫 방문 이후 재사용 |
 
 State-only는 raw KVM 구조체를 직렬화하지 않는다. Direct는 CPU register snapshot을 만들지 않는다.
@@ -40,10 +40,10 @@ Source 접근 차단, I/O drain, 최신 장치 상태와 lease/epoch 검사는 �
 | `build.sh`, `kernel.config`, `*-source.json` | offline 빌드와 기반 소스 identity |
 | `cxl-static-capacity.patch`, `qemu-cxl-direct-ram.patch` | nested CXL lab 구성 |
 | `kvm-dax-state.patch`, `pointer-audit.json` | KVM DAX 객체·EPT rebind·nested root 보완·계측 |
-| `firecracker.patch` | DAX RAM/heap, state-only/reuse/direct/resident, 장치 연결과 restore timing |
+| `firecracker.patch` | DAX RAM, state-only/reuse/direct/resident, 장치 연결과 restore timing |
 | `lab.py`, `guest-init.sh`, `guest-cxl.sh`, `l2-init.sh` | A/B 준비·시작·종료, baseline과 독립 기능 시험 |
-| `shared_probe.c`, `cache_probe.h`, `mptcp_probe.h` | CPU/RAM·PML·network baseline과 관측 |
-| `pool_memory_module.c`, `pool_memory_uapi.h`, `pool_memory_smoke.c` | `/dev/cxl_pool` VM-private mapper, ABI 3와 독립 smoke test |
+| `shared_probe.c` | CPU/RAM·snapshot·direct·stop-and-copy baseline과 관측 |
+| `pool_memory_module.c`, `pool_memory_uapi.h`, `pool_memory_smoke.c` | `/dev/cxl_pool` VM-private mapper, ABI 4와 독립 smoke test |
 | `handoff_bench.py` | SWE 실행·frame 할당·promotion/demotion·state-only/resident hand-off |
 | `swe_handoff_prepare.py`, `swe_handoff_run.py`, `swe-handoff-*.sh` | 기존 trace assets의 재포장, fresh pair별 CLI, guest 명령 protocol |
 | `verify_swe_handoff.py`, `test_handoff_*.py` | 명령 결과·최종 diff·메모리 lease·원시 증거의 독립 검증 |
@@ -51,10 +51,9 @@ Source 접근 차단, I/O drain, 최신 장치 상태와 lease/epoch 검사는 �
 | `resident_fast.py`, `resident_proxy.py`, `resident_prepare.py` | 준비된 제어 경로, binary relay, 기존 fixture의 실행 파일 갱신 |
 | `control_rpc.c`, `control_rpc.py` | bounded 명령·파일 업로드·Unix relay |
 | `kernel_handoff_trace.py`, `analyze_*.py` | opt-in kernel probe와 제어/복원 시간 분석 |
-| `nfs_bench.py`, `nfs_probe.c`, `nfs_dependencies.sh`, `nfs-l2-init.sh` | 공통 host NFS 준비·baseline·소유 process 관리 |
-| `home_storage_*`, `home-storage-l2-init.sh` | writable ext4와 RAM DRAM↔CXL lifecycle |
-| `trace_bench.py`, `trace_prepare.py`, `trace-*.sh` | 실제 개발 trace의 준비·일반 snapshot hand-off |
-| `ram_transfer.c`, `mode_compatibility.py` | RAM 전체 migration baseline과 모드 거절 조건 검증 |
+| `nfs_bench.py`, `nfs_probe.c`, `nfs_dependencies.sh`, `nfs-l2-init.sh` | L1 내부 NFS·block fixture 준비와 소유 process 관리 |
+| `trace_prepare.py` | 원래 trace 명령·환경·timeout·이미지 포장; SWE 준비기가 guest script 설치 |
+| `mode_compatibility.py` | 지원하지 않는 모드의 안전 거절 조건 검증 |
 | `experiment_sources.py`, `verify_*.py`, `test_*.py` | Git 소스 참조와 독립 회귀 검증 |
 
 ## 빌드
@@ -97,14 +96,14 @@ numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 bash "$V/build.sh" qemu /
 
 QEMU 기반은 v10.2.2의 `f8ed81651e61d9c2166df6121ce2af0f44f06b3e`다.
 기존 Docker 빌드와 소스 준비의 상세는 정리 전 README에 있다.
-`CXL_LAB_KERNEL_SOURCE`는 shared probe의 kvm_dax/mptcp UAPI 경로에도 적용된다.
+`CXL_LAB_KERNEL_SOURCE`는 shared probe의 kvm_dax UAPI 경로에도 적용된다.
 SWE guest kernel은 별도 `O=` 디렉터리에서 `kernel.config` 위에 `guest-swe.config`를 `"$CXL_LAB_KERNEL_SOURCE/scripts/kconfig/merge_config.sh" -m -O "$V/.local/guest-swe-build" "$V/kernel.config" "$V/guest-swe.config"`로 합친 뒤, 같은 `O=`로 `make olddefconfig vmlinux`를 실행한다(CPU·NUMA 제한 동일).
 `pool_memory_smoke`는 별도 disposable lab의 mapper 시험이다. 컴파일과 실행을 구분한다.
 
 ## Lab 준비와 baseline 실행
 
 다음은 VM images·static BusyBox·QEMU·guest rootfs가 준비된 lab용 명령이다.
-이번 bud05 정리에서는 VM을 실행하지 않는다. Host의 module·커널·CXL 설정도 바꾸지 않는다.
+Host의 module·커널·CXL 설정은 바꾸지 않는다.
 각 trial은 새 session·assets를 사용한다. 종료·실패 때 기록된 process identity로만 정리한다.
 
 ```bash
@@ -124,11 +123,13 @@ numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 python3 "$V/lab.py" hando
 numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 python3 "$V/lab.py" stop
 ```
 
-새 프로세스 direct 기준선은 **별도 fresh pair**를 `lab.py start --dax-handoff --dax-guest --dax-4k`
+최소 Linux direct 기준선은 **별도 fresh pair**를 `lab.py start --dax-handoff --dax-guest --dax-4k`
 조건으로 시작하고 `lab.py direct-handoff-bench --guest linux --executor firecracker --control http`로 실행한다.
-`lab.py migration-bench`는 네트워크를 통한 RAM 전체 migration 기준선이다.
+이 명령은 **A는 Firecracker, B는 `shared_probe` native executor**를 사용하며 A의 VMM을 유지한다.
+`lab.py migration-bench`는 정지 후 RAM 전체를 네트워크로 전송하는 stop-and-copy 대조군이다. Pre-copy M1은 구현하지 않았다.
+M3(`x-ignore-shared`)와 M4+P(`KVM_PRE_FAULT_MEMORY`)도 아직 구현하지 않았다.
 `mode_compatibility.py --require-safe-direct-rejection`은 지원하지 않는 구성을 pause 전에 거절하는지 확인한다.
-기존 cache/PML·MPTCP·storage 시험은 각 CLI의 `--help`를 따른다.
+과거 cache/PML·MPTCP·storage 전용 실행기는 [정리 전 소스](https://github.com/zktsd813/agent-sandbox-cxl/tree/243b1b0/implementation/virtual_machine)에 있다.
 
 ## SWE trace와 hand-off
 
@@ -177,8 +178,7 @@ Resident의 ready/fast/native/memory control과 immutable NFS cache는 기본이
 
 Direct는 현재 1 vCPU·동일 kernel/CPU 모델·고정 HVA·MMIO·read-only block 조건이다.
 Balloon·hotplug·pmem·지원하지 않는 장치 구성은 사전에 거절한다.
-Writable ext4 lifecycle은 별도 storage baseline이며 writable direct 지원을 뜻하지 않는다.
-Mapper ABI 3은 이전 ABI handle을 받지 않는다. 같은 binary·kernel·mapper로 양쪽을 준비한다.
+Mapper ABI 4은 이전 ABI handle을 받지 않는다. 같은 binary·kernel·mapper로 양쪽을 준비한다.
 
 `dax_nested_root_sync=1`은 nested lab의 outer KVM shadow EPT 보완이다.
 물리 host 성능에서 이 비용을 임의로 빼지 않는다. 일반 TLB 무효화·단일 owner·CXL 가시성은 별도 보장이다.
