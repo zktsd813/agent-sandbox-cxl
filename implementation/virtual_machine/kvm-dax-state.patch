@@ -702,7 +702,7 @@ index 6cd4dd6..0909aba 100644
  	}
 
 diff --git a/arch/x86/kvm/vmx/vmx.c b/arch/x86/kvm/vmx/vmx.c
-index 72e3943..09c0d79 100644
+index 72e3943..b1c76de 100644
 --- a/arch/x86/kvm/vmx/vmx.c
 +++ b/arch/x86/kvm/vmx/vmx.c
 @@ -54,6 +54,7 @@
@@ -834,11 +834,35 @@ index 72e3943..09c0d79 100644
  		vmx->pml_pg = NULL;
  	}
  }
-@@ -7273,8 +7323,11 @@ static noinstr void vmx_vcpu_enter_exit(struct kvm_vcpu *vcpu,
+@@ -7220,7 +7270,8 @@ static fastpath_t vmx_exit_handlers_fastpath(struct kvm_vcpu *vcpu)
+ }
+
+ static noinstr void vmx_vcpu_enter_exit(struct kvm_vcpu *vcpu,
+-					unsigned int flags)
++					unsigned int flags,
++					struct kvm_dax_resume_profile *boundary)
+ {
+ 	struct vcpu_vmx *vmx = to_vmx(vcpu);
+
+@@ -7240,8 +7291,13 @@ static noinstr void vmx_vcpu_enter_exit(struct kvm_vcpu *vcpu,
+ 	if (vcpu->arch.cr2 != native_read_cr2())
+ 		native_write_cr2(vcpu->arch.cr2);
+
++	/* The optional clock sample brackets the assembly entry/exit itself. */
++	if (boundary && !READ_ONCE(boundary->entry_l1_tsc))
++		WRITE_ONCE(boundary->entry_l1_tsc, rdtsc_ordered());
+ 	vmx->fail = __vmx_vcpu_run(vmx, (unsigned long *)&vcpu->arch.regs,
+ 				   flags);
++	if (boundary)
++		WRITE_ONCE(boundary->last_exit_l1_tsc, rdtsc_ordered());
+
+ 	vcpu->arch.cr2 = native_read_cr2();
+ 	vcpu->arch.regs_avail &= ~VMX_REGS_LAZY_LOAD_SET;
+@@ -7273,8 +7329,11 @@ static noinstr void vmx_vcpu_enter_exit(struct kvm_vcpu *vcpu,
  static fastpath_t vmx_vcpu_run(struct kvm_vcpu *vcpu)
  {
  	struct vcpu_vmx *vmx = to_vmx(vcpu);
-+	struct kvm_dax_resume_profile *resume;
++	struct kvm_dax_resume_profile *resume, *boundary;
  	unsigned long cr3, cr4;
 
 +
@@ -846,11 +870,12 @@ index 72e3943..09c0d79 100644
  	/* Record the guest's net vcpu time for enforced NMI injections. */
  	if (unlikely(!enable_vnmi &&
  		     vmx->loaded_vmcs->soft_vnmi_blocked))
-@@ -7360,8 +7413,40 @@ static fastpath_t vmx_vcpu_run(struct kvm_vcpu *vcpu)
+@@ -7360,8 +7419,32 @@ static fastpath_t vmx_vcpu_run(struct kvm_vcpu *vcpu)
 
  	kvm_wait_lapic_expire(vcpu);
 
 +	resume = kvm_dax_resume_profile();
++	boundary = resume;
 +	if (resume && !READ_ONCE(resume->entry_ready)) {
 +		u64 before, after;
 +
@@ -865,19 +890,11 @@ index 72e3943..09c0d79 100644
 +	} else {
 +		resume = NULL;
 +	}
-+	/* Optional boundary samples stay inside the existing profile path. */
-+	if (resume) {
++	if (resume)
 +		resume->l1_tsc_khz = tsc_khz;
-+		resume->entry_l1_tsc = rdtsc_ordered();
-+	}
  	/* The actual VMENTER/EXIT is in the .noinstr.text section. */
- 	vmx_vcpu_enter_exit(vcpu, __vmx_vcpu_run_flags(vmx));
-+	{
-+		struct kvm_dax_resume_profile *last = kvm_dax_resume_profile();
-+
-+		if (last)
-+			WRITE_ONCE(last->last_exit_l1_tsc, rdtsc_ordered());
-+	}
+-	vmx_vcpu_enter_exit(vcpu, __vmx_vcpu_run_flags(vmx));
++	vmx_vcpu_enter_exit(vcpu, __vmx_vcpu_run_flags(vmx), boundary);
 +	if (resume) {
 +		resume->exit_ns = ktime_get_ns();
 +		resume->exit_reason = vmx->exit_reason.full;
@@ -887,7 +904,7 @@ index 72e3943..09c0d79 100644
 
  	/* All fields are clean at this point */
  	if (kvm_is_using_evmcs()) {
-@@ -7459,7 +7544,7 @@ static int vmx_vcpu_create(struct kvm_vcpu *vcpu)
+@@ -7459,7 +7542,7 @@ static int vmx_vcpu_create(struct kvm_vcpu *vcpu)
  	 * for the guest), etc.
  	 */
  	if (enable_pml) {
@@ -896,7 +913,7 @@ index 72e3943..09c0d79 100644
  		if (!vmx->pml_pg)
  			goto free_vpid;
  	}
-@@ -8210,6 +8295,10 @@ static void vmx_vm_destroy(struct kvm *kvm)
+@@ -8210,6 +8293,10 @@ static void vmx_vm_destroy(struct kvm *kvm)
  }
 
  static struct kvm_x86_ops vmx_x86_ops __initdata = {
