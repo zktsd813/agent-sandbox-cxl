@@ -264,8 +264,8 @@ def prepare(args):
         inputs["kernel_source_metadata"] = HERE / "kernel-source.json"
         if (HERE / "cxl-static-capacity.patch").is_file():
             inputs["kernel_local_patch"] = HERE / "cxl-static-capacity.patch"
-            inputs["kernel_cxl_hdm"] = REPO / "implementation/linux/drivers/cxl/core/hdm.c"
-            inputs["kernel_cxl_mbox"] = REPO / "implementation/linux/drivers/cxl/core/mbox.c"
+            inputs["kernel_cxl_hdm"] = kernel_uapi.parents[2] / "drivers/cxl/core/hdm.c"
+            inputs["kernel_cxl_mbox"] = kernel_uapi.parents[2] / "drivers/cxl/core/mbox.c"
     manifest = {"vendor": vendor, "l1_kernel_release": release, "modules": modules,
                 "qemu": str(qemu), "qemu_version": output([qemu, "--version"], env=qemu_env()).splitlines()[0],
                 "firecracker_version": output([args.firecracker, "--version"]),
