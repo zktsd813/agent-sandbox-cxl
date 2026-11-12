@@ -29,6 +29,7 @@ def main():
     parser.add_argument("--case", choices=CASES, required=True)
     parser.add_argument("--assets", type=Path, required=True)
     parser.add_argument("--qemu", type=Path, required=True)
+    parser.add_argument("--network-backend", choices=("socket", "tap"), default="socket")
     parser.add_argument("--qemu-root", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--iterations", type=int, default=20)
@@ -129,7 +130,7 @@ def main():
         if direct:
             arguments.append("--dax-handoff")
         if block:
-            arguments += ["--migration-network", "--network-backend", "socket", "--storage-image", args.assets / "storage.raw"]
+            arguments += ["--migration-network", "--network-backend", args.network_backend, "--storage-image", args.assets / "storage.raw"]
         command(arguments, "start.log")
         started = True
         run_path, config = lab.current_run()

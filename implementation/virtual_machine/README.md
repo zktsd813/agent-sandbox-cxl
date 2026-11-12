@@ -132,6 +132,8 @@ numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 python3 "$V/lab.py" stop
 
 ## SWE trace와 hand-off
 
+`--network-backend {socket,tap}`의 기본은 `socket`이다. 이전 측정은 TAP+vhost-net이므로 지연을 바로 비교하지 않으며, TAP은 host에서 `sudo -n ip`가 되어야 한다.
+
 먼저 `nfs_bench.py prepare`와 `trace_prepare.py`로 원래 trace assets를 준비한다.
 `trace_prepare.py --source-repo`는 기존 trajectory와 image를 읽기만 한다.
 다음 단계는 kernel·mapper·상주 제어기를 새 fixture에 넣는다.
