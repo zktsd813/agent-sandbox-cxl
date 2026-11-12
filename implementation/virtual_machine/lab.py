@@ -1951,7 +1951,15 @@ def migration_ept_summary(trace_text, stats_text="", detail=False):
 
 
 def migration_trace_fetch(vm, config, path):
-    """Export completed diagnostic traces through unused ivshmem, after timing."""
+    """Export completed diagnostic traces after timing, using RPC when available."""
+    if vm.get("control_rpc"):
+        import control_rpc
+        compressed = control_rpc.call(vm, 1,
+            ("set -e\ngzip -c " + shlex.quote(path) + "\n").encode(), 60, binary=True)
+        data = gzip.decompress(compressed)
+        return data, {"path": path, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(),
+                      "gzip_bytes": len(compressed), "gzip_sha256": hashlib.sha256(compressed).hexdigest(),
+                      "transport": "framed gzip through control RPC; not guest RAM transfer"}
     offset = 4 * 1024 * 1024
     capacity = config["shared_mib"] * 1024 * 1024 - offset
     if capacity <= 0:

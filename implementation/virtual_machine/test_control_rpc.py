@@ -172,6 +172,22 @@ class Client(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,'bounds'):rpc.command(self.vm,'mutate once',1)
         self.check_server(thread)
 
+    def test_diagnostic_fetch_preserves_binary_bytes(self):
+        import gzip
+        import hashlib
+        import lab
+        payload = bytes(range(256)) * 128
+        compressed = gzip.compress(payload)
+        def reply(sock, header):
+            sock.sendall(rpc.REPLY.pack(rpc.MAGIC, 0, header[2], len(compressed), 100) + compressed)
+        thread = self.serve(reply)
+        data, integrity = lab.migration_trace_fetch(self.vm, {}, "/tmp/log with spaces")
+        self.check_server(thread)
+        self.assertEqual(data, payload)
+        self.assertEqual(integrity['bytes'], len(payload))
+        self.assertEqual(integrity['sha256'], hashlib.sha256(payload).hexdigest())
+        self.assertEqual(self.received[0][1], b"set -e\ngzip -c '/tmp/log with spaces'\n")
+
     def test_fragmented_reply(self):
         def reply(sock,h):
             for byte in rpc.REPLY.pack(rpc.MAGIC,0,h[2],5,100)+b'hello':sock.sendall(bytes([byte]))
