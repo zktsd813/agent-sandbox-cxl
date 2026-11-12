@@ -98,7 +98,7 @@ numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 bash "$V/build.sh" qemu /
 QEMU 기반은 v10.2.2의 `f8ed81651e61d9c2166df6121ce2af0f44f06b3e`다.
 기존 Docker 빌드와 소스 준비의 상세는 정리 전 README에 있다.
 `CXL_LAB_KERNEL_SOURCE`는 shared probe의 kvm_dax/mptcp UAPI 경로에도 적용된다.
-SWE guest kernel은 별도 `O=` 디렉터리에서 `kernel.config` 위에 `guest-swe.config`를 `scripts/kconfig/merge_config.sh -m -O "$V/.local/guest-swe-build" "$V/kernel.config" "$V/guest-swe.config"`로 합친 뒤, 같은 `O=`로 `make olddefconfig vmlinux`를 실행한다(CPU·NUMA 제한 동일).
+SWE guest kernel은 별도 `O=` 디렉터리에서 `kernel.config` 위에 `guest-swe.config`를 `"$CXL_LAB_KERNEL_SOURCE/scripts/kconfig/merge_config.sh" -m -O "$V/.local/guest-swe-build" "$V/kernel.config" "$V/guest-swe.config"`로 합친 뒤, 같은 `O=`로 `make olddefconfig vmlinux`를 실행한다(CPU·NUMA 제한 동일).
 `pool_memory_smoke`는 별도 disposable lab의 mapper 시험이다. 컴파일과 실행을 구분한다.
 
 ## Lab 준비와 baseline 실행
