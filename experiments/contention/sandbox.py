@@ -1278,7 +1278,7 @@ def host_sampler(directory, stop, cpus, disk="nvme0n1", interval_s=1.0):
 
 
 class CoLoad:
-    """DSec-style co-located best-effort (BE) load (docs/dsec-interference-design.md): `be_load` busy LEVEL of every
+    """DSec-style co-located best-effort (BE) load (docs-pre-merge:docs/dsec-interference-design.md): `be_load` busy LEVEL of every
     CPU of the BE nodes for the whole run, under QoS none / idle (SCHED_IDLE) / core (+ one core-scheduling cookie,
     so BE never shares an SMT core with the sandboxes) / rdt (+ RDT: BE limited to --be-rdt L3 ways and memory
     bandwidth percent). With resctrl mounted, each node's BE runs in its own resctrl group and LLC occupancy and

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fit the kernel scheduling wait that the fluid model leaves out (RESULTS-fleet.md 7절).
+"""Fit the kernel scheduling wait that the fluid model leaves out (docs-pre-merge:experiments/contention/RESULTS-fleet.md 7절).
 
 fleet.py adds wait/run = a(P) * exp(b * util) on top of the fluid share for a pool of P cores. This script fits a(P)
 for P = 5, 10, 20 and one b to the 1 vCPU pilot runs without moves (validation ladder V1 and V2): for each b on a grid,

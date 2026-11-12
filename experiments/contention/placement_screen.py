@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Placement screen (docs/experiment-plan-tail-placement.md, section 8): compare sync-plan runs that replay the
+"""Placement screen (docs-pre-merge:docs/experiment-plan-tail-placement.md, section 8): compare sync-plan runs that replay the
 same steps under different placements. Per run and step: step time, how much later the step's last rollouts end
 than in the reference run (same rollouts), runqueue wait over run per node (cpu1ms.csv), per-node 1-s vCPU demand
 p99 and max (vcpu.csv), moves, and image locality computed from where each sandbox ran: distinct (node, image)

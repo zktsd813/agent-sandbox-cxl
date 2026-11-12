@@ -1,6 +1,6 @@
 # Virtual node 필요성 실측: 공개 RL 학습 rollout, bud05·bud04 (2026-10-26~28)
 
-설계: [virtual-node-experiment-design.md](../../virtual-node-experiment-design.md). 이 문서는 그 설계의 E0·E1·E2·E4(일부)를 실제로 돌린 기록이다.
+설계: [virtual-node-experiment-design.md](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/docs/virtual-node-experiment-design.md). 이 문서는 그 설계의 E0·E1·E2·E4(일부)를 실제로 돌린 기록이다.
 
 ## 0. 결론
 

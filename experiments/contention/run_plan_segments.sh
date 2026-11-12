@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Synchronous replay v2 (docs/sync-replay-design.md): a step plan (rl_rollouts.py plan) is run in segments of
+# Synchronous replay v2 (docs-pre-merge:docs/sync-replay-design.md): a step plan (rl_rollouts.py plan) is run in segments of
 # SEGMENT_STEPS steps. Per segment: build its images (pinned digests, image-pins.json), replay its traces alone
 # (solo, for the expected step time; skipped when SOLO is given), run every condition on the same steps with only
 # the image files' page cache evicted in between, then, with DROP_IMAGES=1, delete the segment's images

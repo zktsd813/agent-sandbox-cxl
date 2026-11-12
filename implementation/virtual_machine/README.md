@@ -2,9 +2,8 @@
 
 공유 CXL에 guest RAM을 유지하고 실행 host를 A↔B로 바꾸는 실험이다.
 현재 검증 환경은 한 물리 host의 QEMU L1 A/B와 nested KVM/Firecracker L2다.
-물리 multi-host CXL은 검증하지 않았다. 연구 방향은 [HANDOFF](../../docs/HANDOFF.md),
-구현 범위는 [구현 지도](../../docs/cxl-implementation-map.md), 기존 측정은
-[resident direct](../../docs/cxl-resident-direct.md)에 있다.
+물리 multi-host CXL은 검증하지 않았다. 연구 방향과 구현 상태는 [RESEARCH](../../docs/RESEARCH.md),
+최신 lab 측정은 [vm-handoff-lab-20261112](../../docs/results/vm-handoff-lab-20261112/README.md)에 있다.
 
 Page cache 공유 실험은 별도 `cxl-page-cache` 저장소로 옮겼다.
 이 checkout은 VM-private RAM mapper와 hand-off만 유지한다.
@@ -171,14 +170,14 @@ Runner는 1 vCPU·2GiB sandbox, L1별 4 vCPU·8GiB, 공유 CXL 16GiB layout을 �
 | `--defer-verification` | 실행만 수집; suite를 검증 통과로 표시하지 않음 |
 
 Resident의 ready/fast/native/memory control과 immutable NFS cache는 기본이다.
-중간 비교 toggle은 제거했다. 비교 결과는 [resident direct](../../docs/cxl-resident-direct.md)와
-[Direct API latency](../../docs/cxl-direct-api-latency.md)에 남아 있다.
+중간 비교 toggle은 제거했다. 비교 결과는 `results/`와 합치기 전 문서 [resident direct](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/docs/cxl-resident-direct.md),
+[Direct API latency](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/docs/cxl-direct-api-latency.md)에 남아 있다.
 
 ## 한계
 
 Direct는 현재 1 vCPU·동일 kernel/CPU 모델·고정 HVA·MMIO·read-only block 조건이다.
 Balloon·hotplug·pmem·지원하지 않는 장치 구성은 사전에 거절한다.
-Mapper ABI 4은 이전 ABI handle을 받지 않는다. 같은 binary·kernel·mapper로 양쪽을 준비한다.
+Mapper `/dev/cxl_pool` ABI 4(handle 152 B, config/query 56 B, Firecracker manifest v4, resident packet v2)는 이전 ABI handle을 받지 않는다. 같은 binary·kernel·mapper로 양쪽을 준비한다.
 
 `dax_nested_root_sync=1`은 nested lab의 outer KVM shadow EPT 보완이다.
 물리 host 성능에서 이 비용을 임의로 빼지 않는다. 일반 TLB 무효화·단일 owner·CXL 가시성은 별도 보장이다.

@@ -19,7 +19,7 @@
    - trace는 SWE-bench Multilingual(빌드가 무거운 다언어 task) 48개이고, 넓은 trace를 일부러 절반 넣었다.
    - LLM 대기는 Gemini API 응답 간격(turn당 3.5초)이다. 공개 GRPO rollout(Python, Qwen3.5)은 turn당 14.5초다.
    - CPU 제한이 없고, 사용률은 sandbox 수 K로 맞췄다.
-   - 같은 기준으로 재면 Python RL rollout은 sandbox당 평균 0.04코어다. 15코어 노드를 70% 채우려면 코어당 17개가 필요해 메모리 한도를 넘는다. 이 문서의 숫자는 "빌드가 무거운 task를, 빠른 LLM으로, CPU 제한 없이, 코어당 2~5개 돌릴 때"의 값이다. workload를 넓힌 계획은 [workload-diversity-plan.md](../../workload-diversity-plan.md)에 있다.
+   - 같은 기준으로 재면 Python RL rollout은 sandbox당 평균 0.04코어다. 15코어 노드를 70% 채우려면 코어당 17개가 필요해 메모리 한도를 넘는다. 이 문서의 숫자는 "빌드가 무거운 task를, 빠른 LLM으로, CPU 제한 없이, 코어당 2~5개 돌릴 때"의 값이다. workload를 넓힌 계획은 [workload-diversity-plan.md](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/docs/workload-diversity-plan.md)에 있다.
 
 ## 1. 방법
 

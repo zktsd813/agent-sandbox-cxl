@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit pilot runs against the solo runs the simulator uses (RESULTS-fleet.md 7절).
+"""Audit pilot runs against the solo runs the simulator uses (docs-pre-merge:experiments/contention/RESULTS-fleet.md 7절).
 
 For each pilot run without moves:
 - divergence: per sandbox, the first command whose return code differs from the SOLO run of the same trace (not the

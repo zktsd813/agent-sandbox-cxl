@@ -1,4 +1,4 @@
-// Best-effort (BE) co-located load for the DSec-style interference runs (docs/dsec-interference-design.md).
+// Best-effort (BE) co-located load for the DSec-style interference runs (docs-pre-merge:docs/dsec-interference-design.md).
 // One thread per listed CPU, each busy LEVEL of every PERIOD_MS (random phase), doing KIND work:
 //   cpu  integer hashing in L1/L2 (compile-like),  avx  AVX-512 FMA (lowers turbo),
 //   mem  stream triad over MEM_MB per thread (memory bandwidth, LLC),  mix  cpu and mem in alternate periods.

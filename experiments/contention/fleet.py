@@ -44,7 +44,7 @@ MECHANISMS = {
 }
 
 
-# Kernel scheduling wait the fluid share leaves out (RESULTS-fleet.md 7절): wait/run = a(P) * exp(b * util) for a
+# Kernel scheduling wait the fluid share leaves out (docs-pre-merge:experiments/contention/RESULTS-fleet.md 7절): wait/run = a(P) * exp(b * util) for a
 # pool of P cores, fitted per mode to the 1 vCPU pilot runs at P = 5, 10, 20 that did not diverge from their solo
 # runs, at matched utilization (pilot_audit.py, kernel_wait_fit.py). Beyond the measured sizes "slope" extends the
 # log-log fit of a over P, "floor" keeps a at its 20-core value.
@@ -622,7 +622,7 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                         pos[s] += 1
                         # carry=True: pure fluid progress (used for the fleet results). carry=False: a partly served
                         # slot rounds up to a whole extra step; it fits small nodes but overstates contention on large
-                        # ones (RESULTS-fleet.md 1절). Scheduler wait is added separately (kernel_wait, 7절)
+                        # ones (docs-pre-merge:experiments/contention/RESULTS-fleet.md 1절). Scheduler wait is added separately (kernel_wait, 7절)
                         prog[s] = prog[s] - 1.0 if carry and prog[s] > 1.0 else 0.0
                         if pos[s] >= seg_len[g]:
                             prog[s] = 0.0

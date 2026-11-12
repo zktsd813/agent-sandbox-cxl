@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""How much do node-load results depend on the workload? Three checks (docs/workload-diversity-plan.md, 2 절).
+"""How much do node-load results depend on the workload? Three checks (docs-pre-merge:docs/workload-diversity-plan.md, 2 절).
 
   nodes   load shape of two nodes in measured runs: 11-05 Docker pools (cgroup use, 20 ms) and RL microVM runs
           (nodes.csv/vcpu.csv, 10 ms). Correlation between the two nodes at 1 s, its fast part (minus a centered 30 s

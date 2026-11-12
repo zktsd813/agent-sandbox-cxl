@@ -1,0 +1,66 @@
+{
+  "counts": {
+    ".py": {
+      "files": 24,
+      "lines": 7019
+    },
+    ".c": {
+      "files": 7,
+      "lines": 4078
+    },
+    ".sh": {
+      "files": 8,
+      "lines": 803
+    },
+    ".h": {
+      "files": 2,
+      "lines": 67
+    }
+  },
+  "patches": {
+    "firecracker.patch": {
+      "files": 28,
+      "added": 4223,
+      "deleted": 95,
+      "lines": 5547
+    },
+    "kvm-dax-state.patch": {
+      "files": 25,
+      "added": 1694,
+      "deleted": 175,
+      "lines": 3154
+    }
+  },
+  "commits": [
+    {
+      "hash": "7ebd387e7b6586981f6a95ccf2e6b0e00c1b2671",
+      "subject": "Prune retired harness chains after moving SWE helpers (A)",
+      "added": 175,
+      "deleted": 6806
+    },
+    {
+      "hash": "8e544c59ffd1f38a5cb3046ea2c21546f7071d51",
+      "subject": "Remove unused harness comparison options and NFS statistics (B)",
+      "added": 48,
+      "deleted": 179
+    },
+    {
+      "hash": "b1fbac717bfea6a1fa58cce09812169f0e65fe46",
+      "subject": "Prune VMM heap and legacy resident JSON revisits (C)",
+      "added": 325,
+      "deleted": 859
+    },
+    {
+      "hash": "213767f5284b320f79f41c75350c19858a4f54fe",
+      "subject": "Retire private mapper credits and placement diagnostics; adopt ABI 4 (D)",
+      "added": 617,
+      "deleted": 963
+    },
+    {
+      "hash": "9629e46e0814e871fca4fee8034bc48edbbc3480",
+      "subject": "Describe retained baselines and refresh implementation sizes (E)",
+      "added": 79,
+      "deleted": 91
+    }
+  ]
+}

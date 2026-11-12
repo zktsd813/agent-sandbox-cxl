@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Does the number of distinct traces change node contention at the same utilization? (RESULTS-fleet.md, 6절)
+"""Does the number of distinct traces change node contention at the same utilization? (docs-pre-merge:experiments/contention/RESULTS-fleet.md, 6절)
 
 Draws random subsets of 15/30/60/120 traces (3 each) plus the full set, sizes each run for the target utilization from
 the subset's own mean demand, and simulates 16 x 192-core nodes split and fully shared, seeds 1-2.

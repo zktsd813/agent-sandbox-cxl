@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Critical path of the original RL job (sweagent/iter2-rl-rollouts) from index.jsonl timing
-(docs/experiment-plan-tail-placement.md, section 8.5).
+(docs-pre-merge:docs/experiment-plan-tail-placement.md, section 8.5).
 
 Per rollout: launch = first_ts - env_creation_s; env = env_creation_s; llm = sum of tool->assistant gaps;
 tool = (last_ts - first_ts) - llm, i.e. tool execution plus agent overhead plus the first LLM call.

@@ -258,7 +258,7 @@ def move_latency():
 def main():
     OUT.mkdir(exist_ok=True)
     # timeline(), bursts() and moves() need event-level runnable intervals: schedstat run_delay is credited when the
-    # task finally runs, so per-tick wait lumps land late (see RESULTS-20261021.md, correction). Only totals are valid.
+    # task finally runs, so per-tick wait lumps land late (see docs-pre-merge:experiments/contention/RESULTS-20261021.md, correction). Only totals are valid.
     lost_cpu()
     model_check()
     move_latency()

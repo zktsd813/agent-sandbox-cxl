@@ -1,6 +1,6 @@
 # Resident direct: 목적지 준비, 실행 환경 재사용, 왕복 검증
 
-구현 설명은 [목적지 FD·장치 실행 환경 재사용](../../../../docs/cxl-resident-direct.md)을 따른다. 이 디렉터리는 2026-11-02의 실험 원자료와 독립 검증 결과다.
+구현 설명은 [목적지 FD·장치 실행 환경 재사용](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/docs/cxl-resident-direct.md)을 따른다. 이 디렉터리는 2026-11-02의 실험 원자료와 독립 검증 결과다.
 
 ## 최종 실행
 
@@ -74,7 +74,7 @@ Ping 시간을 뺀 값은 계측된 전체에서 해당 구간을 뺀 값이다.
 
 ## 재현
 
-기존 SWE fixture 준비는 [SWE pooling 문서](../../../../docs/cxl-swe-pool-traces.md)를 따른다. Kernel/CPM 모듈은 이번에 변경하지 않았다. 이번 Firecracker patch를 적용한 release executable과 기본 fixture로 새 fixture를 만든다. 기존 fixture는 덮어쓰지 않는다.
+기존 SWE fixture 준비는 [SWE pooling 문서](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/docs/cxl-swe-pool-traces.md)를 따른다. Kernel/CPM 모듈은 이번에 변경하지 않았다. 이번 Firecracker patch를 적용한 release executable과 기본 fixture로 새 fixture를 만든다. 기존 fixture는 덮어쓰지 않는다.
 
 ```sh
 python3 implementation/virtual_machine/resident_prepare.py \

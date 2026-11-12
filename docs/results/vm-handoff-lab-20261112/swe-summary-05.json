@@ -1,0 +1,814 @@
+{
+  "suites": {
+    "gin-suite-v2": {
+      "result": "passed",
+      "trials": 3,
+      "commit": "243b1b064ad51f5f7181b7b4ce0aca8f4341544e",
+      "sha256": "b9521406cce664ed0be32d9f19a80f167be3e9ba82407a5f8b57dd991a63b28d"
+    },
+    "all-suite": {
+      "result": "passed",
+      "trials": 9,
+      "commit": "243b1b064ad51f5f7181b7b4ce0aca8f4341544e",
+      "sha256": "4b1c3199596a6cd6efe6af4dc01e66ae5e2289bcb1e86fe9593a0015a39918b7"
+    },
+    "trace-suite": {
+      "result": "passed",
+      "trials": 1,
+      "commit": "243b1b064ad51f5f7181b7b4ce0aca8f4341544e",
+      "sha256": "f5260cfaf726b72a73ec9e725820ab4d9aa479a18f24b40e325aed29bdd87da7"
+    },
+    "inflight-suite": {
+      "result": "passed",
+      "trials": 1,
+      "commit": "243b1b064ad51f5f7181b7b4ce0aca8f4341544e",
+      "sha256": "0f7a78d4d5267bf75ec37ab83a2f93fe87226b3b6cef5fc8c8570d2656a1d4b1"
+    },
+    "warm-suite": {
+      "result": "passed",
+      "trials": 1,
+      "commit": "243b1b064ad51f5f7181b7b4ce0aca8f4341544e",
+      "sha256": "49a2bf4d257f4958262b97132928bee271dffcd1970991c1597c9a1a165028d5"
+    }
+  },
+  "trials": [
+    {
+      "suite": "gin-suite-v2",
+      "trace": "gin-gonic__gin-3741",
+      "mode": "baseline",
+      "result": "passed",
+      "command_count": 27,
+      "handoff_ms": [],
+      "promotion": [],
+      "demotion": []
+    },
+    {
+      "suite": "gin-suite-v2",
+      "trace": "gin-gonic__gin-3741",
+      "mode": "state-only",
+      "result": "passed",
+      "command_count": 27,
+      "handoff_ms": [
+        44.548501,
+        82.356732
+      ],
+      "promotion": [
+        2064.021638,
+        1045.9898660000001
+      ],
+      "demotion": [
+        1243.0017180000002,
+        1121.06797
+      ]
+    },
+    {
+      "suite": "gin-suite-v2",
+      "trace": "gin-gonic__gin-3741",
+      "mode": "direct",
+      "result": "passed",
+      "command_count": 27,
+      "handoff_ms": [
+        3.110827,
+        3.735973,
+        6.443087,
+        1.57048
+      ],
+      "promotion": [
+        2123.714949,
+        1055.6585479999999
+      ],
+      "demotion": [
+        1245.015818,
+        1123.619978
+      ]
+    },
+    {
+      "suite": "all-suite",
+      "trace": "gin-gonic__gin-3741",
+      "mode": "baseline",
+      "result": "passed",
+      "command_count": 27,
+      "handoff_ms": [],
+      "promotion": [],
+      "demotion": []
+    },
+    {
+      "suite": "all-suite",
+      "trace": "gin-gonic__gin-3741",
+      "mode": "state-only",
+      "result": "passed",
+      "command_count": 27,
+      "handoff_ms": [
+        88.358378,
+        83.819199
+      ],
+      "promotion": [
+        2057.379297,
+        1050.541438
+      ],
+      "demotion": [
+        1247.938524,
+        1116.9188840000002
+      ]
+    },
+    {
+      "suite": "all-suite",
+      "trace": "gin-gonic__gin-3741",
+      "mode": "direct",
+      "result": "passed",
+      "command_count": 27,
+      "handoff_ms": [
+        3.150424,
+        4.144432,
+        5.761888,
+        2.145209
+      ],
+      "promotion": [
+        2131.018926,
+        1057.340611
+      ],
+      "demotion": [
+        1243.172225,
+        1126.596537
+      ]
+    },
+    {
+      "suite": "all-suite",
+      "trace": "php-cs-fixer__php-cs-fixer-8331",
+      "mode": "baseline",
+      "result": "passed",
+      "command_count": 35,
+      "handoff_ms": [],
+      "promotion": [],
+      "demotion": []
+    },
+    {
+      "suite": "all-suite",
+      "trace": "php-cs-fixer__php-cs-fixer-8331",
+      "mode": "state-only",
+      "result": "passed",
+      "command_count": 35,
+      "handoff_ms": [
+        44.947547,
+        82.671947
+      ],
+      "promotion": [
+        2130.0564879999997,
+        1052.2683670000001
+      ],
+      "demotion": [
+        1295.890993,
+        1118.31761
+      ]
+    },
+    {
+      "suite": "all-suite",
+      "trace": "php-cs-fixer__php-cs-fixer-8331",
+      "mode": "direct",
+      "result": "passed",
+      "command_count": 35,
+      "handoff_ms": [
+        3.508962,
+        2.612261,
+        2.640754,
+        2.027725
+      ],
+      "promotion": [
+        2184.610797,
+        1050.708098
+      ],
+      "demotion": [
+        1288.516042,
+        1120.414977
+      ]
+    },
+    {
+      "suite": "all-suite",
+      "trace": "micropython__micropython-13039",
+      "mode": "baseline",
+      "result": "passed",
+      "command_count": 43,
+      "handoff_ms": [],
+      "promotion": [],
+      "demotion": []
+    },
+    {
+      "suite": "all-suite",
+      "trace": "micropython__micropython-13039",
+      "mode": "state-only",
+      "result": "passed",
+      "command_count": 43,
+      "handoff_ms": [
+        43.41827,
+        85.287166
+      ],
+      "promotion": [
+        2086.495284,
+        1055.586583
+      ],
+      "demotion": [
+        1268.299368,
+        1122.177355
+      ]
+    },
+    {
+      "suite": "all-suite",
+      "trace": "micropython__micropython-13039",
+      "mode": "direct",
+      "result": "passed",
+      "command_count": 43,
+      "handoff_ms": [
+        3.144649,
+        3.224632,
+        3.433358,
+        2.188926
+      ],
+      "promotion": [
+        2160.965076,
+        1050.346499
+      ],
+      "demotion": [
+        1272.841546,
+        1129.587475
+      ]
+    },
+    {
+      "suite": "trace-suite",
+      "trace": "gin-gonic__gin-3741",
+      "mode": "direct",
+      "result": "passed",
+      "command_count": 27,
+      "handoff_ms": [
+        3.060527,
+        3.454517,
+        5.591778,
+        2.832185
+      ],
+      "promotion": [
+        2135.9028909999997,
+        1061.425642
+      ],
+      "demotion": [
+        1246.478787,
+        1129.0512549999999
+      ]
+    },
+    {
+      "suite": "inflight-suite",
+      "trace": "gin-gonic__gin-3741",
+      "mode": "direct",
+      "result": "passed",
+      "command_count": 27,
+      "handoff_ms": [
+        3.197116,
+        2.727615,
+        2.347585,
+        3.310527,
+        5.867843,
+        1.872535
+      ],
+      "promotion": [
+        2122.843316,
+        1047.57525
+      ],
+      "demotion": [
+        1246.055594,
+        1125.22873
+      ]
+    },
+    {
+      "suite": "warm-suite",
+      "trace": "gin-gonic__gin-3741",
+      "mode": "direct",
+      "result": "passed",
+      "command_count": 27,
+      "handoff_ms": [
+        3.054495,
+        1.653433,
+        2.114691,
+        1.140383,
+        2.061943,
+        1.218005,
+        2.196386,
+        1.395285,
+        1.899188,
+        1.493984,
+        1.920007,
+        1.514688,
+        1.97085,
+        1.519496,
+        1.814988,
+        0.853005,
+        1.796246,
+        0.910616,
+        1.702465,
+        1.597692,
+        1.633305,
+        1.239325,
+        2.500048,
+        2.033567,
+        2.182178,
+        2.026633,
+        2.28369,
+        2.006067,
+        2.331181,
+        1.638836,
+        2.243606,
+        1.936803,
+        2.161783,
+        2.097726,
+        2.201929,
+        1.995675,
+        2.298203,
+        2.067365,
+        2.007624,
+        1.882872,
+        2.20183,
+        2.7657,
+        6.015801,
+        2.26714
+      ],
+      "promotion": [
+        2127.1930639999996,
+        1051.401593
+      ],
+      "demotion": [
+        1255.858935,
+        1121.7580500000001
+      ]
+    }
+  ],
+  "kernel_trace": [
+    {
+      "epoch": 1,
+      "destination": "B",
+      "nested_root_ms": 0.002,
+      "ept_rebind_ms": 0.081
+    },
+    {
+      "epoch": 2,
+      "destination": "A",
+      "nested_root_ms": 0.699,
+      "ept_rebind_ms": 0.714
+    },
+    {
+      "epoch": 3,
+      "destination": "B",
+      "nested_root_ms": 3.468,
+      "ept_rebind_ms": 3.471
+    },
+    {
+      "epoch": 4,
+      "destination": "A",
+      "nested_root_ms": 0.272,
+      "ept_rebind_ms": 0.273
+    }
+  ],
+  "inflight": {
+    "index": 12,
+    "duration_s": 3.709999999999999,
+    "started": {
+      "event": "trace_async_started",
+      "label": "v1e1c17",
+      "index": 12,
+      "command_pid": 323,
+      "start_ticks": 1049
+    },
+    "observations": [
+      {
+        "role": "B",
+        "epoch": 1,
+        "event": "trace_running",
+        "label": "v1e1c18",
+        "index": 12,
+        "command_pid": 323,
+        "start_ticks": 1049,
+        "process_state": "R",
+        "active": true
+      },
+      {
+        "role": "A",
+        "epoch": 2,
+        "event": "trace_running",
+        "label": "v1e2c20",
+        "index": 12,
+        "command_pid": 323,
+        "start_ticks": 1049,
+        "process_state": "R",
+        "active": true
+      },
+      {
+        "role": "B",
+        "epoch": 3,
+        "event": "trace_running",
+        "label": "v1e3c22",
+        "index": 12,
+        "command_pid": 323,
+        "start_ticks": 1049,
+        "process_state": "R",
+        "active": true
+      }
+    ]
+  },
+  "warm": {
+    "n": 38,
+    "p50_ms": 1.9538265,
+    "p95_ms": 2.331181,
+    "min_ms": 0.853005,
+    "max_ms": 2.500048,
+    "first_b_ms": 3.054495,
+    "first_a_ms": 1.653433,
+    "remote_work_b_ms": 2.20183,
+    "after_work_a_ms": 2.7657,
+    "repromote_b_ms": 6.015801,
+    "last_a_ms": 2.26714
+  },
+  "totals": {
+    "passed_trials": 15,
+    "direct_handoffs": 70,
+    "state_handoffs": 8,
+    "promotions": 22,
+    "demotions": 22
+  },
+  "cleanup": {
+    "utc": "2026-11-12T00:56:34.060219+00:00",
+    "sessions": [
+      {
+        "session": "run05-all-00",
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T004903Z-lkbvzbdv",
+        "stop_returncode": 0,
+        "owned_vms": {
+          "A": {
+            "pid": 2693664,
+            "starttime": "85606857",
+            "alive": false
+          },
+          "B": {
+            "pid": 2693674,
+            "starttime": "85606862",
+            "alive": false
+          }
+        },
+        "memory_directory": "/dev/shm/cxl-lab-ag246zq_",
+        "memory_directory_exists": false,
+        "cxl_backing_exists": false,
+        "shared_backing_exists": false,
+        "control_directory_exists": false,
+        "session_pointer_removed": true
+      },
+      {
+        "session": "run05-all-01",
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T004931Z-qkxsqge7",
+        "stop_returncode": 0,
+        "owned_vms": {
+          "A": {
+            "pid": 2694010,
+            "starttime": "85609676",
+            "alive": false
+          },
+          "B": {
+            "pid": 2694020,
+            "starttime": "85609681",
+            "alive": false
+          }
+        },
+        "memory_directory": "/dev/shm/cxl-lab-kkmqmy4q",
+        "memory_directory_exists": false,
+        "cxl_backing_exists": false,
+        "shared_backing_exists": false,
+        "control_directory_exists": false,
+        "session_pointer_removed": true
+      },
+      {
+        "session": "run05-all-02",
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T005012Z-pjxlphwu",
+        "stop_returncode": 0,
+        "owned_vms": {
+          "A": {
+            "pid": 2694249,
+            "starttime": "85613716",
+            "alive": false
+          },
+          "B": {
+            "pid": 2694259,
+            "starttime": "85613721",
+            "alive": false
+          }
+        },
+        "memory_directory": "/dev/shm/cxl-lab-uzfoam06",
+        "memory_directory_exists": false,
+        "cxl_backing_exists": false,
+        "shared_backing_exists": false,
+        "control_directory_exists": false,
+        "session_pointer_removed": true
+      },
+      {
+        "session": "run05-all-03",
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T005048Z-nwxmhbi0",
+        "stop_returncode": 0,
+        "owned_vms": {
+          "A": {
+            "pid": 2694521,
+            "starttime": "85617410",
+            "alive": false
+          },
+          "B": {
+            "pid": 2694531,
+            "starttime": "85617416",
+            "alive": false
+          }
+        },
+        "memory_directory": "/dev/shm/cxl-lab-oyzgsy_y",
+        "memory_directory_exists": false,
+        "cxl_backing_exists": false,
+        "shared_backing_exists": false,
+        "control_directory_exists": false,
+        "session_pointer_removed": true
+      },
+      {
+        "session": "run05-all-04",
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T005108Z-vkzq12p1",
+        "stop_returncode": 0,
+        "owned_vms": {
+          "A": {
+            "pid": 2694703,
+            "starttime": "85619389",
+            "alive": false
+          },
+          "B": {
+            "pid": 2694713,
+            "starttime": "85619395",
+            "alive": false
+          }
+        },
+        "memory_directory": "/dev/shm/cxl-lab-3rkvgwhn",
+        "memory_directory_exists": false,
+        "cxl_backing_exists": false,
+        "shared_backing_exists": false,
+        "control_directory_exists": false,
+        "session_pointer_removed": true
+      },
+      {
+        "session": "run05-all-05",
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T005138Z-zon5jnc6",
+        "stop_returncode": 0,
+        "owned_vms": {
+          "A": {
+            "pid": 2694993,
+            "starttime": "85622375",
+            "alive": false
+          },
+          "B": {
+            "pid": 2695003,
+            "starttime": "85622380",
+            "alive": false
+          }
+        },
+        "memory_directory": "/dev/shm/cxl-lab-q0j4sm4l",
+        "memory_directory_exists": false,
+        "cxl_backing_exists": false,
+        "shared_backing_exists": false,
+        "control_directory_exists": false,
+        "session_pointer_removed": true
+      },
+      {
+        "session": "run05-all-06",
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T005202Z-r4ffjdt1",
+        "stop_returncode": 0,
+        "owned_vms": {
+          "A": {
+            "pid": 2695133,
+            "starttime": "85624776",
+            "alive": false
+          },
+          "B": {
+            "pid": 2695143,
+            "starttime": "85624782",
+            "alive": false
+          }
+        },
+        "memory_directory": "/dev/shm/cxl-lab-je34b6h4",
+        "memory_directory_exists": false,
+        "cxl_backing_exists": false,
+        "shared_backing_exists": false,
+        "control_directory_exists": false,
+        "session_pointer_removed": true
+      },
+      {
+        "session": "run05-all-07",
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T005224Z-fd7wtj6s",
+        "stop_returncode": 0,
+        "owned_vms": {
+          "A": {
+            "pid": 2695248,
+            "starttime": "85626966",
+            "alive": false
+          },
+          "B": {
+            "pid": 2695258,
+            "starttime": "85626972",
+            "alive": false
+          }
+        },
+        "memory_directory": "/dev/shm/cxl-lab-vb3g5dbg",
+        "memory_directory_exists": false,
+        "cxl_backing_exists": false,
+        "shared_backing_exists": false,
+        "control_directory_exists": false,
+        "session_pointer_removed": true
+      },
+      {
+        "session": "run05-all-08",
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T005256Z-85k6fit1",
+        "stop_returncode": 0,
+        "owned_vms": {
+          "A": {
+            "pid": 2695468,
+            "starttime": "85630170",
+            "alive": false
+          },
+          "B": {
+            "pid": 2695478,
+            "starttime": "85630175",
+            "alive": false
+          }
+        },
+        "memory_directory": "/dev/shm/cxl-lab-fyr6vh4a",
+        "memory_directory_exists": false,
+        "cxl_backing_exists": false,
+        "shared_backing_exists": false,
+        "control_directory_exists": false,
+        "session_pointer_removed": true
+      },
+      {
+        "session": "run05-gin-00",
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T004536Z-_sc8b1os",
+        "stop_returncode": 0,
+        "owned_vms": {
+          "A": {
+            "pid": 2689913,
+            "starttime": "85586187",
+            "alive": false
+          },
+          "B": {
+            "pid": 2689923,
+            "starttime": "85586192",
+            "alive": false
+          }
+        },
+        "memory_directory": "/dev/shm/cxl-lab-loyakj3t",
+        "memory_directory_exists": false,
+        "cxl_backing_exists": false,
+        "shared_backing_exists": false,
+        "control_directory_exists": false,
+        "retained_storage": {
+          "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T004536Z-_sc8b1os/home-storage.raw",
+          "logical_bytes": 13958643712,
+          "allocated_bytes": 3036790784
+        },
+        "session_pointer_removed": true
+      },
+      {
+        "session": "run05-gin-v2-00",
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T004705Z-xy81tdqk",
+        "stop_returncode": 0,
+        "owned_vms": {
+          "A": {
+            "pid": 2691990,
+            "starttime": "85595101",
+            "alive": false
+          },
+          "B": {
+            "pid": 2692000,
+            "starttime": "85595107",
+            "alive": false
+          }
+        },
+        "memory_directory": "/dev/shm/cxl-lab-786yhs9m",
+        "memory_directory_exists": false,
+        "cxl_backing_exists": false,
+        "shared_backing_exists": false,
+        "control_directory_exists": false,
+        "session_pointer_removed": true
+      },
+      {
+        "session": "run05-gin-v2-01",
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T004734Z-ugmck9hk",
+        "stop_returncode": 0,
+        "owned_vms": {
+          "A": {
+            "pid": 2692513,
+            "starttime": "85597948",
+            "alive": false
+          },
+          "B": {
+            "pid": 2692523,
+            "starttime": "85597953",
+            "alive": false
+          }
+        },
+        "memory_directory": "/dev/shm/cxl-lab-rznq2kpb",
+        "memory_directory_exists": false,
+        "cxl_backing_exists": false,
+        "shared_backing_exists": false,
+        "control_directory_exists": false,
+        "session_pointer_removed": true
+      },
+      {
+        "session": "run05-gin-v2-02",
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T004813Z-hjc71mgk",
+        "stop_returncode": 0,
+        "owned_vms": {
+          "A": {
+            "pid": 2693096,
+            "starttime": "85601826",
+            "alive": false
+          },
+          "B": {
+            "pid": 2693106,
+            "starttime": "85601831",
+            "alive": false
+          }
+        },
+        "memory_directory": "/dev/shm/cxl-lab-axgo8i__",
+        "memory_directory_exists": false,
+        "cxl_backing_exists": false,
+        "shared_backing_exists": false,
+        "control_directory_exists": false,
+        "session_pointer_removed": true
+      },
+      {
+        "session": "run05-inflight-00",
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T005444Z-eh4ie37s",
+        "stop_returncode": 0,
+        "owned_vms": {
+          "A": {
+            "pid": 2695841,
+            "starttime": "85640979",
+            "alive": false
+          },
+          "B": {
+            "pid": 2695851,
+            "starttime": "85640984",
+            "alive": false
+          }
+        },
+        "memory_directory": "/dev/shm/cxl-lab-ylg2js2v",
+        "memory_directory_exists": false,
+        "cxl_backing_exists": false,
+        "shared_backing_exists": false,
+        "control_directory_exists": false,
+        "session_pointer_removed": true
+      },
+      {
+        "session": "run05-trace-00",
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T005357Z-z29fvoop",
+        "stop_returncode": 0,
+        "owned_vms": {
+          "A": {
+            "pid": 2695686,
+            "starttime": "85636314",
+            "alive": false
+          },
+          "B": {
+            "pid": 2695696,
+            "starttime": "85636319",
+            "alive": false
+          }
+        },
+        "memory_directory": "/dev/shm/cxl-lab-9cl16rot",
+        "memory_directory_exists": false,
+        "cxl_backing_exists": false,
+        "shared_backing_exists": false,
+        "control_directory_exists": false,
+        "session_pointer_removed": true
+      },
+      {
+        "session": "run05-warm-00",
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T005531Z-e2t1poyl",
+        "stop_returncode": 0,
+        "owned_vms": {
+          "A": {
+            "pid": 2696246,
+            "starttime": "85645655",
+            "alive": false
+          },
+          "B": {
+            "pid": 2696256,
+            "starttime": "85645660",
+            "alive": false
+          }
+        },
+        "memory_directory": "/dev/shm/cxl-lab-ojam0a6d",
+        "memory_directory_exists": false,
+        "cxl_backing_exists": false,
+        "shared_backing_exists": false,
+        "control_directory_exists": false,
+        "session_pointer_removed": true
+      }
+    ],
+    "own_qemu_processes_remaining": [],
+    "dev_shm_entries": [],
+    "remaining_run05_pointers": []
+  }
+}

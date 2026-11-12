@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Virtual-node motivation matrix on one host (docs/virtual-node-experiment-design.md, E1/E2/E4):
+# Virtual-node motivation matrix on one host (docs-pre-merge:docs/virtual-node-experiment-design.md, E1/E2/E4):
 # NUMA 0 cores 2-31 as two isolated 15-core nodes (ISO) or one pooled 30-core node (POOL), RL rollouts
 # (candidates-rl.json, real GRPO groups of 8), token-model LLM waits. NUMA 1 is not used.
 # Paired variant: every condition uses the same seed, so ISO and POOL draw the same group sequence.

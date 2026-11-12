@@ -1,28 +1,13 @@
 # agent-sandbox-cxl
 
-문서 색인과 현재 방향(2026-11-03)은 [docs/README.md](docs/README.md)에 있다. 처음 읽는 경우 [CXL microVM 연구와 구현 전체 정리](docs/cxl-microvm-overview.md)부터 본다. Workload 관측부터 실행 이전 구현, PML·MPTCP 검증, 파일 공유 설계와 후속 계획을 연결했다. 구현·실측·시뮬레이션·설계 중인 내용을 구분한다.
+CXL 공유 메모리 위에서 sandbox microVM을 다른 서버로 넘기는 VM hand-off 연구 저장소다. 연구 목표, 설계, 구현 상태, 측정 결론, 버린 방향, 남은 일은 **[docs/RESEARCH.md](docs/RESEARCH.md)** 한 문서에 있다. 측정 원자료는 [docs/results/](docs/results/)에 있다.
 
-2026-11-04 최신 구현은 [resident direct 제어 경로와 단계별 지연 분석](docs/cxl-resident-direct.md)이다. UART eventfd 수명을 고치고 VMM event loop의 native binary 제어로 warm handoff의 HTTP·JSON staging을 생략했다. 같은 바이너리의 계측 비교 중앙값은 8.113→6.992ms, 별도 무계측 실제 SWE 반복은 4.092ms다. 요청→Resume 응답 기준이며 준비·promotion/demotion·guest 첫 실행 시각과 구분한다.
+이 README는 Docker trace replay harness의 사용법이다. 다른 실행 방법은 아래 문서에 있다.
 
-[구현 지도·기준 소스 대비 변경량](docs/cxl-implementation-map.md)에 Firecracker 35개 파일(+6,254/-75줄), KVM 26개 파일(+1,914/-184줄)의 변경 역할, 별도 guest/host 모듈, 두 handoff·NFS·pooling·CoW/discard 흐름과 후속 과제를 기록했다. Linux 기준은 제공 DCD 커널이며 정식 upstream과의 전체 차이라고 주장하지 않는다. 원시 실험 archive·이미지·vendor 사본은 새로 게시하지 않는다.
+- microVM hand-off 구현의 빌드와 nested lab: [implementation/virtual_machine/README.md](implementation/virtual_machine/README.md)
+- 경합 실험 스크립트: [experiments/contention/README.md](experiments/contention/README.md)
 
-직전 분석은 [Direct API 계측·최적화와 과거 1ms 미만 결과 비교](docs/cxl-direct-api-latency.md)다. NFS 이미지 metadata 조회, mapper 연결, 장치/스레드 준비와 커널 시간을 분리한다. [원시 증거와 결과](implementation/virtual_machine/results/direct-api-20261102/README.md)에서 코드 최적화와 immutable NFS 캐시 효과를 따로 확인할 수 있다.
-
-직전 구현은 [handoff의 RAM 전수 순회 제거](docs/cxl-pool-incremental-handoff.md)다. VM별 mapper를 CXL에 유지하고 작은 소유권 handle로 인계하여 반복 GPA/PFN 조회와 전체 mapping JSON을 없앴다. 필요한 최초 admission·실제 promotion/demotion 복사와 명시적 stress audit를 구분한다. [검증·성능·재현 자료](implementation/virtual_machine/results/pool-incremental-20261102/README.md)는 과거 API 측정과 같은 범위로 비교하며, nested KVM 보완과 실제 물리 CXL의 미검증 범위를 명시한다.
-
-2026-10-30의 후속 [guest metadata 기반 pooling](docs/cxl-guest-pool-handoff.md)은 현재 clean lower ext4 page cache를 확인해 promotion 시 데이터 backing만 공유한다. Private CoW도 CXL에 유지하고, demotion에서 현재 내용을 DRAM으로 복사해 할당을 반환한다. Direct와 state-only handoff, host NFS, 실제 OverlayFS와 ACK 이후 재사용의 [검증 결과](implementation/virtual_machine/results/guest-pool-handoff-20261030/README.md)를 별도로 보관한다. 기존 [virtio-blk 관측 기반 prototype](docs/cxl-data-pooling.md)과 full-RAM snapshot 결과는 이전 단계의 기록이다.
-
-이를 [실제 SWE trace 3개에 적용](docs/cxl-swe-pool-traces.md)해 DRAM·state-only·direct **9개 조건, 315개 명령과 36회 전환**을 검증했다. 자연 발생한 clean lower cache 20.6~49.4MiB를 canonical backing에 연결하고, A↔B 및 DRAM↔CXL 왕복 후에도 원본 작업 결과를 유지했다. [실측·원시 증거와 독립 재검증](implementation/virtual_machine/results/swe-pool-traces-20261030/README.md)을 함께 보관한다.
-
-같은 upstream의 [수정하지 않은 Firecracker와 비교](docs/firecracker-pooling-comparison.md)하여 독립 VM의 데이터 frame 공유, stock snapshot clone의 기존 공유 기능, guest 작업 시간과 현재 CoW 비용을 구분했다. [실측 자료](implementation/virtual_machine/results/stock-comparison-20261030/README.md)는 원본 증거와 오프라인 검증기를 포함한다.
-
-[공유 페이지 폐기와 재사용](docs/cxl-page-discard.md)은 guest의 명시적 free-page report를 받아 해당 VM의 공유 연결을 private zero backing으로 바꾸고, 완료 ACK 이후 재사용하는 경로를 설명한다. 기존 4.08초 측정은 한 페이지가 아니라 160MiB cache eviction과 224MiB 전체 재사용 workload의 시간이다.
-
-mini-swe-agent의 기록된 명령을 Docker에서 재실행하고 CPU·메모리·동시성·LLC MPKI를 측정한다. Trace replay는 CPU NUMA node 0과 DRAM(node 0) / CXL(node 2) 메모리 비교를 지원한다. 별도 microVM 실험은 공유 DAX RAM 위의 상태 복원·KVM worker 재사용·direct handoff와 PML/cache 처리 비용을 검증한다. GPU, 모델 가중치, LLM API key는 사용하지 않는다.
-
-2026-10-23 기준 microVM 구현·측정·EMR/DSA 조사와 MPTCP 연결을 유지한 snapshot 이전 결과는 [실행 문서와 다음 세션 인계](https://github.com/zktsd813/agent-sandbox-cxl/blob/184167c/implementation/virtual_machine/README.md#session-handoff)에 모았다. 현재 전환 실험은 한 물리 호스트의 두 Linux VM 사이이며 실제 비일관 CXL 다중 호스트 검증은 남아 있다. DSA와 주기적 preflush는 조사·설계 단계로, 해당 성능을 측정한 결과는 없다.
-
-2026-10-26 정리: 아래 Docker replay의 메모리·MPKI·write 관측 결과를 추가했다. 다른 머신에서 진행한 [microVM contention 실측](experiments/contention/RESULTS-20261021.md), [fleet 시뮬레이션](experiments/contention/RESULTS-fleet.md), [RL rollout trace 수집 계획](docs/trace-collection-plan.md)도 같은 저장소에서 이어간다. Docker의 write 관측 결과를 microVM의 PML/cache 처리 비용이나 실제 다중 호스트 coherence 비용으로 바로 환산하지 않는다.
+harness는 mini-swe-agent의 기록된 명령을 Docker에서 다시 실행하고, CPU·메모리·동시성·LLC MPKI를 측정한다. CPU NUMA node 0에서 DRAM(node 0)과 CXL(node 2) 메모리를 비교할 수 있다. GPU, 모델 가중치, LLM API key는 쓰지 않는다.
 
 ## 완료한 DRAM / CXL 실험
 
@@ -63,10 +48,8 @@ python harness/trace-replay/analyze.py --write-cdf docs/results/write-pages-node
 | `harness/trace-replay/configs/node0.json` | CPU pool, 작업별·전체 메모리 상한, PID 상한, 계측 주기 |
 | `harness/trace-replay/data/inventory.json` | 원본 제출의 고정 commit, trace 경로·크기·SHA-256 |
 | `harness/trace-replay/data/sample16.json` | 기존 pilot에 사용한 16개 파일 이름 |
-| [기존 실험 보고서](docs/replay-report.md) | 완료한 pilot과 전체 실행 계획 |
-| [CXL microVM 구현·사용법](implementation/virtual_machine/README.md) | DAX RAM, snapshot, KVM worker 재사용, direct handoff 실험 |
-| [microVM handoff 문서](docs/microvm-handoff.md) | 상태 분류, NUMA 실행 실험, Firecracker 소스 빌드 방법 |
-| [microVM CPU scheduling 분석](docs/microvm-scheduling.md) | Preact trace의 1·2 vCPU 비교, guest interrupt·선점·CPU 이동, host vCPU 스케줄링 |
+| [CXL microVM 구현·사용법](implementation/virtual_machine/README.md) | DAX RAM, snapshot, KVM worker 재사용, direct hand-off, nested lab |
+| [연구 정리](docs/RESEARCH.md) | 목표, 설계, 구현 상태, 측정 결론, 남은 일 |
 
 Trace replay의 Python 실행 파일은 두 개로 유지한다. microVM 운영은 `implementation/virtual_machine/lab.py`, 빌드는 같은 디렉토리의 `build.sh`로 모았다. 원본 trace, Docker 이미지, 원시 실행 로그와 upstream 저장소 사본은 각 머신에서 준비한다. 커널·Firecracker·QEMU 변경은 원본 버전 정보와 패치로 배포한다.
 
@@ -171,6 +154,19 @@ python harness/trace-replay/analyze.py harness/trace-replay/results/full264
 이 명령은 trace 사이의 기록된 상대 시작 시각과 각 명령 묶음의 timestamp를 유지한다. 264개를 한순간에 시작하지 않는다. 첫 명령 목표 시각에 컨테이너를 생성하고, 준비·슬롯 대기·명령 지연을 기록한다. `--keep-going`은 자원 제한으로 실패한 작업을 정리하고 다른 작업을 계속한다. 일반 명령의 nonzero 종료 코드는 원본과 비교하며, 그것만으로 실험 전체를 중단하지 않는다.
 
 결과에는 `manifest.json`, `events.jsonl`, `metrics.csv`, 작업별 출력 로그가 생성된다. 분석 후 `summary.json`, `report.md`, `timeline.png`가 추가된다. 원시 결과는 Git에 올리지 않는다.
+
+시간 배치 옵션:
+
+| 옵션 | 뜻 |
+|---|---|
+| `--schedule timestamps` (기본) | 각 명령을 기록된 시각에 맞춰 보낸다: 목표 = 시작 + (trace 시작 offset + 명령 시각 − trace 첫 시각) × `--scale`. 앞 명령이 늦게 끝나면 늦은 만큼 `lateness_s`로 기록한다 |
+| `--schedule gaps` | 앞 명령이 끝난 뒤 기록된 응답 간격 × `--scale`만큼 기다린다 |
+| `--schedule immediate` | 기다리지 않는다(`--compare-memory`에 필요) |
+| `--starts recorded` (기본) / `together` | trace를 기록된 상대 시작 시각에 시작하거나 모두 동시에 시작한다 |
+| `--setup precreate` (기본) / `on-arrival` | 컨테이너를 실험 전에 모두 만들거나(`max_concurrent_sessions` 이하일 때) 첫 명령 목표 시각에 만든다 |
+| `--max-active N` | 동시에 살아 있는 컨테이너 상한. 메모리 예산도 함께 적용된다 |
+| `--pools A B …` | workload CPU를 겹치지 않는 pool로 나누고, 새 컨테이너를 살아 있는 컨테이너가 가장 적은 pool에 둔다 |
+| `--cpus X`, `--command-timeout S`, `--memory-node N` | 컨테이너당 CPU 상한(CFS quota), 명령 timeout 덮어쓰기, workload 메모리 node |
 
 ## 후속 실험과 해석 범위
 

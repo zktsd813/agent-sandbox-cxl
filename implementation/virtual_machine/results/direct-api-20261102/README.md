@@ -23,7 +23,7 @@ Baseline의 평균 11.471ms = kernel 1.698ms + 장치 복원 3.385ms + 목적지
 
 B의 NFS image open/크기/ID 조회 평균은 2.763/0.591/0.566ms였다. Regular image의 크기와 ID 조회를 하나로 합쳤다. IRQFD는 SRCU 동기화 한 번과 기존 pending injection drain을 유지한다. Immutable NFS 옵션은 source image ext4를 read-only로 remount하고 client에 `actimeo=60,nocto`를 적용한다. Guest metadata를 공유하지 않는다. 실제 RO mount·NFS 옵션도 독립 검증했다. 각 조건의 실제 remote NFS data read는 20/18/20/29회로, data path 자체를 우회하지 않았다.
 
-최적화 후에도 새로운 host-local 장치/wrapper/스레드와 mapper import가 필요하다. 과거 2GiB의 **0.336ms**는 준비된 executor/FD 경로이며 block/NFS 장치의 host-local 복원이 없었다. 현재 1ms 미만을 복원했다고 주장하지 않는다. [설계·계측 상세](../../../../docs/cxl-direct-api-latency.md)와 [과거 증거](historical-reference.json)를 참고한다.
+최적화 후에도 새로운 host-local 장치/wrapper/스레드와 mapper import가 필요하다. 과거 2GiB의 **0.336ms**는 준비된 executor/FD 경로이며 block/NFS 장치의 host-local 복원이 없었다. 현재 1ms 미만을 복원했다고 주장하지 않는다. [설계·계측 상세](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/docs/cxl-direct-api-latency.md)와 [과거 증거](historical-reference.json)를 참고한다.
 
 ## 검증과 변경 범위
 
@@ -48,4 +48,4 @@ python3 /tmp/direct-api-recheck/cxl-direct-profile-final/measured-sources/verify
 
 나머지 세 압축 파일도 같은 방법으로 frozen verifier를 실행한다. `*-suite-verification.json`은 실행 당시 결과이며 `archive-reverification.json`은 압축 후 새 디렉터리에서 다시 확인한 결과다. `analyzer-negative-checks.json`에는 API 수치, kernel 수치, timing raw record, 영수증 해시를 변조했을 때 분석기가 거절하는 확인을 기록한다.
 
-새 실험은 [설계 문서의 재현 명령](../../../../docs/cxl-direct-api-latency.md#재현과-증거)을 사용한다. `--restore-timing`은 opt-in이며, `--immutable-nfs-cache`는 변경되지 않는 read-only lower image에만 적용한다.
+새 실험은 [설계 문서의 재현 명령](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/docs/cxl-direct-api-latency.md#재현과-증거)을 사용한다. `--restore-timing`은 opt-in이며, `--immutable-nfs-cache`는 변경되지 않는 read-only lower image에만 적용한다.

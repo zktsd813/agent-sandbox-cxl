@@ -56,14 +56,14 @@ python3 experiments/contention/sandbox.py solo            # 코어 13-23에 micr
 | `sim.py` | 단독 실행 burst + LLM 대기로 node를 모델링하는 simulator. 분리·공유·이동 메커니즘별 잃은 CPU |
 | `plot_story.py` | 결과 그림 (`figures/`) |
 
-결과 정리: [RESULTS-20261021.md](RESULTS-20261021.md).
+결과 정리: [RESULTS-20261021.md](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/experiments/contention/RESULTS-20261021.md).
 
 ## DSec 규모 simulation
 
 | 파일 | 역할 |
 |---|---|
 | `fleet.py` | numba simulator. power-of-k 배치, 여러 vCPU, trace별 메모리에 비례하는 migration, NIC 직렬화, RL job 모드. `--test`는 손계산 검사 |
-| `validate.py` | pilot 실측을 같은 구성의 `fleet.py`와 비교([PLAN-fleet.md](PLAN-fleet.md) 검증 사다리) |
+| `validate.py` | pilot 실측을 같은 구성의 `fleet.py`와 비교([PLAN-fleet.md](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/experiments/contention/PLAN-fleet.md) 검증 사다리) |
 | `pilot_audit.py` | pilot 실행을 단독 실행과 명령 단위로 비교: 경로 이탈(timeout), 같은 경로의 CPU, 사용률을 맞추는 수요 배율 |
 | `kernel_wait_fit.py` | 유체 모델이 놓치는 scheduler 대기 a(P)·exp(b·사용률)를 5/10/20코어 실측에 맞춤 (`fleet.KERNEL_WAIT`) |
 | `trace_count.py` | trace 수를 15~120개로 줄여도 같은 사용률의 contention이 같은지 확인 |
@@ -72,4 +72,4 @@ python3 experiments/contention/sandbox.py solo            # 코어 13-23에 micr
 | `grids/` | 큰 규모 실험의 조건 목록 (`fleet.py --grid`) |
 | `candidates-all.json`, `candidates-v.json` | trace 264개 전체, 두 단독 실행에서 모두 쓸 수 있는 242개(검증용) |
 
-계획: [PLAN-fleet.md](PLAN-fleet.md). 결과와 판정: [RESULTS-fleet.md](RESULTS-fleet.md).
+계획: [PLAN-fleet.md](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/experiments/contention/PLAN-fleet.md). 결과와 판정: [RESULTS-fleet.md](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/experiments/contention/RESULTS-fleet.md).

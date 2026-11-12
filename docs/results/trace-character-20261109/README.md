@@ -1,6 +1,6 @@
 # trace 성격 다시 보기, env 생성, sandbox 밖 CPU 작업 (2026-11-09)
 
-지금까지 trace는 sandbox당 평균 코어, burst 폭, LLM 대기 같은 수명 전체의 값으로만 봤다([workload-diversity-plan.md](../../workload-diversity-plan.md) 2절, [실험 계획 v2](../../experiment-plan-tail-placement.md) 8.5). 이 문서는 세 가지를 더 본다.
+지금까지 trace는 sandbox당 평균 코어, burst 폭, LLM 대기 같은 수명 전체의 값으로만 봤다([workload-diversity-plan.md](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/docs/workload-diversity-plan.md) 2절, [실험 계획 v2](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/docs/experiment-plan-tail-placement.md) 8.5). 이 문서는 세 가지를 더 본다.
 - **sandbox가 무엇에 CPU를 쓰는지**: 명령 종류별로 나눈다. HANDOFF T1의 남은 일이다(1절). reward 평가(채점)도 직접 다시 돌린다(2절).
 - **env 생성이 왜 느리고 step에 얼마나 들어가는지**: 기록된 생성 시간을 쪼개고, 생성 단계별 CPU를 재고, DSec·TrEnv-X의 방식과 비교한다. microVM을 미리 만들 가치도 본다(3절).
 - **sandbox 밖에서 생기는 CPU 작업**: 공개 RL job 기록과 문헌·framework 조사로 본다(4절).
@@ -235,7 +235,7 @@
 | group 8개, LLM ×0.25 | 12.4% (p90 39.6%) | −8.5% (p90 −29.6%) | −11.6% (p90 −33.5%) |
 
 - 지금 추론 속도에서는 env 생성을 없애도 step이 약 3% 준다. 추론이 4배 빨라지면 group 기준 약 12%(p90 34%)다.
-- step 길이의 22%는 두 번째 wave가 늦게 요청되는 시간이다([실험 계획 v2](../../experiment-plan-tail-placement.md) 8.5). 이것은 env 생성과 별개라 위 계산에서 그대로다.
+- step 길이의 22%는 두 번째 wave가 늦게 요청되는 시간이다([실험 계획 v2](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/docs/experiment-plan-tail-placement.md) 8.5). 이것은 env 생성과 별개라 위 계산에서 그대로다.
 
 ### 3.4 image 비용: 노드에 없을 때
 
@@ -313,7 +313,7 @@ subagent로 조사했고, DSec 8.2절의 수치와 CPU 문장은 원문에서 �
 - **DSec에서 eager pull의 비용은 시간과 디스크 쓰기였다.** CPU 차이는 보고되지 않았다. 3.4의 "image를 새로 풀면 큰 CPU 덩어리"는 gzip layer를 노드마다 푸는 경우의 값이다. 그 비용이 학습 시간에 보일지는 따로 확인해야 한다.
 - **실행 중 읽는 비율은 우리 측정(2%)이 DSec(Python 6%)보다 작다.** 우리는 agent 명령만 쟀고 test·install은 뺐다.
 - **기록된 job의 느린 생성은 대기열이다(3.2).** image 저장 방식만으로는 줄지 않을 수 있다. warm pool이 이 대기열을 직접 없앤다(GKE 45~85초 → 1~9초).
-- **CXL과의 접점은 hand-off가 아니라 image 공유다.** DSec의 3FS 자리에 CXL 공유 메모리를 두는 방식이다([load balancing 조사](../../load-balancing-survey.md)). 이 경우 이득은 lazy read 지연과 노드 사이 page cache 중복 제거다.
+- **CXL과의 접점은 hand-off가 아니라 image 공유다.** DSec의 3FS 자리에 CXL 공유 메모리를 두는 방식이다([load balancing 조사](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/docs/load-balancing-survey.md)). 이 경우 이득은 lazy read 지연과 노드 사이 page cache 중복 제거다.
 
 **snapshot·CXL fork: TrEnv-X와 CXLfork**
 - **TrEnv-X** ([arXiv 2509.09525](https://arxiv.org/html/2509.09525v2), TOCS)
@@ -357,7 +357,7 @@ VM 하나만 띄우면 0.24초다.
 **미리 만든 VM이 차지하는 메모리**
 - 막 boot해서 쉬고 있는 VM의 VMM RSS는 84 MiB다(1 vCPU, guest 2 GiB, boot 10초 뒤).
 - 돌고 있는 sandbox의 peak RSS는 중앙값 246 MiB, p90 666 MiB다(51개 단독 재생, 8 vCPU). 쉬는 VM 하나가 돌고 있는 sandbox의 약 3분의 1을 쥔다.
-- Python RL sandbox는 sandbox당 0.04코어만 써서 노드 밀도를 메모리가 정한다([workload-diversity-plan](../../workload-diversity-plan.md)). 그래서 쉬는 VM이 쥔 메모리만큼 돌 수 있는 sandbox 수가 준다.
+- Python RL sandbox는 sandbox당 0.04코어만 써서 노드 밀도를 메모리가 정한다([workload-diversity-plan](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/docs/workload-diversity-plan.md)). 그래서 쉬는 VM이 쥔 메모리만큼 돌 수 있는 sandbox 수가 준다.
 
 **수요는 얼마나 미리 아나** (iter2, step 53개)
 

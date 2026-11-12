@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Compare measured pilot runs with fleet.py run on the same configuration (PLAN-fleet.md, validation ladder).
+"""Compare measured pilot runs with fleet.py run on the same configuration (docs-pre-merge:experiments/contention/PLAN-fleet.md, validation ladder).
 
 For every pilot run: read run.json, simulate the same nodes, density, pool, vCPUs, seed, move mechanism and group
 mode with the matching solo run as input, and check the measured totals against the model with the criteria fixed
-in PLAN-fleet.md:
+in docs-pre-merge:experiments/contention/PLAN-fleet.md:
 - runqueue wait / CPU run: within 20% (relative) when the measurement is >= 5%, else within 1 point
 - trace slowdown vs solo, p50 and p90: within 0.03
 - RL step slowdown p50 (group mode): within 0.05
@@ -79,7 +79,7 @@ def main():
                 (f" g{sim_config['group']}" if sim_config["rl"] else "") + f" s{sim_config['seed']}"
         print(label.ljust(46), "  ".join(f"{m} {a:.3f}/{b:.3f}{'' if p else ' FAIL'}" for m, a, b, p in rows
                                           if a is not None and b is not None), flush=True)
-    # Moves (PLAN-fleet.md V4): reduction of wait/run vs the matching no-move run, same ranking and within 10 points
+    # Moves (docs-pre-merge:experiments/contention/PLAN-fleet.md V4): reduction of wait/run vs the matching no-move run, same ranking and within 10 points
     base = {(r["config"]["per_node"], r["config"]["pool"], r["config"]["seed"], r["config"]["rl"]): r for r in report
             if r["config"]["mechanism"] == "none"}
     moves = []

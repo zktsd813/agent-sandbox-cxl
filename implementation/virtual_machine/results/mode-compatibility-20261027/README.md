@@ -80,7 +80,7 @@ Reuse와 prepared의 실제 negative test는 `PrepareReuse` API를 사용했다.
 
 **이 검증은 모드·파일 호환성을 확인한다.** 기존 최적화된 direct의 ms 이하 측정과 trace controller 시간을 같은 지표로 비교하지 않는다.
 
-새 trace의 `controller_handoff_ns`는 pause 요청부터 재개 후 identity 응답까지이며 serial shell 제어 대기가 남아 있다. 목적지 API prestart와 사후 state·log 반출은 제외한다. 이전 [serial trace 실험](../trace-nfs-20261027/README.md)의 9.31초는 로그 수집까지 포함하므로 두 값을 동일 조건의 speedup으로 계산하지 않는다.
+새 trace의 `controller_handoff_ns`는 pause 요청부터 재개 후 identity 응답까지이며 serial shell 제어 대기가 남아 있다. 목적지 API prestart와 사후 state·log 반출은 제외한다. 이전 [serial trace 실험](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/implementation/virtual_machine/results/trace-nfs-20261027/README.md)의 9.31초는 로그 수집까지 포함하므로 두 값을 동일 조건의 speedup으로 계산하지 않는다.
 
 Native pause/snapshot/load/resume API와 mailbox publish/receive 시간은 각각 그 작업을 실행한 L1에서 잰다. 두 host의 시각을 빼거나 단계별 중앙값을 합쳐 실제 downtime으로 제시하지 않는다. 최적화된 native controller에 이번 2-vCPU·block trace를 직접 통합한 end-to-end latency는 별도 과제다.
 

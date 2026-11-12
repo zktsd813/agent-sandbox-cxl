@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rough wall-clock estimate for collecting the rollout traces (docs/trace-collection-plan.md).
+"""Rough wall-clock estimate for collecting the rollout traces (docs-pre-merge:docs/trace-collection-plan.md).
 
 Model (stated so it can be checked):
 - A rollout alternates `turns` LLM turns and tool calls. Per turn: prefill of the new input tokens, decode of the output

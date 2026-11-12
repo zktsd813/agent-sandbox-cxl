@@ -1,0 +1,722 @@
+{
+  "suites": {
+    "all-suite": {
+      "result": "passed",
+      "trials": 9,
+      "commit": "9629e46e0814e871fca4fee8034bc48edbbc3480",
+      "sha256": "8a7caa4e459b4c855ba8072c029dc720e3a7349ef7a8b71ee075b8cd709866d4"
+    },
+    "trace-suite": {
+      "result": "passed",
+      "trials": 1,
+      "commit": "9629e46e0814e871fca4fee8034bc48edbbc3480",
+      "sha256": "e889d89c777d02225eb61dfbd5e71b5f0a04792fa8edb6f6899c252e199e2556"
+    },
+    "inflight-suite": {
+      "result": "passed",
+      "trials": 1,
+      "commit": "9629e46e0814e871fca4fee8034bc48edbbc3480",
+      "sha256": "3e6b9c3a284997b2ce42b81925dfdc610df929ff61946a54683a5c023b24f6d1"
+    },
+    "warm-suite": {
+      "result": "passed",
+      "trials": 1,
+      "commit": "9629e46e0814e871fca4fee8034bc48edbbc3480",
+      "sha256": "deb3a9879944d5a6d41452588009dcc9eb0e9cbd56a82112f7442128bfc2d44c"
+    }
+  },
+  "trials": [
+    {
+      "suite": "all-suite",
+      "trace": "gin-gonic__gin-3741",
+      "mode": "baseline",
+      "result": "passed",
+      "command_count": 27,
+      "handoff_ms": [],
+      "promotion": [],
+      "demotion": []
+    },
+    {
+      "suite": "all-suite",
+      "trace": "gin-gonic__gin-3741",
+      "mode": "state-only",
+      "result": "passed",
+      "command_count": 27,
+      "handoff_ms": [
+        50.566941,
+        88.681609
+      ],
+      "promotion": [
+        2182.420877,
+        1132.8844
+      ],
+      "demotion": [
+        2690.322574,
+        1115.3091510000002
+      ]
+    },
+    {
+      "suite": "all-suite",
+      "trace": "gin-gonic__gin-3741",
+      "mode": "direct",
+      "result": "passed",
+      "command_count": 27,
+      "handoff_ms": [
+        2.713527,
+        3.312147,
+        7.4789,
+        1.249375
+      ],
+      "promotion": [
+        2177.8698640000002,
+        1053.3748970000001
+      ],
+      "demotion": [
+        1484.946074,
+        1138.7869950000002
+      ]
+    },
+    {
+      "suite": "all-suite",
+      "trace": "php-cs-fixer__php-cs-fixer-8331",
+      "mode": "baseline",
+      "result": "passed",
+      "command_count": 35,
+      "handoff_ms": [],
+      "promotion": [],
+      "demotion": []
+    },
+    {
+      "suite": "all-suite",
+      "trace": "php-cs-fixer__php-cs-fixer-8331",
+      "mode": "state-only",
+      "result": "passed",
+      "command_count": 35,
+      "handoff_ms": [
+        47.939002,
+        83.175517
+      ],
+      "promotion": [
+        2126.889716,
+        1044.630788
+      ],
+      "demotion": [
+        1288.495719,
+        1118.530728
+      ]
+    },
+    {
+      "suite": "all-suite",
+      "trace": "php-cs-fixer__php-cs-fixer-8331",
+      "mode": "direct",
+      "result": "passed",
+      "command_count": 35,
+      "handoff_ms": [
+        2.339305,
+        2.4991,
+        4.044468,
+        2.121383
+      ],
+      "promotion": [
+        2178.067598,
+        1045.559535
+      ],
+      "demotion": [
+        1267.0212960000001,
+        1109.3393259999998
+      ]
+    },
+    {
+      "suite": "all-suite",
+      "trace": "micropython__micropython-13039",
+      "mode": "baseline",
+      "result": "passed",
+      "command_count": 43,
+      "handoff_ms": [],
+      "promotion": [],
+      "demotion": []
+    },
+    {
+      "suite": "all-suite",
+      "trace": "micropython__micropython-13039",
+      "mode": "state-only",
+      "result": "passed",
+      "command_count": 43,
+      "handoff_ms": [
+        50.872183,
+        100.478959
+      ],
+      "promotion": [
+        2104.1288480000003,
+        1071.269391
+      ],
+      "demotion": [
+        1270.94846,
+        1115.232707
+      ]
+    },
+    {
+      "suite": "all-suite",
+      "trace": "micropython__micropython-13039",
+      "mode": "direct",
+      "result": "passed",
+      "command_count": 43,
+      "handoff_ms": [
+        2.223846,
+        2.635855,
+        4.779703,
+        1.81719
+      ],
+      "promotion": [
+        2169.8241460000004,
+        1064.472851
+      ],
+      "demotion": [
+        1289.120078,
+        1132.276551
+      ]
+    },
+    {
+      "suite": "trace-suite",
+      "trace": "gin-gonic__gin-3741",
+      "mode": "direct",
+      "result": "passed",
+      "command_count": 27,
+      "handoff_ms": [
+        2.212721,
+        3.339268,
+        6.150429,
+        1.572252
+      ],
+      "promotion": [
+        2132.927798,
+        1072.181685
+      ],
+      "demotion": [
+        1319.679382,
+        1127.847459
+      ]
+    },
+    {
+      "suite": "inflight-suite",
+      "trace": "gin-gonic__gin-3741",
+      "mode": "direct",
+      "result": "passed",
+      "command_count": 27,
+      "handoff_ms": [
+        2.443419,
+        2.182483,
+        1.675353,
+        2.975388,
+        7.311564,
+        1.209489
+      ],
+      "promotion": [
+        2134.593847,
+        1093.1972879999998
+      ],
+      "demotion": [
+        1323.2080919999999,
+        1132.014433
+      ]
+    },
+    {
+      "suite": "warm-suite",
+      "trace": "gin-gonic__gin-3741",
+      "mode": "direct",
+      "result": "passed",
+      "command_count": 27,
+      "handoff_ms": [
+        2.692403,
+        1.643039,
+        1.939767,
+        1.686715,
+        1.293145,
+        0.905999,
+        1.252409,
+        0.771575,
+        1.149418,
+        0.701345,
+        1.630286,
+        1.036588,
+        2.084645,
+        1.094994,
+        2.328061,
+        0.98524,
+        1.300845,
+        1.181471,
+        1.915039,
+        1.222518,
+        1.965312,
+        1.526981,
+        1.781139,
+        1.805774,
+        1.893055,
+        1.576336,
+        1.417178,
+        1.174815,
+        1.50717,
+        1.002366,
+        1.431748,
+        1.011546,
+        1.829587,
+        0.889364,
+        2.028267,
+        1.125084,
+        1.438397,
+        0.993057,
+        1.566228,
+        0.915942,
+        1.853597,
+        2.728629,
+        7.507033,
+        1.574423
+      ],
+      "promotion": [
+        2142.626,
+        1063.2819690000001
+      ],
+      "demotion": [
+        1240.107952,
+        1120.9018780000001
+      ]
+    }
+  ],
+  "kernel_trace": [
+    {
+      "epoch": 1,
+      "destination": "B",
+      "nested_root_ms": 0.002,
+      "ept_rebind_ms": 0.065
+    },
+    {
+      "epoch": 2,
+      "destination": "A",
+      "nested_root_ms": 0.725,
+      "ept_rebind_ms": 0.737
+    },
+    {
+      "epoch": 3,
+      "destination": "B",
+      "nested_root_ms": 4.677,
+      "ept_rebind_ms": 4.68
+    },
+    {
+      "epoch": 4,
+      "destination": "A",
+      "nested_root_ms": 0.297,
+      "ept_rebind_ms": 0.298
+    }
+  ],
+  "inflight": {
+    "index": 12,
+    "duration_s": 3.6900000000000013,
+    "started": {
+      "event": "trace_async_started",
+      "label": "v1e1c17",
+      "index": 12,
+      "command_pid": 321,
+      "start_ticks": 1036
+    },
+    "observations": [
+      {
+        "role": "B",
+        "epoch": 1,
+        "event": "trace_running",
+        "label": "v1e1c18",
+        "index": 12,
+        "command_pid": 321,
+        "start_ticks": 1036,
+        "process_state": "R",
+        "active": true
+      },
+      {
+        "role": "A",
+        "epoch": 2,
+        "event": "trace_running",
+        "label": "v1e2c20",
+        "index": 12,
+        "command_pid": 321,
+        "start_ticks": 1036,
+        "process_state": "R",
+        "active": true
+      },
+      {
+        "role": "B",
+        "epoch": 3,
+        "event": "trace_running",
+        "label": "v1e3c22",
+        "index": 12,
+        "command_pid": 321,
+        "start_ticks": 1036,
+        "process_state": "R",
+        "active": true
+      }
+    ]
+  },
+  "warm": {
+    "n": 38,
+    "p50_ms": 1.3590115,
+    "p95_ms": 2.084645,
+    "min_ms": 0.701345,
+    "max_ms": 2.328061,
+    "first_b_ms": 2.692403,
+    "first_a_ms": 1.643039,
+    "remote_work_b_ms": 1.853597,
+    "after_work_a_ms": 2.728629,
+    "repromote_b_ms": 7.507033,
+    "last_a_ms": 1.574423
+  },
+  "totals": {
+    "passed_trials": 12,
+    "direct_handoffs": 66,
+    "state_handoffs": 6,
+    "promotions": 18,
+    "demotions": 18
+  },
+  "cleanup": {
+    "sessions": [
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T011506Z-6pfu0h4a",
+        "session": "run07-basic",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": null,
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-fx6n09vh",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T011534Z-4rvldlvw",
+        "session": "run07-direct",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": null,
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-3q8wqt6h",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T011538Z-uxomy7cr",
+        "session": "run07-cpu",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": null,
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-yz1kofbn",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T011729Z-ii19a7p2",
+        "session": "",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": "/dev/shm/cxl-lab-mp0vn8f1",
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-utlhcldr",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T011734Z-yjf946t3",
+        "session": "",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": "/dev/shm/cxl-lab-p2bjy25s",
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-igenn03q",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T011742Z-sqgmzxhq",
+        "session": "",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": "/dev/shm/cxl-lab-nvjzh_o2",
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-lnda09sm",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T011807Z-mky2hwi3",
+        "session": "run07-mapper",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": "/dev/shm/cxl-lab-r3i1g66k",
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-ugqy0ja1",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T011832Z-mgl3c2b2",
+        "session": "run07-direct-recheck",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": null,
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-th1iyyfb",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T011852Z-hm6fbrb0",
+        "session": "run07-all-00",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": "/dev/shm/cxl-lab-86sh387n",
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-n2tf2sa3",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T011919Z-m94sqiur",
+        "session": "run07-all-01",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": "/dev/shm/cxl-lab-szkdiw9w",
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-vkrz7fsl",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T011957Z-y50mq1p1",
+        "session": "run07-all-02",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": "/dev/shm/cxl-lab-3ofvgijk",
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-9w2f_9gk",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T012033Z-dvtwsh4a",
+        "session": "run07-all-03",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": "/dev/shm/cxl-lab-uscj18md",
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-t68ehuxu",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T012052Z-wcdqd5vk",
+        "session": "run07-all-04",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": "/dev/shm/cxl-lab-45oezba2",
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-tr8z_g3a",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T012121Z-q2bi8en1",
+        "session": "run07-all-05",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": "/dev/shm/cxl-lab-uogibhc_",
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-kpqudjbj",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T012146Z-ad9b_wbo",
+        "session": "run07-all-06",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": "/dev/shm/cxl-lab-21oagb01",
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-vkjrupoo",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T012207Z-l6a6jsuy",
+        "session": "run07-all-07",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": "/dev/shm/cxl-lab-fw5yorte",
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-uq_ohli2",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T012240Z-9zkr7oo6",
+        "session": "run07-all-08",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": "/dev/shm/cxl-lab-w951dihv",
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-u5aaozsa",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T012333Z-18sow1q6",
+        "session": "run07-trace-00",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": "/dev/shm/cxl-lab-y_gmhabx",
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-xednsjkm",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T012412Z-zl59whgh",
+        "session": "run07-inflight-00",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": "/dev/shm/cxl-lab-wtuwasc7",
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-20xroqdk",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T012451Z-_hu8wqe8",
+        "session": "run07-warm-00",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": "/dev/shm/cxl-lab-jtzr_8lm",
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-yue2ycyh",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T012548Z-yh4_rc96",
+        "session": "",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": null,
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-_133o2hr",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T012553Z-n6scs_mt",
+        "session": "",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": null,
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-r2pic8pn",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T012557Z-r8fwrm_8",
+        "session": "",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": null,
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-0sb6qjym",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T012644Z-dxlphgbp",
+        "session": "run07-re-warm-00",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": "/dev/shm/cxl-lab-k7isjxpd",
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-6_cy5zuz",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T012724Z-50z1znt4",
+        "session": "run07-re-state-00",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": "/dev/shm/cxl-lab-s6izxz1j",
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-eoo4oabx",
+        "control_exists": false,
+        "local_backings_removed": []
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/runs/20261112T012805Z-s417n_hb",
+        "session": "run07-re-trace-00",
+        "qemu_alive": {
+          "A": false,
+          "B": false
+        },
+        "memory_dir": "/dev/shm/cxl-lab-jfys_2_8",
+        "memory_exists": false,
+        "control_dir": "/tmp/qvl-2zky8jtw",
+        "control_exists": false,
+        "local_backings_removed": []
+      }
+    ],
+    "owned_qemu_remaining": 0,
+    "owned_shm_backing_remaining": 0,
+    "shm_listing": []
+  }
+}
