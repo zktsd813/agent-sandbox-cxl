@@ -4,7 +4,7 @@ mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 mount -t devtmpfs devtmpfs /dev
 migration=0 migration_headroom=16
-role=A dax_counter=0 heartbeat=0 heartbeat_sleep=0 heartbeat_quiet=0 heartbeat_churn=0 heartbeat_pit=0 heartbeat_spins=128 heartbeat_timing=0 heartbeat_dense=0
+role=A dax_counter=0 heartbeat=0 heartbeat_sleep=0 heartbeat_quiet=0 heartbeat_churn=0 heartbeat_pit=0 heartbeat_timing=0 heartbeat_dense=0
 for arg in $(cat /proc/cmdline); do
     case "$arg" in
         lab.role=*) role=${arg#*=} ;;
@@ -17,7 +17,6 @@ for arg in $(cat /proc/cmdline); do
         lab.heartbeat_quiet=*) heartbeat_quiet=${arg#*=} ;;
         lab.heartbeat_churn=*) heartbeat_churn=${arg#*=} ;;
         lab.heartbeat_pit=*) heartbeat_pit=${arg#*=} ;;
-        lab.heartbeat_spins=*) heartbeat_spins=${arg#*=} ;;
         lab.heartbeat_timing=*) heartbeat_timing=${arg#*=} ;;
     esac
 done
@@ -41,7 +40,6 @@ fi
 if [ "$heartbeat" -eq 1 ]; then
     export LAB_HEARTBEAT_CHURN="$heartbeat_churn"
     export LAB_HEARTBEAT_PIT="$heartbeat_pit"
-    export LAB_HEARTBEAT_SPINS="$heartbeat_spins"
     export LAB_HEARTBEAT_TIMING="$heartbeat_timing"
     export LAB_HEARTBEAT_DENSE="$heartbeat_dense"
     printf 'L2_CLOCKSOURCE=%s\n' "$(cat /sys/devices/system/clocksource/clocksource0/current_clocksource)"

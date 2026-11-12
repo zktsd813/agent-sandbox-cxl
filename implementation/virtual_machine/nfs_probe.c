@@ -25,9 +25,7 @@
  *   evict LABEL OFFSET LENGTH
  *   quit
  *
- * Each read visits every block of the range exactly once. read_ns counts only
- * time inside pread calls; wall_ns includes validation between requests and is
- * the end-to-end benchmark time. Neither includes mincore or disk-stat reads.
+ * Each read visits every block once and checks the offset-derived pattern.
  */
 
 #define MAX_LABEL 64
@@ -183,19 +181,6 @@ static void emit_identity(const struct probe *p, const char *event, const char *
            event, label, (long)getpid(), p->cookie);
 }
 
-static int compare_u64(const void *a, const void *b)
-{
-    uint64_t x = *(const uint64_t *)a, y = *(const uint64_t *)b;
-    return (x > y) - (x < y);
-}
-
-static uint64_t percentile(const uint64_t *values, size_t count, unsigned percent)
-{
-    /* Nearest-rank percentile, with ranks starting at one. */
-    size_t rank = (count * percent + 99) / 100;
-    return values[rank ? rank - 1 : 0];
-}
-
 static void run_read(struct probe *p, const char *label, uint64_t off,
                      uint64_t len, uint64_t block, const char *mode, uint64_t seed)
 {
@@ -209,14 +194,10 @@ static void run_read(struct probe *p, const char *label, uint64_t off,
     if (count > MAX_ORDER_BYTES / sizeof(uint64_t)) invalid("read block-order table exceeds 64 MiB");
     uint64_t *order = malloc((size_t)count * sizeof(*order));
     uint64_t *buffer = malloc((size_t)block);
-    size_t latency_capacity = (size_t)count, latency_count = 0;
-    uint64_t *latencies = malloc(latency_capacity * sizeof(*latencies));
-    if (!order || !buffer || !latencies) die("malloc read buffers");
+    if (!order || !buffer) die("malloc read buffers");
     /* Fault in the user buffer before measuring read latency. */
     for (size_t i = 0; i < block; i += p->page_size)
         ((volatile unsigned char *)buffer)[i] = 0;
-    for (size_t i = 0; i < latency_capacity * sizeof(*latencies); i += p->page_size)
-        ((volatile unsigned char *)latencies)[i] = 0;
     for (uint64_t i = 0; i < count; i++) order[i] = i;
     uint64_t rng = seed;
     if (random) {
@@ -233,34 +214,18 @@ static void run_read(struct probe *p, const char *label, uint64_t off,
     if (rc) { errno = rc; die("posix_fadvise access mode"); }
     uint64_t before = resident(p, off, len);
     struct disk_stats ds_before = disk_stats(p->stat_path);
-    uint64_t start = now_ns(), read_ns = 0, validation_ns = 0;
-    uint64_t checksum = 0, mismatches = 0, first_bad = UINT64_MAX, syscalls = 0;
+    uint64_t checksum = 0, mismatches = 0, first_bad = UINT64_MAX;
     for (uint64_t i = 0; i < count; i++) {
         uint64_t position = off + order[i] * block;
         size_t done = 0;
         while (done < block) {
-            uint64_t t = now_ns();
             ssize_t n = pread(p->fd, (char *)buffer+done, (size_t)block-done,
                               (off_t)(position+done));
             int saved_errno = errno;
-            uint64_t latency = now_ns()-t;
-            read_ns += latency;
-            syscalls++;
-            if (latency_count == latency_capacity) {
-                /* Short reads or EINTR can require more calls than blocks. */
-                size_t max_samples = MAX_ORDER_BYTES / sizeof(*latencies);
-                if (latency_capacity == max_samples) invalid("too many pread latency samples");
-                latency_capacity = latency_capacity > max_samples / 2 ? max_samples : latency_capacity * 2;
-                uint64_t *grown = realloc(latencies, latency_capacity * sizeof(*latencies));
-                if (!grown) die("grow pread latency samples");
-                latencies = grown;
-            }
-            latencies[latency_count++] = latency;
             if (n < 0 && saved_errno == EINTR) continue;
             if (n <= 0) { errno = n ? saved_errno : EIO; die("pread data file"); }
             done += (size_t)n;
         }
-        uint64_t t = now_ns();
         for (uint64_t w = 0; w < block / sizeof(*buffer); w++) {
             uint64_t value = le64toh(buffer[w]);
             uint64_t word_offset = position / sizeof(*buffer) + w;
@@ -271,37 +236,23 @@ static void run_read(struct probe *p, const char *label, uint64_t off,
             /* An order-independent checksum permits comparing random and seq. */
             checksum += value;
         }
-        validation_ns += now_ns()-t;
     }
-    uint64_t wall_ns = now_ns()-start;
     struct disk_stats ds_after = disk_stats(p->stat_path);
     uint64_t after = resident(p, off, len);
-    qsort(latencies, latency_count, sizeof(*latencies), compare_u64);
     emit_identity(p, "read", label);
     printf(",\"mode\":\"%s\",\"offset\":%" PRIu64 ",\"bytes\":%" PRIu64
            ",\"block_bytes\":%" PRIu64 ",\"seed\":%" PRIu64
-           ",\"blocks\":%" PRIu64 ",\"pread_calls\":%" PRIu64
-           ",\"read_ns\":%" PRIu64 ",\"validation_ns\":%" PRIu64 ",\"wall_ns\":%" PRIu64
-           ",\"read_mib_s\":%.6f,\"wall_mib_s\":%.6f"
            ",\"page_size\":%zu,\"pages\":%" PRIu64
            ",\"resident_before\":%" PRIu64 ",\"resident_after\":%" PRIu64
            ",\"checksum\":\"%016" PRIx64 "\",\"mismatched_words\":%" PRIu64,
-           mode, off, len, block, seed, count, syscalls, read_ns, validation_ns, wall_ns,
-           read_ns ? ((double)len / MIB) * 1e9 / read_ns : 0,
-           wall_ns ? ((double)len / MIB) * 1e9 / wall_ns : 0,
+           mode, off, len, block, seed,
            p->page_size, len / p->page_size, before, after, checksum, mismatches);
-    printf(",\"pread_latency_ns\":{\"samples\":%zu,\"min\":%" PRIu64
-           ",\"p50\":%" PRIu64 ",\"p95\":%" PRIu64 ",\"p99\":%" PRIu64 ",\"max\":%" PRIu64 "}",
-           latency_count, latencies[0], percentile(latencies, latency_count, 50),
-           percentile(latencies, latency_count, 95), percentile(latencies, latency_count, 99),
-           latencies[latency_count-1]);
     if (mismatches) printf(",\"first_bad_offset\":%" PRIu64, first_bad);
     else printf(",\"first_bad_offset\":null");
     emit_stats(ds_before, ds_after);
     printf(",\"ok\":%s}\n", mismatches ? "false" : "true");
     free(buffer);
     free(order);
-    free(latencies);
     if (mismatches) exit(1);
 }
 

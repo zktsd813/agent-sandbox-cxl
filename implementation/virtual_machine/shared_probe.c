@@ -881,7 +881,7 @@ static void guest_heartbeat(int sleeping, int quiet)
     atomic_store(&hb->first_sweep_ns, 0);atomic_store(&hb->warm_sweep_ns, 0);
     atomic_store(&hb->warm_done, 0);
     int timing=env_enabled("LAB_HEARTBEAT_TIMING");
-    unsigned spins=getenv("LAB_HEARTBEAT_SPINS")?strtoul(getenv("LAB_HEARTBEAT_SPINS"),NULL,10):128;
+    const unsigned spins=128;
     int churn=env_enabled("LAB_HEARTBEAT_CHURN");
     if (dense && churn) {
         fprintf(stderr, "Dense heartbeat does not combine with changing-memory stress\n"); exit(1);
@@ -983,15 +983,11 @@ static void handoff_bench(char role, const char *dax, unsigned rounds,
     int reuse = env_enabled("BENCH_REUSE_KVM");
     int dense = env_enabled("LAB_HEARTBEAT_DENSE");
     int reuse_prepare = env_enabled("BENCH_REUSE_PREPARE");
-    int prepare_on_demand = env_enabled("BENCH_REUSE_PREPARE_ON_DEMAND");
     if (reuse && !warm) {
         fprintf(stderr, "KVM reuse requires warm mode\n"); exit(1);
     }
     if (reuse_prepare && !reuse) {
         fprintf(stderr, "Reuse preparation requires KVM reuse\n"); exit(1);
-    }
-    if (prepare_on_demand && !reuse_prepare) {
-        fprintf(stderr, "On-demand preparation requires reuse preparation\n"); exit(1);
     }
     int profile_ack = env_enabled("BENCH_ACK_PROFILE");
     if (profile_ack) {
@@ -1132,10 +1128,6 @@ static void handoff_bench(char role, const char *dax, unsigned rounds,
             if (reuse_prepare) {
                 double ready_start = monotonic();
                 request_start = ready_start;
-                /* Test control: withhold the next preparation until this
-                 * request, so post-ACK verification cannot hide its latency. */
-                if (prepare_on_demand)
-                    atomic_store_explicit(&ctrl->preparing, r + 1, memory_order_release);
                 ready_at_request = atomic_load_explicit(&ctrl->ready[1 - me], memory_order_acquire) == r + 1;
                 wait_value(&ctrl->ready[1 - me], r + 1, "prepared destination ready");
                 ready_wait_us = (monotonic() - ready_start) * 1e6;
@@ -1192,8 +1184,6 @@ static void handoff_bench(char role, const char *dax, unsigned rounds,
             if (r + 1 < rounds) {
                 if (warm && !reuse) bench_start(0, r + 2);
                 if (reuse_prepare) {
-                    if (prepare_on_demand)
-                        wait_value(&ctrl->preparing, r + 2, "next source requested preparation");
                     bench_prepare_reuse(role, r + 1, 0);
                 }
                 atomic_store_explicit(&ctrl->ready[me], r + 2, memory_order_release);
@@ -1216,9 +1206,8 @@ static void handoff_bench(char role, const char *dax, unsigned rounds,
             char load[512];
             snprintf(load, sizeof(load),
                 "{\"snapshot_path\":\"%s\",\"mem_backend\":{\"backend_type\":\"File\","
-                "\"backend_path\":\"/dev/dax0.0\"},\"resume_vm\":false,\"clock_realtime\":%s}",
-                bench_checkpoint_path,
-                env_enabled("BENCH_CLOCK_REALTIME") ? "true" : "false");
+                "\"backend_path\":\"/dev/dax0.0\"},\"resume_vm\":false,\"clock_realtime\":false}",
+                bench_checkpoint_path);
             bench_ack_trace_gate(1);
             uint64_t load_begin_ns = bench_ack_marker(role, r, nonce, "LOAD_BEGIN", NULL);
             double restore_us = bench_api("PUT", "/snapshot/load", load);
@@ -1956,7 +1945,6 @@ static void direct_telemetry(char role,int dax)
         unsigned long slack=strtoul(getenv("LAB_DAX_TIMER_SLACK_NS"),NULL,10);
         if(slack && prctl(PR_SET_TIMERSLACK,slack,0,0,0))die("Controller timer slack");
     }
-    if(!getenv("LAB_DAX_TELEMETRY"))return;
     size_t bytes=64*1024*1024;
     off_t offset=direct_layout_offset(768+(role=='B'?64:0));
     if((uint64_t)offset+bytes>dax_attribute("/dev/dax0.0","size")){
@@ -2216,11 +2204,8 @@ static void linux_stop_executor(struct linux_executor *e,pthread_t thread)
     int rc=pthread_kill(thread,SIGUSR1);
     if(rc){errno=rc;die("Linux direct kick");}
     double until=monotonic()+5;
-    unsigned spin_us=getenv("LAB_DAX_STOP_SPIN_US")?strtoul(getenv("LAB_DAX_STOP_SPIN_US"),NULL,10):0;
-    uint64_t spin_until=context_now()+(uint64_t)spin_us*1000;
     while(!atomic_load_explicit(&e->stopped,memory_order_acquire)){
         if(monotonic()>until){fprintf(stderr,"Linux direct stop timeout\n");exit(1);}
-        if(spin_us && context_now()<spin_until){__asm__ __volatile__("pause");continue;}
         struct timespec timeout={.tv_sec=1};
         syscall(SYS_futex,&e->stopped,FUTEX_WAIT|FUTEX_PRIVATE_FLAG,0,&timeout);
     }
@@ -2274,7 +2259,6 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
         resume_profile=(void *)((char *)page+KVM_DAX_RESUME_PROFILE_OFFSET);
     }
     unsigned me=role=='A'?0:1;
-    int native_a=env_enabled("LAB_DAX_NATIVE_A");
     struct linux_executor executor={0};pthread_t thread;
     int vm=-1,vcpu=-1,run_size=ioctl(kvm,KVM_GET_VCPU_MMAP_SIZE,0);
     struct kvm_run *run=MAP_FAILED;
@@ -2284,7 +2268,7 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
         bench_start(1,0);wait_value(&hb->magic,HB_MAGIC,"Linux direct boot");
         atomic_store_explicit(&ctrl->nonce,nonce,memory_order_release);
     }
-    if(me || native_a){
+    if(me){
         executor.console=open("/run/direct-linux-console.log",O_WRONLY|O_CREAT|O_TRUNC,0600);
         if(executor.console<0)die("Linux direct console");
         int rc=pthread_create(&thread,NULL,linux_execute,&executor);
@@ -2301,7 +2285,7 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
             double start=monotonic(),pause_us=0;
             atomic_store_explicit(&ctrl->preparing,r+1,memory_order_release);
             struct kvm_dax_handoff token={0};
-            if(!me && (!native_a || !r)){
+            if(!me){
                 pause_us=bench_control(0);
                 if(ioctl(kvm,KVM_DAX_PEEK,&token))die("Linux direct metadata");
             }else{
@@ -2332,11 +2316,11 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
                 r,role,pause_us,(guest_observed-start)*1e6,(detached-start)*1e6,(double)token.kernel_ns/1000,handoff_us,(uint64_t)ctrl->counter,
                 (uint64_t)token.vm_offset,(uint64_t)token.vcpu_offset,(uint64_t)token.vmcs_offset,(uint64_t)token.vm_creates,(uint64_t)token.vcpu_creates,
                 (double)token.quiesce_ns/1000,(double)token.mmu_drain_ns/1000,(double)token.binding_ns/1000,(uint64_t)token.pool_used,(uint64_t)token.ept_root_offset,(uint64_t)token.ept_page_count,
-                (!me && !native_a)?bench_control_service_us:0,
-                (me || (native_a && r))?(atomic_load(&executor.stopped_ns)-executor.stop_request_ns)/1000.0:0,
-                (me || (native_a && r))?(executor.stop_return_ns-atomic_load(&executor.stopped_ns))/1000.0:0);
+                (!me)?bench_control_service_us:0,
+                (me)?(atomic_load(&executor.stopped_ns)-executor.stop_request_ns)/1000.0:0,
+                (me)?(executor.stop_return_ns-atomic_load(&executor.stopped_ns))/1000.0:0);
             if(profile!=MAP_FAILED)for(unsigned i=0;i<8;i++)printf(",\"detach_stage_%u_us\":%.3f",i,profile->detach[i]/1000.0);
-            if(!me && !native_a)for(unsigned i=0;i<3;i++)printf(",\"source_control_part_%u_us\":%.3f",i,bench_control_parts_us[i]);
+            if(!me)for(unsigned i=0;i<3;i++)printf(",\"source_control_part_%u_us\":%.3f",i,bench_control_parts_us[i]);
             if(dense)printf(",\"pause_to_working_set_ready_us\":%.3f,\"pause_to_warm_ready_us\":%.3f",
                             working_set_ready_us,warm_ready_us);
             puts("}");
@@ -2348,7 +2332,7 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
             struct kvm_dax_handoff token=ctrl->token;
             if(token.vm_creates!=1 || token.vcpu_creates!=1){fprintf(stderr,"Linux direct VM recreated\n");exit(1);}
             double start=monotonic();
-            if(!me && !native_a){
+            if(!me){
                 bench_control(1);
                 if(ioctl(kvm,KVM_DAX_PEEK,&token))die("Linux direct attached metadata");
             }else{
@@ -2402,9 +2386,9 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
             printf("LINUX_DIRECT_JSON {\"event\":\"destination\",\"round\":%u,\"role\":\"%c\",\"attach_resume_us\":%.3f,\"kernel_attach_us\":%.3f,\"guest_ack_us\":%.3f,\"sequence\":%" PRIu64 ",\"vm_offset\":%" PRIu64 ",\"vcpu_offset\":%" PRIu64 ",\"vmcs_offset\":%" PRIu64 ",\"destination_control_service_us\":%.3f,\"executor_wake_us\":%.3f,\"wake_to_run_us\":%.3f",
                 r,role,(attached-start)*1e6,(double)token.kernel_ns/1000,(acknowledged-attached)*1e6,(uint64_t)atomic_load(&hb->sequence),
                 (uint64_t)token.vm_offset,(uint64_t)token.vcpu_offset,(uint64_t)token.vmcs_offset,
-                (!me && !native_a)?bench_control_service_us:0,
-                (me || native_a)?(atomic_load(&executor.wake_observed_ns)-atomic_load(&executor.wake_request_ns))/1000.0:0,
-                (me || native_a)?(atomic_load(&executor.run_begin_ns)-atomic_load(&executor.wake_observed_ns))/1000.0:0);
+                (!me)?bench_control_service_us:0,
+                (me)?(atomic_load(&executor.wake_observed_ns)-atomic_load(&executor.wake_request_ns))/1000.0:0,
+                (me)?(atomic_load(&executor.run_begin_ns)-atomic_load(&executor.wake_observed_ns))/1000.0:0);
             if(profile!=MAP_FAILED)for(unsigned i=0;i<8;i++)printf(",\"attach_stage_%u_us\":%.3f",i,profile->attach[i]/1000.0);
             if(resume_profile!=MAP_FAILED){
                 /* Both TSC samples are in this guest's virtual TSC domain. The
@@ -2421,7 +2405,7 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
                     (uint64_t)resume.guest_tsc,guest_ack_tsc,(uint64_t)resume.virtual_tsc_khz,
                     (uint64_t)resume.exit_ready,(uint64_t)resume.exit_ns,(uint64_t)resume.exit_reason,(uint64_t)resume.entry_rip);
             }
-            if(!me && !native_a)for(unsigned i=0;i<3;i++)printf(",\"destination_control_part_%u_us\":%.3f",i,bench_control_parts_us[i]);
+            if(!me)for(unsigned i=0;i<3;i++)printf(",\"destination_control_part_%u_us\":%.3f",i,bench_control_parts_us[i]);
             puts("}");
             if(dense){
                 linux_wait(&hb->verified,r+1,&executor);
@@ -2448,18 +2432,10 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
     }
     linux_wait(&hb->verified,rounds,&executor);
     if(dense)linux_wait(&hb->warm_done,rounds,&executor);
-    if(!me && native_a){
-        /* Restore Firecracker's original local mm/executor after measurement. */
-        struct kvm_dax_handoff token={0};
-        linux_stop_executor(&executor,thread);
-        if(ioctl(vm,KVM_DAX_DETACH,&token))die("Linux direct final executor detach");
-        munmap(run,run_size);close(vcpu);close(vm);vm=vcpu=-1;
-        bench_control(1);
-    }
     if(getrusage(RUSAGE_THREAD,&cpu_after))die("controller CPU accounting");
     double controller_cpu_us=(cpu_after.ru_utime.tv_sec-cpu_before.ru_utime.tv_sec+cpu_after.ru_stime.tv_sec-cpu_before.ru_stime.tv_sec)*1e6+cpu_after.ru_utime.tv_usec-cpu_before.ru_utime.tv_usec+cpu_after.ru_stime.tv_usec-cpu_before.ru_stime.tv_usec;
     printf("LINUX_DIRECT_JSON {\"event\":\"complete\",\"role\":\"%c\",\"rounds\":%u,\"heap_bytes\":%" PRIu64 ",\"errors\":%" PRIu64 ",\"clock_errors\":%" PRIu64 ",\"tsc_errors\":%" PRIu64 ",\"clock_ns\":%" PRIu64 ",\"controller_cpu_us\":%.3f,\"controller_wall_us\":%.3f}\n",role,rounds,dense?(uint64_t)atomic_load(&hb->working_set_bytes):UINT64_C(16777216),(uint64_t)atomic_load(&hb->errors),(uint64_t)atomic_load(&hb->clock_errors),(uint64_t)atomic_load(&hb->tsc_errors),(uint64_t)atomic_load(&hb->clock_ns),controller_cpu_us,(monotonic()-controller_start)*1e6);
-    if(me || native_a){atomic_store(&executor.go,2);syscall(SYS_futex,&executor.go,FUTEX_WAKE|FUTEX_PRIVATE_FLAG,1);pthread_join(thread,NULL);close(executor.console);}
+    if(me){atomic_store(&executor.go,2);syscall(SYS_futex,&executor.go,FUTEX_WAKE|FUTEX_PRIVATE_FLAG,1);pthread_join(thread,NULL);close(executor.console);}
     if(vcpu>=0){munmap(run,run_size);close(vcpu);close(vm);}
     if(!me)bench_child=0;
     close(kvm);close(dax);alarm(0);

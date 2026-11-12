@@ -399,7 +399,7 @@ def start(args):
     no_active_run()
     host_kvm()
     prepared = json.loads((ASSETS / "manifest.json").read_text())
-    control_rpc = bool(prepared.get("control_rpc")) and not getattr(args, "serial_control", False)
+    control_rpc = bool(prepared.get("control_rpc"))
     vendor = prepared["vendor"]
     parameter = Path(f"/sys/module/kvm_{'intel' if vendor == 'intel' else 'amd'}/parameters/nested")
     if parameter.read_text().strip().lower() not in ["y", "1"]:
@@ -997,7 +997,6 @@ def direct_handoff_bench(args):
     """Direct CXL object attach; deliberately starts with a device-free CPU guest."""
     run, config = current_run()
     collect_from = getattr(args, "collect_from", None)
-    legacy_tsc = getattr(args, "legacy_tsc", False)
     if not config.get("dax_handoff"):
         raise RuntimeError("Start a fresh --dax-handoff --dax-guest --cxl-mib 2048 lab")
     rounds = args.iterations + args.warmup
@@ -1048,12 +1047,10 @@ def direct_handoff_bench(args):
               "reuse_fds": args.reuse_fds,
               "profile": args.profile,
               "resume_profile": args.resume_profile,
-              "heartbeat_spins": args.heartbeat_spins,
+              "heartbeat_spins": 128,
               "executor_cpu": args.executor_cpu,
-              "irqfd_batch": args.irqfd_batch,
-              "channel_spin_us": args.channel_spin_us,
               "timer_slack_ns": args.timer_slack_ns,
-              "telemetry": args.telemetry, "dwell_ms": args.dwell_ms,
+              "telemetry": 'dax', "dwell_ms": args.dwell_ms,
               "test_pfn_mismatch": args.test_pfn_mismatch,
               "test_new_pfn": args.test_new_pfn,
               "heartbeat_churn": args.heartbeat_churn,
@@ -1073,8 +1070,6 @@ def direct_handoff_bench(args):
     save_json(out / "report.json", report)
 
     def probe_log(role):
-        if args.telemetry == "serial":
-            return guest_command(config["vms"][role], "cat /run/direct.log", timeout=60)
         with open(config["cxl_backing"], "rb", buffering=0) as backing:
             data = os.pread(backing.fileno(), 64 * 1024 * 1024,
                             (768 + layout_shift_mib + (64 if role == "B" else 0)) * 1024 * 1024)
@@ -1104,15 +1099,11 @@ def direct_handoff_bench(args):
                 body = ""
                 if linux:
                     configuration = {"boot-source": {"kernel_image_path": "/lab/l2-vmlinux", "initrd_path": "/lab/l2-initramfs.cpio",
-                        "boot_args": "console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init lab.role=A memmap=2M$64M lab.heartbeat=1 " + f"lab.heartbeat_sleep={int(args.heartbeat == 'sleep')} lab.heartbeat_churn={int(args.heartbeat_churn)} lab.heartbeat_pit={int(args.heartbeat_pit)} lab.heartbeat_spins={args.heartbeat_spins} lab.heartbeat_timing={int(args.resume_profile)} lab.heartbeat_quiet=1 nmi_watchdog=0" + (" lab.heartbeat_dense=1 transparent_hugepage=never" if args.dense_working_set else "")},
+                        "boot_args": "console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init lab.role=A memmap=2M$64M lab.heartbeat=1 " + f"lab.heartbeat_sleep={int(args.heartbeat == 'sleep')} lab.heartbeat_churn={int(args.heartbeat_churn)} lab.heartbeat_pit={int(args.heartbeat_pit)} lab.heartbeat_timing={int(args.resume_profile)} lab.heartbeat_quiet=1 nmi_watchdog=0" + (" lab.heartbeat_dense=1 transparent_hugepage=never" if args.dense_working_set else "")},
                         "machine-config": {"vcpu_count": 1, "mem_size_mib": args.memory_mib}, "drives": []}
                     body += "cat > /run/bench-config.json <<'DIRECT_CONFIG'\n" + json.dumps(configuration) + "\nDIRECT_CONFIG\n"
                 env = f"FC_DAX_DIRECT=1 FC_DAX_HEAP=/dev/dax0.0 FC_DAX_HEAP_OFFSET={(512 + layout_shift_mib) * 1024 * 1024} FC_DAX_HEAP_BYTES=67108864 " if linux else ""
                 env += f"LAB_DAX_LAYOUT_SHIFT_MIB={layout_shift_mib} LAB_HEARTBEAT_DENSE={int(args.dense_working_set)} "
-                if linux and args.executor == "native":
-                    env += "LAB_DAX_NATIVE_A=1 "
-                if args.telemetry == "dax":
-                    env += "LAB_DAX_TELEMETRY=1 "
                 env += f"LAB_DAX_DWELL_US={args.dwell_ms * 1000} "
                 env += f"LAB_DAX_POLL_US={args.poll_us} "
                 env += f"LAB_DAX_SPIN_US={args.spin_us} "
@@ -1126,9 +1117,6 @@ def direct_handoff_bench(args):
                     env += "LAB_DAX_RESUME_PROFILE=1 "
                 if args.executor_cpu is not None:
                     env += f"LAB_DAX_EXECUTOR_CPU={args.executor_cpu} FC_DAX_VCPU_CPU={args.executor_cpu} "
-                if args.irqfd_batch:
-                    env += "FC_DAX_IRQFD_BATCH=1 "
-                env += f"FC_DAX_CHANNEL_SPIN_US={args.channel_spin_us} LAB_DAX_STOP_SPIN_US={args.channel_spin_us} "
                 if args.timer_slack_ns:
                     env += f"LAB_DAX_TIMER_SLACK_NS={args.timer_slack_ns} "
                 if args.test_pfn_mismatch and role == "B":
@@ -1195,7 +1183,7 @@ def direct_handoff_bench(args):
             if not match:
                 raise RuntimeError("Missing host TSC warning count")
             host_tsc_warnings[role] = int(match[1])
-            if not legacy_tsc and host_tsc_warnings[role]:
+            if host_tsc_warnings[role]:
                 raise RuntimeError("Host discovered backwards TSC")
             pool = guest_command(vm, "cat /sys/module/kvm/parameters/dax_pool")
             (out / f"{role}-final-pool.log").write_text(pool)
@@ -1239,16 +1227,14 @@ grep -E '^(L2_BOOTED |L2_CLOCKSOURCE=)' /run/bench-fc-0.log || true""", timeout=
             boot_count = int(boot[1])
             completions = [s for s in samples if s["event"] == "complete"]
             tsc_fields = ["tsc_errors" in s for s in completions]
-            if len(tsc_fields) != 2 or (not legacy_tsc and not all(tsc_fields)):
+            if len(tsc_fields) != 2 or not all(tsc_fields):
                 raise RuntimeError("Missing guest TSC validation")
-            if legacy_tsc and any(tsc_fields):
-                raise RuntimeError("Legacy TSC mode cannot be used for an instrumented image")
             if boot_count != 1 or int(snapshot[1]) or any(s.get("errors") or s.get("clock_errors") or s.get("tsc_errors") for s in samples):
                 raise RuntimeError("Linux guest rebooted, snapshot API used, or heap check failed")
             report["validation"].update({"boot_markers": boot_count, "retained_heap_errors": 0})
-            report["validation"].update({"guest_clock_errors": 0, "guest_tsc_errors": None if legacy_tsc else 0,
-                "raw_tsc_check_enabled": not legacy_tsc,
-                "host_backwards_tsc_warnings": host_tsc_warnings if legacy_tsc else 0,
+            report["validation"].update({"guest_clock_errors": 0, "guest_tsc_errors": 0,
+                "raw_tsc_check_enabled": True,
+                "host_backwards_tsc_warnings": 0,
                 "firecracker_checks_scanned_full_log": True, "changing_memory_mib": 32 if args.heartbeat_churn else 0})
             if args.heartbeat_pit:
                 with open(config["cxl_backing"], "rb", buffering=0) as backing:
@@ -1257,7 +1243,7 @@ grep -E '^(L2_BOOTED |L2_CLOCKSOURCE=)' /run/bench-fc-0.log || true""", timeout=
                     raise RuntimeError("PIT stress workload did not retain an active periodic timer")
                 report["validation"]["periodic_pit_handoff"] = True
             accounting = all("controller_cpu_us" in s and "controller_wall_us" in s for s in completions)
-            if not accounting and not legacy_tsc:
+            if not accounting:
                 raise RuntimeError("Missing controller CPU accounting")
             report["controller_accounting_available"] = accounting
             if accounting:
@@ -1271,9 +1257,9 @@ grep -E '^(L2_BOOTED |L2_CLOCKSOURCE=)' /run/bench-fc-0.log || true""", timeout=
         def timing_applies(sample, key):
             # Zero on the other execution path means unavailable, not zero latency.
             if key in ("kick_to_exit_us", "stop_ack_us", "executor_wake_us", "wake_to_run_us"):
-                return report["executor"] == "native" or sample["role"] == "B"
+                return sample["role"] == "B"
             if "control_service_us" in key or "control_part_" in key:
-                return (report["executor"] == "firecracker" and sample["role"] == "A"
+                return (sample["role"] == "A"
                         and report.get("control", "http") == "local")
             return True
         for group in (sources, destinations):
@@ -1303,8 +1289,7 @@ grep -E '^(L2_BOOTED |L2_CLOCKSOURCE=)' /run/bench-fc-0.log || true""", timeout=
         for role, vm in config["vms"].items():
             try:
                 (out / f"{role}-diagnostic.log").write_text(guest_command(vm, "tail -n 80 /run/direct.log 2>/dev/null || true\ntail -n 80 /run/bench-fc-0.log 2>/dev/null || true\ntail -n 80 /run/direct-linux-console.log 2>/dev/null || true\ndmesg | tail -n 100", timeout=10))
-                if args.telemetry == "dax":
-                    (out / f"{role}-probe.log").write_text(probe_log(role))
+                (out / f"{role}-probe.log").write_text(probe_log(role))
             except Exception as exc:
                 (out / f"{role}-diagnostic-error.txt").write_text(str(exc))
         save_json(out / "report.json", report)
@@ -1324,13 +1309,11 @@ def direct_handoff_report(args):
     if not backup.exists():
         shutil.copyfile(out / "report.json", backup)
     values = dict(guest="linux", iterations=report["iterations"], warmup=report["warmup"],
-                  kernel_mode=report["kernel_handoff_mode"], collect_from=out,
-                  legacy_tsc=args.legacy_tsc)
+                  kernel_mode=report["kernel_handoff_mode"], collect_from=out)
     for key, default in {"executor":"firecracker", "guest_cpu":None, "poll_us":50,
                          "spin_us":0, "control":"http",
                          "reuse_fds":False, "profile":False, "resume_profile":False, "heartbeat_spins":128,
-                         "executor_cpu":None, "irqfd_batch":False,
-                         "channel_spin_us":0,
+                         "executor_cpu":None,
                          "timer_slack_ns":0,
                          "telemetry":"dax", "dwell_ms":20, "heartbeat":"busy",
                          "heartbeat_churn":False, "heartbeat_pit":False,
@@ -1422,8 +1405,6 @@ def configure(args):
     if pml is not None and vendor != "intel":
         raise RuntimeError("PML requires Intel KVM")
     inspection = """printf 'NX_HUGE_PAGES='; cat /sys/module/kvm/parameters/nx_huge_pages
-printf 'RCU_EXPEDITED='; cat /sys/kernel/rcu_expedited
-printf 'RCU_NORMAL='; cat /sys/kernel/rcu_normal
 printf 'KVM_DAX_POOL='; cat /sys/module/kvm/parameters/dax_pool
 printf 'TAINT='; cat /proc/sys/kernel/tainted
 """
@@ -1433,9 +1414,6 @@ printf 'TAINT='; cat /proc/sys/kernel/tainted
     preflight = "test -r /sys/module/kvm/parameters/nx_huge_pages\n"
     if args.nx_huge_pages is not None or pml is not None:
         preflight += f"test -r /modules/kvm.ko\ntest -r /modules/{module}.ko\n"
-    if args.rcu is not None:
-        preflight += "test -w /sys/kernel/rcu_expedited\n"
-        preflight += "test \"$(cat /sys/kernel/rcu_normal)\" = 0\n"
     for vm in config["vms"].values():
         guest_command(vm, preflight)
     script = ""
@@ -1457,11 +1435,9 @@ done
         script += f"insmod /modules/kvm.ko nx_huge_pages={nx_policy}\n"
         pml_argument = f" pml={int(pml == 'on')}" if pml is not None else (' pml="$cache_pml_policy"' if vendor == "intel" else "")
         script += f"insmod /modules/{module}.ko{pml_argument}\n"
-    if args.rcu is not None:
-        script += f"echo {int(args.rcu == 'expedited')} > /sys/kernel/rcu_expedited\n"
     report_path = run / f"configuration-{time.time_ns()}.json"
     report = {"result": "running", "scope": "selected L1 guests only; physical host unchanged",
-              "requested": {"nx_huge_pages": args.nx_huge_pages, "rcu": args.rcu, "pml": pml},
+              "requested": {"nx_huge_pages": args.nx_huge_pages, "pml": pml},
               "read_only": not script, "transcripts": {}}
     try:
         for role, vm in config["vms"].items():
@@ -2015,12 +1991,8 @@ def handoff_bench(args):
         raise RuntimeError("--reuse-kvm requires --mode warm; both used workers remain alive")
     if args.reuse_kvm and args.heartbeat_pit:
         raise RuntimeError("--reuse-kvm does not support --heartbeat-pit: pending PIT state is not reset by this experiment")
-    if args.reuse_quiet_irqfd and not args.reuse_kvm:
-        raise RuntimeError("--reuse-quiet-irqfd requires --reuse-kvm")
     if args.reuse_prepare and not args.reuse_kvm:
         raise RuntimeError("--reuse-prepare requires --reuse-kvm")
-    if args.reuse_prepare_on_demand and not args.reuse_prepare:
-        raise RuntimeError("--reuse-prepare-on-demand requires --reuse-prepare")
     for name in ("guest_cpu", "executor_cpu"):
         cpu = getattr(args, name)
         if cpu is not None and not 0 <= cpu < config["l1_vcpus"]:
@@ -2038,9 +2010,9 @@ def handoff_bench(args):
               "mode": args.mode, "iterations": args.iterations, "warmup": args.warmup,
               "preset": getattr(args, "preset", None),
               "runtime_configuration": config.get("runtime_configuration"),
-              "heartbeat": args.heartbeat, "clock_realtime": args.clock_realtime,
+              "heartbeat": args.heartbeat, "clock_realtime": False,
               "dense_working_set": args.dense_working_set,
-              "guest_clocksource": args.guest_clocksource,
+              "guest_clocksource": 'default',
               "profile_restore": args.profile_restore,
               "profile_ack": args.profile_ack,
               "ack_trace_gated": args.profile_ack,
@@ -2052,12 +2024,11 @@ def handoff_bench(args):
               "keep_kvm_active": args.keep_kvm_active,
               "reuse_kvm": args.reuse_kvm,
               "reuse_prepare": args.reuse_prepare,
-              "reuse_prepare_on_demand": args.reuse_prepare_on_demand,
-              "reuse_irqfd_mode": ("quiet" if args.reuse_quiet_irqfd else "strict") if args.reuse_kvm else None,
+              "reuse_irqfd_mode": "strict" if args.reuse_kvm else None,
               "guest_cpu": args.guest_cpu, "executor_cpu": args.executor_cpu,
               "poll_us": args.poll_us, "spin_us": args.spin_us,
               "dwell_ms": args.dwell_ms, "timer_slack_ns": args.timer_slack_ns,
-              "heartbeat_spins": args.heartbeat_spins,
+              "heartbeat_spins": 128,
               "heartbeat_churn": args.heartbeat_churn, "heartbeat_pit": args.heartbeat_pit,
               "fixed_ram_hva": args.fixed_ram_hva,
               "full_snapshot_samples": args.full_snapshot_samples,
@@ -2091,22 +2062,13 @@ def handoff_bench(args):
         report["reuse_contract"] = ("same virtual-hardware fields of VmInfo, CPU/vCPU/RAM/device topology; "
                                     "boot metadata may differ; one static shared DAX RAM allocation; "
                                     "this benchmark does not switch between distinct CXL backing allocations")
-        report["reuse_irqfd"] = ("quiet comparison: kernel IRQFD work is not flushed; valid only for this "
-                                  "controlled workload with no external I/O or active PIT" if args.reuse_quiet_irqfd else
-                                  "strict default: deassign IRQFDs, flush pending kernel work, restore state and reassign")
-        if args.reuse_quiet_irqfd:
-            report["limitations"].append("quiet IRQFD comparison does not flush pending kernel IRQFD work; "
-                                         "it does not establish safety for external I/O or PIT-active workloads")
+        report["reuse_irqfd"] = ("strict default: deassign IRQFDs, flush pending kernel work, restore state and reassign")
         if args.reuse_prepare:
             report["reuse_preparation"] = ("one PrepareReuse API per incoming handoff, with a single outstanding prepared "
                                             "worker; B prepares its paused seed before A boots, and each retired source prepares "
                                             "after snapshot publication and peer ACK; readiness is published only after preparation; "
                                             "the next source waits for readiness after its active dwell, while its guest still runs; "
                                             "save_restore_prepare includes background preparation API cost and is not elapsed downtime")
-        if args.reuse_prepare_on_demand:
-            report["limitations"].append("on-demand test control withholds each retired worker's preparation until the "
-                                         "next source requests a handoff after dwell, exposing preparation in readiness wait; "
-                                         "only the initial B seed remains preprepared; no added API or mailbox fields")
     save_json(out / "report.json", report)
     try:
         if args.dense_working_set:
@@ -2119,9 +2081,9 @@ def handoff_bench(args):
                          "initrd_path": "/lab/l2-initramfs.cpio",
                          "boot_args": "console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init lab.role=A memmap=2M$64M lab.heartbeat=1 "
                                       f"lab.heartbeat_sleep={int(args.heartbeat == 'sleep')}"
-                                      f" lab.heartbeat_spins={args.heartbeat_spins} lab.heartbeat_churn={int(args.heartbeat_churn)} lab.heartbeat_pit={int(args.heartbeat_pit)} lab.heartbeat_timing={int(args.profile_ack)} lab.heartbeat_quiet=1 nmi_watchdog=0"
+                                      f" lab.heartbeat_churn={int(args.heartbeat_churn)} lab.heartbeat_pit={int(args.heartbeat_pit)} lab.heartbeat_timing={int(args.profile_ack)} lab.heartbeat_quiet=1 nmi_watchdog=0"
                                       + (" lab.heartbeat_dense=1 transparent_hugepage=never" if args.dense_working_set else "")
-                                      + (" clocksource=tsc tsc=reliable" if args.guest_clocksource == "tsc" else "")},
+                                      + ("")},
                          "machine-config": {"vcpu_count": 1, "mem_size_mib": args.memory_mib}, "drives": []}
         for role, vm in config["vms"].items():
             role_configuration = json.loads(json.dumps(configuration))
@@ -2133,7 +2095,7 @@ def handoff_bench(args):
                     body += (f"cat > {transaction}/bench-{name}.json <<'BENCH_COMPONENT'\n" +
                              json.dumps(role_configuration[name]) + "\nBENCH_COMPONENT\n")
             env = (f"BENCH_RUN_DIR={transaction} FC_DAX_DIRECT=0 FC_RESTORE_TIMING={int(args.profile_restore)} BENCH_KVM_KEEPALIVE={int(args.keep_kvm_active)} "
-                   f"BENCH_CLOCK_REALTIME={int(args.clock_realtime)} BENCH_POLL_US={args.poll_us} BENCH_SPIN_US={args.spin_us} "
+                   f"BENCH_POLL_US={args.poll_us} BENCH_SPIN_US={args.spin_us} "
                    f"BENCH_DWELL_US={args.dwell_ms * 1000} BENCH_FULL_SAMPLES={args.full_snapshot_samples} ")
             env += f"LAB_HEARTBEAT_DENSE={int(args.dense_working_set)} "
             env += f"BENCH_NO_SECCOMP={int(args.no_seccomp)} "
@@ -2143,9 +2105,6 @@ def handoff_bench(args):
             env += f"FC_DAX_SNAPSHOT_COMPAT={int(args.direct_cpu_model)} "
             env += f"BENCH_REUSE_KVM={int(args.reuse_kvm)} FC_DAX_REUSE={int(args.reuse_kvm)} "
             env += f"BENCH_REUSE_PREPARE={int(args.reuse_prepare)} "
-            env += f"BENCH_REUSE_PREPARE_ON_DEMAND={int(args.reuse_prepare_on_demand)} "
-            if args.reuse_kvm:
-                env += f"FC_DAX_REUSE_QUIET_IRQFD={int(args.reuse_quiet_irqfd)} "
             env += f"FC_DAX_NO_NESTED_GUEST={int(args.no_nested_guest)} BENCH_SERIAL_FILE={int(args.serial_file or args.reuse_kvm)} "
             if args.fixed_ram_hva is not None:
                 env += f"FC_DAX_FIXED_HVA={args.fixed_ram_hva} "
@@ -2681,7 +2640,6 @@ def main():
     p.add_argument("--qemu", type=Path, help="Use an explicit QEMU binary, e.g. one with CXL Type-3 support")
     p.add_argument("--cxl-mib", type=int, default=0, help="Add shared CXL Type-3 RAM exposed as device-DAX (e.g. 2048)")
     p.add_argument("--dax-guest", action="store_true", help="Run one microVM on A with all 128MiB guest RAM in DAX; B observes")
-    p.add_argument("--serial-control", action="store_true", help="Use the historical console transport even if the fixture has a dedicated control channel")
     p.add_argument("--dax-handoff", action="store_true", help="Direct shared KVM handoff lab; fixed kernel addresses, 4KiB DAX, no automatic L2")
     p.add_argument("--dax-4k", action="store_true", help="Configure the shared device-DAX allocation with 4KiB alignment for matched EPT measurements")
     p.add_argument("--migration-network", action="store_true", help="Connect L1 A/B with a private virtio-net link for full RAM migration")
@@ -2696,8 +2654,6 @@ def main():
     p = subs.add_parser("configure", help="Inspect selected native KVM pair; settings change only with explicit options")
     p.add_argument("--nx-huge-pages", choices=["auto", "never"],
                    help="Reload KVM inside both L1s, stopping their recorded microVMs; never disables this mitigation")
-    p.add_argument("--rcu", choices=["normal", "expedited"],
-                   help="Set grace-period policy inside both L1s; no physical host changes")
     p.add_argument("--pml", choices=["on", "off"],
                    help="Reload Intel KVM inside the selected L1s with PML enabled/disabled")
     p.set_defaults(func=configure)
@@ -2726,8 +2682,7 @@ def main():
     p.add_argument("--warmup", type=int, default=6)
     p.add_argument("--mode", choices=["warm", "cold"], default="warm")
     p.add_argument("--heartbeat", choices=["busy", "sleep"], default="busy")
-    p.add_argument("--clock-realtime", action=argparse.BooleanOptionalAction, default=False)
-    p.add_argument("--guest-clocksource", choices=["default", "tsc"], default="default")
+
     p.add_argument("--profile-restore", action="store_true")
     p.add_argument("--profile-ack", action="store_true",
                    help="Record opt-in L1 trace markers and guest ACK TSC; requires configured tracefs collection")
@@ -2743,12 +2698,8 @@ def main():
     p.add_argument("--keep-kvm-active", action="store_true", help="Keep an empty VM on each node to avoid first/last-VM hardware enable/disable")
     p.add_argument("--reuse-kvm", action="store_true",
                    help="Reuse already-executed KVM VM/vCPU/thread objects; B boots a disposable same-configuration guest first")
-    p.add_argument("--reuse-quiet-irqfd", action="store_true",
-                   help="Controlled reuse comparison without IRQFD work flush; requires --reuse-kvm, no external I/O or active PIT")
     p.add_argument("--reuse-prepare", action="store_true",
                    help="Prepare each paused reused worker with one coarse API while the peer guest runs; requires --reuse-kvm")
-    p.add_argument("--reuse-prepare-on-demand", action="store_true",
-                   help="Test preparation with no advance lead time; requires --reuse-prepare; initial B seed remains prepared")
     p.add_argument("--fixed-ram-hva", type=lambda value: int(value, 0),
                    help="Map DAX RAM at this 2MiB-aligned HVA on every VMM; does not preserve native EPT")
     p.add_argument("--full-snapshot-samples", type=int, choices=range(0, 11), default=6,
@@ -2759,7 +2710,6 @@ def main():
     p.add_argument("--spin-us", type=int, choices=range(0, 2001), metavar="0..2000", default=0)
     p.add_argument("--timer-slack-ns", type=int, choices=[0, 1], default=0)
     p.add_argument("--dwell-ms", type=int, choices=range(0, 1001), metavar="0..1000", default=20)
-    p.add_argument("--heartbeat-spins", type=int, choices=range(0, 8193), metavar="0..8192", default=128)
     p.add_argument("--heartbeat-churn", action="store_true")
     p.add_argument("--heartbeat-pit", action="store_true")
     p.add_argument("--test-corrupt-state", action="store_true",
@@ -2770,8 +2720,8 @@ def main():
     p.add_argument("--dense-working-set", action="store_true", help="Retain and verify a near-full guest working set; measure first and warm page scans after every handoff")
     p.add_argument("--kernel-mode", type=int, choices=[0, 2, 3], default=3,
                    help="0 conservative, 2 deferred retirement, 3 retained EPT (default)")
-    p.add_argument("--executor", choices=["firecracker", "native"], default="firecracker",
-                   help="Native uses the existing probe executor on both nodes after the initial Firecracker boot")
+    p.add_argument("--executor", choices=["firecracker"], default="firecracker",
+                   help="A uses Firecracker; B uses the native shared-probe executor")
     p.add_argument("--control", choices=["http", "local"], default="http",
                    help="Local uses an opt-in persistent binary socket on Firecracker's VMM event loop")
     p.add_argument("--spin-us", type=int, choices=range(0, 2001), metavar="0..2000", default=0,
@@ -2779,18 +2729,13 @@ def main():
     p.add_argument("--reuse-fds", action="store_true", help="Reattach through an existing VM FD after the first visit")
     p.add_argument("--profile", action="store_true", help="Record optional per-stage kernel timings in reserved DAX metadata")
     p.add_argument("--resume-profile", action="store_true", help="Separate first VM-entry attempt, guest heartbeat timestamp and controller observation")
-    p.add_argument("--heartbeat-spins", type=int, choices=range(0, 8193), metavar="0..8192", default=128,
-                   help="Guest PAUSE instructions per busy heartbeat loop (default 128); does not change sleep mode")
     p.add_argument("--executor-cpu", type=int, choices=range(0, 2), help="Pin native and Firecracker vCPU threads independently of the controller")
-    p.add_argument("--irqfd-batch", action="store_true", help="Quiesce simple IRQFDs synchronously with one SRCU grace period")
-    p.add_argument("--channel-spin-us", type=int, choices=range(0, 501), default=0, metavar="0..500", help="Bounded spin before blocking for vCPU stop/resume completion")
+
     p.add_argument("--timer-slack-ns", type=int, choices=[0, 1], default=0, help="0 keeps native timer slack; 1 disables sleep batching for controller polling")
     p.add_argument("--guest-cpu", type=int,
                    help="Pin the controller and its executor/Firecracker threads to one L1 CPU to measure cross-CPU VMCS costs")
     p.add_argument("--poll-us", type=int, choices=[0, 5, 10, 50], default=50,
                    help="0 busy-spins while waiting for shared-memory notifications; 50 sleeps between checks (default)")
-    p.add_argument("--telemetry", choices=["dax", "serial"], default="dax",
-                   help="Keep benchmark JSON outside VM state in a reserved DAX range; avoids slow serial log copying")
     p.add_argument("--dwell-ms", type=int, choices=range(0, 1001), metavar="0..1000", default=20,
                    help="Run guest between handoffs; excluded from measured downtime")
     p.add_argument("--test-pfn-mismatch", action="store_true",
@@ -2808,7 +2753,6 @@ def main():
     p.set_defaults(func=direct_handoff_bench)
     p = subs.add_parser("direct-handoff-report", help="Read-only recovery after completed handoff log collection timed out")
     p.add_argument("output_dir", type=Path)
-    p.add_argument("--legacy-tsc", action="store_true", help="Historical image without raw TSC checks; record known host warnings")
     p.set_defaults(func=direct_handoff_report)
     p = subs.add_parser("console", help="Connect to a guest serial shell")
     p.add_argument("role", choices=["A", "B"])
