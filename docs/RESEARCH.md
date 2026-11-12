@@ -354,6 +354,7 @@ M4+P가 가장 강한 상대다. 관문 G2가 "hand-off 정지 시간 ≤ M4+P"�
 | Q8 생성 시점에 한 번 분류(Pond)하면? | 명령 단위 CXL/DRAM 비율이 p50 1.02, p95 1.22, 최대 3.54로 넓다(10-14, 1회). sandbox 안 분산과 sandbox 사이 분산을 아직 나눠 보지 않았다 | A4 |
 | Q9 작은 host라 생긴 contention 아닌가? | host 코어 수를 sweep한다 | A3 |
 | Q10 M4와의 차이는? | M4에서 하나씩 바꿔 KVM 객체 사전 생성 → EPT 이어받기 → device 연속성으로 3분해. `snapshot` → `reuse-prepared` → `direct`가 이 사다리의 일부다 | D3 |
+| Q11 FragVisor는 vCPU 이동이 86 µs인데 왜 더 느린가? | 86 µs는 상태(약 6.9 KB)만 넘기고 미리 만든 vCPU에 복원하는 구간이다. 메모리는 옮긴 뒤 DSM으로 page마다 가져오고 EPT도 다시 채운다. 우리 장점은 그 뒤 비용이 없는 데서 보여야 한다. 같은 경계의 bare-metal 숫자가 아직 없다 | D1, D3, 8.1 |
 
 ---
 
@@ -372,8 +373,35 @@ M4+P가 가장 강한 상대다. 관문 G2가 "hand-off 정지 시간 ≤ M4+P"�
 | LSFMM 2023 CXL VM migration | CXL 공유 메모리로 VM migration | 같은 계열, M3로 비교 |
 | Pond (ASPLOS'23) | VM 단위 로컬·pool 메모리 배분을 ML로 예측 | 정적, tool call 단위 아님 |
 | DSec (DeepSeek, arXiv 2609.22978) | power-of-k 배치 + SCHED_IDLE + core scheduling, migration 없음. sandbox 약 90%가 평균 CPU 5% 이하 | 노드 간 재배치 없음 |
+| FragVisor (EuroSys'23, "Aggregate VM") | 여러 서버에 걸친 분산 VM. 메모리는 DSM, vCPU를 서버 사이로 옮긴다. vCPU 이동 평균 86 µs(그중 register dump 38 µs) | 메모리를 page 단위로 끌어오고 EPT를 서버마다 따로 채운다. 86 µs에 이 비용이 없다(8.1) |
 
 "실행 중인 VM / EPT·VMCS가 CXL에 있음 / host 간 재구축 없이 넘김 / 비일관 CXL 위 read-write 소유권 이전"을 함께 만족하는 선행 연구는 찾지 못했다. 2025~2026 학회와 arXiv, GiantVM 같은 분산 hypervisor는 더 확인해야 한다.
+
+### 8.1 FragVisor의 86 µs (2026-11-12 코드 분석)
+
+논문 7.3절: "inter-node migration overhead of a vCPU: it is 86 µs on average – including 38 µs to dump registers". 환경은 Xeon E5-2620 v4, 56 Gbps InfiniBand RDMA, Linux 4.4.137 + Popcorn, kvmtool이다. 공개 코드(`systems-nuts/FragVisor`, kernel `bb358fa`, kvmtool `840c22a`)를 읽어 확인했다.
+
+**하는 일**
+1. guest가 hypercall로 이동을 요청한다. KVM이 `KVM_RUN`에서 빠져나오며 커널 안에서 vCPU 상태를 저장한다(`pophype_save_vcpu_states`). 저장 대상은 regs, sregs, FPU, XSAVE, XCR, LAPIC, events, MP state, MSR 14개로 약 6.9 KB다.
+2. 이 상태와 `struct kvm_vcpu` 원본을 RDMA SEND로 목적지에 보낸다.
+3. 목적지는 **부팅 때 미리 만들어 둔** 같은 vCPU fd를 찾아 VMCS를 load하고 상태를 커널 함수로 복원한다. 서버마다 VM fd와 모든 vCPU fd, VMCS를 부팅 때 만든다.
+4. 이어서 Popcorn이 kvmtool의 vCPU thread를 목적지로 옮긴다(host register만, RAM은 아님).
+5. 목적지에서 `KVM_RUN`을 다시 부른다.
+
+**하지 않는 일**
+- guest 메모리를 옮기지 않는다. 목적지에서 EPT violation이 날 때마다 DSM이 4 KiB page를 원격에서 가져와 그 서버의 EPT에 채운다.
+- source EPT root를 목적지에 넘기지 않는다. 그 대입 줄은 주석 처리돼 있다(`hype_kvm.c:3045`). EPT는 서버마다 따로 있고, 그 서버에 이미 있던 매핑만 남는다.
+
+**86 µs에 대해 확인한 것**
+- 계측 경계와 원자료가 공개 코드에 없다. 상태 전송 구간 타이머(`update_vcpu_ns`)는 쌓기만 하고 어디서도 출력하지 않는다. 86 µs 집계 스크립트, 표본 수, 분포도 없다(평균 하나).
+- 옮긴 뒤 page를 가져오고 EPT를 채우는 비용, cache·TLB warm-up은 이 숫자 밖이다.
+- 코드에 "1 vCPU per node" 가정이 있다.
+- InfiniBand 없이 쓰는 TCP messaging layer는 코드에 있다. 다만 수정된 4.4 host kernel이 필요해서 우리 서버(Xeon Gold 6548Y+)에서 그대로 돌리기는 어렵다.
+
+**우리 연구에 주는 의미**
+- FragVisor의 이동은 HANDOFF 원래 기본안(상태 직렬화 + 목적지에 미리 만든 vCPU)과 같은 단계다. 우리 표의 `reuse-prepared`(KVM 객체 사전 생성)에 해당하고, EPT 이어받기는 없다.
+- 그래서 "상태만 넘기는 부분은 bare metal + RDMA에서 100 µs 안쪽"이라는 참고값이 이미 있다. 우리 nested lab의 0.21~1.34 ms는 그보다 크다. 리뷰어가 이 차이를 물을 것이다. 우리 장점은 상태 전달 속도가 아니라 **옮긴 뒤 메모리를 끌어오거나 EPT를 다시 채우지 않는 것**에서 보여야 한다(6.2 D3, D4).
+- 공정한 비교에는 같은 경계(정지 요청 → 목적지 첫 guest 실행)와, 옮긴 뒤 working set을 다시 쓰는 시간까지 함께 재야 한다.
 
 ---
 
