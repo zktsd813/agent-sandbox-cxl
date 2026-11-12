@@ -128,7 +128,7 @@ def main():
                      "--memory-backing-dir", "/dev/shm"]
         if direct:
             arguments.append("--dax-handoff")
-        if args.case != "direct-baseline":
+        if block:
             arguments += ["--migration-network", "--network-backend", "socket", "--storage-image", args.assets / "storage.raw"]
         command(arguments, "start.log")
         started = True
@@ -150,12 +150,17 @@ def main():
         else:
             a, b = config["vms"]["A"], config["vms"]["B"]
             report["vhost_affinity"] = nfs.pin_vms(config, argparse.Namespace(host_cpus_a="0-2", host_cpus_b="3-5"))
-            for name, text in nfs.setup_storage(a, b, directory).items():
-                (out / (name + ".txt")).write_text(text)
-            (out / "B-nfs-mounts.txt").write_text(nfs.select_backend(b, "nfs"))
-            # Verify the target NFS image is readable before testing mode gates.
-            (out / "B-nfs-image-read.txt").write_text(nfs.shell(b,
-                "dd if=/disk/sandbox.raw of=/dev/null bs=4096 count=1\ncat /proc/net/rpc/nfs"))
+            if block:
+                for name, text in nfs.setup_storage(a, b, directory).items():
+                    (out / (name + ".txt")).write_text(text)
+                (out / "B-nfs-mounts.txt").write_text(nfs.select_backend(b, "nfs"))
+                # Verify the target NFS image before testing block mode gates.
+                (out / "B-nfs-image-read.txt").write_text(nfs.shell(b,
+                    "dd if=/disk/sandbox.raw of=/dev/null bs=4096 count=1\ncat /proc/net/rpc/nfs"))
+            else:
+                for vm in (a, b):
+                    nfs.shell(vm, lab.snapshot_cleanup_script(include_boot_vm=True) +
+                              f"mkdir -p {directory}\n")
             if direct:
                 for role, vm in (("A", a), ("B", b)):
                     mode, node = (1, 1) if role == "A" else (2, 2)
