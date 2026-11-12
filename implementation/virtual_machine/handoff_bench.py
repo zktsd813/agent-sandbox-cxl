@@ -328,8 +328,7 @@ class HandoffController(Controller):
             "FC_DAX_FIXED_HVA": "0x400000000000", "FC_DAX_SNAPSHOT": "1"}
         resident = s.direct
         if resident:
-            env.update(FC_DAX_RESIDENT="1", FC_DAX_RESIDENT_IMPORT=s.directory+"/direct-import.json",
-                FC_DAX_RESIDENT_MANIFEST=s.directory+"/restore-manifest.json", FC_RESIDENT_NATIVE="1",
+            env.update(FC_DAX_RESIDENT="1", FC_RESIDENT_NATIVE="1",
                 FC_RESIDENT_BLOCK_PATH="/disk/sandbox.raw")
         if restore_manifest:
             local = s.directory + "/restore-manifest.json"

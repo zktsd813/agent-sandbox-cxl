@@ -1007,7 +1007,7 @@ def direct_handoff_bench(args):
         raise RuntimeError("--memory-mib overrides and --dense-working-set require --guest linux")
     layout_shift_mib = 2048 if linux and (args.memory_mib > 128 or args.dense_working_set) else 0
     if layout_shift_mib and config["cxl_mib"] < 4096:
-        raise RuntimeError("Large/dense direct guests require --cxl-mib 4096 for nonoverlapping RAM, KVM, heap and telemetry")
+        raise RuntimeError("Large/dense direct guests require --cxl-mib 4096 for nonoverlapping RAM, KVM and telemetry")
     if args.resume_profile and not linux:
         raise RuntimeError("--resume-profile requires --guest linux")
     if args.guest_cpu is not None and not 0 <= args.guest_cpu < config["l1_vcpus"]:
@@ -1035,7 +1035,6 @@ def direct_handoff_bench(args):
               "dax_layout_shift_mib": layout_shift_mib,
               "dax_layout": {"ram_offset_mib": 2, "ram_bytes": args.memory_mib * 1024 * 1024 if linux else 2 * 1024 * 1024,
                              "kvm_pool_offset_mib": 256 + layout_shift_mib, "kvm_pool_bytes": 128 * 1024 * 1024,
-                             "vmm_heap_offset_mib": 512 + layout_shift_mib, "vmm_heap_bytes": 64 * 1024 * 1024,
                              "telemetry_offsets_mib": {"A": 768 + layout_shift_mib, "B": 832 + layout_shift_mib}},
               "warmup": args.warmup, "snapshot_bytes": 0, "ram_transfer_bytes": 0,
               "kernel_handoff_mode": args.kernel_mode,
@@ -1102,7 +1101,7 @@ def direct_handoff_bench(args):
                         "boot_args": "console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init lab.role=A memmap=2M$64M lab.heartbeat=1 " + f"lab.heartbeat_sleep={int(args.heartbeat == 'sleep')} lab.heartbeat_churn={int(args.heartbeat_churn)} lab.heartbeat_pit={int(args.heartbeat_pit)} lab.heartbeat_timing={int(args.resume_profile)} lab.heartbeat_quiet=1 nmi_watchdog=0" + (" lab.heartbeat_dense=1 transparent_hugepage=never" if args.dense_working_set else "")},
                         "machine-config": {"vcpu_count": 1, "mem_size_mib": args.memory_mib}, "drives": []}
                     body += "cat > /run/bench-config.json <<'DIRECT_CONFIG'\n" + json.dumps(configuration) + "\nDIRECT_CONFIG\n"
-                env = f"FC_DAX_DIRECT=1 FC_DAX_HEAP=/dev/dax0.0 FC_DAX_HEAP_OFFSET={(512 + layout_shift_mib) * 1024 * 1024} FC_DAX_HEAP_BYTES=67108864 " if linux else ""
+                env = "FC_DAX_DIRECT=1 " if linux else ""
                 env += f"LAB_DAX_LAYOUT_SHIFT_MIB={layout_shift_mib} LAB_HEARTBEAT_DENSE={int(args.dense_working_set)} "
                 env += f"LAB_DAX_DWELL_US={args.dwell_ms * 1000} "
                 env += f"LAB_DAX_POLL_US={args.poll_us} "
