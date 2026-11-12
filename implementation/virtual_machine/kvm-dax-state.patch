@@ -702,7 +702,7 @@ index 6cd4dd6..0909aba 100644
  	}
 
 diff --git a/arch/x86/kvm/vmx/vmx.c b/arch/x86/kvm/vmx/vmx.c
-index 72e3943..7e54165 100644
+index 72e3943..09c0d79 100644
 --- a/arch/x86/kvm/vmx/vmx.c
 +++ b/arch/x86/kvm/vmx/vmx.c
 @@ -54,6 +54,7 @@
@@ -846,7 +846,7 @@ index 72e3943..7e54165 100644
  	/* Record the guest's net vcpu time for enforced NMI injections. */
  	if (unlikely(!enable_vnmi &&
  		     vmx->loaded_vmcs->soft_vnmi_blocked))
-@@ -7360,8 +7413,29 @@ static fastpath_t vmx_vcpu_run(struct kvm_vcpu *vcpu)
+@@ -7360,8 +7413,40 @@ static fastpath_t vmx_vcpu_run(struct kvm_vcpu *vcpu)
 
  	kvm_wait_lapic_expire(vcpu);
 
@@ -865,8 +865,19 @@ index 72e3943..7e54165 100644
 +	} else {
 +		resume = NULL;
 +	}
++	/* Optional boundary samples stay inside the existing profile path. */
++	if (resume) {
++		resume->l1_tsc_khz = tsc_khz;
++		resume->entry_l1_tsc = rdtsc_ordered();
++	}
  	/* The actual VMENTER/EXIT is in the .noinstr.text section. */
  	vmx_vcpu_enter_exit(vcpu, __vmx_vcpu_run_flags(vmx));
++	{
++		struct kvm_dax_resume_profile *last = kvm_dax_resume_profile();
++
++		if (last)
++			WRITE_ONCE(last->last_exit_l1_tsc, rdtsc_ordered());
++	}
 +	if (resume) {
 +		resume->exit_ns = ktime_get_ns();
 +		resume->exit_reason = vmx->exit_reason.full;
@@ -876,7 +887,7 @@ index 72e3943..7e54165 100644
 
  	/* All fields are clean at this point */
  	if (kvm_is_using_evmcs()) {
-@@ -7459,7 +7533,7 @@ static int vmx_vcpu_create(struct kvm_vcpu *vcpu)
+@@ -7459,7 +7544,7 @@ static int vmx_vcpu_create(struct kvm_vcpu *vcpu)
  	 * for the guest), etc.
  	 */
  	if (enable_pml) {
@@ -885,7 +896,7 @@ index 72e3943..7e54165 100644
  		if (!vmx->pml_pg)
  			goto free_vpid;
  	}
-@@ -8210,6 +8284,10 @@ static void vmx_vm_destroy(struct kvm *kvm)
+@@ -8210,6 +8295,10 @@ static void vmx_vm_destroy(struct kvm *kvm)
  }
 
  static struct kvm_x86_ops vmx_x86_ops __initdata = {
@@ -1519,10 +1530,10 @@ index fb6c610..e89794a 100644
  #ifndef __KVM_HAVE_ARCH_VM_FREE
 diff --git a/include/uapi/linux/kvm_dax.h b/include/uapi/linux/kvm_dax.h
 new file mode 100644
-index 0000000..d131859
+index 0000000..af40655
 --- /dev/null
 +++ b/include/uapi/linux/kvm_dax.h
-@@ -0,0 +1,38 @@
+@@ -0,0 +1,39 @@
 +/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 +#ifndef _UAPI_LINUX_KVM_DAX_H
 +#define _UAPI_LINUX_KVM_DAX_H
@@ -1559,6 +1570,7 @@ index 0000000..d131859
 +	__u64 enabled, generation, run_ns, entry_ready;
 +	__u64 entry_ns, guest_tsc, virtual_tsc_khz, sample_span_ns, entry_rip;
 +	__u64 exit_ready, exit_ns, exit_reason, entry_failed;
++	__u64 entry_l1_tsc, last_exit_l1_tsc, l1_tsc_khz;
 +};
 +#endif
 diff --git a/kernel/module/main.c b/kernel/module/main.c
@@ -2066,7 +2078,7 @@ index 1e567d1..42e6cea 100644
  	free_irq_routing_table(new);
 
 diff --git a/virt/kvm/kvm_main.c b/virt/kvm/kvm_main.c
-index 486800a..99af297 100644
+index 486800a..2d33f80 100644
 --- a/virt/kvm/kvm_main.c
 +++ b/virt/kvm/kvm_main.c
 @@ -27,6 +27,7 @@
@@ -2595,7 +2607,7 @@ index 486800a..99af297 100644
  		break;
  	}
  #endif /* CONFIG_HAVE_KVM_IRQ_ROUTING */
-@@ -5116,12 +5248,458 @@ static int kvm_dev_ioctl_create_vm(unsigned long type)
+@@ -5116,12 +5248,465 @@ static int kvm_dev_ioctl_create_vm(unsigned long type)
  	return r;
  }
 
@@ -2763,6 +2775,13 @@ index 486800a..99af297 100644
 +		s->owner = kvm_dax_node();
 +		kvm_get_kvm(kvm); /* Retain the shared graph until this bounded lab ends. */
 +		dax_local_active = true;
++		/* Enable last-exit sampling before the source's first detach too. */
++		{
++			struct kvm_dax_resume_profile *resume =
++				(void *)s + KVM_DAX_RESUME_PROFILE_OFFSET;
++			memset(resume, 0, sizeof(*resume));
++			resume->enabled = dax_resume_profile;
++		}
 +		smp_store_release(&s->state, KVM_DAX_OWNED);
 +		pr_info("KVM_DAX_EXPORT vm=%llx vcpu=%llx node=%u\n",
 +			kvm_dax_offset(kvm), kvm_dax_offset(vcpu), s->owner);
@@ -3054,7 +3073,7 @@ index 486800a..99af297 100644
  	case KVM_GET_API_VERSION:
  		if (arg)
  			goto out;
-@@ -5377,7 +5955,7 @@ static void kvm_io_bus_destroy(struct kvm_io_bus *bus)
+@@ -5377,7 +5962,7 @@ static void kvm_io_bus_destroy(struct kvm_io_bus *bus)
 
  		kvm_iodevice_destructor(pos);
  	}
@@ -3063,7 +3082,7 @@ index 486800a..99af297 100644
  }
 
  static inline int kvm_io_bus_cmp(const struct kvm_io_range *r1,
-@@ -5561,8 +6139,8 @@ int kvm_io_bus_register_dev(struct kvm *kvm, enum kvm_bus bus_idx, gpa_t addr,
+@@ -5561,8 +6146,8 @@ int kvm_io_bus_register_dev(struct kvm *kvm, enum kvm_bus bus_idx, gpa_t addr,
  	if (bus->dev_count - bus->ioeventfd_count > NR_IOBUS_DEVS - 1)
  		return -ENOSPC;
 
@@ -3074,7 +3093,7 @@ index 486800a..99af297 100644
  	if (!new_bus)
  		return -ENOMEM;
 
-@@ -5583,7 +6161,7 @@ int kvm_io_bus_register_dev(struct kvm *kvm, enum kvm_bus bus_idx, gpa_t addr,
+@@ -5583,7 +6168,7 @@ int kvm_io_bus_register_dev(struct kvm *kvm, enum kvm_bus bus_idx, gpa_t addr,
  		(bus->dev_count - i) * sizeof(struct kvm_io_range));
  	rcu_assign_pointer(kvm->buses[bus_idx], new_bus);
  	synchronize_srcu_expedited(&kvm->srcu);
@@ -3083,7 +3102,7 @@ index 486800a..99af297 100644
 
  	return 0;
  }
-@@ -5609,8 +6187,8 @@ int kvm_io_bus_unregister_dev(struct kvm *kvm, enum kvm_bus bus_idx,
+@@ -5609,8 +6194,8 @@ int kvm_io_bus_unregister_dev(struct kvm *kvm, enum kvm_bus bus_idx,
  	if (i == bus->dev_count)
  		return 0;
 
@@ -3094,7 +3113,7 @@ index 486800a..99af297 100644
  	if (new_bus) {
  		memcpy(new_bus, bus, struct_size(bus, range, i));
  		new_bus->dev_count--;
-@@ -5632,7 +6210,7 @@ int kvm_io_bus_unregister_dev(struct kvm *kvm, enum kvm_bus bus_idx,
+@@ -5632,7 +6217,7 @@ int kvm_io_bus_unregister_dev(struct kvm *kvm, enum kvm_bus bus_idx,
  	}
 
  	kvm_iodevice_destructor(dev);
@@ -3103,7 +3122,7 @@ index 486800a..99af297 100644
  	return 0;
  }
 
-@@ -5883,7 +6461,7 @@ static void kvm_uevent_notify_change(unsigned int type, struct kvm *kvm)
+@@ -5883,7 +6468,7 @@ static void kvm_uevent_notify_change(unsigned int type, struct kvm *kvm)
  	active = kvm_active_vms;
  	mutex_unlock(&kvm_lock);
 
@@ -3112,7 +3131,7 @@ index 486800a..99af297 100644
  	if (!env)
  		return;
 
-@@ -5899,19 +6477,19 @@ static void kvm_uevent_notify_change(unsigned int type, struct kvm *kvm)
+@@ -5899,19 +6484,19 @@ static void kvm_uevent_notify_change(unsigned int type, struct kvm *kvm)
  	add_uevent_var(env, "PID=%d", kvm->userspace_pid);
 
  	if (!IS_ERR(kvm->debugfs_dentry)) {
@@ -3135,7 +3154,7 @@ index 486800a..99af297 100644
  }
 
  static void kvm_init_debug(void)
-@@ -6066,6 +6644,8 @@ int kvm_init(unsigned vcpu_size, unsigned vcpu_align, struct module *module)
+@@ -6066,6 +6651,8 @@ int kvm_init(unsigned vcpu_size, unsigned vcpu_align, struct module *module)
  	/* A kmem cache lets us meet the alignment requirements of fx_save. */
  	if (!vcpu_align)
  		vcpu_align = __alignof__(struct kvm_vcpu);
@@ -3144,7 +3163,7 @@ index 486800a..99af297 100644
  	kvm_vcpu_cache =
  		kmem_cache_create_usercopy("kvm_vcpu", vcpu_size, vcpu_align,
  					   SLAB_ACCOUNT,
-@@ -6159,6 +6739,7 @@ void kvm_exit(void)
+@@ -6159,6 +6746,7 @@ void kvm_exit(void)
  	cpuhp_remove_state_nocalls(CPUHP_AP_KVM_ONLINE);
  #endif
  	kvm_irqfd_exit();
