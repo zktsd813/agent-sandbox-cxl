@@ -531,7 +531,13 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
             best_free = free_here
             if free_here < width:
                 for j in range(n_nodes if bnd_k == 0 else bnd_k):
-                    cand = j if bnd_k == 0 else np.random.randint(n_nodes)
+                    cand = j
+                    if bnd_k > 0:
+                        cand = source
+                        if n_nodes > 1:
+                            cand = np.random.randint(n_nodes - 1)
+                            if cand >= source:
+                                cand += 1
                     if cand != source:
                         spare = cores - boundary_load[cand] - reserved[cand]
                         if spare > best_free:
@@ -1214,7 +1220,7 @@ def self_test():
     assert np.allclose(got, [0.007, 0.003]), got  # level L: (L - 0) + (L - 0.004) = 0.01
 
     def go(programs, nodes, cores, per_node, mechanism="none", steps=None, detect=1, hold=0, homes=None, job=0, train=0,
-           cfs=False, choice=None, kw=(0.0, 0.0), latency=False, boundary=False, boundary_latency=0.0, boundary_cpu=0.0, strict_timeout=False):
+           cfs=False, choice=None, kw=(0.0, 0.0), latency=False, boundary=False, boundary_latency=0.0, boundary_cpu=0.0, strict_timeout=False, boundary_k=0):
         names = list(programs)
         arrays = flatten(programs, names)
         homes = np.repeat(np.arange(nodes), per_node) if homes is None else np.array(homes)
@@ -1231,7 +1237,7 @@ def self_test():
                          float(mech.get("dump_s_per_gib", 0)), float(mech.get("xfer_s_per_gib", 0)), detect, 0.1, hold, 1,
                          job, train, np.zeros((n_slots, 4), np.int64), 1.0, cfs, 0.012, 1.0, True, False,
                          np.full(nodes, kw[0]), kw[1], latency, np.zeros(len(names), np.int64), 1, 0, 0.0, 0,
-                         None, None, boundary, boundary_latency, boundary_cpu, 1.0, 0, 0,
+                         None, None, boundary, boundary_latency, boundary_cpu, 1.0, boundary_k, 0,
                          arrays["seg_cpu_s"], arrays["seg_is_command"], 1, strict_timeout)
 
     # two 1-core sandboxes of 1 s each on one core: both run at 0.5 for 2 s -> 2 s of wait in total
@@ -1299,6 +1305,9 @@ def self_test():
     out = go(boundary_programs, nodes=2, cores=1, per_node=0, steps=300,
              homes=[0, 0], choice=[[0]*4, [1]*4], boundary=True, boundary_latency=3.0, mechanism="instant")
     assert out[11] == 1 and out[4] == 0, out[4:13]  # reactive cannot select the boundary move in flight
+    out = go(boundary_programs, nodes=2, cores=1, per_node=0, steps=300,
+             homes=[1, 1], choice=[[0]*4, [1]*4], boundary=True, boundary_k=1)
+    assert out[11] == 1, out[11:13]  # k candidates are drawn from other nodes, never the source
     # Two new commands cannot both reserve the one spare destination core.
     out = go(boundary_programs, nodes=2, cores=1, per_node=0, steps=400,
              homes=[0, 0, 0], choice=[[0]*4, [1]*4, [1]*4], boundary=True)
