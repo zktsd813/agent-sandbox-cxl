@@ -773,7 +773,7 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                     prog[s] = 0.0
                 else:
                     w = want[s]
-                    prog[s] += 1.0 if w <= 0.0 else served[s] / (w * inflation)
+                    prog[s] += max(0.0, min(1.0, step + 1 - paused_until[s])) if w <= 0.0 else served[s] / (w * inflation)
                     if prog[s] >= 1.0 - 1e-9:
                         pos[s] += 1
                         # carry=True: pure fluid progress (used for the fleet results). carry=False: a partly served
@@ -1296,6 +1296,12 @@ def self_test():
         assert len(out[10]) == 1 and abs(out[10][0, 1] - (100 + lag)) < 1e-7, (lag, out[10])
         assert out[0] < 1e-9, (lag, out[0])
         assert abs(out[3] - lag * DT) < 1e-9, (lag, out[3])
+    zero_first = {"hog": program(("cpu", 1000, 1.0)),
+                  "tool": program(("cpu", 1, 0.0), ("cpu", 101, 1.0))}
+    zero_first["tool"]["program"][1][1][0] = 0.0
+    out = go(zero_first, nodes=2, cores=1, per_node=0, steps=300,
+             homes=[0,0], choice=[[0]*4,[1]*4], boundary=True, boundary_latency=0.1)
+    assert out[11] == 1 and abs(out[10][0,1] - 101.1) < 1e-7, out[10:13]
     out = go(boundary_programs, nodes=2, cores=1, per_node=0, steps=300,
              homes=[0, 0], choice=[[0]*4, [1]*4], boundary=True, boundary_cpu=0.001)
     assert abs(out[2] - 0.001) < 1e-9, out[2]
