@@ -17,6 +17,12 @@
 **측정이 말하는 것**
 - 노드 하나만 CPU가 넘치는 순간은 실제로 생기고, 빠른 이동만 그 대기를 되찾는다.
 - 하지만 그 대기는 전체 느려짐의 작은 몫이다. 명령 시간은 6% 안팎만 준다. 무거운 CPU 사용은 명령 문자열만 보고 미리 알 수 있어서 "미리 옮기면 되지 않나"라는 반론이 강하다(4장).
+- 11-13에 시나리오를 다시 찾았다([motivation-scenarios-20261113](results/motivation-scenarios-20261113/README.md)).
+  - 무거운 명령이 시작할 때 코어가 남는 노드로 보내면 이상적 공유 이득의 70~78%를 되찾는다. 같은 SLO에 노드가 48/96/192코어면 26/16/7% 이상 덜 든다(simulator).
+  - LLM 대기 중 미리 옮기기는 이보다 못하다. 다음 명령을 몰라 헛이동이 많고, 아는 경우에도 대기 시작 때 본 부하가 낡는다.
+  - 실행 중 이동은 sandbox가 CXL에서 돌아야 해서 tax에 진다(손익분기 tax 1~2%).
+  - 이전 상태만 CXL에 두고 무거운 명령을 DRAM에서 돌리면 tax가 +2%였다(bud05 실측, 15 명령).
+  - 그래서 이야기를 "sandbox는 CXL에 주차하고, 무거운 명령마다 코어가 남는 노드의 DRAM에서 시작한다"로 바꾼다. CXL 없이 100 Gb/s로 복사해도 CPU 가중으로는 거의 같다는 점이 가장 큰 약점이다.
 
 **안 된 것**
 - 진짜 여러 서버 CXL에서 해 보지 않았다. 그래서 캐시를 내려쓰고 비우는 coherence 처리도 아직 없다(3.5).
@@ -204,6 +210,7 @@ hand-off가 필요한지를 확인하려고 10-14부터 11-09까지 잰 결과�
 |---|---|---|---|
 | 10-14 | 다언어 264 trace를 Docker로, 대기 없이 DRAM(node 0)과 CXL(node 2)에서 1회씩 | 비교 가능한 211쌍에서 trace 시간 증가는 기하평균 13.2%, 중앙값 11.2%, p95 42.8%, 최대 79.9%다. 명령 단위(10,807개)는 p50 1.018, p95 1.215, 최대 3.54다. instructions 가중 LLC MPKI는 DRAM 1.54 / CXL 1.48로 낮다 | [numa-immediate-20261014](results/numa-immediate-20261014/README.md) |
 | 10-21 | 같은 trace에서 명령마다 새로 쓴 4KB page 범위 | call당 p50 2.0 MB, p95 315 MB, p99 1,983 MB. flush할 cache line 수나 이동 시간으로 바로 바꿀 수 없다 | [write-pages-node1-20261021](results/write-pages-node1-20261021/write-report.md) |
+| 11-13 | bud05 DCD(node 2), Docker, 무거운 명령 15개(7개 언어) × 전부 DRAM / 전부 CXL / 이전 상태만 CXL × 3회, 순서 무작위 | 명령 시간 tax(명령 CPU 가중): 전부 CXL +56%(CPU 시간 +84%), 이전 상태만 CXL +2.0%(CPU 시간 +0.2%). 이전 상태는 중앙값 59 MiB, 최대 422 MiB | [motivation-scenarios-20261113](results/motivation-scenarios-20261113/README.md) 3.12 |
 | 11-05 | 고정 clock Docker, CPU를 넓게 쓰는 trace 24개 / 좁게 쓰는 trace 24개 | tax 중앙값은 넓은 쪽 1.14, 좁은 쪽 1.02다. 넓은 sandbox를 늘 CXL에 두고 hand-off해도 tool 시간은 약 1.14(p90 1.35)로, 지금의 1.45보다 낫다 | [cap-sweep-20261104](results/cap-sweep-20261104/README.md) 8.5 |
 
 주의:
@@ -221,6 +228,7 @@ hand-off가 필요한지를 확인하려고 10-14부터 11-09까지 잰 결과�
 | 10-29~11-03 | iter2 step 구조를 맞춘 동기 재생과 배치 screen | 재생/원본 시간 비 0.97~0.98. image locality 배치로 한 노드에 sandbox가 몰리지만 hand-off가 이를 없앤다. group·step 지연 차이 2% 이내. iter2 시간 구성: LLM 87.7%, env 생성 6.2%, tool+agent 6.1% | `docs-pre-merge:docs/experiment-plan-tail-placement.md` 8장 |
 | 11-04~05 | sandbox 크기 cap과 hand-off. simulator와 bud05 Docker 실측(16코어, 다언어 48 trace) | 섞인 순서에서 cap 없음의 CPU 가중 slowdown은 1.175다. 60 ms 반응은 늘어난 tool 시간의 90%를 되찾는다. 단 늘어난 몫이 8.8%뿐이다. Python RL은 cap 1에서도 rollout이 0.8%만 는다 | [cap-sweep-20261104](results/cap-sweep-20261104/README.md) |
 | 11-05 | bud05 NUMA 0을 15코어 pool 2개로 나누고 container cpuset을 실제로 이동 | 넓은 sandbox의 40%는 수명 1/4이 지나서야 첫 burst를 낸다. 사용률 41~83%에서 대기의 49~71%가 한 pool만 넘쳤을 때 생겼다. 60 ms 이동은 공유 pool 대비 대기 차이의 61~96%, 5초 이동은 10~14%를 되찾는다. 그러나 K=120에서 CPU 가중 명령 시간은 −6%, rollout p99는 1.58 → 1.50이다 | [pool-mover-20261105](results/pool-mover-20261105/README.md) |
+| 11-13 | fleet simulator, 다언어 cap30, 16노드 × 48~256코어. 명령 시작 때 옮기기(경계), 실행 중 hand-off(reactive), LLM 대기 중 미리 옮기기, 100/25 Gb/s 복사, CXL tax | 사용률 90%에서 경계 1~10 ms는 pool 이득의 69~78%, reactive를 더하면 76~82%, pre-copy는 5~12%를 되찾는다. 경계 이동은 100 ms까지, 실행 중 이동은 10 ms까지 견딘다. 대기 중 미리 옮기기는 oracle도 52~56%다. 100 Gb/s 복사는 CPU 가중으로 경계 이득의 97%다. CPU 가중 ≤ 1.10에서 노드 절감은 48코어 26%, 256코어 4.2% 이상(상한 9.5%) | [boundary-vs-handoff-20261113](results/boundary-vs-handoff-20261113/README.md), [motivation-scenarios-20261113](results/motivation-scenarios-20261113/README.md) |
 
 - 11-05 실험의 부하는 실제에서 정하지 않고 경합이 생기도록 골랐다(빌드가 무거운 다언어 trace, 빠른 LLM, CPU 제한 없음). 이동은 cpuset만 바꾼 비용 없는 이동이다.
 - 11-06에 workload를 다시 봤다. Python RL로 15코어의 70%를 채우려면 sandbox 261개(코어당 17개)가 필요하다. 메모리가 허락하는 밀도(bud05 코어당 8~10개, DSec 2.7~4.2개)를 넘는다. 노드 사이 1초 CPU 상관은 Docker 정상 상태 −0.09~0.10, 동기 step 0.66~0.77이다(`docs-pre-merge:docs/workload-diversity-plan.md` 2절).
@@ -240,12 +248,16 @@ hand-off가 필요한지를 확인하려고 10-14부터 11-09까지 잰 결과�
   - 배치할 때 burst를 몰라 한 노드만 넘치는 순간이 생긴다.
   - 그 불균형 대기는 빠른 이동만 되찾는다. 60 ms는 대부분 되찾고, 5초는 거의 못 되찾는다.
   - CPU 밖 시스템 자원은 CPU보다 먼저 막히지 않는다.
+  - (11-13) 이 대기는 명령 시작 때 한 번 옮기는 것만으로 대부분 되찾는다. LLM 대기 중 미리 옮기기는 이보다 못하다.
+  - (11-13) 이전 상태를 CXL에 둔 채 무거운 명령만 DRAM에서 돌리면 tax는 +2%다.
 - **필요성을 약하게 하는 것**:
   - 되찾는 대기가 전체 느려짐의 작은 몫이다. 명령 −6%, rollout p99 1.58 → 1.50, 동기 step 차이 1% 이내다.
   - 현실 LLM 속도의 Python RL sandbox는 평균 0.02~0.06코어라 경합 자체가 드물다.
   - 경합이 크게 나온 결과는 부하를 그쪽으로 골랐다.
-  - 무거운 CPU는 명령 문자열로 미리 보인다. Q3(tool call 경계에서 미리 옮기기) 반론이 강하다.
-  - 옮기고 싶은 넓은 sandbox가 tax도 크다.
+  - 무거운 CPU는 명령 문자열로 미리 보인다. Q3(tool call 경계에서 미리 옮기기) 반론이 강하다. 11-13 결과로 답은 생겼다(7장 Q3). 대신 이득이 명령 시작 때 옮기기에 몰리고, 실행 중 이동의 몫은 작다.
+  - 옮기고 싶은 넓은 sandbox가 tax도 크다. CXL에서 돌면 실행 중 이동의 이득을 tax가 넘는다(손익분기 1~2%).
+  - (11-13) CXL 없이 100 Gb/s로 멈추고 복사해도 CPU 가중으로는 명령 시작 때 옮기기 이득의 97%를 얻는다. 명령마다 새 shell을 띄우는 agent는 명령 사이 상태가 작다(중앙값 약 130 MiB). CXL의 몫은 tail, 25 GbE, 출발 노드 CPU, 메모리 용량이다.
+  - (11-13) 노드가 클수록 이득이 준다. 256코어에서는 어떤 정책도 노드를 9.5%보다 더 줄이지 못한다.
 - **아직 열린 것**:
   - 다른 host로 옮기면 clock·cache 간섭이 줄어드는지(지금까지는 모두 한 socket 안이다).
   - 4 GHz에서 반복·무작위 순서로 잰 명령 단위 tax.
@@ -336,14 +348,22 @@ M4+P가 가장 강한 상대다. 관문 G2가 "hand-off 정지 시간 ≤ M4+P"�
    - 모든 sandbox를 CXL에 둔다.
    - 도착한 명령 문자열로 무거운 명령을 알아보고 로컬 DRAM에서 돌린다.
    - 무거운 명령이 겹치면 hand-off로 DRAM과 CPU가 남는 노드를 고른다.
+
+   **11-13 결과**([motivation-scenarios-20261113](results/motivation-scenarios-20261113/README.md)): 명령 단위 틀이 가장 강한 시나리오로 남았다.
+   - 명령 시작 때 코어가 남는 노드로 보내는 것이 이득의 대부분이다. 실행 중 이동과 대기 중 미리 옮기기는 약하다.
+   - 이전 상태만 CXL에 두고 무거운 명령을 DRAM에서 돌리면 tax +2%다.
+   - 남은 질문은 두 가지다.
+     - 쉬던 VM을 다른 노드에 10 ms 안에 붙이는 데 hand-off가 M4·M4+P보다 얼마나 나은가(아래 2).
+     - guest가 "CXL 층 + 붙은 노드의 DRAM 층"을 쓰게 하는 설계와 그 비용. 명령마다 DRAM 층을 붙이고, 명령 뒤 남은 page를 CXL로 내린다. 구현도 측정도 없다.
 2. **M4+P와 효과 분리**: lab에서 바로 할 수 있다.
    - `KVM_PRE_FAULT_MEMORY` prefault를 `snapshot` 경로에 붙인다.
    - EPT만 이어받는 단계와 VMCS·객체까지 이어받는 단계를 나눠 잰다. 이렇게 하면 G2를 lab 수준에서 처음 판정한다.
-3. **명령 단위 CXL tax 재측정**(A4): 4 GHz 고정, 5회, 순서 무작위로 잰다. 명령 단위 CPU와 함께 기록해 (CPU 수요, tax) 분포를 만들고 repo에 남긴다.
+   - 11-13 결과로 비교할 상황이 정해졌다. LLM 대기 동안 쉬던 VM을 무거운 명령 시작 때 다른 노드에 붙이고, 첫 명령이 끝날 때까지를 잰다. 명령 시작 때 옮기기는 10 ms 안이면 1 ms와 결과가 같으므로, M4가 EPT를 다시 채우는 비용까지 10 ms 안에 들면 메커니즘으로서 hand-off의 몫이 사라진다.
+3. **명령 단위 CXL tax 재측정**(A4): 4 GHz 고정, 5회, 순서 무작위로 잰다. 명령 단위 CPU와 함께 기록해 (CPU 수요, tax) 분포를 만들고 repo에 남긴다. 11-13에 무거운 명령 15개를 bud05 DCD에서 3회, 순서 무작위로 쟀다(4.1). 264 trace 전체는 아직이다.
 4. **실제 비일관 CXL**:
    - bud05 node 2 DCD를 쓸 수 있는지 확인한다(용량 할당은 승인 필요).
    - 서버 간 stale 시험 → write-back/invalidate/INVEPT 구현 → M4-naive/fair 순서로 간다.
-5. **promotion/demotion 구간 분해와 E2**: 2 GiB 1~2초가 LLM 응답 대기 안에 끝나는 비율을 본다.
+5. **promotion/demotion 구간 분해와 E2**: 2 GiB 1~2초가 LLM 응답 대기 안에 끝나는 비율을 본다. 11-13 설계에서는 VM 전체가 아니라 무거운 명령이 DRAM에 남긴 page만 내린다(중앙값 16 MiB, 최대 1.6 GB). DCD 쓰기 대역폭은 아직 재지 않았다.
 
 ---
 
@@ -353,7 +373,7 @@ M4+P가 가장 강한 상대다. 관문 G2가 "hand-off 정지 시간 ≤ M4+P"�
 |---|---|---|
 | Q1 그냥 VM migration 하면? | burst와 contention이 migration 지연보다 짧으면 끝날 때 burst도 끝나 있다. burst 중 VM은 dirty rate가 높아 pre-copy가 수렴하지 않고, 과부하 출발 host의 CPU를 쓴다 | A3 구간 길이, C 회수율 곡선 |
 | Q2 CXL에 메모리를 두면 migration이 싸지는 건 알려진 것 아닌가? | 맞다(LSFMM 2023). 그래서 같은 CXL 위 M3·M4·M4+P와 비교한다. 차이는 EPT 이어받기, KVM 객체 재생성 회피, 비일관 CXL 소유권 프로토콜 | B, D3, D4 |
-| Q3 tool call 경계(LLM 대기)에서 미리 옮기면? | 가장 강한 반론. 4장에서 sandbox CPU는 명령 문자열로 미리 알 수 있었다. 이 반론에 대한 답이 아직 없다 | A5, C의 oracle 정책 |
+| Q3 tool call 경계(LLM 대기)에서 미리 옮기면? | 대기 시작 때는 다음 명령을 모른다(명령은 LLM 생성이 끝나야 나온다). 이력으로 예측하면 이동의 74%가 헛이동이고, 다음 명령을 아는 oracle도 pool 이득의 52~56%만 되찾는다. 대기 시작 때 본 목적지 부하가 명령 시작 때는 낡아서다. 명령 시작 때 명령 문자열을 보고 옮기면 68~78%다. 대기 중 미리 옮기기를 더하면 오히려 나빠지고, 대기를 4배로 늘려도 나아지지 않는다. 남는 반론은 "명령 시작 때 100 Gb/s로 복사"다. CPU 가중으로는 같고 tail에서 진다 | [motivation-scenarios-20261113](results/motivation-scenarios-20261113/README.md) 3.5, 3.11 |
 | Q4 노드 안 QoS(overcommit + SCHED_IDLE + core scheduling)로 충분? | QoS는 코어를 만들지 못한다. 노드 총수요가 용량을 넘는 correlated burst를 보여야 한다 | F0, P0 |
 | Q5 1GB huge page면 EPT 재구축은 거의 공짜 아닌가? | 맞다. KSM dedup과 dirty tracking이 4KB를 강제하는 조건을 함께 보인다 | D4 |
 | Q6 `KVM_PRE_FAULT_MEMORY`로 미리 채우면? | M4+P baseline. 이어받기는 상수 비용, prefault는 매핑 크기에 비례 | M4+P, D4 |

@@ -1,0 +1,106 @@
+{
+ "commands": 13336,
+ "heavy": 1550,
+ "heavy_cpu_share": 0.9842374640313839,
+ "wait_before_heavy_s_p10_p50_p90": [
+  1.24,
+  1.44,
+  1.87,
+  6.82
+ ],
+ "wait_before_heavy_cpu_weighted_p10_p50": [
+  1.2598044019360204,
+  1.4713580148578305,
+  1.8487339520675805
+ ],
+ "heavy_cpu_share_with_wait_ge_L": {
+  "0.1": 1.0,
+  "0.3": 1.0,
+  "1": 0.9988071195594573,
+  "3": 0.2924346333910324,
+  "10": 0.06036823519364847,
+  "30": 0.006529285803866991
+ },
+ "heavy_cmd_duration_s_p10_p50_p90": [
+  1.14,
+  3.42,
+  30.35
+ ],
+ "predict_at_wait_start_history": [
+  {
+   "threshold": 0.2,
+   "recall": 0.5451612903225806,
+   "precision": 0.25497887748943876,
+   "cpu_recall": 0.5164600826470994,
+   "predicted_share": 0.248500299940012
+  },
+  {
+   "threshold": 0.3,
+   "recall": 0.17548387096774193,
+   "precision": 0.48312611012433393,
+   "cpu_recall": 0.10877786507964822,
+   "predicted_share": 0.04221655668866227
+  },
+  {
+   "threshold": 0.5,
+   "recall": 0.07870967741935483,
+   "precision": 0.6256410256410256,
+   "cpu_recall": 0.013052897829879504,
+   "predicted_share": 0.014622075584883024
+  }
+ ],
+ "predict_at_command_start_string": {
+  "threshold": 0.5,
+  "recall": 0.847741935483871,
+  "precision": 0.7756788665879575,
+  "cpu_recall": 0.9847292454938515,
+  "predicted_share": 0.1270245950809838
+ },
+ "prev_kind_to_next_heavy": {
+  "explore": {
+   "n": 6758,
+   "p_next_heavy": 0.05489789878662326,
+   "share_of_heavy_cpu": 0.3162722381013481
+  },
+  "test": {
+   "n": 1248,
+   "p_next_heavy": 0.21394230769230768,
+   "share_of_heavy_cpu": 0.23442490776734773
+  },
+  "git": {
+   "n": 1914,
+   "p_next_heavy": 0.17711598746081506,
+   "share_of_heavy_cpu": 0.20963774157358916
+  },
+  "build": {
+   "n": 430,
+   "p_next_heavy": 0.386046511627907,
+   "share_of_heavy_cpu": 0.10604684911753752
+  },
+  "edit": {
+   "n": 981,
+   "p_next_heavy": 0.13863404689092762,
+   "share_of_heavy_cpu": 0.06399689453820283
+  },
+  "run": {
+   "n": 1513,
+   "p_next_heavy": 0.15465961665565103,
+   "share_of_heavy_cpu": 0.05812266010660489
+  },
+  "other": {
+   "n": 171,
+   "p_next_heavy": 0.19883040935672514,
+   "share_of_heavy_cpu": 0.011340344743302266
+  },
+  "install": {
+   "n": 16,
+   "p_next_heavy": 0.1875,
+   "share_of_heavy_cpu": 0.00015836405206748425
+  },
+  "submit": {
+   "n": 305,
+   "p_next_heavy": 0.0,
+   "share_of_heavy_cpu": 0.0
+  }
+ }
+}
