@@ -314,7 +314,7 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
               cfs, sleeper_credit_s, inflation, carry, bernoulli, kw_a, kw_b, kw_latency,
               img_of_trace, n_images, place_mode, loc_bonus, retention_steps,
               seg_heavy=None, seg_width=None, bnd_on=False, bnd_latency_steps=0.0, bnd_cpu_s=0.0,
-              bnd_margin=1.0, bnd_k=0, bnd_view=0, seg_cpu_s=None, seg_is_command=None, bnd_seed=1, strict_timeout=False):
+              bnd_margin=1.0, bnd_k=0, bnd_view=0, seg_cpu_s=None, seg_is_command=None, bnd_seed=1, strict_timeout=False, strict_handoff=False):
     n_slots = slot_home.shape[0]
     # Optional metadata leaves old call sites valid. The first CPU segment is boot unless marked otherwise.
     cpu_seconds = np.zeros(len(seg_len))
@@ -861,13 +861,13 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                             blocked += 1
                         break
                     if mech_kind == 1:
-                        eff = step + latency_steps
+                        eff = step + latency_steps + (1 if strict_handoff else 0)
                         if latency_steps > 0:
                             paused_until[pick] = eff
                         if handoff_cpu_s > 0.0 and n_tasks < max_tasks:
                             task_node[n_tasks] = p
                             task_left[n_tasks] = handoff_cpu_s
-                            task_fractional[n_tasks] = False
+                            task_fractional[n_tasks] = strict_handoff
                             task_v[n_tasks] = min_v[p]
                             n_tasks += 1
                     else:
@@ -1099,7 +1099,7 @@ def simulate(job):
         arrays.get("seg_heavy"), arrays.get("seg_width"), bool(config.get("bnd_on", False)),
         float(config.get("bnd_latency_s", 0.0)) / DT, float(config.get("bnd_cpu_s", 0.0)),
         float(config.get("bnd_margin", 1.0)), int(config.get("bnd_k", 0)), int(config.get("bnd_view", 0)),
-        arrays.get("seg_cpu_s"), arrays.get("seg_is_command"), int(config["seed"]) if str(config["seed"]).isdigit() else 1, bool(config.get("strict_timeout", False)))
+        arrays.get("seg_cpu_s"), arrays.get("seg_is_command"), int(config["seed"]) if str(config["seed"]).isdigit() else 1, bool(config.get("strict_timeout", False)), bool(config.get("strict_handoff", False)))
     cache = {}
     if job.get("blocks"):
         blocks, n_blocks, measured = image_blocks(job["blocks"], image_names)
@@ -1220,7 +1220,7 @@ def self_test():
     assert np.allclose(got, [0.007, 0.003]), got  # level L: (L - 0) + (L - 0.004) = 0.01
 
     def go(programs, nodes, cores, per_node, mechanism="none", steps=None, detect=1, hold=0, homes=None, job=0, train=0,
-           cfs=False, choice=None, kw=(0.0, 0.0), latency=False, boundary=False, boundary_latency=0.0, boundary_cpu=0.0, strict_timeout=False, boundary_k=0):
+           cfs=False, choice=None, kw=(0.0, 0.0), latency=False, boundary=False, boundary_latency=0.0, boundary_cpu=0.0, strict_timeout=False, boundary_k=0, strict_handoff=False):
         names = list(programs)
         arrays = flatten(programs, names)
         homes = np.repeat(np.arange(nodes), per_node) if homes is None else np.array(homes)
@@ -1238,7 +1238,7 @@ def self_test():
                          job, train, np.zeros((n_slots, 4), np.int64), 1.0, cfs, 0.012, 1.0, True, False,
                          np.full(nodes, kw[0]), kw[1], latency, np.zeros(len(names), np.int64), 1, 0, 0.0, 0,
                          None, None, boundary, boundary_latency, boundary_cpu, 1.0, boundary_k, 0,
-                         arrays["seg_cpu_s"], arrays["seg_is_command"], 1, strict_timeout)
+                         arrays["seg_cpu_s"], arrays["seg_is_command"], 1, strict_timeout, strict_handoff)
 
     # two 1-core sandboxes of 1 s each on one core: both run at 0.5 for 2 s -> 2 s of wait in total
     wait, run, *_ = go({"a": program(("cpu", 100, 1.0))}, nodes=1, cores=1, per_node=2, steps=200)
@@ -1269,6 +1269,11 @@ def self_test():
     wait, run, overhead, paused, moves, blocked = go(two, nodes=2, cores=1, per_node=0, mechanism="instant",
                                                      steps=4000, homes=[0, 0])[:6]
     assert wait < 0.05 and moves == 1, (wait, moves)
+    legacy_hand = go(two, nodes=2, cores=1, per_node=0, mechanism="hand-off 10ms", steps=4000, homes=[0,0])
+    strict_hand = go(two, nodes=2, cores=1, per_node=0, mechanism="hand-off 10ms", steps=4000,
+                     homes=[0,0], strict_handoff=True)
+    assert legacy_hand[3] == 0.0, legacy_hand[3]  # old default remains unchanged
+    assert abs(strict_hand[3] - .010) < 1e-9 and abs(strict_hand[2] - .002) < 1e-9, strict_hand[:6]
     # stop-and-copy of a 1 GiB sandbox: paused for dump 0.30 s + transfer 0.39 s, 0.30 core-s of source CPU
     wait, run, overhead, paused, moves, blocked = go(two, nodes=2, cores=1, per_node=0,
                                                      mechanism="migration stop-and-copy", steps=4000, homes=[0, 0])[:6]
