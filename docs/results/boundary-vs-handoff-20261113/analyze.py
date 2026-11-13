@@ -109,15 +109,17 @@ def write_readme(summary):
                 a,b = p.get("cpu_weighted_slowdown_pool_recovered"),p.get("heavy_command_slowdown_p99_pool_recovered")
                 r[variant] = f"{f(a*100 if a is not None else None,1)} / {f(b*100 if b is not None else None,1)}"
             recovery.append(r)
-    slos = [r for r in summary["slos"] if r["priority"] == 1 and r["timeout_s"] > 60]
+    slos = [r for r in summary["slos"] if r["priority"] in (1,13) and r["timeout_s"] > 60]
     slo_rows = []
     for key,limit in SLOS:
-        for cores in (48,96,192):
+        for cores in (48,96,192) + ((256,) if any(r["cores"]==256 for r in slos) else ()):
             r = {"SLO":("CPU 가중" if key.startswith("cpu") else "heavy p99")+f" ≤ {limit:g}", "코어":cores}
             for variant in selected:
                 x=get(slos,cores=cores,metric=key,slo=limit,variant=variant)
                 u=x.get("util")
-                if u is None:
+                if not x:
+                    cell="미실험"
+                elif u is None:
                     cell="구간 내 없음"
                 else:
                     prefix="≥" if x["status"]=="at_least" else ""
@@ -392,7 +394,321 @@ run은 config SHA256으로 이미 완료한 설정을 건너뛰고 한 줄마다
     if any(c.get(k,0)<v for k,v in (("main",606),("rl",600),("timeout",60))):
         label="시간 예산 내 완료 결과" if summary.get("is_final") else "진행 중"
         report=f"> {label}: main {c.get('main',0)}/606, 새 RL {c.get('rl',0)}/600, timeout {c.get('timeout',0)}/60. 미완료 값은 추정하지 않는다.\n\n"+report
+    if summary.get("followup"):
+        report += followup_markdown(summary["followup"])
     (HERE / "README.md").write_text(report)
+
+
+def latency_figure(curves, metric, path):
+    """Standalone scientific figure; ratios are left untrimmed, including negative recovery."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    cases=sorted({(r["workload"],r["cores"],r["target_util"]) for r in curves})
+    fig,axes=plt.subplots(3,2,figsize=(11,11),layout="constrained")
+    styles={"reactive":("o","-"),"boundary":("^","--"),"boundary+reactive":("D","-."),"pre-copy":("X","")}
+    for ax,case in zip(axes.flat,cases):
+        for family,(marker,line) in styles.items():
+            points=sorted((r for r in curves if (r["workload"],r["cores"],r["target_util"])==case and r["family"]==family),key=lambda r:r["latency_s"])
+            points=[r for r in points if r.get(metric) is not None and r.get("latency_s")]
+            if points:
+                ax.plot([r["latency_s"] for r in points],[100*r[metric] for r in points],marker=marker,linestyle=line,label="pre-copy (planned completion)" if family=="pre-copy" else family)
+        ax.set(xscale="log",xlabel="Latency L (s)",ylabel="Pool gain recovered (%)",
+               title=f"{case[0]}, {case[1]} cores/node, target {case[2]}%")
+        ax.axhline(0,color="gray",linewidth=.6)
+        ax.axhline(100,color="gray",linewidth=.6,linestyle=":")
+        ax.grid(True,which="both",alpha=.2)
+    for ax in list(axes.flat)[len(cases):]:ax.set_visible(False)
+    handles,labels=axes.flat[0].get_legend_handles_labels()
+    fig.legend(handles,labels,loc="outside lower center",ncol=4)
+    fig.suptitle("CPU-weighted slowdown" if metric.startswith("cpu") else "Heavy-command p99 slowdown")
+    fig.savefig(path.with_suffix(".png"),dpi=180)
+    fig.savefig(path.with_suffix(".pdf"))
+    plt.close(fig)
+
+
+def analyze_followup():
+    raw_dir=RAW.parent/"boundary11"
+    summary=json.loads((HERE/"summary.json").read_text())
+    raw={}
+    metadata=[]
+    for path in sorted(raw_dir.glob("*.jsonl")):
+        if path.name=="load.jsonl":continue
+        for line in path.open():
+            r=json.loads(line)
+            if r.get("study"):raw[r["config_id"]]=r
+        meta=path.with_suffix(".inputs.json")
+        if meta.exists():metadata.append(dict(path=str(meta),data=json.loads(meta.read_text())))
+    retained=[]
+    superseded_pilot=[]
+    for label in ("b-pilot","b"):
+        initial=raw_dir/(label+".jsonl.initial.bak")
+        meta=raw_dir/(label+".inputs.json.initial.bak")
+        if initial.exists() and meta.exists():
+            ids={json.loads(line)["config_id"] for line in initial.open()}
+            retained.append(dict(source=str(initial),config_ids=sorted(ids&raw.keys()),metadata=json.loads(meta.read_text())))
+            if label=="b-pilot":superseded_pilot=sorted(ids-raw.keys())
+    keys=("study","workload","cores","target_util","variant","placement","gap_scale","ramp_s","duration_s","per_node",
+          "capacity_a","capacity_T_s","capacity_duty")
+    groups={}
+    for r in raw.values():groups.setdefault(tuple(r.get(k,0.0 if k.startswith("capacity_") else None) for k in keys),[]).append(r)
+    rows=[];incomplete=[]
+    metrics=list(dict.fromkeys(METRICS+["reactive_move_delay_mean_s","reactive_move_delay_max_s","capacity_observed_duty","available_cores_per_node","rl_steps"]))
+    for key,rs in groups.items():
+        row=dict(zip(keys,key))
+        if len(rs)!=2 or {r["seed"] for r in rs}!={"1","2"}:
+            incomplete.append(row|dict(seeds=[r["seed"] for r in rs]));continue
+        row.update({k:mean(rs,k) for k in metrics})
+        row.update(actual_util=row["run_cores_per_node"]/row["cores"],lost_pct=100*row["lost_over_run"],
+                   bnd_moves_per_s=row["bnd_moves"]/row["duration_s"],reactive_moves_per_s=row["reactive_moves"]/row["duration_s"],
+                   config_ids=[r["config_id"] for r in rs],seeds=2)
+        row["seed_values"]={r["seed"]:{k:r[k] for k in ("cpu_weighted_slowdown","heavy_command_slowdown_p99","lost_over_run")} for r in rs}
+        rows.append(row)
+    rows.sort(key=lambda r:(r["study"],r["workload"],r["cores"],r["target_util"],r["placement"],r["capacity_a"],r["capacity_T_s"],r["capacity_duty"],r["variant"]))
+    def get(source,**match):
+        return next((r for r in source if all(r.get(k)==v for k,v in match.items())),None)
+    reference=[dict(r,study="A-reference") for r in summary["results"] if r["priority"]==1 and r["timeout_s"]>60
+        and r["cores"] in (96,192) and r["target_util"] in (80,90) and r["variant"] in
+        ("none","pool","bnd-oracle-1ms","bnd-oracle-10ms","bnd-oracle-100ms","bnd-oracle-1s")]
+    a_rows=[r for r in rows if r["study"]=="A"]+reference
+    curves=[]
+    for r in a_rows:
+        name=r["variant"]
+        if name in ("none","pool"):continue
+        family="pre-copy" if name=="migration" else "boundary+reactive" if "+reactive" in name else "reactive" if name.startswith("reactive") else "boundary"
+        latency=(r["reactive_move_delay_mean_s"] if family=="pre-copy" else float(name.split("-L")[-1]) if "-L" in name
+                 else {"1ms":.001,"10ms":.01,"100ms":.1,"1s":1.0}[name.split("-")[-1]])
+        base=get(a_rows,workload=r["workload"],cores=r["cores"],target_util=r["target_util"],variant="none")
+        pool=get(a_rows,workload=r["workload"],cores=r["cores"],target_util=r["target_util"],variant="pool")
+        if base is None or pool is None:continue
+        curve={k:r[k] for k in ("workload","cores","target_util","variant","actual_util","cpu_weighted_slowdown","heavy_command_slowdown_p99")}
+        curve.update(family=family,latency_s=latency)
+        for metric in ("cpu_weighted_slowdown","heavy_command_slowdown_p99"):
+            delta=base[metric]-pool[metric]
+            curve[metric+"_recovered"]=(base[metric]-r[metric])/delta if delta>1e-6 else None
+        curves.append(curve)
+    c_rows=[]
+    for row in rows:
+        if row["study"] not in ("C","C-rl") or row["capacity_a"]==0:continue
+        same=dict(study=row["study"],workload=row["workload"],cores=row["cores"],target_util=row["target_util"])
+        event={k:row[k] for k in ("capacity_a","capacity_T_s","capacity_duty")}
+        none=get(rows,**same,**event,variant="none")
+        none0=get(rows,**same,capacity_a=0.0,variant="none")
+        own0=get(rows,**same,capacity_a=0.0,variant=row["variant"])
+        if any(r is None for r in (none,none0,own0)):continue
+        added=none["lost_over_run"]-none0["lost_over_run"]
+        own_added=row["lost_over_run"]-own0["lost_over_run"]
+        c_rows.append(row|dict(none_added_lost_pp=100*added,added_lost_pp=100*own_added,
+            added_loss_recovered=1-own_added/added if added>1e-6 else None))
+    d_rows=[r for r in rows if r["study"]=="D"]
+    d_slos=[]
+    for name in sorted({r["variant"] for r in d_rows}):
+        for metric,limit in SLOS:
+            r=dict(priority=13,workload="cap30",gap_scale=1.0,timeout_s=1e6,cores=256,ramp_s=600,duration_s=5400.0,
+                   variant=name,metric=metric,slo=limit,**slo_limit([r for r in d_rows if r["variant"]==name],metric,limit))
+            d_slos.append(r)
+    for r in d_slos:
+        base=get(d_slos,variant="none",metric=r["metric"],slo=r["slo"])
+        if base and base["status"]=="interpolated" and r["util"]:
+            ratio=base["util"]/r["util"]
+            r.update(nodes_over_none=ratio,node_saving_pct=100*(1-ratio),node_ratio_status="upper_bound" if r["status"]=="at_least" else "interpolated")
+        else:r.update(nodes_over_none=None,node_saving_pct=None,node_ratio_status="unidentified")
+    expected={"A":112,"B-pilot":12,"B":96,"C":312,"C-rl":156,"D":50}
+    completion={k:sum(r["study"]==k for r in raw.values()) for k in expected}
+    calibration=raw_dir/"density-fit.json"
+    followup=dict(configs=len(raw),completion=completion,expected=expected,incomplete_seed_pairs=incomplete,results=rows,
+        latency_curves=curves,capacity=c_rows,D_slos=d_slos,metadata=metadata,
+        density_calibration=json.loads(calibration.read_text()) if calibration.exists() else [],
+        retained_input_provenance=retained,superseded_saturated_pilot_config_ids=superseded_pilot,
+        event_model="Stationary Poisson intervals, exponential individual duration T; union on/off, no stacked amplitude; rate=-log(1-duty)/T",
+        references_task10=dict(seed_pairs=len(reference),source="unchanged task10 cap30 none/pool/boundary rows at matching ramp=600, duration=5400"))
+    summary["followup"]=followup
+    summary["total_configs"]=summary["configs"]+len(raw)
+    summary["slos"]=[r for r in summary["slos"] if r.get("priority")!=13]+d_slos
+    (HERE/"summary.json").write_text(json.dumps(summary,indent=1,allow_nan=False)+"\n")
+    flat=lambda r:{k:v for k,v in r.items() if k not in ("seed_values","config_ids")}
+    table(HERE/"followup.csv",[flat(r) for r in rows])
+    table(HERE/"latency.csv",curves)
+    table(HERE/"capacity.csv",[flat(r) for r in c_rows])
+    table(HERE/"slo.csv",summary["slos"])
+    for metric,label in (("cpu_weighted_slowdown_recovered","latency-cpu"),("heavy_command_slowdown_p99_recovered","latency-tail")):
+        if curves:latency_figure(curves,metric,HERE/label)
+    columns=["study","workload","cores","target_util","placement","capacity_a","capacity_T_s","capacity_duty","variant",
+             "actual_util","step_slowdown_p50","step_slowdown_p99","cpu_weighted_slowdown","heavy_command_slowdown_p99","lost_pct"]
+    text="# 11번 전체 결과\n\nseed별 요약 두 개의 산술평균. actual_util은 명목 코어 대비 비율이다.\n\n"
+    for study in expected:
+        selected=[r for r in rows if r["study"]==study]
+        text+=f"## {study}\n\n"+markdown_table(selected,columns)+"\n"
+    text+="## 지연 회수율\n\n"+markdown_table(curves,["workload","cores","target_util","family","latency_s","cpu_weighted_slowdown_recovered","heavy_command_slowdown_p99_recovered"])
+    text+="\n## 사건 추가 손실 회수율\n\n"+markdown_table(c_rows,["workload","target_util","capacity_a","capacity_T_s","capacity_duty","variant","none_added_lost_pp","added_lost_pp","added_loss_recovered","capacity_observed_duty","cpu_weighted_slowdown","heavy_command_slowdown_p99"])
+    (HERE/"followup-tables.md").write_text(text)
+    write_readme(summary)
+    print(f"Follow-up: {len(raw)} configs, {len(rows)} seed pairs; {completion}",flush=True)
+
+
+def followup_markdown(data):
+    rows=data["results"]
+    def get(source,**match):return next((r for r in source if all(r.get(k)==v for k,v in match.items())),{})
+    def f(value,n=3):return "—" if value is None else f"{value:.{n}f}"
+    md=lambda rs:markdown_table(rs,list(rs[0])) if rs else "완료된 seed 쌍 없음.\n"
+    a_table=[]
+    for r in data["latency_curves"]:
+        if r["target_util"]!=90:continue
+        a_table.append({"입력":r["workload"],"코어":r["cores"],"선":r["family"],"L ms":f(r["latency_s"]*1000,1) if r["latency_s"] else "—",
+            "CPU 회수 %":f(r["cpu_weighted_slowdown_recovered"]*100 if r["cpu_weighted_slowdown_recovered"] is not None else None,1),
+            "heavy p99 회수 %":f(r["heavy_command_slowdown_p99_recovered"]*100 if r["heavy_command_slowdown_p99_recovered"] is not None else None,1)})
+    b_table=[]
+    for r in rows:
+        if r["study"]!="B":continue
+        b_table.append({"입력":r["workload"],"목표U%":r["target_util"],"배치":r["placement"],"정책":r["variant"],"실제U%":f(r["actual_util"]*100,1),
+            "step p50":f(r["step_slowdown_p50"]),"step p99":f(r["step_slowdown_p99"]),"CPU 가중":f(r["cpu_weighted_slowdown"]),"heavy p99":f(r["heavy_command_slowdown_p99"])})
+    c_table=[]
+    conditions=sorted({(r["study"],r["workload"],r["target_util"],r["capacity_a"],r["capacity_T_s"],r["capacity_duty"]) for r in data["capacity"] if r["workload"]=="rl8" or r["target_util"]==80})
+    for study,work,target,amplitude,duration,duty in conditions:
+        case=[r for r in data["capacity"] if (r["study"],r["workload"],r["target_util"],r["capacity_a"],r["capacity_T_s"],r["capacity_duty"])==(study,work,target,amplitude,duration,duty)]
+        base=get(case,variant="none")
+        out={"입력":work,"목표U%":target,"a":amplitude,"T s":duration,"duty%":duty*100,"관측duty%":f(base.get("capacity_observed_duty",0)*100,1),"none 추가lost %p":f(base.get("none_added_lost_pp"),2)}
+        for name in ("pool","bnd-oracle-1ms","reactive","reactive-L1.0","bnd-oracle-1ms+reactive"):
+            r=get(case,variant=name);p=r.get("added_loss_recovered")
+            out[name+" 회수%"] = f(p*100 if p is not None else None,1)
+        c_table.append(out)
+    c_metric_table=[]
+    for r in data["capacity"]:
+        if r["capacity_a"]!=.5 or r["capacity_T_s"]!=10 or r["capacity_duty"]!=.2 or r["workload"]=="cap30" and r["target_util"]!=80:continue
+        c_metric_table.append({"입력":r["workload"],"정책":r["variant"],"실제U%":f(r["actual_util"]*100,1),
+            "CPU 가중":f(r["cpu_weighted_slowdown"]),"heavy p99":f(r["heavy_command_slowdown_p99"]),
+            "총lost%":f(r["lost_pct"],2),"추가lost%p":f(r["added_lost_pp"],2)})
+    d_table=[]
+    for metric,limit in SLOS:
+        out={"SLO":("CPU 가중" if metric.startswith("cpu") else "heavy p99")+f" ≤ {limit:g}"}
+        for name in ("none","pool","reactive","bnd-oracle-1ms","bnd-oracle-100ms"):
+            r=get(data["D_slos"],variant=name,metric=metric,slo=limit)
+            if not r:out[name]="미완료";continue
+            u=r.get("util");ratio=r.get("nodes_over_none")
+            if u is None:
+                out[name]="구간 내 통과 없음" if r["status"]=="below_grid" else "미완료";continue
+            out[name] = ("≥" if r["status"]=="at_least" else "")+f(u*100 if u is not None else None,1)+"%"
+            if ratio is not None:out[name]+=" / "+("≤" if r["node_ratio_status"]=="upper_bound" else "")+f(ratio)
+        d_table.append(out)
+    a_findings=[]
+    for work,cores in (("cap30",192),("rl8",48)):
+        case=dict(workload=work,cores=cores,target_util=90)
+        names=("bnd-oracle-1ms","reactive-L0.001","bnd-oracle-1ms+reactive-L0.001")
+        points=[get(data["latency_curves"],**case,variant=name) for name in names]
+        if all(points):
+            values=[f(100*r["cpu_weighted_slowdown_recovered"],1) for r in points]
+            a_findings.append(f"{work} {cores}코어·목표90%에서 경계1 ms / reactive1 ms / 병합의 CPU 가중 pool 이득 회수율은 각각 {' / '.join(values)}%다.")
+    slow=[get(data["latency_curves"],workload="cap30",cores=192,target_util=90,variant="reactive-L"+v) for v in ("0.1","0.3","1.0")]
+    if all(slow):
+        a_findings.append("같은 cap30 조건에서 reactive L=100/300/1000 ms의 회수율은 각각 "+" / ".join(f(100*r["cpu_weighted_slowdown_recovered"],1) for r in slow)+"%다. 긴 정지는 실행 중 재배치의 이득을 없애고 역효과를 낸다.")
+    a_findings="\n\n".join(a_findings)
+    b_findings=[]
+    for work in ("cap30","rl8"):
+        common=dict(study="B",workload=work,target_util=80)
+        spread=get(rows,**common,placement="spread",variant="none")
+        points=[get(rows,**common,placement="pack",variant=name) for name in ("none","bnd-oracle-1ms","reactive","bnd-oracle-1ms+reactive")]
+        if spread and all(points):
+            b_findings.append(f"{work} 목표80%의 같은 sandbox 밀도에서 step p99는 spread none {f(spread['step_slowdown_p99'])}배, pack none / 경계1 ms / reactive10 ms / 조합은 각각 "+" / ".join(f(r['step_slowdown_p99']) for r in points)+"배다.")
+    b_findings="\n\n".join(b_findings)
+    c_findings=[]
+    for work,target in (("cap30",80),("rl8",90)):
+        case=dict(workload=work,target_util=target,capacity_a=.5,capacity_T_s=10.0,capacity_duty=.2)
+        points=[get(data["capacity"],**case,variant=name) for name in ("none","bnd-oracle-1ms","reactive","reactive-L1.0","bnd-oracle-1ms+reactive")]
+        if all(points):
+            c_findings.append(f"{work} 목표{target}%, a=50%, T=10 s, duty20%에서 none의 추가 손실은 {f(points[0]['none_added_lost_pp'],2)}%p다. 경계1 ms / reactive10 ms / reactive1 s / 경계+reactive10 ms의 추가 손실 회수율은 각각 "+" / ".join(f(100*r['added_loss_recovered'],1) if r['added_loss_recovered'] is not None else "—" for r in points[1:])+"%다.")
+    c_findings="\n\n".join(c_findings)
+    d_findings=[]
+    for limit in (1.05,1.10):
+        base=get(data["D_slos"],variant="none",metric="cpu_weighted_slowdown",slo=limit)
+        fast=get(data["D_slos"],variant="reactive",metric="cpu_weighted_slowdown",slo=limit)
+        if base.get("util") is not None and fast.get("util") is not None:
+            sentence=f"CPU 가중 SLO≤{limit:g}에서 none의 최대 실제U는 "+("최소 " if base['status']=="at_least" else "")+f(base['util']*100,1)+"%, reactive10 ms는 "+("최소 " if fast['status']=="at_least" else "")+f(fast['util']*100,1)+"%다."
+            saving=fast.get("node_saving_pct")
+            sentence+=(" none 대비 노드 절감은 "+("최소 " if fast['node_ratio_status']=="upper_bound" else "")+f(saving,1)+"%다." if saving is not None else " none 대비 노드 절감은 측정 구간에서 식별되지 않는다.")
+            d_findings.append(sentence)
+    boundary=get(data["D_slos"],variant="bnd-oracle-100ms",metric="cpu_weighted_slowdown",slo=1.10)
+    if boundary.get("util") is not None and boundary.get("node_saving_pct") is not None:
+        d_findings.append("경계100 ms도 실제U "+("최소 " if boundary['status']=="at_least" else "")+f(boundary['util']*100,1)+"%를 통과하고 none 대비 노드 절감은 "+("최소 " if boundary['node_ratio_status']=="upper_bound" else "")+f(boundary['node_saving_pct'],1)+"%다. 경계와 reactive 모두 측정 상단을 통과해 그 이상에서의 최대U 우열은 식별되지 않는다.")
+    d_findings="\n\n".join(d_findings)
+    completion=", ".join(f"{k} {data['completion'][k]}/{v}" for k,v in data["expected"].items())
+    return f'''
+
+## 6. 11번 후속: 이동 지연·상관된 group·외부 용량·256코어
+
+추가 완료 설정 {data['configs']}개. {completion}. 표는 완료한 두 seed의 요약 평균이며 미완료 seed 쌍 {len(data['incomplete_seed_pairs'])}개는 제외했다. 10번의 원래 결과는 유지하고 후속 데이터는 summary.followup에 보존했다. 모든 상세 수치는 [followup.csv](followup.csv), [전체 후속 표](followup-tables.md)에 있다.
+
+### 6.1 A — 실행 중 이동 지연 곡선
+
+{a_findings}
+
+reactive의 정지 L=1/10/100/300/1000/3000 ms, source CPU=2 ms 고정, detect=50 ms, hold=max(1 s,2L)다. 경계+reactive는 경계1 ms에 reactive L=1/100/1000 ms를 더했다. 1 ms reactive도 부분 step을 사용한다. cap30은 ramp600+측정5400초이고, RL8은 gap0.25·48코어·목표90%, ramp1800+측정3600초다. seed는 모두2개다. A/C/D의 새 sandbox 배치는10번의 floating power-of-2를 유지했다. cap30의 경계 선과 none/pool 기준은 같은 밀도·시간·seed인 10번 결과를 그대로 썼다.
+
+![L 대 CPU 가중 pool 이득 회수율](latency-cpu.png)
+
+[CPU 그림 PDF](latency-cpu.pdf). y=(none−X)/(none−pool), x는 초 단위 log다. 음수 회수율도 그대로 표시한다. pre-copy 점의 x는 측정 구간 이동의 **평균 예약 완료 지연**(dump+전송+NIC 대기)이다. 이동 결정 시 예약한 지연이므로 완료 전에 rollout이 끝나는 이동도 포함될 수 있다. pre-copy는 그 동안 계속 실행하므로 정지 L인 다른 선과 의미가 다르다. pre-copy는 detect500ms/hold5초/NIC100Gbps이며 source CPU도 dump 비용을 사용한다.
+
+![L 대 heavy p99 pool 이득 회수율](latency-tail.png)
+
+[tail 그림 PDF](latency-tail.pdf), [곡선 데이터](latency.csv). 다음은 목표90%의 수치다. 80%를 포함한 모든 점은 CSV에 있다.
+
+{md(a_table)}
+### 6.2 B — 같은 task 사본 G=8을 pack/spread
+
+{b_findings}
+
+여러 독립 job의 각 step이 batch×G=8×8이며, 16×192코어, train30초, jitter0이다. RL8은 gap0.25를 쓴다. floating=False로 초기 배치를 고정해 placement=pack은 G개를 같은 노드에, spread는 node round-robin으로 둔다. 경계와 reactive는 이후 이동할 수 있다. 두 배치는 같은 task draw·sandbox 밀도·출발 시각을 쓴다. 이 조건은 10번 floating 배치와 구분한다.
+
+RL8의 usable trace는5개이고 서로 다른 group에 하나씩 있어 실제 G=8 전체 묶음은0개다. 따라서 두 작업량 모두 **동일 trace 8개 사본**이다. 실제 서로 다른 rollout의 상관 정도를 측정한 결과가 아니라 강한 상관을 가정한 검사다. 세 밀도의 spread none pilot(seed2)에서 실제U를 보간해 목표70/80% 밀도를 정하고, 각 정책과 pack에 같은 밀도를 적용했다. 실제U와 pilot 보간/외삽 여부는 아래와 summary.followup.density_calibration에 남겼다. 초기 RL pilot의160/220%는 둘 다 포화되어 최종 보정에서 제외하고,80/100/110%의 포화 전 점으로 다시 보정했다. 밀도 순서로 보간해 포화점의 수치 오차로 순서가 뒤집히지 않게 했다. 제외한4설정과 재사용 입력의 코드 해시는 summary.followup에 보존했다. ramp1800초, cap30 측정5400초/RL8 3600초다.
+
+{md(b_table)}
+### 6.3 C — 외부 용량 감소의 가정에 따른 민감도
+
+{c_findings}
+
+**실제 다른 tenant나 harvest 사건의 측정이 아닌, 가정한 사건 모양에 대한 민감도 분석이다.** 각 노드의 사건 시작은 독립 Poisson, 각 사건 길이는 평균T의 지수분포다. 겹친 사건은 하나의 on 상태로 합치고 감소 폭을 중첩하지 않는다. λ=−log(1−duty)/T로 stationary 기대 on 비율을 duty에 맞췄다. 초기 활성 사건 수도 Poisson(λT)로 시작하며 잔여 수명은 지수분포다. T는 개별 사건의 길이이며 겹침으로 합쳐진 on 기간은 더 길 수 있다.
+
+현재 core capacity만 water-fill, reactive excess/목적지, 경계 여유 계산에 반영하고 pool은 용량 합을 공유한다. 미래 사건은 정책에 보이지 않는다. cap30은192코어·목표70/80%·ramp600+측정5400초, RL8은 A와 같은48코어·목표90%·gap0.25·1800+3600초다. 같은 seed·사건 조건은 모든 정책에 같은 용량 시계열이며 SHA256과 노드별 실제 duty를 raw JSONL에 보존한다. workload의 sandbox 밀도는 사건 유무와 정책 사이에 고정했다. 실제U의 분모는 사건 전 명목 코어 수이며, CSV의 available_cores_per_node에 사건 중 평균 가용 코어를 보존했다.
+
+Δ_X=lost_X(사건)−lost_X(무사건), 회수율=(Δ_none−Δ_X)/Δ_none다. lost의 분모는 실행 CPU이며 Δ는 %p로 표시한다. Δ_none≤0이면 회수율을 산출하지 않는다. 음수나100% 초과를 자르지 않는다. 정책별 진행 궤적과 실행 CPU 분모가 달라 작은 Δ의 회수율은 민감하다. 다음은 cap30 목표80%와 완료된 RL 조건이다. cap30 목표70% 및 CPU 가중/heavy p99는 [capacity.csv](capacity.csv)에 모두 있다.
+
+{md(c_table)}
+a=50%, T=10 s, duty20%의 절대 지표도 함께 제시한다. 추가 손실 회수율과 별도로 각 정책의 총 손실과 tail을 확인할 수 있다.
+
+{md(c_metric_table)}
+### 6.4 D — 16×256코어
+
+{d_findings}
+
+cap30, 목표70/80/85/90/95%, ramp600+측정5400초, seed2다. 명령 수요의 관측 최대30코어는 그대로다. 3.3절과 slo.csv에도256코어 행을 추가했다. cell=최대 실제U / none 대비 노드 비이며 grid 상단 통과는 하한/상한이다.
+
+{md(d_table)}
+### 6.5 후속 재현·한계
+
+후속 그림은 matplotlib 3.11.2(Agg)로 PNG/PDF를 생성했다. 원본은 `experiments/contention/.local/boundary11/`에 있고 같은 config ID는 재개 때 건너뛴다. `boundary.py grid --followup`만 새 설정을 켜며 10번 기본값은 그대로다. 매 큰 grid 전후 부하 검사와 최대24worker, node0 bind/nice19를 유지했다.
+
+```bash
+export PYTHONDONTWRITEBYTECODE=1 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 NUMBA_NUM_THREADS=1
+run0() {{ numactl --cpunodebind=0 --membind=0 nice -n 19 "$@"; }}
+r11=experiments/contention/.local/boundary11
+p11=.venv/bin/python3
+run0 "$p11" experiments/contention/fleet.py test
+run0 "$p11" experiments/contention/cap_sweep.py test
+for stage in A B-pilot; do
+ stem=${{stage,,}}
+ run0 "$p11" experiments/contention/boundary.py grid --followup "$stage" --grid "$r11/$stem-grid.json" --output "$r11/$stem.jsonl"
+ run0 "$p11" experiments/contention/boundary.py run --grid "$r11/$stem-grid.json" --output "$r11/$stem.jsonl" --jobs 24
+done
+run0 "$p11" experiments/contention/boundary.py calibrate --output "$r11/b-pilot.jsonl"
+for stage in B C C-rl D; do
+ stem=${{stage,,}}
+ run0 "$p11" experiments/contention/boundary.py grid --followup "$stage" --grid "$r11/$stem-grid.json" --output "$r11/$stem.jsonl"
+ run0 "$p11" experiments/contention/boundary.py run --grid "$r11/$stem-grid.json" --output "$r11/$stem.jsonl" --jobs 24
+done
+run0 "$p11" docs/results/boundary-vs-handoff-20261113/analyze.py --followup
+```
+
+기존 fluid 모델/명령 완료 선택/10ms 결정 격자/seed2의 한계가 이어진다. RL8은5 trace와 사본 group에 한정된다. B의 목표U는 pilot 보정치로 실제U와 차이가 날 수 있다. pack의 image cache 이득과 이동으로 깨지는 locality 비용은 포함하지 않았다. C는 사건 분포·겹침·독립성·감소 폭 가정에 의존한다. L100ms/1s 경계의 source CPU는10번처럼1ms이고, reactive는 전 지연에서2ms여서 실제 restore CPU를 재현한 비교는 아니다. 실행 시간·서버 기록·기본값 호환 검사는 `.codex-runs/11.last.md`에 있다. bind0 아래 기존 공유 라이브러리 파일 페이지 N1 약2 MiB가 관측됐고, heap/익명 메모리는 N0이었다는 기록도 포함했다.
+'''
 
 
 def main():
@@ -401,7 +717,11 @@ def main():
     parser.add_argument("--final", action="store_true", help="label any remaining omissions as budget-limited")
     parser.add_argument("--widths", action="store_true", help="also read RL solo profiles for within-command width distributions")
     parser.add_argument("--readme", action="store_true", help="also regenerate the Korean result report")
+    parser.add_argument("--followup", action="store_true", help="append task11 analysis, figures, and 256-core SLO without reaggregating task10")
     args = parser.parse_args()
+    if args.followup:
+        analyze_followup()
+        return
     inputs = args.inputs or [p for p in RAW.glob("*.jsonl") if p.name != "load.jsonl"]
     raw, metadata = {}, []
     for path in inputs:
@@ -489,6 +809,13 @@ def main():
                    input_files=[str(p) for p in inputs], metadata=metadata, results=rows, recovered=recovered,
                    slos=slos, causes=causes, density=density,
                    slo_method="piecewise linear at actual run_cores_per_node/cores; no extrapolation; at_least denotes a grid endpoint")
+    previous_path=HERE/"summary.json"
+    if previous_path.exists():
+        previous=json.loads(previous_path.read_text())
+        if previous.get("followup"):
+            summary["followup"]=previous["followup"]
+            summary["total_configs"]=summary["configs"]+previous["followup"]["configs"]
+            summary["slos"]+=previous["followup"]["D_slos"]
     summary["long_control_config_ids"] = sorted(r["config_id"] for r in raw.values() if r["priority"]==3 and r["workload"]=="rl1" and r["ramp_s"]==600 and r["duration_s"]==4500.0)
     summary["retained_input_provenance"] = []
     for label in ("results", "rl"):
