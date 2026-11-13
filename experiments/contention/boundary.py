@@ -253,7 +253,7 @@ def followup_grid(args, state):
         elif study in ("B-pilot","B"):
             calibration = json.loads(args.density.read_text()) if study == "B" else {}
             for workload in ("cap30","rl8"):
-                for target in ((100,160,220) if study=="B-pilot" else (70,80)):
+                for target in (((80,100,110) if workload=="rl8" else (100,160,220)) if study=="B-pilot" else (70,80)):
                     for layout in (["spread"] if study=="B-pilot" else ["spread","pack"]):
                         solo=state["solo"][workload]
                         demand=(solo["cpu_s"]/(solo["cpu_profile_s"]+solo["gap_s"]*.25+solo["traces"]*fleet.SANDBOX_GAP_S)
@@ -287,12 +287,12 @@ def calibrate_density(path):
     result, details = {}, []
     for workload in ("cap30","rl8"):
         points=[]
-        for offered in (100,160,220):
+        for offered in ((80,100,110) if workload=="rl8" else (100,160,220)):
             rs=[r for r in rows if r["workload"]==workload and r["target_util"]==offered]
             if len(rs)!=2:raise ValueError("pilot requires both seeds at three densities")
             points.append((np.mean([r["run_cores_per_node"] for r in rs])/192,rs[0]["per_node"]))
         for target in (70,80):
-            ordered=sorted(points)
+            ordered=sorted(points,key=lambda p:p[1])  # Offered density stays ordered even when utilization saturates.
             lo,hi=next(((lo,hi) for lo,hi in zip(ordered,ordered[1:]) if lo[0]<=target/100<=hi[0]),
                        (ordered[0],ordered[1]) if target/100<ordered[0][0] else (ordered[-2],ordered[-1]))
             (u0,p0),(u1,p1)=lo,hi
