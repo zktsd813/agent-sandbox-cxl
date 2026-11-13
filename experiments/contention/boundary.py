@@ -245,7 +245,7 @@ def check_load(log):
                       external_node0_cpu_pct=sum(pct for _, pct, _ in busy), attempt=attempt)
         with log.open("a") as out:
             out.write(json.dumps(record) + "\n")
-        print(up.strip(), f"node0 external CPU={record[external_node0_cpu_pct]:.1f}%", flush=True)
+        print(up.strip(), f"node0 external CPU={record["external_node0_cpu_pct"]:.1f}%", flush=True)
         if record["external_node0_cpu_pct"] <= 400:
             return True
         if attempt == 0:
@@ -300,8 +300,8 @@ def main():
         for i, result in enumerate(pool.imap_unordered(simulate, todo), 1):
             out.write(json.dumps(result) + "\n")
             out.flush()
-            print(f"{i}/{len(todo)} {result[workload]} {result[cores]} {result[target_util]} {result[variant]} "
-                  f"seed={result[seed]} wall={result[wall_s]:.1f}s elapsed={time.monotonic()-started:.0f}s", flush=True)
+            print(f"{i}/{len(todo)} {result["workload"]} {result["cores"]} {result["target_util"]} {result["variant"]} "
+                  f"seed={result["seed"]} wall={result["wall_s"]:.1f}s elapsed={time.monotonic()-started:.0f}s", flush=True)
     if not check_load(OUT / "load.jsonl"):
         raise SystemExit(75)
 
