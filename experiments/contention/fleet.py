@@ -1126,11 +1126,22 @@ def command_summary(commands):
            "command_cpu_s": float(commands[:, 2].sum()),
            "command_solo_steps": float(commands[:, 0].sum()),
            "command_elapsed_steps": float(commands[:, 1].sum())}
-    for label, subset in (("command", commands), ("heavy_command", commands[commands[:, 2] >= 1.0]),
-                          ("uncensored_command", commands[commands[:, 3] == 0])):
+    # A long high-density RL replay can finish tens of millions of commands. Do not copy the
+    # entire record matrix just to exclude timeouts when none occurred.
+    for label, subset in (("command", commands), ("heavy_command", commands[commands[:, 2] >= 1.0])):
         ratios = subset[:, 1] / subset[:, 0]
+        values = np.percentile(ratios, [50, 90, 99]) if len(ratios) else [None] * 3
+        for q, value in zip((50, 90, 99), values):
+            out[f"{label}_slowdown_p{q}"] = float(value) if value is not None else None
+    if out["commands_timed_out"]:
+        subset = commands[commands[:, 3] == 0]
+        ratios = subset[:, 1] / subset[:, 0]
+        values = np.percentile(ratios, [50, 90, 99]) if len(ratios) else [None] * 3
+        for q, value in zip((50, 90, 99), values):
+            out[f"uncensored_command_slowdown_p{q}"] = float(value) if value is not None else None
+    else:
         for q in (50, 90, 99):
-            out[f"{label}_slowdown_p{q}"] = float(np.percentile(ratios, q)) if len(ratios) else None
+            out[f"uncensored_command_slowdown_p{q}"] = out[f"command_slowdown_p{q}"]
     ratios = commands[:, 1] / commands[:, 0]
     out["cpu_weighted_slowdown"] = float(np.average(ratios, weights=commands[:, 2])) if commands[:, 2].sum() else None
     out["command_time_ratio"] = float(commands[:, 1].sum() / commands[:, 0].sum()) if len(commands) else None
