@@ -178,7 +178,7 @@ def make_grid(args, state):
                 demand = (solo["cpu_s"] / (solo["cpu_profile_s"] + solo["gap_s"] * gap + solo["traces"] * fleet.SANDBOX_GAP_S)
                           if priority == 3 else solo["mean_demand_cores"])
                 for cores in ([96, 192] if priority == 2 else [192] if priority == 4 else [48, 96, 192]):
-                    for util in ([70, 80, 85, 90, 95] if priority == 2 else [50, 60, 70, 80, 85, 90] if priority == 3
+                    for util in ([70, 80, 85, 90, 95] if priority == 2 else [50, 60, 70, 80, 90] if priority == 3
                                  else [200] if priority == 4 else [50, 60, 70, 80, 85, 90, 95]):
                         variants = ["none", "pool", "reactive", "bnd-oracle-1ms", "bnd-oracle-100ms"]
                         if priority in (1, 2, 4):
