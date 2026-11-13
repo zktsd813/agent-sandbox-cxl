@@ -238,12 +238,39 @@ def taxed_arrays(arrays, tau):
         edges=np.minimum(np.arange(int(np.ceil(length*scale-1e-9))+1),length*scale)
         work=scale*np.interp(edges/scale,np.arange(length+1),np.r_[0.0,np.cumsum(demand)])
         stretched=np.diff(work)
+        # Cumulative interpolation can leave ~1e-13 cores at an idle edge. Such numerical
+        # ghosts round to zero threads in the allocator. Remove them and conserve segment work.
+        stretched[np.abs(stretched)<1e-9]=0.0
+        if len(stretched) and stretched.max()>0:
+            stretched[np.argmax(stretched)]+=scale*demand.sum()-stretched.sum()
         starts.append(offset);offset+=len(stretched);lengths.append(len(stretched));cpu.append(float(stretched.sum()*fleet.DT))
         demands.append(stretched)
     out["slot_demand"]=np.concatenate(demands)
     out["seg_start"]=np.asarray(starts,np.int64);out["seg_len"]=np.asarray(lengths,np.int64);out["seg_cpu_s"]=np.asarray(cpu)
     out["trace_taxed_cpu_s"]=np.array([sum(out["seg_len"][a:a+n][out["seg_kind"][a:a+n]==0])*fleet.DT for a,n in zip(out["trace_first"],out["trace_count"])])
     return out
+
+
+def self_test():
+    profile=np.tile(np.r_[np.full(7,2.3),np.zeros(13)],100)
+    programs={"x":dict(program=[("cpu",profile)],vcpus=4,memory_gib=1.,boot=False)}
+    arrays=fleet.flatten(programs,["x"])
+    original=arrays["slot_demand"].copy()
+    for tau in (1.,1.02,1.05,1.10,1.23):
+        taxed=taxed_arrays(arrays,tau)
+        demand=taxed["slot_demand"]
+        assert np.all((demand==0)|(demand>1e-9))
+        assert abs(demand.sum()-tau*original.sum())<1e-9
+        assert np.array_equal(arrays["slot_demand"],original)
+        assert np.array_equal(taxed["seg_reference_len"],arrays["seg_len"])
+    # A taxed, uncontended command has slowdown tau against its original DRAM length.
+    arrays=fleet.flatten({"x":dict(program=[("cpu",np.ones(100))],vcpus=1,memory_gib=1.,boot=False)},["x"])
+    config=fleet.DEFAULTS|dict(nodes=1,cores=4,per_node=1,ramp_s=0,duration_s=1.5,mechanism="none",pool="none")
+    result=fleet.simulate(dict(arrays=taxed_arrays(arrays,1.23),names=["x"],config=config))
+    assert abs(result["cpu_weighted_slowdown"]-1.23)<1e-9,result
+    assert abs(result["run_cores_per_node"]-1.23/1.5)<1e-9,result
+    assert abs(result["dram_run_cores_per_node"]-1/1.5)<1e-9,result
+    print("boundary self-test passed")
 
 
 def q3_grid(args,state):
@@ -515,7 +542,7 @@ def check_load(log):
 def main():
     global STATE
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["grid", "run", "bench", "calibrate"])
+    parser.add_argument("command", choices=["grid", "run", "bench", "calibrate", "test"])
     parser.add_argument("--q3",nargs="+",choices=["A","SLO","TAX","TAX-SLO","MATCH","HIST30","GAP"])
     parser.add_argument("--followup", nargs="+", choices=["A","B-pilot","B","C","C-rl","D"])
     parser.add_argument("--density", type=Path, default=HERE/".local/boundary11/density.json")
@@ -528,6 +555,9 @@ def main():
     parser.add_argument("--jobs", type=int, default=24)
     parser.add_argument("--index", type=int, default=0, help="bench config index")
     args = parser.parse_args()
+    if args.command == "test":
+        self_test()
+        return
     if args.command == "calibrate":
         calibrate_density(args.output)
         return
