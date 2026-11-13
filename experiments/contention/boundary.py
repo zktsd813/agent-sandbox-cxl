@@ -201,6 +201,8 @@ def make_grid(args, state):
                                     stable_placement=True, max_batch=8, nic_gbps=100, gap_scale=gap,
                                     ramp_s=args.ramp_s, duration_s=args.duration_s, timeout_s=args.timeout_s,
                                     oracle_threshold=1.0) | variant(name)
+                                if args.timeout_s <= 60:
+                                    c["strict_timeout"] = True
                                 if priority == 3:
                                     c["choice_width"] = 64
                                 if priority == 4:

@@ -314,7 +314,7 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
               cfs, sleeper_credit_s, inflation, carry, bernoulli, kw_a, kw_b, kw_latency,
               img_of_trace, n_images, place_mode, loc_bonus, retention_steps,
               seg_heavy=None, seg_width=None, bnd_on=False, bnd_latency_steps=0.0, bnd_cpu_s=0.0,
-              bnd_margin=1.0, bnd_k=0, bnd_view=0, seg_cpu_s=None, seg_is_command=None, bnd_seed=1):
+              bnd_margin=1.0, bnd_k=0, bnd_view=0, seg_cpu_s=None, seg_is_command=None, bnd_seed=1, strict_timeout=False):
     n_slots = slot_home.shape[0]
     # Optional metadata leaves old call sites valid. The first CPU segment is boot unless marked otherwise.
     cpu_seconds = np.zeros(len(seg_len))
@@ -747,7 +747,7 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
             recent[s] = 0.9 * recent[s] + 0.1 * demand[s]
             if step + 1 <= paused_until[s]:
                 g = seg[s]
-                if not (g <= seg_last[s] and command[g] and step + 1 - seg_t0[s] >= timeout_steps):
+                if not (strict_timeout and g <= seg_last[s] and command[g] and step + 1 - seg_t0[s] >= timeout_steps):
                     continue
             g = seg[s]
             old_t0 = seg_t0[s]
@@ -1093,7 +1093,7 @@ def simulate(job):
         arrays.get("seg_heavy"), arrays.get("seg_width"), bool(config.get("bnd_on", False)),
         float(config.get("bnd_latency_s", 0.0)) / DT, float(config.get("bnd_cpu_s", 0.0)),
         float(config.get("bnd_margin", 1.0)), int(config.get("bnd_k", 0)), int(config.get("bnd_view", 0)),
-        arrays.get("seg_cpu_s"), arrays.get("seg_is_command"), int(config["seed"]) if str(config["seed"]).isdigit() else 1)
+        arrays.get("seg_cpu_s"), arrays.get("seg_is_command"), int(config["seed"]) if str(config["seed"]).isdigit() else 1, bool(config.get("strict_timeout", False)))
     cache = {}
     if job.get("blocks"):
         blocks, n_blocks, measured = image_blocks(job["blocks"], image_names)
@@ -1214,7 +1214,7 @@ def self_test():
     assert np.allclose(got, [0.007, 0.003]), got  # level L: (L - 0) + (L - 0.004) = 0.01
 
     def go(programs, nodes, cores, per_node, mechanism="none", steps=None, detect=1, hold=0, homes=None, job=0, train=0,
-           cfs=False, choice=None, kw=(0.0, 0.0), latency=False, boundary=False, boundary_latency=0.0, boundary_cpu=0.0):
+           cfs=False, choice=None, kw=(0.0, 0.0), latency=False, boundary=False, boundary_latency=0.0, boundary_cpu=0.0, strict_timeout=False):
         names = list(programs)
         arrays = flatten(programs, names)
         homes = np.repeat(np.arange(nodes), per_node) if homes is None else np.array(homes)
@@ -1232,7 +1232,7 @@ def self_test():
                          job, train, np.zeros((n_slots, 4), np.int64), 1.0, cfs, 0.012, 1.0, True, False,
                          np.full(nodes, kw[0]), kw[1], latency, np.zeros(len(names), np.int64), 1, 0, 0.0, 0,
                          None, None, boundary, boundary_latency, boundary_cpu, 1.0, 0, 0,
-                         arrays["seg_cpu_s"], arrays["seg_is_command"])
+                         arrays["seg_cpu_s"], arrays["seg_is_command"], 1, strict_timeout)
 
     # two 1-core sandboxes of 1 s each on one core: both run at 0.5 for 2 s -> 2 s of wait in total
     wait, run, *_ = go({"a": program(("cpu", 100, 1.0))}, nodes=1, cores=1, per_node=2, steps=200)
@@ -1313,6 +1313,13 @@ def self_test():
     out = go({"a": program(("cpu", 1, 0.0), ("cpu", 7000, 1.0))}, nodes=1, cores=1,
              per_node=1, steps=6500)
     assert out[10][0, 3] == 1 and out[10][0, 1] == 6000, out[10]
+    # Preserve the old pause-then-check timeout by default; strict experiments cut even during a pause.
+    long_move = {"hog": program(("cpu", 10000, 1.0)),
+                 "tool": program(("cpu", 1, 0.0), ("cpu", 7000, 1.0))}
+    for strict, elapsed in ((False, 7001), (True, 6000)):
+        out = go(long_move, nodes=2, cores=1, per_node=0, steps=8000, homes=[0,0],
+                 choice=[[0]*4,[1]*4], boundary=True, boundary_latency=7000.0, strict_timeout=strict)
+        assert out[10][0, 3] == 1 and out[10][0, 1] == elapsed, (strict, out[10])
     # page-cache replay: images {0,1,2,3} and {2,3,4,5} on two nodes from 0 to 100, dropped 50 steps later;
     # per node 4 blocks for 150 of 200 steps (8 fetched), shared cache 6 blocks for 150 steps (6 fetched)
     ev = np.array([[0, 0, 0, 0], [0, 1, 1, 0], [100, 0, 0, 1], [100, 1, 1, 1]], np.int64)
