@@ -109,12 +109,13 @@ def write_readme(summary):
                 a,b = p.get("cpu_weighted_slowdown_pool_recovered"),p.get("heavy_command_slowdown_p99_pool_recovered")
                 r[variant] = f"{f(a*100 if a is not None else None,1)} / {f(b*100 if b is not None else None,1)}"
             recovery.append(r)
-    slos = [r for r in summary["slos"] if r["priority"] in (1,13) and r["timeout_s"] > 60]
+    slos = [r for r in summary["slos"] if r["priority"] in (1,13,20) and r["timeout_s"] > 60]
+    slo_selected = selected + (["pre-hist-1s", "pre-hist-1s+bnd-class-1ms", "pre-hist-1s+bnd-class-100ms", "bnd-copy-25G", "bnd-copy-100G"] if summary.get("q3") else [])
     slo_rows = []
     for key,limit in SLOS:
         for cores in (48,96,192) + ((256,) if any(r["cores"]==256 for r in slos) else ()):
             r = {"SLO":("CPU 가중" if key.startswith("cpu") else "heavy p99")+f" ≤ {limit:g}", "코어":cores}
-            for variant in selected:
+            for variant in slo_selected:
                 x=get(slos,cores=cores,metric=key,slo=limit,variant=variant)
                 u=x.get("util")
                 if not x:
@@ -396,6 +397,10 @@ run은 config SHA256으로 이미 완료한 설정을 건너뛰고 한 줄마다
         report=f"> {label}: main {c.get('main',0)}/606, 새 RL {c.get('rl',0)}/600, timeout {c.get('timeout',0)}/60. 미완료 값은 추정하지 않는다.\n\n"+report
     if summary.get("followup"):
         report += followup_markdown(summary["followup"])
+    if summary.get("q3"):
+        from q3 import markdown, headline
+        report = report.replace("\n## 1. 질문\n", "\n"+headline(summary["q3"])+"\n\n## 1. 질문\n", 1)
+        report += markdown(summary["q3"])
     (HERE / "README.md").write_text(report)
 
 
@@ -523,7 +528,7 @@ def analyze_followup():
         event_model="Stationary Poisson intervals, exponential individual duration T; union on/off, no stacked amplitude; rate=-log(1-duty)/T",
         references_task10=dict(seed_pairs=len(reference),source="unchanged task10 cap30 none/pool/boundary rows at matching ramp=600, duration=5400"))
     summary["followup"]=followup
-    summary["total_configs"]=summary["configs"]+len(raw)
+    summary["total_configs"]=summary["configs"]+len(raw)+summary.get("q3",{}).get("configs",0)
     summary["slos"]=[r for r in summary["slos"] if r.get("priority")!=13]+d_slos
     (HERE/"summary.json").write_text(json.dumps(summary,indent=1,allow_nan=False)+"\n")
     flat=lambda r:{k:v for k,v in r.items() if k not in ("seed_values","config_ids")}
@@ -816,6 +821,10 @@ def main():
             summary["followup"]=previous["followup"]
             summary["total_configs"]=summary["configs"]+previous["followup"]["configs"]
             summary["slos"]+=previous["followup"]["D_slos"]
+    if previous_path.exists() and previous.get("q3"):
+        summary["q3"] = previous["q3"]
+        summary["total_configs"] = summary.get("total_configs",summary["configs"]) + previous["q3"]["configs"]
+        summary["slos"] += previous["q3"]["slos"]
     summary["long_control_config_ids"] = sorted(r["config_id"] for r in raw.values() if r["priority"]==3 and r["workload"]=="rl1" and r["ramp_s"]==600 and r["duration_s"]==4500.0)
     summary["retained_input_provenance"] = []
     for label in ("results", "rl"):
