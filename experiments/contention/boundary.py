@@ -224,7 +224,7 @@ def simulate(config):
     result = fleet.simulate(dict(arrays=arrays, names=STATE["names"][workload], config=config))
     result["config_id"] = config_id(config)
     result["sandbox_per_core"] = config["per_node"] / config["cores"]
-    result["gib_per_core"] = result["sandbox_per_core"] * 228 / 1024
+    result["gib_per_core"] = result["sandbox_per_core"] * 228 / 1024 if workload.startswith("rl") else None
     result["tool_time_ratio"] = STATE["solo"][workload]["tool_time_ratio"]
     return result
 
