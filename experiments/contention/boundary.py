@@ -5,6 +5,8 @@ Run this entrypoint under numactl --cpunodebind=0 --membind=0 nice -n 19, with B
 The 60 s agent timeout is recorded. Use --timeout-s 1000000 for uncensored SLO comparisons.
 """
 import argparse
+import csv
+from collections import Counter
 import hashlib
 import importlib.util
 import json
@@ -104,7 +106,7 @@ def predictions(profiles, programs, names, policy):
     return predicted, report
 
 
-def prepare(workloads):
+def prepare(workloads, advanced=False):
     state = {"implementation_sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
                                         for p in (HERE / "fleet.py", HERE / "cap_sweep.py", Path(__file__))},
              "arrays": {}, "names": {}, "solo": {}, "predictors": [], "sources": {}}
@@ -124,6 +126,8 @@ def prepare(workloads):
             arrays["peak_width"] = np.array([p[2] for p in flat])
             state["arrays"][policy], state["names"][policy] = arrays, names
             state["solo"][policy] = cap.solo_summary(profiles, policy)
+            if advanced:
+                state["q3_inputs"] = q3_inputs(profiles, names, arrays)
         state["sources"]["multilingual"] = str(cap.DOCKER)
     for workload in sorted(w for w in workloads if w.startswith("rl")):
         solo = OLD / "experiments/contention/.local/runs" / SOLOS[workload]
@@ -141,6 +145,155 @@ def prepare(workloads):
         state["sources"][workload] = {"solo": str(solo), "candidates": str(candidates),
                                     "run_vcpus": json.loads((solo / "run.json").read_text())["vcpus"]}
     return state
+
+
+def q3_inputs(profiles, names, arrays):
+    """Global leave-one-trace-out history probabilities; copy state joined by event batch ID."""
+    classifier = read_module("premove_cmdkind", OLD / "experiments/workload-char/cmdkind.py")
+    entries = {t["name"]: t for t in json.loads(cap.CANDIDATES.read_text())["traces"]}
+    directories = {d.name.split("-",1)[-1]:d for d in cap.DOCKER.iterdir() if d.is_dir()}
+    sequences, per_trace, totals = {}, {}, Counter()
+    for name in names:
+        batches = cap.replay.load_trace(str(OLD / entries[name]["trace"]))["batches"]
+        events = [json.loads(line) for line in (directories[name]/"events.jsonl").open()]
+        ids = sorted({e["batch"] for e in events if e["event"]=="command_start"})
+        previous, previous_heavy, ever_heavy = "start", False, False
+        seq=[]
+        counts=Counter()
+        for b,(_,demand) in zip(ids, profiles[name]["commands"]):
+            key=(previous,previous_heavy,ever_heavy)
+            truth=float(demand.sum()*fleet.DT)>=1.0
+            kinds={classifier.kind(action["command"]) for action in batches[b]["actions"]}
+            # A batch takes the highest-priority kind, matching cmdkind's rule for a compound shell command.
+            kind=next((k for k in classifier.KINDS if k in kinds),"other")
+            seq.append((b,key,truth,float(demand.sum()*fleet.DT)))
+            counts[(key,False)]+=1
+            counts[(key,True)]+=int(truth)
+            previous,previous_heavy,ever_heavy=kind,truth,ever_heavy or truth
+        sequences[name],per_trace[name]=seq,counts
+        totals.update(counts)
+    state_path=OUT/"boundary-state.csv"
+    state={(r["trace"],int(r["batch"])):r for r in csv.DictReader(state_path.open())}
+    probability=np.zeros(len(arrays["seg_len"]))
+    state_bytes=np.zeros(len(probability))
+    copy_eligible=np.zeros(len(probability),np.bool_)
+    truth_all=[];prob_all=[];work_all=[];gaps=[];heavy_gaps=[];heavy_gap_work=[]
+    missing=[];state_weights=[];state_af=[];state_afw=[]
+    for i,name in enumerate(names):
+        command_i=0
+        total_else=sum(totals[(key,False)]-per_trace[name][(key,False)] for key in {k for k,_ in totals})
+        heavy_else=sum(totals[(key,True)]-per_trace[name][(key,True)] for key in {k for k,_ in totals})
+        for g in range(arrays["trace_first"][i],arrays["trace_first"][i]+arrays["trace_count"][i]):
+            if arrays["seg_kind"][g]!=0:continue
+            b,key,truth,work=sequences[name][command_i]
+            command_i+=1
+            denominator=totals[(key,False)]-per_trace[name][(key,False)]
+            prob=(totals[(key,True)]-per_trace[name][(key,True)])/denominator if denominator else heavy_else/total_else
+            probability[g]=prob
+            truth_all.append(truth);prob_all.append(prob);work_all.append(work)
+            gap=(arrays["seg_len"][g-1]*fleet.DT if g>arrays["trace_first"][i] and arrays["seg_kind"][g-1]==1 else 0.0)
+            gaps.append(gap)
+            if truth:heavy_gaps.append(gap);heavy_gap_work.append(work)
+            row=state.get((name,b))
+            if row is None:
+                missing.append(dict(trace=name,batch=b,heavy=truth,cpu_s=work))
+                if command_i!=1 or b!=0:raise ValueError(f"missing non-boot boundary state: {name} batch {b}")
+                continue
+            copy_eligible[g]=True
+            af=float(row["anon_bytes"])+float(row["file_bytes"])
+            afw=af+float(row["cum_write_bytes"])
+            state_bytes[g]=afw
+            if truth:state_weights.append(work);state_af.append(af);state_afw.append(afw)
+        assert command_i==len(sequences[name])
+    arrays["hist_probability"]=probability
+    arrays["boundary_state_bytes"]=state_bytes
+    arrays["copy_eligible"]=copy_eligible
+    truth_all,prob_all,work_all=map(np.asarray,(truth_all,prob_all,work_all))
+    def report(threshold):
+        flag=prob_all>=threshold
+        return dict(threshold=threshold,recall=float((flag&truth_all).sum()/truth_all.sum()),
+          precision=float((flag&truth_all).sum()/flag.sum()),cpu_recall=float(work_all[flag&truth_all].sum()/work_all[truth_all].sum()),
+          predicted_fraction=float(flag.mean()))
+    def weighted(values,weights):
+        order=np.argsort(values);values=np.asarray(values)[order];cum=np.cumsum(np.asarray(weights)[order]);cum/=cum[-1]
+        return {f"p{q}":float(values[min(len(values)-1,np.searchsorted(cum,q/100))]) for q in (10,50,90,99)}
+    return dict(history=[report(t) for t in (.2,.3)],history_key="previous batch's highest-priority cmdkind, previous actual heavy, any strictly earlier actual heavy (including previous)",
+        fit="all other traces, subtract held-out trace counts; unseen key falls back to other-trace heavy frequency",
+        commands=len(truth_all),missing_state=missing,missing_boot_heavy_cpu_fraction=sum(r["cpu_s"] for r in missing if r["heavy"])/sum(work_all[truth_all]),state_file=str(state_path),state_sha256=hashlib.sha256(state_path.read_bytes()).hexdigest(),
+        heavy_gap_s=quantiles(heavy_gaps),heavy_cpu_gap_at_least3_fraction=float(np.sum(np.asarray(heavy_gap_work)[np.asarray(heavy_gaps)>=3])/sum(heavy_gap_work)),
+        heavy_cpu_weighted_anon_file_bytes=weighted(state_af,state_weights),heavy_cpu_weighted_copy_bytes=weighted(state_afw,state_weights))
+
+
+def taxed_arrays(arrays, tau):
+    """Stretch time at unchanged width, conserve tau*CPU, and keep DRAM reference denominators."""
+    out=arrays.copy()
+    out["seg_reference_len"]=arrays["seg_len"].copy()
+    out["seg_reference_cpu_s"]=arrays["seg_cpu_s"].copy()
+    demands=[];starts=[];lengths=[];cpu=[];offset=0
+    for g,(kind,start,length) in enumerate(zip(arrays["seg_kind"],arrays["seg_start"],arrays["seg_len"])):
+        if kind==1:
+            starts.append(0);lengths.append(length);cpu.append(0.0);continue
+        scale=tau if arrays["seg_cpu_s"][g]>=1.0 else 1.02
+        demand=arrays["slot_demand"][start:start+length]
+        edges=np.minimum(np.arange(int(np.ceil(length*scale-1e-9))+1),length*scale)
+        work=scale*np.interp(edges/scale,np.arange(length+1),np.r_[0.0,np.cumsum(demand)])
+        stretched=np.diff(work)
+        starts.append(offset);offset+=len(stretched);lengths.append(len(stretched));cpu.append(float(stretched.sum()*fleet.DT))
+        demands.append(stretched)
+    out["slot_demand"]=np.concatenate(demands)
+    out["seg_start"]=np.asarray(starts,np.int64);out["seg_len"]=np.asarray(lengths,np.int64);out["seg_cpu_s"]=np.asarray(cpu)
+    out["trace_taxed_cpu_s"]=np.array([sum(out["seg_len"][a:a+n][out["seg_kind"][a:a+n]==0])*fleet.DT for a,n in zip(out["trace_first"],out["trace_count"])])
+    return out
+
+
+def q3_grid(args,state):
+    configs=[]
+    pre=[f"pre-{predictor}-{latency:g}s" for predictor in ("oracle","hist") for latency in (.1,.3,1.,3.)]
+    combined=["pre-hist-1s+bnd-class-1ms","pre-hist-1s+bnd-class-100ms"]
+    copies=["bnd-copy-25G","bnd-copy-100G"]
+    def add(study,cores,target,names,gap=1.):
+        arrays=state["arrays"]["cap30"]
+        demand=state["solo"]["cap30"]["mean_demand_cores"] if gap==1 else arrays["seg_cpu_s"].sum()/(arrays["trace_cpu_s"].sum()+arrays["trace_gap_s"].sum()*gap+len(state["names"]["cap30"])*fleet.SANDBOX_GAP_S)
+        for name in names:
+            for seed in (1,2):
+                c=fleet.DEFAULTS|dict(priority=20,study="12-"+study,workload="cap30",nodes=16,cores=cores,target_util=target,
+                   per_node=max(1,round(target/100*cores/demand)),floating=True,carry=True,stable_placement=True,
+                   seed=str(seed),max_batch=8,nic_gbps=100,gap_scale=gap,ramp_s=600,duration_s=5400.0,timeout_s=1e6,oracle_threshold=1.0)|variant(name)
+                if name.startswith("pre-"):
+                    c.update(pre_on=True,pre_predictor="oracle" if name.startswith("pre-oracle") else "hist",pre_threshold=.3 if "hist30" in name else .2,
+                         pre_latency_s=float(re.search(r"-([0-9.]+)s",name)[1]),pre_cpu_s=.001)
+                    if "+bnd-class" in name:
+                        c.update(bnd_on=True,predictor="class",bnd_latency_s=.1 if "100ms" in name else .001,bnd_cpu_s=.001)
+                elif name.startswith("bnd-copy"):
+                    c.update(copy_gbps=float(re.search(r"-(\d+)G",name)[1]),bnd_on=True,predictor="oracle")
+                elif name.startswith("bnd-") and name.endswith("s") and not name.endswith("ms"):
+                    c.update(bnd_latency_s=float(name.rsplit("-",1)[1][:-1]),bnd_cpu_s=.001)
+                elif name.startswith("cxl-"):
+                    c.update(tax_heavy=float(name.split("-")[-1]),tax_light=1.02,mechanism="hand-off 10ms",strict_handoff=True)
+                    if "hybrid" in name:c.update(bnd_on=True,bnd_latency_s=.001,bnd_cpu_s=.001)
+                if c["mechanism"]=="hand-off 10ms":c["strict_handoff"]=True
+                configs.append(c)
+    for stage in args.q3:
+        if stage=="A":
+            for cores in (48,96,192):
+                for target in (80,90):add(stage,cores,target,pre+combined+copies)
+        elif stage=="SLO":
+            for cores in (48,96):
+                for target in (70,85,95):add(stage,cores,target,["pre-hist-1s",combined[0]]+copies)
+        elif stage=="TAX":
+            for cores in (48,96,192):
+                for target in (80,90):add(stage,cores,target,[f"cxl-{policy}-{tau:g}" for policy in ("reactive","hybrid") for tau in (1.,1.02,1.05,1.10,1.23)])
+        elif stage=="TAX-SLO":
+            for cores in (48,96,192):
+                for target in (70,85,95):add(stage,cores,target,[f"cxl-{policy}-{tau:g}" for policy in ("reactive","hybrid") for tau in ((1.,1.02,1.05,1.10,1.23) if target==70 else (1.,1.02,1.05))])
+        elif stage=="MATCH":
+            for cores in (48,96,192):
+                for target in (80,90):add(stage,cores,target,[f"bnd-{pred}-{latency:g}s" for pred in ("oracle","class") for latency in (.1,.3,1.,3.) if latency!=.1 and not (pred=="oracle" and latency==1.)])
+        elif stage=="HIST30":
+            for target in (80,90):add(stage,96,target,["pre-hist30-1s"])
+        elif stage=="GAP":
+            for target in (80,90):add(stage,96,target,["none","pool","pre-oracle-1s","pre-oracle-3s","pre-hist-1s","pre-hist-3s","bnd-class-1ms","reactive"],4.)
+    return configs
 
 
 def variant(name):
@@ -310,10 +463,20 @@ def simulate(config):
     fleet.TIMEOUT_S = config["timeout_s"]
     workload = config["workload"]
     arrays = STATE["arrays"][workload].copy()
-    actual = arrays["seg_cpu_s"] >= config["oracle_threshold"]
+    if config.get("tax_heavy") is not None:
+        arrays=taxed_arrays(arrays,config["tax_heavy"])
+    actual = arrays.get("seg_reference_cpu_s",arrays["seg_cpu_s"]) >= config["oracle_threshold"]
     arrays["seg_heavy"] = arrays["class_heavy"] if config["predictor"] == "class" else actual
     arrays["seg_width"] = (arrays["class_width"] if config["predictor"] == "class" else arrays["peak_width"]
                             if config["width_mode"] == "peak" else arrays["seg_cpu_s"] / np.maximum(fleet.DT, arrays["seg_len"] * fleet.DT))
+    if config.get("pre_on"):
+        arrays["pre_heavy"]=actual if config["pre_predictor"]=="oracle" else arrays["hist_probability"]>=config["pre_threshold"]
+        arrays["pre_width"]=arrays["seg_cpu_s"]/np.maximum(fleet.DT,arrays["seg_len"]*fleet.DT) if config["pre_predictor"]=="oracle" else arrays["class_width"]
+    if config.get("copy_gbps"):
+        arrays["seg_heavy"]=arrays["seg_heavy"] & arrays["copy_eligible"]
+        copy_s=arrays["boundary_state_bytes"]/(config["copy_gbps"]*1e9/8)
+        arrays["seg_bnd_latency_steps"]=(copy_s+.005)/fleet.DT
+        arrays["seg_bnd_cpu_s"]=copy_s
     result = fleet.simulate(dict(arrays=arrays, names=STATE["names"][workload], config=config))
     result["config_id"] = config_id(config)
     result["sandbox_per_core"] = config["per_node"] / config["cores"]
@@ -353,6 +516,7 @@ def main():
     global STATE
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["grid", "run", "bench", "calibrate"])
+    parser.add_argument("--q3",nargs="+",choices=["A","SLO","TAX","TAX-SLO","MATCH","HIST30","GAP"])
     parser.add_argument("--followup", nargs="+", choices=["A","B-pilot","B","C","C-rl","D"])
     parser.add_argument("--density", type=Path, default=HERE/".local/boundary11/density.json")
     parser.add_argument("--priorities", type=int, nargs="+", default=[1, 2, 3, 4])
@@ -375,15 +539,17 @@ def main():
     configs = json.loads(args.grid.read_text()) if args.command != "grid" else []
     if configs:
         workloads={c["workload"] for c in configs}
+    elif args.q3:
+        workloads={"cap30"}
     elif args.followup:
         workloads={"cap30","rl8"} if any(s in ("A","B-pilot","B","C-rl") for s in args.followup) else {"cap30"}
     else:
         workloads={w for p in args.priorities for w in (["cap30"] if p in (1,4) else ["cap16"] if p==2 else ["rl1","rl8"])}
-    STATE = prepare(workloads)
+    STATE = prepare(workloads,advanced=bool(args.q3 or any(str(c.get("study","")).startswith("12-") for c in configs)))
     metadata = {k: v for k, v in STATE.items() if k not in ("arrays", "names")}
     args.output.with_suffix(".inputs.json").write_text(json.dumps(metadata, indent=2))
     if args.command == "grid":
-        configs = followup_grid(args, STATE) if args.followup else make_grid(args, STATE)
+        configs = q3_grid(args, STATE) if args.q3 else followup_grid(args, STATE) if args.followup else make_grid(args, STATE)
         args.grid.write_text(json.dumps(configs, indent=1))
         print(f"{len(configs)} configs -> {args.grid}")
         return
