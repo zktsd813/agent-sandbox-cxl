@@ -314,7 +314,8 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
               cfs, sleeper_credit_s, inflation, carry, bernoulli, kw_a, kw_b, kw_latency,
               img_of_trace, n_images, place_mode, loc_bonus, retention_steps,
               seg_heavy=None, seg_width=None, bnd_on=False, bnd_latency_steps=0.0, bnd_cpu_s=0.0,
-              bnd_margin=1.0, bnd_k=0, bnd_view=0, seg_cpu_s=None, seg_is_command=None, bnd_seed=1, strict_timeout=False, strict_handoff=False):
+              bnd_margin=1.0, bnd_k=0, bnd_view=0, seg_cpu_s=None, seg_is_command=None, bnd_seed=1, strict_timeout=False, strict_handoff=False,
+              node_capacity=None):
     n_slots = slot_home.shape[0]
     # Optional metadata leaves old call sites valid. The first CPU segment is boot unless marked otherwise.
     cpu_seconds = np.zeros(len(seg_len))
@@ -404,6 +405,7 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
     hist_sum = np.zeros(n_pools)
     cooldown = np.full(n_pools, -1, np.int64)
     pool_cap = np.zeros(n_pools)
+    current_capacity = np.full(n_nodes, cores)
     for n in range(n_nodes):
         pool_cap[pool_of_node[n]] += cores
     wait = 0.0
@@ -412,12 +414,19 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
     paused_want = 0.0
     moves = 0
     measured_moves = 0
+    move_delay_sum = 0.0
+    move_delay_max = 0.0
     blocked = 0
     finished = np.zeros(1_000_000)
     n_finished = 0
     load = np.zeros(n_pools)
     for step in range(steps):
         measuring = step >= begin_step
+        if node_capacity is not None:
+            pool_cap[:] = 0.0
+            for n in range(n_nodes):
+                current_capacity[n] = node_capacity[step, n]
+                pool_cap[pool_of_node[n]] += current_capacity[n]
         # 1. start sandboxes
         for s in range(n_slots):
             if not active[s] and next_start[s] >= 0 and step >= next_start[s]:
@@ -519,14 +528,14 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                 actual_width = cpu_seconds[g] / (seg_len[g] * DT)
                 fits = False
                 for n in range(n_nodes):
-                    if cores - boundary_load[n] - reserved[n] >= actual_width - 1e-9:
+                    if current_capacity[n] - boundary_load[n] - reserved[n] >= actual_width - 1e-9:
                         fits = True
                 cause[s] = 0 if fits else 1
             if not bnd_on or n_pools != n_nodes or not heavy[g] or move_eff[s] >= 0:
                 continue
             source = node[s]
             width = widths[g]
-            free_here = cores - boundary_load[source] - reserved[source]
+            free_here = current_capacity[source] - boundary_load[source] - reserved[source]
             dest = source
             best_free = free_here
             if free_here < width:
@@ -539,7 +548,7 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                             if cand >= source:
                                 cand += 1
                     if cand != source:
-                        spare = cores - boundary_load[cand] - reserved[cand]
+                        spare = current_capacity[cand] - boundary_load[cand] - reserved[cand]
                         if spare > best_free:
                             dest = cand
                             best_free = spare
@@ -848,8 +857,14 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                 while done < batch:
                     dest = -1
                     for q in range(n_pools):
-                        if q != p and load[q] <= pool_cap[q] - 1.0 and (dest < 0 or load[q] < load[dest]):
-                            dest = q
+                        if q != p and load[q] <= pool_cap[q] - 1.0:
+                            if dest < 0:
+                                dest = q
+                            elif node_capacity is not None:
+                                if pool_cap[q] - load[q] > pool_cap[dest] - load[dest]:
+                                    dest = q
+                            elif load[q] < load[dest]:
+                                dest = q
                     pick = -1
                     for j in range(ncount[p], ncount[p + 1]):
                         s = on_node[j]
@@ -887,7 +902,7 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                             n_tasks += 1
                     move_eff[pick] = eff
                     move_dest[pick] = dest
-                    locked_until[pick] = eff + hold_steps
+                    locked_until[pick] = int(math.ceil(eff + hold_steps))
                     load[dest] += recent[pick]
                     load[p] -= recent[pick]
                     if eff > last_eff:
@@ -895,11 +910,14 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                     moves += 1
                     if measuring:
                         measured_moves += 1
+                        delay = (eff - step - (1 if mech_kind == 1 and strict_handoff else 0)) * DT
+                        move_delay_sum += delay
+                        move_delay_max = max(move_delay_max, delay)
                     done += 1
                 if done > 0:
-                    cooldown[p] = last_eff + hold_steps
+                    cooldown[p] = int(math.ceil(last_eff + hold_steps))
     return wait, run, overhead, paused_want, moves, blocked, finished[:n_finished], step_secs[:n_steps_done], \
-        step_ratio[:n_steps_done], ev[:n_ev], commands[:n_commands], bnd_moves, bnd_blocked, loss_by_cause, initial_unfit_loss, measured_moves, later_arrival_loss
+        step_ratio[:n_steps_done], ev[:n_ev], commands[:n_commands], bnd_moves, bnd_blocked, loss_by_cause, initial_unfit_loss, measured_moves, later_arrival_loss, move_delay_sum, move_delay_max
 
 
 _BLOCKS = {}
@@ -1015,6 +1033,40 @@ def cache_replay(events, blocks, n_blocks, n_nodes, retention_steps, begin, end,
             "shared_fetch_gib_per_hour": float(missed[n_nodes] * gib / hours) if hours else None}
 
 
+def capacity_schedule(config, steps, begin):
+    """Stationary Poisson/exponential intervals; overlapping events cause one capacity cut.
+
+    P(at least one active interval)=1-exp(-rate*T), so rate=-log(1-duty)/T.
+    Initial active counts are Poisson(rate*T), with exponential residual lifetimes.
+    A dedicated RNG gives every policy exactly the same exogenous capacity trace.
+    """
+    amplitude = float(config.get("capacity_a", 0.0))
+    if amplitude == 0.0:
+        return None, {}
+    duty, mean_s = float(config["capacity_duty"]), float(config["capacity_T_s"])
+    if not 0 < amplitude < 1 or not 0 < duty < 1 or mean_s <= 0:
+        raise ValueError("capacity requires 0<a,duty<1 and T>0")
+    rate = -math.log1p(-duty) / mean_s
+    seed = int(hashlib.sha256(f"capacity-{config['seed']}".encode()).hexdigest()[:16], 16)
+    rng = np.random.default_rng(seed)
+    capacity = np.full((steps, config["nodes"]), float(config["cores"]))
+    horizon = steps * DT
+    for n in range(config["nodes"]):
+        intervals = [(0.0, rng.exponential(mean_s)) for _ in range(rng.poisson(rate * mean_s))]
+        start = rng.exponential(1 / rate)
+        while start < horizon:
+            intervals.append((start, start + rng.exponential(mean_s)))
+            start += rng.exponential(1 / rate)
+        for start, end in intervals:
+            # Sample the state at each step's beginning; decisions see that current capacity.
+            lo, hi = int(math.ceil(start / DT)), min(steps, int(math.ceil(end / DT)))
+            capacity[lo:hi, n] = config["cores"] * (1 - amplitude)
+    duty_by_node = (capacity[begin:] < config["cores"]).mean(axis=0)
+    return capacity, dict(capacity_rate_per_s=rate, capacity_observed_duty=float(duty_by_node.mean()),
+        capacity_duty_by_node=duty_by_node.tolist(), available_cores_per_node=float(capacity[begin:].mean()),
+        capacity_sha256=hashlib.sha256(capacity.tobytes()).hexdigest())
+
+
 def simulate(job):
     arrays, names, config = job["arrays"], job["names"], job["config"]
     nodes, cores, pool = config["nodes"], config["cores"], config["pool"]
@@ -1030,6 +1082,7 @@ def simulate(job):
     slot_home = np.repeat(np.arange(nodes), per_node).astype(np.int64)
     ramp_steps = int(round(config["ramp_s"] / DT))
     steps = int(round((config["ramp_s"] + config["duration_s"]) / DT))
+    capacity, capacity_stats = capacity_schedule(config, steps, ramp_steps)
     entries = list(range(len(names)))
     width = int(config.get("choice_width", 256))
     first_start = np.zeros(n_slots, np.int64)
@@ -1076,15 +1129,17 @@ def simulate(job):
     img_of_trace = np.array([image_names.index(i) for i in images], np.int64)
     retention_steps = int(round(config["retention_s"] / DT))
     started = time.time()
-    wait, run, overhead, paused_want, moves, blocked, finished, step_secs, step_ratio, events, commands, bnd_moves, bnd_blocked, causes, unfit, reactive_moves, later_arrival = run_fleet(
+    move_latency = (int(round(mech.get("latency_s", 0.0) / DT)) if config.get("reactive_latency_s") is None
+                    else float(config["reactive_latency_s"]) / DT)
+    wait, run, overhead, paused_want, moves, blocked, finished, step_secs, step_ratio, events, commands, bnd_moves, bnd_blocked, causes, unfit, reactive_moves, later_arrival, move_delay_sum, move_delay_max = run_fleet(
         arrays["slot_demand"], arrays["seg_kind"], arrays["seg_start"], arrays["seg_len"], arrays["trace_first"],
         arrays["trace_count"], arrays["trace_vcpus"], arrays["trace_mem"],
         arrays["trace_cpu_s"] + arrays["trace_gap_s"] * config["gap_scale"],
         nodes, float(cores), pool_of_node.astype(np.int64), n_pools, slot_home, first_start, choices, place,
         int(config["place_k"]), bool(config["floating"]), steps, ramp_steps, int(round(SANDBOX_GAP_S / DT)),
         int(round(TIMEOUT_S / DT)), int(mech["kind"]), bool(mech.get("pause", False)),
-        int(round(mech.get("latency_s", 0.0) / DT)) if mech["kind"] == 1 else 0,
-        float(mech.get("cpu_s", 0.0)), float(mech.get("dump_s_per_gib", 0.0)),
+        move_latency if mech["kind"] == 1 else 0,
+        float(config.get("reactive_cpu_s", mech.get("cpu_s", 0.0))), float(mech.get("dump_s_per_gib", 0.0)),
         float(mech.get("xfer_s_per_gib", 0.0)) * scale, int(round(config["detect_ms"] / 10)),
         float(config["threshold"]), int(round(config["hold_s"] / DT)), int(config["max_batch"]), int(job_size),
         int(round(config["train_s"] / DT)), jitter, float(config["gap_scale"]), config["sched"] == "cfs",
@@ -1099,7 +1154,7 @@ def simulate(job):
         arrays.get("seg_heavy"), arrays.get("seg_width"), bool(config.get("bnd_on", False)),
         float(config.get("bnd_latency_s", 0.0)) / DT, float(config.get("bnd_cpu_s", 0.0)),
         float(config.get("bnd_margin", 1.0)), int(config.get("bnd_k", 0)), int(config.get("bnd_view", 0)),
-        arrays.get("seg_cpu_s"), arrays.get("seg_is_command"), int(config["seed"]) if str(config["seed"]).isdigit() else 1, bool(config.get("strict_timeout", False)), bool(config.get("strict_handoff", False)))
+        arrays.get("seg_cpu_s"), arrays.get("seg_is_command"), int(config["seed"]) if str(config["seed"]).isdigit() else 1, bool(config.get("strict_timeout", False)), bool(config.get("strict_handoff", False)), capacity)
     cache = {}
     if job.get("blocks"):
         blocks, n_blocks, measured = image_blocks(job["blocks"], image_names)
@@ -1122,8 +1177,10 @@ def simulate(job):
             "step_slowdown_mean": float(step_ratio.mean()) if len(step_ratio) else None,
             "step_slowdown_p99": float(np.percentile(step_ratio, 99)) if len(step_ratio) else None,
             "reactive_moves": int(reactive_moves), "bnd_moves": int(bnd_moves), "bnd_blocked": int(bnd_blocked),
+            "reactive_move_delay_mean_s": move_delay_sum / reactive_moves if reactive_moves else None,
+            "reactive_move_delay_max_s": move_delay_max if reactive_moves else None,
             "loss_cpu_s_by_cause": causes.tolist(), "initial_unfit_loss_cpu_s": float(unfit), "later_arrival_loss_cpu_s": float(later_arrival),
-            **command_stats, "events": int(len(events)), **cache, "wall_s": round(time.time() - started, 2)}
+            **command_stats, "events": int(len(events)), **cache, **capacity_stats, "wall_s": round(time.time() - started, 2)}
 
 
 def command_summary(commands):
@@ -1220,7 +1277,8 @@ def self_test():
     assert np.allclose(got, [0.007, 0.003]), got  # level L: (L - 0) + (L - 0.004) = 0.01
 
     def go(programs, nodes, cores, per_node, mechanism="none", steps=None, detect=1, hold=0, homes=None, job=0, train=0,
-           cfs=False, choice=None, kw=(0.0, 0.0), latency=False, boundary=False, boundary_latency=0.0, boundary_cpu=0.0, strict_timeout=False, boundary_k=0, strict_handoff=False):
+           cfs=False, choice=None, kw=(0.0, 0.0), latency=False, boundary=False, boundary_latency=0.0, boundary_cpu=0.0, strict_timeout=False, boundary_k=0, strict_handoff=False,
+           capacity=None, reactive_latency=None, pooled=False):
         names = list(programs)
         arrays = flatten(programs, names)
         homes = np.repeat(np.arange(nodes), per_node) if homes is None else np.array(homes)
@@ -1228,17 +1286,17 @@ def self_test():
         mech = MECHANISMS[mechanism]
         return run_fleet(arrays["slot_demand"], arrays["seg_kind"], arrays["seg_start"], arrays["seg_len"],
                          arrays["trace_first"], arrays["trace_count"], arrays["trace_vcpus"], arrays["trace_mem"],
-                         arrays["trace_expected"], nodes, float(cores), np.arange(nodes), nodes,
+                         arrays["trace_expected"], nodes, float(cores), np.zeros(nodes, np.int64) if pooled else np.arange(nodes), 1 if pooled else nodes,
                          homes.astype(np.int64), np.zeros(n_slots, np.int64),
                          np.zeros((n_slots, 4), np.int64) if choice is None else np.array(choice, np.int64),
                          np.zeros((n_slots, 4, 1)), 1, False, steps, 0,
                          10**9, int(TIMEOUT_S / DT), mech["kind"], bool(mech.get("pause", False)),
-                         int(round(mech.get("latency_s", 0) / DT)), float(mech.get("cpu_s", 0)),
+                         int(round(mech.get("latency_s", 0) / DT)) if reactive_latency is None else reactive_latency / DT, float(mech.get("cpu_s", 0)),
                          float(mech.get("dump_s_per_gib", 0)), float(mech.get("xfer_s_per_gib", 0)), detect, 0.1, hold, 1,
                          job, train, np.zeros((n_slots, 4), np.int64), 1.0, cfs, 0.012, 1.0, True, False,
-                         np.full(nodes, kw[0]), kw[1], latency, np.zeros(len(names), np.int64), 1, 0, 0.0, 0,
+                         np.full(1 if pooled else nodes, kw[0]), kw[1], latency, np.zeros(len(names), np.int64), 1, 0, 0.0, 0,
                          None, None, boundary, boundary_latency, boundary_cpu, 1.0, boundary_k, 0,
-                         arrays["seg_cpu_s"], arrays["seg_is_command"], 1, strict_timeout, strict_handoff)
+                         arrays["seg_cpu_s"], arrays["seg_is_command"], 1, strict_timeout, strict_handoff, capacity)
 
     # two 1-core sandboxes of 1 s each on one core: both run at 0.5 for 2 s -> 2 s of wait in total
     wait, run, *_ = go({"a": program(("cpu", 100, 1.0))}, nodes=1, cores=1, per_node=2, steps=200)
@@ -1274,6 +1332,9 @@ def self_test():
                      homes=[0,0], strict_handoff=True)
     assert legacy_hand[3] == 0.0, legacy_hand[3]  # old default remains unchanged
     assert abs(strict_hand[3] - .010) < 1e-9 and abs(strict_hand[2] - .002) < 1e-9, strict_hand[:6]
+    fractional_hand = go(two, nodes=2, cores=1, per_node=0, mechanism="hand-off 10ms", steps=4000,
+                         homes=[0,0], strict_handoff=True, reactive_latency=.001)
+    assert abs(fractional_hand[3] - .001) < 1e-9 and abs(fractional_hand[2] - .002) < 1e-9, fractional_hand[:6]
     # stop-and-copy of a 1 GiB sandbox: paused for dump 0.30 s + transfer 0.39 s, 0.30 core-s of source CPU
     wait, run, overhead, paused, moves, blocked = go(two, nodes=2, cores=1, per_node=0,
                                                      mechanism="migration stop-and-copy", steps=4000, homes=[0, 0])[:6]
@@ -1330,6 +1391,24 @@ def self_test():
     assert len(out[10]) == 2 and np.allclose(out[10][:, 1], 200), out[10]
     stats = command_summary(out[10])
     assert abs(stats["cpu_weighted_slowdown"] - 2.0) < 1e-9 and stats["commands_timed_out"] == 0, stats
+    # Capacity cuts affect allocation, pooled sums, admission, and reactive detection.
+    out = go(capped, nodes=1, cores=1, per_node=1, steps=250, capacity=np.full((250,1), .5))
+    assert abs(out[1]-1) < .02 and abs(out[0]-1) < .02 and out[10][0,1] == 200, out[:2]
+    cap = np.tile(np.array([.5, 2.0]), (250,1))
+    out = go(capped, nodes=2, cores=2, per_node=0, homes=[0], steps=250, boundary=True, capacity=cap)
+    assert out[11] == 1 and out[10][0,1] == 100, out[10:13]
+    out = go(capped, nodes=2, cores=2, per_node=0, homes=[0], steps=250, mechanism="instant", capacity=cap)
+    assert out[4] == 1 and out[0] < .02, out[:6]
+    cap = np.tile(np.array([.5, 1.0]), (250,1))
+    out = go(capped, nodes=2, cores=1, per_node=0, homes=[0,0], steps=250, capacity=cap, pooled=True)
+    assert np.allclose(out[10][:,1], 400/3, atol=1), out[10]
+    config = dict(nodes=8, cores=192, seed="1", capacity_a=.5, capacity_duty=.2, capacity_T_s=1)
+    schedule, info = capacity_schedule(config, 100000, 10000)
+    assert abs(info["capacity_observed_duty"]-.2) < .03, info
+    assert abs(info["capacity_rate_per_s"] + math.log(.8)) < 1e-12, info
+    repeated, _ = capacity_schedule(config | {"mechanism":"none"}, 100000, 10000)
+    assert np.array_equal(schedule, repeated)
+    assert capacity_schedule(dict(nodes=1,cores=1), 10, 0) == (None,{})
     out = go({"a": program(("cpu", 1, 0.0), ("cpu", 7000, 1.0))}, nodes=1, cores=1,
              per_node=1, steps=6500)
     assert out[10][0, 3] == 1 and out[10][0, 1] == 6000, out[10]

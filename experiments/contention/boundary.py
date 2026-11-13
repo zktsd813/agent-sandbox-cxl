@@ -217,6 +217,95 @@ def config_id(config):
     return hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()[:20]
 
 
+def followup_grid(args, state):
+    """Task 11. Each study keeps a paired density, time window, and seed across policies."""
+    configs = []
+    def add(study, workload, cores, target, names, **extra):
+        solo = state["solo"][workload]
+        gap = .25 if workload == "rl8" else 1.0
+        demand = (solo["cpu_s"] / (solo["cpu_profile_s"] + solo["gap_s"]*gap + solo["traces"]*fleet.SANDBOX_GAP_S)
+                  if workload == "rl8" else solo["mean_demand_cores"])
+        for name in names:
+            for seed in (1,2):
+                c = fleet.DEFAULTS | dict(priority=10+"ABCD".index(study[0]), study=study, workload=workload,
+                    nodes=16, cores=cores, target_util=target, per_node=max(1,round(target/100*cores/demand)),
+                    seed=str(seed), stable_placement=True, floating=True, carry=True, nic_gbps=100,
+                    gap_scale=gap, max_batch=8, ramp_s=600, duration_s=5400.0, timeout_s=1e6,
+                    oracle_threshold=1.0, choice_width=64 if workload=="rl8" else 256) | variant(name)
+                if workload == "rl8":
+                    c.update(ramp_s=1800.0,duration_s=3600.0)
+                if name.startswith("reactive-L") or "+reactive-L" in name:
+                    latency = float(name.split("-L")[-1])
+                    c.update(mechanism="hand-off 10ms",reactive_latency_s=latency,reactive_cpu_s=.002,
+                             detect_ms=50,hold_s=max(1.0,2*latency))
+                if c["mechanism"] == "hand-off 10ms":
+                    c["strict_handoff"] = True
+                c.update(extra)
+                configs.append(c)
+    ordinary = ["none","pool","reactive","bnd-oracle-1ms","bnd-oracle-100ms","bnd-oracle-1ms+reactive"]
+    for study in args.followup:
+        if study == "A":
+            names = [f"reactive-L{x}" for x in (.001,.01,.1,.3,1.0,3.0)]
+            names += [f"bnd-oracle-1ms+reactive-L{x}" for x in (.001,.1,1.0)] + ["migration"]
+            for cores in (96,192):
+                for target in (80,90):add("A","cap30",cores,target,names)
+            add("A","rl8",48,90,names+["none","pool","bnd-oracle-1ms","bnd-oracle-10ms","bnd-oracle-100ms","bnd-oracle-1s"])
+        elif study in ("B-pilot","B"):
+            calibration = json.loads(args.density.read_text()) if study == "B" else {}
+            for workload in ("cap30","rl8"):
+                for target in ((100,160,220) if study=="B-pilot" else (70,80)):
+                    for layout in (["spread"] if study=="B-pilot" else ["spread","pack"]):
+                        solo=state["solo"][workload]
+                        demand=(solo["cpu_s"]/(solo["cpu_profile_s"]+solo["gap_s"]*.25+solo["traces"]*fleet.SANDBOX_GAP_S)
+                                if workload=="rl8" else solo["mean_demand_cores"])
+                        per_node=(max(8,round(target/100*192/demand/8)*8) if study=="B-pilot"
+                                  else calibration[f"{workload}-{target}"])
+                        add(study,workload,192,target,["none"] if study=="B-pilot" else ordinary,
+                            rl=True,batch=8,group=8,train_s=30.0,jitter_s=0.0,floating=False,placement=layout,
+                            per_node=per_node,choice_width=64,ramp_s=1800.0,
+                            duration_s=1800.0 if study=="B-pilot" else 3600.0 if workload=="rl8" else 5400.0,
+                            group_mode="eight identical trace copies; no complete eligible real group")
+        elif study in ("C","C-rl"):
+            workload = "cap30" if study=="C" else "rl8"
+            for target in ((70,80) if workload=="cap30" else (90,)):
+                names=ordinary[:4]+["reactive-L1.0",ordinary[-1]]
+                # No-event controls have the identical horizon and density as their event pairs.
+                add(study,workload,192 if workload=="cap30" else 48,target,names,capacity_a=0.0)
+                for amplitude in (.25,.5):
+                    for mean_s in (1.0,10.0,60.0):
+                        for duty in (.05,.2):
+                            add(study,workload,192 if workload=="cap30" else 48,target,names,
+                                capacity_a=amplitude,capacity_T_s=mean_s,capacity_duty=duty)
+        elif study == "D":
+            for target in (70,80,85,90,95):add("D","cap30",256,target,ordinary[:5])
+    return configs
+
+
+def calibrate_density(path):
+    """Interpolate the pilot spread baseline; any extrapolation is recorded, never hidden."""
+    rows = [json.loads(line) for line in path.open()]
+    result, details = {}, []
+    for workload in ("cap30","rl8"):
+        points=[]
+        for offered in (100,160,220):
+            rs=[r for r in rows if r["workload"]==workload and r["target_util"]==offered]
+            if len(rs)!=2:raise ValueError("pilot requires both seeds at three densities")
+            points.append((np.mean([r["run_cores_per_node"] for r in rs])/192,rs[0]["per_node"]))
+        for target in (70,80):
+            ordered=sorted(points)
+            lo,hi=next(((lo,hi) for lo,hi in zip(ordered,ordered[1:]) if lo[0]<=target/100<=hi[0]),
+                       (ordered[0],ordered[1]) if target/100<ordered[0][0] else (ordered[-2],ordered[-1]))
+            (u0,p0),(u1,p1)=lo,hi
+            if u1-u0<.005 or p1<=p0:raise ValueError(f"pilot utilization is not increasing: {workload} {points}")
+            per_node=max(8,round((p0+(target/100-u0)*(p1-p0)/(u1-u0))/8)*8)
+            result[f"{workload}-{target}"]=per_node
+            details.append(dict(workload=workload,target_util=target,per_node=per_node,pilot=points,
+                                extrapolated=not u0<=target/100<=u1))
+    path.with_name("density.json").write_text(json.dumps(result,indent=2))
+    path.with_name("density-fit.json").write_text(json.dumps(details,indent=2))
+    print(json.dumps(details,indent=2),flush=True)
+
+
 def simulate(config):
     fleet.TIMEOUT_S = config["timeout_s"]
     workload = config["workload"]
@@ -263,7 +352,9 @@ def check_load(log):
 def main():
     global STATE
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["grid", "run", "bench"])
+    parser.add_argument("command", choices=["grid", "run", "bench", "calibrate"])
+    parser.add_argument("--followup", nargs="+", choices=["A","B-pilot","B","C","C-rl","D"])
+    parser.add_argument("--density", type=Path, default=HERE/".local/boundary11/density.json")
     parser.add_argument("--priorities", type=int, nargs="+", default=[1, 2, 3, 4])
     parser.add_argument("--ramp-s", type=float, default=600)
     parser.add_argument("--duration-s", type=float, default=5400)
@@ -273,17 +364,26 @@ def main():
     parser.add_argument("--jobs", type=int, default=24)
     parser.add_argument("--index", type=int, default=0, help="bench config index")
     args = parser.parse_args()
+    if args.command == "calibrate":
+        calibrate_density(args.output)
+        return
     if not 1 <= args.jobs <= 24:
         parser.error("jobs must be 1..24")
     OUT.mkdir(parents=True, exist_ok=True)
+    args.grid.parent.mkdir(parents=True,exist_ok=True)
+    args.output.parent.mkdir(parents=True,exist_ok=True)
     configs = json.loads(args.grid.read_text()) if args.command != "grid" else []
-    workloads = {c["workload"] for c in configs} if configs else {
-        w for p in args.priorities for w in (["cap30"] if p in (1, 4) else ["cap16"] if p == 2 else ["rl1", "rl8"])}
+    if configs:
+        workloads={c["workload"] for c in configs}
+    elif args.followup:
+        workloads={"cap30","rl8"} if any(s in ("A","B-pilot","B","C-rl") for s in args.followup) else {"cap30"}
+    else:
+        workloads={w for p in args.priorities for w in (["cap30"] if p in (1,4) else ["cap16"] if p==2 else ["rl1","rl8"])}
     STATE = prepare(workloads)
     metadata = {k: v for k, v in STATE.items() if k not in ("arrays", "names")}
     args.output.with_suffix(".inputs.json").write_text(json.dumps(metadata, indent=2))
     if args.command == "grid":
-        configs = make_grid(args, STATE)
+        configs = followup_grid(args, STATE) if args.followup else make_grid(args, STATE)
         args.grid.write_text(json.dumps(configs, indent=1))
         print(f"{len(configs)} configs -> {args.grid}")
         return
@@ -293,7 +393,7 @@ def main():
         print(json.dumps(simulate(config)), flush=True)
         print(f"wall including preparation excluded: {time.monotonic()-started:.2f} s", flush=True)
         return
-    if not check_load(OUT / "load.jsonl"):
+    if not check_load(args.output.parent / "load.jsonl"):
         print("node0 still busy after ten minutes; no grid started", flush=True)
         raise SystemExit(75)
     done = {json.loads(line)["config_id"] for line in args.output.open()} if args.output.exists() else set()
@@ -306,7 +406,7 @@ def main():
             out.flush()
             print(f"{i}/{len(todo)} {result["workload"]} {result["cores"]} {result["target_util"]} {result["variant"]} "
                   f"seed={result["seed"]} wall={result["wall_s"]:.1f}s elapsed={time.monotonic()-started:.0f}s", flush=True)
-    if not check_load(OUT / "load.jsonl"):
+    if not check_load(args.output.parent / "load.jsonl"):
         raise SystemExit(75)
 
 
