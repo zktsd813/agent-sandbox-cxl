@@ -470,6 +470,8 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
                 recent[s] = 0.0
                 decided[s] = -1
                 command_cpu[s] = 0.0
+                cause[s] = 3
+                initial_unfit[s] = False
                 next_start[s] = -1
                 live[node[s]] += 1
                 img = img_of_trace[t]
@@ -582,8 +584,8 @@ def run_fleet(slot_demand, seg_kind, seg_start, seg_len, trace_first, trace_coun
             demand[s] = w * available
             if measuring:
                 paused_want += w * (1.0 - available) * DT
-                if active[s] and seg[s] <= seg_last[s] and command[seg[s]]:
-                    loss_by_cause[cause[s]] += w * (1.0 - available) * DT
+                if active[s] and seg[s] <= seg_last[s]:
+                    loss_by_cause[cause[s] if command[seg[s]] else 3] += w * (1.0 - available) * DT
                     if initial_unfit[s]:
                         initial_unfit_loss += w * (1.0 - available) * DT
                     elif cause[s] == 0 and last_command_start[node[s]] > seg_t0[s]:
@@ -1201,7 +1203,7 @@ def self_test():
     assert np.allclose(got, [0.007, 0.003]), got  # level L: (L - 0) + (L - 0.004) = 0.01
 
     def go(programs, nodes, cores, per_node, mechanism="none", steps=None, detect=1, hold=0, homes=None, job=0, train=0,
-           cfs=False, choice=None, kw=(0.0, 0.0), latency=False, boundary=False, boundary_latency=0.0):
+           cfs=False, choice=None, kw=(0.0, 0.0), latency=False, boundary=False, boundary_latency=0.0, boundary_cpu=0.0):
         names = list(programs)
         arrays = flatten(programs, names)
         homes = np.repeat(np.arange(nodes), per_node) if homes is None else np.array(homes)
@@ -1218,7 +1220,7 @@ def self_test():
                          float(mech.get("dump_s_per_gib", 0)), float(mech.get("xfer_s_per_gib", 0)), detect, 0.1, hold, 1,
                          job, train, np.zeros((n_slots, 4), np.int64), 1.0, cfs, 0.012, 1.0, True, False,
                          np.full(nodes, kw[0]), kw[1], latency, np.zeros(len(names), np.int64), 1, 0, 0.0, 0,
-                         None, None, boundary, boundary_latency, 0.0, 1.0, 0, 0,
+                         None, None, boundary, boundary_latency, boundary_cpu, 1.0, 0, 0,
                          arrays["seg_cpu_s"], arrays["seg_is_command"])
 
     # two 1-core sandboxes of 1 s each on one core: both run at 0.5 for 2 s -> 2 s of wait in total
@@ -1277,6 +1279,9 @@ def self_test():
         assert len(out[10]) == 1 and abs(out[10][0, 1] - (100 + lag)) < 1e-7, (lag, out[10])
         assert out[0] < 1e-9, (lag, out[0])
         assert abs(out[3] - lag * DT) < 1e-9, (lag, out[3])
+    out = go(boundary_programs, nodes=2, cores=1, per_node=0, steps=300,
+             homes=[0, 0], choice=[[0]*4, [1]*4], boundary=True, boundary_cpu=0.001)
+    assert abs(out[2] - 0.001) < 1e-9, out[2]
     out = go(boundary_programs, nodes=2, cores=1, per_node=0, steps=300,
              homes=[1, 0], choice=[[0]*4, [1]*4], boundary=True)
     assert out[11] == 0 and out[10][0, 1] == 100, out[10:13]

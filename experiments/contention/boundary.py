@@ -64,6 +64,7 @@ def predictions(profiles, programs, names, policy):
                          for flag, (_, d) in zip(labels[name], profiles[name]["commands"]) if flag]
     predicted, errors, ratios, truth, flags, peak_ratios, cvs = {}, [], [], [], [], [], []
     fallback_count = 0
+    cpu_work = []
     for name in names:
         peer = [w for n in names if n != name and repo(n) == repo(name) for w in samples[n]]
         if not peer:
@@ -81,6 +82,7 @@ def predictions(profiles, programs, names, policy):
             actual = value.sum() * fleet.DT >= 1.0
             predicted[name].append((flag, estimate, float(np.percentile(value, 90))))
             truth.append(actual)
+            cpu_work.append(float(value.sum() * fleet.DT))
             flags.append(flag)
             if flag:
                 errors.append(estimate - value.mean())
@@ -90,9 +92,12 @@ def predictions(profiles, programs, names, policy):
                 peak_ratios.append(float(np.percentile(value, 90) / value.mean()))
                 cvs.append(float(value.std() / value.mean()))
     truth, flags = np.array(truth), np.array(flags)
+    cpu_work = np.array(cpu_work)
     report = {"policy": policy, "commands": len(truth), "actual_heavy": int(truth.sum()),
               "predicted_heavy": int(flags.sum()), "recall": float((truth & flags).sum() / truth.sum()),
               "precision": float((truth & flags).sum() / flags.sum()),
+              "cpu_recall": float(cpu_work[truth & flags].sum() / cpu_work[truth].sum()),
+              "heavy_cpu_share": float(cpu_work[truth].sum() / cpu_work.sum()),
               "width_error_cores": quantiles(errors), "width_predicted_over_actual": quantiles(ratios),
               "heavy_p90_over_mean": quantiles(peak_ratios), "heavy_cv": quantiles(cvs),
               "fallback_traces": fallback_count, "fit": "other traces in same repo; else other traces globally"}
@@ -286,7 +291,7 @@ def main():
         return
     if not check_load(OUT / "load.jsonl"):
         print("node0 still busy after ten minutes; no grid started", flush=True)
-        return
+        raise SystemExit(75)
     done = {json.loads(line)["config_id"] for line in args.output.open()} if args.output.exists() else set()
     todo = [c for c in configs if config_id(c) not in done]
     print(f"{len(todo)}/{len(configs)} configs, {args.jobs} workers", flush=True)
@@ -297,7 +302,8 @@ def main():
             out.flush()
             print(f"{i}/{len(todo)} {result[workload]} {result[cores]} {result[target_util]} {result[variant]} "
                   f"seed={result[seed]} wall={result[wall_s]:.1f}s elapsed={time.monotonic()-started:.0f}s", flush=True)
-    check_load(OUT / "load.jsonl")
+    if not check_load(OUT / "load.jsonl"):
+        raise SystemExit(75)
 
 
 if __name__ == "__main__":
