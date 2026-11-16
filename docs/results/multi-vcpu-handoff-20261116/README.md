@@ -196,4 +196,3 @@ worktree `.local`은 `du` 기준 18.21 GiB다. 실패 trial의 private disk 증�
 기준 repo의 입력은 읽기 전용으로 사용했다. host 설정을 바꾸지 않았고 push하지 않았다.
 
 원시 자료 경로, 해시, 방향별 전체 분포와 CPU별 구간은 [followup.json](followup.json)에 있다.
-
