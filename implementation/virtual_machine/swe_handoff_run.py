@@ -200,6 +200,11 @@ def main():
             lab_lock = (HERE.parents[1]/'.codex-runs/lab.lock').open('a')
             fcntl.flock(lab_lock, fcntl.LOCK_EX)
             try:
+                # Hashing the sparse 13GiB template can occupy node-0 cache.
+                # Release only clean pages of this read-only input, never use
+                # the host's global drop_caches control.
+                with (assets/'storage.raw').open('rb') as stream:
+                    os.posix_fadvise(stream.fileno(), 0, 0, os.POSIX_FADV_DONTNEED)
                 hardware = subprocess.check_output(['numactl', '--hardware'], text=True)
                 arm['numa_hardware'] = hardware
                 free = int(re.search(r'node 0 free: (\d+) MB', hardware)[1])
