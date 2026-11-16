@@ -60,7 +60,7 @@ def calibrate(args):
             raise RuntimeError('Requested EPT leaf size was not observed')
         rows.append(row)
         save(output/'physical.json', {'seed': args.seed, 'rows': rows,
-            'method': 'First minus median of five warm guest write scans; RAM prefaulted in L0. Denominator=KVM vCPU pf_fixed delta. No L0 tracefs access. Approximate fault service cost, includes cache effects and first VM-entry.'})
+            'method': 'After six initial scans, delete/re-add this VM memslot with identical host mapping and assert zero EPT leaves. Reaccess minus median of five subsequent warm scans. Denominator=KVM vCPU pf_fixed delta. No L0 tracefs access. Approximate fault service cost; cache/TLB effects remain.'})
         print(mode, repeat, row['us_per_fixed_fault'], flush=True)
 
 

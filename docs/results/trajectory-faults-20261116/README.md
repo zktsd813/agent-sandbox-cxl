@@ -75,6 +75,9 @@ Guest 실행만의 시간은 아니다. 제어 전달과 최대 20 ms의 polling
 `kvm:kvm_page_fault`를 별도 histogram으로 센다.
 명령 직전·직후의 각 L1 카운터 차이를 쓴다.
 Histogram dropped가 0이 아니면 거절한다. `pf_fixed`로 대신하지 않는다.
+`kvm_page_fault`의 guest 물리 주소도 2 GiB 구간으로 나눠 센다.
+이 fixture의 RAM은 `[0, 2 GiB)`다. 장치 주소의 fault는 별도로 남긴다.
+Intel EPT 경로에서 이 tracepoint는 EPT 위반의 guest 물리 주소를 기록한다.
 이동 중 fault는 명령 합과 구분한다. 전체 계수 구간 합도 남긴다.
 L1 커널은 기존 설정에서 `CONFIG_HIST_TRIGGERS=y`만 추가해 별도 빌드했다.
 계수 실행의 hand-off 함수 trace에는 `dax_nested_root_sync` 시간도 있다.
@@ -103,7 +106,8 @@ Host tracefs는 접근할 수 없어 L0 EPT exit를 직접 세지 못했다.
 원시 scan 값과 바이너리 해시는 [physical-summary.json](physical-summary.json)에 있다.
 
 SWE의 실제 매핑은 4 KiB다.
-L1에서 센 fault 수에 0.989 µs를 곱한 값은 물리 서버의 **추정 매핑 비용**이다.
+L1에서 센 RAM 주소 fault 수에 0.989 µs를 곱한 값은 물리 서버의 **추정 매핑 비용**이다.
+장치 주소 fault는 이 환산에서 제외한다.
 VMM 생성, EPT 해제, 장치 복원, cache와 주소 변환 캐시(TLB, translation lookaside buffer)의 warm-up, 전송 비용은 그 추정에 없다.
 2 MiB 비용에 같은 4 KiB fault 수를 곱해서 huge-page 궤적을 예측하지 않는다.
 

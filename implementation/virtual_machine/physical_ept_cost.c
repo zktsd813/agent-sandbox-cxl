@@ -76,8 +76,17 @@ int main(int argc,char **argv) {
                           0xb0,1,0xe6,0xe9,0xeb,0xe6};
     uint32_t pages=mib*MIB/4096; memcpy(code+6,&pages,4); memcpy(ram+0x1000,code,sizeof(code));
     struct kvm_regs regs={.rip=0x1000,.rsp=0x1ff000,.rflags=2}; call(vcpu,KVM_SET_REGS,&regs);
-    printf("{\"page_mode\":\"%s\",\"working_set_mib\":%lu,\"collapse_result\":%d,\"collapse_errno\":%d,\"scans\":[",argv[1],mib,collapse,collapse_errno);
-    for(unsigned scan=0;scan<6;scan++) {
+    printf("{\"page_mode\":\"%s\",\"working_set_mib\":%lu,\"collapse_result\":%d,\"collapse_errno\":%d,\"ept_reset\":\"delete and re-add identical memslot while vCPU stopped at PIO\"",argv[1],mib,collapse,collapse_errno);
+    for(unsigned phase=0;phase<2;phase++) {
+      if(phase) {
+        // Remove only this VM's slot. KVM zaps its EPT; the host mapping,
+        // physical RAM, guest registers and data cache stay in place.
+        slot.memory_size=0; call(vm,KVM_SET_USER_MEMORY_REGION,&slot);
+        need(!stat_value(vm,"pages_4k")&&!stat_value(vm,"pages_2m")&&!stat_value(vm,"pages_1g"),"memslot removal did not clear EPT leaves");
+        slot.memory_size=bytes; call(vm,KVM_SET_USER_MEMORY_REGION,&slot);
+      }
+      printf(",\"%s\":[",phase?"scans":"cold_scans");
+      for(unsigned scan=0;scan<6;scan++) {
         uint64_t faults_before=stat_value(vcpu,"pf_fixed"),begin=ns();
         int rc; do { rc=ioctl(vcpu,KVM_RUN,0); } while(rc<0&&errno==EINTR);
         uint64_t elapsed=ns()-begin;
@@ -85,9 +94,11 @@ int main(int argc,char **argv) {
         uint64_t fixed=stat_value(vcpu,"pf_fixed")-faults_before;
         printf("%s{\"host_ns\":%"PRIu64",\"pf_fixed\":%"PRIu64",\"pages_4k\":%"PRIu64",\"pages_2m\":%"PRIu64",\"pages_1g\":%"PRIu64"}",
             scan?",":"",elapsed,fixed,stat_value(vm,"pages_4k"),stat_value(vm,"pages_2m"),stat_value(vm,"pages_1g"));
+      }
+      putchar(']');
     }
-    puts("]}");
+    puts("}");
     // Check that every page was reached on every scan.
-    for(size_t offset=2*MIB;offset<bytes;offset+=4096)need(ram[offset]==6,"scan did not visit each page six times");
+    for(size_t offset=2*MIB;offset<bytes;offset+=4096)need(ram[offset]==12,"scan did not visit each page twelve times");
     munmap(run,run_size); close(vcpu); close(vm); close(kvm); munmap(ram,bytes); return 0;
 }
