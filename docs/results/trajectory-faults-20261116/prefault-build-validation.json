@@ -1,0 +1,52 @@
+{
+  "result": "passed",
+  "rows": [
+    {
+      "tree": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run14/linux-prefault",
+      "base_commit": "28ec38566cdda02c9854918b4baea85ee104c4d1",
+      "ordered_layers": {
+        "kvm-dax-state.patch": "2609ddad6c1eec285edc0d35f6507348234daf88e90b2a42a3d2205d41db7d1f",
+        "kvm-prefault.patch": "5d7da42dcef2aed522ce187f0b3e2ba7b835a0dc582596c42b6189995ba8dced"
+      },
+      "files_compared": 26,
+      "all_files_match_built_source": true,
+      "fuzz": 0
+    },
+    {
+      "tree": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run14/fc-prefault",
+      "base_commit": "f135a7e2cf5cd29145d2a768544bbb391982aba3",
+      "ordered_layers": {
+        "firecracker.patch": "2b20b316a6bd68d87512ab40e64e4a1bf0d538527e0fd423ec929b79ad203566",
+        "firecracker-prefault.patch": "5451a5b804a4fafed3041f9166f54b791e44ad76080ade9e4264fecd04ccdf04"
+      },
+      "files_compared": 29,
+      "all_files_match_built_source": true,
+      "fuzz": 0
+    }
+  ],
+  "note": "Kernel source HEAD already includes cxl-static-capacity.patch; compare after base+overlay, without touching either built source.",
+  "base_patches_unchanged_since_675a9d5": true,
+  "runtime_artifacts": {
+    "firecracker": "0b2b64200871d1e92e20773f129d85b6e663ddb91ba8a9b949c894007dab921c",
+    "l1-kernel": "53f518235e111021b2e1a84e9d0fd55bfc1c653e2f48a9d785d377f63d203d30",
+    "l1-initramfs.cpio": "3ef1ad417fe9d0135ed055a6130340db13cff9733ca509ef676b4c085c1691d0"
+  },
+  "kvm_modules": {
+    "kvm.ko": "30c9dfe2fdec08d8c2b211e7b63f6a96f2563ccd672b13e311383ae29b90eed0",
+    "kvm-intel.ko": "cc65b52ff77f0cc56392a4beacd9920f1f01b2382842b1d800f30af7c5fa6387"
+  },
+  "kernel_config_sha256": "e8f4c704323a73338f3924a8cadd4dad270fcefe7b2eca72a1cfa758edf0709d",
+  "tests": {
+    "python": {
+      "total": 50,
+      "passed": 42,
+      "skipped": 8,
+      "log_sha256": "00a95f90a8c6eaca12b5bb905677c068559c06807eeba49fb0f81199f80321ae"
+    },
+    "rust": {
+      "passed": 17,
+      "ignored": 1,
+      "log_sha256": "22b446563e8450cd2e6a237304de880e096f6b281b41295547575ff8e2b1078b"
+    }
+  }
+}

@@ -33,3 +33,5 @@ RAM 전체 경로는 이동마다 524,288개 4 KiB page를 채웠다. kernel 시
 추가 실험의 물리 비용 계산은 재개 이후 demand fault만 다룬다. 예비 채우기 자체의 물리 실행 비용을 측정한 값은 아니다. 전체 RAM 경로는 미래에 처음 쓸 page의 fault도 미리 처리하므로, 잔여 demand 비용이 무이동보다 작아질 수 있다. Nested 채우기 시간을 물리 서버 시간으로 사용하거나, 이 음수 차이를 전체 성능 향상이라고 해석하지 않는다.
 
 초기 계수 suite 하나는 RAM fault가 반드시 양수여야 한다는 이전 검증 규칙에 걸렸다. PHP all-RAM/all 조건은 RAM fault 0회, 장치 주소 fault 49회였고 guest 실행은 성공했다. 첫 명령 전 RAM 전체를 채운 영수증과 실제 leaf를 검증하는 경우에만 0회를 허용하도록 오프라인 검증을 고쳤다. 수정 후 같은 원시 run 검증과 Python 시험을 통과했다. 최종 계수는 새 `prefcount2`에서 전부 다시 측정한다. `prefcount1`은 진단 자료다. 실행 코드와 binary는 바꾸지 않았다.
+
+격리된 git 원본에 base와 overlay를 순서대로 적용했다. 문맥 오차를 허용하지 않는 `--fuzz=0` 검사다. 모든 대상 파일이 실제 빌드 source와 같았다. 기존 두 base patch도 초기 `675a9d5`와 같다. binary·모듈·설정·시험 로그 해시는 [prefault-build-validation.json](prefault-build-validation.json)에 둔다.
