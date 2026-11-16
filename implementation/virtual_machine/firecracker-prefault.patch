@@ -188,7 +188,7 @@
 +        "errno":result.as_ref().err().and_then(|e|e.raw_os_error())});
 +    if let Ok(path) = std::env::var("FC_PREFAULT_REPORT") { fs::write(path, serde_json::to_vec(&report).map_err(io::Error::other)?)?; }
 +    eprintln!("PREFAULT_JSON {report}");
-+    result?;
++    result.map_err(|error| io::Error::new(error.kind(), format!("{error}; {report}")))?;
 +    if q.processed_pages != expected { return Err(invalid("partial prefault completion")); }
 +    Ok(())
 +}

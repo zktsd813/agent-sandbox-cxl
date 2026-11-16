@@ -742,11 +742,15 @@ def verify_suite(path):
         group = result['trace']
         if trial.get('policy'):
             group += ':'+trial['policy']+':'+str(trial['repeat'])
-        need(result["mode"] not in groups[group], "duplicate trace/mode trial")
-        groups[group][result["mode"]] = result
+        method = trial.get("method", result["mode"])
+        need(method not in groups[group], "duplicate trace/method trial")
+        groups[group][method] = result
         rows.append(result)
     need(len({row["execution_inputs_sha256"] for row in rows}) == 1, "suite mixes execution source/runtime/configuration")
     need(len({row.get('guest_cpu_flags_sha256') for row in rows}) == 1, 'Suite guest CPU flags differ')
+    requested = set(suite['arguments']['modes']) | {'prefault-'+p for p in (suite['arguments'].get('prefault_variants') or [])}
+    if suite['arguments'].get('prefault'):
+        requested = {'prefault-'+suite['arguments']['prefault']}
     comparison = []
     for name, modes in groups.items():
         need(len({row["workload_inputs_sha256"] for row in modes.values()}) == 1,
@@ -764,6 +768,7 @@ def verify_suite(path):
     return {"result": "passed", "trials": rows, "comparisons": comparison,
             "execution_inputs_sha256": rows[0]["execution_inputs_sha256"],
             "coverage": {name: sorted(modes) for name, modes in groups.items()},
+            "complete_requested_matrix": all(set(modes) == requested for modes in groups.values()),
             "complete_three_mode_matrix": all(set(modes) == MODES for modes in groups.values()),
             "complete_nine_trial_matrix": set(groups) == TRACE_NAMES and all(set(modes) == MODES for modes in groups.values())}
 

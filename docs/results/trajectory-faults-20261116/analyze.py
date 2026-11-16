@@ -82,11 +82,21 @@ def summarize(args):
             r = json.loads(path.read_text())
             if not r['arguments'].get('trajectory_policy'):
                 continue
-            key = (r['name'], r['arguments']['trajectory_policy'], r['mode'])
+            method = 'prefault-'+r['arguments']['prefault'] if r['arguments'].get('prefault') else r['mode']
+            key = (r['name'], r['arguments']['trajectory_policy'], method)
             row = {'fixture':key[0], 'policy':key[1], 'mode':key[2], 'repeat':arm['repeat'],
                    'count_run':r['arguments']['count_faults'], 'report':str(path),
                    'total_s':r['observed_replay_ns']/1e9, 'active_s':r['trajectory_total_ns']/1e9,
                    'stop_s':r['trajectory_handoff_ns']/1e9, 'moves':len(r['boundaries'])}
+            if r['arguments'].get('prefault'):
+                fills = [x['prefault'] for x in r['transitions'] if x.get('prefault_mode')]
+                queries = [x['source_ranges'] for x in r['transitions'] if x.get('source_ranges')]
+                row.update(prefault_kernel_s=sum(x['kernel_ns'] for x in fills)/1e9,
+                    prefault_wall_s=sum(x['wall_ns'] for x in fills)/1e9,
+                    query_kernel_s=sum(x['kernel_ns'] for x in queries)/1e9,
+                    query_wall_s=sum(x['wall_ns'] for x in queries)/1e9,
+                    prefault_pages=sum(x['processed_pages'] for x in fills),
+                    source_ranges=sum(len(x['ranges']) for x in queries))
             node0 = set(range(32)) | set(range(64,96))
             owned = {str(vm['pid']) for vm in r['config']['vms'].values()}
             owned.add(str(suite.get('controller_pid', -1)))
@@ -159,6 +169,9 @@ def summarize(args):
             base_active = [b['active_s'] for b,r in groups[(key[0],key[1],'baseline')] if not b['count_run']]
             out.update(active_s_median=st.median(x['active_s'] for x in times),
                        active_extra_s=st.median(x['active_s'] for x in times)-st.median(base_active))
+            if key[2].startswith('prefault-'):
+                for field in ('prefault_kernel_s','prefault_wall_s','query_kernel_s','query_wall_s','prefault_pages','source_ranges'):
+                    out[field+'_median'] = st.median(x[field] for x in times)
             if key[2]=='direct':
                 out['native_pause_to_resume_s_median'] = st.median(x['native_pause_to_resume_s'] for x in times)
             excess = [x['excess_s'] for x in commands if (x['fixture'],x['policy'],x['mode'])==key and not x['count_run'] and x['excess_s'] is not None]

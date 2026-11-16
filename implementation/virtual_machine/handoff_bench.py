@@ -976,6 +976,9 @@ def main():
                 raw, name = c.shell(role,source_fence_script(directory),'final-fence')
                 c.fetch_bytes(role,directory+'/fc.log','final-guest-log')
                 c.fetch_bytes(role,directory+'/vmm.log','final-vmm-log')
+                if args.prefault:
+                    c.shell(role, f'cat {directory}/stderr.log\ncat {directory}/prefault-report.json 2>/dev/null || true',
+                            'final-prefault-diagnostic')
                 report['cleanup'].append({'role':role,'directory':directory,'file':name,'fenced':'FENCED ' in raw})
             except BaseException as exc:
                 report['cleanup'].append({'role':role,'directory':directory,'error':repr(exc)})

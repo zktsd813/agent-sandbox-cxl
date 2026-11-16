@@ -57,6 +57,7 @@ def arguments():
     parser.add_argument('--heavy-plan', type=Path)
     parser.add_argument('--count-faults', action='store_true')
     parser.add_argument('--prefault', choices=('all','mapped'))
+    parser.add_argument('--prefault-variants', nargs='+', choices=('all','mapped'))
     parser.add_argument('--prefault-activate', action='store_true')
     parser.add_argument('--repetitions', type=int, default=1)
     parser.add_argument('--seed', type=int, default=20261116)
@@ -81,7 +82,9 @@ def arguments():
         parser.error('Trajectory requires a heavy plan, positive repetitions and no per-hop kernel-trace option')
     if args.prefault and (args.modes != ['state-only'] or not args.trajectory_policies):
         parser.error('Prefault requires only state-only trajectory mode')
-    if args.prefault_activate and not args.prefault:
+    if args.prefault_variants and (args.prefault or not args.trajectory_policies or len(set(args.prefault_variants)) != len(args.prefault_variants)):
+        parser.error('Prefault variants require trajectory, unique variants, and no single prefault option')
+    if args.prefault_activate and not (args.prefault or args.prefault_variants):
         parser.error('Activation requires prefault')
     return args
 
@@ -162,19 +165,21 @@ def main():
 
     save()
     try:
-        tasks = [(name, mode, policy, repeat) for name in args.names for mode in args.modes
+        methods = [(mode,args.prefault) for mode in args.modes] + [('state-only',p) for p in (args.prefault_variants or [])]
+        tasks = [(name, mode, policy, repeat, prefault) for name in args.names for mode,prefault in methods
                  for policy in (args.trajectory_policies or [None]) for repeat in range(args.repetitions)]
         if args.trajectory_policies:
             random.Random(args.seed).shuffle(tasks)
         suite['planned_order'] = tasks
-        for index, (name, mode, policy, repeat) in enumerate(tasks):
+        for index, (name, mode, policy, repeat, prefault) in enumerate(tasks):
             session = f"{args.session}-{index:02d}"
             pointer = HERE / ".local" / f"current-{session}.json"
             if pointer.exists():
                 raise RuntimeError("Session already exists; use a fresh name: " + session)
-            trial_id = f"{name}-{mode}" + (f'-{policy}-r{repeat}' if policy else '')
+            method = "prefault-"+prefault if prefault else mode
+            trial_id = f"{name}-{method}" + (f'-{policy}-r{repeat}' if policy else '')
             arm = {"id": trial_id, "trace": name, "mode": mode, "policy": policy, 'repeat': repeat,
-                   "session": session, "result": "running"}
+                   "session": session, "result": "running", "method":method}
             suite["trials"].append(arm)
             env = dict(os.environ, CXL_LAB_ASSETS=str(assets), CXL_LAB_SESSION=session,
                        CXL_LAB_QEMU_ROOT=str(qemu_root))
@@ -196,8 +201,8 @@ def main():
             if policy:
                 bench.extend(['--trajectory-policy', policy, '--heavy-plan', str(args.heavy_plan.resolve())])
                 if args.count_faults: bench.append('--count-faults')
-            if args.prefault:
-                bench.extend(['--prefault',args.prefault])
+            if prefault:
+                bench.extend(['--prefault',prefault])
                 if args.prefault_activate: bench.append('--prefault-activate')
             if mode == "direct" and not policy:
                 bench.append("--resident-repromote-handoff")
