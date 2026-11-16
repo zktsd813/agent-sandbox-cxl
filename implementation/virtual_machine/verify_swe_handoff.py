@@ -739,35 +739,45 @@ def verify(path):
                        'No per-handoff source fault probes; owner rejection tests run separately',
                        'Per-command NFS counter polling removed; NFS read count was not measured']}
 
-def verify_suite(path):
-    path = Path(path)
-    suite = json.loads(path.read_bytes())
-    need(suite["schema"] == "swe-handoff-suite-v1" and suite["trials"], "unknown/empty suite")
-    verify_sources(suite, path.parent)
+def verify_suites(paths, *, successful_only=False):
     rows, groups = [], collections.defaultdict(dict)
-    for trial in suite["trials"]:
-        report = local(path.parent, trial["report_file"])
-        need(sha(report.read_bytes()) == trial["report_sha256"], "suite report hash")
-        result = verify(report)
-        need(result["trace"] == trial["trace"] and result["mode"] == trial["mode"], "suite trial identity")
-        need(set(trial["outer_cleanup"]) == {"A", "B"} and
-             all(entry["fenced"] is True for entry in trial["outer_cleanup"].values())
-             and trial["memory_backing_removed"] is True and all(trial["network_removed"].values()), "outer resources not cleaned")
-        group = result['trace']
-        if trial.get('policy'):
-            group += ':'+trial['policy']+':'+str(trial['repeat'])
-        method = trial.get("method", result["mode"])
-        arguments = json.loads(report.read_bytes())['arguments']
-        expected_method = 'prefault-'+arguments['prefault'] if arguments.get('prefault') else result['mode']
-        need(method == expected_method, 'Suite method tag differs from executed restore')
-        need(method not in groups[group], "duplicate trace/method trial")
-        groups[group][method] = result
-        rows.append(result)
+    sources, requested_sets = [], []
+    for path in map(Path, paths):
+        suite = json.loads(path.read_bytes())
+        need(suite["schema"] == "swe-handoff-suite-v1" and suite["trials"], "unknown/empty suite")
+        if successful_only:
+            need(suite['result'] in ('passed','failed'), 'Recovery source suite is still running')
+        verify_sources(suite, path.parent)
+        requested = set(suite['arguments']['modes']) | {'prefault-'+p for p in (suite['arguments'].get('prefault_variants') or [])}
+        if suite['arguments'].get('prefault'):
+            requested = {'prefault-'+suite['arguments']['prefault']}
+        requested_sets.append(requested)
+        selected = [t for t in suite['trials'] if not successful_only or t['result'] == 'passed']
+        sources.append({'path':str(path),'sha256':sha(path.read_bytes()),'result':suite['result'],
+            'selected_trials':len(selected),'excluded_trials':[{'id':t['id'],'result':t['result'],'error':t.get('error')}
+                for t in suite['trials'] if t not in selected]})
+        for trial in selected:
+            report = local(path.parent, trial["report_file"])
+            need(sha(report.read_bytes()) == trial["report_sha256"], "suite report hash")
+            result = verify(report)
+            need(result["trace"] == trial["trace"] and result["mode"] == trial["mode"], "suite trial identity")
+            need(set(trial["outer_cleanup"]) == {"A", "B"} and
+                 all(entry["fenced"] is True for entry in trial["outer_cleanup"].values())
+                 and trial["memory_backing_removed"] is True and all(trial["network_removed"].values()), "outer resources not cleaned")
+            group = result['trace']
+            if trial.get('policy'):
+                group += ':'+trial['policy']+':'+str(trial['repeat'])
+            method = trial.get("method", result["mode"])
+            arguments = json.loads(report.read_bytes())['arguments']
+            expected_method = 'prefault-'+arguments['prefault'] if arguments.get('prefault') else result['mode']
+            need(method == expected_method, 'Suite method tag differs from executed restore')
+            need(method not in groups[group], "duplicate trace/method trial")
+            groups[group][method] = result
+            rows.append(result)
     need(len({row["execution_inputs_sha256"] for row in rows}) == 1, "suite mixes execution source/runtime/configuration")
     need(len({row.get('guest_cpu_flags_sha256') for row in rows}) == 1, 'Suite guest CPU flags differ')
-    requested = set(suite['arguments']['modes']) | {'prefault-'+p for p in (suite['arguments'].get('prefault_variants') or [])}
-    if suite['arguments'].get('prefault'):
-        requested = {'prefault-'+suite['arguments']['prefault']}
+    need(all(value == requested_sets[0] for value in requested_sets), 'Recovery suites requested different methods')
+    requested = requested_sets[0]
     comparison = []
     for name, modes in groups.items():
         need(len({row["workload_inputs_sha256"] for row in modes.values()}) == 1,
@@ -782,21 +792,26 @@ def verify_suite(path):
                      "baseline and lifecycle workload results differ")
             comparison.append({"trace": name, "mode": mode, "baseline_present": baseline is not None,
                                "workload_results_match": True if baseline else None})
-    return {"result": "passed", "trials": rows, "comparisons": comparison,
+    return {"result": "passed", "trials": rows, "source_suites":sources,
+            "successful_trials_only":successful_only, "comparisons": comparison,
             "execution_inputs_sha256": rows[0]["execution_inputs_sha256"],
             "coverage": {name: sorted(modes) for name, modes in groups.items()},
             "complete_requested_matrix": all(set(modes) == requested for modes in groups.values()),
             "complete_three_mode_matrix": all(set(modes) == MODES for modes in groups.values()),
             "complete_nine_trial_matrix": set(groups) == TRACE_NAMES and all(set(modes) == MODES for modes in groups.values())}
 
+def verify_suite(path):
+    return verify_suites([path])
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("report", type=Path, nargs="?")
     parser.add_argument("--suite", type=Path)
+    parser.add_argument("--successful-suites", type=Path, nargs="+", help="Audit the union of passed trials from terminal source suites; report exclusions explicitly")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    if (args.report is None) == (args.suite is None):
-        parser.error("Choose a report or --suite")
+    if sum(x is not None for x in (args.report,args.suite,args.successful_suites)) != 1:
+        parser.error("Choose a report, --suite, or --successful-suites")
     # Full-suite evidence hashing must not contend with another timed trial.
     # Library callers can manage their own lock; this server's CLI joins the
     # existing shared build lock and leaves repository use elsewhere unchanged.
@@ -805,7 +820,8 @@ def main():
         if quiet.exists():
             stream = stack.enter_context(quiet.open('a'))
             fcntl.flock(stream, fcntl.LOCK_SH)
-        result = verify_suite(args.suite) if args.suite else verify(args.report)
+        result = (verify_suites(args.successful_suites, successful_only=True) if args.successful_suites else
+                  verify_suite(args.suite) if args.suite else verify(args.report))
         result['audit_source_sha256'] = sha(Path(__file__).read_bytes())
         data = json.dumps(result, indent=2) + "\n"
         if args.output:
