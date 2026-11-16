@@ -94,7 +94,7 @@ def summarize(args):
             for phase in ('before','after'):
                 for line in (suite_path.parent/(arm['id']+'-load-'+phase+'.txt')).read_text().splitlines()[2:]:
                     fields = line.split()
-                    if len(fields) == 5 and int(fields[2]) in node0 and float(fields[3]) >= 5 and fields[0] not in owned:
+                    if len(fields) == 5 and fields[4] != 'ps' and int(fields[2]) in node0 and float(fields[3]) >= 5 and fields[0] not in owned:
                         noise.append(line.strip())
             row['other_cpu_load'] = noise
             row['disturbed'] = bool(noise)
