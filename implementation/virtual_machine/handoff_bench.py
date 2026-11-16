@@ -556,8 +556,8 @@ class HandoffController(Controller):
         if getattr(self.args, 'trajectory_policy', None):
             import control_rpc
             answer = control_rpc.http(self.vms[destination], target.directory+'/api.sock', 'GET', '/', {})
-            require(json_lines(answer, 'LAB_API_JSON ')[0]['status'] == 200, 'Snapshot API readiness failed')
             self.raw('snapshot-control-ready', answer)
+            require(json_lines(answer, 'LAB_API_JSON ')[0]['status'] == 200, 'Snapshot API readiness failed')
         target.preparation = {'ready_ns': time.monotonic_ns(), 'start_ns': started,
                               'file': evidence, 'directory': target.directory, 'source_paused': False}
         self.snapshot_target = target

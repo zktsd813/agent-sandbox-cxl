@@ -152,6 +152,14 @@ class Protocol(unittest.TestCase):
         os.unlink(address)
 
 class Client(unittest.TestCase):
+    def test_http_get_has_no_body(self):
+        from unittest.mock import patch
+        with patch.object(rpc, 'call', return_value='HTTP/1.1 200 OK\r\n\r\n') as call:
+            rpc.http({}, '/run/api.sock', 'GET', '/', {})
+        request = call.call_args.args[2].split(b'\0', 1)[1]
+        self.assertIn(b'Content-Length: 0\r\n', request)
+        self.assertEqual(request.split(b'\r\n\r\n', 1)[1], b'')
+
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory(prefix='control-client-test-')
         self.listener=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)

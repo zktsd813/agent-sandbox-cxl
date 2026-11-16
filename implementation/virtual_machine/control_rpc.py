@@ -75,7 +75,7 @@ def unix_exchange(vm, path, request, response_bytes, prefix_bytes, timeout=120):
 
 
 def http(vm, path, method, route, body):
-    data = __import__('json').dumps(body).encode()
+    data = b'' if method == 'GET' else __import__('json').dumps(body).encode()
     request = (f'{method} {route} HTTP/1.1\r\nHost: localhost\r\n'
                f'Content-Type: application/json\r\nContent-Length: {len(data)}\r\n\r\n').encode()+data
     start = time.monotonic_ns()
