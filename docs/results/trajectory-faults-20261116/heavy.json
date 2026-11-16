@@ -1,0 +1,27 @@
+{
+  "criterion": "cmdkind.kind in test/build/install; add explicit MicroPython test driver invocations (interpreter + tests path)",
+  "classifier_path": "/home/ijkim/agent-sandbox-cxl/experiments/workload-char/cmdkind.py",
+  "classifier_sha256": "4ec3c966aad97a3147dccba675d0c43f1c07f3a270c6c57b05673f26c55407d9",
+  "indices": {
+    "gin-gonic__gin-3741": [
+      4,
+      12,
+      16
+    ],
+    "php-cs-fixer__php-cs-fixer-8331": [
+      11,
+      12,
+      13,
+      21,
+      28
+    ],
+    "micropython__micropython-13039": [
+      7,
+      26,
+      32,
+      33,
+      34,
+      35
+    ]
+  }
+}

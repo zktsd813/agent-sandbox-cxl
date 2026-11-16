@@ -524,6 +524,12 @@ def verify(path):
             if transition.get('runtime_path') == 'state-v2':
                 need('stop_snapshot_process' in e.text(transition['source_stop_file']), 'Source stop absent')
                 need(transition['load_api']['request']['resume_vm'] is True, 'Restore did not resume')
+                if r['arguments'].get('trajectory_policy'):
+                    prep = transition['preparation']
+                    need(prep['source_paused'] is False and prep['ready_ns'] < transition['request_ns'],
+                         'Snapshot receiver not prepared before pause')
+                    need('kvm-vm' not in e.text(prep['file']) and 'kvm-vcpu' not in e.text(prep['file']),
+                         'Prepared receiver already had KVM objects')
             else:
                 identity_pair(e,transition['before'],transition['after'])
             handoffs.append(transition)
@@ -605,7 +611,29 @@ def verify(path):
             retained=graph
             need(imp['mapper']['handle']['state'] == 1 and int(imp['mapper']['run_epoch']) == hop['destination_epoch'],
                  'Wrong imported mapper epoch')
-    if r['mode'] == 'baseline':
+    if r['arguments'].get('trajectory_policy'):
+        nhops = len(r['boundaries'])
+        expected = {'promotion': 1, 'demotion': 1}
+        if nhops: expected[r['mode']] = nhops
+        need(counts == expected, 'Trajectory lifecycle coverage')
+        need([(x['source'],x['destination'],x['source_epoch'],x['destination_epoch']) for x in handoffs] ==
+             [('A' if i%2==0 else 'B','B' if i%2==0 else 'A',i,i+1) for i in range(nhops)], 'Trajectory itinerary')
+        need([x['before_command'] for x in handoffs] == r['boundaries'], 'Trajectory policy boundaries')
+        for row in r['commands']:
+            need(row['host_send_ns'] < row['host_receive_ns'], 'Host command clock')
+            if r['arguments'].get('count_faults'):
+                for role in ('A','B'):
+                    for key in ('ept_violation', 'page_fault'):
+                        before, after = row['fault_before'][role], row['fault_after'][role]
+                        for sample in (before, after):
+                            totals = re.findall(r'Totals:\s*Hits:\s*(\d+)\s+Entries:\s*(\d+)\s+Dropped:\s*(\d+)',
+                                                e.text(sample[key+'_file']))
+                            need(len(totals) == 1 and int(totals[0][0]) == sample[key] and int(totals[0][2]) == 0,
+                                 'Altered or dropped fault histogram')
+                        need(row['faults'][role][key] == after[key]-before[key] >= 0, 'Fault count delta')
+        need(all(x['fenced'] for x in r['keepalive_cleanup']) and len(r['keepalive_cleanup']) == 2,
+             'Keepalive VM cleanup')
+    elif r['mode'] == 'baseline':
         need(not counts and not grants,'Baseline changed memory tier')
     else:
         extra=2 if r['arguments'].get('resident_repromote_handoff') else 0

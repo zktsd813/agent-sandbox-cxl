@@ -6,10 +6,12 @@ recorded guest commands are not rewritten here. This is a bounded workload
 experiment, not a matched stock-Firecracker performance benchmark.
 """
 import argparse
+import fcntl
 import json
 import os
 from pathlib import Path
 import re
+import random
 import shutil
 import subprocess
 import sys
@@ -51,6 +53,13 @@ def arguments():
     parser.add_argument("--defer-verification", action="store_true",
                         help="Preserve execution-only results; never label the suite passed")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument('--trajectory-policies', nargs='+', choices=('heavy', 'all'))
+    parser.add_argument('--heavy-plan', type=Path)
+    parser.add_argument('--count-faults', action='store_true')
+    parser.add_argument('--repetitions', type=int, default=1)
+    parser.add_argument('--seed', type=int, default=20261116)
+    parser.add_argument('--l1-memory-mib', type=int, default=6144)
+    parser.add_argument('--cxl-mib', type=int, default=8192)
     args = parser.parse_args()
     if not re.fullmatch(r"[a-z0-9_-]{1,29}", args.session):
         parser.error("Use a fresh lowercase session name of at most 29 characters")
@@ -66,6 +75,8 @@ def arguments():
         parser.error("Kernel tracing requires only direct mode")
     if len(set(args.names)) != len(args.names) or len(set(args.modes)) != len(args.modes):
         parser.error("Do not repeat trace names or modes")
+    if args.trajectory_policies and (not args.heavy_plan or args.repetitions < 1 or args.kernel_trace):
+        parser.error('Trajectory requires a heavy plan, positive repetitions and no per-hop kernel-trace option')
     return args
 
 
@@ -144,21 +155,28 @@ def main():
 
     save()
     try:
-        for index, (name, mode) in enumerate((name, mode) for name in args.names for mode in args.modes):
+        tasks = [(name, mode, policy, repeat) for name in args.names for mode in args.modes
+                 for policy in (args.trajectory_policies or [None]) for repeat in range(args.repetitions)]
+        if args.trajectory_policies:
+            random.Random(args.seed).shuffle(tasks)
+        suite['planned_order'] = tasks
+        for index, (name, mode, policy, repeat) in enumerate(tasks):
             session = f"{args.session}-{index:02d}"
             pointer = HERE / ".local" / f"current-{session}.json"
             if pointer.exists():
                 raise RuntimeError("Session already exists; use a fresh name: " + session)
-            trial_id = f"{name}-{mode}"
-            arm = {"id": trial_id, "trace": name, "mode": mode, "session": session, "result": "running"}
+            trial_id = f"{name}-{mode}" + (f'-{policy}-r{repeat}' if policy else '')
+            arm = {"id": trial_id, "trace": name, "mode": mode, "policy": policy, 'repeat': repeat,
+                   "session": session, "result": "running"}
             suite["trials"].append(arm)
             env = dict(os.environ, CXL_LAB_ASSETS=str(assets), CXL_LAB_SESSION=session,
                        CXL_LAB_QEMU_ROOT=str(qemu_root))
             arm["environment"] = {key: env[key] for key in
                 ("CXL_LAB_ASSETS", "CXL_LAB_SESSION", "CXL_LAB_QEMU_ROOT")}
-            prefix = ["taskset", "-c", args.cpus, sys.executable, "-u"]
-            start = prefix + [str(HERE / "lab.py"), "start", "--vcpus", "4", "--memory-mib", "8192",
-                "--shared-mib", "64", "--cxl-mib", "16384", "--dax-guest", "--dax-4k",
+            prefix = ['numactl', '--cpunodebind=0', '--membind=0', "taskset", "-c", args.cpus, sys.executable, "-u"]
+            l1_mib, cxl_mib = (args.l1_memory_mib, args.cxl_mib) if policy else (8192, 16384)
+            start = prefix + [str(HERE / "lab.py"), "start", "--vcpus", "4", "--memory-mib", str(l1_mib),
+                "--shared-mib", "64", "--cxl-mib", str(cxl_mib), "--dax-guest", "--dax-4k",
                 "--migration-network", "--network-backend", args.network_backend, "--memory-backing-dir", "/dev/shm",
                 "--home-storage-image", str(assets / "storage.raw"), "--qemu", str(qemu)]
             if mode == "direct":
@@ -166,7 +184,10 @@ def main():
             bench = prefix + [str(HERE / "handoff_bench.py"), "--mode", mode, "--name", name,
                               "--memory-mib", str(args.memory_mib),
                               "--direct-profile-roundtrips", str(args.direct_profile_roundtrips)]
-            if mode == "direct":
+            if policy:
+                bench.extend(['--trajectory-policy', policy, '--heavy-plan', str(args.heavy_plan.resolve())])
+                if args.count_faults: bench.append('--count-faults')
+            if mode == "direct" and not policy:
                 bench.append("--resident-repromote-handoff")
             if args.restore_timing:
                 bench.append("--restore-timing")
@@ -176,11 +197,30 @@ def main():
                 bench.extend(["--inflight-handoff-index", str(args.inflight_handoff_index)])
             save()
             failure = None
+            lab_lock = (HERE.parents[1]/'.codex-runs/lab.lock').open('a')
+            fcntl.flock(lab_lock, fcntl.LOCK_EX)
             try:
+                hardware = subprocess.check_output(['numactl', '--hardware'], text=True)
+                arm['numa_hardware'] = hardware
+                free = int(re.search(r'node 0 free: (\d+) MB', hardware)[1])
+                arm['budget_mib'] = 2*l1_mib+cxl_mib+64
+                if free < arm['budget_mib']+4096:
+                    raise RuntimeError(f'Node 0 free {free} MiB < lab budget + 4GiB')
                 arm["start"] = command(start, env, output / (trial_id + "-start.log"))
                 if arm["start"]["returncode"]:
                     raise RuntimeError("Lab start failed: " + trial_id)
-                arm["bench"] = command(bench, env, output / (trial_id + "-bench.log"))
+                with (HERE.parents[1]/'.codex-runs/quiet.lock').open('a') as quiet:
+                    fcntl.flock(quiet, fcntl.LOCK_EX)
+                    for phase in ('before',):
+                        (output/(trial_id+'-load-'+phase+'.txt')).write_text(
+                            Path('/proc/loadavg').read_text()+subprocess.check_output(
+                                ['ps','-eo','pid,user,psr,pcpu,comm'], text=True))
+                    try:
+                        arm["bench"] = command(bench, env, output / (trial_id + "-bench.log"))
+                    finally:
+                        (output/(trial_id+'-load-after.txt')).write_text(
+                            Path('/proc/loadavg').read_text()+subprocess.check_output(
+                                ['ps','-eo','pid,user,psr,pcpu,comm'], text=True))
                 if arm["bench"]["returncode"]:
                     raise RuntimeError("Workload trial failed: " + trial_id)
             except BaseException as exc:
@@ -212,6 +252,7 @@ def main():
                         failure = failure or exc
                 else:
                     arm["cleanup_error"] = "No recorded pair pointer; lab start failed before publication"
+                lab_lock.close()
                 save()
             if failure:
                 raise failure
