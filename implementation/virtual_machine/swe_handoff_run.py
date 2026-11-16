@@ -202,11 +202,10 @@ def main():
             start = prefix + [str(HERE / "lab.py"), "start", "--vcpus", str(max(4, args.vcpus+2)), "--memory-mib", str(l1_mib),
                 "--shared-mib", "64", "--cxl-mib", str(cxl_mib), "--dax-guest", "--dax-4k",
                 "--migration-network", "--network-backend", args.network_backend, "--memory-backing-dir", "/dev/shm",
+                "--direct-cpu-model",
                 "--home-storage-image", str(assets / "storage.raw"), "--qemu", str(qemu)]
             if mode == "direct":
                 start.append("--dax-handoff")
-            if policy:
-                start.append('--direct-cpu-model')
             bench = prefix + [str(HERE / "handoff_bench.py"), "--mode", mode, "--name", name,
                               "--memory-mib", str(args.memory_mib), "--vcpus", str(args.vcpus),
                               "--direct-profile-roundtrips", str(args.direct_profile_roundtrips)]
