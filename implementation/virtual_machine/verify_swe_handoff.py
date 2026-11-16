@@ -135,7 +135,7 @@ def execution_identity(report):
     """
     fixture, config, plan = report["fixture"], report["config"], report["trace"]
     common = {"source_hashes": report["source_hashes"],
-        'l1_cpu_models': {role:vm['command'][vm['command'].index('-cpu')+1] for role,vm in config['vms'].items()},
+        'l1_cpu_models': {role:vm['command'][vm['command'].index('-cpu')+1] for role,vm in config.get('vms',{}).items()},
         'kvm_parameters': {role:row['values'] for role,row in report.get('storage_setup',{}).get('kvm_parameters',{}).items()},
         "runtime_inputs": {key: fixture["inputs"][key]["sha256"] for key in ("firecracker", "l1_kernel", "l2_kernel")},
         "runtime_artifacts": {key: fixture["artifacts"][key] for key in
