@@ -1,0 +1,5031 @@
+{
+  "schema": "multi-vcpu-followup-v1",
+  "swe": [
+    {
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/followup-gin2final/gin-gonic__gin-3741-baseline/report.json",
+        "sha256": "c51862eaf2e9f1a687cf5742447d0c9d3dc6c787c013944aa05e799054e6d6a2"
+      },
+      "verification": {
+        "result": "passed",
+        "mode": "baseline",
+        "trace": "gin-gonic__gin-3741",
+        "report_sha256": "c51862eaf2e9f1a687cf5742447d0c9d3dc6c787c013944aa05e799054e6d6a2",
+        "execution_inputs_sha256": "efa47408ebdfc89f33c2f6f181ee308ba488bb989d32d64d112cc26cd2483653",
+        "workload_inputs_sha256": "aeef0f662353049290dc8aeead9079b9c83fbb42a76605570f1eaeb6a3b8335b",
+        "commands": 27,
+        "returncodes": [
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          127,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "submission": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151",
+          "startup_warning_count": 1
+        },
+        "tests": [
+          {
+            "index": 4,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          },
+          {
+            "index": 12,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          },
+          {
+            "index": 16,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          }
+        ],
+        "guest_command_seconds": 7.679999999999998,
+        "block_read_ios": 12289,
+        "remote_nfs_reads": null,
+        "boot_id": "a1cf6b31-84c9-473e-b984-f5ecb87eef39",
+        "identity_observations": 2,
+        "transitions": {},
+        "inflight_commands": 0,
+        "runtime_image_rehash": false,
+        "per_handoff_guest_probes": false,
+        "profiled_kernel_handoffs": 0,
+        "limitations": [
+          "Coherent nested lab; immutable fixture identity comes from build records, not runtime rehash",
+          "No per-handoff source fault probes; owner rejection tests run separately",
+          "Per-command NFS counter polling removed; NFS read count was not measured"
+        ]
+      },
+      "go_test_cpu": {
+        "4": {
+          "wall_s": 4.029999999999999,
+          "accounted_elapsed_s": 3.9450000000000003,
+          "per_cpu_busy_s": {
+            "cpu0": 2.88,
+            "cpu1": 2.75
+          },
+          "working_cpus": 2,
+          "average_executing_cores": 1.3970223325062037
+        },
+        "12": {
+          "wall_s": 1.7699999999999996,
+          "accounted_elapsed_s": 1.75,
+          "per_cpu_busy_s": {
+            "cpu0": 1.4,
+            "cpu1": 1.36
+          },
+          "working_cpus": 2,
+          "average_executing_cores": 1.5593220338983054
+        },
+        "16": {
+          "wall_s": 1.5299999999999994,
+          "accounted_elapsed_s": 1.51,
+          "per_cpu_busy_s": {
+            "cpu0": 1.12,
+            "cpu1": 1.16
+          },
+          "working_cpus": 2,
+          "average_executing_cores": 1.4901960784313732
+        }
+      },
+      "parallel_build_cpu": {
+        "wall_s": 14.78,
+        "accounted_elapsed_s": 14.77,
+        "per_cpu_busy_s": {
+          "cpu0": 14.34,
+          "cpu1": 14.4
+        },
+        "working_cpus": 2,
+        "average_executing_cores": 1.9445196211096079,
+        "intervals": [
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.165,
+            "per_cpu_busy_s": {
+              "cpu0": 0.14,
+              "cpu1": 0.16
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.8181818181818183
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.175,
+            "per_cpu_busy_s": {
+              "cpu0": 0.18,
+              "cpu1": 0.17
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 2.0
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.175,
+            "per_cpu_busy_s": {
+              "cpu0": 0.17,
+              "cpu1": 0.17
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.942857142857143
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17,
+            "per_cpu_busy_s": {
+              "cpu0": 0.15,
+              "cpu1": 0.15
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.764705882352941
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.18,
+            "per_cpu_busy_s": {
+              "cpu0": 0.1,
+              "cpu1": 0.13
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.277777777777778
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.175,
+            "per_cpu_busy_s": {
+              "cpu0": 0.17,
+              "cpu1": 0.1
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.5428571428571431
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17,
+            "per_cpu_busy_s": {
+              "cpu0": 0.17,
+              "cpu1": 0.17
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 2.0
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 13.56,
+            "per_cpu_busy_s": {
+              "cpu0": 13.26,
+              "cpu1": 13.35
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.9623893805309733
+          }
+        ],
+        "handoffs": 0,
+        "command": "go build -a -p \"$(getconf _NPROCESSORS_ONLN)\" ./..."
+      }
+    },
+    {
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/followup-gin2direct/gin-gonic__gin-3741-direct/report.json",
+        "sha256": "c9b6a10ca2197f0ceea0ef354abdf8ec2ca2694bdf2b6e37fee00a970f9beece"
+      },
+      "verification": {
+        "result": "passed",
+        "mode": "direct",
+        "trace": "gin-gonic__gin-3741",
+        "report_sha256": "c9b6a10ca2197f0ceea0ef354abdf8ec2ca2694bdf2b6e37fee00a970f9beece",
+        "execution_inputs_sha256": "efa47408ebdfc89f33c2f6f181ee308ba488bb989d32d64d112cc26cd2483653",
+        "workload_inputs_sha256": "aeef0f662353049290dc8aeead9079b9c83fbb42a76605570f1eaeb6a3b8335b",
+        "commands": 27,
+        "returncodes": [
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          127,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "submission": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151",
+          "startup_warning_count": 1
+        },
+        "tests": [
+          {
+            "index": 4,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          },
+          {
+            "index": 12,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          },
+          {
+            "index": 16,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          }
+        ],
+        "guest_command_seconds": 8.53,
+        "block_read_ios": 11514,
+        "remote_nfs_reads": null,
+        "boot_id": "3898d968-49e6-454d-9639-42b9ea9337c7",
+        "identity_observations": 10,
+        "transitions": {
+          "promotion": 2,
+          "direct": 12,
+          "demotion": 2
+        },
+        "inflight_commands": 1,
+        "runtime_image_rehash": false,
+        "per_handoff_guest_probes": false,
+        "profiled_kernel_handoffs": 0,
+        "limitations": [
+          "Coherent nested lab; immutable fixture identity comes from build records, not runtime rehash",
+          "No per-handoff source fault probes; owner rejection tests run separately",
+          "Per-command NFS counter polling removed; NFS read count was not measured"
+        ]
+      },
+      "go_test_cpu": {
+        "4": {
+          "wall_s": 4.08,
+          "accounted_elapsed_s": 4.005,
+          "per_cpu_busy_s": {
+            "cpu0": 3.02,
+            "cpu1": 2.96
+          },
+          "working_cpus": 2,
+          "average_executing_cores": 1.465686274509804
+        },
+        "12": {
+          "wall_s": 2.460000000000001,
+          "accounted_elapsed_s": 2.425,
+          "per_cpu_busy_s": {
+            "cpu0": 1.95,
+            "cpu1": 1.84
+          },
+          "working_cpus": 2,
+          "average_executing_cores": 1.5406504065040645,
+          "intervals": [
+            {
+              "wall_s": null,
+              "accounted_elapsed_s": 0.02,
+              "per_cpu_busy_s": {
+                "cpu0": 0.02,
+                "cpu1": 0.01
+              },
+              "working_cpus": 2,
+              "average_executing_cores": 1.5
+            },
+            {
+              "wall_s": null,
+              "accounted_elapsed_s": 0.02,
+              "per_cpu_busy_s": {
+                "cpu0": 0.02,
+                "cpu1": 0.0
+              },
+              "working_cpus": 1,
+              "average_executing_cores": 1.0
+            },
+            {
+              "wall_s": null,
+              "accounted_elapsed_s": 0.03,
+              "per_cpu_busy_s": {
+                "cpu0": 0.02,
+                "cpu1": 0.02
+              },
+              "working_cpus": 2,
+              "average_executing_cores": 1.3333333333333335
+            },
+            {
+              "wall_s": null,
+              "accounted_elapsed_s": 2.355,
+              "per_cpu_busy_s": {
+                "cpu0": 1.89,
+                "cpu1": 1.81
+              },
+              "working_cpus": 2,
+              "average_executing_cores": 1.5711252653927814
+            }
+          ]
+        },
+        "16": {
+          "wall_s": 1.6199999999999992,
+          "accounted_elapsed_s": 1.605,
+          "per_cpu_busy_s": {
+            "cpu0": 1.21,
+            "cpu1": 1.21
+          },
+          "working_cpus": 2,
+          "average_executing_cores": 1.4938271604938278
+        }
+      },
+      "parallel_build_cpu": {
+        "wall_s": 16.1,
+        "accounted_elapsed_s": 16.07,
+        "per_cpu_busy_s": {
+          "cpu0": 15.55,
+          "cpu1": 15.64
+        },
+        "working_cpus": 2,
+        "average_executing_cores": 1.9372670807453416,
+        "intervals": [
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.175,
+            "per_cpu_busy_s": {
+              "cpu0": 0.13,
+              "cpu1": 0.16
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.6571428571428575
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.18,
+            "per_cpu_busy_s": {
+              "cpu0": 0.17,
+              "cpu1": 0.18
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.9444444444444444
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.175,
+            "per_cpu_busy_s": {
+              "cpu0": 0.18,
+              "cpu1": 0.17
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 2.0
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17,
+            "per_cpu_busy_s": {
+              "cpu0": 0.17,
+              "cpu1": 0.17
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 2.0
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.175,
+            "per_cpu_busy_s": {
+              "cpu0": 0.17,
+              "cpu1": 0.18
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 2.0
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.185,
+            "per_cpu_busy_s": {
+              "cpu0": 0.15,
+              "cpu1": 0.15
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.6216216216216215
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17,
+            "per_cpu_busy_s": {
+              "cpu0": 0.13,
+              "cpu1": 0.09
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.2941176470588234
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 14.84,
+            "per_cpu_busy_s": {
+              "cpu0": 14.45,
+              "cpu1": 14.54
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.9535040431266846
+          }
+        ],
+        "handoffs": 6,
+        "command": "go build -a -p \"$(getconf _NPROCESSORS_ONLN)\" ./..."
+      }
+    },
+    {
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/followup-gin8/gin-gonic__gin-3741-baseline/report.json",
+        "sha256": "907c74ac53dbbda00ea226a74868253656dd9b47202ad7c7d33f99b3345e590a"
+      },
+      "verification": {
+        "result": "passed",
+        "mode": "baseline",
+        "trace": "gin-gonic__gin-3741",
+        "report_sha256": "907c74ac53dbbda00ea226a74868253656dd9b47202ad7c7d33f99b3345e590a",
+        "execution_inputs_sha256": "ec2c0025b46dea4b8d4597fee4c84cfc45cd592125ea6fa0ff587abb02484bd8",
+        "workload_inputs_sha256": "aeef0f662353049290dc8aeead9079b9c83fbb42a76605570f1eaeb6a3b8335b",
+        "commands": 27,
+        "returncodes": [
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          127,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "submission": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151",
+          "startup_warning_count": 1
+        },
+        "tests": [
+          {
+            "index": 4,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          },
+          {
+            "index": 12,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          },
+          {
+            "index": 16,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          }
+        ],
+        "guest_command_seconds": 4.87,
+        "block_read_ios": 14151,
+        "remote_nfs_reads": null,
+        "boot_id": "e357356e-0525-4c9c-aec5-f5d2a8aa6399",
+        "identity_observations": 2,
+        "transitions": {},
+        "inflight_commands": 0,
+        "runtime_image_rehash": false,
+        "per_handoff_guest_probes": false,
+        "profiled_kernel_handoffs": 0,
+        "limitations": [
+          "Coherent nested lab; immutable fixture identity comes from build records, not runtime rehash",
+          "No per-handoff source fault probes; owner rejection tests run separately",
+          "Per-command NFS counter polling removed; NFS read count was not measured"
+        ]
+      },
+      "go_test_cpu": {
+        "4": {
+          "wall_s": 2.21,
+          "accounted_elapsed_s": 2.17125,
+          "per_cpu_busy_s": {
+            "cpu0": 0.69,
+            "cpu1": 0.79,
+            "cpu2": 0.93,
+            "cpu3": 0.78,
+            "cpu4": 0.62,
+            "cpu5": 0.63,
+            "cpu6": 0.68,
+            "cpu7": 0.76
+          },
+          "working_cpus": 8,
+          "average_executing_cores": 2.660633484162896
+        },
+        "12": {
+          "wall_s": 1.21,
+          "accounted_elapsed_s": 1.18875,
+          "per_cpu_busy_s": {
+            "cpu0": 0.39,
+            "cpu1": 0.37,
+            "cpu2": 0.37,
+            "cpu3": 0.26,
+            "cpu4": 0.52,
+            "cpu5": 0.43,
+            "cpu6": 0.23,
+            "cpu7": 0.24
+          },
+          "working_cpus": 8,
+          "average_executing_cores": 2.322314049586777
+        },
+        "16": {
+          "wall_s": 1.0600000000000005,
+          "accounted_elapsed_s": 1.04125,
+          "per_cpu_busy_s": {
+            "cpu0": 0.29,
+            "cpu1": 0.31,
+            "cpu2": 0.27,
+            "cpu3": 0.39,
+            "cpu4": 0.22,
+            "cpu5": 0.34,
+            "cpu6": 0.27,
+            "cpu7": 0.26
+          },
+          "working_cpus": 8,
+          "average_executing_cores": 2.2169811320754707
+        }
+      },
+      "parallel_build_cpu": {
+        "wall_s": 6.26,
+        "accounted_elapsed_s": 6.22375,
+        "per_cpu_busy_s": {
+          "cpu0": 3.93,
+          "cpu1": 4.18,
+          "cpu2": 3.49,
+          "cpu3": 3.78,
+          "cpu4": 3.7,
+          "cpu5": 3.74,
+          "cpu6": 3.96,
+          "cpu7": 3.53
+        },
+        "working_cpus": 8,
+        "average_executing_cores": 4.84185303514377,
+        "intervals": [
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17375000000000002,
+            "per_cpu_busy_s": {
+              "cpu0": 0.11,
+              "cpu1": 0.12,
+              "cpu2": 0.12,
+              "cpu3": 0.12,
+              "cpu4": 0.12,
+              "cpu5": 0.12,
+              "cpu6": 0.13,
+              "cpu7": 0.13
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 5.582733812949639
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.16875,
+            "per_cpu_busy_s": {
+              "cpu0": 0.09,
+              "cpu1": 0.0,
+              "cpu2": 0.0,
+              "cpu3": 0.01,
+              "cpu4": 0.0,
+              "cpu5": 0.01,
+              "cpu6": 0.08,
+              "cpu7": 0.0
+            },
+            "working_cpus": 4,
+            "average_executing_cores": 1.1259259259259258
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.175,
+            "per_cpu_busy_s": {
+              "cpu0": 0.01,
+              "cpu1": 0.02,
+              "cpu2": 0.01,
+              "cpu3": 0.06,
+              "cpu4": 0.07,
+              "cpu5": 0.02,
+              "cpu6": 0.04,
+              "cpu7": 0.06
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 1.657142857142857
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.175,
+            "per_cpu_busy_s": {
+              "cpu0": 0.02,
+              "cpu1": 0.05,
+              "cpu2": 0.01,
+              "cpu3": 0.09,
+              "cpu4": 0.02,
+              "cpu5": 0.01,
+              "cpu6": 0.02,
+              "cpu7": 0.06
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 1.6000000000000003
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17125,
+            "per_cpu_busy_s": {
+              "cpu0": 0.08,
+              "cpu1": 0.14,
+              "cpu2": 0.09,
+              "cpu3": 0.01,
+              "cpu4": 0.01,
+              "cpu5": 0.1,
+              "cpu6": 0.08,
+              "cpu7": 0.12
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 3.678832116788321
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17375000000000002,
+            "per_cpu_busy_s": {
+              "cpu0": 0.18,
+              "cpu1": 0.16,
+              "cpu2": 0.06,
+              "cpu3": 0.11,
+              "cpu4": 0.06,
+              "cpu5": 0.11,
+              "cpu6": 0.12,
+              "cpu7": 0.03
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 4.776978417266187
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17125,
+            "per_cpu_busy_s": {
+              "cpu0": 0.04,
+              "cpu1": 0.16,
+              "cpu2": 0.12,
+              "cpu3": 0.06,
+              "cpu4": 0.05,
+              "cpu5": 0.04,
+              "cpu6": 0.17,
+              "cpu7": 0.17
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 4.72992700729927
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 5.015,
+            "per_cpu_busy_s": {
+              "cpu0": 3.4,
+              "cpu1": 3.53,
+              "cpu2": 3.08,
+              "cpu3": 3.32,
+              "cpu4": 3.37,
+              "cpu5": 3.33,
+              "cpu6": 3.32,
+              "cpu7": 2.96
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 5.246261216350947
+          }
+        ],
+        "handoffs": 0,
+        "command": "go build -a -p \"$(getconf _NPROCESSORS_ONLN)\" ./..."
+      }
+    },
+    {
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/followup-gin8/gin-gonic__gin-3741-direct/report.json",
+        "sha256": "e160ed5e5d247d20d4b66c872f2c78bb6bd058ac48ff335fbb03fc4211f7d4fa"
+      },
+      "verification": {
+        "result": "passed",
+        "mode": "direct",
+        "trace": "gin-gonic__gin-3741",
+        "report_sha256": "e160ed5e5d247d20d4b66c872f2c78bb6bd058ac48ff335fbb03fc4211f7d4fa",
+        "execution_inputs_sha256": "ec2c0025b46dea4b8d4597fee4c84cfc45cd592125ea6fa0ff587abb02484bd8",
+        "workload_inputs_sha256": "aeef0f662353049290dc8aeead9079b9c83fbb42a76605570f1eaeb6a3b8335b",
+        "commands": 27,
+        "returncodes": [
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          127,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "submission": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151",
+          "startup_warning_count": 1
+        },
+        "tests": [
+          {
+            "index": 4,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          },
+          {
+            "index": 12,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          },
+          {
+            "index": 16,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          }
+        ],
+        "guest_command_seconds": 5.630000000000002,
+        "block_read_ios": 12691,
+        "remote_nfs_reads": null,
+        "boot_id": "ed1d6f4c-ca18-4169-a1b5-a2d6807c56f4",
+        "identity_observations": 10,
+        "transitions": {
+          "promotion": 2,
+          "direct": 12,
+          "demotion": 2
+        },
+        "inflight_commands": 1,
+        "runtime_image_rehash": false,
+        "per_handoff_guest_probes": false,
+        "profiled_kernel_handoffs": 0,
+        "limitations": [
+          "Coherent nested lab; immutable fixture identity comes from build records, not runtime rehash",
+          "No per-handoff source fault probes; owner rejection tests run separately",
+          "Per-command NFS counter polling removed; NFS read count was not measured"
+        ]
+      },
+      "go_test_cpu": {
+        "4": {
+          "wall_s": 2.33,
+          "accounted_elapsed_s": 2.27,
+          "per_cpu_busy_s": {
+            "cpu0": 0.68,
+            "cpu1": 0.75,
+            "cpu2": 0.96,
+            "cpu3": 0.84,
+            "cpu4": 0.79,
+            "cpu5": 0.82,
+            "cpu6": 0.74,
+            "cpu7": 0.91
+          },
+          "working_cpus": 8,
+          "average_executing_cores": 2.7854077253218885
+        },
+        "12": {
+          "wall_s": 1.75,
+          "accounted_elapsed_s": 1.7149999999999999,
+          "per_cpu_busy_s": {
+            "cpu0": 0.53,
+            "cpu1": 0.39,
+            "cpu2": 0.69,
+            "cpu3": 0.4,
+            "cpu4": 0.5,
+            "cpu5": 0.33,
+            "cpu6": 0.49,
+            "cpu7": 0.64
+          },
+          "working_cpus": 8,
+          "average_executing_cores": 2.2685714285714287,
+          "intervals": [
+            {
+              "wall_s": null,
+              "accounted_elapsed_s": 0.01,
+              "per_cpu_busy_s": {
+                "cpu0": 0.0,
+                "cpu1": 0.0,
+                "cpu2": 0.01,
+                "cpu3": 0.0,
+                "cpu4": 0.0,
+                "cpu5": 0.0,
+                "cpu6": 0.0,
+                "cpu7": 0.0
+              },
+              "working_cpus": 1,
+              "average_executing_cores": 1.0
+            },
+            {
+              "wall_s": null,
+              "accounted_elapsed_s": 0.0275,
+              "per_cpu_busy_s": {
+                "cpu0": 0.0,
+                "cpu1": 0.0,
+                "cpu2": 0.02,
+                "cpu3": 0.0,
+                "cpu4": 0.0,
+                "cpu5": 0.0,
+                "cpu6": 0.0,
+                "cpu7": 0.0
+              },
+              "working_cpus": 1,
+              "average_executing_cores": 0.7272727272727273
+            },
+            {
+              "wall_s": null,
+              "accounted_elapsed_s": 0.025,
+              "per_cpu_busy_s": {
+                "cpu0": 0.0,
+                "cpu1": 0.01,
+                "cpu2": 0.03,
+                "cpu3": 0.02,
+                "cpu4": 0.01,
+                "cpu5": 0.01,
+                "cpu6": 0.01,
+                "cpu7": 0.01
+              },
+              "working_cpus": 7,
+              "average_executing_cores": 4.0
+            },
+            {
+              "wall_s": null,
+              "accounted_elapsed_s": 1.6524999999999999,
+              "per_cpu_busy_s": {
+                "cpu0": 0.53,
+                "cpu1": 0.38,
+                "cpu2": 0.63,
+                "cpu3": 0.38,
+                "cpu4": 0.49,
+                "cpu5": 0.32,
+                "cpu6": 0.48,
+                "cpu7": 0.63
+              },
+              "working_cpus": 8,
+              "average_executing_cores": 2.32375189107413
+            }
+          ]
+        },
+        "16": {
+          "wall_s": 1.129999999999999,
+          "accounted_elapsed_s": 1.0987500000000001,
+          "per_cpu_busy_s": {
+            "cpu0": 0.53,
+            "cpu1": 0.46,
+            "cpu2": 0.3,
+            "cpu3": 0.32,
+            "cpu4": 0.3,
+            "cpu5": 0.17,
+            "cpu6": 0.26,
+            "cpu7": 0.21
+          },
+          "working_cpus": 8,
+          "average_executing_cores": 2.256637168141595
+        }
+      },
+      "parallel_build_cpu": {
+        "wall_s": 7.0699999999999985,
+        "accounted_elapsed_s": 6.97125,
+        "per_cpu_busy_s": {
+          "cpu0": 4.53,
+          "cpu1": 4.28,
+          "cpu2": 4.0,
+          "cpu3": 4.05,
+          "cpu4": 4.28,
+          "cpu5": 4.14,
+          "cpu6": 4.17,
+          "cpu7": 4.42
+        },
+        "working_cpus": 8,
+        "average_executing_cores": 4.790664780763791,
+        "intervals": [
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.1625,
+            "per_cpu_busy_s": {
+              "cpu0": 0.08,
+              "cpu1": 0.09,
+              "cpu2": 0.09,
+              "cpu3": 0.07,
+              "cpu4": 0.1,
+              "cpu5": 0.08,
+              "cpu6": 0.12,
+              "cpu7": 0.08
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 4.369230769230769
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17250000000000001,
+            "per_cpu_busy_s": {
+              "cpu0": 0.1,
+              "cpu1": 0.1,
+              "cpu2": 0.09,
+              "cpu3": 0.1,
+              "cpu4": 0.16,
+              "cpu5": 0.12,
+              "cpu6": 0.1,
+              "cpu7": 0.1
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 5.0434782608695645
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.18,
+            "per_cpu_busy_s": {
+              "cpu0": 0.01,
+              "cpu1": 0.13,
+              "cpu2": 0.02,
+              "cpu3": 0.01,
+              "cpu4": 0.06,
+              "cpu5": 0.01,
+              "cpu6": 0.02,
+              "cpu7": 0.01
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 1.5000000000000002
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.18,
+            "per_cpu_busy_s": {
+              "cpu0": 0.07,
+              "cpu1": 0.02,
+              "cpu2": 0.02,
+              "cpu3": 0.01,
+              "cpu4": 0.01,
+              "cpu5": 0.01,
+              "cpu6": 0.07,
+              "cpu7": 0.07
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 1.5555555555555558
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17625,
+            "per_cpu_busy_s": {
+              "cpu0": 0.12,
+              "cpu1": 0.01,
+              "cpu2": 0.0,
+              "cpu3": 0.01,
+              "cpu4": 0.0,
+              "cpu5": 0.01,
+              "cpu6": 0.06,
+              "cpu7": 0.01
+            },
+            "working_cpus": 6,
+            "average_executing_cores": 1.24822695035461
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17500000000000002,
+            "per_cpu_busy_s": {
+              "cpu0": 0.02,
+              "cpu1": 0.02,
+              "cpu2": 0.07,
+              "cpu3": 0.0,
+              "cpu4": 0.07,
+              "cpu5": 0.05,
+              "cpu6": 0.14,
+              "cpu7": 0.07
+            },
+            "working_cpus": 7,
+            "average_executing_cores": 2.5142857142857142
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17125,
+            "per_cpu_busy_s": {
+              "cpu0": 0.11,
+              "cpu1": 0.15,
+              "cpu2": 0.03,
+              "cpu3": 0.09,
+              "cpu4": 0.1,
+              "cpu5": 0.11,
+              "cpu6": 0.06,
+              "cpu7": 0.12
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 4.4963503649635035
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 5.75375,
+            "per_cpu_busy_s": {
+              "cpu0": 4.02,
+              "cpu1": 3.76,
+              "cpu2": 3.68,
+              "cpu3": 3.76,
+              "cpu4": 3.78,
+              "cpu5": 3.75,
+              "cpu6": 3.6,
+              "cpu7": 3.96
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 5.267868781229632
+          }
+        ],
+        "handoffs": 6,
+        "command": "go build -a -p \"$(getconf _NPROCESSORS_ONLN)\" ./..."
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "vcpus": 2,
+      "matched": true,
+      "compared": [
+        "execution_inputs_sha256",
+        "workload_inputs_sha256",
+        "returncodes",
+        "tests",
+        "submission"
+      ]
+    },
+    {
+      "vcpus": 8,
+      "matched": true,
+      "compared": [
+        "execution_inputs_sha256",
+        "workload_inputs_sha256",
+        "returncodes",
+        "tests",
+        "submission"
+      ]
+    }
+  ],
+  "resident": [
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-resident-v1-busy/trial.json",
+        "sha256": "9510e75b45e3498960cb0b64b6c467c0b5184c2026cfcd0beb1ccab14a8b5be9"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T030913Z-vmll7l2a/resident-bench-1794798556382623523/report.json",
+        "sha256": "3069c9dc933befbc9a97515eb4e8848898cb4cb05a80f1558bf4178227e72a16"
+      },
+      "vcpus": 1,
+      "state": "busy",
+      "profile": false,
+      "resume_profile": false,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 3.3164825,
+            "p95": 4.177497,
+            "mean": 3.43617618,
+            "min": 2.04948,
+            "max": 22.230963
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.5877319999999999,
+            "p95": 0.749787,
+            "mean": 0.5871389,
+            "min": 0.345592,
+            "max": 0.792462
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.8754835000000001,
+            "p95": 0.968804,
+            "mean": 0.85770111,
+            "min": 0.612322,
+            "max": 1.037018
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.7283469999999999,
+            "p95": 2.008007,
+            "mean": 1.93294372,
+            "min": 1.402239,
+            "max": 20.718598
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 1.5554975,
+            "p95": 2.318917,
+            "mean": 1.50323246,
+            "min": 0.485946,
+            "max": 2.997929
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 3.4334565,
+            "p95": 4.074009,
+            "mean": 3.43455747,
+            "min": 2.234213,
+            "max": 4.978381
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.6807190000000001,
+            "p95": 0.7656040000000001,
+            "mean": 0.64825132,
+            "min": 0.24975999999999998,
+            "max": 0.806706
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.8904825000000001,
+            "p95": 1.017671,
+            "mean": 0.87940405,
+            "min": 0.658682,
+            "max": 1.068596
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.900396,
+            "p95": 2.053319,
+            "mean": 1.86869815,
+            "min": 1.509776,
+            "max": 2.094254
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 1.541312,
+            "p95": 2.262103,
+            "mean": 1.56585932,
+            "min": 0.534273,
+            "max": 2.939875
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4034830,
+          4034842
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": {
+        "0": {
+          "sequence_increase": 107215,
+          "timer_increase": 80811,
+          "ipi_increase": 0,
+          "ping_increase": 45859722
+        }
+      }
+    },
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-resident-v1-idle/trial.json",
+        "sha256": "430d2f899d4eb4c27a1172f39083daf38285f6e72a3b68ca0738f5b9a8c58085"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T030848Z-89doqkb9/resident-bench-1794798530630923756/report.json",
+        "sha256": "61f3b967c159b4ba9ac26a23a90eb9e8d5e2f606603e9ab96730aea864abba3c"
+      },
+      "vcpus": 1,
+      "state": "idle",
+      "profile": false,
+      "resume_profile": false,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.24696,
+            "p95": 2.660382,
+            "mean": 2.52944979,
+            "min": 1.755894,
+            "max": 16.339233
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.4988315,
+            "p95": 0.796914,
+            "mean": 0.52272674,
+            "min": 0.27581900000000004,
+            "max": 0.9901530000000001
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.00174,
+            "p95": 1.141193,
+            "mean": 0.99419219,
+            "min": 0.694663,
+            "max": 1.212646
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 2.0066895000000002,
+            "p95": 2.353567,
+            "mean": 2.28634162,
+            "min": 1.540743,
+            "max": 16.338893
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.1654585,
+            "p95": 0.655615,
+            "mean": 0.24310817,
+            "min": 0.000101,
+            "max": 0.92213
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.1736705,
+            "p95": 2.516555,
+            "mean": 2.17260438,
+            "min": 1.765353,
+            "max": 2.615945
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.4910875,
+            "p95": 0.706697,
+            "mean": 0.48551354,
+            "min": 0.242667,
+            "max": 0.8800399999999999
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.9254985,
+            "p95": 1.047232,
+            "mean": 0.9266883,
+            "min": 0.724023,
+            "max": 1.1092899999999999
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.89889,
+            "p95": 2.165049,
+            "mean": 1.90574309,
+            "min": 1.52662,
+            "max": 2.339874
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.2175445,
+            "p95": 0.666514,
+            "mean": 0.26686129,
+            "min": 0.000103,
+            "max": 0.948251
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4034691,
+          4034705
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": null
+    },
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-resident-v2-busy/trial.json",
+        "sha256": "e936153b23fea372019259879d62cdcc098a555438f28ebf58f781ba429ad89c"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T031045Z-002g02du/resident-bench-1794798647585796118/report.json",
+        "sha256": "afe73b44973399dc01055009ce2b068a49cfe2bb72c9e209b411bc69256754e9"
+      },
+      "vcpus": 2,
+      "state": "busy",
+      "profile": false,
+      "resume_profile": false,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.3608715,
+            "p95": 3.596932,
+            "mean": 2.85921413,
+            "min": 1.925225,
+            "max": 33.913378
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.274095,
+            "p95": 0.798041,
+            "mean": 0.40567984,
+            "min": 0.236057,
+            "max": 1.005409
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.9613025,
+            "p95": 1.049451,
+            "mean": 0.9470706799999999,
+            "min": 0.7824840000000001,
+            "max": 1.125138
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.6834220000000002,
+            "p95": 2.24823,
+            "mean": 2.08478949,
+            "min": 1.427463,
+            "max": 33.469874
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.6050815,
+            "p95": 1.903095,
+            "mean": 0.77442464,
+            "min": 0.330961,
+            "max": 2.420131
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.4902645,
+            "p95": 3.690772,
+            "mean": 2.61737085,
+            "min": 1.810174,
+            "max": 4.621412
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.48253,
+            "p95": 0.681622,
+            "mean": 0.4810918,
+            "min": 0.240841,
+            "max": 0.832876
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.905373,
+            "p95": 1.031585,
+            "mean": 0.91097156,
+            "min": 0.602407,
+            "max": 1.085801
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.8423444999999998,
+            "p95": 2.152869,
+            "mean": 1.85842914,
+            "min": 1.147092,
+            "max": 2.205587
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.561093,
+            "p95": 1.93502,
+            "mean": 0.75894171,
+            "min": 0.335224,
+            "max": 2.466544
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4035533,
+          4035545
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": {
+        "0": {
+          "sequence_increase": 153028,
+          "timer_increase": 81757,
+          "ipi_increase": 63079,
+          "ping_increase": 86909
+        },
+        "1": {
+          "sequence_increase": 199214,
+          "timer_increase": 10753,
+          "ipi_increase": 81087,
+          "ping_increase": 86910
+        }
+      }
+    },
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-resident-v2-idle/trial.json",
+        "sha256": "a496250d017073bbb110c75bcbe98127d48687ebe7ef07f0588cf7e77129b613"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T030937Z-p7d_ks4x/resident-bench-1794798580244507820/report.json",
+        "sha256": "1b09ed5a86b36abbe9d7b52828a1c690599936ff2c1f261b0f619c3e3fa9de87"
+      },
+      "vcpus": 2,
+      "state": "idle",
+      "profile": false,
+      "resume_profile": false,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.195762,
+            "p95": 2.697696,
+            "mean": 2.33670944,
+            "min": 1.74892,
+            "max": 15.80108
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.49678849999999997,
+            "p95": 0.79989,
+            "mean": 0.52943084,
+            "min": 0.260284,
+            "max": 1.052239
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.0169899999999998,
+            "p95": 1.163532,
+            "mean": 1.01775681,
+            "min": 0.772208,
+            "max": 1.280391
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.9097615000000001,
+            "p95": 2.280924,
+            "mean": 2.05967751,
+            "min": 1.520888,
+            "max": 15.352701
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.216076,
+            "p95": 0.67237,
+            "mean": 0.27703193,
+            "min": 9.9e-05,
+            "max": 0.878751
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.191853,
+            "p95": 2.571552,
+            "mean": 2.20983762,
+            "min": 1.758914,
+            "max": 2.798034
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.547147,
+            "p95": 0.787574,
+            "mean": 0.56124349,
+            "min": 0.263886,
+            "max": 0.971619
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.9818910000000001,
+            "p95": 1.167849,
+            "mean": 0.99656941,
+            "min": 0.7769149999999999,
+            "max": 1.23505
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.9056755,
+            "p95": 2.292576,
+            "mean": 1.93966089,
+            "min": 1.525479,
+            "max": 2.455881
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.2154145,
+            "p95": 0.806626,
+            "mean": 0.27017673,
+            "min": 0.000108,
+            "max": 0.984899
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4034928,
+          4034940
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": null
+    },
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-resident-v4-busy/trial.json",
+        "sha256": "51cc2c375c97d440477de834bb7d67bb3f83593c02abd602db5abd944dbeac1d"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T031248Z-rp95k9tl/resident-bench-1794798771242773373/report.json",
+        "sha256": "b54a8e70e94fe732fe80a7b152375e51399444d3cb8139b9ecad5c3fbd0fff0a"
+      },
+      "vcpus": 4,
+      "state": "busy",
+      "profile": false,
+      "resume_profile": false,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.5466225,
+            "p95": 3.298446,
+            "mean": 2.80028305,
+            "min": 2.120207,
+            "max": 18.664069
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.490257,
+            "p95": 0.9679829999999999,
+            "mean": 0.52260066,
+            "min": 0.26375400000000004,
+            "max": 1.022011
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.931087,
+            "p95": 1.10497,
+            "mean": 0.95139546,
+            "min": 0.7385900000000001,
+            "max": 1.198453
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.884948,
+            "p95": 2.400707,
+            "mean": 2.08257813,
+            "min": 1.541604,
+            "max": 17.95406
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.6512065,
+            "p95": 1.173926,
+            "mean": 0.71770492,
+            "min": 0.329541,
+            "max": 4.15658
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.5049194999999997,
+            "p95": 4.394768,
+            "mean": 2.72824685,
+            "min": 2.112376,
+            "max": 5.746688
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.4902325,
+            "p95": 0.985568,
+            "mean": 0.52623792,
+            "min": 0.251,
+            "max": 1.166943
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.9398500000000001,
+            "p95": 1.0786099999999998,
+            "mean": 0.94452283,
+            "min": 0.753456,
+            "max": 1.163463
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.8330095000000002,
+            "p95": 2.409016,
+            "mean": 1.88590311,
+            "min": 1.418865,
+            "max": 2.60484
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.634871,
+            "p95": 2.779999,
+            "mean": 0.84234374,
+            "min": 0.336374,
+            "max": 3.559945
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4036157,
+          4036171
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": {
+        "0": {
+          "sequence_increase": 181741,
+          "timer_increase": 82626,
+          "ipi_increase": 34399,
+          "ping_increase": 39613
+        },
+        "1": {
+          "sequence_increase": 225971,
+          "timer_increase": 10731,
+          "ipi_increase": 38735,
+          "ping_increase": 39614
+        },
+        "2": {
+          "sequence_increase": 225474,
+          "timer_increase": 10731,
+          "ipi_increase": 38734,
+          "ping_increase": 39614
+        },
+        "3": {
+          "sequence_increase": 227085,
+          "timer_increase": 10732,
+          "ipi_increase": 38773,
+          "ping_increase": 39613
+        }
+      }
+    },
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-resident-v4-idle/trial.json",
+        "sha256": "bed22b6b184826aaafb134a67ee67d732d1e2f874774537c5845a3dabb489766"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T031139Z-18h9je80/resident-bench-1794798702032544301/report.json",
+        "sha256": "a8695bcbd13efd7c82c2247c6cb03e31a7e2d5cde2ad599708e4349c84eacb85"
+      },
+      "vcpus": 4,
+      "state": "idle",
+      "profile": false,
+      "resume_profile": false,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.8232255000000004,
+            "p95": 3.137374,
+            "mean": 2.8163577,
+            "min": 2.326822,
+            "max": 3.200819
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 1.0880295,
+            "p95": 1.3398610000000002,
+            "mean": 1.08280803,
+            "min": 0.684907,
+            "max": 1.532219
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.199097,
+            "p95": 1.304813,
+            "mean": 1.18364324,
+            "min": 0.9327799999999999,
+            "max": 1.502808
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 2.7396890000000003,
+            "p95": 3.047024,
+            "mean": 2.72819775,
+            "min": 2.126829,
+            "max": 3.153991
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.055756,
+            "p95": 0.337392,
+            "mean": 0.08815995,
+            "min": 0.000285,
+            "max": 0.561971
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.770354,
+            "p95": 3.09848,
+            "mean": 2.78759209,
+            "min": 2.315993,
+            "max": 3.200376
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 1.0026175,
+            "p95": 1.380214,
+            "mean": 1.0346465,
+            "min": 0.7450869999999999,
+            "max": 1.494183
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.1438695,
+            "p95": 1.269425,
+            "mean": 1.14355601,
+            "min": 0.954303,
+            "max": 1.315789
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 2.6881765,
+            "p95": 3.098179,
+            "mean": 2.70548,
+            "min": 2.223031,
+            "max": 3.200064
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.0003295,
+            "p95": 0.449668,
+            "mean": 0.08211209,
+            "min": 0.000116,
+            "max": 0.559994
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4035793,
+          4035814
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": null
+    },
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-resident-v8-busy/trial.json",
+        "sha256": "eadc1fcca28b80d243a857a48ef1197b9d266aed37cf5e6d3dc6c4bc897f984b"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T031548Z-nsqa1bkz/resident-bench-1794798951772353831/report.json",
+        "sha256": "0ab29eac6b5e6091fcf22de24d0ec4aafb82a6cbabb0673b41aadbaf680f2bf8"
+      },
+      "vcpus": 8,
+      "state": "busy",
+      "profile": false,
+      "resume_profile": false,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 3.2705965,
+            "p95": 4.426421,
+            "mean": 3.48441424,
+            "min": 2.658394,
+            "max": 7.588017
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.652225,
+            "p95": 1.603307,
+            "mean": 0.81270138,
+            "min": 0.356841,
+            "max": 1.900538
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.1722194999999997,
+            "p95": 1.2730080000000001,
+            "mean": 1.15980953,
+            "min": 0.958877,
+            "max": 1.447537
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 2.4167579999999997,
+            "p95": 3.337923,
+            "mean": 2.55313181,
+            "min": 1.874545,
+            "max": 3.758333
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.773645,
+            "p95": 1.618925,
+            "mean": 0.93128243,
+            "min": 0.447529,
+            "max": 5.533385
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 3.2728705,
+            "p95": 5.164899,
+            "mean": 4.27966337,
+            "min": 2.69178,
+            "max": 42.714227
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.6053655,
+            "p95": 1.4778930000000001,
+            "mean": 0.72340047,
+            "min": 0.344758,
+            "max": 1.790954
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.1117685000000002,
+            "p95": 1.25638,
+            "mean": 1.11742232,
+            "min": 0.933606,
+            "max": 1.404898
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 2.2496134999999997,
+            "p95": 3.374084,
+            "mean": 3.18152114,
+            "min": 1.873397,
+            "max": 42.71398
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.980107,
+            "p95": 2.800276,
+            "mean": 1.09814223,
+            "min": 0.000247,
+            "max": 3.826028
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4037052,
+          4037071
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": {
+        "0": {
+          "sequence_increase": 192052,
+          "timer_increase": 84990,
+          "ipi_increase": 15745,
+          "ping_increase": 18845
+        },
+        "1": {
+          "sequence_increase": 240325,
+          "timer_increase": 10773,
+          "ipi_increase": 18556,
+          "ping_increase": 18845
+        },
+        "2": {
+          "sequence_increase": 238311,
+          "timer_increase": 10774,
+          "ipi_increase": 18560,
+          "ping_increase": 18845
+        },
+        "3": {
+          "sequence_increase": 240428,
+          "timer_increase": 10774,
+          "ipi_increase": 18526,
+          "ping_increase": 18845
+        },
+        "4": {
+          "sequence_increase": 237442,
+          "timer_increase": 10775,
+          "ipi_increase": 18542,
+          "ping_increase": 18845
+        },
+        "5": {
+          "sequence_increase": 234102,
+          "timer_increase": 10777,
+          "ipi_increase": 18550,
+          "ping_increase": 18845
+        },
+        "6": {
+          "sequence_increase": 238180,
+          "timer_increase": 10776,
+          "ipi_increase": 18542,
+          "ping_increase": 18846
+        },
+        "7": {
+          "sequence_increase": 240898,
+          "timer_increase": 10778,
+          "ipi_increase": 18552,
+          "ping_increase": 18846
+        }
+      }
+    },
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-resident-v8-idle/trial.json",
+        "sha256": "b91b2d3c2f3fc8d3774553900a8c77b569530eaab68cba8bde62857def2f2624"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T031414Z-quw2697s/resident-bench-1794798857307953546/report.json",
+        "sha256": "d83fe69441bc5bca7d7aa3d00f987af29dd4fa03da394d4928c783674a13e134"
+      },
+      "vcpus": 8,
+      "state": "idle",
+      "profile": false,
+      "resume_profile": false,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 3.6208739999999997,
+            "p95": 3.931442,
+            "mean": 3.61400861,
+            "min": 2.9278,
+            "max": 4.156398
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 1.8644195,
+            "p95": 2.106177,
+            "mean": 1.83080034,
+            "min": 1.159097,
+            "max": 2.2950619999999997
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.2858550000000002,
+            "p95": 1.411436,
+            "mean": 1.27927207,
+            "min": 1.004456,
+            "max": 1.5442850000000001
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 3.5895935,
+            "p95": 3.927322,
+            "mean": 3.57633824,
+            "min": 2.927415,
+            "max": 4.156042
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.00036,
+            "p95": 0.222624,
+            "mean": 0.03767037,
+            "min": 0.000306,
+            "max": 0.338133
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 3.5638110000000003,
+            "p95": 3.869642,
+            "mean": 3.56029756,
+            "min": 2.977187,
+            "max": 4.178443
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 1.7742404999999999,
+            "p95": 2.061056,
+            "mean": 1.7702200399999999,
+            "min": 1.2615560000000001,
+            "max": 2.234787
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.2745715,
+            "p95": 1.3972470000000001,
+            "mean": 1.27716349,
+            "min": 1.110554,
+            "max": 1.7056410000000002
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 3.515785,
+            "p95": 3.829422,
+            "mean": 3.51501375,
+            "min": 2.976897,
+            "max": 4.178146
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.0003095,
+            "p95": 0.221873,
+            "mean": 0.04528381,
+            "min": 0.000107,
+            "max": 0.337328
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4036582,
+          4036600
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": null
+    },
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-profile2-v1-busy/trial.json",
+        "sha256": "0af9a5d400e6935ef3004d033735648a75de5e30078c4aff0b1276fd0021f222"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T032330Z-yu40c53o/resident-bench-1794799413174415388/report.json",
+        "sha256": "0c85c423a47f440bea38b41c9450c4c8379a34cde17dbd35e111cac965882156"
+      },
+      "vcpus": 1,
+      "state": "busy",
+      "profile": true,
+      "resume_profile": true,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 3.5951735,
+            "p95": 4.212566,
+            "mean": 3.78711731,
+            "min": 2.362222,
+            "max": 29.143106
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.710384,
+            "p95": 0.7886040000000001,
+            "mean": 0.64674417,
+            "min": 0.276942,
+            "max": 0.86021
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.9694945,
+            "p95": 1.031717,
+            "mean": 0.95170892,
+            "min": 0.612545,
+            "max": 1.1111289999999998
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 2.0652195,
+            "p95": 2.281486,
+            "mean": 2.30051747,
+            "min": 1.328113,
+            "max": 27.2488
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 1.5498655000000001,
+            "p95": 2.165826,
+            "mean": 1.48659984,
+            "min": 0.431369,
+            "max": 2.805709
+          },
+          "kernel_detach_ms": {
+            "n": 100,
+            "p50": 0.109675,
+            "p95": 0.151974,
+            "mean": 0.08950554,
+            "min": 0.015604,
+            "max": 0.232153
+          },
+          "kernel_attach_ms": {
+            "n": 100,
+            "p50": 0.112742,
+            "p95": 0.136445,
+            "mean": 0.11692512,
+            "min": 0.106003,
+            "max": 0.159923
+          },
+          "kernel_handoff_ms": {
+            "n": 100,
+            "p50": 0.21963149999999998,
+            "p95": 0.27391,
+            "mean": 0.20643066,
+            "min": 0.12586,
+            "max": 0.35309
+          },
+          "detach_0_ms": {
+            "n": 100,
+            "p50": 0.10353,
+            "p95": 0.116513,
+            "mean": 0.07605032,
+            "min": 0.009968,
+            "max": 0.145839
+          },
+          "detach_1_ms": {
+            "n": 100,
+            "p50": 0.000291,
+            "p95": 0.00033,
+            "mean": 0.00029429,
+            "min": 0.000195,
+            "max": 0.000396
+          },
+          "detach_2_ms": {
+            "n": 100,
+            "p50": 0.002068,
+            "p95": 0.015013,
+            "mean": 0.00928631,
+            "min": 0.001478,
+            "max": 0.117884
+          },
+          "detach_3_ms": {
+            "n": 100,
+            "p50": 0.00015250000000000002,
+            "p95": 0.000177,
+            "mean": 0.00015662,
+            "min": 0.00012,
+            "max": 0.000209
+          },
+          "detach_4_ms": {
+            "n": 100,
+            "p50": 0.0014025,
+            "p95": 0.001686,
+            "mean": 0.00146958,
+            "min": 0.001018,
+            "max": 0.007579
+          },
+          "detach_5_ms": {
+            "n": 100,
+            "p50": 0.002112,
+            "p95": 0.002568,
+            "mean": 0.00215289,
+            "min": 0.001611,
+            "max": 0.003018
+          },
+          "detach_6_ms": {
+            "n": 100,
+            "p50": 8.3e-05,
+            "p95": 0.000124,
+            "mean": 9.553e-05,
+            "min": 7.7e-05,
+            "max": 0.00017
+          },
+          "detach_7_ms": {
+            "n": 100,
+            "p50": 0.0,
+            "p95": 0.0,
+            "mean": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "attach_0_ms": {
+            "n": 100,
+            "p50": 0.0030865,
+            "p95": 0.003227,
+            "mean": 0.00307313,
+            "min": 0.002789,
+            "max": 0.003507
+          },
+          "attach_1_ms": {
+            "n": 100,
+            "p50": 0.000109,
+            "p95": 0.000119,
+            "mean": 8.446e-05,
+            "min": 3.6e-05,
+            "max": 0.000148
+          },
+          "attach_2_ms": {
+            "n": 100,
+            "p50": 0.001926,
+            "p95": 0.002049,
+            "mean": 0.0019344499999999999,
+            "min": 0.001531,
+            "max": 0.002748
+          },
+          "attach_3_ms": {
+            "n": 100,
+            "p50": 0.004393,
+            "p95": 0.004614,
+            "mean": 0.00448087,
+            "min": 0.004177,
+            "max": 0.010419
+          },
+          "attach_4_ms": {
+            "n": 100,
+            "p50": 0.000306,
+            "p95": 0.00032,
+            "mean": 0.00041279,
+            "min": 0.000262,
+            "max": 0.010718
+          },
+          "attach_5_ms": {
+            "n": 100,
+            "p50": 0.1025405,
+            "p95": 0.124764,
+            "mean": 0.10666607,
+            "min": 0.096112,
+            "max": 0.147131
+          },
+          "attach_6_ms": {
+            "n": 100,
+            "p50": 0.000156,
+            "p95": 0.000196,
+            "mean": 0.00016286,
+            "min": 0.000119,
+            "max": 0.000284
+          },
+          "attach_7_ms": {
+            "n": 100,
+            "p50": 0.000108,
+            "p95": 0.000116,
+            "mean": 0.00011049,
+            "min": 9.9e-05,
+            "max": 0.000196
+          },
+          "first_run_to_entry_ms": {
+            "n": 100,
+            "p50": 0.025863,
+            "p95": 0.029272,
+            "mean": 0.02608791,
+            "min": 0.023962,
+            "max": 0.031692
+          },
+          "entry_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 1.6981888,
+            "p95": 2.3875816,
+            "mean": 1.6643122,
+            "min": 0.6407104,
+            "max": 2.8749352
+          },
+          "entry_to_epoch_detection_ms": {
+            "n": 100,
+            "p50": 0.62652,
+            "p95": 1.7750504,
+            "mean": 0.755887408,
+            "min": 0.1715984,
+            "max": 2.5859
+          },
+          "guest_wait_writers_ms": {
+            "n": 100,
+            "p50": 0.4940408,
+            "p95": 1.72804,
+            "mean": 0.632852184,
+            "min": 2e-05,
+            "max": 1.9664512
+          },
+          "guest_interrupt_accounting_ms": {
+            "n": 100,
+            "p50": 0.27320120000000003,
+            "p95": 0.30132,
+            "mean": 0.275572608,
+            "min": 0.2420704,
+            "max": 0.310768
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 3.4939229999999997,
+            "p95": 4.173684,
+            "mean": 3.41372883,
+            "min": 2.35016,
+            "max": 4.566111
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.748335,
+            "p95": 0.8101240000000001,
+            "mean": 0.71574783,
+            "min": 0.29980599999999996,
+            "max": 0.8680739999999999
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.8383084999999999,
+            "p95": 0.99754,
+            "mean": 0.85678842,
+            "min": 0.6883279999999999,
+            "max": 1.168006
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 2.0167145,
+            "p95": 2.18354,
+            "mean": 2.00575959,
+            "min": 1.558274,
+            "max": 2.424665
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 1.457746,
+            "p95": 2.129958,
+            "mean": 1.40796924,
+            "min": 0.410803,
+            "max": 2.720253
+          },
+          "kernel_detach_ms": {
+            "n": 100,
+            "p50": 0.11985599999999999,
+            "p95": 0.154149,
+            "mean": 0.1132792,
+            "min": 0.021926,
+            "max": 0.224992
+          },
+          "kernel_attach_ms": {
+            "n": 100,
+            "p50": 0.11392250000000001,
+            "p95": 0.13522,
+            "mean": 0.11829351,
+            "min": 0.10851,
+            "max": 0.171862
+          },
+          "kernel_handoff_ms": {
+            "n": 100,
+            "p50": 0.23327900000000001,
+            "p95": 0.27893,
+            "mean": 0.23157271000000001,
+            "min": 0.135775,
+            "max": 0.373364
+          },
+          "detach_0_ms": {
+            "n": 100,
+            "p50": 0.100826,
+            "p95": 0.134758,
+            "mean": 0.09252201,
+            "min": 0.010234,
+            "max": 0.142616
+          },
+          "detach_1_ms": {
+            "n": 100,
+            "p50": 0.000287,
+            "p95": 0.000313,
+            "mean": 0.00028611,
+            "min": 0.000207,
+            "max": 0.000327
+          },
+          "detach_2_ms": {
+            "n": 100,
+            "p50": 0.0143895,
+            "p95": 0.015097,
+            "mean": 0.01584288,
+            "min": 0.001981,
+            "max": 0.157884
+          },
+          "detach_3_ms": {
+            "n": 100,
+            "p50": 0.000152,
+            "p95": 0.000184,
+            "mean": 0.00015717,
+            "min": 0.000138,
+            "max": 0.000413
+          },
+          "detach_4_ms": {
+            "n": 100,
+            "p50": 0.0019385000000000001,
+            "p95": 0.00207,
+            "mean": 0.00191012,
+            "min": 0.001316,
+            "max": 0.002213
+          },
+          "detach_5_ms": {
+            "n": 100,
+            "p50": 0.002499,
+            "p95": 0.00274,
+            "mean": 0.0024728,
+            "min": 0.002016,
+            "max": 0.002892
+          },
+          "detach_6_ms": {
+            "n": 100,
+            "p50": 8e-05,
+            "p95": 0.000164,
+            "mean": 8.811e-05,
+            "min": 7.6e-05,
+            "max": 0.000166
+          },
+          "detach_7_ms": {
+            "n": 100,
+            "p50": 0.0,
+            "p95": 0.0,
+            "mean": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "attach_0_ms": {
+            "n": 100,
+            "p50": 0.00325,
+            "p95": 0.0034,
+            "mean": 0.00332411,
+            "min": 0.002974,
+            "max": 0.012959
+          },
+          "attach_1_ms": {
+            "n": 100,
+            "p50": 0.0001115,
+            "p95": 0.000123,
+            "mean": 9.292e-05,
+            "min": 3.7e-05,
+            "max": 0.000132
+          },
+          "attach_2_ms": {
+            "n": 100,
+            "p50": 0.0017165000000000001,
+            "p95": 0.002097,
+            "mean": 0.00191461,
+            "min": 0.001602,
+            "max": 0.018112
+          },
+          "attach_3_ms": {
+            "n": 100,
+            "p50": 0.0046115,
+            "p95": 0.004974,
+            "mean": 0.00466349,
+            "min": 0.004244,
+            "max": 0.00749
+          },
+          "attach_4_ms": {
+            "n": 100,
+            "p50": 0.0003035,
+            "p95": 0.000335,
+            "mean": 0.00030799,
+            "min": 0.000268,
+            "max": 0.000534
+          },
+          "attach_5_ms": {
+            "n": 100,
+            "p50": 0.10361300000000001,
+            "p95": 0.124866,
+            "mean": 0.10751198000000001,
+            "min": 0.098333,
+            "max": 0.15764
+          },
+          "attach_6_ms": {
+            "n": 100,
+            "p50": 0.00015,
+            "p95": 0.000173,
+            "mean": 0.00015274,
+            "min": 0.000123,
+            "max": 0.000297
+          },
+          "attach_7_ms": {
+            "n": 100,
+            "p50": 0.0001295,
+            "p95": 0.000211,
+            "mean": 0.00032567,
+            "min": 9.8e-05,
+            "max": 0.018577
+          },
+          "first_run_to_entry_ms": {
+            "n": 100,
+            "p50": 0.02718,
+            "p95": 0.030951,
+            "mean": 0.02948234,
+            "min": 0.02299,
+            "max": 0.149658
+          },
+          "entry_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 1.5870576,
+            "p95": 2.2708632,
+            "mean": 1.556543504,
+            "min": 0.6619808,
+            "max": 2.8007672
+          },
+          "entry_to_epoch_detection_ms": {
+            "n": 100,
+            "p50": 0.3981456,
+            "p95": 1.7764896,
+            "mean": 0.7050755439999999,
+            "min": 0.1766776,
+            "max": 2.5343784
+          },
+          "guest_wait_writers_ms": {
+            "n": 100,
+            "p50": 0.36744200000000005,
+            "p95": 1.4714944,
+            "mean": 0.579503704,
+            "min": 2.08e-05,
+            "max": 1.7307472
+          },
+          "guest_interrupt_accounting_ms": {
+            "n": 100,
+            "p50": 0.2672,
+            "p95": 0.300348,
+            "mean": 0.271964256,
+            "min": 0.245416,
+            "max": 0.3293472
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4039399,
+          4039411
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": {
+        "0": {
+          "sequence_increase": 110247,
+          "timer_increase": 82985,
+          "ipi_increase": 0,
+          "ping_increase": 46987283
+        }
+      }
+    },
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-profile2-v1-idle/trial.json",
+        "sha256": "ae6ca1f78eef7a06a955da475c23965a7bf36573ec83b87cf0cded2ba0e77fd3"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T032151Z-d0ss86t9/resident-bench-1794799314066501703/report.json",
+        "sha256": "fbe8e594606de91647dd375e1278c28d6c3f8eef7b86b8f2ab89cdd1117d987f"
+      },
+      "vcpus": 1,
+      "state": "idle",
+      "profile": true,
+      "resume_profile": true,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.3236559999999997,
+            "p95": 2.728829,
+            "mean": 2.35124655,
+            "min": 1.992446,
+            "max": 2.863063
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.6153465,
+            "p95": 0.893983,
+            "mean": 0.63339415,
+            "min": 0.334881,
+            "max": 1.103783
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.0730285,
+            "p95": 1.173279,
+            "mean": 1.06924222,
+            "min": 0.669913,
+            "max": 1.303458
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 2.1359485,
+            "p95": 2.524627,
+            "mean": 2.14249892,
+            "min": 1.456416,
+            "max": 2.842594
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.18180849999999998,
+            "p95": 0.631567,
+            "mean": 0.20874763,
+            "min": 0.000101,
+            "max": 0.840915
+          },
+          "kernel_detach_ms": {
+            "n": 100,
+            "p50": 0.038638,
+            "p95": 0.234466,
+            "mean": 0.07495204,
+            "min": 0.021212,
+            "max": 0.295512
+          },
+          "kernel_attach_ms": {
+            "n": 100,
+            "p50": 0.231348,
+            "p95": 0.250857,
+            "mean": 0.23268311,
+            "min": 0.214906,
+            "max": 0.265244
+          },
+          "kernel_handoff_ms": {
+            "n": 100,
+            "p50": 0.27273800000000004,
+            "p95": 0.474675,
+            "mean": 0.30763515,
+            "min": 0.243162,
+            "max": 0.527712
+          },
+          "detach_0_ms": {
+            "n": 100,
+            "p50": 0.019958,
+            "p95": 0.122435,
+            "mean": 0.03537197,
+            "min": 0.009884,
+            "max": 0.173305
+          },
+          "detach_1_ms": {
+            "n": 100,
+            "p50": 0.0002905,
+            "p95": 0.000335,
+            "mean": 0.00027996,
+            "min": 0.000209,
+            "max": 0.000389
+          },
+          "detach_2_ms": {
+            "n": 100,
+            "p50": 0.0139235,
+            "p95": 0.159375,
+            "mean": 0.03462589,
+            "min": 0.001875,
+            "max": 0.229389
+          },
+          "detach_3_ms": {
+            "n": 100,
+            "p50": 0.00015,
+            "p95": 0.000162,
+            "mean": 0.00015912,
+            "min": 0.000116,
+            "max": 0.001041
+          },
+          "detach_4_ms": {
+            "n": 100,
+            "p50": 0.001575,
+            "p95": 0.002023,
+            "mean": 0.00171126,
+            "min": 0.001088,
+            "max": 0.008959
+          },
+          "detach_5_ms": {
+            "n": 100,
+            "p50": 0.0024270000000000003,
+            "p95": 0.002834,
+            "mean": 0.00271091,
+            "min": 0.001659,
+            "max": 0.011733
+          },
+          "detach_6_ms": {
+            "n": 100,
+            "p50": 7.8e-05,
+            "p95": 0.000157,
+            "mean": 9.292999999999999e-05,
+            "min": 7.3e-05,
+            "max": 0.000161
+          },
+          "detach_7_ms": {
+            "n": 100,
+            "p50": 0.0,
+            "p95": 0.0,
+            "mean": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "attach_0_ms": {
+            "n": 100,
+            "p50": 0.0031495,
+            "p95": 0.003429,
+            "mean": 0.00325228,
+            "min": 0.002815,
+            "max": 0.014221
+          },
+          "attach_1_ms": {
+            "n": 100,
+            "p50": 5.1e-05,
+            "p95": 0.000116,
+            "mean": 6.964e-05,
+            "min": 3.6e-05,
+            "max": 0.000121
+          },
+          "attach_2_ms": {
+            "n": 100,
+            "p50": 0.0022775,
+            "p95": 0.002613,
+            "mean": 0.00236446,
+            "min": 0.001731,
+            "max": 0.012521
+          },
+          "attach_3_ms": {
+            "n": 100,
+            "p50": 0.0047795,
+            "p95": 0.005255,
+            "mean": 0.00496566,
+            "min": 0.004284,
+            "max": 0.014759
+          },
+          "attach_4_ms": {
+            "n": 100,
+            "p50": 0.000303,
+            "p95": 0.000328,
+            "mean": 0.00030417,
+            "min": 0.000261,
+            "max": 0.000346
+          },
+          "attach_5_ms": {
+            "n": 100,
+            "p50": 0.22032200000000002,
+            "p95": 0.239465,
+            "mean": 0.22145987,
+            "min": 0.204408,
+            "max": 0.254306
+          },
+          "attach_6_ms": {
+            "n": 100,
+            "p50": 0.000152,
+            "p95": 0.000177,
+            "mean": 0.00015482,
+            "min": 0.000117,
+            "max": 0.000284
+          },
+          "attach_7_ms": {
+            "n": 100,
+            "p50": 0.000113,
+            "p95": 0.000128,
+            "mean": 0.00011221,
+            "min": 8e-05,
+            "max": 0.000185
+          },
+          "first_run_to_entry_ms": {
+            "n": 100,
+            "p50": 0.0265775,
+            "p95": 0.519983,
+            "mean": 0.1284046,
+            "min": 0.02238,
+            "max": 0.664359
+          },
+          "entry_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.2914728,
+            "p95": 0.3456792,
+            "mean": 0.299539096,
+            "min": 0.2623584,
+            "max": 0.6757968
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.3176895,
+            "p95": 2.622158,
+            "mean": 2.34104605,
+            "min": 1.89905,
+            "max": 2.751669
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.5670094999999999,
+            "p95": 0.8452329999999999,
+            "mean": 0.60429818,
+            "min": 0.33925599999999995,
+            "max": 1.0349760000000001
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.0696569999999999,
+            "p95": 1.16702,
+            "mean": 1.06149088,
+            "min": 0.795126,
+            "max": 1.2131690000000002
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 2.1184325,
+            "p95": 2.416352,
+            "mean": 2.13536075,
+            "min": 1.532732,
+            "max": 2.587779
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.11564050000000001,
+            "p95": 0.560972,
+            "mean": 0.2056853,
+            "min": 9.6e-05,
+            "max": 0.797131
+          },
+          "kernel_detach_ms": {
+            "n": 100,
+            "p50": 0.0382565,
+            "p95": 0.179891,
+            "mean": 0.06327902,
+            "min": 0.022041,
+            "max": 0.22578
+          },
+          "kernel_attach_ms": {
+            "n": 100,
+            "p50": 0.2298825,
+            "p95": 0.245868,
+            "mean": 0.23119521,
+            "min": 0.214538,
+            "max": 0.262348
+          },
+          "kernel_handoff_ms": {
+            "n": 100,
+            "p50": 0.2680165,
+            "p95": 0.406678,
+            "mean": 0.29447423,
+            "min": 0.239069,
+            "max": 0.487434
+          },
+          "detach_0_ms": {
+            "n": 100,
+            "p50": 0.0195745,
+            "p95": 0.13292,
+            "mean": 0.03662013,
+            "min": 0.009699,
+            "max": 0.158257
+          },
+          "detach_1_ms": {
+            "n": 100,
+            "p50": 0.0002925,
+            "p95": 0.000318,
+            "mean": 0.00027492,
+            "min": 0.000189,
+            "max": 0.000337
+          },
+          "detach_2_ms": {
+            "n": 100,
+            "p50": 0.0142465,
+            "p95": 0.155045,
+            "mean": 0.02202569,
+            "min": 0.001944,
+            "max": 0.199392
+          },
+          "detach_3_ms": {
+            "n": 100,
+            "p50": 0.000147,
+            "p95": 0.000158,
+            "mean": 0.00014734,
+            "min": 0.000114,
+            "max": 0.000167
+          },
+          "detach_4_ms": {
+            "n": 100,
+            "p50": 0.001961,
+            "p95": 0.002269,
+            "mean": 0.00192571,
+            "min": 0.001365,
+            "max": 0.002516
+          },
+          "detach_5_ms": {
+            "n": 100,
+            "p50": 0.0021805,
+            "p95": 0.002641,
+            "mean": 0.00218828,
+            "min": 0.001571,
+            "max": 0.003216
+          },
+          "detach_6_ms": {
+            "n": 100,
+            "p50": 8.3e-05,
+            "p95": 0.000169,
+            "mean": 9.695e-05,
+            "min": 7.2e-05,
+            "max": 0.000173
+          },
+          "detach_7_ms": {
+            "n": 100,
+            "p50": 0.0,
+            "p95": 0.0,
+            "mean": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "attach_0_ms": {
+            "n": 100,
+            "p50": 0.0031345,
+            "p95": 0.003391,
+            "mean": 0.00314538,
+            "min": 0.002726,
+            "max": 0.003574
+          },
+          "attach_1_ms": {
+            "n": 100,
+            "p50": 5.5e-05,
+            "p95": 0.000132,
+            "mean": 7.498e-05,
+            "min": 4.1e-05,
+            "max": 0.000134
+          },
+          "attach_2_ms": {
+            "n": 100,
+            "p50": 0.0016649999999999998,
+            "p95": 0.001932,
+            "mean": 0.0017743799999999999,
+            "min": 0.001384,
+            "max": 0.011571
+          },
+          "attach_3_ms": {
+            "n": 100,
+            "p50": 0.004871,
+            "p95": 0.00529,
+            "mean": 0.0051137,
+            "min": 0.004554,
+            "max": 0.016619
+          },
+          "attach_4_ms": {
+            "n": 100,
+            "p50": 0.0003195,
+            "p95": 0.000354,
+            "mean": 0.00031918,
+            "min": 0.000266,
+            "max": 0.000369
+          },
+          "attach_5_ms": {
+            "n": 100,
+            "p50": 0.219073,
+            "p95": 0.235502,
+            "mean": 0.22046232,
+            "min": 0.204478,
+            "max": 0.251618
+          },
+          "attach_6_ms": {
+            "n": 100,
+            "p50": 0.00016350000000000002,
+            "p95": 0.000223,
+            "mean": 0.00017578,
+            "min": 0.000126,
+            "max": 0.000336
+          },
+          "attach_7_ms": {
+            "n": 100,
+            "p50": 0.0001295,
+            "p95": 0.000154,
+            "mean": 0.00012949,
+            "min": 0.000102,
+            "max": 0.000168
+          },
+          "first_run_to_entry_ms": {
+            "n": 100,
+            "p50": 0.026437000000000002,
+            "p95": 0.508259,
+            "mean": 0.13338559,
+            "min": 0.022088,
+            "max": 0.745117
+          },
+          "entry_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.2984888,
+            "p95": 0.3491008,
+            "mean": 0.298814136,
+            "min": 0.2485856,
+            "max": 0.3946488
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4038971,
+          4038983
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": null
+    },
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-profile2-v2-busy/trial.json",
+        "sha256": "f8d139131f9ab66c6a1573a5ef7768247f541ee0781542d031915a73b2000ef6"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T032653Z-gwopjenv/resident-bench-1794799616212434713/report.json",
+        "sha256": "d4aa2b89cdc44f37d1e1f617dc6f15ddcd943104f0e6d7a5fb9607efab708505"
+      },
+      "vcpus": 2,
+      "state": "busy",
+      "profile": true,
+      "resume_profile": true,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.5889595,
+            "p95": 4.090717,
+            "mean": 2.78573155,
+            "min": 2.00425,
+            "max": 4.826237
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.552197,
+            "p95": 0.7363379999999999,
+            "mean": 0.53649721,
+            "min": 0.298709,
+            "max": 0.853424
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.973543,
+            "p95": 1.101963,
+            "mean": 0.9679226,
+            "min": 0.734991,
+            "max": 1.1830239999999999
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.9565130000000002,
+            "p95": 2.187811,
+            "mean": 1.95214189,
+            "min": 1.530011,
+            "max": 2.313972
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.635289,
+            "p95": 2.220586,
+            "mean": 0.83358966,
+            "min": 0.381844,
+            "max": 2.734072
+          },
+          "kernel_detach_ms": {
+            "n": 100,
+            "p50": 0.13228600000000001,
+            "p95": 0.263682,
+            "mean": 0.12377964,
+            "min": 0.029329,
+            "max": 0.323664
+          },
+          "kernel_attach_ms": {
+            "n": 100,
+            "p50": 0.1589005,
+            "p95": 0.181717,
+            "mean": 0.16093279,
+            "min": 0.147618,
+            "max": 0.208656
+          },
+          "kernel_handoff_ms": {
+            "n": 100,
+            "p50": 0.294973,
+            "p95": 0.423786,
+            "mean": 0.28471243,
+            "min": 0.190591,
+            "max": 0.475476
+          },
+          "detach_0_ms": {
+            "n": 100,
+            "p50": 0.1204135,
+            "p95": 0.248866,
+            "mean": 0.10774849,
+            "min": 0.015302,
+            "max": 0.30382
+          },
+          "detach_1_ms": {
+            "n": 100,
+            "p50": 0.000247,
+            "p95": 0.000302,
+            "mean": 0.00025184,
+            "min": 0.000195,
+            "max": 0.000379
+          },
+          "detach_2_ms": {
+            "n": 100,
+            "p50": 0.008799000000000001,
+            "p95": 0.014579,
+            "mean": 0.01041514,
+            "min": 0.001855,
+            "max": 0.021079
+          },
+          "detach_3_ms": {
+            "n": 100,
+            "p50": 0.0004045,
+            "p95": 0.000517,
+            "mean": 0.00041831,
+            "min": 0.00034,
+            "max": 0.000611
+          },
+          "detach_4_ms": {
+            "n": 100,
+            "p50": 0.0013735000000000002,
+            "p95": 0.001635,
+            "mean": 0.0013953400000000001,
+            "min": 0.001019,
+            "max": 0.002105
+          },
+          "detach_5_ms": {
+            "n": 100,
+            "p50": 0.0033734999999999998,
+            "p95": 0.003675,
+            "mean": 0.00343201,
+            "min": 0.002882,
+            "max": 0.007508
+          },
+          "detach_6_ms": {
+            "n": 100,
+            "p50": 0.000109,
+            "p95": 0.000163,
+            "mean": 0.00011851,
+            "min": 7.3e-05,
+            "max": 0.000166
+          },
+          "detach_7_ms": {
+            "n": 100,
+            "p50": 0.0,
+            "p95": 0.0,
+            "mean": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "attach_0_ms": {
+            "n": 100,
+            "p50": 0.0032245,
+            "p95": 0.003372,
+            "mean": 0.00321592,
+            "min": 0.00295,
+            "max": 0.003589
+          },
+          "attach_1_ms": {
+            "n": 100,
+            "p50": 0.00011,
+            "p95": 0.000123,
+            "mean": 0.00010422,
+            "min": 3.9e-05,
+            "max": 0.000188
+          },
+          "attach_2_ms": {
+            "n": 100,
+            "p50": 0.002149,
+            "p95": 0.002373,
+            "mean": 0.00214446,
+            "min": 0.001739,
+            "max": 0.00251
+          },
+          "attach_3_ms": {
+            "n": 100,
+            "p50": 0.005218,
+            "p95": 0.005749,
+            "mean": 0.00539173,
+            "min": 0.004983,
+            "max": 0.016934
+          },
+          "attach_4_ms": {
+            "n": 100,
+            "p50": 0.000659,
+            "p95": 0.000728,
+            "mean": 0.00066717,
+            "min": 0.000586,
+            "max": 0.000887
+          },
+          "attach_5_ms": {
+            "n": 100,
+            "p50": 0.14736149999999998,
+            "p95": 0.170031,
+            "mean": 0.1491132,
+            "min": 0.135799,
+            "max": 0.19566
+          },
+          "attach_6_ms": {
+            "n": 100,
+            "p50": 0.000149,
+            "p95": 0.000175,
+            "mean": 0.00015227,
+            "min": 0.000112,
+            "max": 0.000269
+          },
+          "attach_7_ms": {
+            "n": 100,
+            "p50": 0.0001275,
+            "p95": 0.000226,
+            "mean": 0.00014382,
+            "min": 0.000101,
+            "max": 0.000252
+          },
+          "first_run_to_entry_ms": {
+            "n": 100,
+            "p50": 0.025019,
+            "p95": 0.033755,
+            "mean": 0.02637522,
+            "min": 0.021364,
+            "max": 0.039046
+          },
+          "entry_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.8347591999999999,
+            "p95": 2.4213992,
+            "mean": 1.051513888,
+            "min": 0.6231872,
+            "max": 2.9837968
+          },
+          "entry_to_epoch_detection_ms": {
+            "n": 100,
+            "p50": 0.2765636,
+            "p95": 1.358108,
+            "mean": 0.382730664,
+            "min": 0.1305568,
+            "max": 2.1681648
+          },
+          "guest_wait_writers_ms": {
+            "n": 100,
+            "p50": 0.2604328,
+            "p95": 1.6779856,
+            "mean": 0.383052752,
+            "min": 2.88e-05,
+            "max": 2.435792
+          },
+          "guest_interrupt_accounting_ms": {
+            "n": 100,
+            "p50": 0.2742224,
+            "p95": 0.3086752,
+            "mean": 0.285730472,
+            "min": 0.2608056,
+            "max": 0.7329416
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.6156560000000004,
+            "p95": 4.147365,
+            "mean": 2.83426526,
+            "min": 1.954557,
+            "max": 5.7171
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.5386960000000001,
+            "p95": 0.77858,
+            "mean": 0.50901126,
+            "min": 0.306088,
+            "max": 0.942234
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.9279660000000001,
+            "p95": 1.110211,
+            "mean": 0.95323496,
+            "min": 0.628419,
+            "max": 1.144106
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.8740055,
+            "p95": 2.167017,
+            "mean": 1.86615748,
+            "min": 1.166015,
+            "max": 2.667694
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.6410525,
+            "p95": 2.32927,
+            "mean": 0.96810778,
+            "min": 0.378131,
+            "max": 4.028895
+          },
+          "kernel_detach_ms": {
+            "n": 100,
+            "p50": 0.140573,
+            "p95": 0.238478,
+            "mean": 0.11725872,
+            "min": 0.0297,
+            "max": 0.297551
+          },
+          "kernel_attach_ms": {
+            "n": 100,
+            "p50": 0.152974,
+            "p95": 0.165896,
+            "mean": 0.15419553,
+            "min": 0.142697,
+            "max": 0.18502
+          },
+          "kernel_handoff_ms": {
+            "n": 100,
+            "p50": 0.291776,
+            "p95": 0.385781,
+            "mean": 0.27145425,
+            "min": 0.175102,
+            "max": 0.449647
+          },
+          "detach_0_ms": {
+            "n": 100,
+            "p50": 0.126447,
+            "p95": 0.217761,
+            "mean": 0.10157815,
+            "min": 0.015595,
+            "max": 0.276252
+          },
+          "detach_1_ms": {
+            "n": 100,
+            "p50": 0.000258,
+            "p95": 0.000304,
+            "mean": 0.00025816,
+            "min": 0.000216,
+            "max": 0.000321
+          },
+          "detach_2_ms": {
+            "n": 100,
+            "p50": 0.0083425,
+            "p95": 0.015453,
+            "mean": 0.00954549,
+            "min": 0.007448,
+            "max": 0.017458
+          },
+          "detach_3_ms": {
+            "n": 100,
+            "p50": 0.0004235,
+            "p95": 0.000568,
+            "mean": 0.00044736,
+            "min": 0.000361,
+            "max": 0.000657
+          },
+          "detach_4_ms": {
+            "n": 100,
+            "p50": 0.0017534999999999999,
+            "p95": 0.002123,
+            "mean": 0.00176502,
+            "min": 0.001417,
+            "max": 0.002475
+          },
+          "detach_5_ms": {
+            "n": 100,
+            "p50": 0.003517,
+            "p95": 0.003806,
+            "mean": 0.00356625,
+            "min": 0.002667,
+            "max": 0.010778
+          },
+          "detach_6_ms": {
+            "n": 100,
+            "p50": 0.000107,
+            "p95": 0.000111,
+            "mean": 9.829e-05,
+            "min": 7.3e-05,
+            "max": 0.000115
+          },
+          "detach_7_ms": {
+            "n": 100,
+            "p50": 0.0,
+            "p95": 0.0,
+            "mean": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "attach_0_ms": {
+            "n": 100,
+            "p50": 0.003108,
+            "p95": 0.003384,
+            "mean": 0.00305772,
+            "min": 0.002256,
+            "max": 0.003607
+          },
+          "attach_1_ms": {
+            "n": 100,
+            "p50": 0.000111,
+            "p95": 0.000141,
+            "mean": 0.00010011,
+            "min": 3.9e-05,
+            "max": 0.000161
+          },
+          "attach_2_ms": {
+            "n": 100,
+            "p50": 0.0016164999999999999,
+            "p95": 0.001857,
+            "mean": 0.00162113,
+            "min": 0.001345,
+            "max": 0.002025
+          },
+          "attach_3_ms": {
+            "n": 100,
+            "p50": 0.005356,
+            "p95": 0.005885,
+            "mean": 0.00547693,
+            "min": 0.004643,
+            "max": 0.012524
+          },
+          "attach_4_ms": {
+            "n": 100,
+            "p50": 0.000652,
+            "p95": 0.000712,
+            "mean": 0.00064262,
+            "min": 0.000457,
+            "max": 0.00074
+          },
+          "attach_5_ms": {
+            "n": 100,
+            "p50": 0.14210899999999999,
+            "p95": 0.154956,
+            "mean": 0.1430235,
+            "min": 0.131905,
+            "max": 0.172233
+          },
+          "attach_6_ms": {
+            "n": 100,
+            "p50": 0.000133,
+            "p95": 0.000168,
+            "mean": 0.00013813,
+            "min": 0.000111,
+            "max": 0.000199
+          },
+          "attach_7_ms": {
+            "n": 100,
+            "p50": 0.00013250000000000002,
+            "p95": 0.000201,
+            "mean": 0.00013539,
+            "min": 9.6e-05,
+            "max": 0.000224
+          },
+          "first_run_to_entry_ms": {
+            "n": 100,
+            "p50": 0.0243775,
+            "p95": 0.033187,
+            "mean": 0.02598732,
+            "min": 0.020538,
+            "max": 0.036156
+          },
+          "entry_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.8878948,
+            "p95": 2.473244,
+            "mean": 1.180914128,
+            "min": 0.5951072,
+            "max": 4.2637704
+          },
+          "entry_to_epoch_detection_ms": {
+            "n": 100,
+            "p50": 0.26984240000000004,
+            "p95": 1.1864024,
+            "mean": 0.370229528,
+            "min": 0.0467288,
+            "max": 1.9211408
+          },
+          "guest_wait_writers_ms": {
+            "n": 100,
+            "p50": 0.2768228,
+            "p95": 1.9448176,
+            "mean": 0.524919504,
+            "min": 4.8e-05,
+            "max": 3.9485568
+          },
+          "guest_interrupt_accounting_ms": {
+            "n": 100,
+            "p50": 0.2761228,
+            "p95": 0.3123912,
+            "mean": 0.285765096,
+            "min": 0.2606256,
+            "max": 0.5470992
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4040229,
+          4040241
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": {
+        "0": {
+          "sequence_increase": 156320,
+          "timer_increase": 83563,
+          "ipi_increase": 64065,
+          "ping_increase": 91263
+        },
+        "1": {
+          "sequence_increase": 203772,
+          "timer_increase": 10984,
+          "ipi_increase": 82711,
+          "ping_increase": 91263
+        }
+      }
+    },
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-profile2-v2-idle/trial.json",
+        "sha256": "1e4a4a78aea5b97430eec4b6f83a85896ee57bee870913c8a6a018c19a7e5010"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T032516Z-8lqzy6z6/resident-bench-1794799519014701887/report.json",
+        "sha256": "96c6bd897a673a693aff3ac58705b051ca5bc155362f29129ee7265b069ed873"
+      },
+      "vcpus": 2,
+      "state": "idle",
+      "profile": true,
+      "resume_profile": true,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.3198125000000003,
+            "p95": 2.703512,
+            "mean": 2.33659934,
+            "min": 1.887298,
+            "max": 2.950125
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.5639195,
+            "p95": 0.867303,
+            "mean": 0.60261077,
+            "min": 0.322253,
+            "max": 1.1601590000000002
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.118628,
+            "p95": 1.215411,
+            "mean": 1.10558281,
+            "min": 0.907781,
+            "max": 1.301573
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 2.099233,
+            "p95": 2.501754,
+            "mean": 2.14779514,
+            "min": 1.682013,
+            "max": 2.625062
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.2093065,
+            "p95": 0.560874,
+            "mean": 0.1888042,
+            "min": 9.9e-05,
+            "max": 0.667008
+          },
+          "kernel_detach_ms": {
+            "n": 100,
+            "p50": 0.045837,
+            "p95": 0.198013,
+            "mean": 0.06969588,
+            "min": 0.029574,
+            "max": 0.258175
+          },
+          "kernel_attach_ms": {
+            "n": 100,
+            "p50": 0.26665649999999996,
+            "p95": 0.289234,
+            "mean": 0.26866949,
+            "min": 0.252656,
+            "max": 0.312525
+          },
+          "kernel_handoff_ms": {
+            "n": 100,
+            "p50": 0.3143555,
+            "p95": 0.467843,
+            "mean": 0.33836537,
+            "min": 0.289716,
+            "max": 0.516843
+          },
+          "detach_0_ms": {
+            "n": 100,
+            "p50": 0.0307825,
+            "p95": 0.133078,
+            "mean": 0.04103815,
+            "min": 0.015992,
+            "max": 0.227441
+          },
+          "detach_1_ms": {
+            "n": 100,
+            "p50": 0.0002785,
+            "p95": 0.000311,
+            "mean": 0.00027654,
+            "min": 0.00021,
+            "max": 0.000401
+          },
+          "detach_2_ms": {
+            "n": 100,
+            "p50": 0.0082935,
+            "p95": 0.156132,
+            "mean": 0.02193984,
+            "min": 0.001868,
+            "max": 0.186503
+          },
+          "detach_3_ms": {
+            "n": 100,
+            "p50": 0.0004195,
+            "p95": 0.000568,
+            "mean": 0.00044827,
+            "min": 0.000333,
+            "max": 0.00252
+          },
+          "detach_4_ms": {
+            "n": 100,
+            "p50": 0.00168,
+            "p95": 0.002012,
+            "mean": 0.00166173,
+            "min": 0.001177,
+            "max": 0.002916
+          },
+          "detach_5_ms": {
+            "n": 100,
+            "p50": 0.003519,
+            "p95": 0.011636,
+            "mean": 0.00425268,
+            "min": 0.002603,
+            "max": 0.021881
+          },
+          "detach_6_ms": {
+            "n": 100,
+            "p50": 7.65e-05,
+            "p95": 8.1e-05,
+            "mean": 7.867e-05,
+            "min": 7.3e-05,
+            "max": 0.00016
+          },
+          "detach_7_ms": {
+            "n": 100,
+            "p50": 0.0,
+            "p95": 0.0,
+            "mean": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "attach_0_ms": {
+            "n": 100,
+            "p50": 0.003271,
+            "p95": 0.003584,
+            "mean": 0.00326343,
+            "min": 0.002835,
+            "max": 0.003933
+          },
+          "attach_1_ms": {
+            "n": 100,
+            "p50": 0.00012,
+            "p95": 0.000144,
+            "mean": 0.00011349,
+            "min": 4e-05,
+            "max": 0.000154
+          },
+          "attach_2_ms": {
+            "n": 100,
+            "p50": 0.002156,
+            "p95": 0.002421,
+            "mean": 0.00214457,
+            "min": 0.001735,
+            "max": 0.002834
+          },
+          "attach_3_ms": {
+            "n": 100,
+            "p50": 0.0052385,
+            "p95": 0.006065,
+            "mean": 0.00551085,
+            "min": 0.00494,
+            "max": 0.016205
+          },
+          "attach_4_ms": {
+            "n": 100,
+            "p50": 0.000654,
+            "p95": 0.000706,
+            "mean": 0.00065476,
+            "min": 0.000589,
+            "max": 0.000749
+          },
+          "attach_5_ms": {
+            "n": 100,
+            "p50": 0.2547745,
+            "p95": 0.276909,
+            "mean": 0.25669808,
+            "min": 0.238952,
+            "max": 0.299371
+          },
+          "attach_6_ms": {
+            "n": 100,
+            "p50": 0.000147,
+            "p95": 0.000178,
+            "mean": 0.00015118,
+            "min": 0.000123,
+            "max": 0.000277
+          },
+          "attach_7_ms": {
+            "n": 100,
+            "p50": 0.000129,
+            "p95": 0.000191,
+            "mean": 0.00013313,
+            "min": 0.0001,
+            "max": 0.000209
+          },
+          "first_run_to_entry_ms": {
+            "n": 100,
+            "p50": 0.0254115,
+            "p95": 0.473091,
+            "mean": 0.10618702000000001,
+            "min": 0.022102,
+            "max": 0.712445
+          },
+          "entry_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.2865392,
+            "p95": 0.353992,
+            "mean": 0.293437928,
+            "min": 0.2529208,
+            "max": 0.4120856
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.2682884999999997,
+            "p95": 2.560544,
+            "mean": 2.65143071,
+            "min": 1.71706,
+            "max": 41.269255
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.583352,
+            "p95": 0.825443,
+            "mean": 0.60027903,
+            "min": 0.33042200000000005,
+            "max": 0.889201
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.118377,
+            "p95": 1.242155,
+            "mean": 1.10964019,
+            "min": 0.866571,
+            "max": 1.377136
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 2.0758115,
+            "p95": 2.372665,
+            "mean": 2.47860396,
+            "min": 1.538446,
+            "max": 41.268981
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.10843900000000001,
+            "p95": 0.608485,
+            "mean": 0.17282675,
+            "min": 0.000102,
+            "max": 0.706339
+          },
+          "kernel_detach_ms": {
+            "n": 100,
+            "p50": 0.047063,
+            "p95": 0.159314,
+            "mean": 0.06510724,
+            "min": 0.031898,
+            "max": 0.239756
+          },
+          "kernel_attach_ms": {
+            "n": 100,
+            "p50": 0.267445,
+            "p95": 0.293005,
+            "mean": 0.27000601,
+            "min": 0.24841,
+            "max": 0.314992
+          },
+          "kernel_handoff_ms": {
+            "n": 100,
+            "p50": 0.31397050000000004,
+            "p95": 0.433893,
+            "mean": 0.33511325,
+            "min": 0.291028,
+            "max": 0.512732
+          },
+          "detach_0_ms": {
+            "n": 100,
+            "p50": 0.0269145,
+            "p95": 0.141849,
+            "mean": 0.04676389,
+            "min": 0.018066,
+            "max": 0.219656
+          },
+          "detach_1_ms": {
+            "n": 100,
+            "p50": 0.000289,
+            "p95": 0.000383,
+            "mean": 0.00029053,
+            "min": 0.000209,
+            "max": 0.000543
+          },
+          "detach_2_ms": {
+            "n": 100,
+            "p50": 0.0078755,
+            "p95": 0.018629,
+            "mean": 0.01197596,
+            "min": 0.00182,
+            "max": 0.157486
+          },
+          "detach_3_ms": {
+            "n": 100,
+            "p50": 0.0003815,
+            "p95": 0.000508,
+            "mean": 0.00039919,
+            "min": 0.000313,
+            "max": 0.000634
+          },
+          "detach_4_ms": {
+            "n": 100,
+            "p50": 0.001777,
+            "p95": 0.002028,
+            "mean": 0.00176505,
+            "min": 0.00122,
+            "max": 0.002162
+          },
+          "detach_5_ms": {
+            "n": 100,
+            "p50": 0.0035045,
+            "p95": 0.004121,
+            "mean": 0.0038370599999999998,
+            "min": 0.002482,
+            "max": 0.02379
+          },
+          "detach_6_ms": {
+            "n": 100,
+            "p50": 7.5e-05,
+            "p95": 7.8e-05,
+            "mean": 7.556e-05,
+            "min": 7.3e-05,
+            "max": 8.7e-05
+          },
+          "detach_7_ms": {
+            "n": 100,
+            "p50": 0.0,
+            "p95": 0.0,
+            "mean": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "attach_0_ms": {
+            "n": 100,
+            "p50": 0.003264,
+            "p95": 0.003512,
+            "mean": 0.00329411,
+            "min": 0.002731,
+            "max": 0.006526
+          },
+          "attach_1_ms": {
+            "n": 100,
+            "p50": 0.000124,
+            "p95": 0.000147,
+            "mean": 0.00012126,
+            "min": 4.2e-05,
+            "max": 0.000215
+          },
+          "attach_2_ms": {
+            "n": 100,
+            "p50": 0.001853,
+            "p95": 0.002226,
+            "mean": 0.00186528,
+            "min": 0.001437,
+            "max": 0.002395
+          },
+          "attach_3_ms": {
+            "n": 100,
+            "p50": 0.0058775,
+            "p95": 0.006816,
+            "mean": 0.00601727,
+            "min": 0.005024,
+            "max": 0.017048
+          },
+          "attach_4_ms": {
+            "n": 100,
+            "p50": 0.000675,
+            "p95": 0.000709,
+            "mean": 0.00067227,
+            "min": 0.000514,
+            "max": 0.000769
+          },
+          "attach_5_ms": {
+            "n": 100,
+            "p50": 0.25502349999999996,
+            "p95": 0.280722,
+            "mean": 0.25773749,
+            "min": 0.236846,
+            "max": 0.301016
+          },
+          "attach_6_ms": {
+            "n": 100,
+            "p50": 0.000161,
+            "p95": 0.000208,
+            "mean": 0.00016826,
+            "min": 0.000134,
+            "max": 0.000467
+          },
+          "attach_7_ms": {
+            "n": 100,
+            "p50": 0.000124,
+            "p95": 0.000196,
+            "mean": 0.00013007,
+            "min": 9.8e-05,
+            "max": 0.000227
+          },
+          "first_run_to_entry_ms": {
+            "n": 100,
+            "p50": 0.026362,
+            "p95": 0.428945,
+            "mean": 0.11525336,
+            "min": 0.02143,
+            "max": 0.653451
+          },
+          "entry_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.2857576,
+            "p95": 0.3600832,
+            "mean": 0.295928248,
+            "min": 0.2400528,
+            "max": 0.695156
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4039825,
+          4039837
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": null
+    }
+  ],
+  "native_diagnosis": [
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-native-profile-v1/trial.json",
+        "sha256": "b82373aa1568a4dc66fbb17f6233a58ee5e2454399553a0ffda77c0636a0115f"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T032836Z-xk4cwce_/direct-linux-handoff-1794799717782990572/report.json",
+        "sha256": "dddd8b6cc2dbe5b80b40ba8e97ce8d200da88f71241fb471b922ba32fc05a224"
+      },
+      "vcpus": 1,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 1.1490179999999999,
+            "p95": 2.4731970000000003,
+            "mean": 1.34708497,
+            "min": 0.5959030000000001,
+            "max": 3.1657979999999997
+          },
+          "pause_to_remote_controller_ack_ms": {
+            "n": 100,
+            "p50": 1.228199,
+            "p95": 2.473353,
+            "mean": 1.39747857,
+            "min": 0.59797,
+            "max": 3.223471
+          },
+          "kernel_detach_ms": {
+            "n": 100,
+            "p50": 0.0703395,
+            "p95": 0.150947,
+            "mean": 0.07009607,
+            "min": 0.012907,
+            "max": 0.183502
+          },
+          "kernel_attach_ms": {
+            "n": 100,
+            "p50": 0.031586,
+            "p95": 0.035417000000000004,
+            "mean": 0.03252816,
+            "min": 0.030363,
+            "max": 0.042189
+          },
+          "first_run_to_entry_ms": {
+            "n": 100,
+            "p50": 0.0241095,
+            "p95": 0.02538,
+            "mean": 0.02424815,
+            "min": 0.021843,
+            "max": 0.032261000000000005
+          },
+          "entry_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.5569284999999999,
+            "p95": 1.860024,
+            "mean": 0.7659842,
+            "min": 0.143847,
+            "max": 2.624884
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.8099125,
+            "p95": 2.165884,
+            "mean": 1.04336355,
+            "min": 0.485568,
+            "max": 4.275774999999999
+          },
+          "pause_to_remote_controller_ack_ms": {
+            "n": 100,
+            "p50": 0.9126559999999999,
+            "p95": 2.166044,
+            "mean": 1.09242585,
+            "min": 0.492468,
+            "max": 4.276161
+          },
+          "kernel_detach_ms": {
+            "n": 100,
+            "p50": 0.027104499999999997,
+            "p95": 0.03711,
+            "mean": 0.02762151,
+            "min": 0.016635,
+            "max": 0.10538
+          },
+          "kernel_attach_ms": {
+            "n": 100,
+            "p50": 0.033239500000000005,
+            "p95": 0.036066,
+            "mean": 0.03366723,
+            "min": 0.031446,
+            "max": 0.037556
+          },
+          "first_run_to_entry_ms": {
+            "n": 100,
+            "p50": 0.0229615,
+            "p95": 0.025491,
+            "mean": 0.02332751,
+            "min": 0.021138,
+            "max": 0.031346
+          },
+          "entry_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.466027,
+            "p95": 1.8025060000000002,
+            "mean": 0.66048644,
+            "min": 0.159998,
+            "max": 2.69607
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4040701,
+          4040703
+        ],
+        "backing_removed": true
+      }
+    },
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-native-profile-v2/trial.json",
+        "sha256": "c82fd4d7b7c3ba1f6a39af4e1dbd4dc071ef2d5c785a5fa4916cb52e935e17e6"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T033005Z-5j61cqxg/direct-linux-handoff-1794799807098929750/report.json",
+        "sha256": "c5e87059061ed1978a9e12d30915e9cae816c9654f3e29813e9a639eb7c93a31"
+      },
+      "vcpus": 2,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.89201,
+            "p95": 2.302259,
+            "mean": 1.06031663,
+            "min": 0.6198899999999999,
+            "max": 2.880769
+          },
+          "pause_to_remote_controller_ack_ms": {
+            "n": 100,
+            "p50": 0.95671,
+            "p95": 2.4047899999999998,
+            "mean": 1.12364688,
+            "min": 0.626457,
+            "max": 2.8814360000000003
+          },
+          "kernel_detach_ms": {
+            "n": 100,
+            "p50": 0.1186295,
+            "p95": 0.285024,
+            "mean": 0.12158751,
+            "min": 0.029274,
+            "max": 0.386941
+          },
+          "kernel_attach_ms": {
+            "n": 100,
+            "p50": 0.053538,
+            "p95": 0.058281999999999994,
+            "mean": 0.05361889,
+            "min": 0.049432000000000004,
+            "max": 0.061929000000000005
+          },
+          "first_run_to_entry_ms": {
+            "n": 100,
+            "p50": 0.0234225,
+            "p95": 0.024876000000000002,
+            "mean": 0.02342718,
+            "min": 0.019529,
+            "max": 0.028051
+          },
+          "entry_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.20679999999999998,
+            "p95": 1.7377170000000002,
+            "mean": 0.4408532,
+            "min": 0.131852,
+            "max": 2.2514969999999996
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.6441425000000001,
+            "p95": 1.953306,
+            "mean": 0.81038179,
+            "min": 0.410183,
+            "max": 3.3495549999999996
+          },
+          "pause_to_remote_controller_ack_ms": {
+            "n": 100,
+            "p50": 0.7240770000000001,
+            "p95": 1.953467,
+            "mean": 0.86494003,
+            "min": 0.5176369999999999,
+            "max": 3.4522150000000003
+          },
+          "kernel_detach_ms": {
+            "n": 100,
+            "p50": 0.0435255,
+            "p95": 0.20436600000000002,
+            "mean": 0.06306138,
+            "min": 0.034574,
+            "max": 0.310145
+          },
+          "kernel_attach_ms": {
+            "n": 100,
+            "p50": 0.055411,
+            "p95": 0.061572,
+            "mean": 0.05619418,
+            "min": 0.050963,
+            "max": 0.064937
+          },
+          "first_run_to_entry_ms": {
+            "n": 100,
+            "p50": 0.0220015,
+            "p95": 0.023406,
+            "mean": 0.02199108,
+            "min": 0.019503,
+            "max": 0.028510999999999998
+          },
+          "entry_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.217814,
+            "p95": 1.558088,
+            "mean": 0.38274747,
+            "min": 0.133309,
+            "max": 2.936687
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4041102,
+          4041105
+        ],
+        "backing_removed": true
+      }
+    }
+  ],
+  "cpu_accounting": "x86 Linux USER_HZ=100; busy=user+nice+system+irq+softirq; active threshold=max(1 tick,1% wall); interval wall uses mean per-CPU accounted ticks when no uptime timestamp exists",
+  "status": "passed",
+  "date": "2026-11-16",
+  "completed_utc": "2026-11-16T03:34:53.622157+00:00",
+  "implementation_commit": "4224c183407c9dff45c1606969b3167e54125ae9",
+  "cleanup": {
+    "pairs": 24,
+    "qemu_identities": 48,
+    "owned_qemu_alive": 0,
+    "owned_backings_remaining": 0,
+    "rows": [
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T025427Z-ig8o0ori",
+        "qemu": [
+          {
+            "pid": 4024458,
+            "starttime": "120919231",
+            "alive": false
+          },
+          {
+            "pid": 4024470,
+            "starttime": "120919239",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-m15wr6aq",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T030000Z-l5gmb6n3",
+        "qemu": [
+          {
+            "pid": 4029915,
+            "starttime": "120952597",
+            "alive": false
+          },
+          {
+            "pid": 4029927,
+            "starttime": "120952602",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-nbdq3lf2",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T030359Z-wk1d68a0",
+        "qemu": [
+          {
+            "pid": 4032937,
+            "starttime": "120976440",
+            "alive": false
+          },
+          {
+            "pid": 4032949,
+            "starttime": "120976445",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-xvysqouz",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T030451Z-ehtkpfj0",
+        "qemu": [
+          {
+            "pid": 4033295,
+            "starttime": "120981667",
+            "alive": false
+          },
+          {
+            "pid": 4033307,
+            "starttime": "120981672",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-x9m55mk3",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T030607Z-e8ugrqr5",
+        "qemu": [
+          {
+            "pid": 4033706,
+            "starttime": "120989232",
+            "alive": false
+          },
+          {
+            "pid": 4033724,
+            "starttime": "120989238",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-_rwjmgi3",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T030636Z-szy7z_op",
+        "qemu": [
+          {
+            "pid": 4033863,
+            "starttime": "120992149",
+            "alive": false
+          },
+          {
+            "pid": 4033881,
+            "starttime": "120992154",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-knw7r9rk",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T030714Z-g5c5_tb0",
+        "qemu": [
+          {
+            "pid": 4034070,
+            "starttime": "120996010",
+            "alive": false
+          },
+          {
+            "pid": 4034082,
+            "starttime": "120996016",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-3gx8vemp",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T030848Z-89doqkb9",
+        "qemu": [
+          {
+            "pid": 4034691,
+            "starttime": "121005324",
+            "alive": false
+          },
+          {
+            "pid": 4034705,
+            "starttime": "121005330",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-ctoq8gts",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T030913Z-vmll7l2a",
+        "qemu": [
+          {
+            "pid": 4034830,
+            "starttime": "121007897",
+            "alive": false
+          },
+          {
+            "pid": 4034842,
+            "starttime": "121007902",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-9khcnrit",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T030937Z-p7d_ks4x",
+        "qemu": [
+          {
+            "pid": 4034928,
+            "starttime": "121010287",
+            "alive": false
+          },
+          {
+            "pid": 4034940,
+            "starttime": "121010293",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-ijlvwtbd",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T031045Z-002g02du",
+        "qemu": [
+          {
+            "pid": 4035533,
+            "starttime": "121017018",
+            "alive": false
+          },
+          {
+            "pid": 4035545,
+            "starttime": "121017023",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-zckek94h",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T031139Z-18h9je80",
+        "qemu": [
+          {
+            "pid": 4035793,
+            "starttime": "121022463",
+            "alive": false
+          },
+          {
+            "pid": 4035814,
+            "starttime": "121022468",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-bnhxlq80",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T031248Z-rp95k9tl",
+        "qemu": [
+          {
+            "pid": 4036157,
+            "starttime": "121029385",
+            "alive": false
+          },
+          {
+            "pid": 4036171,
+            "starttime": "121029390",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-8w6_8ikv",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T031414Z-quw2697s",
+        "qemu": [
+          {
+            "pid": 4036582,
+            "starttime": "121037964",
+            "alive": false
+          },
+          {
+            "pid": 4036600,
+            "starttime": "121037970",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-xuz94a74",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T031548Z-nsqa1bkz",
+        "qemu": [
+          {
+            "pid": 4037052,
+            "starttime": "121047413",
+            "alive": false
+          },
+          {
+            "pid": 4037071,
+            "starttime": "121047418",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-3aaoy3b3",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T031732Z-2v6zbmb6",
+        "qemu": [
+          {
+            "pid": 4037554,
+            "starttime": "121057736",
+            "alive": false
+          },
+          {
+            "pid": 4037566,
+            "starttime": "121057741",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-j7j2hb79",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T031756Z-7k0kelbw",
+        "qemu": [
+          {
+            "pid": 4037679,
+            "starttime": "121060137",
+            "alive": false
+          },
+          {
+            "pid": 4037691,
+            "starttime": "121060142",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-inj2n4y9",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T031819Z-puijdrvz",
+        "qemu": [
+          {
+            "pid": 4037787,
+            "starttime": "121062479",
+            "alive": false
+          },
+          {
+            "pid": 4037799,
+            "starttime": "121062484",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-jwecd29l",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T032151Z-d0ss86t9",
+        "qemu": [
+          {
+            "pid": 4038971,
+            "starttime": "121083665",
+            "alive": false
+          },
+          {
+            "pid": 4038983,
+            "starttime": "121083671",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-wbkueqc_",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T032330Z-yu40c53o",
+        "qemu": [
+          {
+            "pid": 4039399,
+            "starttime": "121093577",
+            "alive": false
+          },
+          {
+            "pid": 4039411,
+            "starttime": "121093582",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-ohgnztl2",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T032516Z-8lqzy6z6",
+        "qemu": [
+          {
+            "pid": 4039825,
+            "starttime": "121104162",
+            "alive": false
+          },
+          {
+            "pid": 4039837,
+            "starttime": "121104167",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-y8in1obi",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T032653Z-gwopjenv",
+        "qemu": [
+          {
+            "pid": 4040229,
+            "starttime": "121113880",
+            "alive": false
+          },
+          {
+            "pid": 4040241,
+            "starttime": "121113886",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-o2guell0",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T032836Z-xk4cwce_",
+        "qemu": [
+          {
+            "pid": 4040701,
+            "starttime": "121124041",
+            "alive": false
+          },
+          {
+            "pid": 4040703,
+            "starttime": "121124041",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-8c7jdav3",
+        "backing_removed": true
+      },
+      {
+        "run": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T033005Z-5j61cqxg",
+        "qemu": [
+          {
+            "pid": 4041102,
+            "starttime": "121132972",
+            "alive": false
+          },
+          {
+            "pid": 4041105,
+            "starttime": "121132972",
+            "alive": false
+          }
+        ],
+        "backing_path": "/dev/shm/cxl-lab-gy3vrmwv",
+        "backing_removed": true
+      }
+    ]
+  },
+  "worktree_local_bytes_du": 19550109696,
+  "worktree_local_gib_du": 18.20745849609375,
+  "resources": {
+    "cpus": "0-23",
+    "memory_node": 0,
+    "l1_memory_mib_each": 4096,
+    "swe_guest_memory_mib": 2048,
+    "timing_guest_memory_mib": 128,
+    "swe_cxl_mib": 4096,
+    "timing_cxl_mib": 2048,
+    "network_backend": "QEMU socket",
+    "lab_lock": "exclusive",
+    "timing_quiet_lock": "exclusive",
+    "heavy_test_build_quiet_lock": "shared",
+    "reserve_gib": 4,
+    "build_nice": 19
+  },
+  "checks": {
+    "python": {
+      "total": 54,
+      "passed": 46,
+      "skipped": 8,
+      "log": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/followup-python-tests-final.log",
+        "sha256": "1692d21b9d725bc15d02a7a7f6189e60420eb2e548622591ac990307b70944ae"
+      }
+    },
+    "inflight_evidence_mutations": {
+      "passed": 8,
+      "log": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/followup-inflight-tests.log",
+        "sha256": "f5ba25f5ef56b0a25d4b0c1fb120bfbc7c5ed2fa1b334d732e985305b6387c9c"
+      }
+    },
+    "independent_analysis": {
+      "result": "passed",
+      "log": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/followup-final-analysis.log",
+        "sha256": "a93cb6ade2870e5e57730419135aebbe6b2be60ae4427a3de9d3bbacd297601f"
+      }
+    },
+    "gomaxprocs": "unset, unchanged from recorded Gin fixture",
+    "resident_kernel_taint": "4096 only: expected TAINT_OOT_MODULE from pool_memory_module; no additional taint bits",
+    "native_kernel_taint": 0
+  },
+  "diagnostic_protocol": {
+    "primary": "unprofiled; original guest heartbeat scheduling",
+    "final_profiles": "profile2: heartbeat pinned to CPU 0; ack_tsc at actual final ACK publication; epoch detection and writer-ready timestamps retained separately",
+    "samples_per_direction": 100,
+    "warmup_per_direction": 10,
+    "guest_busy_workload": "512KiB checksum writer and futex ring on every CPU, same algorithm as 15",
+    "measurement_start": "source resident C controller immediately before DirectSend/pause; helper fork and outer RPC excluded",
+    "idle": "one 1ms heartbeat, no other guest workload",
+    "discarded_profiles": [
+      "followup-profile-v1-idle",
+      "followup-profile-v1-busy",
+      "followup-profile-v2-idle"
+    ]
+  },
+  "failed_trials": [
+    {
+      "name": "followup-profile-v2-idle",
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-profile-v2-idle/trial.json",
+        "sha256": "63fd947c38422e312c98b548d25070cd7639f61a762ec3dc9f2887f19d065655"
+      },
+      "error": "Command '['numactl', '--physcpubind=0-23', '--membind=0', '/usr/bin/python3', '/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/handoff_bench.py', '--mode', 'direct', '--name', 'gin-gonic__gin-3741', '--memory-mib', '128', '--vcpus', '2', '--resident-bench', 'idle', '--iterations', '100', '--warmup', '10', '--profile', '--restore-timing', '--resume-profile']' returned non-zero exit status 1.",
+      "cleanup": {
+        "qemu_pids": [
+          4037787,
+          4037799
+        ],
+        "backing_removed": true
+      }
+    },
+    {
+      "name": "followup-resident-pilot1",
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-resident-pilot1/trial.json",
+        "sha256": "42d14ff87e0301f73f8652b51b36f4bd82c259242f0c826537c4ad1cd7295499"
+      },
+      "error": "Command '['numactl', '--physcpubind=0-23', '--membind=0', '/usr/bin/python3', '/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/handoff_bench.py', '--mode', 'direct', '--name', 'gin-gonic__gin-3741', '--memory-mib', '128', '--vcpus', '1', '--resident-bench', 'idle', '--iterations', '2', '--warmup', '1', '--profile', '--restore-timing', '--resume-profile']' returned non-zero exit status 1.",
+      "cleanup": {
+        "qemu_pids": [
+          4033295,
+          4033307
+        ],
+        "backing_removed": true
+      }
+    }
+  ],
+  "limitations": [
+    "One coherent physical host with nested KVM and emulated file CXL; not physical multi-host latency or non-coherent correctness",
+    "Fixed vCPU topology; one VM arena; no failure recovery (outside task scope)",
+    "Read-only block plus NFS and pool mapper; 128MiB timing guests versus 2GiB SWE guests",
+    "Idle ACK includes the diagnostic heartbeat wakeup and 50us observer polling",
+    "8-vCPU busy B-to-A maximum 42.714227ms; API sum 2.383ms; exact non-API tail cause unresolved",
+    "SWE workload CPU figures are single functional observations, not repeated command speedup measurements"
+  ]
+}

@@ -9,6 +9,7 @@ import copy
 import json
 from pathlib import Path
 import shutil
+import shlex
 import subprocess
 import tempfile
 
@@ -31,6 +32,7 @@ def unpack(archive, directory):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--trace-assets', type=Path, required=True)
+    parser.add_argument('--link-storage', action='store_true', help='Reference the read-only storage template without copying it')
     parser.add_argument('--assets', type=Path, required=True)
     parser.add_argument('--firecracker', type=Path, required=True)
     parser.add_argument('--guest-kernel', type=Path, required=True)
@@ -38,7 +40,11 @@ def main():
     parser.add_argument('--mapper-module', type=Path, required=True)
     parser.add_argument('--kvm-module-dir', type=Path, required=True)
     parser.add_argument('--l1-kernel', type=Path, required=True)
+    parser.add_argument('--shared-probe', type=Path)
+    parser.add_argument('--l1-config', type=Path, help='Require built-in NFS server support and record the L1 config')
     args = parser.parse_args()
+    if args.l1_config and 'CONFIG_NFSD=y' not in args.l1_config.read_text().splitlines():
+        raise ValueError('L1 needs built-in CONFIG_NFSD=y for the NFS fixture')
     base = args.trace_assets.resolve(strict=True)
     dest = args.assets.resolve()
     if dest.exists():
@@ -60,18 +66,24 @@ def main():
             raise ValueError('Changed source trace: '+name)
     dest.mkdir(parents=True)
     for path in base.iterdir():
-        if path.name != 'manifest.json':
+        if path.name == 'storage.raw' and args.link_storage:
+            (dest/path.name).symlink_to(path.resolve())
+        elif path.name != 'manifest.json':
             run(['cp', '-a', '--sparse=always', '--reflink=auto', path, dest/path.name])
     replacements = {'firecracker': args.firecracker, 'l2-vmlinux': args.guest_kernel,
                     'l1-kernel': args.l1_kernel, 'pool_memory_module.ko': args.mapper_module}
     for name, source in replacements.items():
         shutil.copy2(source, dest/name)
+    if args.l1_config:
+        shutil.copy2(args.l1_config, dest/'l1-kernel.config')
     shutil.copy2(args.guest_config, dest/'l2-handoff.config')
     commands = {}
     for source, binary in (('resident_control.c', 'resident-control'), ('control_rpc.c', 'control-rpc'),
                            ('resident_bootstrap.c', 'resident-bootstrap')):
         commands[binary] = ['gcc', '-O2', '-Wall', '-Wextra', '-Werror', '-static', HERE/source, '-o', dest/binary]
         run(commands[binary])
+    if args.shared_probe:
+        shutil.copy2(args.shared_probe, dest/'shared-probe')
     with tempfile.TemporaryDirectory(prefix='swe-handoff-build-', dir=dest) as tmp:
         temporary = Path(tmp)
         host = temporary/'l1'
@@ -79,6 +91,7 @@ def main():
         for name in ('firecracker', 'l2-vmlinux', 'pool_memory_module.ko',
                      'resident-control', 'resident-bootstrap', 'control-rpc'):
             shutil.copy2(dest/name, host/'lab'/name)
+        shutil.copy2(dest/'shared-probe', host/'lab/shared-probe')
         shutil.copy2(HERE/'guest-init.sh', host/'init')
         (host/'init').chmod(0o755)
         modules = {}
@@ -90,9 +103,16 @@ def main():
             guest = temporary/name
             archive = name+'-initramfs.cpio'
             unpack(base/archive, guest)
+            shutil.copy2(dest/'shared-probe', guest/'lab/shared-probe')
             shutil.copy2(HERE/'swe-handoff-l2-init.sh', guest/'init')
             (guest/'init').chmod(0o755)
             shutil.copy2(HERE/'swe-handoff-guest-run.sh', guest/'lab/swe-handoff-guest-run.sh')
+            build = 'go build -a -p "$(getconf _NPROCESSORS_ONLN)" ./...'
+            argv = ["/trace/busybox", "env", "-i", *[f"{k}={v}" for k,v in trace['effective_environment'].items()],
+                    *trace['environment']['interpreter'], build]
+            build_path = guest/'lab/trace/parallel-build.sh'
+            build_path.write_text('#!/trace/busybox sh\ncd /testbed || exit 125\nexec '+shlex.join(argv)+'\n')
+            build_path.chmod(0o755)
             for command in trace['commands']:
                 path = guest/'lab/trace/cmd'/f"{command['index']:03d}.command"
                 if path.read_text() != command['command'] or lab.sha256(path) != command['command_sha256']:

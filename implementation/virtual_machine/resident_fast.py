@@ -12,7 +12,7 @@ from handoff_bench import require, json_lines
 
 def request(c,source,directory,nonce,first,label,peer,vm_id,epoch,start,size,kind):
     vm=c.vms[source]
-    if 3 in vm.get('control_rpc_operations',[]):
+    if 3 in vm.get('control_rpc_operations',[]) and not getattr(c.args, 'resident_bench', None):
         import resident_proxy
         started=time.monotonic_ns()
         require(lab.alive(vm),'VM is not running')
@@ -45,6 +45,10 @@ def prepare_servers(c):
             command += f'\ncat {control}/log'
         if getattr(c.args,'restore_timing',False):
             command='export FC_RESIDENT_PROFILE=1\n'+command
+        if hasattr(c, 'bench_offset'):
+            command = (f'export RESIDENT_BENCH_HEARTBEAT={c.bench_offset} RESIDENT_BENCH_ARENA={c.kvm_arena}\n'
+                + ('export RESIDENT_BENCH_PROFILE=1\n' if c.args.profile else '')
+                + ('export RESIDENT_BENCH_RESUME_PROFILE=1\n' if c.args.resume_profile else '') + command)
         raw,name=c.shell(role,command,'resident-controller-prepare')
         c.resident_servers[role]={'directory':control,'file':name}
         boots=json_lines(raw,'RESIDENT_SERVER_BOOT_JSON ')

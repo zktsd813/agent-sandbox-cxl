@@ -189,11 +189,15 @@ nested root 보완(`dax_nested_root_sync`)은 11-02에 hand-off마다 하던 RAM
 | 물리 multi-host 비일관 CXL | 안 해 봄. bud05 node 2가 4 host 공유 DCD로 기록돼 있으나 쓰지 않음(용량 할당에 승인 필요) |
 | coherence write-back / invalidate / INVEPT | 미구현 |
 | 서버 간 HPA 동일성 검사, 서버 간 atomic 소유권 | 미구현 |
-| 다중 vCPU direct | 사전 거절(1 vCPU만) |
 | network, 쓰기 가능 disk direct | 미구현(읽기 전용 block만) |
 | M1 pre-copy, M3, M4+P, M4-naive/fair | 미구현(6.1) |
 | EPT 이어받기와 VMCS·객체 재사용의 효과 분리 | 안 잼 |
 | 장애 복구 | 범위 밖 |
+
+2026-11-16에 direct를 고정 1~8 vCPU로 넓혔다. 2/4/8개 각각 205회 왕복과
+CPU별 데이터·IPI·timer 검증을 통과했다. Gin 4 vCPU도 실행 중 왕복 후 baseline과 결과가 같았다.
+범위와 source pause → guest ACK 수치는 [다중 vCPU 결과](results/multi-vcpu-handoff-20261116/README.md)에 있다.
+이 검증도 한 host의 coherent nested lab이며 물리 multi-host 성능 주장이 아니다.
 
 ---
 

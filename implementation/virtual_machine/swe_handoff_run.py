@@ -30,7 +30,8 @@ SOURCES = ("experiment_sources.py", "swe_handoff_run.py", "handoff_bench.py", "s
     "lab.py", "shared_probe.c", "resident_fast.py",
     "resident_control.c", "resident_bootstrap.c", "resident_prepare.py", "control_rpc.c", "control_rpc.py",
     "guest-init.sh", "resident_wire.h", "resident_proxy.py", "kernel_handoff_trace.py",
-    "firecracker.patch", "kvm-dax-state.patch", "kvm-dax-source.json", "kvm-prefault.patch", "firecracker-prefault.patch", "prefault_probe.c")
+    "firecracker.patch", "kvm-dax-state.patch", "kvm-dax-source.json", "kvm-prefault.patch", "firecracker-prefault.patch", "prefault_probe.c",
+    "multi_vcpu.py")
 
 
 def arguments():
@@ -44,6 +45,11 @@ def arguments():
     parser.add_argument("--names", choices=NAMES, nargs="+", default=list(NAMES))
     parser.add_argument("--modes", choices=MODES, nargs="+", default=list(MODES))
     parser.add_argument("--memory-mib", type=int, default=2048)
+    parser.add_argument("--vcpus", type=int, choices=(1,2,4,8), default=1)
+    # Default: 6144/8192 for trajectory runs, 8192/16384 otherwise.
+    parser.add_argument("--l1-memory-mib", type=int, choices=(4096,6144,8192))
+    parser.add_argument("--cxl-mib", type=int, choices=(4096,8192,16384))
+    parser.add_argument("--parallel-build", action="store_true")
     parser.add_argument("--restore-timing", action="store_true")
     parser.add_argument("--kernel-trace", action="store_true")
     parser.add_argument("--inflight-handoff-index", type=int)
@@ -63,19 +69,17 @@ def arguments():
     parser.add_argument('--repetitions', type=int, default=1)
     parser.add_argument('--seed', type=int, default=20261116)
     parser.add_argument('--skip-trials', type=int, default=0, help='Resume a recorded shuffled plan in a fresh output/session; preserve the completed prefix separately')
-    parser.add_argument('--l1-memory-mib', type=int, default=6144)
-    parser.add_argument('--cxl-mib', type=int, default=8192)
     args = parser.parse_args()
     if not re.fullmatch(r"[a-z0-9_-]{1,29}", args.session):
         parser.error("Use a fresh lowercase session name of at most 29 characters")
     if not re.fullmatch(r"[0-9]+(?:-[0-9]+)?(?:,[0-9]+(?:-[0-9]+)?)*", args.cpus):
         parser.error("Use a taskset CPU list such as 0-7")
     if args.memory_mib != 2048:
-        parser.error("This workload fixture uses 2048MiB and one vCPU per sandbox")
+        parser.error("This workload fixture uses 2048MiB per sandbox")
     if not 0 <= args.direct_profile_roundtrips <= 20 or (args.direct_profile_roundtrips and args.modes != ['direct']):
         parser.error("Profile repetitions require only direct mode and 0..20 roundtrips")
-    if args.inflight_handoff_index is not None and (args.modes != ["direct"] or len(args.names) != 1):
-        parser.error("In-flight index requires one explicit trace and direct mode")
+    if args.inflight_handoff_index is not None and ("direct" not in args.modes or len(args.names) != 1):
+        parser.error("In-flight index requires one explicit trace including direct mode")
     if args.kernel_trace and args.modes != ['direct']:
         parser.error("Kernel tracing requires only direct mode")
     if len(set(args.names)) != len(args.names) or len(set(args.modes)) != len(args.modes):
@@ -116,7 +120,7 @@ def main():
              "arguments": {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()},
              "fixture_manifest": manifest, "fixture_manifest_sha256": lab.sha256(manifest_path),
              "source_hashes": source_hashes, "source_reference": source_reference, "qemu_sha256": lab.sha256(qemu), "trials": [],
-             "scope": "One fresh pair per actual trace/mode; same one-vCPU 2GiB sandbox configuration",
+             "scope": "One fresh pair per actual trace/mode; same configured vCPU count and 2GiB sandbox configuration",
              "limitations": ["Coherent nested KVM on one physical host",
                              "One trial per trace/mode unless separately repeated",
                              "Baseline uses the same patched VMM in DRAM, not pristine Firecracker",
@@ -147,6 +151,8 @@ def main():
         storage = Path(config["home_storage_image"]["path"])
         if storage != run / "home-storage.raw" or storage.is_symlink() or not storage.is_file():
             raise RuntimeError("Unexpected owned storage path; refusing cleanup")
+        with storage.open('rb') as stream:
+            os.posix_fadvise(stream.fileno(), 0, 0, os.POSIX_FADV_DONTNEED)
         arm["owned_storage"] = {"path": str(storage), "initial_sha256":
             config["home_storage_image"].get("initial_sha256"), "retained": True,
             "bytes": storage.stat().st_size}
@@ -191,8 +197,9 @@ def main():
             arm["environment"] = {key: env[key] for key in
                 ("CXL_LAB_ASSETS", "CXL_LAB_SESSION", "CXL_LAB_QEMU_ROOT")}
             prefix = ['numactl', '--cpunodebind=0', '--membind=0', "taskset", "-c", args.cpus, sys.executable, "-u"]
-            l1_mib, cxl_mib = (args.l1_memory_mib, args.cxl_mib) if policy else (8192, 16384)
-            start = prefix + [str(HERE / "lab.py"), "start", "--vcpus", "4", "--memory-mib", str(l1_mib),
+            l1_mib = args.l1_memory_mib or (6144 if policy else 8192)
+            cxl_mib = args.cxl_mib or (8192 if policy else 16384)
+            start = prefix + [str(HERE / "lab.py"), "start", "--vcpus", str(max(4, args.vcpus+2)), "--memory-mib", str(l1_mib),
                 "--shared-mib", "64", "--cxl-mib", str(cxl_mib), "--dax-guest", "--dax-4k",
                 "--migration-network", "--network-backend", args.network_backend, "--memory-backing-dir", "/dev/shm",
                 "--home-storage-image", str(assets / "storage.raw"), "--qemu", str(qemu)]
@@ -201,7 +208,7 @@ def main():
             if policy:
                 start.append('--direct-cpu-model')
             bench = prefix + [str(HERE / "handoff_bench.py"), "--mode", mode, "--name", name,
-                              "--memory-mib", str(args.memory_mib),
+                              "--memory-mib", str(args.memory_mib), "--vcpus", str(args.vcpus),
                               "--direct-profile-roundtrips", str(args.direct_profile_roundtrips)]
             if policy:
                 bench.extend(['--trajectory-policy', policy, '--heavy-plan', str(args.heavy_plan.resolve())])
@@ -211,13 +218,15 @@ def main():
             if prefault:
                 bench.extend(['--prefault',prefault])
                 if args.prefault_activate: bench.append('--prefault-activate')
+            if args.parallel_build:
+                bench.append("--parallel-build")
             if mode == "direct" and not policy:
                 bench.append("--resident-repromote-handoff")
             if args.restore_timing:
                 bench.append("--restore-timing")
             if args.kernel_trace:
                 bench.append("--kernel-trace")
-            if args.inflight_handoff_index is not None:
+            if args.inflight_handoff_index is not None and mode == "direct":
                 bench.extend(["--inflight-handoff-index", str(args.inflight_handoff_index)])
             save()
             failure = None

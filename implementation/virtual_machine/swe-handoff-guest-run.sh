@@ -19,6 +19,8 @@ rm "$T/fd-sentinel"
 printf '{"event":"trace_ready","boot_id":"%s","pid":%s,"command_count":%s}\n' "$BOOT" "$$" "$COUNT"
 
 RUNNING=0
+# USER_HZ is 100 in this Linux guest. Keep raw per-CPU counters in the archive.
+cpu_stat() { awk '/^cpu[0-9]+ / {print}' /proc/stat; }
 # Only used by the opt-in in-flight handoff test. Normal run still waits here.
 finish_command() {
     RC=0
@@ -29,11 +31,13 @@ finish_command() {
     kill -KILL "-$COMMAND_PID" 2>/dev/null || true
     read END _ < /proc/uptime
     cat /sys/class/block/vda/stat > "$R/$N.block-after"
+    cpu_stat > "$R/$N.cpu-after"
     OUT_SHA=$(sha256sum "$R/$N.out"); OUT_SHA=${OUT_SHA%% *}
-    NEXT=$((NEXT + 1))
+    if [ "$N" != parallel-build ]; then NEXT=$((NEXT + 1)); fi
     printf '%s %s %s\n' "$BOOT" "$NEXT" "$OUT_SHA" > "$T/state"
     TIMED_OUT=false; [ ! -e "$R/$N.timeout" ] || TIMED_OUT=true
-    printf '{"event":"trace_end","label":"%s","run_label":"%s","index":%s,"command_sha256":"%s","rc":%s,"start_s":%s,"end_s":%s,"output_sha256":"%s","next_index":%s,"timed_out":%s}\n' "$TOKEN" "$RUN_TOKEN" "$INDEX" "$CMD_SHA" "$RC" "$START" "$END" "$OUT_SHA" "$NEXT" "$TIMED_OUT" > "$R/$N.json"
+    END_EVENT=trace_end; [ "$N" != parallel-build ] || END_EVENT=trace_build_end
+    printf '{"event":"%s","label":"%s","run_label":"%s","index":%s,"command_sha256":"%s","rc":%s,"start_s":%s,"end_s":%s,"output_sha256":"%s","next_index":%s,"timed_out":%s}\n' "$END_EVENT" "$TOKEN" "$RUN_TOKEN" "$INDEX" "$CMD_SHA" "$RC" "$START" "$END" "$OUT_SHA" "$NEXT" "$TIMED_OUT" > "$R/$N.json"
     cat "$R/$N.json"
     if [ "$NEXT" -eq "$COUNT" ]; then printf '{"completed_commands":%s}\n' "$COUNT" > "$R/complete.json"; fi
     RUNNING=0
@@ -59,10 +63,32 @@ command_live() {
 while read -r OP ARG TOKEN EXTRA; do
     case "$OP" in
         run|run_async) INDEX=$ARG ;;
-        *) TOKEN=$ARG ;;
+        *) EXTRA=$TOKEN; TOKEN=$ARG ;;
     esac
     case "$TOKEN" in ''|*[!a-zA-Z0-9_-]*) echo '{"event":"trace_protocol_error"}'; continue ;; esac
     case "$OP" in
+        heartbeat)
+            VCPUS=$(awk '/^cpu[0-9]+ / {n++} END {print n}' /proc/stat)
+            MODE=1; SLEEP=0
+            if [ "$EXTRA" = idle ]; then MODE=0; VCPUS=1; SLEEP=2; fi
+            LAB_HEARTBEAT_VCPUS=$VCPUS LAB_HEARTBEAT_SMP=$MODE LAB_HEARTBEAT_TIMING=1 taskset 1 /lab/shared-probe heartbeat A "$SLEEP" 1 > "$R/heartbeat.log" 2>&1 &
+            printf '{"event":"trace_heartbeat","label":"%s","pid":%s}\n' "$TOKEN" "$!"
+            ;;
+        build_async)
+            [ "$RUNNING" -eq 0 ] && [ "$NEXT" -eq "$COUNT" ] || exit 1
+            N=parallel-build; INDEX=$COUNT; TIMEOUT=300
+            cp "$T/parallel-build.sh" "$R/$N.command"
+            CMD_SHA=$(sha256sum "$R/$N.command"); CMD_SHA=${CMD_SHA%% *}
+            cat /sys/class/block/vda/stat > "$R/$N.block-before"
+            cpu_stat > "$R/$N.cpu-before"
+            read START _ < /proc/uptime
+            setsid "$B" chroot /newroot /trace/parallel-build.sh </dev/null > "$R/$N.out" 2>&1 &
+            COMMAND_PID=$!
+            setsid "$B" sh -c 'sleep "$1"; echo timeout > "$2"; kill -TERM "-$3" 2>/dev/null || true' watchdog "$TIMEOUT" "$R/$N.timeout" "$COMMAND_PID" </dev/null >/dev/null 2>&1 &
+            WATCHDOG_PID=$!; RUN_TOKEN=$TOKEN; RUNNING=1
+            COMMAND_START=$(awk '{print $22}' "/proc/$COMMAND_PID/stat")
+            printf '{"event":"trace_async_started","label":"%s","index":%s,"command_pid":%s,"start_ticks":%s}\n' "$TOKEN" "$INDEX" "$COMMAND_PID" "$COMMAND_START"
+            ;;
         run|run_async)
             [ "$RUNNING" -eq 0 ] || exit 1
             case "$INDEX" in ''|*[!0-9]*) exit 1 ;; esac
@@ -74,6 +100,7 @@ while read -r OP ARG TOKEN EXTRA; do
             CMD_SHA=$(sha256sum "$T/cmd/$N.command"); CMD_SHA=${CMD_SHA%% *}
             cp "$T/cmd/$N.command" "$R/$N.command"
             cat /sys/class/block/vda/stat > "$R/$N.block-before"
+            cpu_stat > "$R/$N.cpu-before"
             read START _ < /proc/uptime
             printf '{"event":"trace_start","label":"%s","index":%s,"command_sha256":"%s","start_s":%s}\n' "$TOKEN" "$INDEX" "$CMD_SHA" "$START"
             setsid "$B" chroot /newroot "/trace/cmd/$N.sh" </dev/null > "$R/$N.out" 2>&1 &
@@ -92,6 +119,7 @@ while read -r OP ARG TOKEN EXTRA; do
         running)
             [ "$RUNNING" -eq 1 ] || exit 1
             command_live
+            cpu_stat > "$R/$N.cpu-$TOKEN"
             printf '{"event":"trace_running","label":"%s","index":%s,"command_pid":%s,"start_ticks":%s,"process_state":"%s","active":%s}\n' "$TOKEN" "$INDEX" "$COMMAND_PID" "$LIVE_START" "$LIVE_STATE" "$LIVE"
             ;;
         collect)

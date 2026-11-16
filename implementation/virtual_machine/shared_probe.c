@@ -314,6 +314,9 @@ static void check_memory(char role)
 /* Lab-only checkpoint timing. Control/state use [1MiB,2MiB) of shared DAX;
  * guest RAM begins at 2MiB. Each duration uses one node's monotonic clock. */
 #define HB_MAGIC UINT64_C(0x48424d4943524f56)
+struct smp_cpu {
+    _Atomic uint64_t sequence, acknowledged, timer, ipi, ping, errors, clock_errors, tsc_errors;
+};
 struct heartbeat {
     _Atomic uint64_t magic, sequence, epoch, acknowledged, verified, errors;
     _Atomic uint64_t clock_ns, clock_errors;
@@ -322,6 +325,8 @@ struct heartbeat {
     /* Appended lab workload diagnostics; legacy heartbeat offsets stay fixed. */
     _Atomic uint64_t working_set_bytes, available_bytes, instance_id;
     _Atomic uint64_t first_sweep_ns, warm_sweep_ns, warm_done;
+    struct smp_cpu cpus[KVM_DAX_MAX_VCPUS];
+    _Atomic uint64_t epoch_detect_tsc, writers_ready_tsc;
 };
 _Static_assert(sizeof(struct heartbeat) <= 4096, "heartbeat page");
 struct boundary_clock {
@@ -835,8 +840,130 @@ static uint64_t migration_word(uint64_t instance, size_t page, unsigned word);
 static uint64_t migration_sweep(unsigned char *memory, size_t length, uint64_t instance,
                                  uint64_t *errors);
 
+/* SMP correctness workload: one checksum writer plus one futex ring thread
+ * pinned to each CPU. Writers keep every vCPU busy; ring wakeups exercise IPIs. */
+static struct heartbeat *smp_hb;
+static unsigned smp_count;
+static _Atomic int smp_turn[KVM_DAX_MAX_VCPUS];
+static void smp_pin(unsigned cpu)
+{
+    cpu_set_t mask; CPU_ZERO(&mask); CPU_SET(cpu, &mask);
+    if (sched_setaffinity(0, sizeof(mask), &mask)) die("SMP CPU affinity");
+}
+static void *smp_ping(void *arg)
+{
+    unsigned cpu = (uintptr_t)arg, next = (cpu + 1) % smp_count;
+    smp_pin(cpu);
+    for (;;) {
+        while (!atomic_load_explicit(&smp_turn[cpu], memory_order_acquire))
+            syscall(SYS_futex, &smp_turn[cpu], FUTEX_WAIT_PRIVATE, 0, NULL);
+        atomic_store(&smp_turn[cpu], 0);
+        atomic_fetch_add(&smp_hb->cpus[cpu].ping, 1);
+        atomic_store_explicit(&smp_turn[next], 1, memory_order_release);
+        syscall(SYS_futex, &smp_turn[next], FUTEX_WAKE_PRIVATE, 1);
+    }
+    return NULL;
+}
+static void *smp_write(void *arg)
+{
+    unsigned cpu = (uintptr_t)arg;
+    smp_pin(cpu);
+    struct smp_cpu *s = &smp_hb->cpus[cpu];
+    const size_t words = 65536;
+    uint64_t *data = calloc(words, sizeof(*data));
+    if (!data) die("SMP retained memory");
+    uint64_t generation = 0, old_ns = 0, old_tsc = 0;
+    for (;;) {
+        uint64_t errors = 0;
+        for (size_t i = 0; i < words; i++) {
+            uint64_t expected = generation ? (generation ^ (i * UINT64_C(0x9e3779b97f4a7c15)) ^ cpu) : 0;
+            if (data[i] != expected) errors++;
+            data[i] = (generation + 1) ^ (i * UINT64_C(0x9e3779b97f4a7c15)) ^ cpu;
+        }
+        generation++;
+        atomic_fetch_add(&s->errors, errors);
+        uint64_t now_ns = monotonic_ns(), now_tsc = migration_tsc();
+        if (now_ns < old_ns) atomic_fetch_add(&s->clock_errors, 1);
+        if (now_tsc < old_tsc) atomic_fetch_add(&s->tsc_errors, 1);
+        old_ns = now_ns; old_tsc = now_tsc;
+        atomic_store_explicit(&s->sequence, generation, memory_order_release);
+        atomic_store_explicit(&s->acknowledged, atomic_load(&smp_hb->epoch), memory_order_release);
+    }
+    return NULL;
+}
+static void smp_interrupts(void)
+{
+    FILE *f = fopen("/proc/interrupts", "r");
+    if (!f) die("SMP interrupts");
+    char line[2048];
+    while (fgets(line, sizeof(line), f)) {
+        char *colon = strchr(line, ':');
+        if (!colon) continue;
+        int timer = strstr(line, "LOC:") != NULL;
+        int ipi = strstr(line, "RES:") != NULL || strstr(line, "CAL:") != NULL;
+        if (!timer && !ipi) continue;
+        for (unsigned cpu = 0; cpu < smp_count; cpu++) {
+            char *end; uint64_t value = strtoull(colon + 1, &end, 10);
+            if (end == colon + 1) { fprintf(stderr, "SMP interrupt columns missing\n"); exit(1); }
+            if (timer) atomic_store(&smp_hb->cpus[cpu].timer, value);
+            else atomic_fetch_add(&smp_hb->cpus[cpu].ipi, value);
+            colon = end - 1;
+        }
+    }
+    fclose(f);
+}
+static void guest_smp_heartbeat(unsigned count)
+{
+    if (!count || count > KVM_DAX_MAX_VCPUS || sysconf(_SC_NPROCESSORS_ONLN) != count) {
+        fprintf(stderr, "SMP CPU count mismatch\n"); exit(1);
+    }
+    int fd = open("/dev/mem", O_RDWR | O_SYNC);
+    if (fd < 0) die("SMP /dev/mem");
+    smp_hb = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 64 * 1024 * 1024);
+    if (smp_hb == MAP_FAILED) die("SMP heartbeat map");
+    close(fd); memset(smp_hb, 0, sizeof(*smp_hb)); smp_count = count;
+    pthread_t writers[8], pings[8];
+    for (unsigned cpu = 0; cpu < count; cpu++) {
+        int rc = pthread_create(&writers[cpu], NULL, smp_write, (void *)(uintptr_t)cpu);
+        if (!rc) rc = pthread_create(&pings[cpu], NULL, smp_ping, (void *)(uintptr_t)cpu);
+        if (rc) { errno = rc; die("SMP thread"); }
+    }
+    atomic_store(&smp_turn[0], 1);
+    syscall(SYS_futex, &smp_turn[0], FUTEX_WAKE_PRIVATE, 1);
+    for (unsigned cpu = 0; cpu < count; cpu++)
+        while (!atomic_load(&smp_hb->cpus[cpu].sequence) || !atomic_load(&smp_hb->cpus[cpu].ping)) usleep(1000);
+    smp_pin(0); smp_interrupts();
+    atomic_store_explicit(&smp_hb->magic, HB_MAGIC, memory_order_release);
+    uint64_t previous = 0;
+    for (;;) {
+        uint64_t epoch = atomic_load_explicit(&smp_hb->epoch, memory_order_acquire);
+        atomic_fetch_add(&smp_hb->sequence, 1);
+        if (epoch != previous) {
+            atomic_store(&smp_hb->epoch_detect_tsc, migration_tsc());
+            for (unsigned cpu = 0; cpu < count; cpu++)
+                while (atomic_load_explicit(&smp_hb->cpus[cpu].acknowledged, memory_order_acquire) != epoch) usleep(50);
+            atomic_store(&smp_hb->writers_ready_tsc, migration_tsc());
+            for (unsigned cpu = 0; cpu < count; cpu++) atomic_store(&smp_hb->cpus[cpu].ipi, 0);
+            smp_interrupts();
+            for (unsigned cpu = 0; cpu < count; cpu++) {
+                struct smp_cpu *s = &smp_hb->cpus[cpu];
+                if (atomic_load(&s->errors) || atomic_load(&s->clock_errors) || atomic_load(&s->tsc_errors))
+                    atomic_fetch_add(&smp_hb->errors, 1);
+            }
+            atomic_store(&smp_hb->ack_tsc, migration_tsc());
+            atomic_store(&smp_hb->ack_epoch, epoch);
+            atomic_store_explicit(&smp_hb->acknowledged, epoch, memory_order_release);
+            atomic_store_explicit(&smp_hb->verified, epoch, memory_order_release);
+            previous = epoch;
+        }
+        usleep(50);
+    }
+}
+
 static void guest_heartbeat(int sleeping, int quiet)
 {
+    unsigned vcpus = getenv("LAB_HEARTBEAT_VCPUS") ? strtoul(getenv("LAB_HEARTBEAT_VCPUS"), NULL, 10) : 1;
+    if (vcpus > 1 || env_enabled("LAB_HEARTBEAT_SMP")) { guest_smp_heartbeat(vcpus); return; }
     int fd = open("/dev/mem", O_RDWR | O_SYNC);
     if (fd < 0) die("guest /dev/mem");
     struct heartbeat *hb = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 64 * 1024 * 1024);
@@ -963,7 +1090,7 @@ static void guest_heartbeat(int sleeping, int quiet)
             if (!dense) atomic_store_explicit(&hb->verified, epoch, memory_order_release);
             previous = epoch;
         }
-        if (sleeping) usleep(100);
+        if (sleeping) usleep(sleeping == 2 ? 1000 : 100);
         else for (unsigned spin = 0; spin < spins; spin++) __asm__ __volatile__("pause");
     }
 }
@@ -2200,6 +2327,7 @@ struct linux_executor {
     _Atomic uint64_t wake_request_ns, wake_observed_ns, run_begin_ns, stopped_ns;
     uint64_t stop_request_ns, stop_return_ns;
     int vcpu, console;
+    unsigned index;
     struct kvm_run *run;
 };
 
@@ -2207,7 +2335,7 @@ static void *linux_execute(void *argument)
 {
     struct linux_executor *e=argument;
     if(getenv("LAB_DAX_EXECUTOR_CPU")){
-        unsigned cpu=strtoul(getenv("LAB_DAX_EXECUTOR_CPU"),NULL,10);
+        unsigned cpu=strtoul(getenv("LAB_DAX_EXECUTOR_CPU"),NULL,10)+e->index;
         if(cpu>=CPU_SETSIZE){fprintf(stderr,"Invalid executor CPU\n");exit(1);}
         cpu_set_t mask;CPU_ZERO(&mask);CPU_SET(cpu,&mask);
         if(sched_setaffinity(0,sizeof(mask),&mask))die("Executor CPU affinity");
@@ -2288,6 +2416,27 @@ static void linux_wait_published(struct direct_control *ctrl,uint64_t expected)
     }
 }
 
+static void linux_token_identity(const struct kvm_dax_handoff *token, unsigned count)
+{
+    static struct kvm_dax_vcpu_identity initial[KVM_DAX_MAX_VCPUS];
+    static int known;
+    if (token->abi_version != KVM_DAX_ABI_VERSION || token->vcpu_count != count ||
+        token->vcpu_creates != count || token->vm_creates != 1) {
+        fprintf(stderr,"Linux direct token topology mismatch\n"); exit(1);
+    }
+    for (unsigned cpu=0; cpu<count; cpu++) {
+        const struct kvm_dax_vcpu_identity *id=&token->vcpus[cpu];
+        if (id->id != cpu || id->reserved || !id->vcpu_offset || !id->vmcs_offset ||
+            !id->run_offset || (token->ept_root_offset && !id->ept_root_offset)) {
+            fprintf(stderr,"Linux direct per-vCPU identity absent\n"); exit(1);
+        }
+    }
+    if (known && memcmp(initial,token->vcpus,sizeof(initial))) {
+        fprintf(stderr,"Linux direct per-vCPU graph changed\n"); exit(1);
+    }
+    memcpy(initial,token->vcpus,sizeof(initial)); known=1;
+}
+
 static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
 {
     double controller_start=monotonic();
@@ -2319,9 +2468,15 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
         resume_profile=(void *)((char *)page+KVM_DAX_RESUME_PROFILE_OFFSET);
     }
     unsigned me=role=='A'?0:1;
-    struct linux_executor executor={0};pthread_t thread;
-    int vm=-1,vcpu=-1,run_size=ioctl(kvm,KVM_GET_VCPU_MMAP_SIZE,0);
-    struct kvm_run *run=MAP_FAILED;
+    unsigned count = getenv("LAB_DAX_VCPUS") ? strtoul(getenv("LAB_DAX_VCPUS"), NULL, 10) : 1;
+    if (!count || count > KVM_DAX_MAX_VCPUS) { fprintf(stderr,"Invalid vCPU count\n"); exit(1); }
+    struct linux_executor executors[KVM_DAX_MAX_VCPUS] = {{0}};
+    pthread_t threads[KVM_DAX_MAX_VCPUS];
+    for (unsigned cpu=0; cpu<count; cpu++) executors[cpu].vcpu=-1;
+    /* Existing scalar timings describe vCPU 0; stop/restart covers all CPUs. */
+#define executor executors[0]
+#define thread threads[0]
+    int vm=-1,run_size=ioctl(kvm,KVM_GET_VCPU_MMAP_SIZE,0);
     unsigned char *ram=MAP_FAILED;
     if(!me){
         atexit(bench_cleanup);memset(ctrl,0,sizeof(*ctrl));atomic_store(&hb->magic,0);
@@ -2331,8 +2486,11 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
     if(me){
         executor.console=open("/run/direct-linux-console.log",O_WRONLY|O_CREAT|O_TRUNC,0600);
         if(executor.console<0)die("Linux direct console");
-        int rc=pthread_create(&thread,NULL,linux_execute,&executor);
-        if(rc){errno=rc;die("Linux direct executor thread");}
+        for (unsigned cpu=0; cpu<count; cpu++) {
+            executors[cpu].console=executor.console; executors[cpu].index=cpu;
+            int rc=pthread_create(&threads[cpu],NULL,linux_execute,&executors[cpu]);
+            if(rc){errno=rc;die("Linux direct executor thread");}
+        }
     }
     if(me)wait_value(&ctrl->nonce,nonce,"Linux direct nonce");
     atomic_store_explicit(&ctrl->ready[me],1,memory_order_release);
@@ -2351,11 +2509,21 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
                 pause_us=bench_control(0);
                 if(ioctl(kvm,KVM_DAX_PEEK,&token))die("Linux direct metadata");
             }else{
-                linux_stop_executor(&executor,thread);
+                for (unsigned cpu=0; cpu+1<count; cpu++) linux_stop_executor(&executors[cpu],threads[cpu]);
+                if (r == 1 && env_enabled("LAB_DAX_TEST_RUNNING")) {
+                    struct kvm_dax_handoff rejected = {0};
+                    errno=0;
+                    if (ioctl(vm,KVM_DAX_DETACH,&rejected) != -1 || errno != EBUSY) {
+                        fprintf(stderr,"Running final vCPU detach was not rejected\n"); exit(1);
+                    }
+                    printf("LINUX_DIRECT_JSON {\"event\":\"running_rejected\",\"round\":%u,\"vcpu\":%u,\"errno\":%d}\n",r,count-1,errno);
+                }
+                linux_stop_executor(&executors[count-1],threads[count-1]);
                 pause_us=(monotonic()-start)*1e6;
                 if(ioctl(vm,KVM_DAX_DETACH,&token))die("Linux direct DETACH");
-                direct_revoked(vcpu);
+                for (unsigned cpu=0; cpu<count; cpu++) direct_revoked(executors[cpu].vcpu);
             }
+            linux_token_identity(&token,count);
             double detached=monotonic();
             uint64_t detached_tsc = migration_tsc();
             uint64_t exit_tsc = resume_profile != MAP_FAILED ? resume_profile->last_exit_l1_tsc : 0;
@@ -2399,7 +2567,8 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
             linux_wait_published(ctrl,r+1);
             uint64_t notified_tsc = migration_tsc();
             struct kvm_dax_handoff token=ctrl->token;
-            if(token.vm_creates!=1 || token.vcpu_creates!=1){fprintf(stderr,"Linux direct VM recreated\n");exit(1);}
+            linux_token_identity(&token,count);
+            if(token.abi_version!=KVM_DAX_ABI_VERSION || token.vcpu_count!=count || token.vm_creates!=1 || token.vcpu_creates!=count){fprintf(stderr,"Linux direct VM recreated\n");exit(1);}
             double start=monotonic();
             if(!me){
                 bench_control(1);
@@ -2411,20 +2580,40 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
                         MAP_SHARED|MAP_FIXED_NOREPLACE,dax,2*1024*1024+ram_shift);
                     if(ram==MAP_FAILED)die("Linux direct fixed RAM HVA");
                 }
+                if (r == 0) {
+                    for (unsigned test=0; test<3; test++) {
+                        struct kvm_dax_handoff bad=token;
+                        if (test==0) bad.abi_version--;
+                        else if (test==1) bad.vcpu_count++;
+                        else bad.vcpus[count-1].vmcs_offset+=4096;
+                        errno=0;
+                        if (ioctl(kvm,KVM_DAX_ATTACH,&bad) != -1 || errno != EXDEV) {
+                            fprintf(stderr,"Invalid topology token not rejected\n"); exit(1);
+                        }
+                    }
+                    printf("LINUX_DIRECT_JSON {\"event\":\"token_rejected\",\"cases\":3}\n");
+                }
                 int reuse=vm>=0 && getenv("FC_DAX_REUSE_FD");
                 int attached_vm=ioctl(reuse?vm:kvm,reuse?KVM_DAX_REATTACH:KVM_DAX_ATTACH,&token);
                 if(attached_vm<0)die("Linux direct ATTACH");
                 if(vm<0)vm=attached_vm;else if(!reuse)close(attached_vm);
-                if(vcpu<0){
-                    vcpu=ioctl(vm,KVM_DAX_VCPU,0);if(vcpu<0)die("Linux direct vCPU FD");
-                    run=mmap(NULL,run_size,PROT_READ|PROT_WRITE,MAP_SHARED,vcpu,0);
-                    if(run==MAP_FAILED)die("Linux direct run map");
+                for (unsigned cpu=0; cpu<count; cpu++) {
+                    struct linux_executor *e=&executors[cpu];
+                    if(e->vcpu<0){
+                        e->vcpu=ioctl(vm,KVM_DAX_VCPU,cpu);if(e->vcpu<0)die("Linux direct vCPU FD");
+                        e->run=mmap(NULL,run_size,PROT_READ|PROT_WRITE,MAP_SHARED,e->vcpu,0);
+                        if(e->run==MAP_FAILED)die("Linux direct run map");
+                    }
                 }
-                executor.vcpu=vcpu;executor.run=run;atomic_store(&executor.stop,0);atomic_store(&executor.stopped,0);
-                __atomic_store_n(&run->immediate_exit,0,__ATOMIC_RELEASE);
-                atomic_store(&executor.wake_request_ns,context_now());
-                atomic_store_explicit(&executor.go,1,memory_order_release);
-                syscall(SYS_futex,&executor.go,FUTEX_WAKE|FUTEX_PRIVATE_FLAG,1);
+                /* Every FD/run mapping must exist before any KVM_RUN begins. */
+                for (unsigned cpu=0; cpu<count; cpu++) {
+                    struct linux_executor *e=&executors[cpu];
+                    atomic_store(&e->stop,0);atomic_store(&e->stopped,0);
+                    __atomic_store_n(&e->run->immediate_exit,0,__ATOMIC_RELEASE);
+                    atomic_store(&e->wake_request_ns,context_now());
+                    atomic_store_explicit(&e->go,1,memory_order_release);
+                    syscall(SYS_futex,&e->go,FUTEX_WAKE_PRIVATE,1);
+                }
             }
             uint64_t attached_ns=monotonic_ns();
             uint64_t attached_tsc = migration_tsc();
@@ -2454,6 +2643,15 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
                 fprintf(stderr,"Linux direct execution/heap continuity failed\n");exit(1);
             }
             atomic_store_explicit(&ctrl->acknowledged,r+1,memory_order_release);
+            if (count > 1 || env_enabled("LAB_DAX_SMP")) for (unsigned cpu=0; cpu<count; cpu++) {
+                struct smp_cpu *s=&hb->cpus[cpu];
+                printf("LINUX_DIRECT_JSON {\"event\":\"smp\",\"round\":%u,\"cpu\":%u,\"sequence\":%" PRIu64
+                    ",\"ack\":%" PRIu64 ",\"timer\":%" PRIu64 ",\"ipi\":%" PRIu64 ",\"ping\":%" PRIu64
+                    ",\"errors\":%" PRIu64 ",\"clock_errors\":%" PRIu64 ",\"tsc_errors\":%" PRIu64 "}\n",
+                    r,cpu,(uint64_t)atomic_load(&s->sequence),(uint64_t)atomic_load(&s->acknowledged),
+                    (uint64_t)atomic_load(&s->timer),(uint64_t)atomic_load(&s->ipi),(uint64_t)atomic_load(&s->ping),
+                    (uint64_t)atomic_load(&s->errors),(uint64_t)atomic_load(&s->clock_errors),(uint64_t)atomic_load(&s->tsc_errors));
+            }
             printf("LINUX_DIRECT_JSON {\"event\":\"destination\",\"round\":%u,\"role\":\"%c\",\"attach_resume_us\":%.3f,\"kernel_attach_us\":%.3f,\"guest_ack_us\":%.3f,\"sequence\":%" PRIu64 ",\"vm_offset\":%" PRIu64 ",\"vcpu_offset\":%" PRIu64 ",\"vmcs_offset\":%" PRIu64 ",\"destination_control_service_us\":%.3f,\"executor_wake_us\":%.3f,\"wake_to_run_us\":%.3f",
                 r,role,(attached-start)*1e6,(double)token.kernel_ns/1000,(acknowledged-attached)*1e6,(uint64_t)atomic_load(&hb->sequence),
                 (uint64_t)token.vm_offset,(uint64_t)token.vcpu_offset,(uint64_t)token.vmcs_offset,
@@ -2510,9 +2708,19 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
     boundary_clock_sync(&ctrl->clock, role, 1, "LINUX_DIRECT_JSON");
     if(getrusage(RUSAGE_THREAD,&cpu_after))die("controller CPU accounting");
     double controller_cpu_us=(cpu_after.ru_utime.tv_sec-cpu_before.ru_utime.tv_sec+cpu_after.ru_stime.tv_sec-cpu_before.ru_stime.tv_sec)*1e6+cpu_after.ru_utime.tv_usec-cpu_before.ru_utime.tv_usec+cpu_after.ru_stime.tv_usec-cpu_before.ru_stime.tv_usec;
-    printf("LINUX_DIRECT_JSON {\"event\":\"complete\",\"role\":\"%c\",\"rounds\":%u,\"heap_bytes\":%" PRIu64 ",\"errors\":%" PRIu64 ",\"clock_errors\":%" PRIu64 ",\"tsc_errors\":%" PRIu64 ",\"clock_ns\":%" PRIu64 ",\"controller_cpu_us\":%.3f,\"controller_wall_us\":%.3f}\n",role,rounds,dense?(uint64_t)atomic_load(&hb->working_set_bytes):UINT64_C(16777216),(uint64_t)atomic_load(&hb->errors),(uint64_t)atomic_load(&hb->clock_errors),(uint64_t)atomic_load(&hb->tsc_errors),(uint64_t)atomic_load(&hb->clock_ns),controller_cpu_us,(monotonic()-controller_start)*1e6);
-    if(me){atomic_store(&executor.go,2);syscall(SYS_futex,&executor.go,FUTEX_WAKE|FUTEX_PRIVATE_FLAG,1);pthread_join(thread,NULL);close(executor.console);}
-    if(vcpu>=0){munmap(run,run_size);close(vcpu);close(vm);}
+    printf("LINUX_DIRECT_JSON {\"event\":\"complete\",\"role\":\"%c\",\"rounds\":%u,\"heap_bytes\":%" PRIu64 ",\"errors\":%" PRIu64 ",\"clock_errors\":%" PRIu64 ",\"tsc_errors\":%" PRIu64 ",\"clock_ns\":%" PRIu64 ",\"controller_cpu_us\":%.3f,\"controller_wall_us\":%.3f}\n",role,rounds,(count > 1 || env_enabled("LAB_DAX_SMP")) ? count * UINT64_C(524288) : dense?(uint64_t)atomic_load(&hb->working_set_bytes):UINT64_C(16777216),(uint64_t)atomic_load(&hb->errors),(uint64_t)atomic_load(&hb->clock_errors),(uint64_t)atomic_load(&hb->tsc_errors),(uint64_t)atomic_load(&hb->clock_ns),controller_cpu_us,(monotonic()-controller_start)*1e6);
+    if(me){
+        for(unsigned cpu=0;cpu<count;cpu++) {
+            struct linux_executor *e=&executors[cpu];
+            atomic_store(&e->go,2);syscall(SYS_futex,&e->go,FUTEX_WAKE_PRIVATE,1);
+            pthread_join(threads[cpu],NULL);
+            if(e->vcpu>=0){munmap(e->run,run_size);close(e->vcpu);}
+        }
+        close(executor.console);
+    }
+    if(vm>=0)close(vm);
+#undef executor
+#undef thread
     if(!me)bench_child=0;
     close(kvm);close(dax);alarm(0);
 }
@@ -2582,7 +2790,7 @@ int main(int argc, char **argv)
         migration_bench(role, argv[3], port, rounds, nonce, memory_mib);
     }
     else if (!strcmp(argv[1], "heartbeat") && argc >= 3 && argc <= 5)
-        guest_heartbeat(argc == 3 || !strcmp(argv[3], "1"), argc == 5 && !strcmp(argv[4],"1"));
+        guest_heartbeat(argc == 3 ? 1 : (!strcmp(argv[3], "2") ? 2 : !strcmp(argv[3], "1")), argc == 5 && !strcmp(argv[4],"1"));
     else if (!strcmp(argv[1], "handoff") && argc == 8) {
         char *end;
         unsigned long rounds = strtoul(argv[4], &end, 10);

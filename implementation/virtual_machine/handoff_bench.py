@@ -17,6 +17,7 @@ import re
 import secrets
 import shlex
 import shutil
+import statistics
 import time
 
 import lab
@@ -219,10 +220,12 @@ def parse_maps(raw):
 
 class HandoffController(Controller):
     def __init__(self, config, out, args):
-        Controller.__init__(self, config, out, args.memory_mib, 1)
+        Controller.__init__(self, config, out, args.memory_mib, getattr(args, "vcpus", 1))
         self.args, self.mode = args, args.mode
-        self.metadata_base = (4096 if config.get('cxl_mib') == 8192 else 8192) * MIB
-        self.arena_base = (6144 if config.get('cxl_mib') == 8192 else 12288) * MIB
+        # (metadata/data bytes, KVM arena) in MiB by emulated CXL size.
+        metadata, arena = {2048: (512, 1024), 4096: (3072, 3584), 8192: (4096, 6144)}.get(config.get('cxl_mib'), (8192, 12288))
+        self.metadata_base = self.data_bytes = metadata * MIB
+        self.kvm_arena = self.arena_base = arena * MIB
         self.fixture = json.loads((Path(config['assets']) / 'manifest.json').read_text())
         self.trace = self.fixture['traces'][args.name]
         self.root = '/run/swe-handoff-' + os.urandom(8).hex()
@@ -230,7 +233,7 @@ class HandoffController(Controller):
         s = self.sandboxes[0]
         s.direct, s.manifest, s.owner = self.mode == 'direct', None, None
         self.io_engine = 'Async'
-        self.allocator = FrameAllocator(2 * MIB, 3072 * MIB)
+        self.allocator = FrameAllocator(2 * MIB, (256 if config['cxl_mib']==2048 else 3072) * MIB)
         self.commands, self.trace_commands = [], []
         self.memory_events, self.api_events, self.launches = [], [], []
         self.audits = []
@@ -405,22 +408,23 @@ class HandoffController(Controller):
         for role, node, mode in (('A', 1, 1), ('B', 2, 2)):
             self.shell(role, 'echo 2147483647 > /sys/module/kvm/parameters/dax_owner_pid\n'
                 + ('echo 1 > /sys/module/kvm/parameters/dax_handoff_profile\n' if self.args.restore_timing else '') +
+                (f'echo {int(getattr(self.args, "resume_profile",False))} > /sys/module/kvm/parameters/dax_resume_profile\n' if getattr(self.args,'resident_bench',None) else '') +
                 'resource=$(cat /sys/bus/dax/devices/dax0.0/resource)\n'
                 'echo 3 > /sys/module/kvm/parameters/dax_handoff_mode\n'
                 'echo 1 > /sys/module/kvm/parameters/dax_nested_root_sync\n'
                 'echo 1 > /sys/module/kvm/parameters/dax_scattered\n'
                 'echo $resource > /sys/module/kvm/parameters/dax_data_base\n'
-                f'echo {self.metadata_base} > /sys/module/kvm/parameters/dax_data_bytes\n'
+                f'echo {self.data_bytes} > /sys/module/kvm/parameters/dax_data_bytes\n'
                 f'echo {node} > /sys/module/kvm/parameters/dax_node\necho {mode} > /sys/module/kvm/parameters/dax_shared\n'
-                f"printf '%x,%x\\n' \"$((resource + {self.arena_base}))\" {128*MIB} > /sys/module/kvm/parameters/dax_pool\n"
+                f"printf '%x,%x\\n' \"$((resource + {self.kvm_arena}))\" {128*MIB} > /sys/module/kvm/parameters/dax_pool\n"
                 'cat /sys/module/kvm/parameters/dax_pool', 'direct-kernel-setup')
 
     def boot_vm(self, s):
         self.start_vm(s)
-        components = {'/machine-config': {'vcpu_count': 1, 'mem_size_mib': self.memory_mib},
+        components = {'/machine-config': {'vcpu_count': self.vcpus, 'mem_size_mib': self.memory_mib},
             '/boot-source': {'kernel_image_path': '/lab/l2-vmlinux',
                 'initrd_path': f'/lab/{self.trace["name"]}-initramfs.cpio',
-                'boot_args': 'console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init'},
+                'boot_args': 'console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init' + (' memmap=2M$64M nmi_watchdog=0' if getattr(self.args,'resident_bench',None) else '')},
             '/drives/data': {'drive_id': 'data', 'path_on_host': '/disk/sandbox.raw', 'is_root_device': False,
                 'is_read_only': True, 'cache_type': 'Writeback', 'io_engine': self.io_engine}}
         for path, body in components.items():
@@ -521,6 +525,23 @@ class HandoffController(Controller):
         ended['inflight'] = {'started':started, 'observations':observations,
                             'handoff_files':[hop['fast_file'] for hop in hops]}
         return ended
+
+    def parallel_build(self, s):
+        started = self.trace_command(s, 'build_async', event='trace_async_started')
+        observations, hops = [], []
+        for destination in (('B', 'A') * 3 + (None,) if s.direct else (None,) * 7):
+            time.sleep(.15)
+            live = self.trace_command(s, 'running', event='trace_running')
+            value = live['receipt']
+            require(value['active'] and all(value[k] == started['receipt'][k]
+                    for k in ('index', 'command_pid', 'start_ticks')), 'Parallel build ended or was replaced')
+            observations.append(live)
+            if destination:
+                hops.append(self.direct_handoff(s, destination))
+        ended = self.trace_command(s, 'collect', event='trace_build_end', timeout=330)
+        require(ended['receipt']['rc'] == 0 and not ended['receipt']['timed_out'], 'Parallel build failed')
+        return {'command':'go build -a -p "$(getconf _NPROCESSORS_ONLN)" ./...',
+                'started':started, 'observations':observations, 'hops':[h['fast_file'] for h in hops], 'ended':ended}
 
     def command_vm(self, s, op, *args):
         require(op in ('identity', 'check'), 'Unexpected synthetic command in SWE workload')
@@ -836,11 +857,102 @@ def trajectory_replay(c, s, report, save):
     c.demote(s)
 
 
+def resident_measure(args):
+    """Exercise the actual resident device/mapper path with a shared guest ACK.
+
+    No Python clock crosses a handoff boundary. The source C controller samples
+    CLOCK_MONOTONIC before send/pause and after acquire-observing the guest ACK.
+    Each direction has its own warmup and measured sample count.
+    """
+    run, config = lab.current_run()
+    out = run / ('resident-bench-' + str(time.time_ns()))
+    out.mkdir()
+    c = HandoffController(config, out, args)
+    s = c.sandboxes[0]
+    report = {'result':'running', 'arguments':vars(args), 'config':config,
+              'transitions':c.transitions, 'receipts':c.receipts,
+              'boundary':'source C CLOCK_MONOTONIC immediately before resident send/pause to acquire-observed remote guest ACK; 50us polling included',
+              'idle':'one heartbeat sleeps 1ms; other vCPUs have no workload',
+              'busy':'same pinned 512KiB checksum writers and futex ring as stage 15'}
+    sources = ('handoff_bench.py','resident_fast.py','resident_control.c','resident_wire.h',
+               'shared_probe.c','swe-handoff-guest-run.sh','multi_vcpu.py')
+    report['source_hashes'],report['source_reference'] = record_sources(HERE,sources)
+    try:
+        lab.verify(argparse.Namespace(timeout=180))
+        c.setup()
+        c.configure_direct()
+        report['boot'] = c.boot_vm(s)
+        report['heartbeat'] = c.trace_command(s,'heartbeat',args.resident_bench,event='trace_heartbeat')
+        time.sleep(.2)
+        c.promote(s)
+        frames = sorted(c.allocator.grants[s.owner].frames)
+        require(frames == list(range(2*MIB, (2+args.memory_mib)*MIB, PAGE)), 'Benchmark needs the observed contiguous private grant')
+        c.bench_offset = frames[64*MIB//PAGE]
+        from resident_fast import prepare
+        prepare(c,s)
+        for i in range(2*(args.warmup+args.iterations)):
+            time.sleep(.02)  # active dwell is excluded from the C interval
+            row = c.direct_handoff(s,'B' if s.role=='A' else 'A')
+            row['sample_index'] = i//2
+            row['measured'] = i//2 >= args.warmup
+            ack = row['fast']['ack']
+            require(ack['epoch'] == s.epoch and ack['verified'] == s.epoch
+                    and row['fast']['guest_ack_ns'] > 0, 'Missing guest acknowledgement')
+            if i == 1:
+                report['resident_processes'] = {}
+                for role,worker in c.resident_workers.items():
+                    raw,name=c.shell(role,f"read p t < {worker['directory']}/fc.pid\nreadlink /proc/$p/exe\ncat /proc/$p/stat\nls /proc/$p/task",'resident-process-identity')
+                    require('/lab/firecracker' in raw, 'Endpoint is not Firecracker')
+                    report['resident_processes'][role] = {'file':name,'identity':raw}
+            lab.save_json(out/'report.json',report)
+        report['direction_summary_ms'] = {}
+        for source in ('A','B'):
+            rows = [r for r in c.transitions if r.get('measured') and r['source']==source]
+            require(len(rows)==args.iterations, 'Wrong direction sample count')
+            values=sorted(r['fast']['guest_ack_ns']/1e6 for r in rows)
+            report['direction_summary_ms'][source+('→B' if source=='A' else '→A')] = {
+                'n':len(values),'p50':statistics.median(values),'p95':values[math.ceil(.95*len(values))-1],
+                'min':values[0],'max':values[-1],'mean':statistics.mean(values)}
+        report['validation'] = {}
+        for role,vm in c.vms.items():
+            raw,name=c.shell(role,'cat /sys/module/kvm/parameters/dax_pool\ncat /proc/sys/kernel/tainted','final-kernel-identity')
+            require(re.search(rf'vm_create_calls=1 vcpu_create_calls={args.vcpus}\b',raw), 'KVM graph recreated')
+            report['validation'][role] = {'file':name,'raw':raw}
+        if args.resident_bench=='busy':
+            samples=[]
+            for hop,row in enumerate(r for r in c.transitions if r.get('kind')=='direct'):
+                for cpu,values in enumerate(row['fast']['ack']['cpus'][:args.vcpus]):
+                    samples.append(dict(event='smp',round=hop,cpu=cpu,sequence=values[0],ack=values[1],
+                         timer=values[2],ipi=values[3],ping=values[4],errors=0,clock_errors=0,tsc_errors=0))
+            report['smp_validation'] = lab.validate_smp_handoff(samples,len(samples)//args.vcpus,args.vcpus)
+        report['result']='passed'
+    except BaseException as error:
+        report.update(result='failed',error=repr(error))
+        raise
+    finally:
+        for role,worker in getattr(c,'resident_workers',{}).items():
+            for name in ('fc.log','vmm.log','stderr.log'):
+                try:c.fetch_bytes(role,worker['directory']+'/'+name,'final-'+role+'-'+name)
+                except Exception as error:report.setdefault('collection_errors',[]).append(str(error))
+        for role,server in getattr(c,'resident_servers',{}).items():
+            try:c.fetch_bytes(role,server['directory']+'/log','controller-'+role+'-log')
+            except Exception as error:report.setdefault('collection_errors',[]).append(str(error))
+        lab.save_json(out/'report.json',report)
+        print('RESIDENT_BENCH_REPORT '+str(out/'report.json'),flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--resident-bench', choices=('idle','busy'))
+    parser.add_argument('--iterations',type=int,default=100)
+    parser.add_argument('--warmup',type=int,default=10)
+    parser.add_argument('--profile',action='store_true')
+    parser.add_argument('--resume-profile',action='store_true')
     parser.add_argument('--mode', choices=('baseline','state-only','direct'), required=True)
     parser.add_argument('--name', required=True)
     parser.add_argument('--memory-mib', type=int, default=2048)
+    parser.add_argument('--vcpus', type=int, choices=(1,2,4,8), default=1)
+    parser.add_argument("--parallel-build", action="store_true")
     parser.add_argument("--full-audit", action="store_true")
     parser.add_argument("--restore-timing", action="store_true")
     parser.add_argument("--kernel-trace", action="store_true")
@@ -861,9 +973,12 @@ def main():
     require(args.inflight_handoff_index is None or (args.mode == 'direct' and not args.full_audit),
             'In-flight test requires direct runtime mode')
     require(not args.kernel_trace or args.mode == 'direct', 'Kernel tracing requires direct mode')
+    if args.resident_bench:
+        require(args.mode=='direct' and args.memory_mib==128, 'Resident benchmark needs a 128MiB direct VM')
+        return resident_measure(args)
     require(args.memory_mib == 2048, 'Use the bounded 2GiB workload layout')
     run, config = lab.current_run()
-    require(config['cxl_mib'] in (8192, 16384) and bool(config.get('dax_handoff')) == (args.mode == 'direct'), 'Wrong fresh pair mode/capacity')
+    require(config['cxl_mib'] in (4096, 8192, 16384) and bool(config.get('dax_handoff')) == (args.mode == 'direct'), 'Wrong fresh pair mode/capacity')
     out = run / ('swe-handoff-' + str(time.time_ns()))
     out.mkdir()
     c = HandoffController(config, out, args)
@@ -875,7 +990,7 @@ def main():
         'api_events': c.api_events, 'launches': c.launches,
         'resident_readiness':c.resident_readiness, 'resident_preparations':c.resident_preparations,
         'allocator_events': c.allocator.events, 'audits': c.audits,
-        'layout': {'private_start': 2*MIB, 'private_end': 3072*MIB, 'kvm_arena': c.arena_base},
+        'layout': {'private_start': 2*MIB, 'private_end': 3072*MIB, 'kvm_arena': c.kvm_arena, 'metadata_base':c.metadata_base},
         'limitations': ['Coherent nested KVM; one run per trace/mode', ('Two extra handoffs inside a running command' if args.inflight_handoff_index is not None else 'Transitions between recorded commands'),
             'Same patched DRAM baseline, not pristine Firecracker', 'One VM per trial; full private RAM copy for tier changes']}
     sources = ('experiment_sources.py', 'handoff_bench.py', 'swe-handoff-l2-init.sh', 'swe-handoff-guest-run.sh',
@@ -945,11 +1060,15 @@ def main():
             save()
         if args.mode != 'baseline' and not args.trajectory_policy:
             c.promote(s)
+            if args.parallel_build:
+                report['parallel_build'] = c.parallel_build(s)
             if args.resident_repromote_handoff:
                 c.direct_handoff(s, 'B')
                 c.direct_handoff(s, 'A')
             if args.full_audit: c.audit_memory(s)
             c.demote(s)
+        if args.mode == 'baseline' and args.parallel_build:
+            report['parallel_build'] = c.parallel_build(s)
         report['final_identity'] = c.command_vm(s,'identity')
         exported = c.trace_command(s,'export',event='trace_export',timeout=180)
         _, archive = c.frame(s,exported,'TRACE_EXPORT','guest-archive')

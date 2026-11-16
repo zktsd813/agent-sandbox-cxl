@@ -4,13 +4,15 @@ mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 mount -t devtmpfs devtmpfs /dev
 migration=0 migration_headroom=16
-role=A dax_counter=0 heartbeat=0 heartbeat_sleep=0 heartbeat_quiet=0 heartbeat_churn=0 heartbeat_pit=0 heartbeat_timing=0 heartbeat_dense=0
+role=A dax_counter=0 heartbeat=0 heartbeat_sleep=0 heartbeat_quiet=0 heartbeat_churn=0 heartbeat_pit=0 heartbeat_timing=0 heartbeat_dense=0 heartbeat_vcpus=1 heartbeat_smp=0
 for arg in $(cat /proc/cmdline); do
     case "$arg" in
         lab.role=*) role=${arg#*=} ;;
         lab.migration=*) migration=${arg#*=} ;;
         lab.migration_headroom=*) migration_headroom=${arg#*=} ;;
         lab.dax_counter=*) dax_counter=${arg#*=} ;;
+        lab.heartbeat_smp=*) heartbeat_smp=${arg#*=} ;;
+        lab.heartbeat_vcpus=*) heartbeat_vcpus=${arg#*=} ;;
         lab.heartbeat=*) heartbeat=${arg#*=} ;;
         lab.heartbeat_dense=*) heartbeat_dense=${arg#*=} ;;
         lab.heartbeat_sleep=*) heartbeat_sleep=${arg#*=} ;;
@@ -38,6 +40,8 @@ if [ "$heartbeat_dense" -eq 0 ] && ! /lab/shared-probe memory "$role"; then
     halt -f
 fi
 if [ "$heartbeat" -eq 1 ]; then
+    export LAB_HEARTBEAT_SMP="$heartbeat_smp"
+    export LAB_HEARTBEAT_VCPUS="$heartbeat_vcpus"
     export LAB_HEARTBEAT_CHURN="$heartbeat_churn"
     export LAB_HEARTBEAT_PIT="$heartbeat_pit"
     export LAB_HEARTBEAT_TIMING="$heartbeat_timing"

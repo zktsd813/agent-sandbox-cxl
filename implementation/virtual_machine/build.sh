@@ -202,6 +202,8 @@ test_sources() {
     # Filter to the modified pure contracts and the actions API parser.
     fc_cargo test -p vmm reuse::tests
     fc_cargo test -p firecracker test_parse_put_actions
+    fc_cargo test -p firecracker test_rejected_pause_returns_to_device_event_dispatch
+    fc_cargo test -p vmm test_direct_handoff_preflight_rejects_devices_and_excess_vcpus
     fc_cargo test -p vmm direct::tests
     fc_cargo test -p vmm pool_memory::tests
     if [[ "${CXL_LAB_PREFAULT:-0}" == 1 ]]; then

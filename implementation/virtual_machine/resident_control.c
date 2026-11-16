@@ -11,6 +11,16 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <stdint.h>
+#include <stdatomic.h>
+#include <sys/mman.h>
+/* Read-only mirrors of the optional kernel timing records (kvm_dax.h). */
+#define KVM_DAX_PROFILE_OFFSET 2048
+#define KVM_DAX_RESUME_PROFILE_OFFSET 2176
+struct kvm_dax_profile { uint64_t detach[8], attach[8]; };
+struct kvm_dax_resume_profile {
+ uint64_t enabled, generation, run_ns, entry_ready, entry_ns, guest_tsc, virtual_tsc_khz, sample_span_ns, entry_rip;
+ uint64_t exit_ready, exit_ns, exit_reason, entry_failed, entry_l1_tsc, last_exit_l1_tsc, l1_tsc_khz;
+};
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,6 +48,60 @@ static int profile_enabled;
 static void fail(const char *s) { perror(s); exit(1); }
 static uint64_t ns(void) { struct timespec t; if(clock_gettime(CLOCK_MONOTONIC,&t))fail("clock");return (uint64_t)t.tv_sec*1000000000+t.tv_nsec; }
 static void check(int ok,const char *s) { if(!ok){fprintf(stderr,"resident-control: %s\n",s);exit(1);} }
+/* Opt-in measurement only. The frame is derived from the private promotion
+ * grant; the normal runtime never maps guest RAM in this controller. */
+struct bench_cpu { _Atomic uint64_t sequence, acknowledged, timer, ipi, ping, errors, clock_errors, tsc_errors; };
+struct bench_heartbeat {
+ _Atomic uint64_t magic, sequence, epoch, acknowledged, verified, errors, clock_ns, clock_errors;
+ _Atomic uint64_t tsc, tsc_errors, ack_tsc, ack_epoch;
+ _Atomic uint64_t working_set_bytes, available_bytes, instance_id, first_sweep_ns, warm_sweep_ns, warm_done;
+ struct bench_cpu cpus[8];
+ _Atomic uint64_t epoch_detect_tsc, writers_ready_tsc;
+};
+_Static_assert(sizeof(struct bench_heartbeat)==672,"guest heartbeat layout");
+static struct bench_heartbeat *heartbeat;
+static struct kvm_dax_profile *kernel_profile;
+static struct kvm_dax_resume_profile *resume_profile;
+static void bench_map(void) {
+ const char *offset=getenv("RESIDENT_BENCH_HEARTBEAT");if(!offset)return;
+ int fd=open("/dev/dax0.0",O_RDWR|O_CLOEXEC);if(fd<0)fail("benchmark DAX");
+ heartbeat=mmap(NULL,4096,PROT_READ|PROT_WRITE,MAP_SHARED,fd,strtoull(offset,NULL,10));
+ check(heartbeat!=MAP_FAILED&&atomic_load(&heartbeat->magic)==UINT64_C(0x48424d4943524f56),"benchmark heartbeat identity");
+ const char *arena=getenv("RESIDENT_BENCH_ARENA");check(arena!=NULL,"benchmark arena");
+ void *page=mmap(NULL,4096,PROT_READ,MAP_SHARED,fd,strtoull(arena,NULL,10));check(page!=MAP_FAILED,"benchmark profile map");close(fd);
+ if(getenv("RESIDENT_BENCH_PROFILE"))kernel_profile=(void *)((char *)page+KVM_DAX_PROFILE_OFFSET);
+ if(getenv("RESIDENT_BENCH_RESUME_PROFILE"))resume_profile=(void *)((char *)page+KVM_DAX_RESUME_PROFILE_OFFSET);
+}
+static void bench_wait(_Atomic uint64_t *value,uint64_t epoch) {
+ uint64_t deadline=ns()+30000000000ull;
+ while(atomic_load_explicit(value,memory_order_acquire)!=epoch) {
+  check(ns()<deadline,"benchmark guest ACK timeout");usleep(50);
+ }
+}
+static unsigned bench_reply(char *ack,uint64_t epoch) {
+ bench_wait(&heartbeat->verified,epoch);
+ check(!atomic_load(&heartbeat->errors)&&!atomic_load(&heartbeat->clock_errors)&&!atomic_load(&heartbeat->tsc_errors),"benchmark guest continuity");
+ size_t n=snprintf(ack,4096,"{\"epoch\":%"PRIu64",\"sequence\":%"PRIu64",\"verified\":%"PRIu64",\"cpus\":[",epoch,atomic_load(&heartbeat->sequence),atomic_load(&heartbeat->verified));
+ for(unsigned i=0;i<8;i++) {
+  struct bench_cpu *c=&heartbeat->cpus[i];
+  check(!atomic_load(&c->errors)&&!atomic_load(&c->clock_errors)&&!atomic_load(&c->tsc_errors),"benchmark CPU continuity");
+  n+=snprintf(ack+n,4096-n,"%s[%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64"]",i?",":"",atomic_load(&c->sequence),atomic_load(&c->acknowledged),atomic_load(&c->timer),atomic_load(&c->ipi),atomic_load(&c->ping));
+ }
+ n+=snprintf(ack+n,4096-n,"]");
+ if(kernel_profile) {
+  n+=snprintf(ack+n,4096-n,",\"detach_ns\":[");
+  for(unsigned i=0;i<8;i++)n+=snprintf(ack+n,4096-n,"%s%llu",i?",":"",(unsigned long long)kernel_profile->detach[i]);
+  n+=snprintf(ack+n,4096-n,"],\"attach_ns\":[");
+  for(unsigned i=0;i<8;i++)n+=snprintf(ack+n,4096-n,"%s%llu",i?",":"",(unsigned long long)kernel_profile->attach[i]);
+  n+=snprintf(ack+n,4096-n,"]");
+ }
+ if(resume_profile) {
+  n+=snprintf(ack+n,4096-n,",\"epoch_detect_guest_tsc\":%"PRIu64",\"writers_ready_guest_tsc\":%"PRIu64,atomic_load(&heartbeat->epoch_detect_tsc),atomic_load(&heartbeat->writers_ready_tsc));
+  check(__atomic_load_n(&resume_profile->entry_ready,__ATOMIC_ACQUIRE)&&atomic_load(&heartbeat->ack_epoch)==epoch,"benchmark entry profile absent");
+  n+=snprintf(ack+n,4096-n,",\"run_ns\":%llu,\"entry_ns\":%llu,\"entry_guest_tsc\":%llu,\"ack_guest_tsc\":%"PRIu64",\"tsc_khz\":%llu,\"pair_span_ns\":%llu",(unsigned long long)resume_profile->run_ns,(unsigned long long)resume_profile->entry_ns,(unsigned long long)resume_profile->guest_tsc,atomic_load(&heartbeat->ack_tsc),(unsigned long long)resume_profile->virtual_tsc_khz,(unsigned long long)resume_profile->sample_span_ns);
+ }
+ n+=snprintf(ack+n,4096-n,"}");check(n<4096,"benchmark reply bound");return n;
+}
 struct phase_profile { uint64_t last; unsigned count; struct { const char *name; uint64_t ns; } stages[10]; };
 static void phase_start(struct phase_profile *p) { memset(p,0,sizeof(*p));if(profile_enabled)p->last=ns(); }
 static void phase_mark(struct phase_profile *p,const char *name) {
@@ -221,6 +285,7 @@ static struct outcome handoff(struct request q,const char *peer,int client,char 
   q.state_len=response[1];q.manifest_len=0;recv_all(native_fd,state,q.state_len);
   o.send=(struct api_result){.status=204,.us=(ns()-start)/1000.};
  } else { o.send=api("PUT","/actions","{\"action_type\": \"DirectSend\"}"); }
+ if(heartbeat)atomic_store_explicit(&heartbeat->epoch,q.epoch,memory_order_release);
  phase_mark(&profile,"export_api");
  select_owner(2147483647);phase_mark(&profile,"source_fence");q.operation=0;
  if(!memory) {
@@ -232,10 +297,12 @@ static struct outcome handoff(struct request q,const char *peer,int client,char 
  memcpy(wire,&q,sizeof(q));send_all(fd,wire,sizeof(q)+q.state_len+q.manifest_len);
  phase_mark(&profile,"metadata_send");
  uint32_t marker;recv_all(fd,&marker,sizeof(marker));check(marker==MAGIC,"resume marker");o.pause_to_resume_ns=ns()-start;
+ uint64_t guest_observed=0;
+ if(heartbeat){bench_wait(&heartbeat->acknowledged,q.epoch);guest_observed=ns()-start;}
  phase_mark(&profile,"peer_until_resume");
  if(client>=0)send_all(client,&marker,sizeof(marker));
  recv_all(fd,&o.target,sizeof(o.target));check(o.target.magic==MAGIC&&o.target.ack_len<4096,"reply bounds");
- recv_all(fd,ack,o.target.ack_len);ack[o.target.ack_len]=0;o.handoff_ns=ns()-start;if(!q.persistent)close(fd);
+ recv_all(fd,ack,o.target.ack_len);ack[o.target.ack_len]=0;o.handoff_ns=ns()-start;if(heartbeat)o.target.ack_ns=guest_observed;if(!q.persistent)close(fd);
  phase_print(&profile,&q,"send");return o;
 }
 static void print_outcome(const struct outcome *o,const char *ack,uint64_t request_ns,uint64_t request_resume_ns) {
@@ -279,6 +346,7 @@ int main(int argc,char **argv) {
  }
  if(!strcmp(argv[1],"serve")){
   check(argc==5||argc==6,"serve arguments");int listener=tcp(argv[3],1),local=local_socket(1);
+  bench_map();
   prepare_owner();
   selector_fd=open("/sys/module/kvm/parameters/dax_owner_pid",O_WRONLY|O_CLOEXEC);
   if(selector_fd<0)fail("prepare owner parameter");
@@ -346,6 +414,7 @@ int main(int argc,char **argv) {
    } else { r.receive=api("PUT","/actions","{\"action_type\": \"DirectReceive\"}"); }
    phase_mark(&profile,"import_api");
    uint32_t marker=MAGIC;send_all(fd,&marker,sizeof(marker));
+   if(heartbeat)r.ack_len=bench_reply(ack,q.epoch);
    send_all(fd,&r,sizeof(r));send_all(fd,ack,r.ack_len);if(!q.persistent)close(fd);
    phase_print(&profile,&q,"receive");
   }

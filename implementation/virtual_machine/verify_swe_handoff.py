@@ -146,7 +146,7 @@ def execution_identity(report):
         "configuration": {key: config[key] for key in ("host_kernel", "qemu_sha256", "l1_vcpus", "l1_memory_mib",
                                                        "shared_mib", "cxl_mib", "dax_guest", "dax_4k")},
         "storage_template_sha256": config["home_storage_image"]["template_sha256"],
-        "memory_mib": report["arguments"]["memory_mib"], "vcpus": 1,
+        "memory_mib": report["arguments"]["memory_mib"], "vcpus": report["arguments"].get("vcpus",1),
         "restore_timing": report["arguments"].get("restore_timing", False)}
     workload = {key: plan[key] for key in ("name", "trace_sha256", "image_sha256", "image_bytes", "command_count",
         "commands", "handoff_before", "environment", "effective_environment")}
@@ -246,8 +246,19 @@ def verify_trace(e, report):
     need(len(commands) == plan["command_count"] == len(trace["commands"]), "trace command count")
     expected_files = {f"results/{i:03d}.{extension}" for i in range(len(commands))
                       for extension in ("command", "out", "json", "block-before", "block-after")}
+    cpu_files = {key for key in files if re.fullmatch(r"results/[0-9]{3}\.cpu-(before|after|[a-zA-Z0-9_-]+)", key)}
+    if cpu_files:
+        required_cpu = {f"results/{i:03d}.cpu-{side}" for i in range(len(commands)) for side in ("before", "after")}
+        required_cpu.update(f"results/{row['receipt']['index']:03d}.cpu-{row['receipt']['label']}"
+                            for row in report['control_commands'] if row.get('operation') == 'running'
+                            and row['receipt']['index'] < len(commands))
+        need(cpu_files == required_cpu, "missing/extra per-CPU counter snapshots")
+        for name in cpu_files:
+            rows = [line.split() for line in files[name].decode().splitlines()]
+            need([r[0] for r in rows] == [f"cpu{i}" for i in range(report['arguments'].get('vcpus', 1))]
+                 and all(len(r) >= 9 and all(v.isdigit() for v in r[1:]) for r in rows), "invalid per-CPU counters")
     need({key for key in files if key.startswith("results/") and key.split("/")[-1][:3].isdigit()} ==
-         expected_files, "missing/extra command artifacts")
+         expected_files | cpu_files, "missing/extra command artifacts")
     raw_ends, tests, read_ios, remote_reads, duration = [], [], 0, 0, 0.0
     for index, (command, event) in enumerate(zip(trace["commands"], commands)):
         end = guest(e, event, "trace_end")
@@ -314,6 +325,8 @@ def verify_trace(e, report):
     boot, pid, inode = (identities[0][k] for k in ("boot_id", "pid", "fd_inode"))
     need((boot, pid) == (ready["boot_id"], ready["pid"]) and ready["command_count"] == len(commands), "boot workload identity")
     need([row["fd_ordinal"] for row in identities] == list(range(len(identities))), "FD observation sequence reset/gap")
+    auxiliary = report.get('parallel_build')
+    aux_end = guest(e, auxiliary['ended'], 'trace_build_end') if auxiliary else None
     for identity in identities:
         need((identity["boot_id"], identity["pid"], identity["fd_inode"]) == (boot, pid, inode)
              and identity["fd_deleted"] is True and inode > 0, "guest process or open FD replaced")
@@ -323,8 +336,32 @@ def verify_trace(e, report):
         complete = identity["next_index"]
         need(0 <= complete <= len(commands), "identity progress range")
         state = f"{boot} {complete} {raw_ends[complete - 1]['output_sha256']}\n" if complete else f"{boot} 0\n"
+        if aux_end and int(identity['label'].rsplit('c',1)[1]) > int(aux_end['label'].rsplit('c',1)[1]):
+            state = f"{boot} {complete} {aux_end['output_sha256']}\n"
         need(identity["sentinel_sha256"] == sha(state.encode()), "mutable trace state changed")
-    need(files["results/state"] == f"{boot} {len(commands)} {raw_ends[-1]['output_sha256']}\n".encode(), "final guest state")
+    final_hash = aux_end['output_sha256'] if aux_end else raw_ends[-1]['output_sha256']
+    need(files["results/state"] == f"{boot} {len(commands)} {final_hash}\n".encode(), "final guest state")
+    if auxiliary:
+        start = guest(e, auxiliary['started'], 'trace_async_started')
+        need(aux_end['index'] == len(commands) == start['index'] == aux_end['next_index'] and
+             aux_end['rc'] == 0 and aux_end['timed_out'] is False and aux_end['run_label'] == start['label'],
+             'auxiliary build failed or changed trace progress')
+        prefix='results/parallel-build'
+        need(json.loads(files[prefix+'.json']) == aux_end and sha(files[prefix+'.out']) == aux_end['output_sha256']
+             and sha(files[prefix+'.command']) == aux_end['command_sha256']
+             and auxiliary['command'].encode() in files[prefix+'.command'], 'auxiliary build bytes changed')
+        observations=auxiliary['observations']
+        need(len(observations)==7, 'incomplete build observations')
+        for observation in observations:
+            live=guest(e,observation,'trace_running')
+            need(live['active'] is True and live['process_state'] not in ('Z','X','x','missing') and
+                 all(live[k]==start[k] for k in ('index','command_pid','start_ticks')), 'build process replaced or stopped')
+        snapshots=[files[prefix+'.cpu-'+suffix] for suffix in
+                   ['before', *[o['receipt']['label'] for o in observations], 'after']]
+        counters=[[list(map(int,line.split()[1:8+1])) for line in sample.decode().splitlines()] for sample in snapshots]
+        need(all(len(sample)==report['arguments']['vcpus'] for sample in counters), 'build CPU count changed')
+        for before,after in zip(counters,counters[1:]):
+            need(all(all(b>=a for a,b in zip(x,y)) for x,y in zip(before,after)), 'build CPU counters went backwards')
     need(math.isclose(duration, report["guest_duration_s"], abs_tol=1e-8), "aggregate command duration changed")
     return {"commands": len(commands), "returncodes": [r["rc"] for r in raw_ends], "submission": submitted,
             'guest_cpu_flags_sha256': sha(files['results/cpu-flags.txt']) if 'results/cpu-flags.txt' in files else None,
@@ -455,7 +492,8 @@ def verify(path):
              'Cleanup fenced a different process')
     need(len(r['cleanup']) == len(launches), 'Runtime cleanup missing')
     configs = [a['request'] for a in r['api_events'] if a['path'] == '/machine-config']
-    need(configs == [{'vcpu_count': 1, 'mem_size_mib': 2048}], 'Wrong VM configuration')
+    vcpus = r['arguments'].get('vcpus',1)
+    need(vcpus in (1,2,4,8) and configs == [{'vcpu_count': vcpus, 'mem_size_mib': 2048}], 'Wrong VM configuration')
     disks = [a['request'] for a in r['api_events'] if a['path'] == '/drives/data']
     need(len(disks) == 1 and disks[0]['is_read_only'] and disks[0]['path_on_host'] == '/disk/sandbox.raw',
          'Wrong immutable block device')
@@ -609,10 +647,15 @@ def verify(path):
         for i,hop in enumerate(handoffs,1):
             exp,imp=events[('export',i)],events[('import',i)]
             keys=('vm_offset','vcpu_offset','vmcs_offset','run_offset','ram_hva','ram_bytes','vm_creates','vcpu_creates')
+            if 'abi_version' in exp['token']:
+                keys += ('abi_version','vcpu_count','vcpus')
+                need(exp['token']['abi_version'] == 2 and exp['token']['vcpu_count'] == vcpus, 'Wrong SMP token ABI/topology')
+                need(len(exp['token']['vcpus']) == 8 and
+                     [c['id'] for c in exp['token']['vcpus'][:vcpus]] == list(range(vcpus)), 'Missing per-vCPU identities')
             graph={k:exp['token'][k] for k in keys}
             need(all(imp['token'][k] == v for k,v in graph.items()) and
                  exp['token']['flags'] == 2 and imp['token']['flags'] == 1,'Changed kernel graph/owner')
-            need(graph['vm_creates'] == graph['vcpu_creates'] == 1 and
+            need(graph['vm_creates'] == 1 and graph['vcpu_creates'] == vcpus and
                  exp['snapshot_bytes'] == exp['ram_transfer_bytes'] == imp['snapshot_bytes'] == imp['ram_transfer_bytes'] == 0,
                  'Snapshot or RAM copy on direct handoff')
             if retained is not None:need(graph == retained,'Recreated kernel graph')
@@ -692,6 +735,7 @@ def verify(path):
     else:
         extra=2 if r['arguments'].get('resident_repromote_handoff') else 0
         if r['arguments'].get('inflight_handoff_index') is not None: extra += 2
+        if r['arguments'].get('parallel_build'): extra += 6
         nhops=2+2*r['arguments'].get('direct_profile_roundtrips',0)+extra
         need(counts == {'promotion':2,'demotion':2,r['mode']:nhops},'Missing lifecycle case')
         need([(x['source'],x['destination'],x['source_epoch'],x['destination_epoch']) for x in handoffs] ==
@@ -729,6 +773,17 @@ def verify(path):
         order = [proof['started']['file'],observed[0]['file'],files[0],observed[1]['file'],
                  files[1],observed[2]['file'],command['file']]
         need([e.order[f] for f in order] == sorted(e.order[f] for f in order), 'In-flight evidence reordered')
+    if r['arguments'].get('parallel_build'):
+        build=r['parallel_build']; selected=[h for h in handoffs if h['fast_file'] in build['hops']]
+        need(len(selected)==(6 if r['mode']=='direct' else 0), 'parallel build handoff count')
+        need([h['fast_file'] for h in selected]==build['hops'], 'parallel build handoffs reordered')
+        order=[build['started']['file']]
+        for i,observation in enumerate(build['observations']):
+            need(observation['role']==('B' if r['mode']=='direct' and i%2 else 'A'), 'parallel build endpoint')
+            order.append(observation['file'])
+            if i<len(selected): order.append(selected[i]['fast_file'])
+        order.append(build['ended']['file'])
+        need([e.order[f] for f in order]==sorted(e.order[f] for f in order), 'parallel build evidence reordered')
     return {'result':'passed','mode':r['mode'],'trace':r['trace']['name'],
         'report_sha256':sha(path.read_bytes()),**execution_identity(r),**workload,
         'transitions':dict(counts),'inflight_commands':len(inflight),

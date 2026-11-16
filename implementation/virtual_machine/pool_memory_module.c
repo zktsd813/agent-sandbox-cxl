@@ -105,14 +105,29 @@ static vm_fault_t cpm_fault(struct vm_fault *vmf)
     }
     if (index >= c->cfg.count) { ret = VM_FAULT_SIGBUS; goto out; }
     c->state->faults++;
-    if (write)
-        zap_vma_ptes(vmf->vma, vmf->address & PAGE_MASK, PAGE_SIZE);
+    /* Install writable mappings at their final permission. Never remove an
+     * existing PTE here: another vCPU may be following it after its fault
+     * completed, and a transient hole makes KVM's PFN lookup fail with EFAULT. */
     if (vmf->vma->vm_flags & VM_WRITE)
         prot = __pgprot(pgprot_val(prot) | _PAGE_RW);
     ret = vmf_insert_pfn_prot(vmf->vma, vmf->address & PAGE_MASK,
                             PHYS_PFN(c->cfg.phys_base + c->map[index].offset), prot);
 out:
     mutex_unlock(&c->lock);
+    return ret;
+}
+
+static vm_fault_t cpm_pfn_mkwrite(struct vm_fault *vmf)
+{
+    struct cpm *c = vmf->vma->vm_private_data;
+    vm_fault_t ret = 0;
+    mutex_lock(&c->lock);
+    if (vmf->pgoff >= c->cfg.count ||
+        (c->header && (!owns(c) || READ_ONCE(c->state->state) != CPM_ACTIVE)))
+        ret = VM_FAULT_SIGBUS;
+    mutex_unlock(&c->lock);
+    /* Let finish_mkwrite_fault upgrade the original PTE under its page-table
+     * lock. Calling the insertion fault handler here skips that upgrade. */
     return ret;
 }
 
@@ -130,7 +145,7 @@ static int cpm_may_split(struct vm_area_struct *vma, unsigned long address) { re
 static int cpm_mremap(struct vm_area_struct *vma) { return -EINVAL; }
 static const struct vm_operations_struct cpm_vm_ops = {
     .fault = cpm_fault,
-    .pfn_mkwrite = cpm_fault,
+    .pfn_mkwrite = cpm_pfn_mkwrite,
     .close = cpm_vma_close,
     .may_split = cpm_may_split,
     .mremap = cpm_mremap,
