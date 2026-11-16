@@ -16,7 +16,7 @@ import subprocess
 import time
 
 HERE = Path(__file__).resolve().parent
-CASES = ("direct-baseline", "direct-two-vcpu", "direct-block", "reuse-block", "reuse-two-vcpu")
+CASES = ("direct-baseline", "direct-excess-vcpus", "direct-block", "reuse-block", "reuse-two-vcpu")
 
 
 def require(ok, message):
@@ -182,7 +182,7 @@ def main():
                 f" /lab/firecracker --no-seccomp --api-sock {directory}/api.sock <&3 > {directory}/fc.log 2>&1) &\n" +
                 nfs.record_pid(directory) + f"n=0\nwhile [ ! -S {directory}/api.sock ]; do\n"
                 f"read p s < {directory}/fc.pid\nkill -0 \"$p\"\nn=$((n+1))\n[ $n -lt 500 ]\nsleep .02\ndone")
-            vcpus = 1 if block else 2
+            vcpus = 1 if block else (9 if direct else 2)
             components = {"/machine-config": {"vcpu_count": vcpus, "mem_size_mib": 512},
                 "/boot-source": {"kernel_image_path": "/lab/l2-vmlinux",
                     "initrd_path": "/lab/nfs-l2-initramfs.cpio" if block else "/lab/l2-initramfs.cpio",
@@ -206,7 +206,7 @@ def main():
             if direct:
                 rejection = api(a, "PATCH", "/vm", {"state": "Paused"}, 400)
                 if args.require_safe_direct_rejection:
-                    expected = "diskless MMIO workers only" if block else "one vCPU"
+                    expected = "diskless MMIO workers only" if block else "vCPU count"
                     require("Unsupported direct handoff configuration" in rejection["response"] and
                             expected in rejection["response"], "Direct rejection was not the preflight guard")
                     report["rejection_stage"] = "direct_preflight"
