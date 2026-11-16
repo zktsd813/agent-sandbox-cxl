@@ -86,7 +86,8 @@ def resident_report(path):
              'Resident raw receipt checksum changed')
     need(report['result']=='passed' and set(report['resident_processes'])=={'A','B'}, 'Missing Firecracker pair')
     for evidence in report['validation'].values():
-        need(evidence['raw'].strip().splitlines()[-1]=='0', 'Resident L1 kernel tainted')
+        need(evidence['raw'].strip().splitlines()[-1]==str(1<<12),
+             'Unexpected resident kernel taint beyond the out-of-tree mapper module')
     for receipt in report['receipts']:
         if receipt['kind'].startswith('final-'):
             data=(raw.parent/receipt['file']).read_bytes()
