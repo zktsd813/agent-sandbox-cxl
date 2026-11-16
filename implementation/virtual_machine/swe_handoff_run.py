@@ -62,6 +62,7 @@ def arguments():
     parser.add_argument('--prefault-probe', type=Path)
     parser.add_argument('--repetitions', type=int, default=1)
     parser.add_argument('--seed', type=int, default=20261116)
+    parser.add_argument('--skip-trials', type=int, default=0, help='Resume a recorded shuffled plan in a fresh output/session; preserve the completed prefix separately')
     parser.add_argument('--l1-memory-mib', type=int, default=6144)
     parser.add_argument('--cxl-mib', type=int, default=8192)
     args = parser.parse_args()
@@ -171,8 +172,11 @@ def main():
                  for policy in (args.trajectory_policies or [None]) for repeat in range(args.repetitions)]
         if args.trajectory_policies:
             random.Random(args.seed).shuffle(tasks)
+        if not 0 <= args.skip_trials < len(tasks):
+            raise ValueError('skip-trials must select a nonempty suffix of the recorded plan')
         suite['planned_order'] = tasks
-        for index, (name, mode, policy, repeat, prefault) in enumerate(tasks):
+        suite['skipped_planned_order'] = tasks[:args.skip_trials]
+        for index, (name, mode, policy, repeat, prefault) in enumerate(tasks[args.skip_trials:], start=args.skip_trials):
             session = f"{args.session}-{index:02d}"
             pointer = HERE / ".local" / f"current-{session}.json"
             if pointer.exists():
