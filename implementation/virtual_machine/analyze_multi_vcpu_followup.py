@@ -9,7 +9,7 @@ import statistics
 import tarfile
 
 from experiment_sources import verify_sources
-from verify_swe_handoff import verify
+from verify_swe_handoff import verify, FATAL_KERNEL
 
 
 def need(ok, message):
@@ -85,6 +85,13 @@ def resident_report(path):
         need(hashlib.sha256((raw.parent/receipt['file']).read_bytes()).hexdigest()==receipt['sha256'],
              'Resident raw receipt checksum changed')
     need(report['result']=='passed' and set(report['resident_processes'])=={'A','B'}, 'Missing Firecracker pair')
+    for evidence in report['validation'].values():
+        need(evidence['raw'].strip().splitlines()[-1]=='0', 'Resident L1 kernel tainted')
+    for receipt in report['receipts']:
+        if receipt['kind'].startswith('final-'):
+            data=(raw.parent/receipt['file']).read_bytes()
+            need(not FATAL_KERNEL.search(data.decode(errors='replace')) and b'DIRECT_HANDOFF_FATAL' not in data,
+                 'Fatal resident VMM or guest log')
     for evidence in report['resident_processes'].values():
         need('/lab/firecracker' in (raw.parent/evidence['file']).read_text(), 'Endpoint is not Firecracker')
     rows = [row for row in report['transitions'] if row.get('kind')=='direct']
@@ -109,6 +116,9 @@ def resident_report(path):
                   'pause_to_resume_response_ms':[r['fast']['pause_to_resume_response_ns']/1e6 for r in group],
                   'resume_response_to_guest_ack_ms':[(r['fast']['guest_ack_ns']-r['fast']['pause_to_resume_response_ns'])/1e6 for r in group]}
         if result['profile']:
+            stages['kernel_detach_ms']=[sum(r['fast']['ack']['detach_ns'])/1e6 for r in group]
+            stages['kernel_attach_ms']=[sum(r['fast']['ack']['attach_ns'])/1e6 for r in group]
+            stages['kernel_handoff_ms']=[(sum(r['fast']['ack']['detach_ns'])+sum(r['fast']['ack']['attach_ns']))/1e6 for r in group]
             for side in ('detach','attach'):
                 for i in range(8):
                     stages[f'{side}_{i}_ms'] = [r['fast']['ack'][side+'_ns'][i]/1e6 for r in group]
