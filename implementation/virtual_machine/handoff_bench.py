@@ -780,7 +780,7 @@ def trajectory_replay(c, s, report, save):
             after = kt.trajectory_counts(c)
             row['fault_before'], row['fault_after'] = before, after
             row['faults'] = {role: {key: after[role][key]-before[role][key]
-                for key in ('ept_violation', 'page_fault')} for role in ('A', 'B')}
+                for key in ('ept_violation', 'page_fault', 'ram_ept_violation', 'mmio_ept_violation')} for role in ('A', 'B')}
         c.trace_commands.append(row)
         # Keep the next fresh destination ready while the current VM owns RAM.
         # This preparation is outside pause and command intervals; its wall

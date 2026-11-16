@@ -631,17 +631,24 @@ def verify(path):
             need(row['host_send_ns'] < row['host_receive_ns'], 'Host command clock')
             if r['arguments'].get('count_faults'):
                 for role in ('A','B'):
-                    for key in ('ept_violation', 'page_fault'):
+                    for key in ('ept_violation', 'page_fault', 'ram_ept_violation', 'mmio_ept_violation'):
                         before, after = row['fault_before'][role], row['fault_after'][role]
                         for sample in (before, after):
-                            totals = re.findall(r'Totals:\s*Hits:\s*(\d+)\s+Entries:\s*(\d+)\s+Dropped:\s*(\d+)',
-                                                e.text(sample[key+'_file']))
-                            need(len(totals) == 1 and int(totals[0][0]) == sample[key] and int(totals[0][2]) == 0,
+                            text = e.text(sample[key+'_file'])
+                            totals = re.findall(r'Totals:\s*Hits:\s*(\d+)\s+Entries:\s*(\d+)\s+Dropped:\s*(\d+)', text)
+                            need(len(totals) == 1 and int(totals[0][2]) == 0, 'Missing/dropped histogram')
+                            actual = int(totals[0][0])
+                            if key in ('ram_ept_violation', 'mmio_ept_violation'):
+                                ram = sum(int(n) for n in re.findall(r'fault_address:\s*~\s*0-2147483647\s*}[^\n]*hitcount:\s*(\d+)', text))
+                                actual = ram if key == 'ram_ept_violation' else actual-ram
+                            need(actual == sample[key],
                                  'Altered or dropped fault histogram')
                         need(row['faults'][role][key] == after[key]-before[key] >= 0, 'Fault count delta')
         need(all(x['fenced'] for x in r['keepalive_cleanup']) and len(r['keepalive_cleanup']) == 2,
              'Keepalive VM cleanup')
         if r['arguments'].get('count_faults'):
+            need(sum(r['fault_final'][role]['ram_ept_violation'] for role in ('A','B')) > 0,
+                 'No RAM address bucket observed')
             for key in ('create_vm', 'create_vcpu'):
                 created = sum(r['fault_final'][role][key]-r['fault_initial'][role][key] for role in ('A','B'))
                 need(created == (nhops if r['mode'] == 'state-only' else 0), 'Fresh KVM creation coverage')

@@ -101,6 +101,8 @@ def summarize(args):
             if row['count_run']:
                 row['ept_violations'] = sum(x['faults'][role]['ept_violation'] for x in r['commands'] for role in ('A','B'))
                 row['page_faults'] = sum(x['faults'][role]['page_fault'] for x in r['commands'] for role in ('A','B'))
+                row['ram_ept_violations'] = sum(x['faults'][role]['ram_ept_violation'] for x in r['commands'] for role in ('A','B'))
+                row['mmio_ept_violations'] = row['page_faults']-row['ram_ept_violations']
                 row['spte'] = r['spte_final']
                 row['whole_interval_ept'] = sum(r['fault_final'][role]['ept_violation']-r['fault_initial'][role]['ept_violation'] for role in ('A','B'))
                 row['vm_creates'] = sum(r['fault_final'][role]['create_vm']-r['fault_initial'][role]['create_vm'] for role in ('A','B'))
@@ -123,7 +125,7 @@ def summarize(args):
                 out.update(index=index, role=command['role'], epoch=command['epoch'], after_move_ordinal=since,
                     duration_s=duration, excess_s=duration-st.mean(controls) if controls else None)
                 for role in ('A','B'):
-                    for kind in ('ept_violation','page_fault'):
+                    for kind in ('ept_violation','page_fault','ram_ept_violation','mmio_ept_violation'):
                         out[role+'_'+kind] = command.get('faults',{}).get(role,{}).get(kind)
                 out['excess_ept'] = None
                 if row['count_run']:
@@ -153,14 +155,18 @@ def summarize(args):
             faults = st.mean(x['ept_violations'] for x in counts)
             moves = counts[0]['moves']
             out.update(ept_mean=faults, page_fault_mean=st.mean(x['page_faults'] for x in counts),
+                       ram_ept_mean=st.mean(x['ram_ept_violations'] for x in counts),
+                       mmio_ept_mean=st.mean(x['mmio_ept_violations'] for x in counts),
                        moves=moves, ept_per_move=faults/moves if moves else None,
                        spte=[x['spte'] for x in counts], nested_root_ms_mean=st.mean(x['nested_root_ns'] for x in counts)/1e6)
             if costs:
-                out['estimated_physical_4k_s']=faults*costs['4k']/1e6
+                out['estimated_physical_4k_s']=out['ram_ept_mean']*costs['4k']/1e6
                 base_faults = [b['ept_violations'] for b,r in groups[(key[0],key[1],'baseline')] if b['count_run']]
                 if base_faults:
                     out['excess_ept_mean'] = faults-st.mean(base_faults)
-                    out['estimated_excess_physical_4k_s'] = out['excess_ept_mean']*costs['4k']/1e6
+                    base_ram = [b['ram_ept_violations'] for b,r in groups[(key[0],key[1],'baseline')] if b['count_run']]
+                    out['excess_ram_ept_mean'] = out['ram_ept_mean']-st.mean(base_ram)
+                    out['estimated_excess_physical_4k_s'] = out['excess_ram_ept_mean']*costs['4k']/1e6
             lag, lag_excess = defaultdict(list), defaultdict(list)
             for x in commands:
                 if (x['fixture'],x['policy'],x['mode'])==key and x['count_run'] and x['after_move_ordinal']:

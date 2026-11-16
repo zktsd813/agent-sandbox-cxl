@@ -26,7 +26,8 @@ def trajectory_start(c):
             script += f"echo 'p:trajectory/{name} kvm:{symbol}' >> $T/kprobe_events\n"
         for event in ('kvm/kvm_exit', 'kvm/kvm_page_fault', 'trajectory/create_vm', 'trajectory/create_vcpu'):
             suffix = ' if exit_reason == 48' if event == 'kvm/kvm_exit' else ''
-            script += f"echo 'hist:keys=common_pid{suffix}' > $T/events/{event}/trigger\n"
+            keys = 'common_pid,fault_address.buckets=2147483648' if event == 'kvm/kvm_page_fault' else 'common_pid'
+            script += f"echo 'hist:keys={keys}{suffix}' > $T/events/{event}/trigger\n"
         c.shell(role, script, 'trajectory-count-start')
 
 
@@ -42,6 +43,12 @@ def trajectory_counts(c):
                 raise ValueError('Missing or dropped histogram: '+raw)
             counts[name] = int(totals[0][0])
             counts[name+'_file'] = file
+            if name == 'page_fault':
+                counts['ram_ept_violation'] = sum(int(n) for n in re.findall(
+                    r'fault_address:\s*~\s*0-2147483647\s*}[^\n]*hitcount:\s*(\d+)', raw))
+                counts['ram_ept_violation_file'] = file
+                counts['mmio_ept_violation'] = counts[name]-counts['ram_ept_violation']
+                counts['mmio_ept_violation_file'] = file
         result[role] = counts
     return result
 
