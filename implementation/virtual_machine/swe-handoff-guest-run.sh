@@ -19,6 +19,8 @@ rm "$T/fd-sentinel"
 printf '{"event":"trace_ready","boot_id":"%s","pid":%s,"command_count":%s}\n' "$BOOT" "$$" "$COUNT"
 
 RUNNING=0
+# USER_HZ is 100 in this Linux guest. Keep raw per-CPU counters in the archive.
+cpu_stat() { awk '/^cpu[0-9]+ / {print}' /proc/stat; }
 # Only used by the opt-in in-flight handoff test. Normal run still waits here.
 finish_command() {
     RC=0
@@ -29,6 +31,7 @@ finish_command() {
     kill -KILL "-$COMMAND_PID" 2>/dev/null || true
     read END _ < /proc/uptime
     cat /sys/class/block/vda/stat > "$R/$N.block-after"
+    cpu_stat > "$R/$N.cpu-after"
     OUT_SHA=$(sha256sum "$R/$N.out"); OUT_SHA=${OUT_SHA%% *}
     NEXT=$((NEXT + 1))
     printf '%s %s %s\n' "$BOOT" "$NEXT" "$OUT_SHA" > "$T/state"
@@ -74,6 +77,7 @@ while read -r OP ARG TOKEN EXTRA; do
             CMD_SHA=$(sha256sum "$T/cmd/$N.command"); CMD_SHA=${CMD_SHA%% *}
             cp "$T/cmd/$N.command" "$R/$N.command"
             cat /sys/class/block/vda/stat > "$R/$N.block-before"
+            cpu_stat > "$R/$N.cpu-before"
             read START _ < /proc/uptime
             printf '{"event":"trace_start","label":"%s","index":%s,"command_sha256":"%s","start_s":%s}\n' "$TOKEN" "$INDEX" "$CMD_SHA" "$START"
             setsid "$B" chroot /newroot "/trace/cmd/$N.sh" </dev/null > "$R/$N.out" 2>&1 &
@@ -92,6 +96,7 @@ while read -r OP ARG TOKEN EXTRA; do
         running)
             [ "$RUNNING" -eq 1 ] || exit 1
             command_live
+            cpu_stat > "$R/$N.cpu-$TOKEN"
             printf '{"event":"trace_running","label":"%s","index":%s,"command_pid":%s,"start_ticks":%s,"process_state":"%s","active":%s}\n' "$TOKEN" "$INDEX" "$COMMAND_PID" "$LIVE_START" "$LIVE_STATE" "$LIVE"
             ;;
         collect)
