@@ -274,8 +274,11 @@ def verify_trace(e, report):
         need(after["read_ios"] >= before["read_ios"], "block read counter reversed")
         read_ios += after["read_ios"] - before["read_ios"]
         expected_role = "B" if report["mode"] != "baseline" and plan["handoff_before"] <= index < len(commands) - 2 else "A"
+        trajectory = report['arguments'].get('trajectory_policy')
+        if trajectory:
+            expected_role = 'B' if sum(x <= index for x in report['boundaries']) % 2 else 'A'
         need(event["role"] == expected_role, "command executed on wrong node")
-        need(event["vm"] == 1 and event["tier"] == ("cxl" if expected_role == "B" else "dram"), "command ran on wrong memory tier")
+        need(event["vm"] == 1 and event["tier"] == ("cxl" if trajectory or expected_role == "B" else "dram"), "command ran on wrong memory tier")
         if "network" in event:
             network = event["network"]
             delta = nfs_reads(e, network["after_file"]) - nfs_reads(e, network["before_file"])
@@ -699,8 +702,11 @@ def verify_suite(path):
         need(set(trial["outer_cleanup"]) == {"A", "B"} and
              all(entry["fenced"] is True for entry in trial["outer_cleanup"].values())
              and trial["memory_backing_removed"] is True and all(trial["network_removed"].values()), "outer resources not cleaned")
-        need(result["mode"] not in groups[result["trace"]], "duplicate trace/mode trial")
-        groups[result["trace"]][result["mode"]] = result
+        group = result['trace']
+        if trial.get('policy'):
+            group += ':'+trial['policy']+':'+str(trial['repeat'])
+        need(result["mode"] not in groups[group], "duplicate trace/mode trial")
+        groups[group][result["mode"]] = result
         rows.append(result)
     need(len({row["execution_inputs_sha256"] for row in rows}) == 1, "suite mixes execution source/runtime/configuration")
     comparison = []
