@@ -98,6 +98,8 @@ def summarize(args):
                         noise.append(line.strip())
             row['other_cpu_load'] = noise
             row['disturbed'] = bool(noise)
+            row['native_pause_to_resume_s'] = (sum(x['fast']['pause_to_resume_response_ns'] for x in r['transitions'] if x['kind']=='direct')/1e9
+                if r['mode']=='direct' else None)
             if row['count_run']:
                 row['ept_violations'] = sum(x['faults'][role]['ept_violation'] for x in r['commands'] for role in ('A','B'))
                 row['page_faults'] = sum(x['faults'][role]['page_fault'] for x in r['commands'] for role in ('A','B'))
@@ -157,6 +159,8 @@ def summarize(args):
             base_active = [b['active_s'] for b,r in groups[(key[0],key[1],'baseline')] if not b['count_run']]
             out.update(active_s_median=st.median(x['active_s'] for x in times),
                        active_extra_s=st.median(x['active_s'] for x in times)-st.median(base_active))
+            if key[2]=='direct':
+                out['native_pause_to_resume_s_median'] = st.median(x['native_pause_to_resume_s'] for x in times)
             excess = [x['excess_s'] for x in commands if (x['fixture'],x['policy'],x['mode'])==key and not x['count_run'] and x['excess_s'] is not None]
             if excess:
                 out.update(command_extra_s_median=st.median(excess), command_extra_s_p95=percentile(excess,.95), command_extra_s_max=max(excess))
