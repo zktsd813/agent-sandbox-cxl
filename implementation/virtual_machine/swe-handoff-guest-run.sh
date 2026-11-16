@@ -33,7 +33,7 @@ finish_command() {
     cat /sys/class/block/vda/stat > "$R/$N.block-after"
     cpu_stat > "$R/$N.cpu-after"
     OUT_SHA=$(sha256sum "$R/$N.out"); OUT_SHA=${OUT_SHA%% *}
-    NEXT=$((NEXT + 1))
+    if [ "$N" != parallel-build ]; then NEXT=$((NEXT + 1)); fi
     printf '%s %s %s\n' "$BOOT" "$NEXT" "$OUT_SHA" > "$T/state"
     TIMED_OUT=false; [ ! -e "$R/$N.timeout" ] || TIMED_OUT=true
     printf '{"event":"trace_end","label":"%s","run_label":"%s","index":%s,"command_sha256":"%s","rc":%s,"start_s":%s,"end_s":%s,"output_sha256":"%s","next_index":%s,"timed_out":%s}\n' "$TOKEN" "$RUN_TOKEN" "$INDEX" "$CMD_SHA" "$RC" "$START" "$END" "$OUT_SHA" "$NEXT" "$TIMED_OUT" > "$R/$N.json"
@@ -66,6 +66,21 @@ while read -r OP ARG TOKEN EXTRA; do
     esac
     case "$TOKEN" in ''|*[!a-zA-Z0-9_-]*) echo '{"event":"trace_protocol_error"}'; continue ;; esac
     case "$OP" in
+        build_async)
+            [ "$RUNNING" -eq 0 ] && [ "$NEXT" -eq "$COUNT" ] || exit 1
+            N=parallel-build; INDEX=$COUNT; TIMEOUT=300
+            cp "$T/parallel-build.sh" "$R/$N.command"
+            CMD_SHA=$(sha256sum "$R/$N.command"); CMD_SHA=${CMD_SHA%% *}
+            cat /sys/class/block/vda/stat > "$R/$N.block-before"
+            cpu_stat > "$R/$N.cpu-before"
+            read START _ < /proc/uptime
+            setsid "$B" chroot /newroot /trace/parallel-build.sh </dev/null > "$R/$N.out" 2>&1 &
+            COMMAND_PID=$!
+            setsid "$B" sh -c 'sleep "$1"; echo timeout > "$2"; kill -TERM "-$3" 2>/dev/null || true' watchdog "$TIMEOUT" "$R/$N.timeout" "$COMMAND_PID" </dev/null >/dev/null 2>&1 &
+            WATCHDOG_PID=$!; RUN_TOKEN=$TOKEN; RUNNING=1
+            COMMAND_START=$(awk '{print $22}' "/proc/$COMMAND_PID/stat")
+            printf '{"event":"trace_async_started","label":"%s","index":%s,"command_pid":%s,"start_ticks":%s}\n' "$TOKEN" "$INDEX" "$COMMAND_PID" "$COMMAND_START"
+            ;;
         run|run_async)
             [ "$RUNNING" -eq 0 ] || exit 1
             case "$INDEX" in ''|*[!0-9]*) exit 1 ;; esac

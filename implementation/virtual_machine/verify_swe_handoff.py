@@ -242,8 +242,19 @@ def verify_trace(e, report):
     need(len(commands) == plan["command_count"] == len(trace["commands"]), "trace command count")
     expected_files = {f"results/{i:03d}.{extension}" for i in range(len(commands))
                       for extension in ("command", "out", "json", "block-before", "block-after")}
+    cpu_files = {key for key in files if re.fullmatch(r"results/[0-9]{3}\.cpu-(before|after|[a-zA-Z0-9_-]+)", key)}
+    if cpu_files:
+        required_cpu = {f"results/{i:03d}.cpu-{side}" for i in range(len(commands)) for side in ("before", "after")}
+        required_cpu.update(f"results/{row['receipt']['index']:03d}.cpu-{row['receipt']['label']}"
+                            for row in report['control_commands'] if row.get('operation') == 'running'
+                            and row['receipt']['index'] < len(commands))
+        need(cpu_files == required_cpu, "missing/extra per-CPU counter snapshots")
+        for name in cpu_files:
+            rows = [line.split() for line in files[name].decode().splitlines()]
+            need([r[0] for r in rows] == [f"cpu{i}" for i in range(report['arguments'].get('vcpus', 1))]
+                 and all(len(r) >= 9 and all(v.isdigit() for v in r[1:]) for r in rows), "invalid per-CPU counters")
     need({key for key in files if key.startswith("results/") and key.split("/")[-1][:3].isdigit()} ==
-         expected_files, "missing/extra command artifacts")
+         expected_files | cpu_files, "missing/extra command artifacts")
     raw_ends, tests, read_ios, remote_reads, duration = [], [], 0, 0, 0.0
     for index, (command, event) in enumerate(zip(trace["commands"], commands)):
         end = guest(e, event, "trace_end")

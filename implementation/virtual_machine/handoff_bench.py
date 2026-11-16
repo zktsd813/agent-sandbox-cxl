@@ -493,6 +493,23 @@ class HandoffController(Controller):
                             'handoff_files':[hop['fast_file'] for hop in hops]}
         return ended
 
+    def parallel_build(self, s):
+        started = self.trace_command(s, 'build_async', event='trace_async_started')
+        observations, hops = [], []
+        for destination in (('B', 'A') * 3 + (None,) if s.direct else (None,) * 7):
+            time.sleep(.15)
+            live = self.trace_command(s, 'running', event='trace_running')
+            value = live['receipt']
+            require(value['active'] and all(value[k] == started['receipt'][k]
+                    for k in ('index', 'command_pid', 'start_ticks')), 'Parallel build ended or was replaced')
+            observations.append(live)
+            if destination:
+                hops.append(self.direct_handoff(s, destination))
+        ended = self.trace_command(s, 'collect', event='trace_end', timeout=330)
+        require(ended['receipt']['rc'] == 0 and not ended['receipt']['timed_out'], 'Parallel build failed')
+        return {'command':'go build -a -p "$(getconf _NPROCESSORS_ONLN)" ./...',
+                'started':started, 'observations':observations, 'hops':[h['fast_file'] for h in hops], 'ended':ended}
+
     def command_vm(self, s, op, *args):
         require(op in ('identity', 'check'), 'Unexpected synthetic command in SWE workload')
         return self.trace_command(s, 'identity')
@@ -703,6 +720,7 @@ def main():
     parser.add_argument('--name', required=True)
     parser.add_argument('--memory-mib', type=int, default=2048)
     parser.add_argument('--vcpus', type=int, choices=(1,2,4,8), default=1)
+    parser.add_argument("--parallel-build", action="store_true")
     parser.add_argument("--full-audit", action="store_true")
     parser.add_argument("--restore-timing", action="store_true")
     parser.add_argument("--kernel-trace", action="store_true")
@@ -784,11 +802,15 @@ def main():
             save()
         if args.mode != 'baseline':
             c.promote(s)
+            if args.parallel_build:
+                report['parallel_build'] = c.parallel_build(s)
             if args.resident_repromote_handoff:
                 c.direct_handoff(s, 'B')
                 c.direct_handoff(s, 'A')
             if args.full_audit: c.audit_memory(s)
             c.demote(s)
+        if args.mode == 'baseline' and args.parallel_build:
+            report['parallel_build'] = c.parallel_build(s)
         report['final_identity'] = c.command_vm(s,'identity')
         exported = c.trace_command(s,'export',event='trace_export',timeout=180)
         _, archive = c.frame(s,exported,'TRACE_EXPORT','guest-archive')

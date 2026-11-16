@@ -45,6 +45,7 @@ def arguments():
     parser.add_argument("--vcpus", type=int, choices=(1,2,4,8), default=1)
     parser.add_argument("--l1-memory-mib", type=int, choices=(4096,6144,8192), default=8192)
     parser.add_argument("--cxl-mib", type=int, choices=(4096,16384), default=16384)
+    parser.add_argument("--parallel-build", action="store_true")
     parser.add_argument("--restore-timing", action="store_true")
     parser.add_argument("--kernel-trace", action="store_true")
     parser.add_argument("--inflight-handoff-index", type=int)
@@ -127,6 +128,8 @@ def main():
         storage = Path(config["home_storage_image"]["path"])
         if storage != run / "home-storage.raw" or storage.is_symlink() or not storage.is_file():
             raise RuntimeError("Unexpected owned storage path; refusing cleanup")
+        with storage.open('rb') as stream:
+            os.posix_fadvise(stream.fileno(), 0, 0, os.POSIX_FADV_DONTNEED)
         arm["owned_storage"] = {"path": str(storage), "initial_sha256":
             config["home_storage_image"].get("initial_sha256"), "retained": True,
             "bytes": storage.stat().st_size}
@@ -169,6 +172,8 @@ def main():
             bench = prefix + [str(HERE / "handoff_bench.py"), "--mode", mode, "--name", name,
                               "--memory-mib", str(args.memory_mib), "--vcpus", str(args.vcpus),
                               "--direct-profile-roundtrips", str(args.direct_profile_roundtrips)]
+            if args.parallel_build:
+                bench.append("--parallel-build")
             if mode == "direct":
                 bench.append("--resident-repromote-handoff")
             if args.restore_timing:

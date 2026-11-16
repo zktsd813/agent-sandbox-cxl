@@ -9,6 +9,7 @@ import copy
 import json
 from pathlib import Path
 import shutil
+import shlex
 import subprocess
 import tempfile
 
@@ -101,6 +102,12 @@ def main():
             shutil.copy2(HERE/'swe-handoff-l2-init.sh', guest/'init')
             (guest/'init').chmod(0o755)
             shutil.copy2(HERE/'swe-handoff-guest-run.sh', guest/'lab/swe-handoff-guest-run.sh')
+            build = 'go build -a -p "$(getconf _NPROCESSORS_ONLN)" ./...'
+            argv = ["/trace/busybox", "env", "-i", *[f"{k}={v}" for k,v in trace['effective_environment'].items()],
+                    *trace['environment']['interpreter'], build]
+            build_path = guest/'lab/trace/parallel-build.sh'
+            build_path.write_text('#!/trace/busybox sh\ncd /testbed || exit 125\nexec '+shlex.join(argv)+'\n')
+            build_path.chmod(0o755)
             for command in trace['commands']:
                 path = guest/'lab/trace/cmd'/f"{command['index']:03d}.command"
                 if path.read_text() != command['command'] or lab.sha256(path) != command['command_sha256']:
