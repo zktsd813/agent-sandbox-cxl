@@ -761,7 +761,7 @@ def trajectory_replay(c, s, report, save):
             hop.update(host_request_ns=requested, host_resume_ns=time.monotonic_ns(), before_command=index)
             if args.count_faults and args.mode == 'state-only':
                 raw, file = c.shell(s.role, f'read p t < {s.directory}/fc.pid\n'
-                    f'cat /proc/$p/maps\nls -l /proc/$p/fd\ncat {s.report}', 'snapshot-restored')
+                    'cat /proc/$p/maps\nls -l /proc/$p/fd', 'snapshot-restored')
                 require('kvm-vm' in raw and 'kvm-vcpu' in raw, 'Restored KVM objects missing')
                 hop['restored_file'] = file
         before = kt.trajectory_counts(c) if args.count_faults else None
