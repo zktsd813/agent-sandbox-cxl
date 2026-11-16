@@ -1414,12 +1414,981 @@
       ]
     }
   ],
-  "resident": [],
+  "resident": [
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-resident-v1-busy/trial.json",
+        "sha256": "9510e75b45e3498960cb0b64b6c467c0b5184c2026cfcd0beb1ccab14a8b5be9"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T030913Z-vmll7l2a/resident-bench-1794798556382623523/report.json",
+        "sha256": "3069c9dc933befbc9a97515eb4e8848898cb4cb05a80f1558bf4178227e72a16"
+      },
+      "vcpus": 1,
+      "state": "busy",
+      "profile": false,
+      "resume_profile": false,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 3.3164825,
+            "p95": 4.177497,
+            "mean": 3.43617618,
+            "min": 2.04948,
+            "max": 22.230963
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.5877319999999999,
+            "p95": 0.749787,
+            "mean": 0.5871389,
+            "min": 0.345592,
+            "max": 0.792462
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.8754835000000001,
+            "p95": 0.968804,
+            "mean": 0.85770111,
+            "min": 0.612322,
+            "max": 1.037018
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.7283469999999999,
+            "p95": 2.008007,
+            "mean": 1.93294372,
+            "min": 1.402239,
+            "max": 20.718598
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 1.5554975,
+            "p95": 2.318917,
+            "mean": 1.50323246,
+            "min": 0.485946,
+            "max": 2.997929
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 3.4334565,
+            "p95": 4.074009,
+            "mean": 3.43455747,
+            "min": 2.234213,
+            "max": 4.978381
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.6807190000000001,
+            "p95": 0.7656040000000001,
+            "mean": 0.64825132,
+            "min": 0.24975999999999998,
+            "max": 0.806706
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.8904825000000001,
+            "p95": 1.017671,
+            "mean": 0.87940405,
+            "min": 0.658682,
+            "max": 1.068596
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.900396,
+            "p95": 2.053319,
+            "mean": 1.86869815,
+            "min": 1.509776,
+            "max": 2.094254
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 1.541312,
+            "p95": 2.262103,
+            "mean": 1.56585932,
+            "min": 0.534273,
+            "max": 2.939875
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4034830,
+          4034842
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": {
+        "0": {
+          "sequence_increase": 107215,
+          "timer_increase": 80811,
+          "ipi_increase": 0,
+          "ping_increase": 45859722
+        }
+      }
+    },
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-resident-v1-idle/trial.json",
+        "sha256": "430d2f899d4eb4c27a1172f39083daf38285f6e72a3b68ca0738f5b9a8c58085"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T030848Z-89doqkb9/resident-bench-1794798530630923756/report.json",
+        "sha256": "61f3b967c159b4ba9ac26a23a90eb9e8d5e2f606603e9ab96730aea864abba3c"
+      },
+      "vcpus": 1,
+      "state": "idle",
+      "profile": false,
+      "resume_profile": false,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.24696,
+            "p95": 2.660382,
+            "mean": 2.52944979,
+            "min": 1.755894,
+            "max": 16.339233
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.4988315,
+            "p95": 0.796914,
+            "mean": 0.52272674,
+            "min": 0.27581900000000004,
+            "max": 0.9901530000000001
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.00174,
+            "p95": 1.141193,
+            "mean": 0.99419219,
+            "min": 0.694663,
+            "max": 1.212646
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 2.0066895000000002,
+            "p95": 2.353567,
+            "mean": 2.28634162,
+            "min": 1.540743,
+            "max": 16.338893
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.1654585,
+            "p95": 0.655615,
+            "mean": 0.24310817,
+            "min": 0.000101,
+            "max": 0.92213
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.1736705,
+            "p95": 2.516555,
+            "mean": 2.17260438,
+            "min": 1.765353,
+            "max": 2.615945
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.4910875,
+            "p95": 0.706697,
+            "mean": 0.48551354,
+            "min": 0.242667,
+            "max": 0.8800399999999999
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.9254985,
+            "p95": 1.047232,
+            "mean": 0.9266883,
+            "min": 0.724023,
+            "max": 1.1092899999999999
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.89889,
+            "p95": 2.165049,
+            "mean": 1.90574309,
+            "min": 1.52662,
+            "max": 2.339874
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.2175445,
+            "p95": 0.666514,
+            "mean": 0.26686129,
+            "min": 0.000103,
+            "max": 0.948251
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4034691,
+          4034705
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": null
+    },
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-resident-v2-busy/trial.json",
+        "sha256": "e936153b23fea372019259879d62cdcc098a555438f28ebf58f781ba429ad89c"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T031045Z-002g02du/resident-bench-1794798647585796118/report.json",
+        "sha256": "afe73b44973399dc01055009ce2b068a49cfe2bb72c9e209b411bc69256754e9"
+      },
+      "vcpus": 2,
+      "state": "busy",
+      "profile": false,
+      "resume_profile": false,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.3608715,
+            "p95": 3.596932,
+            "mean": 2.85921413,
+            "min": 1.925225,
+            "max": 33.913378
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.274095,
+            "p95": 0.798041,
+            "mean": 0.40567984,
+            "min": 0.236057,
+            "max": 1.005409
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.9613025,
+            "p95": 1.049451,
+            "mean": 0.9470706799999999,
+            "min": 0.7824840000000001,
+            "max": 1.125138
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.6834220000000002,
+            "p95": 2.24823,
+            "mean": 2.08478949,
+            "min": 1.427463,
+            "max": 33.469874
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.6050815,
+            "p95": 1.903095,
+            "mean": 0.77442464,
+            "min": 0.330961,
+            "max": 2.420131
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.4902645,
+            "p95": 3.690772,
+            "mean": 2.61737085,
+            "min": 1.810174,
+            "max": 4.621412
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.48253,
+            "p95": 0.681622,
+            "mean": 0.4810918,
+            "min": 0.240841,
+            "max": 0.832876
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.905373,
+            "p95": 1.031585,
+            "mean": 0.91097156,
+            "min": 0.602407,
+            "max": 1.085801
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.8423444999999998,
+            "p95": 2.152869,
+            "mean": 1.85842914,
+            "min": 1.147092,
+            "max": 2.205587
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.561093,
+            "p95": 1.93502,
+            "mean": 0.75894171,
+            "min": 0.335224,
+            "max": 2.466544
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4035533,
+          4035545
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": {
+        "0": {
+          "sequence_increase": 153028,
+          "timer_increase": 81757,
+          "ipi_increase": 63079,
+          "ping_increase": 86909
+        },
+        "1": {
+          "sequence_increase": 199214,
+          "timer_increase": 10753,
+          "ipi_increase": 81087,
+          "ping_increase": 86910
+        }
+      }
+    },
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-resident-v2-idle/trial.json",
+        "sha256": "a496250d017073bbb110c75bcbe98127d48687ebe7ef07f0588cf7e77129b613"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T030937Z-p7d_ks4x/resident-bench-1794798580244507820/report.json",
+        "sha256": "1b09ed5a86b36abbe9d7b52828a1c690599936ff2c1f261b0f619c3e3fa9de87"
+      },
+      "vcpus": 2,
+      "state": "idle",
+      "profile": false,
+      "resume_profile": false,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.195762,
+            "p95": 2.697696,
+            "mean": 2.33670944,
+            "min": 1.74892,
+            "max": 15.80108
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.49678849999999997,
+            "p95": 0.79989,
+            "mean": 0.52943084,
+            "min": 0.260284,
+            "max": 1.052239
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.0169899999999998,
+            "p95": 1.163532,
+            "mean": 1.01775681,
+            "min": 0.772208,
+            "max": 1.280391
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.9097615000000001,
+            "p95": 2.280924,
+            "mean": 2.05967751,
+            "min": 1.520888,
+            "max": 15.352701
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.216076,
+            "p95": 0.67237,
+            "mean": 0.27703193,
+            "min": 9.9e-05,
+            "max": 0.878751
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.191853,
+            "p95": 2.571552,
+            "mean": 2.20983762,
+            "min": 1.758914,
+            "max": 2.798034
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.547147,
+            "p95": 0.787574,
+            "mean": 0.56124349,
+            "min": 0.263886,
+            "max": 0.971619
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.9818910000000001,
+            "p95": 1.167849,
+            "mean": 0.99656941,
+            "min": 0.7769149999999999,
+            "max": 1.23505
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.9056755,
+            "p95": 2.292576,
+            "mean": 1.93966089,
+            "min": 1.525479,
+            "max": 2.455881
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.2154145,
+            "p95": 0.806626,
+            "mean": 0.27017673,
+            "min": 0.000108,
+            "max": 0.984899
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4034928,
+          4034940
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": null
+    },
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-resident-v4-busy/trial.json",
+        "sha256": "51cc2c375c97d440477de834bb7d67bb3f83593c02abd602db5abd944dbeac1d"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T031248Z-rp95k9tl/resident-bench-1794798771242773373/report.json",
+        "sha256": "b54a8e70e94fe732fe80a7b152375e51399444d3cb8139b9ecad5c3fbd0fff0a"
+      },
+      "vcpus": 4,
+      "state": "busy",
+      "profile": false,
+      "resume_profile": false,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.5466225,
+            "p95": 3.298446,
+            "mean": 2.80028305,
+            "min": 2.120207,
+            "max": 18.664069
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.490257,
+            "p95": 0.9679829999999999,
+            "mean": 0.52260066,
+            "min": 0.26375400000000004,
+            "max": 1.022011
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.931087,
+            "p95": 1.10497,
+            "mean": 0.95139546,
+            "min": 0.7385900000000001,
+            "max": 1.198453
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.884948,
+            "p95": 2.400707,
+            "mean": 2.08257813,
+            "min": 1.541604,
+            "max": 17.95406
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.6512065,
+            "p95": 1.173926,
+            "mean": 0.71770492,
+            "min": 0.329541,
+            "max": 4.15658
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.5049194999999997,
+            "p95": 4.394768,
+            "mean": 2.72824685,
+            "min": 2.112376,
+            "max": 5.746688
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.4902325,
+            "p95": 0.985568,
+            "mean": 0.52623792,
+            "min": 0.251,
+            "max": 1.166943
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 0.9398500000000001,
+            "p95": 1.0786099999999998,
+            "mean": 0.94452283,
+            "min": 0.753456,
+            "max": 1.163463
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 1.8330095000000002,
+            "p95": 2.409016,
+            "mean": 1.88590311,
+            "min": 1.418865,
+            "max": 2.60484
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.634871,
+            "p95": 2.779999,
+            "mean": 0.84234374,
+            "min": 0.336374,
+            "max": 3.559945
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4036157,
+          4036171
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": {
+        "0": {
+          "sequence_increase": 181741,
+          "timer_increase": 82626,
+          "ipi_increase": 34399,
+          "ping_increase": 39613
+        },
+        "1": {
+          "sequence_increase": 225971,
+          "timer_increase": 10731,
+          "ipi_increase": 38735,
+          "ping_increase": 39614
+        },
+        "2": {
+          "sequence_increase": 225474,
+          "timer_increase": 10731,
+          "ipi_increase": 38734,
+          "ping_increase": 39614
+        },
+        "3": {
+          "sequence_increase": 227085,
+          "timer_increase": 10732,
+          "ipi_increase": 38773,
+          "ping_increase": 39613
+        }
+      }
+    },
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-resident-v4-idle/trial.json",
+        "sha256": "bed22b6b184826aaafb134a67ee67d732d1e2f874774537c5845a3dabb489766"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T031139Z-18h9je80/resident-bench-1794798702032544301/report.json",
+        "sha256": "a8695bcbd13efd7c82c2247c6cb03e31a7e2d5cde2ad599708e4349c84eacb85"
+      },
+      "vcpus": 4,
+      "state": "idle",
+      "profile": false,
+      "resume_profile": false,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.8232255000000004,
+            "p95": 3.137374,
+            "mean": 2.8163577,
+            "min": 2.326822,
+            "max": 3.200819
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 1.0880295,
+            "p95": 1.3398610000000002,
+            "mean": 1.08280803,
+            "min": 0.684907,
+            "max": 1.532219
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.199097,
+            "p95": 1.304813,
+            "mean": 1.18364324,
+            "min": 0.9327799999999999,
+            "max": 1.502808
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 2.7396890000000003,
+            "p95": 3.047024,
+            "mean": 2.72819775,
+            "min": 2.126829,
+            "max": 3.153991
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.055756,
+            "p95": 0.337392,
+            "mean": 0.08815995,
+            "min": 0.000285,
+            "max": 0.561971
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 2.770354,
+            "p95": 3.09848,
+            "mean": 2.78759209,
+            "min": 2.315993,
+            "max": 3.200376
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 1.0026175,
+            "p95": 1.380214,
+            "mean": 1.0346465,
+            "min": 0.7450869999999999,
+            "max": 1.494183
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.1438695,
+            "p95": 1.269425,
+            "mean": 1.14355601,
+            "min": 0.954303,
+            "max": 1.315789
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 2.6881765,
+            "p95": 3.098179,
+            "mean": 2.70548,
+            "min": 2.223031,
+            "max": 3.200064
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.0003295,
+            "p95": 0.449668,
+            "mean": 0.08211209,
+            "min": 0.000116,
+            "max": 0.559994
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4035793,
+          4035814
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": null
+    },
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-resident-v8-busy/trial.json",
+        "sha256": "eadc1fcca28b80d243a857a48ef1197b9d266aed37cf5e6d3dc6c4bc897f984b"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T031548Z-nsqa1bkz/resident-bench-1794798951772353831/report.json",
+        "sha256": "0ab29eac6b5e6091fcf22de24d0ec4aafb82a6cbabb0673b41aadbaf680f2bf8"
+      },
+      "vcpus": 8,
+      "state": "busy",
+      "profile": false,
+      "resume_profile": false,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 3.2705965,
+            "p95": 4.426421,
+            "mean": 3.48441424,
+            "min": 2.658394,
+            "max": 7.588017
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.652225,
+            "p95": 1.603307,
+            "mean": 0.81270138,
+            "min": 0.356841,
+            "max": 1.900538
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.1722194999999997,
+            "p95": 1.2730080000000001,
+            "mean": 1.15980953,
+            "min": 0.958877,
+            "max": 1.447537
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 2.4167579999999997,
+            "p95": 3.337923,
+            "mean": 2.55313181,
+            "min": 1.874545,
+            "max": 3.758333
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.773645,
+            "p95": 1.618925,
+            "mean": 0.93128243,
+            "min": 0.447529,
+            "max": 5.533385
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 3.2728705,
+            "p95": 5.164899,
+            "mean": 4.27966337,
+            "min": 2.69178,
+            "max": 42.714227
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 0.6053655,
+            "p95": 1.4778930000000001,
+            "mean": 0.72340047,
+            "min": 0.344758,
+            "max": 1.790954
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.1117685000000002,
+            "p95": 1.25638,
+            "mean": 1.11742232,
+            "min": 0.933606,
+            "max": 1.404898
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 2.2496134999999997,
+            "p95": 3.374084,
+            "mean": 3.18152114,
+            "min": 1.873397,
+            "max": 42.71398
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.980107,
+            "p95": 2.800276,
+            "mean": 1.09814223,
+            "min": 0.000247,
+            "max": 3.826028
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4037052,
+          4037071
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": {
+        "0": {
+          "sequence_increase": 192052,
+          "timer_increase": 84990,
+          "ipi_increase": 15745,
+          "ping_increase": 18845
+        },
+        "1": {
+          "sequence_increase": 240325,
+          "timer_increase": 10773,
+          "ipi_increase": 18556,
+          "ping_increase": 18845
+        },
+        "2": {
+          "sequence_increase": 238311,
+          "timer_increase": 10774,
+          "ipi_increase": 18560,
+          "ping_increase": 18845
+        },
+        "3": {
+          "sequence_increase": 240428,
+          "timer_increase": 10774,
+          "ipi_increase": 18526,
+          "ping_increase": 18845
+        },
+        "4": {
+          "sequence_increase": 237442,
+          "timer_increase": 10775,
+          "ipi_increase": 18542,
+          "ping_increase": 18845
+        },
+        "5": {
+          "sequence_increase": 234102,
+          "timer_increase": 10777,
+          "ipi_increase": 18550,
+          "ping_increase": 18845
+        },
+        "6": {
+          "sequence_increase": 238180,
+          "timer_increase": 10776,
+          "ipi_increase": 18542,
+          "ping_increase": 18846
+        },
+        "7": {
+          "sequence_increase": 240898,
+          "timer_increase": 10778,
+          "ipi_increase": 18552,
+          "ping_increase": 18846
+        }
+      }
+    },
+    {
+      "trial": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/followup-resident-v8-idle/trial.json",
+        "sha256": "b91b2d3c2f3fc8d3774553900a8c77b569530eaab68cba8bde62857def2f2624"
+      },
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/runs/20261116T031414Z-quw2697s/resident-bench-1794798857307953546/report.json",
+        "sha256": "d83fe69441bc5bca7d7aa3d00f987af29dd4fa03da394d4928c783674a13e134"
+      },
+      "vcpus": 8,
+      "state": "idle",
+      "profile": false,
+      "resume_profile": false,
+      "directions": {
+        "A→B": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 3.6208739999999997,
+            "p95": 3.931442,
+            "mean": 3.61400861,
+            "min": 2.9278,
+            "max": 4.156398
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 1.8644195,
+            "p95": 2.106177,
+            "mean": 1.83080034,
+            "min": 1.159097,
+            "max": 2.2950619999999997
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.2858550000000002,
+            "p95": 1.411436,
+            "mean": 1.27927207,
+            "min": 1.004456,
+            "max": 1.5442850000000001
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 3.5895935,
+            "p95": 3.927322,
+            "mean": 3.57633824,
+            "min": 2.927415,
+            "max": 4.156042
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.00036,
+            "p95": 0.222624,
+            "mean": 0.03767037,
+            "min": 0.000306,
+            "max": 0.338133
+          }
+        },
+        "B→A": {
+          "pause_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 3.5638110000000003,
+            "p95": 3.869642,
+            "mean": 3.56029756,
+            "min": 2.977187,
+            "max": 4.178443
+          },
+          "send_api_ms": {
+            "n": 100,
+            "p50": 1.7742404999999999,
+            "p95": 2.061056,
+            "mean": 1.7702200399999999,
+            "min": 1.2615560000000001,
+            "max": 2.234787
+          },
+          "receive_api_ms": {
+            "n": 100,
+            "p50": 1.2745715,
+            "p95": 1.3972470000000001,
+            "mean": 1.27716349,
+            "min": 1.110554,
+            "max": 1.7056410000000002
+          },
+          "pause_to_resume_response_ms": {
+            "n": 100,
+            "p50": 3.515785,
+            "p95": 3.829422,
+            "mean": 3.51501375,
+            "min": 2.976897,
+            "max": 4.178146
+          },
+          "resume_response_to_guest_ack_ms": {
+            "n": 100,
+            "p50": 0.0003095,
+            "p95": 0.221873,
+            "mean": 0.04528381,
+            "min": 0.000107,
+            "max": 0.337328
+          }
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4036582,
+          4036600
+        ],
+        "backing_removed": true
+      },
+      "smp_validation": null
+    }
+  ],
   "cpu_accounting": "x86 Linux USER_HZ=100; busy=user+nice+system+irq+softirq; active threshold=max(1 tick,1% wall); interval wall uses mean per-CPU accounted ticks when no uptime timestamp exists",
-  "status": "functional-passed; resident timing running",
-  "notes": [
-    "Two matched Gin baseline/direct pairs; original 27 commands unchanged",
-    "Auxiliary rebuild verified separately; six live handoffs",
-    "Resident measurement pilot is excluded from final timing samples"
-  ]
+  "status": "functional and main resident timing passed; pinned diagnostics running",
+  "resources": {
+    "cpus": "0-23",
+    "memory_node": 0,
+    "l1_memory_mib_each": 4096,
+    "swe_guest_memory_mib": 2048,
+    "timing_guest_memory_mib": 128,
+    "swe_cxl_mib": 4096,
+    "timing_cxl_mib": 2048,
+    "network_backend": "QEMU socket",
+    "lab_lock": "exclusive",
+    "timing_quiet_lock": "exclusive",
+    "heavy_test_build_quiet_lock": "shared",
+    "reserve_gib": 4,
+    "build_nice": 19
+  }
 }
