@@ -4,6 +4,7 @@ import argparse
 from collections import defaultdict
 import csv
 import fcntl
+import hashlib
 import json
 from pathlib import Path
 import random
@@ -124,6 +125,12 @@ def summarize(args):
                 for role in ('A','B'):
                     for kind in ('ept_violation','page_fault'):
                         out[role+'_'+kind] = command.get('faults',{}).get(role,{}).get(kind)
+                out['excess_ept'] = None
+                if row['count_run']:
+                    base_faults = [sum(x['commands'][index]['faults'][role]['ept_violation'] for role in ('A','B'))
+                                   for b,x in baseline if b['repeat']==row['repeat'] and b['count_run']]
+                    if base_faults:
+                        out['excess_ept'] = out['A_ept_violation']+out['B_ept_violation']-st.mean(base_faults)
                 commands.append(out)
     costs = {}
     if args.physical:
@@ -150,14 +157,22 @@ def summarize(args):
                        spte=[x['spte'] for x in counts], nested_root_ms_mean=st.mean(x['nested_root_ns'] for x in counts)/1e6)
             if costs:
                 out['estimated_physical_4k_s']=faults*costs['4k']/1e6
-            lag = defaultdict(list)
+                base_faults = [b['ept_violations'] for b,r in groups[(key[0],key[1],'baseline')] if b['count_run']]
+                if base_faults:
+                    out['excess_ept_mean'] = faults-st.mean(base_faults)
+                    out['estimated_excess_physical_4k_s'] = out['excess_ept_mean']*costs['4k']/1e6
+            lag, lag_excess = defaultdict(list), defaultdict(list)
             for x in commands:
                 if (x['fixture'],x['policy'],x['mode'])==key and x['count_run'] and x['after_move_ordinal']:
                     lag[x['after_move_ordinal']].append(x['A_ept_violation']+x['B_ept_violation'])
-            out['faults_by_after_move_ordinal'] = {str(k):{'mean':st.mean(v),'sum':sum(v),'n':len(v)} for k,v in sorted(lag.items())}
+                    if x['excess_ept'] is not None: lag_excess[x['after_move_ordinal']].append(x['excess_ept'])
+            out['faults_by_after_move_ordinal'] = {str(k):{'mean':st.mean(v),'sum':sum(v),'n':len(v),
+                'excess_over_baseline_mean':st.mean(lag_excess[k]) if lag_excess[k] else None} for k,v in sorted(lag.items())}
         summary.append(out)
     args.output.mkdir(parents=True, exist_ok=True)
-    save(args.output/'summary.json', {'physical_us_per_fixed_fault':costs, 'conditions':summary, 'trials':trials})
+    save(args.output/'summary.json', {'physical_us_per_fixed_fault':costs, 'conditions':summary, 'trials':trials,
+        'analysis_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        'suite_sha256':{str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in args.suites}})
     if commands:
         with (args.output/'commands.csv').open('w') as stream:
             writer=csv.DictWriter(stream, fieldnames=list(commands[0])); writer.writeheader(); writer.writerows(commands)
