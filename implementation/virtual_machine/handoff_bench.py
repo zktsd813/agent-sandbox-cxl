@@ -217,7 +217,9 @@ class HandoffController(Controller):
     def __init__(self, config, out, args):
         Controller.__init__(self, config, out, args.memory_mib, getattr(args, "vcpus", 1))
         self.args, self.mode = args, args.mode
-        self.metadata_base = 8192 * MIB
+        self.metadata_base = (3072 if config["cxl_mib"] == 4096 else 8192) * MIB
+        self.kvm_arena = (3584 if config["cxl_mib"] == 4096 else 12288) * MIB
+        self.data_bytes = (3072 if config["cxl_mib"] == 4096 else 8192) * MIB
         self.fixture = json.loads((Path(config['assets']) / 'manifest.json').read_text())
         self.trace = self.fixture['traces'][args.name]
         self.root = '/run/swe-handoff-' + os.urandom(8).hex()
@@ -398,9 +400,9 @@ class HandoffController(Controller):
                 'echo 1 > /sys/module/kvm/parameters/dax_nested_root_sync\n'
                 'echo 1 > /sys/module/kvm/parameters/dax_scattered\n'
                 'echo $resource > /sys/module/kvm/parameters/dax_data_base\n'
-                f'echo {8192*MIB} > /sys/module/kvm/parameters/dax_data_bytes\n'
+                f'echo {self.data_bytes} > /sys/module/kvm/parameters/dax_data_bytes\n'
                 f'echo {node} > /sys/module/kvm/parameters/dax_node\necho {mode} > /sys/module/kvm/parameters/dax_shared\n'
-                f"printf '%x,%x\\n' \"$((resource + {12288*MIB}))\" {128*MIB} > /sys/module/kvm/parameters/dax_pool\n"
+                f"printf '%x,%x\\n' \"$((resource + {self.kvm_arena}))\" {128*MIB} > /sys/module/kvm/parameters/dax_pool\n"
                 'cat /sys/module/kvm/parameters/dax_pool', 'direct-kernel-setup')
 
     def boot_vm(self, s):
@@ -715,7 +717,7 @@ def main():
     require(not args.kernel_trace or args.mode == 'direct', 'Kernel tracing requires direct mode')
     require(args.memory_mib == 2048, 'Use the bounded 2GiB workload layout')
     run, config = lab.current_run()
-    require(config['cxl_mib'] == 16384 and bool(config.get('dax_handoff')) == (args.mode == 'direct'), 'Wrong fresh pair mode/capacity')
+    require(config['cxl_mib'] in (4096,16384) and bool(config.get('dax_handoff')) == (args.mode == 'direct'), 'Wrong fresh pair mode/capacity')
     out = run / ('swe-handoff-' + str(time.time_ns()))
     out.mkdir()
     c = HandoffController(config, out, args)
@@ -727,7 +729,7 @@ def main():
         'api_events': c.api_events, 'launches': c.launches,
         'resident_readiness':c.resident_readiness, 'resident_preparations':c.resident_preparations,
         'allocator_events': c.allocator.events, 'audits': c.audits,
-        'layout': {'private_start': 2*MIB, 'private_end': 3072*MIB, 'kvm_arena': 12288*MIB},
+        'layout': {'private_start': 2*MIB, 'private_end': 3072*MIB, 'kvm_arena': c.kvm_arena, 'metadata_base':c.metadata_base},
         'limitations': ['Coherent nested KVM; one run per trace/mode', ('Two extra handoffs inside a running command' if args.inflight_handoff_index is not None else 'Transitions between recorded commands'),
             'Same patched DRAM baseline, not pristine Firecracker', 'One VM per trial; full private RAM copy for tier changes']}
     sources = ('experiment_sources.py', 'handoff_bench.py', 'swe-handoff-l2-init.sh', 'swe-handoff-guest-run.sh',

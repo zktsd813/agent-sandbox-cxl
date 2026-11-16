@@ -44,6 +44,7 @@ def arguments():
     parser.add_argument("--memory-mib", type=int, default=2048)
     parser.add_argument("--vcpus", type=int, choices=(1,2,4,8), default=1)
     parser.add_argument("--l1-memory-mib", type=int, choices=(4096,6144,8192), default=8192)
+    parser.add_argument("--cxl-mib", type=int, choices=(4096,16384), default=16384)
     parser.add_argument("--restore-timing", action="store_true")
     parser.add_argument("--kernel-trace", action="store_true")
     parser.add_argument("--inflight-handoff-index", type=int)
@@ -95,7 +96,7 @@ def main():
              "arguments": {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()},
              "fixture_manifest": manifest, "fixture_manifest_sha256": lab.sha256(manifest_path),
              "source_hashes": source_hashes, "source_reference": source_reference, "qemu_sha256": lab.sha256(qemu), "trials": [],
-             "scope": "One fresh pair per actual trace/mode; same one-vCPU 2GiB sandbox configuration",
+             "scope": "One fresh pair per actual trace/mode; same configured vCPU count and 2GiB sandbox configuration",
              "limitations": ["Coherent nested KVM on one physical host",
                              "One trial per trace/mode unless separately repeated",
                              "Baseline uses the same patched VMM in DRAM, not pristine Firecracker",
@@ -160,7 +161,7 @@ def main():
                 ("CXL_LAB_ASSETS", "CXL_LAB_SESSION", "CXL_LAB_QEMU_ROOT")}
             prefix = ["taskset", "-c", args.cpus, sys.executable, "-u"]
             start = prefix + [str(HERE / "lab.py"), "start", "--vcpus", str(max(4,args.vcpus+2)), "--memory-mib", str(args.l1_memory_mib),
-                "--shared-mib", "64", "--cxl-mib", "16384", "--dax-guest", "--dax-4k",
+                "--shared-mib", "64", "--cxl-mib", str(args.cxl_mib), "--dax-guest", "--dax-4k",
                 "--migration-network", "--network-backend", args.network_backend, "--memory-backing-dir", "/dev/shm",
                 "--home-storage-image", str(assets / "storage.raw"), "--qemu", str(qemu)]
             if mode == "direct":
@@ -180,7 +181,7 @@ def main():
             failure = None
             try:
                 from multi_vcpu import node0_free
-                budget = (2*args.l1_memory_mib + 16384 + 64)*1024*1024
+                budget = (2*args.l1_memory_mib + args.cxl_mib + 64)*1024*1024
                 free = node0_free()
                 arm["node0_budget"] = {"free_bytes":free,"budget_bytes":budget,"reserve_bytes":4*1024**3}
                 if free < budget + 4*1024**3:
