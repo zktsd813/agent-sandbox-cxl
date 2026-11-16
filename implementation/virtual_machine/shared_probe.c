@@ -326,6 +326,7 @@ struct heartbeat {
     _Atomic uint64_t working_set_bytes, available_bytes, instance_id;
     _Atomic uint64_t first_sweep_ns, warm_sweep_ns, warm_done;
     struct smp_cpu cpus[KVM_DAX_MAX_VCPUS];
+    _Atomic uint64_t epoch_detect_tsc, writers_ready_tsc;
 };
 _Static_assert(sizeof(struct heartbeat) <= 4096, "heartbeat page");
 struct boundary_clock {
@@ -938,10 +939,10 @@ static void guest_smp_heartbeat(unsigned count)
         uint64_t epoch = atomic_load_explicit(&smp_hb->epoch, memory_order_acquire);
         atomic_fetch_add(&smp_hb->sequence, 1);
         if (epoch != previous) {
-            atomic_store(&smp_hb->ack_tsc, migration_tsc());
-            atomic_store(&smp_hb->ack_epoch, epoch);
+            atomic_store(&smp_hb->epoch_detect_tsc, migration_tsc());
             for (unsigned cpu = 0; cpu < count; cpu++)
                 while (atomic_load_explicit(&smp_hb->cpus[cpu].acknowledged, memory_order_acquire) != epoch) usleep(50);
+            atomic_store(&smp_hb->writers_ready_tsc, migration_tsc());
             for (unsigned cpu = 0; cpu < count; cpu++) atomic_store(&smp_hb->cpus[cpu].ipi, 0);
             smp_interrupts();
             for (unsigned cpu = 0; cpu < count; cpu++) {
@@ -949,6 +950,8 @@ static void guest_smp_heartbeat(unsigned count)
                 if (atomic_load(&s->errors) || atomic_load(&s->clock_errors) || atomic_load(&s->tsc_errors))
                     atomic_fetch_add(&smp_hb->errors, 1);
             }
+            atomic_store(&smp_hb->ack_tsc, migration_tsc());
+            atomic_store(&smp_hb->ack_epoch, epoch);
             atomic_store_explicit(&smp_hb->acknowledged, epoch, memory_order_release);
             atomic_store_explicit(&smp_hb->verified, epoch, memory_order_release);
             previous = epoch;

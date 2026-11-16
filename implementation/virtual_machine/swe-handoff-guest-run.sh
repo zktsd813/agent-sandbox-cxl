@@ -71,7 +71,7 @@ while read -r OP ARG TOKEN EXTRA; do
             VCPUS=$(awk '/^cpu[0-9]+ / {n++} END {print n}' /proc/stat)
             MODE=1; SLEEP=0
             if [ "$EXTRA" = idle ]; then MODE=0; VCPUS=1; SLEEP=2; fi
-            LAB_HEARTBEAT_VCPUS=$VCPUS LAB_HEARTBEAT_SMP=$MODE LAB_HEARTBEAT_TIMING=1 /lab/shared-probe heartbeat A "$SLEEP" 1 > "$R/heartbeat.log" 2>&1 &
+            LAB_HEARTBEAT_VCPUS=$VCPUS LAB_HEARTBEAT_SMP=$MODE LAB_HEARTBEAT_TIMING=1 taskset 1 /lab/shared-probe heartbeat A "$SLEEP" 1 > "$R/heartbeat.log" 2>&1 &
             printf '{"event":"trace_heartbeat","label":"%s","pid":%s}\n' "$TOKEN" "$!"
             ;;
         build_async)

@@ -117,8 +117,19 @@ def resident_report(path):
                      and r['fast']['ack']['ack_guest_tsc']>=r['fast']['ack']['entry_guest_tsc'] for r in group),
                  'Invalid entry/guest timestamp ordering')
             stages['first_run_to_entry_ms'] = [(r['fast']['ack']['entry_ns']-r['fast']['ack']['run_ns'])/1e6 for r in group]
-            stages['entry_to_epoch_detection_ms'] = [(r['fast']['ack']['ack_guest_tsc']-r['fast']['ack']['entry_guest_tsc'])
-                       /r['fast']['ack']['tsc_khz'] for r in group]
+            def guest_interval(row, end, begin):
+                ack=row['fast']['ack']
+                return (ack[end]-ack[begin])/ack['tsc_khz']
+            new_boundary='epoch_detect_guest_tsc' in group[0]['fast']['ack']
+            stages['entry_to_guest_ack_ms' if new_boundary else 'entry_to_epoch_detection_ms'] = [
+                guest_interval(r,'ack_guest_tsc','entry_guest_tsc') for r in group]
+            if new_boundary and result['state']=='busy':
+                for name,end,begin in [('entry_to_epoch_detection_ms','epoch_detect_guest_tsc','entry_guest_tsc'),
+                     ('guest_wait_writers_ms','writers_ready_guest_tsc','epoch_detect_guest_tsc'),
+                     ('guest_interrupt_accounting_ms','ack_guest_tsc','writers_ready_guest_tsc')]:
+                    stages[name]=[guest_interval(r,end,begin) for r in group]
+                need(all(min(stages[name])>=0 for name in ('entry_to_epoch_detection_ms','guest_wait_writers_ms',
+                    'guest_interrupt_accounting_ms')), 'Guest ACK stages went backwards')
         result['directions'][source+('→B' if source=='A' else '→A')] = {k:summary(v) for k,v in stages.items()}
     result['smp_validation'] = report.get('smp_validation')
     return result

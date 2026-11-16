@@ -56,7 +56,9 @@ struct bench_heartbeat {
  _Atomic uint64_t tsc, tsc_errors, ack_tsc, ack_epoch;
  _Atomic uint64_t working_set_bytes, available_bytes, instance_id, first_sweep_ns, warm_sweep_ns, warm_done;
  struct bench_cpu cpus[8];
+ _Atomic uint64_t epoch_detect_tsc, writers_ready_tsc;
 };
+_Static_assert(sizeof(struct bench_heartbeat)==672,"guest heartbeat layout");
 static struct bench_heartbeat *heartbeat;
 static struct kvm_dax_profile *kernel_profile;
 static struct kvm_dax_resume_profile *resume_profile;
@@ -94,6 +96,7 @@ static unsigned bench_reply(char *ack,uint64_t epoch) {
   n+=snprintf(ack+n,4096-n,"]");
  }
  if(resume_profile) {
+  n+=snprintf(ack+n,4096-n,",\"epoch_detect_guest_tsc\":%"PRIu64",\"writers_ready_guest_tsc\":%"PRIu64,atomic_load(&heartbeat->epoch_detect_tsc),atomic_load(&heartbeat->writers_ready_tsc));
   check(__atomic_load_n(&resume_profile->entry_ready,__ATOMIC_ACQUIRE)&&atomic_load(&heartbeat->ack_epoch)==epoch,"benchmark entry profile absent");
   n+=snprintf(ack+n,4096-n,",\"run_ns\":%llu,\"entry_ns\":%llu,\"entry_guest_tsc\":%llu,\"ack_guest_tsc\":%"PRIu64",\"tsc_khz\":%llu,\"pair_span_ns\":%llu",(unsigned long long)resume_profile->run_ns,(unsigned long long)resume_profile->entry_ns,(unsigned long long)resume_profile->guest_tsc,atomic_load(&heartbeat->ack_tsc),(unsigned long long)resume_profile->virtual_tsc_khz,(unsigned long long)resume_profile->sample_span_ns);
  }
