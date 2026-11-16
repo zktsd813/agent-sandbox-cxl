@@ -44,8 +44,12 @@ def trajectory_counts(c):
 
 
 def trajectory_mappings(c, s):
-    raw, file = c.shell(s.role, f'read p t < {s.directory}/fc.pid\n'
-        '/lab/shared-probe vm-stats "$p"', 'trajectory-spte')
+    # Only this sandbox plus an empty keepalive VM remains in each L1. The
+    # aggregate counters therefore measure its live leaves, including direct
+    # imports whose per-VM debugfs directory is deliberately removed on detach.
+    raw, file = c.shell(s.role, 'mount -t debugfs debugfs /sys/kernel/debug 2>/dev/null || true\n'
+        'for n in pages_4k pages_2m pages_1g; do\n'
+        'printf "%s " "$n"; cat /sys/kernel/debug/kvm/$n\ndone', 'trajectory-spte')
     sizes = {name:int(value) for name,value in re.findall(r'^(pages_[421][kmg]) (\d+)\s*$', raw, re.M)}
     if set(sizes) != {'pages_4k', 'pages_2m', 'pages_1g'}:
         raise ValueError('Actual leaf mapping counters missing: '+raw)
