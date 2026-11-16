@@ -105,13 +105,14 @@ def summarize(args):
                 row['mmio_ept_violations'] = row['page_faults']-row['ram_ept_violations']
                 row['spte'] = r['spte_final']
                 row['whole_interval_ept'] = sum(r['fault_final'][role]['ept_violation']-r['fault_initial'][role]['ept_violation'] for role in ('A','B'))
+                row['whole_interval_ram_ept'] = sum(r['fault_final'][role]['ram_ept_violation']-r['fault_initial'][role]['ram_ept_violation'] for role in ('A','B'))
                 row['vm_creates'] = sum(r['fault_final'][role]['create_vm']-r['fault_initial'][role]['create_vm'] for role in ('A','B'))
                 row['vcpu_creates'] = sum(r['fault_final'][role]['create_vcpu']-r['fault_initial'][role]['create_vcpu'] for role in ('A','B'))
                 row['nested_root_ns'] = sum(x['duration_ns'] for node in r['nested_traces'] for x in node['intervals'] if x['function']=='nested_root')
             groups[key].append((row, r))
             trials.append(row)
     for key, items in groups.items():
-        baseline = groups[(key[0],key[1],'baseline')]
+        baseline = groups.get((key[0],key[1],'baseline'), [])
         for row, r in items:
             since = None
             for command in r['commands']:
@@ -142,7 +143,7 @@ def summarize(args):
     for key, items in sorted(groups.items()):
         times = [row for row,r in items if not row['count_run']]
         counts = [row for row,r in items if row['count_run']]
-        base = [row['total_s'] for row,r in groups[(key[0],key[1],'baseline')] if not row['count_run']]
+        base = [row['total_s'] for row,r in groups.get((key[0],key[1],'baseline'), []) if not row['count_run']]
         out = dict(zip(('fixture','policy','mode'),key))
         out.update(n_timing=len(times), n_count=len(counts), disturbed=sum(row['disturbed'] for row,r in items))
         if times and base:
@@ -155,16 +156,18 @@ def summarize(args):
             faults = st.mean(x['ept_violations'] for x in counts)
             moves = counts[0]['moves']
             out.update(ept_mean=faults, page_fault_mean=st.mean(x['page_faults'] for x in counts),
+                       whole_interval_ept_mean=st.mean(x['whole_interval_ept'] for x in counts),
+                       whole_interval_ram_ept_mean=st.mean(x['whole_interval_ram_ept'] for x in counts),
                        ram_ept_mean=st.mean(x['ram_ept_violations'] for x in counts),
                        mmio_ept_mean=st.mean(x['mmio_ept_violations'] for x in counts),
                        moves=moves, ept_per_move=faults/moves if moves else None,
                        spte=[x['spte'] for x in counts], nested_root_ms_mean=st.mean(x['nested_root_ns'] for x in counts)/1e6)
             if costs:
                 out['estimated_physical_4k_s']=out['ram_ept_mean']*costs['4k']/1e6
-                base_faults = [b['ept_violations'] for b,r in groups[(key[0],key[1],'baseline')] if b['count_run']]
+                base_faults = [b['ept_violations'] for b,r in groups.get((key[0],key[1],'baseline'), []) if b['count_run']]
                 if base_faults:
                     out['excess_ept_mean'] = faults-st.mean(base_faults)
-                    base_ram = [b['ram_ept_violations'] for b,r in groups[(key[0],key[1],'baseline')] if b['count_run']]
+                    base_ram = [b['ram_ept_violations'] for b,r in groups.get((key[0],key[1],'baseline'), []) if b['count_run']]
                     out['excess_ram_ept_mean'] = out['ram_ept_mean']-st.mean(base_ram)
                     out['estimated_excess_physical_4k_s'] = out['excess_ram_ept_mean']*costs['4k']/1e6
             lag, lag_excess = defaultdict(list), defaultdict(list)
@@ -179,9 +182,12 @@ def summarize(args):
     save(args.output/'summary.json', {'physical_us_per_fixed_fault':costs, 'conditions':summary, 'trials':trials,
         'analysis_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         'suite_sha256':{str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in args.suites}})
-    if commands:
-        with (args.output/'commands.csv').open('w') as stream:
-            writer=csv.DictWriter(stream, fieldnames=list(commands[0])); writer.writeheader(); writer.writerows(commands)
+    for name, rows in (('commands', commands), ('conditions', summary), ('trials', trials)):
+        flat = [{k:v for k,v in row.items() if not isinstance(v, (dict,list))} for row in rows]
+        if flat:
+            fields = list(dict.fromkeys(k for row in flat for k in row))
+            with (args.output/(name+'.csv')).open('w') as stream:
+                writer=csv.DictWriter(stream, fieldnames=fields); writer.writeheader(); writer.writerows(flat)
 
 
 def main():

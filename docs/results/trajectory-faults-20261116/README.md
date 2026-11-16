@@ -15,6 +15,15 @@ Direct hand-off는 기존 확장 페이지 테이블(EPT, extended page tables)�
 - L1은 각각 6 GiB, 가상 CPU(vCPU) 4개다. 공유 CXL backing은 8 GiB다.
   공유 제어 메모리는 64 MiB다. 예산은 20,544 MiB다.
 - L2는 2 GiB, 1 vCPU다. 실행 CPU 범위는 8–15다.
+- 모든 방식의 L1 CPU 모델에서 AMX(Advanced Matrix Extensions)와
+  XFD(Extended Feature Disable)를 숨긴다. 주소 무작위 배치도 공통으로 끈다.
+- Guest CPU의 가상화·시간·성능 계수 기능은 direct 호환 규칙으로 맞췄다.
+  실제 guest CPU flag 파일의 해시가 세 방식에서 같은지 독립 검증한다.
+- L1 KVM은 모두 `nx_huge_pages=never enable_pmu=0`이다.
+  Intel 모듈은 `pml=0 enable_apicv=0 flexpriority=0 preemption_timer=0`이다.
+  PMU(performance monitoring unit)와 page modification logging(PML)을 끈다.
+  인터럽트 가상화(APICv)와 관련 timer도 같은 설정이다.
+  이 값은 각 L1의 sysfs에서 읽어 결과 identity에 넣었다.
 - VM을 띄울 때마다 `lab.lock`을 잡고 node 0 free를 확인한다.
   예산에 4 GiB를 더한 24,640 MiB보다 적으면 시작하지 않는다.
 - 조건별 본 측정은 `quiet.lock`의 배타 잠금 아래다.
@@ -51,6 +60,7 @@ Direct만 읽기 전용 block backend를 미리 연다.
 다른 checkout의 `cmdkind.py`를 읽어서 test/build/install을 골랐다.
 MicroPython의 명시적 test driver 호출도 포함했다.
 분류기 경로, 해시, 보정한 기준과 최종 index를 함께 기록했다.
+분류기 규칙에 따라 PHPUnit `--version`도 test 범주에 포함된다.
 모든 명령 정책은 마지막 제출 명령을 포함해 매 명령 전에 옮긴다.
 각 fixture × 정책 × 방식은 3회다.
 fixture·정책·방식·반복 순서를 한꺼번에 섞는다.
@@ -98,7 +108,7 @@ RAM·guest register·데이터는 유지한다. 초기 scan 값도 원시 자료
 
 | 실제 leaf | 반복 | fault당 비용 중앙값 | 범위 |
 |---|---:|---:|---:|
-| 4 KiB | 3 | 0.985 µs | 0.981–0.999 µs |
+| 4 KiB | 3 | 0.986 µs | 0.981–0.999 µs |
 | 2 MiB | 3 | 1.060 µs | 1.041–1.073 µs |
 
 EPT를 비운 뒤 첫 scan의 fixed fault와 leaf는 각각 131,073개와 257개였다.
@@ -112,23 +122,24 @@ NX는 no-execute, THP는 transparent huge page다. 이 설정은 바꾸지 않�
 원시 scan 값과 바이너리 해시는 [physical-summary.json](physical-summary.json)에 있다.
 
 SWE의 실제 매핑은 4 KiB다.
-L1에서 센 RAM 주소 fault 수에 0.985 µs를 곱한 값은 물리 서버의 **추정 매핑 비용**이다.
+L1에서 센 RAM 주소 fault 수에 0.986 µs를 곱한 값은 물리 서버의 **추정 매핑 비용**이다.
 장치 주소 fault는 이 환산에서 제외한다.
 VMM 생성, EPT 해제, 장치 복원, cache와 주소 변환 캐시(TLB, translation lookaside buffer)의 warm-up, 전송 비용은 그 추정에 없다.
 2 MiB 비용에 같은 4 KiB fault 수를 곱해서 huge-page 궤적을 예측하지 않는다.
 
 ## 예비 검증
 
-Gin heavy 정책, 계수 실행 각 1회(`pilot5`)는 세 방식 모두 독립 검증을 통과했다.
+CPU 조건을 맞춘 Gin heavy 계수 실행(`cpucheck3`)은 세 방식 모두 독립 검증을 통과했다.
+실제 guest CPU flag의 SHA-256 해시는 세 방식 모두
+`e1f41f5ed6b13e3822ae62064cc3f9f90cc6772cb244e8a6567b6f5300a5a262`였다.
+양쪽 L1의 여섯 KVM 모듈 설정도 같았다.
 
-| 방식 | 명령 중 EPT violation 합 |
-|---|---:|
-| 무이동 | 261,424 |
-| Snapshot | 512,511 |
-| Direct | 259,469 |
+기존 lab은 direct에서만 CPU 기능과 KVM 옵션을 제한했다.
+CPU mask만 맞춘 `cpucheck`도 PMU 기능 차이로 독립 검증에서 거절됐다.
+그 앞의 `pilot5`, `count1/2`, `time1/2`는 진단 자료로 보존했다.
+최종 비교에는 CPU 조건을 맞춘 `count3`와 `time3`만 쓴다.
 
-이 표는 본 측정의 3회 집계에 섞지 않는다.
-기존 Python 시험 49개는 통과했다. 기존 증거가 필요한 8개는 skip이다.
+Python 시험 50개는 통과했다. 기존 증거가 필요한 8개는 skip이다.
 선택한 Rust 계약 시험 15개가 통과했다.
 각 SWE run은 `lab.py verify`와 독립 workload 검증을 거친다.
 
@@ -137,6 +148,7 @@ Gin heavy 정책, 계수 실행 각 1회(`pilot5`)는 세 방식 모두 독립 �
 Nested 시간은 물리 서버의 시간으로 옮길 수 없다.
 Direct가 L1 EPT를 보존해도 L0의 합성 변환은 다시 채운다.
 `dax_nested_root_sync`도 nested 전용 보완이다. 시간을 임의로 빼지 않는다.
+Histogram은 각 L1에서 순서대로 읽는다. 명령 경계에 RPC 시간만큼의 오차가 있다.
 Direct의 fault가 0이어야 하는 대상은 이미 매핑한 page다.
 새로 쓰는 page의 fault까지 없어지는 것은 아니다.
 무이동의 fault와 나란히 봐야 한다.
@@ -147,3 +159,23 @@ A는 로컬 lower disk, B는 NFS를 쓴다. 무이동 대비 시간에는 이 �
 `analyze.py SUITE/report.json ... --physical PHYSICAL/physical.json --output OUTPUT`으로
 조건별 요약 JSON과 명령별 CSV(comma-separated values)를 만든다.
 원시 run은 `implementation/virtual_machine/.local/run14/`와 `.local/runs/`에 둔다.
+
+재실행의 공통 runner 옵션은 아래와 같다. 기존 SWE fixture를 쓰되,
+L1 커널에는 `CONFIG_HIST_TRIGGERS=y`가 필요하다.
+`shared-probe kvm-keepalive`와 control RPC operation 4도 fixture에 넣어야 한다.
+`resident_prepare.py`의 `--shared-probe`, `--l1-kernel`, `--kvm-module-dir`로
+별도 빌드한 바이너리를 포장했다.
+
+```bash
+numactl --cpunodebind=0 --membind=0 python3 implementation/virtual_machine/swe_handoff_run.py \
+  --assets ASSETS --qemu QEMU --qemu-root QEMU_ROOT --session FRESH_SESSION --cpus 8-15 \
+  --trajectory-policies heavy all --repetitions 3 --seed 20261116 \
+  --heavy-plan docs/results/trajectory-faults-20261116/heavy.json \
+  --l1-memory-mib 6144 --cxl-mib 8192 --count-faults --output OUTPUT
+```
+
+시간 실행은 `--count-faults`를 빼고 seed 20261117을 쓴다.
+Runner가 lab·quiet 잠금을 관리한다. 빌드는 별도로 quiet 공유 잠금을 잡는다.
+`physical_ept_cost.c`는 `gcc -O2 -Wall -Wextra -Werror`로 빌드한다.
+`analyze.py --calibrate BINARY --output RAW_OUTPUT`은 node 0과 두 잠금을 지키며
+물리 VM을 한 번에 하나씩 띄운다.
