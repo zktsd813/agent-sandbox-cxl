@@ -84,7 +84,7 @@ class RunnerLaunchTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             (root/'manifest.json').write_text(json.dumps({'traces': {'sample': {'name': 'sample'}}}))
-            c = HandoffController({'assets': str(root), 'vms': {'A': {}, 'B': {}}}, root,
+            c = HandoffController({'assets': str(root), 'cxl_mib': 16384, 'vms': {'A': {}, 'B': {}}}, root,
                 SimpleNamespace(mode='direct', name='sample', memory_mib=2048, full_audit=False, restore_timing=False))
             c.shell = Mock(return_value=('', 'shell'))
             c.write_bytes = Mock(return_value=('EXEC_PROCESS 12 34\n', 'launch'))
