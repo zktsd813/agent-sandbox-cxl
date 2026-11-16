@@ -31,6 +31,7 @@ def main():
     p.add_argument("--iterations", type=int, default=400)
     p.add_argument("--warmup", type=int, default=10)
     p.add_argument("--measure", action="store_true", help="Hold quiet.lock exclusively")
+    p.add_argument("--kernel-mode", type=int, choices=(2,3), default=3)
     p.add_argument("--test-running-vcpu", action="store_true")
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--firecracker", type=Path, default=LOCAL / "fc/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker")
@@ -49,7 +50,7 @@ def main():
     # The input wrapper has its own read-only library/firmware search paths.
     command = ["numactl", "--physcpubind=0-23", "--membind=0", sys.executable, str(HERE / "lab.py")]
     result = {"result": "running", "vcpus": args.vcpus, "iterations": args.iterations,
-              "warmup": args.warmup, "exclusive_quiet": args.measure,
+              "warmup": args.warmup, "kernel_mode": args.kernel_mode, "exclusive_quiet": args.measure,
               "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
               "memory_policy": "NUMA node 0; CPUs 0-23", "baseline_local_gib": 35,
               "session": session}
@@ -102,7 +103,7 @@ def main():
                     raise RuntimeError("QEMU owned memory allocated outside node 0")
             result["resources"] = resources
             bench_args = ["direct-handoff-bench", "--guest", "linux", "--vcpus", args.vcpus,
-                          "--iterations", args.iterations, "--warmup", args.warmup,
+                          "--iterations", args.iterations, "--warmup", args.warmup, "--kernel-mode", args.kernel_mode,
                           "--executor-cpu", 1, "--guest-cpu", 0, "--control", "http",
                           "--poll-us", 50, "--dwell-ms", 20, "--reuse-fds"]
             if args.measure:

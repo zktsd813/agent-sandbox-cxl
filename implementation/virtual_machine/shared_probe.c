@@ -2422,7 +2422,7 @@ static void linux_token_identity(const struct kvm_dax_handoff *token, unsigned c
     for (unsigned cpu=0; cpu<count; cpu++) {
         const struct kvm_dax_vcpu_identity *id=&token->vcpus[cpu];
         if (id->id != cpu || id->reserved || !id->vcpu_offset || !id->vmcs_offset ||
-            !id->run_offset || !id->ept_root_offset) {
+            !id->run_offset || (token->ept_root_offset && !id->ept_root_offset)) {
             fprintf(stderr,"Linux direct per-vCPU identity absent\n"); exit(1);
         }
     }
