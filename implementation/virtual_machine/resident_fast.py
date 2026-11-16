@@ -12,7 +12,7 @@ from handoff_bench import require, json_lines
 
 def request(c,source,directory,nonce,first,label,peer,vm_id,epoch,start,size,kind):
     vm=c.vms[source]
-    if 3 in vm.get('control_rpc_operations',[]):
+    if 3 in vm.get('control_rpc_operations',[]) and not getattr(c.args, 'resident_bench', None):
         import resident_proxy
         started=time.monotonic_ns()
         require(lab.alive(vm),'VM is not running')
