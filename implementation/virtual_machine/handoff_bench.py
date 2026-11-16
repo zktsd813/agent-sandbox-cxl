@@ -505,7 +505,7 @@ class HandoffController(Controller):
             observations.append(live)
             if destination:
                 hops.append(self.direct_handoff(s, destination))
-        ended = self.trace_command(s, 'collect', event='trace_end', timeout=330)
+        ended = self.trace_command(s, 'collect', event='trace_build_end', timeout=330)
         require(ended['receipt']['rc'] == 0 and not ended['receipt']['timed_out'], 'Parallel build failed')
         return {'command':'go build -a -p "$(getconf _NPROCESSORS_ONLN)" ./...',
                 'started':started, 'observations':observations, 'hops':[h['fast_file'] for h in hops], 'ended':ended}

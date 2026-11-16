@@ -36,7 +36,8 @@ finish_command() {
     if [ "$N" != parallel-build ]; then NEXT=$((NEXT + 1)); fi
     printf '%s %s %s\n' "$BOOT" "$NEXT" "$OUT_SHA" > "$T/state"
     TIMED_OUT=false; [ ! -e "$R/$N.timeout" ] || TIMED_OUT=true
-    printf '{"event":"trace_end","label":"%s","run_label":"%s","index":%s,"command_sha256":"%s","rc":%s,"start_s":%s,"end_s":%s,"output_sha256":"%s","next_index":%s,"timed_out":%s}\n' "$TOKEN" "$RUN_TOKEN" "$INDEX" "$CMD_SHA" "$RC" "$START" "$END" "$OUT_SHA" "$NEXT" "$TIMED_OUT" > "$R/$N.json"
+    END_EVENT=trace_end; [ "$N" != parallel-build ] || END_EVENT=trace_build_end
+    printf '{"event":"%s","label":"%s","run_label":"%s","index":%s,"command_sha256":"%s","rc":%s,"start_s":%s,"end_s":%s,"output_sha256":"%s","next_index":%s,"timed_out":%s}\n' "$END_EVENT" "$TOKEN" "$RUN_TOKEN" "$INDEX" "$CMD_SHA" "$RC" "$START" "$END" "$OUT_SHA" "$NEXT" "$TIMED_OUT" > "$R/$N.json"
     cat "$R/$N.json"
     if [ "$NEXT" -eq "$COUNT" ]; then printf '{"completed_commands":%s}\n' "$COUNT" > "$R/complete.json"; fi
     RUNNING=0

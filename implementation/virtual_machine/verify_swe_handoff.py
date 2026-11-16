@@ -627,6 +627,7 @@ def verify(path):
     else:
         extra=2 if r['arguments'].get('resident_repromote_handoff') else 0
         if r['arguments'].get('inflight_handoff_index') is not None: extra += 2
+        if r['arguments'].get('parallel_build'): extra += 6
         nhops=2+2*r['arguments'].get('direct_profile_roundtrips',0)+extra
         need(counts == {'promotion':2,'demotion':2,r['mode']:nhops},'Missing lifecycle case')
         need([(x['source'],x['destination'],x['source_epoch'],x['destination_epoch']) for x in handoffs] ==
