@@ -116,7 +116,7 @@ EPT를 비운 뒤 첫 scan의 fixed fault와 leaf는 각각 131,073개와 257개
 분모는 L0 KVM vCPU의 `pf_fixed` 증가분이다.
 Host tracefs는 접근할 수 없어 L0 EPT exit를 직접 세지 못했다.
 이 값에도 cache와 주소 변환 캐시(TLB, translation lookaside buffer) 효과와 VM-entry 비용이 남는다. 순수 상수로 보지 않는다.
-또한 lab의 풀 mapper 첫 쓰기에는 PTE 무효화가 있다. KVM 재시도도 EPT exit 수에 포함될 수 있다.
+또한 lab의 풀 mapper 첫 쓰기에는 페이지 테이블 항목(PTE, page table entry) 무효화가 있다. KVM 재시도도 EPT exit 수에 포함될 수 있다.
 물리 보정의 분모는 매핑을 고친 `pf_fixed`다. 두 종류의 exit에 같은 단가가 든다고 검증한 것은 아니다.
 아래 환산은 lab 계수와 물리 매핑 단가의 곱이다. 실제 물리 복원에서 같은 exit 수가 난다는 예측은 아니다.
 기존 host 설정은 TDP MMU 켬, NX huge-page 보완 끔, THP madvise다.

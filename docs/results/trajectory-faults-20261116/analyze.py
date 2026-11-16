@@ -73,10 +73,13 @@ def percentile(values, p):
 
 def summarize(args):
     groups, trials, commands = defaultdict(list), [], []
+    excluded, suite_results = [], {}
     for suite_path in args.suites:
         suite = json.loads(suite_path.read_text())
+        suite_results[str(suite_path)] = suite['result']
         for arm in suite['trials']:
             if arm['result'] != 'passed':
+                excluded.append({'suite':str(suite_path),'id':arm['id'],'result':arm['result'],'error':arm.get('error')})
                 continue
             path = suite_path.parent/arm['report_file']
             r = json.loads(path.read_text())
@@ -213,6 +216,7 @@ def summarize(args):
         summary.append(out)
     args.output.mkdir(parents=True, exist_ok=True)
     save(args.output/'summary.json', {'physical_us_per_fixed_fault':costs, 'conditions':summary, 'trials':trials,
+        'input_suite_results':suite_results, 'excluded_trials':excluded,
         'analysis_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         'suite_sha256':{str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in args.suites}})
     for name, rows in (('commands', commands), ('conditions', summary), ('trials', trials)):
