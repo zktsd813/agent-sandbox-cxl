@@ -34,7 +34,7 @@ def main():
     p.add_argument("--test-running-vcpu", action="store_true")
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--firecracker", type=Path, default=LOCAL / "fc/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker")
-    p.add_argument("--qemu", type=Path, default=INPUTS / "run09-qemu/bin/qemu-system-x86_64")
+    p.add_argument("--qemu", type=Path, default=LOCAL / "qemu-runtime/bin/qemu-system-x86_64")
     args = p.parse_args()
     args.output = args.output.resolve()
     if not args.output.is_relative_to(HERE.parents[1]):
@@ -89,7 +89,7 @@ def main():
                 (args.output / f"{role}-numa-maps.txt").write_text(maps)
                 nodes = {}
                 for line in maps.splitlines():
-                    if not (re.search(r"anon=[1-9]", line) or "cxl-memory.bin" in line or "shared-memory.bin" in line):
+                    if not ((re.search(r"anon=[1-9]", line) and "file=" not in line) or "cxl-memory.bin" in line or "shared-memory.bin" in line):
                         continue
                     for node, pages in re.findall(r"\bN(\d+)=(\d+)\b", line):
                         nodes[node] = nodes.get(node, 0) + int(pages)

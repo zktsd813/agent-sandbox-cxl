@@ -2599,6 +2599,10 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
                         e->run=mmap(NULL,run_size,PROT_READ|PROT_WRITE,MAP_SHARED,e->vcpu,0);
                         if(e->run==MAP_FAILED)die("Linux direct run map");
                     }
+                }
+                /* Every FD/run mapping must exist before any KVM_RUN begins. */
+                for (unsigned cpu=0; cpu<count; cpu++) {
+                    struct linux_executor *e=&executors[cpu];
                     atomic_store(&e->stop,0);atomic_store(&e->stopped,0);
                     __atomic_store_n(&e->run->immediate_exit,0,__ATOMIC_RELEASE);
                     atomic_store(&e->wake_request_ns,context_now());
