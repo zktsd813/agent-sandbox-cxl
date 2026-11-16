@@ -1,0 +1,110 @@
+{
+  "schema": "multi-vcpu-handoff-v1",
+  "date": "2026-11-16",
+  "functional": [
+    {
+      "name": "stage2-v1-pilot",
+      "source_commit": "a85276bec970c749fed7e7a3d346309ed5d2859f",
+      "result": "passed",
+      "vcpus": 1,
+      "handoffs": 12,
+      "validation": {
+        "handoffs": 12,
+        "identical_object_offsets": [
+          4096,
+          69760,
+          106496
+        ],
+        "vm_creates": 1,
+        "vcpu_creates": 1,
+        "continuity_checks": "Linux heartbeat and retained 16MiB heap",
+        "kernel_taint": 0,
+        "snapshot_api_calls": 0,
+        "duplicate_attach_rejected": true,
+        "old_owner_vcpu_access_revoked": true,
+        "running_last_vcpu_rejected": true,
+        "identical_ept_root_offset": 294912,
+        "ept_page_count": 42,
+        "boot_markers": 1,
+        "retained_heap_errors": 0,
+        "guest_clock_errors": 0,
+        "guest_tsc_errors": 0,
+        "raw_tsc_check_enabled": true,
+        "host_backwards_tsc_warnings": 0,
+        "firecracker_checks_scanned_full_log": true,
+        "changing_memory_mib": 0,
+        "guest_clocksource": "kvm-clock"
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4002263,
+          4002264
+        ],
+        "backing_removed": true
+      },
+      "raw_report": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/stage2-v1-pilot/handoff.json",
+      "raw_sha256": "3442f3757ea703c317513a6a920e51fe7c8fb7c13bae64b74a4cdb5e7da29993"
+    },
+    {
+      "name": "stage2-v2-functional",
+      "source_commit": "a85276bec970c749fed7e7a3d346309ed5d2859f",
+      "result": "passed",
+      "vcpus": 2,
+      "handoffs": 410,
+      "validation": {
+        "handoffs": 410,
+        "identical_object_offsets": [
+          4096,
+          69760,
+          106496
+        ],
+        "vm_creates": 1,
+        "vcpu_creates": 2,
+        "continuity_checks": "Linux heartbeat and retained 16MiB heap",
+        "kernel_taint": 0,
+        "snapshot_api_calls": 0,
+        "duplicate_attach_rejected": true,
+        "old_owner_vcpu_access_revoked": true,
+        "smp": {
+          "0": {
+            "sequence_increase": 92633,
+            "timer_increase": 58233,
+            "ipi_increase": 38129,
+            "ping_increase": 77973
+          },
+          "1": {
+            "sequence_increase": 127439,
+            "timer_increase": 8556,
+            "ipi_increase": 52292,
+            "ping_increase": 77974
+          }
+        },
+        "running_last_vcpu_rejected": true,
+        "identical_ept_root_offset": 344064,
+        "ept_page_count": 42,
+        "boot_markers": 1,
+        "retained_heap_errors": 0,
+        "guest_clock_errors": 0,
+        "guest_tsc_errors": 0,
+        "raw_tsc_check_enabled": true,
+        "host_backwards_tsc_warnings": 0,
+        "firecracker_checks_scanned_full_log": true,
+        "changing_memory_mib": 0,
+        "guest_clocksource": "kvm-clock"
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4002488,
+          4002489
+        ],
+        "backing_removed": true
+      },
+      "raw_report": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/stage2-v2-functional/handoff.json",
+      "raw_sha256": "8fb0160226f4d94f878e1c263f9da28670f9d56cd412c541dc5d7e53bd19a93f"
+    }
+  ],
+  "measurement": [],
+  "limitations": [
+    "nested KVM, one physical host, coherent emulated CXL"
+  ]
+}
