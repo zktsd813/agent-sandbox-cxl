@@ -1,6 +1,6 @@
 # 궤적 전체의 복원 fault 비용 (2026-11-16)
 
-진행 중인 측정이다. 아래 예비 결과는 본 측정 결과와 구분한다.
+1–4단계의 측정 결과다. Prefault 추가는 다음 단계에서 진행한다.
 
 가상 머신(VM, virtual machine)의 메모리를 Compute Express Link(CXL)에 둔다.
 Snapshot은 매번 새 Kernel-based Virtual Machine(KVM) 객체를 만든다.
@@ -71,7 +71,7 @@ fixture·정책·방식·반복 순서를 한꺼번에 섞는다.
 명령 시간은 FIFO 송신 요청 직전부터 완전한 결과 receipt 수신까지다.
 Guest 실행만의 시간은 아니다. 제어 전달과 최대 20 ms의 polling이 들어간다.
 각 run의 loadavg와 `ps -eo pid,user,psr,pcpu,comm` 원본을 전후에 남긴다.
-다른 node 0 프로세스가 5% 이상이면 분석에서 흔들린 run으로 표시한다.
+수집용 `ps`를 제외한 다른 node 0 프로세스가 5% 이상이면 분석에서 흔들린 run으로 표시한다.
 이 값은 `ps`의 프로세스 수명 평균이라 짧은 간섭을 놓칠 수 있다.
 
 궤적 총 시간은 첫 이동/명령 직전부터 마지막 명령 결과까지의 실제 wall time이다.
@@ -179,3 +179,107 @@ Runner가 lab·quiet 잠금을 관리한다. 빌드는 별도로 quiet 공유 �
 `physical_ept_cost.c`는 `gcc -O2 -Wall -Wextra -Werror`로 빌드한다.
 `analyze.py --calibrate BINARY --output RAW_OUTPUT`은 node 0과 두 잠금을 지키며
 물리 VM을 한 번에 하나씩 띄운다.
+
+## 본 측정 결과 (1–4단계)
+
+108개 run과 두 suite 전체 검증이 통과했다. 각 셀은 시간 3회와 계수 3회다.
+실행 입력 identity와 실제 guest CPU flag 해시는 전체에서 같았다.
+수집용 `ps`는 외부 부하 표시에서 제외했다. 시간 run의 부하 표시는 0개다.
+계수 run 1개에는 외부 `python3` 부하가 있었다. 이 run도 집계에 포함했다.
+정확한 값과 run 표시는 [summary.json](summary.json), [trials.csv](trials.csv)에 있다.
+
+### 궤적 시간
+
+초 단위 중앙값이다. Δ는 같은 fixture·정책의 무이동 중앙값과의 차이다.
+`active`는 명령 구간과 이동 구간의 합이다. 실제 wall에는 반복 수신 준비와 기록도 들어간다.
+수신 준비를 이전 명령이나 LLM 대기와 겹쳐 실행하는 것은 구현하지 않았다.
+
+| Fixture | 정책 | 무이동 wall | Snapshot Δwall / Δactive | Direct Δwall / Δactive |
+|---|---|---:|---:|---:|
+| Gin | 무거운 명령 | 13.201 | 2.707 / 2.654 | 1.029 / 1.024 |
+| Gin | 모든 명령 | 13.130 | 4.319 / 3.667 | 1.688 / 1.673 |
+| PHP-CS-Fixer | 무거운 명령 | 3.952 | 0.906 / 0.802 | 0.756 / 0.750 |
+| PHP-CS-Fixer | 모든 명령 | 3.935 | 3.010 / 2.143 | 1.288 / 1.267 |
+| MicroPython | 무거운 명령 | 8.802 | 1.364 / 1.234 | 0.772 / 0.764 |
+| MicroPython | 모든 명령 | 8.877 | 3.260 / 2.187 | 1.186 / 1.157 |
+
+정지 시간의 공통 L0 경계는 요청부터 완전한 재개 확인 응답 수신까지다.
+이 값은 실제 guest pause의 상한이다. 특히 direct의 바깥 relay 응답 지연이 크다.
+아래 native 값은 source L1의 한 시계로 잰 pause→remote Resume 응답이다.
+공통 L0 절대 시각을 대체하는 값으로 쓰지 않는다.
+
+| Fixture | 정책 | Snapshot L0 합(ms) | Direct L0 합(ms) | Direct native 합(ms) | nested root 합(ms, 계수 평균) |
+|---|---|---:|---:|---:|---:|
+| Gin | heavy | 71.18 | 29.50 | 11.06 | 4.99 |
+| Gin | all | 423.46 | 570.51 | 61.60 | 23.65 |
+| PHP-CS-Fixer | heavy | 84.20 | 96.14 | 11.40 | 2.81 |
+| PHP-CS-Fixer | all | 572.66 | 677.15 | 64.49 | 11.34 |
+| MicroPython | heavy | 87.83 | 100.94 | 15.81 | 5.50 |
+| MicroPython | all | 533.44 | 759.13 | 76.45 | 15.22 |
+
+### 명령 중 EPT 위반
+
+각 칸은 3회 평균이다. `/이동`은 명령 합을 이동 횟수로 나눈 값이다.
+이동·명령 사이까지 포함한 전체 계수 합은 JSON의 `whole_interval_ept_mean`이다.
+
+| Fixture | 정책 | 무이동 | Snapshot 합 / 이동당 | Direct 합 / 이동당 | 이동 횟수 |
+|---|---|---:|---:|---:|---:|
+| Gin | heavy | 260,870 | 517,034 / 172,345 | 263,285 / 87,762 | 3 |
+| Gin | all | 260,779 | 583,527 / 21,612 | 265,020 / 9,816 | 27 |
+| PHP-CS-Fixer | heavy | 34,112 | 112,090 / 22,418 | 38,676 / 7,735 | 5 |
+| PHP-CS-Fixer | all | 34,096 | 208,298 / 5,951 | 38,810 / 1,109 | 35 |
+| MicroPython | heavy | 86,957 | 180,409 / 30,068 | 88,134 / 14,689 | 6 |
+| MicroPython | all | 86,966 | 284,289 / 6,611 | 88,309 / 2,054 | 43 |
+
+계수 실행에서 snapshot은 이동 357회마다 VM/vCPU를 새로 만들었다.
+Direct는 같은 357회 동안 VM/vCPU 생성이 0회였다.
+실제 leaf는 모든 조건에서 4 KiB뿐이었다. 2 MiB와 1 GiB leaf는 0개였다.
+이는 `--dax-4k`와 현재 mapper의 조건이다. SWE huge-page 궤적은 측정하지 않았다.
+
+### 이동 뒤 남은 fault와 명령 시간 분포
+
+아래 명령 시간 증가는 이동 구간을 제외한다.
+각 반복을 같은 반복 번호의 baseline 명령과 비교했다.
+3회×명령 수의 표본을 모아 중앙값 / 95백분위수(p95) / 최댓값을 구했다.
+단위는 ms다. 이동을 포함한 step 분포도 JSON·CSV에 따로 있다.
+
+| Fixture | 정책 | Snapshot 중앙 / p95 / 최대 | Direct 중앙 / p95 / 최대 |
+|---|---|---:|---:|
+| Gin | heavy | 0.04 / 818.92 / 1010.33 | -0.06 / 144.36 / 813.47 |
+| Gin | all | 20.49 / 867.44 / 1036.63 | 0.26 / 170.41 / 791.74 |
+| PHP-CS-Fixer | heavy | -0.16 / 123.12 / 247.53 | -0.27 / 172.03 / 417.64 |
+| PHP-CS-Fixer | all | 20.88 / 123.55 / 244.95 | 0.52 / 129.71 / 202.85 |
+| MicroPython | heavy | -0.00 / 86.33 / 651.55 | -0.31 / 33.90 / 668.57 |
+| MicroPython | all | 20.63 / 82.81 / 383.79 | 0.13 / 40.65 / 202.88 |
+
+명령 순번별 fault는 JSON의 `faults_by_after_move_ordinal`에 있다.
+원시 명령 시각·노드·epoch·fault·baseline 대비 증가는 [commands.csv](commands.csv)에 있다.
+
+| Fixture(heavy) | Snapshot 2번째 이후 EPT 합 | Direct 2번째 이후 EPT 합 | Snapshot fault가 남은 마지막 순번 |
+|---|---:|---:|---:|
+| Gin | 5,191 | 367 | 11 |
+| PHP-CS-Fixer | 19,517 | 17,744 | 8 |
+| MicroPython | 35,025 | 973 | 19 |
+
+이 tail 합은 3회 전체다. 새로 쓰는 page와 background 작업도 포함한다.
+원래 매핑한 page의 refault만을 식별한 수는 아니다.
+모든 명령 정책에서는 다음 명령 전에 다시 옮기므로 이동 뒤 순번은 항상 1이다.
+
+### 물리 비용 추정
+
+전체 계수 구간 RAM fault의 baseline 대비 증가에 0.9855441853 µs를 곱했다.
+아래는 **추정 추가 RAM fault 처리 비용(ms)**이다. 실제 물리 궤적을 잰 값이 아니다.
+중첩 시간에서 보정값을 뺀 결과도 아니다.
+
+| Fixture | 정책 | Snapshot 추정 추가(ms) | Direct 추정 추가(ms) |
+|---|---|---:|---:|
+| Gin | heavy | 252.98 | 2.38 |
+| Gin | all | 324.69 | 4.18 |
+| PHP-CS-Fixer | heavy | 77.91 | 4.50 |
+| PHP-CS-Fixer | all | 180.40 | 4.66 |
+| MicroPython | heavy | 93.46 | 1.16 |
+| MicroPython | all | 205.19 | 1.33 |
+
+[conditions.csv](conditions.csv)는 조건별 수치다. [validation.json](validation.json)은
+입력·검증·생성 횟수·매핑 크기·정리 증거의 요약이다.
+이 단계에서는 물리 multi-host 지연이나 hand-off의 전체 물리 이득을 결론내리지 않는다.

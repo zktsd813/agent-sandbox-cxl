@@ -1,0 +1,121 @@
+{
+  "generated_utc": "2026-11-16T05:20:20.699364+00:00",
+  "final_suites": {
+    "count3": {
+      "file": "implementation/virtual_machine/.local/run14/count3/report.json",
+      "sha256": "f80baf4439723a13aaf9c14ed82ac451f4294fd6fbd29a7729b31cb02e767e18",
+      "suite_verification": {
+        "file": "suite-verification.json",
+        "bytes": 180304,
+        "sha256": "655d60d9a3cbf00a75d66851e53ee01b1b2062bacbfd75eb0f4848a3a1c8cba3"
+      }
+    },
+    "time3": {
+      "file": "implementation/virtual_machine/.local/run14/time3/report.json",
+      "sha256": "568821cf71b02a96b4068225b668cf23c4371fe80c1aa61e275d371fee2c991f",
+      "suite_verification": {
+        "file": "suite-verification.json",
+        "bytes": 180264,
+        "sha256": "852f1cae85ac862a2114fb25e59e37a8aa256a89329aa43f8f7a14cc6cfa80b7"
+      }
+    }
+  },
+  "trials_passed": 108,
+  "conditions": 18,
+  "timing_repetitions": 3,
+  "count_repetitions": 3,
+  "execution_inputs_sha256": "1794d79721c73e91175a010bab87e179fe28daf79321baf9cf60278883d82395",
+  "guest_cpu_flags_sha256": "e1f41f5ed6b13e3822ae62064cc3f9f90cc6772cb244e8a6567b6f5300a5a262",
+  "outer_qemu_fences": 216,
+  "all_backing_removed": true,
+  "owned_storage_removed": true,
+  "count_run_handoffs": {
+    "state-only": 357,
+    "direct": 357
+  },
+  "all_snapshot_ram_dump_and_transfer_bytes": 0,
+  "snapshot_state_bytes_min_max": [
+    13938,
+    13950
+  ],
+  "actual_leaf_sizes": {
+    "pages_4k_min_max": [
+      2204,
+      162136
+    ],
+    "pages_2m": 0,
+    "pages_1g": 0,
+    "inactive_leaves": 0
+  },
+  "minimum_prelaunch_node0_free_mib": 25080,
+  "lab_budget_mib": 20544,
+  "reserve_mib": 4096,
+  "runtime_artifacts": {
+    "pool_memory_module.ko": "badb0c76d5e956030cfd3ed6ffb8b460592b0ba34bfbaa8fb93785c5e0e3f012",
+    "php-cs-fixer__php-cs-fixer-8331-initramfs.cpio": "9a6867ab10ea967cd04f3a9ee5693c37eb2cd733659f5ca4746ed593c19052a2",
+    "firecracker": "0759cfbac12f7e2e5867a6f3d78925434aa43388730e0b0047e19fab7870d2f4",
+    "control-rpc": "648fe7f3ba88f821dca15f067197a0de7084ea8592b3be30d8e8feccd4251404",
+    "l2-handoff.config": "5be9bf28c19a58d6047772ed464295ad4082a81cb9cdbb9bc43e31e13090efbd",
+    "resident-bootstrap": "2caf0bcdf94d011da72a87485429594c0874a23618d8e340383dc136d4727840",
+    "resident-control": "eefcc0c29fa1f8060e99e8f3702d43ceaaf1a9ea6b592df781aa66f21df55791",
+    "l1-kernel": "53f518235e111021b2e1a84e9d0fd55bfc1c653e2f48a9d785d377f63d203d30",
+    "nfs-probe": "6a5a9cde3bfe9822f081063df33dc65b240caee1aec8c011ecfc08897a6f629c",
+    "storage.raw": "5676ebb3ec3d8795c75a47cdd2f0d679ca0ab4d4852946b16a04d67eaedbbb43",
+    "micropython__micropython-13039-initramfs.cpio": "71d139d55f90c7fcb51eb078b3507605722db0b049ba2a63d0f8bf577c01f5b7",
+    "gin-gonic__gin-3741-initramfs.cpio": "c9409aed530e336ae6b8e5ad5f861c82f9ba4f10934e3d2ba5952a526e44110c",
+    "l2-initramfs.cpio": "868179a5d8991ae97aaed08e0f27ffeb0ef438adde78bb2d1ce44d5d26bb40fa",
+    "shared-probe": "ab930755507373264f31b5fbee4a5db07127360f2d8bd77643502f272c345f75",
+    "l1-initramfs.cpio": "803046edb1dd45b0b8255bac55e9bb15cd5698ec0042f835ed68c38ad67d67b4",
+    "l2-vmlinux": "5417131366990d248d072296478c804e42a2ff5324ec9da63d0234825ac9dff3"
+  },
+  "runtime_inputs": {
+    "l1_kernel": {
+      "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run14/kernel-hist/arch/x86/boot/bzImage",
+      "sha256": "53f518235e111021b2e1a84e9d0fd55bfc1c653e2f48a9d785d377f63d203d30"
+    },
+    "firecracker": {
+      "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run14/assets-v5/firecracker",
+      "sha256": "0759cfbac12f7e2e5867a6f3d78925434aa43388730e0b0047e19fab7870d2f4"
+    },
+    "l2_kernel": {
+      "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/build07-guest/vmlinux",
+      "sha256": "5417131366990d248d072296478c804e42a2ff5324ec9da63d0234825ac9dff3"
+    },
+    "busybox": {
+      "path": "/usr/bin/busybox",
+      "sha256": "dbac288c29ba568459550a2da9e7ae0ded6b1fc728ee9fad3044c44e62d6ac14"
+    },
+    "probe_source": {
+      "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/shared_probe.c",
+      "sha256": "77696b7cf5a3071696539675e3b40f89a85376c385f4b6837f6e9131967afd6e"
+    },
+    "l1_init": {
+      "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/guest-init.sh",
+      "sha256": "5d724e1071aa91e7f2ff8b5a22ab52bfcab4c34861996794684772722a36d7d4"
+    },
+    "l2_init": {
+      "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/l2-init.sh",
+      "sha256": "e765c182267aa04db6a57878edacafcfb157cc17caa8bf270c63aea3bf319370"
+    },
+    "cxl_init": {
+      "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/guest-cxl.sh",
+      "sha256": "a80b7d0b1c8edb4adc613dec7a140d0723a3388eca96cdda1eccd713ff0c7136"
+    },
+    "kvm_modules": {
+      "kvm.ko": "971200cddac4ecfec5168c2d390b46eedefee9c6599ed8a0e8d23ece62a21e85",
+      "kvm-intel.ko": "cc65b52ff77f0cc56392a4beacd9920f1f01b2382842b1d800f30af7c5fa6387"
+    }
+  },
+  "python_tests": {
+    "passed": 42,
+    "skipped": 8,
+    "total": 50,
+    "log": "implementation/virtual_machine/.local/run14/unit-get-body.log"
+  },
+  "rust_tests": {
+    "passed": 15,
+    "log": "implementation/virtual_machine/.local/run14/rust-test.log"
+  },
+  "timing_runs_flagged_external_load": 0,
+  "count_runs_flagged_external_load": 1
+}
