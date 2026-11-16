@@ -19,7 +19,7 @@ def trajectory_start(c):
     start(c)
     for role in ('A', 'B'):
         script = 'T=/sys/kernel/tracing\n'
-        for name, symbol in (('create_vm', 'kvm_create_vm'), ('create_vcpu', 'kvm_vm_ioctl_create_vcpu')):
+        for name, symbol in (('create_vm', 'kvm_arch_init_vm'), ('create_vcpu', 'kvm_arch_vcpu_create')):
             script += f"echo 'p:trajectory/{name} kvm:{symbol}' >> $T/kprobe_events\n"
         for event in ('kvm/kvm_exit', 'kvm/kvm_page_fault', 'trajectory/create_vm', 'trajectory/create_vcpu'):
             suffix = ' if exit_reason == 48' if event == 'kvm/kvm_exit' else ''

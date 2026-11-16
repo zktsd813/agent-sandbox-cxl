@@ -23,6 +23,7 @@ def main():
     parser.add_argument('--keep-guest-images',action='store_true',help='Only update L1 executables and init, preserving embedded L2 fixtures')
     parser.add_argument('--kvm-module-dir',type=Path,help='Use rebuilt disposable-L1 kvm.ko and kvm-intel.ko from this directory')
     parser.add_argument('--shared-probe',type=Path,help='Use a rebuilt static probe, including KVM keepalive')
+    parser.add_argument('--l1-kernel',type=Path,help='Use a rebuilt disposable L1 bzImage')
     args=parser.parse_args()
     base=args.base_assets.resolve(strict=True);fc=args.firecracker.resolve(strict=True)
     dest=args.output.resolve()
@@ -49,6 +50,9 @@ def main():
             shutil.copy2(args.shared_probe, root/'lab/shared-probe')
         shutil.copy2(HERE/'guest-init.sh',root/'init')
         (root/'init').chmod(0o755)
+        if args.l1_kernel:
+            shutil.copy2(args.l1_kernel, dest/'l1-kernel')
+            original['inputs']['l1_kernel']={'path':str(args.l1_kernel.resolve()), 'sha256':lab.sha256(args.l1_kernel)}
         if args.kvm_module_dir:
             modules={}
             for name in ('kvm.ko','kvm-intel.ko'):
