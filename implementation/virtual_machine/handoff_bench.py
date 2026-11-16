@@ -331,9 +331,10 @@ class HandoffController(Controller):
             "FC_POOL_MEMORY_METADATA_OFFSET": str(getattr(self, "metadata_base", 3072 * MIB) + s.vm * 64 * MIB),
             "FC_POOL_FULL_AUDIT": "1" if getattr(self.args, "full_audit", False) else "0",
             "FC_POOL_MEMORY_MANIFEST": s.manifest_path, "FC_POOL_MEMORY_DEVICE": "/dev/cxl_pool",
-            "FC_DAX_FIXED_HVA": "0x400000000000", "FC_DAX_SNAPSHOT": "1"}
+            "FC_DAX_FIXED_HVA": "0x400000000000", "FC_DAX_SNAPSHOT": "1",
+            "FC_DAX_SNAPSHOT_COMPAT": "1"}
         if getattr(self.args, 'trajectory_policy', None):
-            env.update(FC_DAX_SNAPSHOT_COMPAT='1', FC_DAX_NO_NESTED_GUEST='1')
+            env['FC_DAX_NO_NESTED_GUEST'] = '1'
         if getattr(self.args, 'prefault', None) and purpose == 'snapshot-prepare':
             env.update(FC_PREFAULT_MODE=self.args.prefault,
                 FC_PREFAULT_RANGES=s.directory+'/prefault-ranges.json',
