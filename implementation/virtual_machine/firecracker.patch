@@ -90,7 +90,7 @@ index a3b3f3f..65d254f 100644
              parse_put_actions(&Body::new("invalid_body")).unwrap_err();
 
 diff --git a/src/firecracker/src/api_server_adapter.rs b/src/firecracker/src/api_server_adapter.rs
-index 70abff4..4b212bc 100644
+index 70abff4..ca49758 100644
 --- a/src/firecracker/src/api_server_adapter.rs
 +++ b/src/firecracker/src/api_server_adapter.rs
 @@ -2,10 +2,13 @@
@@ -467,7 +467,7 @@ index 70abff4..4b212bc 100644
 +            return;
 +        }
 +        let (vmm, mut event_manager) = vmm::test_utils::default_vmm_no_boot(None);
-+        vmm.lock().unwrap().machine_config.vcpu_count = 2;
++        vmm.lock().unwrap().machine_config.vcpu_count = 9;
 +        let state_before = vmm.lock().unwrap().instance_info.state.clone();
 +        let (to_vmm, from_api) = channel();
 +        let (to_api, from_vmm) = channel();
@@ -488,7 +488,7 @@ index 70abff4..4b212bc 100644
 +        event_manager.run_with_timeout(100).unwrap();
 +        adapter.lock().unwrap().handle_request(&mut event_manager);
 +        let error = (*from_vmm.recv_timeout(Duration::from_secs(1)).unwrap()).unwrap_err();
-+        assert!(error.to_string().contains("direct handoff requires one vCPU"));
++        assert!(error.to_string().contains("direct handoff requires vCPU count"));
 +        assert_eq!(vmm.lock().unwrap().instance_info.state, state_before);
 +        device_event.write(1).unwrap();
 +        event_manager.run_with_timeout(100).unwrap();
@@ -509,7 +509,7 @@ index 8baa66a..34177ba 100644
      if let Err(err) = result {
          error_unrestricted!("{err}");
 diff --git a/src/vmm/src/arch/x86_64/vcpu.rs b/src/vmm/src/arch/x86_64/vcpu.rs
-index 26c82dd..2ff45da 100644
+index 26c82dd..b860f84 100644
 --- a/src/vmm/src/arch/x86_64/vcpu.rs
 +++ b/src/vmm/src/arch/x86_64/vcpu.rs
 @@ -16,6 +16,7 @@ use kvm_bindings::{
@@ -558,16 +558,15 @@ index 26c82dd..2ff45da 100644
      /// Constructs a new kvm vcpu with arch specific functionality.
      ///
      /// # Arguments
-@@ -173,10 +191,18 @@ impl KvmVcpu {
+@@ -173,10 +191,17 @@ impl KvmVcpu {
      /// * `index` - Represents the 0-based CPU index between [0, max vcpus).
      /// * `vm` - The vm to which this vcpu will get attached.
      pub fn new(index: u8, vm: &KvmVm) -> Result<Self, KvmVcpuError> {
 -        let kvm_vcpu = vm
 +        let kvm_vcpu = if vm.common.dax_imported {
 +            use std::os::fd::AsRawFd;
-+            if index != 0 { return Err(KvmVcpuError::VcpuFd(kvm_ioctls::Error::new(libc::EINVAL))); }
 +            // SAFETY: private no-payload ioctl returns a new FD for the retained vCPU.
-+            let fd = unsafe { libc::ioctl(vm.fd().as_raw_fd(), 0xae_f3 as _, 0) };
++            let fd = unsafe { libc::ioctl(vm.fd().as_raw_fd(), 0xae_f3 as _, u64::from(index)) };
 +            if fd < 0 { return Err(KvmVcpuError::VcpuFd(kvm_ioctls::Error::last())); }
 +            // SAFETY: successful ioctl transferred ownership of the existing vCPU FD.
 +            unsafe { vm.fd().create_vcpu_from_rawfd(fd) }.map_err(KvmVcpuError::VcpuFd)?
@@ -579,7 +578,7 @@ index 26c82dd..2ff45da 100644
 
          Ok(KvmVcpu {
              index,
-@@ -217,7 +243,34 @@ impl KvmVcpu {
+@@ -217,7 +242,34 @@ impl KvmVcpu {
              u8::from(vcpu_count > 1 && smt),
          )?;
 
@@ -615,7 +614,7 @@ index 26c82dd..2ff45da 100644
          self.fd
              .set_cpuid2(&kvm_cpuid)
              .map_err(KvmVcpuConfigureError::SetCpuid)?;
-@@ -631,6 +684,8 @@ impl KvmVcpu {
+@@ -631,6 +683,8 @@ impl KvmVcpu {
              .get_vcpu_events()
              .map_err(KvmVcpuError::VcpuGetVcpuEvents)?;
 
@@ -624,7 +623,7 @@ index 26c82dd..2ff45da 100644
          Ok(VcpuState {
              cpuid,
              saved_msrs,
-@@ -680,6 +735,60 @@ impl KvmVcpu {
+@@ -680,6 +734,60 @@ impl KvmVcpu {
          self.fd.set_tsc_khz(tsc_freq).map_err(SetTscError)
      }
 
@@ -685,7 +684,7 @@ index 26c82dd..2ff45da 100644
      /// Use provided state to populate KVM internal state.
      pub fn restore_state(&self, state: &VcpuState) -> Result<(), KvmVcpuError> {
          // Ordering requirements:
-@@ -740,6 +849,16 @@ impl KvmVcpu {
+@@ -740,6 +848,16 @@ impl KvmVcpu {
              if nmsrs < msrs.as_fam_struct_ref().nmsrs as usize {
                  return Err(KvmVcpuError::VcpuSetMsrsIncomplete);
              }
@@ -1556,10 +1555,10 @@ index 2a75945..fe91a5d 100644
      type ConstructorArgs = MmioTransportConstructorArgs;
 diff --git a/src/vmm/src/direct.rs b/src/vmm/src/direct.rs
 new file mode 100644
-index 0000000..c93019a
+index 0000000..3332d4b
 --- /dev/null
 +++ b/src/vmm/src/direct.rs
-@@ -0,0 +1,772 @@
+@@ -0,0 +1,853 @@
 +// Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 +// SPDX-License-Identifier: Apache-2.0
 +
@@ -1594,6 +1593,19 @@ index 0000000..c93019a
 +use crate::vstate::vm::{KvmVm, Vm};
 +use crate::{EventManager, Vmm, VmmError};
 +
++pub(crate) const MAX_VCPUS: u8 = 2;
++const ABI_VERSION: u32 = 2;
++#[repr(C)]
++#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub(crate) struct VcpuIdentity {
++    pub id: u32,
++    pub reserved: u32,
++    pub vcpu_offset: u64,
++    pub vmcs_offset: u64,
++    pub run_offset: u64,
++    pub ept_root_offset: u64,
++}
 +#[repr(C)]
 +#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 +#[serde(deny_unknown_fields)]
@@ -1616,6 +1628,9 @@ index 0000000..c93019a
 +    pub binding_ns: u64,
 +    pub ept_root_offset: u64,
 +    pub ept_page_count: u64,
++    pub abi_version: u32,
++    pub vcpu_count: u32,
++    pub vcpus: [VcpuIdentity; 8],
 +}
 +
 +#[derive(Debug, Serialize, Deserialize)]
@@ -1671,7 +1686,7 @@ index 0000000..c93019a
 +fn decode_resident_packet(bytes: &[u8]) -> io::Result<ResidentPacket> {
 +    if bytes.is_empty() || bytes.len() >= 65536 { return Err(invalid("resident packet size")); }
 +    let packet: ResidentPacket = bitcode::deserialize(bytes).map_err(|e| invalid(e.to_string()))?;
-+    if packet.0 != 2 { return Err(invalid("resident packet version")); }
++    if packet.0 != 3 { return Err(invalid("resident packet version")); }
 +    Ok(packet)
 +}
 +
@@ -1735,17 +1750,20 @@ index 0000000..c93019a
 +        && token.vmcs_offset == original.vmcs_offset && token.run_offset == original.run_offset
 +        && token.generation == original.generation && token.ram_hva == original.ram_hva
 +        && token.ram_bytes == original.ram_bytes && token.ept_root_offset == original.ept_root_offset
-+        && token.vm_creates == 1 && token.vcpu_creates == 1 && token.flags == 1
++        && token.abi_version == ABI_VERSION && token.abi_version == original.abi_version
++        && token.vcpu_count == original.vcpu_count && token.vcpus == original.vcpus
++        && token.vm_creates == 1 && token.vcpu_creates == u64::from(token.vcpu_count)
++        && valid_cpu_identities(token) && token.flags == 1
 +}
 +
 +pub(crate) fn validate_live(vmm: &Vmm) -> Result<(), VmmError> {
-+    if vmm.machine_config.vcpu_count != 1
++    if !(1..=MAX_VCPUS).contains(&vmm.machine_config.vcpu_count)
 +        || vmm.machine_config.track_dirty_pages
 +        || vmm.machine_config.huge_pages != HugePageConfig::None
 +        || !matches!(vmm.device_manager.virtio_devices, VirtioDevices::Mmio(_))
 +    {
 +        return Err(VmmError::DaxPreflight(
-+            "direct I/O requires 1 vCPU, 4 KiB untracked RAM and MMIO",
++            "direct I/O requires a supported vCPU count, 4 KiB untracked RAM and MMIO",
 +        ));
 +    }
 +    let mut valid = true;
@@ -1824,7 +1842,7 @@ index 0000000..c93019a
 +                .map_err(VmmError::DaxHandoff)?
 +        };
 +        let mut state = DirectState {
-+            schema: "direct-device-handoff-v1".into(),
++            schema: "direct-device-handoff-v2".into(),
 +            token: HandoffToken::default(),
 +            machine_config: self.machine_config.clone(),
 +            boot_source: self.boot_source_config.clone(),
@@ -1865,7 +1883,7 @@ index 0000000..c93019a
 +                timing.mark("park_resident");
 +            }
 +            let bytes = if let Some(mapper) = &mapper {
-+                bitcode::serialize(&(2u32, &state.token, &state.devices, mapper)).map_err(io::Error::other)?
++                bitcode::serialize(&(3u32, &state.token, &state.devices, mapper)).map_err(io::Error::other)?
 +            } else { serde_json::to_vec(&state).map_err(io::Error::other)? };
 +            if bytes.len() >= 65536 { return Err(invalid("resident packet too large")); }
 +            timing.mark("serialize_devices");
@@ -1938,7 +1956,7 @@ index 0000000..c93019a
 +        }
 +        let mut timing = crate::persist::RestoreTiming::new("direct_resident_import");
 +        let (_, token, devices, mapper) = decode_resident_packet(bytes).map_err(err)?;
-+        let mut state = DirectState { schema: "direct-device-handoff-v1".into(), token, devices,
++        let mut state = DirectState { schema: "direct-device-handoff-v2".into(), token, devices,
 +            machine_config: self.machine_config.clone(), boot_source: self.boot_source_config.clone(),
 +            memory: self.vm.as_kvm().unwrap().guest_memory().describe(), memory_manifest_sha256: String::new() };
 +        validate_state(&state).map_err(err)?;
@@ -1990,20 +2008,45 @@ index 0000000..c93019a
 +    if next.generation <= previous.generation || next.vm_offset != previous.vm_offset
 +        || next.vcpu_offset != previous.vcpu_offset || next.vmcs_offset != previous.vmcs_offset
 +        || next.run_offset != previous.run_offset || next.ram_hva != previous.ram_hva
-+        || next.ram_bytes != previous.ram_bytes || next.ept_root_offset != previous.ept_root_offset {
++        || next.ram_bytes != previous.ram_bytes || next.ept_root_offset != previous.ept_root_offset
++        || next.abi_version != previous.abi_version || next.vcpu_count != previous.vcpu_count
++        || next.vcpus != previous.vcpus || !valid_cpu_identities(next) {
 +        return Err(invalid("stale or foreign resident token"));
 +    }
 +    Ok(())
 +}
 +
++fn valid_cpu_identities(t: &HandoffToken) -> bool {
++    if t.abi_version != ABI_VERSION || !(1..=u32::from(MAX_VCPUS)).contains(&t.vcpu_count) {
++        return false;
++    }
++    let count = t.vcpu_count as usize;
++    for (index, cpu) in t.vcpus[..count].iter().enumerate() {
++        if cpu.id != index as u32 || cpu.reserved != 0 || cpu.vcpu_offset == 0
++            || cpu.vmcs_offset == 0 || cpu.run_offset == 0 || cpu.ept_root_offset == 0
++            || cpu.vmcs_offset % 4096 != 0 || cpu.run_offset % 4096 != 0
++            || cpu.ept_root_offset % 4096 != 0 {
++            return false;
++        }
++        for previous in &t.vcpus[..index] {
++            if previous.vcpu_offset == cpu.vcpu_offset || previous.vmcs_offset == cpu.vmcs_offset
++                || previous.run_offset == cpu.run_offset { return false; }
++        }
++    }
++    t.vcpus[count..].iter().all(|cpu| *cpu == VcpuIdentity::default())
++        && t.vcpu_offset == t.vcpus[0].vcpu_offset && t.vmcs_offset == t.vcpus[0].vmcs_offset
++        && t.run_offset == t.vcpus[0].run_offset && t.ept_root_offset == t.vcpus[0].ept_root_offset
++}
++
 +fn validate_state(state: &DirectState) -> io::Result<()> {
 +    let t = &state.token;
-+    if state.schema != "direct-device-handoff-v1"
-+        || state.machine_config.vcpu_count != 1
++    if state.schema != "direct-device-handoff-v2"
++        || u32::from(state.machine_config.vcpu_count) != t.vcpu_count
++        || !valid_cpu_identities(t)
 +        || state.machine_config.track_dirty_pages
 +        || state.machine_config.huge_pages != HugePageConfig::None
 +        || t.vm_creates != 1
-+        || t.vcpu_creates != 1
++        || t.vcpu_creates != u64::from(t.vcpu_count)
 +        || t.generation == 0
 +        || t.vm_offset == 0
 +        || t.flags != 2
@@ -2103,7 +2146,7 @@ index 0000000..c93019a
 +    vm.adopt_direct_memory(regions, &state.memory, &state.token)
 +        .map_err(error)?;
 +    timing.mark("adopt_memory");
-+    let vcpus = vm.create_vcpus(1).map_err(error)?;
++    let vcpus = vm.create_vcpus(state.machine_config.vcpu_count).map_err(error)?;
 +    timing.mark("vcpu_wrapper");
 +    let vm = Arc::new(vm);
 +    let mut local_resources = VmResources::default();
@@ -2173,12 +2216,20 @@ index 0000000..c93019a
 +
 +    fn valid_state() -> DirectState {
 +        DirectState {
-+            schema: "direct-device-handoff-v1".into(),
++            schema: "direct-device-handoff-v2".into(),
 +            token: HandoffToken {
 +                vm_offset: 4096,
 +                vcpu_offset: 8192,
 +                vmcs_offset: 12288,
 +                run_offset: 16384,
++                abi_version: ABI_VERSION,
++                vcpu_count: 1,
++                vcpus: {
++                    let mut cpus = [VcpuIdentity::default(); 8];
++                    cpus[0] = VcpuIdentity { id: 0, reserved: 0, vcpu_offset: 8192,
++                        vmcs_offset: 12288, run_offset: 16384, ept_root_offset: 20480 };
++                    cpus
++                },
 +                generation: 1,
 +                vm_creates: 1,
 +                vcpu_creates: 1,
@@ -2228,6 +2279,35 @@ index 0000000..c93019a
 +            let mut invalid = valid_state();
 +            mutate(&mut invalid);
 +            assert!(validate_state(&invalid).is_err(), "{invalid:?}");
++        }
++    }
++
++    #[test]
++    fn smp_contract_checks_every_cpu_and_the_fixed_abi() {
++        let mut state = valid_state();
++        state.machine_config.vcpu_count = 2;
++        state.token.vcpu_count = 2;
++        state.token.vcpu_creates = 2;
++        state.token.vcpus[1] = VcpuIdentity { id: 1, reserved: 0, vcpu_offset: 24576,
++            vmcs_offset: 28672, run_offset: 32768, ept_root_offset: 20480 };
++        assert!(validate_state(&state).is_ok());
++        let original = state.token.clone();
++        let mut attached = original.clone(); attached.flags = 1;
++        assert!(attached_identity(&original, &attached));
++        attached.vcpus[1].vmcs_offset += 4096;
++        assert!(!attached_identity(&original, &attached));
++        for mutate in [
++            |t: &mut HandoffToken| t.abi_version = 1,
++            |t: &mut HandoffToken| t.vcpu_count = 1,
++            |t: &mut HandoffToken| t.vcpus[1].id = 0,
++            |t: &mut HandoffToken| t.vcpus[1].reserved = 1,
++            |t: &mut HandoffToken| t.vcpus[1].vmcs_offset = t.vcpus[0].vmcs_offset,
++            |t: &mut HandoffToken| t.vcpus[1].run_offset = 0,
++            |t: &mut HandoffToken| t.vcpus[1].ept_root_offset += 1,
++            |t: &mut HandoffToken| t.vcpus[2].id = 2,
++        ] {
++            state.token = original.clone(); mutate(&mut state.token);
++            assert!(validate_state(&state).is_err());
 +        }
 +    }
 +
@@ -2285,7 +2365,7 @@ index 0000000..c93019a
 +            "device_bytes":1<<30,"reserved":[0,0],"generation":1,"faults":0,"exhausted":0,
 +            "allocation_generation":1
 +        })).unwrap();
-+        let bytes = bitcode::serialize(&(2u32, &state.token, &state.devices, &mapper)).unwrap();
++        let bytes = bitcode::serialize(&(3u32, &state.token, &state.devices, &mapper)).unwrap();
 +        let packet = decode_resident_packet(&bytes).unwrap();
 +        assert_eq!(packet.1, state.token);
 +        assert_eq!(serde_json::to_value(packet.3).unwrap(), serde_json::to_value(&mapper).unwrap());
@@ -2329,11 +2409,11 @@ index 0000000..c93019a
 +            sha256(b"mapping generation 1"),
 +            sha256(b"mapping generation 2")
 +        );
-+        assert_eq!(std::mem::size_of::<HandoffToken>(), 136);
++        assert_eq!(std::mem::size_of::<HandoffToken>(), 464);
 +    }
 +}
 diff --git a/src/vmm/src/lib.rs b/src/vmm/src/lib.rs
-index 41b7b8d..a85be4a 100644
+index 41b7b8d..ef08aa7 100644
 --- a/src/vmm/src/lib.rs
 +++ b/src/vmm/src/lib.rs
 @@ -78,6 +78,9 @@ pub mod builder;
@@ -2434,8 +2514,8 @@ index 41b7b8d..a85be4a 100644
 +    /// Reject unsupported direct devices before changing vCPU or IRQFD state.
 +    #[cfg(target_arch = "x86_64")]
 +    pub(crate) fn check_direct_handoff_configuration(&self) -> Result<(), VmmError> {
-+        if self.machine_config.vcpu_count != 1 {
-+            return Err(VmmError::DaxPreflight("direct handoff requires one vCPU"));
++        if !(1..=crate::direct::MAX_VCPUS).contains(&self.machine_config.vcpu_count) {
++            return Err(VmmError::DaxPreflight("direct handoff exceeds supported vCPU count"));
 +        }
 +        if crate::direct::io_enabled() {
 +            return crate::direct::validate_live(self);
@@ -2582,7 +2662,7 @@ index 41b7b8d..a85be4a 100644
          Ok(MicrovmState {
              vm_info: vm_info.clone(),
 diff --git a/src/vmm/src/persist.rs b/src/vmm/src/persist.rs
-index 71a0345..889ef50 100644
+index 71a0345..2dfd978 100644
 --- a/src/vmm/src/persist.rs
 +++ b/src/vmm/src/persist.rs
 @@ -11,6 +11,7 @@ use std::os::unix::io::AsRawFd;
@@ -2828,7 +2908,7 @@ index 71a0345..889ef50 100644
      let mem_file = File::open(mem_file_path)?;
      let guest_mem =
          memory::snapshot_file(mem_file, mem_state.regions(), track_dirty_pages, huge_pages)?;
-@@ -687,6 +819,61 @@ mod tests {
+@@ -687,6 +819,63 @@ mod tests {
      use crate::vmm_config::vsock::tests::default_config;
      use crate::vstate::memory::{GuestMemoryRegionState, GuestRegionType};
 
@@ -2873,12 +2953,14 @@ index 71a0345..889ef50 100644
 +
 +    #[cfg(target_arch = "x86_64")]
 +    #[test]
-+    fn test_direct_handoff_preflight_rejects_devices_and_multiple_vcpus() {
++    fn test_direct_handoff_preflight_rejects_devices_and_excess_vcpus() {
 +        use crate::builder::tests::default_vmm_with_pci;
 +        let mut vmm = default_vmm();
 +        vmm.check_direct_handoff_configuration().unwrap();
 +        vmm.machine_config.vcpu_count = 2;
-+        assert!(vmm.check_direct_handoff_configuration().unwrap_err().to_string().contains("one vCPU"));
++        vmm.check_direct_handoff_configuration().unwrap();
++        vmm.machine_config.vcpu_count = crate::direct::MAX_VCPUS + 1;
++        assert!(vmm.check_direct_handoff_configuration().unwrap_err().to_string().contains("vCPU count"));
 +        vmm.machine_config.vcpu_count = 1;
 +        let mut event_manager = EventManager::new().unwrap();
 +        insert_block_devices(&mut vmm, &mut default_kernel_cmdline(), &mut event_manager,
@@ -4888,7 +4970,7 @@ index 888e8c5..6f0d493 100644
      fn test_extract_huge_tlb_mmap_flags() {
          let cases = [
 diff --git a/src/vmm/src/vstate/vcpu.rs b/src/vmm/src/vstate/vcpu.rs
-index 5af0b76..755365c 100644
+index 5af0b76..18fc374 100644
 --- a/src/vmm/src/vstate/vcpu.rs
 +++ b/src/vmm/src/vstate/vcpu.rs
 @@ -71,6 +71,8 @@ pub struct VcpuConfig {
@@ -4951,7 +5033,7 @@ index 5af0b76..755365c 100644
 +            assert!(std::env::var("FC_VCPU_CPU").is_ok()
 +                || std::env::var("FC_DAX_DIRECT").as_deref() == Ok("1")
 +                || std::env::var("FC_DAX_SNAPSHOT").as_deref() == Ok("1"));
-+            let cpu: usize = cpu.parse().expect("vCPU CPU");
++            let cpu: usize = cpu.parse::<usize>().expect("vCPU CPU") + self.kvm_vcpu.index as usize;
 +            assert!(cpu < libc::CPU_SETSIZE as usize);
 +            // SAFETY: initialized cpu_set_t and a checked CPU index.
 +            unsafe {
@@ -4982,7 +5064,7 @@ index 5af0b76..755365c 100644
              Ok(VcpuEvent::Pause) => {
 -                // Nothing special to do.
 +                #[cfg(target_arch = "x86_64")]
-+                if std::env::var("FC_DAX_REUSE").as_deref() == Ok("1") || crate::direct::io_enabled() {
++                if std::env::var("FC_DAX_REUSE").as_deref() == Ok("1") || std::env::var("FC_DAX_DIRECT").as_deref() == Ok("1") {
 +                    match self.kvm_vcpu.fd.get_sregs() {
 +                        Ok(sregs) if sregs.cr4 & (1 << 13) == 0 && sregs.efer & (1 << 12) == 0 => (),
 +                        result => {
@@ -5216,7 +5298,7 @@ index 5af0b76..755365c 100644
                  (NotAllowed(_), NotAllowed(_))
                  | (SavedState(_), SavedState(_))
 diff --git a/src/vmm/src/vstate/vm.rs b/src/vmm/src/vstate/vm.rs
-index dfedd64..e2feb78 100644
+index dfedd64..31e7a7b 100644
 --- a/src/vmm/src/vstate/vm.rs
 +++ b/src/vmm/src/vstate/vm.rs
 @@ -7,9 +7,10 @@
@@ -5363,7 +5445,7 @@ index dfedd64..e2feb78 100644
              handle
                  .send_event(crate::VcpuEvent::SaveState)
                  .map_err(MicrovmStateError::SignalVcpu)?;
-@@ -542,11 +581,154 @@ impl KvmVm {
+@@ -542,11 +581,158 @@ impl KvmVm {
          Ok(())
      }
 
@@ -5442,6 +5524,10 @@ index dfedd64..e2feb78 100644
 +            if !self.common.dax_detached.load(Ordering::Acquire) {
 +                return Ok([0; 2]);
 +            }
++            // SAFETY: read-only full graph identity from the detached arena.
++            if unsafe { libc::ioctl(self.common.kvm.fd.as_raw_fd(), (read | 4) as _, &mut meta) } < 0 {
++                return Err(std::io::Error::last_os_error());
++            }
 +            // SAFETY: the experimental ioctl writes a fixed-size repr(C) metadata record.
 +            let reuse = std::env::var("FC_DAX_REUSE_FD").as_deref() == Ok("1");
 +            let fd = unsafe {
@@ -5518,7 +5604,7 @@ index dfedd64..e2feb78 100644
      /// Gets a reference to this [`KvmVm`]'s [`GuestMemoryMmap`] object
      pub fn guest_memory(&self) -> &GuestMemoryMmap {
          &self.common.guest_memory
-@@ -666,6 +848,13 @@ impl KvmVm {
+@@ -666,6 +852,13 @@ impl KvmVm {
      /// Register a device IRQ
      pub fn register_irq(&self, fd: &EventFd, gsi: u32) -> Result<(), errno::Error> {
          self.common.fd.register_irqfd(fd, gsi)?;

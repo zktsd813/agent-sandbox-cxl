@@ -993,6 +993,27 @@ def validate_dense_working_set(report, samples, sources, rounds, memory_mib):
                                  dense_scan_rounds=rounds)
 
 
+def validate_smp_handoff(samples, rounds, vcpus):
+    rows = [s for s in samples if s["event"] == "smp"]
+    if len(rows) != rounds * vcpus:
+        raise RuntimeError("Missing per-CPU SMP evidence")
+    result = {}
+    for cpu in range(vcpus):
+        history = sorted((s for s in rows if s["cpu"] == cpu), key=lambda s: s["round"])
+        if [s["round"] for s in history] != list(range(rounds)):
+            raise RuntimeError("Duplicate or missing SMP CPU/round")
+        for index, row in enumerate(history):
+            if row["ack"] != index + 1 or any(row[k] for k in ("errors", "clock_errors", "tsc_errors")):
+                raise RuntimeError("SMP checksum, clock or ACK failed")
+        for key in ("sequence", "timer", "ipi", "ping"):
+            values = [s[key] for s in history]
+            if not values[0] or values[-1] <= values[0] or any(a > b for a, b in zip(values, values[1:])):
+                raise RuntimeError(f"SMP CPU {cpu} {key} did not continue")
+        result[str(cpu)] = {key + "_increase": history[-1][key] - history[0][key]
+                            for key in ("sequence", "timer", "ipi", "ping")}
+    return result
+
+
 def direct_handoff_bench(args):
     """Direct CXL object attach; deliberately starts with a device-free CPU guest."""
     run, config = current_run()
@@ -1001,6 +1022,14 @@ def direct_handoff_bench(args):
         raise RuntimeError("Start a fresh --dax-handoff --dax-guest --cxl-mib 2048 lab")
     rounds = args.iterations + args.warmup
     linux = args.guest == "linux"
+    vcpus = getattr(args, "vcpus", 1)
+    if not 1 <= vcpus <= 8 or (vcpus != 1 and not linux):
+        raise RuntimeError("Multiple vCPUs require a Linux guest, 1..8 CPUs")
+    if vcpus > 1 and (args.dense_working_set or args.resume_profile or args.heartbeat_pit or args.heartbeat_churn):
+        raise RuntimeError("SMP workload has its own checksum/clock/interrupt checks")
+    base_cpu = args.executor_cpu or 0
+    if vcpus > 1 and base_cpu + vcpus > config["l1_vcpus"]:
+        raise RuntimeError("L1 needs enough CPUs for the requested executor affinity")
     if not 128 <= args.memory_mib <= 2048:
         raise RuntimeError("Require 128..2048MiB guest RAM")
     if not linux and (args.memory_mib != 128 or args.dense_working_set):
@@ -1029,6 +1058,7 @@ def direct_handoff_bench(args):
     if not collect_from:
         out.mkdir()
     report = {"result": "running", "run": str(run), "iterations": args.iterations,
+              "vcpus": vcpus, "test_running_vcpu": getattr(args, "test_running_vcpu", False),
               "memory_mib": args.memory_mib if linux else 2, "dense_working_set": args.dense_working_set,
               "dax_layout_shift_mib": layout_shift_mib,
               "dax_layout": {"ram_offset_mib": 2, "ram_bytes": args.memory_mib * 1024 * 1024 if linux else 2 * 1024 * 1024,
@@ -1055,7 +1085,7 @@ def direct_handoff_bench(args):
               "heartbeat": args.heartbeat if linux else None,
               "guest": (f"{args.memory_mib}MiB Linux microVM cold-booted once by Firecracker on A; B executes same shared KVM objects using existing shared-probe" if linux else "2MiB real-mode CPU guest; integer register, RIP, x87 accumulator and RAM continuity"),
               "boundary": ("source pause/kick begin to observed remote Linux guest acknowledgement; configured polling/spinning included" if linux else "completed HLT exit on source to observed remote HLT completion; source guest exit cost excluded; configured polling included"),
-              "limitations": ["single vCPU, identical kernel/module code addresses and CXL GPA/KVA, nokaslr",
+              "limitations": ["same vCPU count and IDs, identical kernel/module code addresses and CXL GPA/KVA, nokaslr",
                               ("PIC/IOAPIC/LAPIC/PIT and PV clock retained; timers/workers/cache rebound; VM logical clock freezes during handoff; no APF/steal/PMU/host-device IRQFD or block/network/vsock; source VMM remains on A" if linux else "no IRQ/PIT/pvclock/async PF/devices"),
                               ("EPT is retained with matching PFNs and node-local page metadata rebound" if args.kernel_mode >= 3 else "EPT is invalidated and rebuilt; RAM stays shared"),
                               "shared bump arena retained until outer VM shutdown; not a reusable production allocator",
@@ -1096,11 +1126,13 @@ def direct_handoff_bench(args):
                 body = ""
                 if linux:
                     configuration = {"boot-source": {"kernel_image_path": "/lab/l2-vmlinux", "initrd_path": "/lab/l2-initramfs.cpio",
-                        "boot_args": "console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init lab.role=A memmap=2M$64M lab.heartbeat=1 " + f"lab.heartbeat_sleep={int(args.heartbeat == 'sleep')} lab.heartbeat_churn={int(args.heartbeat_churn)} lab.heartbeat_pit={int(args.heartbeat_pit)} lab.heartbeat_timing={int(args.resume_profile)} lab.heartbeat_quiet=1 nmi_watchdog=0" + (" lab.heartbeat_dense=1 transparent_hugepage=never" if args.dense_working_set else "")},
-                        "machine-config": {"vcpu_count": 1, "mem_size_mib": args.memory_mib}, "drives": []}
+                        "boot_args": "console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init lab.role=A memmap=2M$64M lab.heartbeat=1 " + f"lab.heartbeat_vcpus={vcpus} lab.heartbeat_sleep={int(args.heartbeat == 'sleep')} lab.heartbeat_churn={int(args.heartbeat_churn)} lab.heartbeat_pit={int(args.heartbeat_pit)} lab.heartbeat_timing={int(args.resume_profile)} lab.heartbeat_quiet=1 nmi_watchdog=0" + (" lab.heartbeat_dense=1 transparent_hugepage=never" if args.dense_working_set else "")},
+                        "machine-config": {"vcpu_count": vcpus, "mem_size_mib": args.memory_mib}, "drives": []}
                     body += "cat > /run/bench-config.json <<'DIRECT_CONFIG'\n" + json.dumps(configuration) + "\nDIRECT_CONFIG\n"
                 env = "FC_DAX_DIRECT=1 " if linux else ""
-                env += f"LAB_DAX_LAYOUT_SHIFT_MIB={layout_shift_mib} LAB_HEARTBEAT_DENSE={int(args.dense_working_set)} "
+                env += f"LAB_DAX_LAYOUT_SHIFT_MIB={layout_shift_mib} LAB_HEARTBEAT_DENSE={int(args.dense_working_set)} LAB_DAX_VCPUS={vcpus} "
+                if getattr(args, "test_running_vcpu", False):
+                    env += "LAB_DAX_TEST_RUNNING=1 "
                 env += f"LAB_DAX_DWELL_US={args.dwell_ms * 1000} "
                 env += f"LAB_DAX_POLL_US={args.poll_us} "
                 env += f"LAB_DAX_SPIN_US={args.spin_us} "
@@ -1184,7 +1216,7 @@ def direct_handoff_bench(args):
                 raise RuntimeError("Host discovered backwards TSC")
             pool = guest_command(vm, "cat /sys/module/kvm/parameters/dax_pool")
             (out / f"{role}-final-pool.log").write_text(pool)
-            if not re.search(r"vm_create_calls=1 vcpu_create_calls=1", pool):
+            if not re.search(rf"vm_create_calls=1 vcpu_create_calls={vcpus}(?:\s|$)", pool):
                 raise RuntimeError("VM/vCPU creation was called again during handoff")
         samples = sum(report["samples"].values(), [])
         sources = sorted((s for s in samples if s["event"] == "source"), key=lambda s: s["round"])
@@ -1199,10 +1231,17 @@ def direct_handoff_bench(args):
         if len(identity) != 1:
             raise RuntimeError("Shared KVM/vCPU/VMCS object identity changed")
         report["validation"] = {"handoffs": rounds, "identical_object_offsets": list(identity)[0],
-                                "vm_creates": 1, "vcpu_creates": 1,
+                                "vm_creates": 1, "vcpu_creates": vcpus,
                                 "continuity_checks": ("Linux heartbeat and retained dense working set" if args.dense_working_set else "Linux heartbeat and retained 16MiB heap") if linux else "integer register, RIP and x87 accumulator",
                                 "kernel_taint": 0, "snapshot_api_calls": 0}
         report["validation"].update({"duplicate_attach_rejected": True, "old_owner_vcpu_access_revoked": True})
+        if vcpus > 1:
+            report["validation"]["smp"] = validate_smp_handoff(samples, rounds, vcpus)
+        if getattr(args, "test_running_vcpu", False):
+            rejected = [s for s in samples if s["event"] == "running_rejected"]
+            if len(rejected) != 1 or rejected[0]["vcpu"] != vcpus - 1 or rejected[0]["errno"] != 16:
+                raise RuntimeError("Missing running last-vCPU rejection evidence")
+            report["validation"]["running_last_vcpu_rejected"] = True
         if args.dense_working_set:
             validate_dense_working_set(report, samples, sources, rounds, args.memory_mib)
         if args.kernel_mode >= 3:
@@ -1767,7 +1806,7 @@ def migration_bench(args):
                 guest_command(vm, migration_trace_script(True, detail), timeout=30)
         configuration = {"boot-source": {"kernel_image_path": "/lab/l2-vmlinux", "initrd_path": "/lab/l2-initramfs.cpio",
                          "boot_args": "console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init lab.role=A memmap=2M$64M lab.migration=1 lab.migration_headroom=16 nmi_watchdog=0 transparent_hugepage=never"},
-                         "machine-config": {"vcpu_count": 1, "mem_size_mib": args.memory_mib}, "drives": []}
+                         "machine-config": {"vcpu_count": vcpus, "mem_size_mib": args.memory_mib}, "drives": []}
         report["guest_configuration"] = configuration
         for role in ("B", "A"):
             vm = config["vms"][role]
@@ -2077,11 +2116,11 @@ def handoff_bench(args):
         configuration = {"boot-source": {"kernel_image_path": "/lab/l2-vmlinux",
                          "initrd_path": "/lab/l2-initramfs.cpio",
                          "boot_args": "console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init lab.role=A memmap=2M$64M lab.heartbeat=1 "
-                                      f"lab.heartbeat_sleep={int(args.heartbeat == 'sleep')}"
+                                      f"lab.heartbeat_vcpus={vcpus} lab.heartbeat_sleep={int(args.heartbeat == 'sleep')}"
                                       f" lab.heartbeat_churn={int(args.heartbeat_churn)} lab.heartbeat_pit={int(args.heartbeat_pit)} lab.heartbeat_timing={int(args.profile_ack)} lab.heartbeat_quiet=1 nmi_watchdog=0"
                                       + (" lab.heartbeat_dense=1 transparent_hugepage=never" if args.dense_working_set else "")
                                       + ("")},
-                         "machine-config": {"vcpu_count": 1, "mem_size_mib": args.memory_mib}, "drives": []}
+                         "machine-config": {"vcpu_count": vcpus, "mem_size_mib": args.memory_mib}, "drives": []}
         for role, vm in config["vms"].items():
             role_configuration = json.loads(json.dumps(configuration))
             if args.reuse_kvm and role == "B":
@@ -2210,6 +2249,13 @@ def handoff_bench(args):
                                 "payload_integrity_verified": True, "ram_hvas": ram_hvas,
                                 "state_bytes": sorted({s["state_bytes"] for s in sources}),
                                 "snapshot_payload_bytes_total": sum(s["state_bytes"] for s in sources)}
+        if vcpus > 1:
+            report["validation"]["smp"] = validate_smp_handoff(samples, rounds, vcpus)
+        if getattr(args, "test_running_vcpu", False):
+            rejected = [s for s in samples if s["event"] == "running_rejected"]
+            if len(rejected) != 1 or rejected[0]["vcpu"] != vcpus - 1 or rejected[0]["errno"] != 16:
+                raise RuntimeError("Missing running last-vCPU rejection evidence")
+            report["validation"]["running_last_vcpu_rejected"] = True
         if args.dense_working_set:
             validate_dense_working_set(report, all_samples, sources, rounds, args.memory_mib)
         if args.reuse_kvm:
@@ -2713,6 +2759,8 @@ def main():
                    help="Flip a payload byte after hashing; require rejection before receiver deserialization (1 iteration, 0 warmup)")
     p.set_defaults(func=handoff_bench)
     p = subs.add_parser("direct-handoff-bench", help="Attach the same shared KVM/vCPU/VMCS across independent kernels")
+    p.add_argument("--vcpus", type=int, choices=[1, 2, 4, 8], default=1, help="Linux microVM vCPUs, with identical source/destination topology")
+    p.add_argument("--test-running-vcpu", action="store_true", help="Keep the last B vCPU running, require EBUSY, then stop it and continue")
     p.add_argument("--memory-mib", type=int, default=128, help="Linux guest RAM, 128..2048MiB (default 128)")
     p.add_argument("--dense-working-set", action="store_true", help="Retain and verify a near-full guest working set; measure first and warm page scans after every handoff")
     p.add_argument("--kernel-mode", type=int, choices=[2, 3], default=3,
