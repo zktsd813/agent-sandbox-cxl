@@ -115,6 +115,7 @@ def summarize(args):
         baseline = groups.get((key[0],key[1],'baseline'), [])
         for row, r in items:
             since = None
+            moves = {x['before_command']:x for x in r['transitions'] if 'before_command' in x}
             for command in r['commands']:
                 index = command['receipt']['index']
                 if index in r['boundaries']: since = 0
@@ -122,9 +123,12 @@ def summarize(args):
                 controls = [x['commands'][index]['host_duration_ns']/1e9 for b,x in baseline
                             if b['repeat']==row['repeat'] and b['count_run']==row['count_run']]
                 duration = command['host_duration_ns']/1e9
+                step_start = moves[index]['host_request_ns'] if index in moves else command['host_send_ns']
+                step_duration = (command['host_receive_ns']-step_start)/1e9
                 out = {k:row[k] for k in ('fixture','policy','mode','repeat','count_run','disturbed')}
                 out.update(index=index, role=command['role'], epoch=command['epoch'], after_move_ordinal=since,
                     duration_s=duration, excess_s=duration-st.mean(controls) if controls else None)
+                out.update(step_duration_s=step_duration, step_excess_s=step_duration-st.mean(controls) if controls else None)
                 for role in ('A','B'):
                     for kind in ('ept_violation','page_fault','ram_ept_violation','mmio_ept_violation'):
                         out[role+'_'+kind] = command.get('faults',{}).get(role,{}).get(kind)
@@ -150,9 +154,15 @@ def summarize(args):
             out.update(total_s_median=st.median(x['total_s'] for x in times),
                        extra_s=st.median(x['total_s'] for x in times)-st.median(base),
                        stop_s_median=st.median(x['stop_s'] for x in times))
+            base_active = [b['active_s'] for b,r in groups[(key[0],key[1],'baseline')] if not b['count_run']]
+            out.update(active_s_median=st.median(x['active_s'] for x in times),
+                       active_extra_s=st.median(x['active_s'] for x in times)-st.median(base_active))
             excess = [x['excess_s'] for x in commands if (x['fixture'],x['policy'],x['mode'])==key and not x['count_run'] and x['excess_s'] is not None]
             if excess:
                 out.update(command_extra_s_median=st.median(excess), command_extra_s_p95=percentile(excess,.95), command_extra_s_max=max(excess))
+            step = [x['step_excess_s'] for x in commands if (x['fixture'],x['policy'],x['mode'])==key and not x['count_run'] and x['step_excess_s'] is not None]
+            if step:
+                out.update(step_extra_s_median=st.median(step), step_extra_s_p95=percentile(step,.95), step_extra_s_max=max(step))
         if counts:
             faults = st.mean(x['ept_violations'] for x in counts)
             moves = counts[0]['moves']
@@ -164,13 +174,16 @@ def summarize(args):
                        moves=moves, ept_per_move=faults/moves if moves else None,
                        spte=[x['spte'] for x in counts], nested_root_ms_mean=st.mean(x['nested_root_ns'] for x in counts)/1e6)
             if costs:
-                out['estimated_physical_4k_s']=out['ram_ept_mean']*costs['4k']/1e6
+                out['estimated_physical_4k_s']=out['whole_interval_ram_ept_mean']*costs['4k']/1e6
+                out['estimated_command_physical_4k_s']=out['ram_ept_mean']*costs['4k']/1e6
                 base_faults = [b['ept_violations'] for b,r in groups.get((key[0],key[1],'baseline'), []) if b['count_run']]
                 if base_faults:
                     out['excess_ept_mean'] = faults-st.mean(base_faults)
                     base_ram = [b['ram_ept_violations'] for b,r in groups.get((key[0],key[1],'baseline'), []) if b['count_run']]
                     out['excess_ram_ept_mean'] = out['ram_ept_mean']-st.mean(base_ram)
-                    out['estimated_excess_physical_4k_s'] = out['excess_ram_ept_mean']*costs['4k']/1e6
+                    base_whole = [b['whole_interval_ram_ept'] for b,r in groups[(key[0],key[1],'baseline')] if b['count_run']]
+                    out['whole_interval_excess_ram_ept_mean'] = out['whole_interval_ram_ept_mean']-st.mean(base_whole)
+                    out['estimated_excess_physical_4k_s'] = out['whole_interval_excess_ram_ept_mean']*costs['4k']/1e6
             lag, lag_excess = defaultdict(list), defaultdict(list)
             for x in commands:
                 if (x['fixture'],x['policy'],x['mode'])==key and x['count_run'] and x['after_move_ordinal']:
