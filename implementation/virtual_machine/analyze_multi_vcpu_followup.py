@@ -106,7 +106,8 @@ def resident_report(path):
         stages = {'pause_to_guest_ack_ms':[r['fast']['guest_ack_ns']/1e6 for r in group],
                   'send_api_ms':[r['fast']['apis']['send']['duration_us']/1000 for r in group],
                   'receive_api_ms':[r['fast']['apis']['receive']['duration_us']/1000 for r in group],
-                  'pause_to_resume_response_ms':[r['fast']['pause_to_resume_response_ns']/1e6 for r in group]}
+                  'pause_to_resume_response_ms':[r['fast']['pause_to_resume_response_ns']/1e6 for r in group],
+                  'resume_response_to_guest_ack_ms':[(r['fast']['guest_ack_ns']-r['fast']['pause_to_resume_response_ns'])/1e6 for r in group]}
         if result['profile']:
             for side in ('detach','attach'):
                 for i in range(8):
