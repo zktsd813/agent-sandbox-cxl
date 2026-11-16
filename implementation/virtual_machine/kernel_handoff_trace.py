@@ -19,6 +19,9 @@ def trajectory_start(c):
     start(c)
     for role in ('A', 'B'):
         script = 'T=/sys/kernel/tracing\n'
+        for name in ('tlb_current', 'tlb_all', 'tlb_guest'):
+            for suffix in ('enter', 'exit'):
+                script += f'if [ -d $T/events/resident_diag/{name}_{suffix} ]; then echo 0 > $T/events/resident_diag/{name}_{suffix}/enable; fi\n'
         for name, symbol in (('create_vm', 'kvm_arch_init_vm'), ('create_vcpu', 'kvm_arch_vcpu_create')):
             script += f"echo 'p:trajectory/{name} kvm:{symbol}' >> $T/kprobe_events\n"
         for event in ('kvm/kvm_exit', 'kvm/kvm_page_fault', 'trajectory/create_vm', 'trajectory/create_vcpu'):
