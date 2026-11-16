@@ -82,3 +82,14 @@ NUMA(Non-Uniform Memory Access) node 0만 사용한다. 빌드는 nice 19, 최�
 quiet shared lock 아래 수행한다. lab은 전역 lab exclusive lock과 node 0 free-memory
 예산 검사 뒤 L1별 4~6 GiB로 시작한다. 측정은 quiet exclusive lock을 잡는다.
 실행 종료는 이 실행의 `lab.py stop`과 backing 정리를 반드시 수행한다.
+
+## 구현 후 확인
+
+2/4/8개 각각 205회 왕복과 실행 중 마지막 vCPU의 detach 거절을 통과했다.
+각 단계의 기존 1개 경로, EPT를 버리는 mode 2도 확인했다.
+4개 Gin fixture는 실행 중 B→A→B를 포함해 baseline과 결과가 같았다.
+RAM mapper의 쓰기 fault에서 PTE(Page Table Entry)를 지우면 다른 vCPU의
+PFN(Page Frame Number) 조회가 `EFAULT`로 실패할 수 있었다.
+기존 PTE를 유지하고 write-protect 해제는 Linux의 `finish_mkwrite_fault`에 맡겼다.
+native 실행기도 모든 vCPU FD·run mapping을 만든 다음 thread를 깨우도록 고쳤다.
+수치와 남은 한계는 [결과](../../docs/results/multi-vcpu-handoff-20261116/README.md)에 있다.

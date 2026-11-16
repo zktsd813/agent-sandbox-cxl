@@ -153,7 +153,10 @@ numactl --cpunodebind=0 --membind=0 --physcpubind=0-31 python3 "$V/verify_swe_ha
   --suite "$V/.local/swe-handoff-run/report.json"
 ```
 
-Runner는 1 vCPU·2GiB sandbox, L1별 4 vCPU·8GiB, 공유 CXL 16GiB layout을 쓴다.
+Runner의 기본은 1 vCPU·2GiB sandbox, L1별 4 vCPU·8GiB, 공유 CXL 16GiB layout이다.
+`--vcpus {1,2,4,8}`과 `--l1-memory-mib {4096,6144,8192}`로 조절한다.
+NFS fixture의 L1에는 `CONFIG_NFSD=y`가 필요하다. 준비기에 `--l1-config`를 주면 이를 검사하고 기록한다.
+`--link-storage`는 큰 원본 storage를 읽기 전용 symlink로 참조한다. 각 실행의 쓰기 가능한 복사본은 별도로 만든다.
 실행 소스는 commit된 Git blob과 일치해야 한다. 미검토 변경을 commit하라는 자동 동작은 없다.
 `handoff_bench.py`는 이미 시작한 fresh pair에서 한 trace를 실행하는 하위 CLI다.
 명령 문자열·환경·순서와 최종 제출 diff는 원본 trace에서 독립 검증한다.
@@ -162,6 +165,7 @@ Runner는 1 vCPU·2GiB sandbox, L1별 4 vCPU·8GiB, 공유 CXL 16GiB layout을 �
 | 주요 flag | 의미 |
 |---|---|
 | `--modes baseline state-only direct` | 같은 수정 VMM의 DRAM 기준선과 두 hand-off 방식 |
+| `--vcpus N`, `--l1-memory-mib M` | guest vCPU 수와 각 L1 메모리 예산; 시작 직전 node 0 free 검사 |
 | `--restore-timing` | VMM 내부 상세 계측; 무계측 표본과 분리 |
 | `--kernel-trace` | direct hand-off 구간에만 nested root·EPT·TLB probe |
 | `--direct-profile-roundtrips N` | 실제 명령 사이에 추가 왕복, 0–20 |
@@ -173,13 +177,35 @@ Resident의 ready/fast/native/memory control과 immutable NFS cache는 기본이
 중간 비교 toggle은 제거했다. 비교 결과는 `results/`와 합치기 전 문서 [resident direct](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/docs/cxl-resident-direct.md),
 [Direct API latency](https://github.com/zktsd813/agent-sandbox-cxl/blob/docs-pre-merge/docs/cxl-direct-api-latency.md)에 남아 있다.
 
+## 다중 vCPU 검증
+
+설계는 [MULTI_VCPU.md](MULTI_VCPU.md), 2/4/8 vCPU 왕복·IPI·timer·Gin 결과는
+[multi-vcpu-handoff-20261116](../../docs/results/multi-vcpu-handoff-20261116/README.md)에 있다.
+`multi_vcpu.py`는 lab/quiet 잠금, node 0 메모리 예산, 시작·검증·종료를 한 trial로 묶는다.
+입력과 빌드 산출물을 이 worktree에 준비한 뒤 실행한다. QEMU runtime은 `.local/qemu-runtime/bin/`에 둔다.
+
+```bash
+numactl --physcpubind=0-23 --membind=0 python3 "$V/multi_vcpu.py" \
+  --vcpus 8 --iterations 400 --warmup 10 --test-running-vcpu \
+  --output "$V/.local/trials/functional-8"
+numactl --physcpubind=0-23 --membind=0 python3 "$V/multi_vcpu.py" \
+  --vcpus 8 --iterations 100 --warmup 10 --measure \
+  --output "$V/.local/trials/measured-8"
+```
+
+`--measure`는 quiet 잠금을 독점하고 1 vCPU에도 같은 CPU별 checksum/futex 부하를 쓴다.
+기존 1 vCPU heartbeat는 flag 없이 유지한다. `--kernel-mode 2`는 EPT를 버리는 기존 경로다.
+
 ## 한계
 
-Direct는 현재 1 vCPU·동일 kernel/CPU 모델·고정 HVA·MMIO·read-only block 조건이다.
+Direct는 현재 1~8 vCPU·동일 kernel/CPU 모델·고정 HVA·MMIO·read-only block 조건이다.
+양쪽 vCPU 수와 ID가 같아야 한다. 1/2/4/8개를 검증했다. CPU hotplug는 지원하지 않는다.
 Balloon·hotplug·pmem·지원하지 않는 장치 구성은 사전에 거절한다.
-Mapper `/dev/cxl_pool` ABI 4(handle 152 B, config/query 56 B, Firecracker manifest v4, resident packet v2)는 이전 ABI handle을 받지 않는다. 같은 binary·kernel·mapper로 양쪽을 준비한다.
+KVM shared header/token ABI는 2(token 464 B), direct JSON은 v2, resident packet은 v3다.
+Mapper `/dev/cxl_pool` ABI 4(handle 152 B, config/query 56 B, Firecracker manifest v4)는 유지한다.
+이전 ABI는 거절한다. 같은 binary·kernel·mapper로 양쪽을 준비한다.
 
 `dax_nested_root_sync=1`은 nested lab의 outer KVM shadow EPT 보완이다.
 물리 host 성능에서 이 비용을 임의로 빼지 않는다. 일반 TLB 무효화·단일 owner·CXL 가시성은 별도 보장이다.
-비일관 물리 multi-host CXL, 다중 vCPU direct, writable direct, 장애 복구와
+비일관 물리 multi-host CXL, writable direct, 장애 복구와
 최신 resident 경로의 MPTCP/PML 통합은 검증하지 않았다.
