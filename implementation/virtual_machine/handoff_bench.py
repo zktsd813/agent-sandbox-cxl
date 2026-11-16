@@ -329,6 +329,8 @@ class HandoffController(Controller):
             "FC_POOL_FULL_AUDIT": "1" if getattr(self.args, "full_audit", False) else "0",
             "FC_POOL_MEMORY_MANIFEST": s.manifest_path, "FC_POOL_MEMORY_DEVICE": "/dev/cxl_pool",
             "FC_DAX_FIXED_HVA": "0x400000000000", "FC_DAX_SNAPSHOT": "1"}
+        if getattr(self.args, 'trajectory_policy', None):
+            env.update(FC_DAX_SNAPSHOT_COMPAT='1', FC_DAX_NO_NESTED_GUEST='1')
         resident = s.direct
         if resident:
             env.update(FC_DAX_RESIDENT="1", FC_RESIDENT_NATIVE="1",

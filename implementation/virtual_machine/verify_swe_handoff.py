@@ -135,6 +135,7 @@ def execution_identity(report):
     """
     fixture, config, plan = report["fixture"], report["config"], report["trace"]
     common = {"source_hashes": report["source_hashes"],
+        'l1_cpu_models': {role:vm['command'][vm['command'].index('-cpu')+1] for role,vm in config['vms'].items()},
         "runtime_inputs": {key: fixture["inputs"][key]["sha256"] for key in ("firecracker", "l1_kernel", "l2_kernel")},
         "runtime_artifacts": {key: fixture["artifacts"][key] for key in
                               ("firecracker", "l1-kernel", "l2-vmlinux", "pool_memory_module.ko")},
@@ -323,6 +324,7 @@ def verify_trace(e, report):
     need(files["results/state"] == f"{boot} {len(commands)} {raw_ends[-1]['output_sha256']}\n".encode(), "final guest state")
     need(math.isclose(duration, report["guest_duration_s"], abs_tol=1e-8), "aggregate command duration changed")
     return {"commands": len(commands), "returncodes": [r["rc"] for r in raw_ends], "submission": submitted,
+            'guest_cpu_flags_sha256': sha(files['results/cpu-flags.txt']) if 'results/cpu-flags.txt' in files else None,
             "tests": tests, "guest_command_seconds": duration, "block_read_ios": read_ios,
             "remote_nfs_reads": remote_reads, "boot_id": boot, "identity_observations": len(identities)}
 
@@ -728,6 +730,7 @@ def verify_suite(path):
         groups[group][result["mode"]] = result
         rows.append(result)
     need(len({row["execution_inputs_sha256"] for row in rows}) == 1, "suite mixes execution source/runtime/configuration")
+    need(len({row.get('guest_cpu_flags_sha256') for row in rows}) == 1, 'Suite guest CPU flags differ')
     comparison = []
     for name, modes in groups.items():
         need(len({row["workload_inputs_sha256"] for row in modes.values()}) == 1,

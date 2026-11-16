@@ -116,6 +116,7 @@ while read -r OP ARG TOKEN EXTRA; do
             FD_ORDINAL=$((FD_ORDINAL + 1))
             ;;
         export)
+            grep '^flags[[:space:]]*:' /proc/cpuinfo > "$R/cpu-flags.txt"
             cat /proc/mounts > "$R/guest-mounts.txt"
             cat /proc/meminfo > "$R/meminfo.txt"
             cat /sys/class/block/vda/stat > "$R/block-final"

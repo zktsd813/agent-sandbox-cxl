@@ -510,7 +510,7 @@ def start(args):
                    "-cpu", "host," + ("vmx=on" if vendor == "intel" else "svm=on") +
                        # The DAX FPU allocator deliberately rejects dynamic XFD state.
                        (",xfd=off,amx-tile=off,amx-bf16=off,amx-int8=off"
-                        if args.dax_handoff and vendor == "intel" else ""),
+                        if (args.dax_handoff or getattr(args, 'direct_cpu_model', False)) and vendor == "intel" else ""),
                    "-smp", str(args.vcpus), "-m", (f"{args.memory_mib}M,maxmem={args.memory_mib + args.cxl_mib}M,slots=8"
                                                              if cxl_backing else str(args.memory_mib)),
                    "-nodefaults", "-no-user-config", "-display", "none", "-monitor", "none", "-no-reboot",
@@ -521,6 +521,8 @@ def start(args):
                    "-device", "ivshmem-plain,memdev=shared",
                    "-chardev", f"socket,id=console,path={console_path},server=on,wait=off,logfile={prefix}.serial.log",
                    "-serial", "chardev:console", "-qmp", f"unix:{qmp_path},server=on,wait=off"]
+            if getattr(args, 'direct_cpu_model', False) and not args.dax_handoff:
+                cmd[cmd.index('-append')+1] += ' nokaslr'
             if control_rpc:
                 cmd[cmd.index("-append") + 1] += " lab.control_rpc=1"
                 cmd.extend(["-device", "virtio-serial-pci,id=labcontrol",
@@ -2638,6 +2640,7 @@ def main():
     p.add_argument("--cxl-mib", type=int, default=0, help="Add shared CXL Type-3 RAM exposed as device-DAX (e.g. 2048)")
     p.add_argument("--dax-guest", action="store_true", help="Run one microVM on A with all 128MiB guest RAM in DAX; B observes")
     p.add_argument("--dax-handoff", action="store_true", help="Direct shared KVM handoff lab; fixed kernel addresses, 4KiB DAX, no automatic L2")
+    p.add_argument('--direct-cpu-model', action='store_true', help='Match the direct-compatible Intel CPU mask without enabling direct KVM objects')
     p.add_argument("--dax-4k", action="store_true", help="Configure the shared device-DAX allocation with 4KiB alignment for matched EPT measurements")
     p.add_argument("--migration-network", action="store_true", help="Connect L1 A/B with a private virtio-net link for full RAM migration")
     p.add_argument("--network-backend", choices=["socket", "tap"], default="socket", help="Use a QEMU socket or isolated host TAP/bridge with vhost-net (default socket)")

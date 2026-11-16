@@ -182,6 +182,8 @@ def main():
                 "--home-storage-image", str(assets / "storage.raw"), "--qemu", str(qemu)]
             if mode == "direct":
                 start.append("--dax-handoff")
+            if policy:
+                start.append('--direct-cpu-model')
             bench = prefix + [str(HERE / "handoff_bench.py"), "--mode", mode, "--name", name,
                               "--memory-mib", str(args.memory_mib),
                               "--direct-profile-roundtrips", str(args.direct_profile_roundtrips)]
