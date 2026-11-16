@@ -737,7 +737,9 @@ class HandoffController(Controller):
 def trajectory_replay(c, s, report, save):
     import kernel_handoff_trace as kt
     args = c.args
-    heavy = json.loads(Path(args.heavy_plan).read_text())['indices'][args.name]
+    plan = Path(args.heavy_plan).read_text()
+    report['heavy_plan_file'] = c.raw('heavy-plan', plan)
+    heavy = json.loads(plan)['indices'][args.name]
     moving = args.mode != 'baseline'
     boundaries = [x['index'] for x in c.trace['commands']
                   if moving and (args.trajectory_policy == 'all' or x['index'] in heavy)]
@@ -756,6 +758,8 @@ def trajectory_replay(c, s, report, save):
         index = command['index']
         if index in boundaries:
             destination = 'B' if s.role == 'A' else 'A'
+            if args.count_faults:
+                kt.mark(c, s.epoch+1)
             requested = time.monotonic_ns()
             hop = (c.direct_handoff if s.direct else c.state_handoff)(s, destination)
             hop.update(host_request_ns=requested, host_resume_ns=time.monotonic_ns(), before_command=index)

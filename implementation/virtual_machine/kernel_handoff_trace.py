@@ -56,7 +56,15 @@ def trajectory_mappings(c, s):
     sizes = {name:int(value) for name,value in re.findall(r'^(pages_[421][kmg]) (\d+)\s*$', raw, re.M)}
     if set(sizes) != {'pages_4k', 'pages_2m', 'pages_1g'}:
         raise ValueError('Actual leaf mapping counters missing: '+raw)
-    return {'role': s.role, 'file': file, **sizes}
+    inactive = 'B' if s.role == 'A' else 'A'
+    idle, idle_file = c.shell(inactive,
+        'mount -t debugfs debugfs /sys/kernel/debug 2>/dev/null || true\n'
+        'for n in pages_4k pages_2m pages_1g; do\n'
+        'printf "%s " "$n"; cat /sys/kernel/debug/kvm/$n\ndone', 'trajectory-spte-inactive')
+    idle_sizes = {name:int(value) for name,value in re.findall(r'^(pages_[421][kmg]) (\d+)\s*$', idle, re.M)}
+    if set(idle_sizes) != set(sizes) or any(idle_sizes.values()):
+        raise ValueError('Inactive L1 contains unexpected mapped KVM RAM: '+idle)
+    return {'role': s.role, 'file': file, **sizes, 'inactive': {'role': inactive, 'file': idle_file, **idle_sizes}}
 
 
 def start(c, *, reuse=False):

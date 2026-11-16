@@ -101,6 +101,7 @@ def main():
     output.mkdir(parents=True, exist_ok=False)
     source_hashes, source_reference = record_sources(HERE, SOURCES)
     suite = {"schema": "swe-handoff-suite-v1", "result": "running",
+             'controller_pid': os.getpid(),
              "arguments": {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()},
              "fixture_manifest": manifest, "fixture_manifest_sha256": lab.sha256(manifest_path),
              "source_hashes": source_hashes, "source_reference": source_reference, "qemu_sha256": lab.sha256(qemu), "trials": [],

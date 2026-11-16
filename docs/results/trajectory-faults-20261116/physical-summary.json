@@ -1,0 +1,414 @@
+{
+  "seed": 20261116,
+  "method": "First minus median of five warm guest write scans; RAM prefaulted in L0. Denominator=KVM vCPU pf_fixed delta. No L0 tracefs access. Approximate fault service cost, includes cache effects and first VM-entry.",
+  "raw": "implementation/virtual_machine/.local/run14/physical2/physical.json",
+  "host": "Linux ubuntu 6.6.0-rc6-niagara-lreclaim-20260923 #4 SMP PREEMPT_DYNAMIC Wed Sep 23 03:14:32 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux",
+  "source_commit": "82708de",
+  "binary_sha256": "5fc41a7d153e149d3bbca6a9831f9ed7eb7a3db9e046a3e9455692464e2a0db3",
+  "rows": [
+    {
+      "page_mode": "4k",
+      "working_set_mib": 512,
+      "collapse_result": 0,
+      "collapse_errno": 0,
+      "scans": [
+        {
+          "host_ns": 136063704,
+          "pf_fixed": 131073,
+          "pages_4k": 131073,
+          "pages_2m": 0,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1607355,
+          "pf_fixed": 0,
+          "pages_4k": 131073,
+          "pages_2m": 0,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1469671,
+          "pf_fixed": 0,
+          "pages_4k": 131073,
+          "pages_2m": 0,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1457379,
+          "pf_fixed": 0,
+          "pages_4k": 131073,
+          "pages_2m": 0,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1441297,
+          "pf_fixed": 0,
+          "pages_4k": 131073,
+          "pages_2m": 0,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1451577,
+          "pf_fixed": 0,
+          "pages_4k": 131073,
+          "pages_2m": 0,
+          "pages_1g": 0
+        }
+      ],
+      "repeat": 0,
+      "start_ns": 1209890617833765,
+      "end_ns": 1209890989378976,
+      "argv": [
+        "numactl",
+        "--cpunodebind=0",
+        "--membind=0",
+        "--physcpubind=8",
+        "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run14/physical-ept-cost-v2",
+        "4k",
+        "512"
+      ],
+      "excess_ns": 134606325,
+      "fixed_faults": 131073,
+      "us_per_fixed_fault": 1.0269569247671144
+    },
+    {
+      "page_mode": "4k",
+      "working_set_mib": 512,
+      "collapse_result": 0,
+      "collapse_errno": 0,
+      "scans": [
+        {
+          "host_ns": 130795468,
+          "pf_fixed": 131073,
+          "pages_4k": 131073,
+          "pages_2m": 0,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1329298,
+          "pf_fixed": 0,
+          "pages_4k": 131073,
+          "pages_2m": 0,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1127047,
+          "pf_fixed": 0,
+          "pages_4k": 131073,
+          "pages_2m": 0,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1121040,
+          "pf_fixed": 0,
+          "pages_4k": 131073,
+          "pages_2m": 0,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1112732,
+          "pf_fixed": 0,
+          "pages_4k": 131073,
+          "pages_2m": 0,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1112067,
+          "pf_fixed": 0,
+          "pages_4k": 131073,
+          "pages_2m": 0,
+          "pages_1g": 0
+        }
+      ],
+      "repeat": 2,
+      "start_ns": 1210011301500612,
+      "end_ns": 1210011657592056,
+      "argv": [
+        "numactl",
+        "--cpunodebind=0",
+        "--membind=0",
+        "--physcpubind=8",
+        "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run14/physical-ept-cost-v2",
+        "4k",
+        "512"
+      ],
+      "excess_ns": 129674428,
+      "fixed_faults": 131073,
+      "us_per_fixed_fault": 0.9893298238386243
+    },
+    {
+      "page_mode": "2m",
+      "working_set_mib": 512,
+      "collapse_result": 0,
+      "collapse_errno": 0,
+      "scans": [
+        {
+          "host_ns": 1500323,
+          "pf_fixed": 257,
+          "pages_4k": 0,
+          "pages_2m": 257,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1160027,
+          "pf_fixed": 0,
+          "pages_4k": 0,
+          "pages_2m": 257,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1151195,
+          "pf_fixed": 0,
+          "pages_4k": 0,
+          "pages_2m": 257,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1149937,
+          "pf_fixed": 0,
+          "pages_4k": 0,
+          "pages_2m": 257,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1147252,
+          "pf_fixed": 0,
+          "pages_4k": 0,
+          "pages_2m": 257,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1149202,
+          "pf_fixed": 0,
+          "pages_4k": 0,
+          "pages_2m": 257,
+          "pages_1g": 0
+        }
+      ],
+      "repeat": 1,
+      "start_ns": 1210011705836122,
+      "end_ns": 1210011819451209,
+      "argv": [
+        "numactl",
+        "--cpunodebind=0",
+        "--membind=0",
+        "--physcpubind=8",
+        "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run14/physical-ept-cost-v2",
+        "2m",
+        "512"
+      ],
+      "excess_ns": 350386,
+      "fixed_faults": 257,
+      "us_per_fixed_fault": 1.3633696498054475
+    },
+    {
+      "page_mode": "2m",
+      "working_set_mib": 512,
+      "collapse_result": 0,
+      "collapse_errno": 0,
+      "scans": [
+        {
+          "host_ns": 1497468,
+          "pf_fixed": 257,
+          "pages_4k": 0,
+          "pages_2m": 257,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1143959,
+          "pf_fixed": 0,
+          "pages_4k": 0,
+          "pages_2m": 257,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1144053,
+          "pf_fixed": 0,
+          "pages_4k": 0,
+          "pages_2m": 257,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1138697,
+          "pf_fixed": 0,
+          "pages_4k": 0,
+          "pages_2m": 257,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1145523,
+          "pf_fixed": 0,
+          "pages_4k": 0,
+          "pages_2m": 257,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1137537,
+          "pf_fixed": 0,
+          "pages_4k": 0,
+          "pages_2m": 257,
+          "pages_1g": 0
+        }
+      ],
+      "repeat": 0,
+      "start_ns": 1210011869838007,
+      "end_ns": 1210011994413779,
+      "argv": [
+        "numactl",
+        "--cpunodebind=0",
+        "--membind=0",
+        "--physcpubind=8",
+        "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run14/physical-ept-cost-v2",
+        "2m",
+        "512"
+      ],
+      "excess_ns": 353509,
+      "fixed_faults": 257,
+      "us_per_fixed_fault": 1.3755214007782102
+    },
+    {
+      "page_mode": "2m",
+      "working_set_mib": 512,
+      "collapse_result": 0,
+      "collapse_errno": 0,
+      "scans": [
+        {
+          "host_ns": 1534925,
+          "pf_fixed": 257,
+          "pages_4k": 0,
+          "pages_2m": 257,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1161395,
+          "pf_fixed": 0,
+          "pages_4k": 0,
+          "pages_2m": 257,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1163058,
+          "pf_fixed": 0,
+          "pages_4k": 0,
+          "pages_2m": 257,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1162069,
+          "pf_fixed": 0,
+          "pages_4k": 0,
+          "pages_2m": 257,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1153156,
+          "pf_fixed": 0,
+          "pages_4k": 0,
+          "pages_2m": 257,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1156159,
+          "pf_fixed": 0,
+          "pages_4k": 0,
+          "pages_2m": 257,
+          "pages_1g": 0
+        }
+      ],
+      "repeat": 2,
+      "start_ns": 1210012042579866,
+      "end_ns": 1210012159452355,
+      "argv": [
+        "numactl",
+        "--cpunodebind=0",
+        "--membind=0",
+        "--physcpubind=8",
+        "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run14/physical-ept-cost-v2",
+        "2m",
+        "512"
+      ],
+      "excess_ns": 373530,
+      "fixed_faults": 257,
+      "us_per_fixed_fault": 1.4534241245136186
+    },
+    {
+      "page_mode": "4k",
+      "working_set_mib": 512,
+      "collapse_result": 0,
+      "collapse_errno": 0,
+      "scans": [
+        {
+          "host_ns": 130494321,
+          "pf_fixed": 131073,
+          "pages_4k": 131073,
+          "pages_2m": 0,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1308130,
+          "pf_fixed": 0,
+          "pages_4k": 131073,
+          "pages_2m": 0,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1140323,
+          "pf_fixed": 0,
+          "pages_4k": 131073,
+          "pages_2m": 0,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1126316,
+          "pf_fixed": 0,
+          "pages_4k": 131073,
+          "pages_2m": 0,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1123878,
+          "pf_fixed": 0,
+          "pages_4k": 131073,
+          "pages_2m": 0,
+          "pages_1g": 0
+        },
+        {
+          "host_ns": 1125516,
+          "pf_fixed": 0,
+          "pages_4k": 131073,
+          "pages_2m": 0,
+          "pages_1g": 0
+        }
+      ],
+      "repeat": 1,
+      "start_ns": 1210012211877708,
+      "end_ns": 1210012573700402,
+      "argv": [
+        "numactl",
+        "--cpunodebind=0",
+        "--membind=0",
+        "--physcpubind=8",
+        "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run14/physical-ept-cost-v2",
+        "4k",
+        "512"
+      ],
+      "excess_ns": 129368005,
+      "fixed_faults": 131073,
+      "us_per_fixed_fault": 0.986992019714205
+    }
+  ],
+  "summary": {
+    "4k": {
+      "n": 3,
+      "median_us": 0.9893298238386243,
+      "min_us": 0.986992019714205,
+      "max_us": 1.0269569247671144
+    },
+    "2m": {
+      "n": 3,
+      "median_us": 1.3755214007782102,
+      "min_us": 1.3633696498054475,
+      "max_us": 1.4534241245136186
+    }
+  }
+}

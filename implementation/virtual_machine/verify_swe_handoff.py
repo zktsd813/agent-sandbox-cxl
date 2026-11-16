@@ -615,6 +615,11 @@ def verify(path):
             need(imp['mapper']['handle']['state'] == 1 and int(imp['mapper']['run_epoch']) == hop['destination_epoch'],
                  'Wrong imported mapper epoch')
     if r['arguments'].get('trajectory_policy'):
+        policy = r['arguments']['trajectory_policy']
+        heavy = e.json(r['heavy_plan_file'])['indices'][r['name']]
+        expected_boundaries = ([] if r['mode'] == 'baseline' else
+            [i for i in range(len(r['commands'])) if policy == 'all' or i in heavy])
+        need(r['boundaries'] == expected_boundaries, 'Changed heavy/all migration policy')
         nhops = len(r['boundaries'])
         expected = {'promotion': 1, 'demotion': 1}
         if nhops: expected[r['mode']] = nhops
@@ -636,6 +641,13 @@ def verify(path):
                         need(row['faults'][role][key] == after[key]-before[key] >= 0, 'Fault count delta')
         need(all(x['fenced'] for x in r['keepalive_cleanup']) and len(r['keepalive_cleanup']) == 2,
              'Keepalive VM cleanup')
+        if r['arguments'].get('count_faults'):
+            for key in ('create_vm', 'create_vcpu'):
+                created = sum(r['fault_final'][role][key]-r['fault_initial'][role][key] for role in ('A','B'))
+                need(created == (nhops if r['mode'] == 'state-only' else 0), 'Fresh KVM creation coverage')
+            for sizes in (r['spte_final'], r['spte_final']['inactive']):
+                parsed = {key:int(value) for key,value in re.findall(r'^(pages_[421][kmg]) (\d+)\s*$', e.text(sizes['file']), re.M)}
+                need(parsed == {key:sizes[key] for key in ('pages_4k','pages_2m','pages_1g')}, 'Changed actual SPTE counters')
     elif r['mode'] == 'baseline':
         need(not counts and not grants,'Baseline changed memory tier')
     else:

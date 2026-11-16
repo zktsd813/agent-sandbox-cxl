@@ -84,10 +84,11 @@ def summarize(args):
             key = (r['name'], r['arguments']['trajectory_policy'], r['mode'])
             row = {'fixture':key[0], 'policy':key[1], 'mode':key[2], 'repeat':arm['repeat'],
                    'count_run':r['arguments']['count_faults'], 'report':str(path),
-                   'total_s':r['trajectory_total_ns']/1e9, 'observed_s':r['observed_replay_ns']/1e9,
+                   'total_s':r['observed_replay_ns']/1e9, 'active_s':r['trajectory_total_ns']/1e9,
                    'stop_s':r['trajectory_handoff_ns']/1e9, 'moves':len(r['boundaries'])}
             node0 = set(range(32)) | set(range(64,96))
             owned = {str(vm['pid']) for vm in r['config']['vms'].values()}
+            owned.add(str(suite.get('controller_pid', -1)))
             noise = []
             for phase in ('before','after'):
                 for line in (suite_path.parent/(arm['id']+'-load-'+phase+'.txt')).read_text().splitlines()[2:]:
