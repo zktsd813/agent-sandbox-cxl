@@ -665,8 +665,10 @@ def verify(path):
         need(all(x['fenced'] for x in r['keepalive_cleanup']) and len(r['keepalive_cleanup']) == 2,
              'Keepalive VM cleanup')
         if r['arguments'].get('count_faults'):
-            need(sum(r['fault_final'][role]['ram_ept_violation'] for role in ('A','B')) > 0,
-                 'No RAM address bucket observed')
+            fully_prefilled = (r['arguments'].get('prefault') == 'all' and
+                               r['boundaries'] and r['boundaries'][0] == 0)
+            need(fully_prefilled or sum(r['fault_final'][role]['ram_ept_violation'] for role in ('A','B')) > 0,
+                 'No RAM address bucket observed without initial all-RAM prefault')
             for key in ('create_vm', 'create_vcpu'):
                 created = sum(r['fault_final'][role][key]-r['fault_initial'][role][key] for role in ('A','B'))
                 need(created == (nhops if r['mode'] == 'state-only' else 0), 'Fresh KVM creation coverage')
@@ -743,6 +745,9 @@ def verify_suite(path):
         if trial.get('policy'):
             group += ':'+trial['policy']+':'+str(trial['repeat'])
         method = trial.get("method", result["mode"])
+        arguments = json.loads(report.read_bytes())['arguments']
+        expected_method = 'prefault-'+arguments['prefault'] if arguments.get('prefault') else result['mode']
+        need(method == expected_method, 'Suite method tag differs from executed restore')
         need(method not in groups[group], "duplicate trace/method trial")
         groups[group][method] = result
         rows.append(result)
