@@ -151,7 +151,8 @@ def summarize(args):
                        extra_s=st.median(x['total_s'] for x in times)-st.median(base),
                        stop_s_median=st.median(x['stop_s'] for x in times))
             excess = [x['excess_s'] for x in commands if (x['fixture'],x['policy'],x['mode'])==key and not x['count_run'] and x['excess_s'] is not None]
-            out.update(command_extra_s_median=st.median(excess), command_extra_s_p95=percentile(excess,.95), command_extra_s_max=max(excess))
+            if excess:
+                out.update(command_extra_s_median=st.median(excess), command_extra_s_p95=percentile(excess,.95), command_extra_s_max=max(excess))
         if counts:
             faults = st.mean(x['ept_violations'] for x in counts)
             moves = counts[0]['moves']
