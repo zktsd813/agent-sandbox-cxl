@@ -66,7 +66,7 @@ int main(int argc,char **argv) {
     struct kvm_sregs sr; call(vcpu,KVM_GET_SREGS,&sr);
     struct kvm_segment cs={.base=0,.limit=0xffffffff,.selector=8,.type=11,.present=1,.db=1,.s=1,.g=1};
     sr.cs=cs; cs.type=3; cs.selector=16; sr.ds=sr.es=sr.fs=sr.gs=sr.ss=cs;
-    sr.cr0=(sr.cr0|1)&~(1ul<<31); sr.cr4=0; sr.efer=0;
+    sr.cr0=(sr.cr0|1)&~((1ul<<31)|(1ul<<30)|(1ul<<29)); sr.cr4=0; sr.efer=0;
     call(vcpu,KVM_SET_SREGS,&sr);
     // 32-bit flat guest, paging disabled. One write per 4KiB data page.
     // mov esi,2MiB; mov ecx,pages; inc byte [esi]; add esi,4096;
