@@ -1555,7 +1555,7 @@ index 2a75945..fe91a5d 100644
      type ConstructorArgs = MmioTransportConstructorArgs;
 diff --git a/src/vmm/src/direct.rs b/src/vmm/src/direct.rs
 new file mode 100644
-index 0000000..31d2c12
+index 0000000..f5cc482
 --- /dev/null
 +++ b/src/vmm/src/direct.rs
 @@ -0,0 +1,853 @@
@@ -1593,7 +1593,7 @@ index 0000000..31d2c12
 +use crate::vstate::vm::{KvmVm, Vm};
 +use crate::{EventManager, Vmm, VmmError};
 +
-+pub(crate) const MAX_VCPUS: u8 = 4;
++pub(crate) const MAX_VCPUS: u8 = 8;
 +const ABI_VERSION: u32 = 2;
 +#[repr(C)]
 +#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
