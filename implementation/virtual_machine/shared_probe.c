@@ -938,6 +938,8 @@ static void guest_smp_heartbeat(unsigned count)
         uint64_t epoch = atomic_load_explicit(&smp_hb->epoch, memory_order_acquire);
         atomic_fetch_add(&smp_hb->sequence, 1);
         if (epoch != previous) {
+            atomic_store(&smp_hb->ack_tsc, migration_tsc());
+            atomic_store(&smp_hb->ack_epoch, epoch);
             for (unsigned cpu = 0; cpu < count; cpu++)
                 while (atomic_load_explicit(&smp_hb->cpus[cpu].acknowledged, memory_order_acquire) != epoch) usleep(50);
             for (unsigned cpu = 0; cpu < count; cpu++) atomic_store(&smp_hb->cpus[cpu].ipi, 0);
@@ -1085,7 +1087,7 @@ static void guest_heartbeat(int sleeping, int quiet)
             if (!dense) atomic_store_explicit(&hb->verified, epoch, memory_order_release);
             previous = epoch;
         }
-        if (sleeping) usleep(100);
+        if (sleeping) usleep(sleeping == 2 ? 1000 : 100);
         else for (unsigned spin = 0; spin < spins; spin++) __asm__ __volatile__("pause");
     }
 }
@@ -2777,7 +2779,7 @@ int main(int argc, char **argv)
         migration_bench(role, argv[3], port, rounds, nonce, memory_mib);
     }
     else if (!strcmp(argv[1], "heartbeat") && argc >= 3 && argc <= 5)
-        guest_heartbeat(argc == 3 || !strcmp(argv[3], "1"), argc == 5 && !strcmp(argv[4],"1"));
+        guest_heartbeat(argc == 3 ? 1 : (!strcmp(argv[3], "2") ? 2 : !strcmp(argv[3], "1")), argc == 5 && !strcmp(argv[4],"1"));
     else if (!strcmp(argv[1], "handoff") && argc == 8) {
         char *end;
         unsigned long rounds = strtoul(argv[4], &end, 10);

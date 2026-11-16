@@ -63,10 +63,17 @@ command_live() {
 while read -r OP ARG TOKEN EXTRA; do
     case "$OP" in
         run|run_async) INDEX=$ARG ;;
-        *) TOKEN=$ARG ;;
+        *) EXTRA=$TOKEN; TOKEN=$ARG ;;
     esac
     case "$TOKEN" in ''|*[!a-zA-Z0-9_-]*) echo '{"event":"trace_protocol_error"}'; continue ;; esac
     case "$OP" in
+        heartbeat)
+            VCPUS=$(awk '/^cpu[0-9]+ / {n++} END {print n}' /proc/stat)
+            MODE=1; SLEEP=0
+            if [ "$EXTRA" = idle ]; then MODE=0; VCPUS=1; SLEEP=2; fi
+            LAB_HEARTBEAT_VCPUS=$VCPUS LAB_HEARTBEAT_SMP=$MODE LAB_HEARTBEAT_TIMING=1 /lab/shared-probe heartbeat A "$SLEEP" 1 > "$R/heartbeat.log" 2>&1 &
+            printf '{"event":"trace_heartbeat","label":"%s","pid":%s}\n' "$TOKEN" "$!"
+            ;;
         build_async)
             [ "$RUNNING" -eq 0 ] && [ "$NEXT" -eq "$COUNT" ] || exit 1
             N=parallel-build; INDEX=$COUNT; TIMEOUT=300

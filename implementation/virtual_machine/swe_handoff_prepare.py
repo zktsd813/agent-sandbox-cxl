@@ -40,6 +40,7 @@ def main():
     parser.add_argument('--mapper-module', type=Path, required=True)
     parser.add_argument('--kvm-module-dir', type=Path, required=True)
     parser.add_argument('--l1-kernel', type=Path, required=True)
+    parser.add_argument('--shared-probe', type=Path)
     parser.add_argument('--l1-config', type=Path, help='Require built-in NFS server support and record the L1 config')
     args = parser.parse_args()
     if args.l1_config and 'CONFIG_NFSD=y' not in args.l1_config.read_text().splitlines():
@@ -81,6 +82,8 @@ def main():
                            ('resident_bootstrap.c', 'resident-bootstrap')):
         commands[binary] = ['gcc', '-O2', '-Wall', '-Wextra', '-Werror', '-static', HERE/source, '-o', dest/binary]
         run(commands[binary])
+    if args.shared_probe:
+        shutil.copy2(args.shared_probe, dest/'shared-probe')
     with tempfile.TemporaryDirectory(prefix='swe-handoff-build-', dir=dest) as tmp:
         temporary = Path(tmp)
         host = temporary/'l1'
@@ -88,6 +91,7 @@ def main():
         for name in ('firecracker', 'l2-vmlinux', 'pool_memory_module.ko',
                      'resident-control', 'resident-bootstrap', 'control-rpc'):
             shutil.copy2(dest/name, host/'lab'/name)
+        shutil.copy2(dest/'shared-probe', host/'lab/shared-probe')
         shutil.copy2(HERE/'guest-init.sh', host/'init')
         (host/'init').chmod(0o755)
         modules = {}
@@ -99,6 +103,7 @@ def main():
             guest = temporary/name
             archive = name+'-initramfs.cpio'
             unpack(base/archive, guest)
+            shutil.copy2(dest/'shared-probe', guest/'lab/shared-probe')
             shutil.copy2(HERE/'swe-handoff-l2-init.sh', guest/'init')
             (guest/'init').chmod(0o755)
             shutil.copy2(HERE/'swe-handoff-guest-run.sh', guest/'lab/swe-handoff-guest-run.sh')
