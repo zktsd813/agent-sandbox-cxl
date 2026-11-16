@@ -913,7 +913,7 @@ static void smp_interrupts(void)
 }
 static void guest_smp_heartbeat(unsigned count)
 {
-    if (count < 2 || count > KVM_DAX_MAX_VCPUS || sysconf(_SC_NPROCESSORS_ONLN) != count) {
+    if (!count || count > KVM_DAX_MAX_VCPUS || sysconf(_SC_NPROCESSORS_ONLN) != count) {
         fprintf(stderr, "SMP CPU count mismatch\n"); exit(1);
     }
     int fd = open("/dev/mem", O_RDWR | O_SYNC);
@@ -958,7 +958,7 @@ static void guest_smp_heartbeat(unsigned count)
 static void guest_heartbeat(int sleeping, int quiet)
 {
     unsigned vcpus = getenv("LAB_HEARTBEAT_VCPUS") ? strtoul(getenv("LAB_HEARTBEAT_VCPUS"), NULL, 10) : 1;
-    if (vcpus > 1) { guest_smp_heartbeat(vcpus); return; }
+    if (vcpus > 1 || env_enabled("LAB_HEARTBEAT_SMP")) { guest_smp_heartbeat(vcpus); return; }
     int fd = open("/dev/mem", O_RDWR | O_SYNC);
     if (fd < 0) die("guest /dev/mem");
     struct heartbeat *hb = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 64 * 1024 * 1024);
@@ -2634,7 +2634,7 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
                 fprintf(stderr,"Linux direct execution/heap continuity failed\n");exit(1);
             }
             atomic_store_explicit(&ctrl->acknowledged,r+1,memory_order_release);
-            if (count > 1) for (unsigned cpu=0; cpu<count; cpu++) {
+            if (count > 1 || env_enabled("LAB_DAX_SMP")) for (unsigned cpu=0; cpu<count; cpu++) {
                 struct smp_cpu *s=&hb->cpus[cpu];
                 printf("LINUX_DIRECT_JSON {\"event\":\"smp\",\"round\":%u,\"cpu\":%u,\"sequence\":%" PRIu64
                     ",\"ack\":%" PRIu64 ",\"timer\":%" PRIu64 ",\"ipi\":%" PRIu64 ",\"ping\":%" PRIu64
@@ -2699,7 +2699,7 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
     boundary_clock_sync(&ctrl->clock, role, 1, "LINUX_DIRECT_JSON");
     if(getrusage(RUSAGE_THREAD,&cpu_after))die("controller CPU accounting");
     double controller_cpu_us=(cpu_after.ru_utime.tv_sec-cpu_before.ru_utime.tv_sec+cpu_after.ru_stime.tv_sec-cpu_before.ru_stime.tv_sec)*1e6+cpu_after.ru_utime.tv_usec-cpu_before.ru_utime.tv_usec+cpu_after.ru_stime.tv_usec-cpu_before.ru_stime.tv_usec;
-    printf("LINUX_DIRECT_JSON {\"event\":\"complete\",\"role\":\"%c\",\"rounds\":%u,\"heap_bytes\":%" PRIu64 ",\"errors\":%" PRIu64 ",\"clock_errors\":%" PRIu64 ",\"tsc_errors\":%" PRIu64 ",\"clock_ns\":%" PRIu64 ",\"controller_cpu_us\":%.3f,\"controller_wall_us\":%.3f}\n",role,rounds,dense?(uint64_t)atomic_load(&hb->working_set_bytes):UINT64_C(16777216),(uint64_t)atomic_load(&hb->errors),(uint64_t)atomic_load(&hb->clock_errors),(uint64_t)atomic_load(&hb->tsc_errors),(uint64_t)atomic_load(&hb->clock_ns),controller_cpu_us,(monotonic()-controller_start)*1e6);
+    printf("LINUX_DIRECT_JSON {\"event\":\"complete\",\"role\":\"%c\",\"rounds\":%u,\"heap_bytes\":%" PRIu64 ",\"errors\":%" PRIu64 ",\"clock_errors\":%" PRIu64 ",\"tsc_errors\":%" PRIu64 ",\"clock_ns\":%" PRIu64 ",\"controller_cpu_us\":%.3f,\"controller_wall_us\":%.3f}\n",role,rounds,(count > 1 || env_enabled("LAB_DAX_SMP")) ? count * UINT64_C(524288) : dense?(uint64_t)atomic_load(&hb->working_set_bytes):UINT64_C(16777216),(uint64_t)atomic_load(&hb->errors),(uint64_t)atomic_load(&hb->clock_errors),(uint64_t)atomic_load(&hb->tsc_errors),(uint64_t)atomic_load(&hb->clock_ns),controller_cpu_us,(monotonic()-controller_start)*1e6);
     if(me){
         for(unsigned cpu=0;cpu<count;cpu++) {
             struct linux_executor *e=&executors[cpu];

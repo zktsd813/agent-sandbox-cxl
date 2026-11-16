@@ -17,6 +17,12 @@ class SmpEvidenceTests(unittest.TestCase):
         self.assertEqual(set(result), {"0", "1"})
         self.assertEqual(result["1"]["timer_increase"], 3)
 
+    def test_one_cpu_needs_no_cross_cpu_ipi(self):
+        rows = [r for r in self.evidence() if r["cpu"] == 0]
+        for row in rows:
+            row["ipi"] = 0
+        self.assertEqual(validate_smp_handoff(rows, 4, 1)["0"]["ipi_increase"], 0)
+
     def test_missing_duplicate_or_wrong_ack(self):
         rows = self.evidence()
         variants = [rows[:-1], rows + [rows[0]]]

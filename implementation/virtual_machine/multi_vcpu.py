@@ -6,6 +6,7 @@ import fcntl
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -27,7 +28,7 @@ def node0_free():
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--vcpus", type=int, choices=[1, 2, 4, 8], required=True)
-    p.add_argument("--iterations", type=int, default=210)
+    p.add_argument("--iterations", type=int, default=400)
     p.add_argument("--warmup", type=int, default=10)
     p.add_argument("--measure", action="store_true", help="Hold quiet.lock exclusively")
     p.add_argument("--test-running-vcpu", action="store_true")
@@ -80,10 +81,29 @@ def main():
                 "--dax-4k", "--network-backend", "socket", "--memory-backing-dir", "/dev/shm",
                 "--qemu", args.qemu)
             run("verify", "verify")
+            config = json.loads((Path(json.loads(current.read_text())["run"]) / "run.json").read_text())
+            resources = {}
+            for role, vm in config["vms"].items():
+                status = Path(f"/proc/{vm['pid']}/status").read_text()
+                maps = Path(f"/proc/{vm['pid']}/numa_maps").read_text()
+                (args.output / f"{role}-numa-maps.txt").write_text(maps)
+                nodes = {}
+                for line in maps.splitlines():
+                    if not (re.search(r"anon=[1-9]", line) or "cxl-memory.bin" in line or "shared-memory.bin" in line):
+                        continue
+                    for node, pages in re.findall(r"\bN(\d+)=(\d+)\b", line):
+                        nodes[node] = nodes.get(node, 0) + int(pages)
+                resources[role] = {"owned_memory_pages_by_node": nodes,
+                    "cpus_allowed": re.search(r"Cpus_allowed_list:\s*(.+)", status)[1]}
+                if any(int(node) != 0 and pages for node, pages in nodes.items()):
+                    raise RuntimeError("QEMU owned memory allocated outside node 0")
+            result["resources"] = resources
             bench_args = ["direct-handoff-bench", "--guest", "linux", "--vcpus", args.vcpus,
                           "--iterations", args.iterations, "--warmup", args.warmup,
                           "--executor-cpu", 1, "--guest-cpu", 0, "--control", "http",
                           "--poll-us", 50, "--dwell-ms", 20, "--reuse-fds"]
+            if args.measure:
+                bench_args += ["--smp-workload"]
             if args.test_running_vcpu:
                 bench_args += ["--test-running-vcpu"]
             run("handoff", *bench_args)

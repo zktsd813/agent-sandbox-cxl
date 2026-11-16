@@ -1005,7 +1005,7 @@ def validate_smp_handoff(samples, rounds, vcpus):
         for index, row in enumerate(history):
             if row["ack"] != index + 1 or any(row[k] for k in ("errors", "clock_errors", "tsc_errors")):
                 raise RuntimeError("SMP checksum, clock or ACK failed")
-        for key in ("sequence", "timer", "ipi", "ping"):
+        for key in (("sequence", "timer", "ipi", "ping") if vcpus > 1 else ("sequence", "timer", "ping")):
             values = [s[key] for s in history]
             if not values[0] or values[-1] <= values[0] or any(a > b for a, b in zip(values, values[1:])):
                 raise RuntimeError(f"SMP CPU {cpu} {key} did not continue")
@@ -1023,9 +1023,10 @@ def direct_handoff_bench(args):
     rounds = args.iterations + args.warmup
     linux = args.guest == "linux"
     vcpus = getattr(args, "vcpus", 1)
+    smp_workload = vcpus > 1 or getattr(args, "smp_workload", False)
     if not 1 <= vcpus <= 8 or (vcpus != 1 and not linux):
         raise RuntimeError("Multiple vCPUs require a Linux guest, 1..8 CPUs")
-    if vcpus > 1 and (args.dense_working_set or args.resume_profile or args.heartbeat_pit or args.heartbeat_churn):
+    if smp_workload and (args.dense_working_set or args.resume_profile or args.heartbeat_pit or args.heartbeat_churn):
         raise RuntimeError("SMP workload has its own checksum/clock/interrupt checks")
     base_cpu = args.executor_cpu or 0
     if vcpus > 1 and base_cpu + vcpus > config["l1_vcpus"]:
@@ -1058,7 +1059,7 @@ def direct_handoff_bench(args):
     if not collect_from:
         out.mkdir()
     report = {"result": "running", "run": str(run), "iterations": args.iterations,
-              "vcpus": vcpus, "test_running_vcpu": getattr(args, "test_running_vcpu", False),
+              "vcpus": vcpus, "smp_workload": smp_workload, "checksum_bytes_per_cpu": 524288 if smp_workload else None, "test_running_vcpu": getattr(args, "test_running_vcpu", False),
               "memory_mib": args.memory_mib if linux else 2, "dense_working_set": args.dense_working_set,
               "dax_layout_shift_mib": layout_shift_mib,
               "dax_layout": {"ram_offset_mib": 2, "ram_bytes": args.memory_mib * 1024 * 1024 if linux else 2 * 1024 * 1024,
@@ -1126,11 +1127,11 @@ def direct_handoff_bench(args):
                 body = ""
                 if linux:
                     configuration = {"boot-source": {"kernel_image_path": "/lab/l2-vmlinux", "initrd_path": "/lab/l2-initramfs.cpio",
-                        "boot_args": "console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init lab.role=A memmap=2M$64M lab.heartbeat=1 " + f"lab.heartbeat_vcpus={vcpus} lab.heartbeat_sleep={int(args.heartbeat == 'sleep')} lab.heartbeat_churn={int(args.heartbeat_churn)} lab.heartbeat_pit={int(args.heartbeat_pit)} lab.heartbeat_timing={int(args.resume_profile)} lab.heartbeat_quiet=1 nmi_watchdog=0" + (" lab.heartbeat_dense=1 transparent_hugepage=never" if args.dense_working_set else "")},
+                        "boot_args": "console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init lab.role=A memmap=2M$64M lab.heartbeat=1 " + f"lab.heartbeat_vcpus={vcpus} lab.heartbeat_smp={int(smp_workload)} lab.heartbeat_sleep={int(args.heartbeat == 'sleep')} lab.heartbeat_churn={int(args.heartbeat_churn)} lab.heartbeat_pit={int(args.heartbeat_pit)} lab.heartbeat_timing={int(args.resume_profile)} lab.heartbeat_quiet=1 nmi_watchdog=0" + (" lab.heartbeat_dense=1 transparent_hugepage=never" if args.dense_working_set else "")},
                         "machine-config": {"vcpu_count": vcpus, "mem_size_mib": args.memory_mib}, "drives": []}
                     body += "cat > /run/bench-config.json <<'DIRECT_CONFIG'\n" + json.dumps(configuration) + "\nDIRECT_CONFIG\n"
                 env = "FC_DAX_DIRECT=1 " if linux else ""
-                env += f"LAB_DAX_LAYOUT_SHIFT_MIB={layout_shift_mib} LAB_HEARTBEAT_DENSE={int(args.dense_working_set)} LAB_DAX_VCPUS={vcpus} "
+                env += f"LAB_DAX_LAYOUT_SHIFT_MIB={layout_shift_mib} LAB_HEARTBEAT_DENSE={int(args.dense_working_set)} LAB_DAX_VCPUS={vcpus} LAB_DAX_SMP={int(smp_workload)} "
                 if getattr(args, "test_running_vcpu", False):
                     env += "LAB_DAX_TEST_RUNNING=1 "
                 env += f"LAB_DAX_DWELL_US={args.dwell_ms * 1000} "
@@ -1232,10 +1233,16 @@ def direct_handoff_bench(args):
             raise RuntimeError("Shared KVM/vCPU/VMCS object identity changed")
         report["validation"] = {"handoffs": rounds, "identical_object_offsets": list(identity)[0],
                                 "vm_creates": 1, "vcpu_creates": vcpus,
-                                "continuity_checks": ("Linux heartbeat and retained dense working set" if args.dense_working_set else "Linux heartbeat and retained 16MiB heap") if linux else "integer register, RIP and x87 accumulator",
+                                "continuity_checks": (f"{vcpus} CPU-pinned checksum writers (512 KiB each), futex ring and per-CPU clock/interrupt checks" if smp_workload else ("Linux heartbeat and retained dense working set" if args.dense_working_set else "Linux heartbeat and retained 16MiB heap")) if linux else "integer register, RIP and x87 accumulator",
                                 "kernel_taint": 0, "snapshot_api_calls": 0}
         report["validation"].update({"duplicate_attach_rejected": True, "old_owner_vcpu_access_revoked": True})
-        if vcpus > 1:
+        if linux:
+            rejections = [s for s in samples if s["event"] == "token_rejected"]
+            if len(rejections) != 1 or rejections[0].get("cases") != 3:
+                raise RuntimeError("Missing ABI/count/last-vCPU identity rejection evidence")
+            report["validation"].update(all_vcpu_identities_preserved=True,
+                old_abi_rejected=True, topology_mismatch_rejected=True, last_vmcs_mismatch_rejected=True)
+        if smp_workload:
             report["validation"]["smp"] = validate_smp_handoff(samples, rounds, vcpus)
         if getattr(args, "test_running_vcpu", False):
             rejected = [s for s in samples if s["event"] == "running_rejected"]
@@ -2116,7 +2123,7 @@ def handoff_bench(args):
         configuration = {"boot-source": {"kernel_image_path": "/lab/l2-vmlinux",
                          "initrd_path": "/lab/l2-initramfs.cpio",
                          "boot_args": "console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init lab.role=A memmap=2M$64M lab.heartbeat=1 "
-                                      f"lab.heartbeat_vcpus={vcpus} lab.heartbeat_sleep={int(args.heartbeat == 'sleep')}"
+                                      f"lab.heartbeat_vcpus={vcpus} lab.heartbeat_smp={int(smp_workload)} lab.heartbeat_sleep={int(args.heartbeat == 'sleep')}"
                                       f" lab.heartbeat_churn={int(args.heartbeat_churn)} lab.heartbeat_pit={int(args.heartbeat_pit)} lab.heartbeat_timing={int(args.profile_ack)} lab.heartbeat_quiet=1 nmi_watchdog=0"
                                       + (" lab.heartbeat_dense=1 transparent_hugepage=never" if args.dense_working_set else "")
                                       + ("")},
@@ -2249,7 +2256,7 @@ def handoff_bench(args):
                                 "payload_integrity_verified": True, "ram_hvas": ram_hvas,
                                 "state_bytes": sorted({s["state_bytes"] for s in sources}),
                                 "snapshot_payload_bytes_total": sum(s["state_bytes"] for s in sources)}
-        if vcpus > 1:
+        if smp_workload:
             report["validation"]["smp"] = validate_smp_handoff(samples, rounds, vcpus)
         if getattr(args, "test_running_vcpu", False):
             rejected = [s for s in samples if s["event"] == "running_rejected"]
@@ -2761,6 +2768,7 @@ def main():
     p = subs.add_parser("direct-handoff-bench", help="Attach the same shared KVM/vCPU/VMCS across independent kernels")
     p.add_argument("--vcpus", type=int, choices=[1, 2, 4, 8], default=1, help="Linux microVM vCPUs, with identical source/destination topology")
     p.add_argument("--test-running-vcpu", action="store_true", help="Keep the last B vCPU running, require EBUSY, then stop it and continue")
+    p.add_argument("--smp-workload", action="store_true", help="Use the same per-CPU checksum/futex workload also with one vCPU")
     p.add_argument("--memory-mib", type=int, default=128, help="Linux guest RAM, 128..2048MiB (default 128)")
     p.add_argument("--dense-working-set", action="store_true", help="Retain and verify a near-full guest working set; measure first and warm page scans after every handoff")
     p.add_argument("--kernel-mode", type=int, choices=[2, 3], default=3,
