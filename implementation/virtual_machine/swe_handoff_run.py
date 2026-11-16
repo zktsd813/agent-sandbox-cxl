@@ -28,7 +28,7 @@ SOURCES = ("experiment_sources.py", "swe_handoff_run.py", "handoff_bench.py", "s
     "lab.py", "shared_probe.c", "resident_fast.py",
     "resident_control.c", "resident_bootstrap.c", "resident_prepare.py", "control_rpc.c", "control_rpc.py",
     "guest-init.sh", "resident_wire.h", "resident_proxy.py", "kernel_handoff_trace.py",
-    "firecracker.patch", "kvm-dax-state.patch", "kvm-dax-source.json")
+    "firecracker.patch", "kvm-dax-state.patch", "kvm-dax-source.json", "multi_vcpu.py")
 
 
 def arguments():
@@ -42,6 +42,8 @@ def arguments():
     parser.add_argument("--names", choices=NAMES, nargs="+", default=list(NAMES))
     parser.add_argument("--modes", choices=MODES, nargs="+", default=list(MODES))
     parser.add_argument("--memory-mib", type=int, default=2048)
+    parser.add_argument("--vcpus", type=int, choices=(1,2,4,8), default=1)
+    parser.add_argument("--l1-memory-mib", type=int, choices=(4096,6144,8192), default=8192)
     parser.add_argument("--restore-timing", action="store_true")
     parser.add_argument("--kernel-trace", action="store_true")
     parser.add_argument("--inflight-handoff-index", type=int)
@@ -57,11 +59,11 @@ def arguments():
     if not re.fullmatch(r"[0-9]+(?:-[0-9]+)?(?:,[0-9]+(?:-[0-9]+)?)*", args.cpus):
         parser.error("Use a taskset CPU list such as 0-7")
     if args.memory_mib != 2048:
-        parser.error("This workload fixture uses 2048MiB and one vCPU per sandbox")
+        parser.error("This workload fixture uses 2048MiB per sandbox")
     if not 0 <= args.direct_profile_roundtrips <= 20 or (args.direct_profile_roundtrips and args.modes != ['direct']):
         parser.error("Profile repetitions require only direct mode and 0..20 roundtrips")
-    if args.inflight_handoff_index is not None and (args.modes != ["direct"] or len(args.names) != 1):
-        parser.error("In-flight index requires one explicit trace and direct mode")
+    if args.inflight_handoff_index is not None and ("direct" not in args.modes or len(args.names) != 1):
+        parser.error("In-flight index requires one explicit trace including direct mode")
     if args.kernel_trace and args.modes != ['direct']:
         parser.error("Kernel tracing requires only direct mode")
     if len(set(args.names)) != len(args.names) or len(set(args.modes)) != len(args.modes):
@@ -157,14 +159,14 @@ def main():
             arm["environment"] = {key: env[key] for key in
                 ("CXL_LAB_ASSETS", "CXL_LAB_SESSION", "CXL_LAB_QEMU_ROOT")}
             prefix = ["taskset", "-c", args.cpus, sys.executable, "-u"]
-            start = prefix + [str(HERE / "lab.py"), "start", "--vcpus", "4", "--memory-mib", "8192",
+            start = prefix + [str(HERE / "lab.py"), "start", "--vcpus", str(max(4,args.vcpus+2)), "--memory-mib", str(args.l1_memory_mib),
                 "--shared-mib", "64", "--cxl-mib", "16384", "--dax-guest", "--dax-4k",
                 "--migration-network", "--network-backend", args.network_backend, "--memory-backing-dir", "/dev/shm",
                 "--home-storage-image", str(assets / "storage.raw"), "--qemu", str(qemu)]
             if mode == "direct":
                 start.append("--dax-handoff")
             bench = prefix + [str(HERE / "handoff_bench.py"), "--mode", mode, "--name", name,
-                              "--memory-mib", str(args.memory_mib),
+                              "--memory-mib", str(args.memory_mib), "--vcpus", str(args.vcpus),
                               "--direct-profile-roundtrips", str(args.direct_profile_roundtrips)]
             if mode == "direct":
                 bench.append("--resident-repromote-handoff")
@@ -172,11 +174,17 @@ def main():
                 bench.append("--restore-timing")
             if args.kernel_trace:
                 bench.append("--kernel-trace")
-            if args.inflight_handoff_index is not None:
+            if args.inflight_handoff_index is not None and mode == "direct":
                 bench.extend(["--inflight-handoff-index", str(args.inflight_handoff_index)])
             save()
             failure = None
             try:
+                from multi_vcpu import node0_free
+                budget = (2*args.l1_memory_mib + 16384 + 64)*1024*1024
+                free = node0_free()
+                arm["node0_budget"] = {"free_bytes":free,"budget_bytes":budget,"reserve_bytes":4*1024**3}
+                if free < budget + 4*1024**3:
+                    raise RuntimeError("node 0 free memory below SWE budget + 4 GiB")
                 arm["start"] = command(start, env, output / (trial_id + "-start.log"))
                 if arm["start"]["returncode"]:
                     raise RuntimeError("Lab start failed: " + trial_id)

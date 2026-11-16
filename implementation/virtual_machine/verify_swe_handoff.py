@@ -142,7 +142,7 @@ def execution_identity(report):
         "configuration": {key: config[key] for key in ("host_kernel", "qemu_sha256", "l1_vcpus", "l1_memory_mib",
                                                        "shared_mib", "cxl_mib", "dax_guest", "dax_4k")},
         "storage_template_sha256": config["home_storage_image"]["template_sha256"],
-        "memory_mib": report["arguments"]["memory_mib"], "vcpus": 1,
+        "memory_mib": report["arguments"]["memory_mib"], "vcpus": report["arguments"].get("vcpus",1),
         "restore_timing": report["arguments"].get("restore_timing", False)}
     workload = {key: plan[key] for key in ("name", "trace_sha256", "image_sha256", "image_bytes", "command_count",
         "commands", "handoff_before", "environment", "effective_environment")}
@@ -447,7 +447,8 @@ def verify(path):
              'Cleanup fenced a different process')
     need(len(r['cleanup']) == len(launches), 'Runtime cleanup missing')
     configs = [a['request'] for a in r['api_events'] if a['path'] == '/machine-config']
-    need(configs == [{'vcpu_count': 1, 'mem_size_mib': 2048}], 'Wrong VM configuration')
+    vcpus = r['arguments'].get('vcpus',1)
+    need(vcpus in (1,2,4,8) and configs == [{'vcpu_count': vcpus, 'mem_size_mib': 2048}], 'Wrong VM configuration')
     disks = [a['request'] for a in r['api_events'] if a['path'] == '/drives/data']
     need(len(disks) == 1 and disks[0]['is_read_only'] and disks[0]['path_on_host'] == '/disk/sandbox.raw',
          'Wrong immutable block device')
@@ -595,10 +596,15 @@ def verify(path):
         for i,hop in enumerate(handoffs,1):
             exp,imp=events[('export',i)],events[('import',i)]
             keys=('vm_offset','vcpu_offset','vmcs_offset','run_offset','ram_hva','ram_bytes','vm_creates','vcpu_creates')
+            if 'abi_version' in exp['token']:
+                keys += ('abi_version','vcpu_count','vcpus')
+                need(exp['token']['abi_version'] == 2 and exp['token']['vcpu_count'] == vcpus, 'Wrong SMP token ABI/topology')
+                need(len(exp['token']['vcpus']) == 8 and
+                     [c['id'] for c in exp['token']['vcpus'][:vcpus]] == list(range(vcpus)), 'Missing per-vCPU identities')
             graph={k:exp['token'][k] for k in keys}
             need(all(imp['token'][k] == v for k,v in graph.items()) and
                  exp['token']['flags'] == 2 and imp['token']['flags'] == 1,'Changed kernel graph/owner')
-            need(graph['vm_creates'] == graph['vcpu_creates'] == 1 and
+            need(graph['vm_creates'] == 1 and graph['vcpu_creates'] == vcpus and
                  exp['snapshot_bytes'] == exp['ram_transfer_bytes'] == imp['snapshot_bytes'] == imp['ram_transfer_bytes'] == 0,
                  'Snapshot or RAM copy on direct handoff')
             if retained is not None:need(graph == retained,'Recreated kernel graph')

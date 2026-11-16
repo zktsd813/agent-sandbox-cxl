@@ -215,7 +215,7 @@ def parse_maps(raw):
 
 class HandoffController(Controller):
     def __init__(self, config, out, args):
-        Controller.__init__(self, config, out, args.memory_mib, 1)
+        Controller.__init__(self, config, out, args.memory_mib, getattr(args, "vcpus", 1))
         self.args, self.mode = args, args.mode
         self.metadata_base = 8192 * MIB
         self.fixture = json.loads((Path(config['assets']) / 'manifest.json').read_text())
@@ -405,7 +405,7 @@ class HandoffController(Controller):
 
     def boot_vm(self, s):
         self.start_vm(s)
-        components = {'/machine-config': {'vcpu_count': 1, 'mem_size_mib': self.memory_mib},
+        components = {'/machine-config': {'vcpu_count': self.vcpus, 'mem_size_mib': self.memory_mib},
             '/boot-source': {'kernel_image_path': '/lab/l2-vmlinux',
                 'initrd_path': f'/lab/{self.trace["name"]}-initramfs.cpio',
                 'boot_args': 'console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init'},
@@ -700,6 +700,7 @@ def main():
     parser.add_argument('--mode', choices=('baseline','state-only','direct'), required=True)
     parser.add_argument('--name', required=True)
     parser.add_argument('--memory-mib', type=int, default=2048)
+    parser.add_argument('--vcpus', type=int, choices=(1,2,4,8), default=1)
     parser.add_argument("--full-audit", action="store_true")
     parser.add_argument("--restore-timing", action="store_true")
     parser.add_argument("--kernel-trace", action="store_true")

@@ -31,6 +31,7 @@ def unpack(archive, directory):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--trace-assets', type=Path, required=True)
+    parser.add_argument('--link-storage', action='store_true', help='Reference the read-only storage template without copying it')
     parser.add_argument('--assets', type=Path, required=True)
     parser.add_argument('--firecracker', type=Path, required=True)
     parser.add_argument('--guest-kernel', type=Path, required=True)
@@ -60,7 +61,9 @@ def main():
             raise ValueError('Changed source trace: '+name)
     dest.mkdir(parents=True)
     for path in base.iterdir():
-        if path.name != 'manifest.json':
+        if path.name == 'storage.raw' and args.link_storage:
+            (dest/path.name).symlink_to(path.resolve())
+        elif path.name != 'manifest.json':
             run(['cp', '-a', '--sparse=always', '--reflink=auto', path, dest/path.name])
     replacements = {'firecracker': args.firecracker, 'l2-vmlinux': args.guest_kernel,
                     'l1-kernel': args.l1_kernel, 'pool_memory_module.ko': args.mapper_module}
