@@ -459,7 +459,16 @@ class HandoffController(Controller):
                 f'n=0\nwhile ! grep -q KVM_KEEPALIVE_READY {directory}/log; do\n'
                 'n=$((n+1))\n[ $n -lt 100 ]\nsleep .01\ndone\n'+f'cat {directory}/log', 'keepalive')
             self.keepalives.append({'role': role, 'directory': directory, 'file': name})
-        return {'immutable_nfs_cache': immutable_cache, 'keepalive': self.keepalives}
+        parameters = {}
+        for role in ('A', 'B'):
+            raw, file = self.shell(role,
+                'for entry in kvm/nx_huge_pages kvm/enable_pmu kvm_intel/pml kvm_intel/enable_apicv '
+                'kvm_intel/flexpriority kvm_intel/preemption_timer; do\n'
+                'module=${entry%/*}; option=${entry#*/}\n'
+                'printf "KVM_PARAMETER %s " "$entry"; cat /sys/module/$module/parameters/$option\ndone',
+                'kvm-parameters')
+            parameters[role] = {'file': file, 'values':dict(re.findall(r'^KVM_PARAMETER (\S+) (\S+)\s*$', raw, re.M))}
+        return {'immutable_nfs_cache': immutable_cache, 'keepalive': self.keepalives, 'kvm_parameters': parameters}
 
     def wait_event(self, role, directory, event, label=None, timeout=120):
         pattern = f'"event":"{event}"'

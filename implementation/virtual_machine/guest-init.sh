@@ -8,7 +8,7 @@ mkdir -p /dev/pts /run
 mount -t devpts devpts /dev/pts
 mount -t tmpfs tmpfs /run
 
-role= nonce= rounds=1000 cxl_bytes=0 dax_guest=0 dax_handoff=0 dax_4k=0 migration_ip= control_rpc=0
+role= nonce= rounds=1000 cxl_bytes=0 dax_guest=0 dax_handoff=0 dax_4k=0 migration_ip= control_rpc=0 direct_compat=0
 for arg in $(cat /proc/cmdline); do
     case "$arg" in
         lab.role=*) role=${arg#*=} ;;
@@ -20,6 +20,7 @@ for arg in $(cat /proc/cmdline); do
         lab.dax_4k=*) dax_4k=${arg#*=} ;;
         lab.migration_ip=*) migration_ip=${arg#*=} ;;
         lab.control_rpc=*) control_rpc=${arg#*=} ;;
+        lab.direct_compat=*) direct_compat=${arg#*=} ;;
     esac
 done
 
@@ -46,7 +47,7 @@ fi
 
 while read -r module; do
     module_args=
-    if [ "$dax_handoff" -eq 1 ]; then
+    if [ "$dax_handoff" -eq 1 ] || [ "$direct_compat" -eq 1 ]; then
         case "$module" in
             kvm.ko) module_args='nx_huge_pages=never enable_pmu=0' ;;
             kvm-intel.ko) module_args='pml=0 enable_apicv=0 flexpriority=0 preemption_timer=0' ;;

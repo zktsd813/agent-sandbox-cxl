@@ -523,6 +523,8 @@ def start(args):
                    "-serial", "chardev:console", "-qmp", f"unix:{qmp_path},server=on,wait=off"]
             if getattr(args, 'direct_cpu_model', False) and not args.dax_handoff:
                 cmd[cmd.index('-append')+1] += ' nokaslr'
+            if getattr(args, 'direct_cpu_model', False):
+                cmd[cmd.index('-append')+1] += ' lab.direct_compat=1'
             if control_rpc:
                 cmd[cmd.index("-append") + 1] += " lab.control_rpc=1"
                 cmd.extend(["-device", "virtio-serial-pci,id=labcontrol",
