@@ -139,7 +139,7 @@ CPU mask만 맞춘 `cpucheck`도 PMU 기능 차이로 독립 검증에서 거절
 그 앞의 `pilot5`, `count1/2`, `time1/2`는 진단 자료로 보존했다.
 최종 비교에는 CPU 조건을 맞춘 `count3`와 `time3`만 쓴다.
 
-Python 시험 50개는 통과했다. 기존 증거가 필요한 8개는 skip이다.
+Python 시험 50개 중 42개는 통과했다. 기존 증거가 필요한 8개는 skip이다.
 선택한 Rust 계약 시험 15개가 통과했다.
 각 SWE run은 `lab.py verify`와 독립 workload 검증을 거친다.
 

@@ -191,6 +191,8 @@ def summarize(args):
                        moves=moves, ept_per_move=faults/moves if moves else None,
                        spte=[x['spte'] for x in counts], nested_root_ms_mean=st.mean(x['nested_root_ns'] for x in counts)/1e6)
             if costs:
+                if key[2].startswith('prefault-'):
+                    out['physical_estimate_scope'] = 'Demand faults only; prefault execution cost excluded. Not an end-to-end physical estimate.'
                 out['estimated_physical_4k_s']=out['whole_interval_ram_ept_mean']*costs['4k']/1e6
                 out['estimated_command_physical_4k_s']=out['ram_ept_mean']*costs['4k']/1e6
                 base_faults = [b['ept_violations'] for b,r in groups.get((key[0],key[1],'baseline'), []) if b['count_run']]

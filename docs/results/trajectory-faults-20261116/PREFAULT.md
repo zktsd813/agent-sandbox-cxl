@@ -27,3 +27,7 @@ RAM 전체 경로는 이동마다 524,288개 4 KiB page를 채웠다. kernel 시
 기존 Python 시험은 42개 통과, 증거 의존 8개 skip이다. 기존 Rust 계약과 새 ABI·범위 시험은 합계 17개 통과, 기존 1개 ignore였다. 커널 모듈과 Firecracker를 각각 격리 빌드했다. 모든 기능 시험의 QEMU와 공유 메모리 backing은 정리했다.
 
 다음 본 측정은 새 모듈·VMM의 동일한 binary로 무이동, snapshot, direct, RAM 전체 prefault, 매핑 범위 prefault를 함께 재실행한다. fixture와 방식 순서를 무작위로 섞는다. 시간 run seed는 20261119, 수를 세는 run seed는 20261118이다. 조건마다 3회다.
+
+추가 본 측정에는 `--trajectory-policies heavy all --prefault-variants all mapped --repetitions 3`을 쓴다. 단일 기능 시험은 `--modes state-only --prefault all` 또는 `--prefault mapped`로 고를 수 있다. `--prefault-probe`는 정적 ABI 시험 binary 경로다. 일반 host 커널에서 이 binary를 실행하지 않는다.
+
+추가 실험의 물리 비용 계산은 재개 이후 demand fault만 다룬다. 예비 채우기 자체의 물리 실행 비용을 측정한 값은 아니다. 전체 RAM 경로는 미래에 처음 쓸 page의 fault도 미리 처리하므로, 잔여 demand 비용이 무이동보다 작아질 수 있다. Nested 채우기 시간을 물리 서버 시간으로 사용하거나, 이 음수 차이를 전체 성능 향상이라고 해석하지 않는다.
