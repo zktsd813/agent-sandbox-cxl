@@ -283,3 +283,5 @@ Direct는 같은 357회 동안 VM/vCPU 생성이 0회였다.
 [conditions.csv](conditions.csv)는 조건별 수치다. [validation.json](validation.json)은
 입력·검증·생성 횟수·매핑 크기·정리 증거의 요약이다.
 이 단계에서는 물리 multi-host 지연이나 hand-off의 전체 물리 이득을 결론내리지 않는다.
+
+5단계 구현과 기능 시험은 [PREFAULT.md](PREFAULT.md)에 기록했다. 기본 1–4단계의 확정 결과와 추가 실험의 실행 binary는 구분한다.

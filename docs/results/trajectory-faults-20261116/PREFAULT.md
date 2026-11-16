@@ -13,3 +13,17 @@ FILL은 `kvm_mmu_reload` 뒤 범위의 4 KiB마다 `kvm_mmu_do_page_fault`를 �
 Firecracker는 CPU·VM·장치 상태 복원 뒤, vCPU thread 시작 전에 FILL을 호출한다. `--prefault all`은 RAM 전체, `--prefault mapped`는 이동 직전 source의 매핑 범위를 채운다. `--prefault-activate`는 ACTIVATE를 선택한다. source 조회·목록 전달·목적지 채우기는 모두 이동 요청과 재개 사이에 있다. 목적지 완료 보고서는 궤적 시간 측정 뒤 수집한다. 조회 두 번과 채우기의 커널 시간, 전체 경과 시간, 실제 처리 page 수를 별도로 남긴다.
 
 기능 검증과 추가 측정 결과는 아래에 기록한다.
+
+## 기능 시험
+
+Gin heavy 전체 궤적을 두 경로로 한 번씩 실행했다. 두 run 모두 `lab verify`와 독립 workload 검증을 통과했다. A/B 각각 별도 VM에서 잘못된 요청 12종의 거부, 빈 root, 4 page 채우기, 정확한 2개 범위 조회, ACTIVATE도 확인했다. 이 ABI 시험에서는 guest를 실행하지 않았다. 원시 요약은 `prefault-functional.json`이다.
+
+RAM 전체 경로는 이동마다 524,288개 4 KiB page를 채웠다. kernel 시간은 이동마다 약 0.616–0.620초였다. 첫 이동 전 RAM fault는 8,925회다. 첫 이동 뒤 모든 명령의 RAM fault는 0회였다. 마지막 실제 leaf도 4 KiB 524,288개다. 이 하드웨어와 설정에서는 기본 `prefetch=true`로 충분했다. 본 비교에 ACTIVATE를 쓰지 않는다.
+
+매핑 범위 경로는 세 이동에서 각각 9,707 / 146,977 / 159,584개 page를 채웠다. 목록은 각각 902 / 1,858 / 1,851개 범위다. 두 번 조회한 kernel 시간 합은 1.15 / 5.69 / 6.09 ms였다. 채우기 kernel 시간 합은 11.73 / 175.03 / 188.27 ms였다. 궤적 RAM fault는 261,929회였다. 새로 쓰는 page는 여전히 fault를 일으킨다. 전체 RAM 경로와 구분해야 한다.
+
+초기 구현은 첫 채우기 뒤 `EAGAIN`으로 중단했다. 진단에서 메모리 슬롯 세대는 고정됐지만, 첫 DAX 사용자 주소 변환이 생길 때 MMU 무효화 순서가 page마다 변했다. 전체 작업의 보수적인 순서 검사가 이를 감지했다. Firecracker는 최대 네 번 전체 범위를 다시 시도한다. 위 시험은 매 이동 두 번으로 완료했다. 두 번째 시도 시간도 정지 시간에 포함했다. 이 구현의 비용은 최적화된 prefault의 하한이 아니다. 오류 상태에서는 재개하지 않는다.
+
+기존 Python 시험은 42개 통과, 증거 의존 8개 skip이다. 기존 Rust 계약과 새 ABI·범위 시험은 합계 17개 통과, 기존 1개 ignore였다. 커널 모듈과 Firecracker를 각각 격리 빌드했다. 모든 기능 시험의 QEMU와 공유 메모리 backing은 정리했다.
+
+다음 본 측정은 새 모듈·VMM의 동일한 binary로 무이동, snapshot, direct, RAM 전체 prefault, 매핑 범위 prefault를 함께 재실행한다. fixture와 방식 순서를 무작위로 섞는다. 시간 run seed는 20261119, 수를 세는 run seed는 20261118이다. 조건마다 3회다.

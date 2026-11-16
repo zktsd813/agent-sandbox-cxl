@@ -1,0 +1,607 @@
+{
+  "rows": [
+    {
+      "suite": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run14/pfall5/report.json",
+      "suite_sha256": "d06a6e51b01f9123b5b2b2cdf9275bdaea845f5f9c64f26629627999982109e4",
+      "report_sha256": "158f2d784f1205e4a384d6ab80203e09819cb829a63adc6184ce950eb5cdc1c5",
+      "mode": "all",
+      "result": "passed",
+      "fixture": "gin-gonic__gin-3741",
+      "policy": "heavy",
+      "probes": [
+        {
+          "role": "A",
+          "file": "0012-prefault-probe.txt",
+          "result": {
+            "result": "passed",
+            "negative_checks": 12,
+            "mapped_pages": 4,
+            "ranges": 2,
+            "guest_runs": 0
+          },
+          "binary_sha256": "397865a6b9bca869084d9483551d2f33c09ba7b185ee2eef5655b8fb3b68e99d"
+        },
+        {
+          "role": "B",
+          "file": "0013-prefault-probe.txt",
+          "result": {
+            "result": "passed",
+            "negative_checks": 12,
+            "mapped_pages": 4,
+            "ranges": 2,
+            "guest_runs": 0
+          },
+          "binary_sha256": "397865a6b9bca869084d9483551d2f33c09ba7b185ee2eef5655b8fb3b68e99d"
+        }
+      ],
+      "moves": [
+        {
+          "index": 4,
+          "prefault": {
+            "abi": 1,
+            "activate": false,
+            "attempts": [
+              {
+                "errno": 11,
+                "kernel_ns": 448096280,
+                "processed_pages": 0
+              },
+              {
+                "errno": null,
+                "kernel_ns": 171153305,
+                "processed_pages": 524288
+              }
+            ],
+            "errno": null,
+            "expected_pages": 524288,
+            "kernel_ns": 619249585,
+            "mode": "all",
+            "processed_pages": 524288,
+            "range_count": 1,
+            "result": "passed",
+            "wall_ns": 619272580
+          },
+          "source": {}
+        },
+        {
+          "index": 12,
+          "prefault": {
+            "abi": 1,
+            "activate": false,
+            "attempts": [
+              {
+                "errno": 11,
+                "kernel_ns": 444477581,
+                "processed_pages": 0
+              },
+              {
+                "errno": null,
+                "kernel_ns": 171684977,
+                "processed_pages": 524288
+              }
+            ],
+            "errno": null,
+            "expected_pages": 524288,
+            "kernel_ns": 616162558,
+            "mode": "all",
+            "processed_pages": 524288,
+            "range_count": 1,
+            "result": "passed",
+            "wall_ns": 616182559
+          },
+          "source": {}
+        },
+        {
+          "index": 16,
+          "prefault": {
+            "abi": 1,
+            "activate": false,
+            "attempts": [
+              {
+                "errno": 11,
+                "kernel_ns": 446321998,
+                "processed_pages": 0
+              },
+              {
+                "errno": null,
+                "kernel_ns": 173850782,
+                "processed_pages": 524288
+              }
+            ],
+            "errno": null,
+            "expected_pages": 524288,
+            "kernel_ns": 620172780,
+            "mode": "all",
+            "processed_pages": 524288,
+            "range_count": 1,
+            "result": "passed",
+            "wall_ns": 620193825
+          },
+          "source": {}
+        }
+      ],
+      "command_faults": [
+        {
+          "index": 0,
+          "ram": 1894,
+          "ept": 1894
+        },
+        {
+          "index": 1,
+          "ram": 190,
+          "ept": 190
+        },
+        {
+          "index": 2,
+          "ram": 97,
+          "ept": 97
+        },
+        {
+          "index": 3,
+          "ram": 6744,
+          "ept": 6744
+        },
+        {
+          "index": 4,
+          "ram": 0,
+          "ept": 2
+        },
+        {
+          "index": 5,
+          "ram": 0,
+          "ept": 0
+        },
+        {
+          "index": 6,
+          "ram": 0,
+          "ept": 0
+        },
+        {
+          "index": 7,
+          "ram": 0,
+          "ept": 0
+        },
+        {
+          "index": 8,
+          "ram": 0,
+          "ept": 0
+        },
+        {
+          "index": 9,
+          "ram": 0,
+          "ept": 0
+        },
+        {
+          "index": 10,
+          "ram": 0,
+          "ept": 0
+        },
+        {
+          "index": 11,
+          "ram": 0,
+          "ept": 0
+        },
+        {
+          "index": 12,
+          "ram": 0,
+          "ept": 1
+        },
+        {
+          "index": 13,
+          "ram": 0,
+          "ept": 0
+        },
+        {
+          "index": 14,
+          "ram": 0,
+          "ept": 0
+        },
+        {
+          "index": 15,
+          "ram": 0,
+          "ept": 0
+        },
+        {
+          "index": 16,
+          "ram": 0,
+          "ept": 1
+        },
+        {
+          "index": 17,
+          "ram": 0,
+          "ept": 0
+        },
+        {
+          "index": 18,
+          "ram": 0,
+          "ept": 0
+        },
+        {
+          "index": 19,
+          "ram": 0,
+          "ept": 0
+        },
+        {
+          "index": 20,
+          "ram": 0,
+          "ept": 0
+        },
+        {
+          "index": 21,
+          "ram": 0,
+          "ept": 0
+        },
+        {
+          "index": 22,
+          "ram": 0,
+          "ept": 0
+        },
+        {
+          "index": 23,
+          "ram": 0,
+          "ept": 0
+        },
+        {
+          "index": 24,
+          "ram": 0,
+          "ept": 0
+        },
+        {
+          "index": 25,
+          "ram": 0,
+          "ept": 0
+        },
+        {
+          "index": 26,
+          "ram": 0,
+          "ept": 0
+        }
+      ],
+      "spte": {
+        "role": "B",
+        "file": "0590-trajectory-spte.txt",
+        "pages_4k": 524288,
+        "pages_2m": 0,
+        "pages_1g": 0,
+        "inactive": {
+          "role": "A",
+          "file": "0591-trajectory-spte-inactive.txt",
+          "pages_4k": 0,
+          "pages_2m": 0,
+          "pages_1g": 0
+        }
+      },
+      "outer_cleanup": {
+        "A": {
+          "pid": 4080124,
+          "starttime": "121932460",
+          "fenced": true
+        },
+        "B": {
+          "pid": 4080135,
+          "starttime": "121932468",
+          "fenced": true
+        }
+      },
+      "memory_backing_removed": true
+    },
+    {
+      "suite": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run14/pfmap0/report.json",
+      "suite_sha256": "a282adbda91b14d57b992172ace3ca3069306357c85546370cd622cfbd36bb2d",
+      "report_sha256": "1bb6340d22c3d17cb790a3bba124de77f757235f21634491c785b8f07fe89f7a",
+      "mode": "mapped",
+      "result": "passed",
+      "fixture": "gin-gonic__gin-3741",
+      "policy": "heavy",
+      "probes": [
+        {
+          "role": "A",
+          "file": "0012-prefault-probe.txt",
+          "result": {
+            "result": "passed",
+            "negative_checks": 12,
+            "mapped_pages": 4,
+            "ranges": 2,
+            "guest_runs": 0
+          },
+          "binary_sha256": "397865a6b9bca869084d9483551d2f33c09ba7b185ee2eef5655b8fb3b68e99d"
+        },
+        {
+          "role": "B",
+          "file": "0013-prefault-probe.txt",
+          "result": {
+            "result": "passed",
+            "negative_checks": 12,
+            "mapped_pages": 4,
+            "ranges": 2,
+            "guest_runs": 0
+          },
+          "binary_sha256": "397865a6b9bca869084d9483551d2f33c09ba7b185ee2eef5655b8fb3b68e99d"
+        }
+      ],
+      "moves": [
+        {
+          "index": 4,
+          "prefault": {
+            "abi": 1,
+            "activate": false,
+            "attempts": [
+              {
+                "errno": 11,
+                "kernel_ns": 8514825,
+                "processed_pages": 0
+              },
+              {
+                "errno": null,
+                "kernel_ns": 3215809,
+                "processed_pages": 9707
+              }
+            ],
+            "errno": null,
+            "expected_pages": 9707,
+            "kernel_ns": 11730634,
+            "mode": "mapped",
+            "processed_pages": 9707,
+            "range_count": 902,
+            "result": "passed",
+            "wall_ns": 16452827
+          },
+          "source": {
+            "abi": 1,
+            "kernel_ns": 1145734,
+            "mapped_pages": 9707,
+            "operation": "prefault-ranges",
+            "ram_bytes": 2147483648,
+            "ram_snapshot_bytes": 0,
+            "result": "passed",
+            "run_epoch": "0",
+            "vm_id": "1",
+            "wall_ns": 1559911
+          }
+        },
+        {
+          "index": 12,
+          "prefault": {
+            "abi": 1,
+            "activate": false,
+            "attempts": [
+              {
+                "errno": 11,
+                "kernel_ns": 126218071,
+                "processed_pages": 0
+              },
+              {
+                "errno": null,
+                "kernel_ns": 48816166,
+                "processed_pages": 146977
+              }
+            ],
+            "errno": null,
+            "expected_pages": 146977,
+            "kernel_ns": 175034237,
+            "mode": "mapped",
+            "processed_pages": 146977,
+            "range_count": 1858,
+            "result": "passed",
+            "wall_ns": 184743562
+          },
+          "source": {
+            "abi": 1,
+            "kernel_ns": 5687360,
+            "mapped_pages": 146977,
+            "operation": "prefault-ranges",
+            "ram_bytes": 2147483648,
+            "ram_snapshot_bytes": 0,
+            "result": "passed",
+            "run_epoch": "1",
+            "vm_id": "1",
+            "wall_ns": 6710852
+          }
+        },
+        {
+          "index": 16,
+          "prefault": {
+            "abi": 1,
+            "activate": false,
+            "attempts": [
+              {
+                "errno": 11,
+                "kernel_ns": 135849063,
+                "processed_pages": 0
+              },
+              {
+                "errno": null,
+                "kernel_ns": 52419666,
+                "processed_pages": 159584
+              }
+            ],
+            "errno": null,
+            "expected_pages": 159584,
+            "kernel_ns": 188268729,
+            "mode": "mapped",
+            "processed_pages": 159584,
+            "range_count": 1851,
+            "result": "passed",
+            "wall_ns": 197916041
+          },
+          "source": {
+            "abi": 1,
+            "kernel_ns": 6087486,
+            "mapped_pages": 159584,
+            "operation": "prefault-ranges",
+            "ram_bytes": 2147483648,
+            "ram_snapshot_bytes": 0,
+            "result": "passed",
+            "run_epoch": "2",
+            "vm_id": "1",
+            "wall_ns": 7110057
+          }
+        }
+      ],
+      "command_faults": [
+        {
+          "index": 0,
+          "ram": 1888,
+          "ept": 1888
+        },
+        {
+          "index": 1,
+          "ram": 191,
+          "ept": 191
+        },
+        {
+          "index": 2,
+          "ram": 94,
+          "ept": 94
+        },
+        {
+          "index": 3,
+          "ram": 6776,
+          "ept": 6776
+        },
+        {
+          "index": 4,
+          "ram": 225562,
+          "ept": 225564
+        },
+        {
+          "index": 5,
+          "ram": 4,
+          "ept": 4
+        },
+        {
+          "index": 6,
+          "ram": 4,
+          "ept": 4
+        },
+        {
+          "index": 7,
+          "ram": 15,
+          "ept": 15
+        },
+        {
+          "index": 8,
+          "ram": 3,
+          "ept": 3
+        },
+        {
+          "index": 9,
+          "ram": 6,
+          "ept": 6
+        },
+        {
+          "index": 10,
+          "ram": 7,
+          "ept": 7
+        },
+        {
+          "index": 11,
+          "ram": 7,
+          "ept": 7
+        },
+        {
+          "index": 12,
+          "ram": 25134,
+          "ept": 25135
+        },
+        {
+          "index": 13,
+          "ram": 3,
+          "ept": 3
+        },
+        {
+          "index": 14,
+          "ram": 2,
+          "ept": 2
+        },
+        {
+          "index": 15,
+          "ram": 2,
+          "ept": 2
+        },
+        {
+          "index": 16,
+          "ram": 2204,
+          "ept": 2205
+        },
+        {
+          "index": 17,
+          "ram": 2,
+          "ept": 2
+        },
+        {
+          "index": 18,
+          "ram": 3,
+          "ept": 3
+        },
+        {
+          "index": 19,
+          "ram": 3,
+          "ept": 3
+        },
+        {
+          "index": 20,
+          "ram": 3,
+          "ept": 3
+        },
+        {
+          "index": 21,
+          "ram": 3,
+          "ept": 3
+        },
+        {
+          "index": 22,
+          "ram": 2,
+          "ept": 2
+        },
+        {
+          "index": 23,
+          "ram": 3,
+          "ept": 3
+        },
+        {
+          "index": 24,
+          "ram": 2,
+          "ept": 2
+        },
+        {
+          "index": 25,
+          "ram": 3,
+          "ept": 3
+        },
+        {
+          "index": 26,
+          "ram": 3,
+          "ept": 3
+        }
+      ],
+      "spte": {
+        "role": "B",
+        "file": "0605-trajectory-spte.txt",
+        "pages_4k": 160767,
+        "pages_2m": 0,
+        "pages_1g": 0,
+        "inactive": {
+          "role": "A",
+          "file": "0606-trajectory-spte-inactive.txt",
+          "pages_4k": 0,
+          "pages_2m": 0,
+          "pages_1g": 0
+        }
+      },
+      "outer_cleanup": {
+        "A": {
+          "pid": 4080324,
+          "starttime": "121939206",
+          "fenced": true
+        },
+        "B": {
+          "pid": 4080335,
+          "starttime": "121939211",
+          "fenced": true
+        }
+      },
+      "memory_backing_removed": true
+    }
+  ]
+}
