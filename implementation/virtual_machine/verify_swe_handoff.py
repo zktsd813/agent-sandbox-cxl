@@ -641,6 +641,16 @@ def verify(path):
                     need(receipt['expected_pages'] == memory//PAGE, 'Incomplete all-RAM prefault')
                 else:
                     source = hop['source_ranges']
+                    queries = [x for x in r['memory_events'] if x['operation'] == 'prefault-ranges' and
+                               x['vm'] == hop['vm'] and x['epoch'] == hop['source_epoch'] and x['role'] == hop['source']]
+                    need(len(queries) == 1 and e.json(queries[0]['file']) == source == queries[0]['report'],
+                         'Mapped range list differs from raw source query')
+                    previous = 0
+                    for span in source['ranges']:
+                        end = span['gpa']+span['bytes']
+                        need(span['bytes'] > 0 and (span['gpa'] | span['bytes']) % PAGE == 0 and
+                             previous <= span['gpa'] < end <= memory, 'Invalid source RAM range ordering/geometry')
+                        previous = end
                     need(source['vm_id'] == str(hop['vm']) and int(source['run_epoch']) == hop['source_epoch'] and
                          source['mapped_pages'] == receipt['expected_pages'] and source['ram_snapshot_bytes'] == 0,
                          'Mapped source identity/coverage mismatch')
