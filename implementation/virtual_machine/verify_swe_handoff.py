@@ -7,6 +7,8 @@ submission are checked independently, including process/FD continuity.
 import argparse
 import base64
 import collections
+import contextlib
+import fcntl
 import hashlib
 import json
 import math
@@ -795,11 +797,20 @@ def main():
     args = parser.parse_args()
     if (args.report is None) == (args.suite is None):
         parser.error("Choose a report or --suite")
-    result = verify_suite(args.suite) if args.suite else verify(args.report)
-    data = json.dumps(result, indent=2) + "\n"
-    if args.output:
-        args.output.write_text(data)
-    print(data, end="")
+    # Full-suite evidence hashing must not contend with another timed trial.
+    # Library callers can manage their own lock; this server's CLI joins the
+    # existing shared build lock and leaves repository use elsewhere unchanged.
+    quiet = Path(__file__).resolve().parents[2]/'.codex-runs/quiet.lock'
+    with contextlib.ExitStack() as stack:
+        if quiet.exists():
+            stream = stack.enter_context(quiet.open('a'))
+            fcntl.flock(stream, fcntl.LOCK_SH)
+        result = verify_suite(args.suite) if args.suite else verify(args.report)
+        result['audit_source_sha256'] = sha(Path(__file__).read_bytes())
+        data = json.dumps(result, indent=2) + "\n"
+        if args.output:
+            args.output.write_text(data)
+        print(data, end="")
 
 
 if __name__ == '__main__':
