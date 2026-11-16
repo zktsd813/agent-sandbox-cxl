@@ -1026,7 +1026,7 @@ def direct_handoff_bench(args):
     smp_workload = vcpus > 1 or getattr(args, "smp_workload", False)
     if not 1 <= vcpus <= 8 or (vcpus != 1 and not linux):
         raise RuntimeError("Multiple vCPUs require a Linux guest, 1..8 CPUs")
-    if smp_workload and (args.dense_working_set or args.resume_profile or args.heartbeat_pit or args.heartbeat_churn):
+    if smp_workload and (args.dense_working_set or args.heartbeat_pit or args.heartbeat_churn):
         raise RuntimeError("SMP workload has its own checksum/clock/interrupt checks")
     base_cpu = args.executor_cpu or 0
     if vcpus > 1 and base_cpu + vcpus > config["l1_vcpus"]:

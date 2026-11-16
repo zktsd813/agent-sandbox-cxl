@@ -119,6 +119,10 @@ def main():
                           "--poll-us", 50, "--dwell-ms", 20, "--reuse-fds"]
             if args.measure:
                 bench_args += ["--smp-workload"]
+            if args.profile:
+                bench_args += ["--profile"]
+            if args.resume_profile:
+                bench_args += ["--resume-profile"]
             if args.test_running_vcpu:
                 bench_args += ["--test-running-vcpu"]
             if args.resident_bench:
