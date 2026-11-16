@@ -248,6 +248,177 @@
       },
       "raw_report": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/stage4-v4-functional/handoff.json",
       "raw_sha256": "db0fa73df310d4987c8743b5ff88dd17701bd7b3aa9aa0749da3ed9d3a16074c"
+    },
+    {
+      "name": "stage8-v1-regression",
+      "source_commit": "7b9ff22177772800987f4b3e194d0970f3d43729",
+      "result": "passed",
+      "vcpus": 1,
+      "handoffs": 12,
+      "validation": {
+        "handoffs": 12,
+        "identical_object_offsets": [
+          4096,
+          69760,
+          106496
+        ],
+        "vm_creates": 1,
+        "vcpu_creates": 1,
+        "continuity_checks": "Linux heartbeat and retained 16MiB heap",
+        "kernel_taint": 0,
+        "snapshot_api_calls": 0,
+        "duplicate_attach_rejected": true,
+        "old_owner_vcpu_access_revoked": true,
+        "all_vcpu_identities_preserved": true,
+        "old_abi_rejected": true,
+        "topology_mismatch_rejected": true,
+        "last_vmcs_mismatch_rejected": true,
+        "identical_ept_root_offset": 294912,
+        "ept_page_count": 42,
+        "boot_markers": 1,
+        "retained_heap_errors": 0,
+        "guest_clock_errors": 0,
+        "guest_tsc_errors": 0,
+        "raw_tsc_check_enabled": true,
+        "host_backwards_tsc_warnings": 0,
+        "firecracker_checks_scanned_full_log": true,
+        "changing_memory_mib": 0,
+        "guest_clocksource": "kvm-clock"
+      },
+      "resources": {
+        "A": {
+          "owned_memory_pages_by_node": {
+            "0": 107302
+          },
+          "cpus_allowed": "0-23"
+        },
+        "B": {
+          "owned_memory_pages_by_node": {
+            "0": 107289
+          },
+          "cpus_allowed": "0-23"
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4007407,
+          4007409
+        ],
+        "backing_removed": true
+      },
+      "raw_report": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/stage8-v1-regression/handoff.json",
+      "raw_sha256": "da87c7a0206706f62ec62548af55fd4e2ebebfc68ef3cc89b77cf2c0e8681255"
+    },
+    {
+      "name": "stage8-v8-functional",
+      "source_commit": "7b9ff22177772800987f4b3e194d0970f3d43729",
+      "result": "passed",
+      "vcpus": 8,
+      "handoffs": 410,
+      "validation": {
+        "handoffs": 410,
+        "identical_object_offsets": [
+          4096,
+          69760,
+          106496
+        ],
+        "vm_creates": 1,
+        "vcpu_creates": 8,
+        "continuity_checks": "8 CPU-pinned checksum writers (512 KiB each), futex ring and per-CPU clock/interrupt checks",
+        "kernel_taint": 0,
+        "snapshot_api_calls": 0,
+        "duplicate_attach_rejected": true,
+        "old_owner_vcpu_access_revoked": true,
+        "all_vcpu_identities_preserved": true,
+        "old_abi_rejected": true,
+        "topology_mismatch_rejected": true,
+        "last_vmcs_mismatch_rejected": true,
+        "smp": {
+          "0": {
+            "sequence_increase": 156043,
+            "timer_increase": 68369,
+            "ipi_increase": 12705,
+            "ping_increase": 15215
+          },
+          "1": {
+            "sequence_increase": 191110,
+            "timer_increase": 8585,
+            "ipi_increase": 15017,
+            "ping_increase": 15215
+          },
+          "2": {
+            "sequence_increase": 191063,
+            "timer_increase": 8585,
+            "ipi_increase": 15038,
+            "ping_increase": 15215
+          },
+          "3": {
+            "sequence_increase": 190755,
+            "timer_increase": 8585,
+            "ipi_increase": 15000,
+            "ping_increase": 15215
+          },
+          "4": {
+            "sequence_increase": 191073,
+            "timer_increase": 8585,
+            "ipi_increase": 15009,
+            "ping_increase": 15214
+          },
+          "5": {
+            "sequence_increase": 191049,
+            "timer_increase": 8585,
+            "ipi_increase": 15028,
+            "ping_increase": 15214
+          },
+          "6": {
+            "sequence_increase": 190994,
+            "timer_increase": 8585,
+            "ipi_increase": 15054,
+            "ping_increase": 15214
+          },
+          "7": {
+            "sequence_increase": 192278,
+            "timer_increase": 8586,
+            "ipi_increase": 15004,
+            "ping_increase": 15214
+          }
+        },
+        "running_last_vcpu_rejected": true,
+        "identical_ept_root_offset": 651264,
+        "ept_page_count": 44,
+        "boot_markers": 1,
+        "retained_heap_errors": 0,
+        "guest_clock_errors": 0,
+        "guest_tsc_errors": 0,
+        "raw_tsc_check_enabled": true,
+        "host_backwards_tsc_warnings": 0,
+        "firecracker_checks_scanned_full_log": true,
+        "changing_memory_mib": 0,
+        "guest_clocksource": "kvm-clock"
+      },
+      "resources": {
+        "A": {
+          "owned_memory_pages_by_node": {
+            "0": 110427
+          },
+          "cpus_allowed": "0-23"
+        },
+        "B": {
+          "owned_memory_pages_by_node": {
+            "0": 110430
+          },
+          "cpus_allowed": "0-23"
+        }
+      },
+      "cleanup": {
+        "qemu_pids": [
+          4007468,
+          4007470
+        ],
+        "backing_removed": true
+      },
+      "raw_report": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/trials/stage8-v8-functional/handoff.json",
+      "raw_sha256": "1f8591b37e771220dda0471ae076749a95e232089ca239d5f60874cd6de4ee69"
     }
   ],
   "measurement": [],
