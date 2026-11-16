@@ -126,6 +126,31 @@ class Protocol(unittest.TestCase):
         self.assertEqual(self.request(3,struct.pack('<IIII',6,1,rpc.CAP,4)+b'/tmp/x'+b'x')[0],125)
         self.assertEqual(self.request(3,struct.pack('<IIII',6,1,4,5)+b'/tmp/x'+b'x')[0],125)
 
+    def test_http_connection_survives_preparation_and_restore(self):
+        address = str(self.root/'http.sock')
+        failures = []
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as listener:
+            listener.bind(address); listener.listen(1)
+            responses = [b'HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}',
+                         b'HTTP/1.1 204 No Content\r\n\r\n']
+            def serve():
+                try:
+                    with listener.accept()[0] as sock:
+                        sock.settimeout(2)
+                        for response in responses:
+                            request = b''
+                            while not request.endswith(b'\r\n\r\n'):
+                                request += sock.recv(1)
+                            sock.sendall(response[:12]); sock.sendall(response[12:])
+                except BaseException as error:
+                    failures.append(error)
+            thread = threading.Thread(target=serve); thread.start()
+            for response in responses:
+                self.assertEqual(self.request(4, address.encode()+b'\0GET / HTTP/1.1\r\n\r\n'), (0, response))
+            thread.join(timeout=3)
+            self.assertFalse(thread.is_alive()); self.assertEqual(failures, [])
+        os.unlink(address)
+
 class Client(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory(prefix='control-client-test-')

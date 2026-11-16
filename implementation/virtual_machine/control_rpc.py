@@ -72,3 +72,14 @@ def unix_exchange(vm, path, request, response_bytes, prefix_bytes, timeout=120):
     path=path.encode()
     return call(vm,3,struct.pack('<IIII',len(path),len(request),response_bytes,prefix_bytes)
                 +path+request,timeout,binary=True)
+
+
+def http(vm, path, method, route, body):
+    data = __import__('json').dumps(body).encode()
+    request = (f'{method} {route} HTTP/1.1\r\nHost: localhost\r\n'
+               f'Content-Type: application/json\r\nContent-Length: {len(data)}\r\n\r\n').encode()+data
+    start = time.monotonic_ns()
+    response = call(vm, 4, path.encode()+b'\0'+request, 120)
+    status = int(response.split(' ', 2)[1])
+    return 'LAB_API_JSON '+__import__('json').dumps({'status': status, 'expected_status': 204,
+        'duration_us': (time.monotonic_ns()-start)/1000})+'\n'+response

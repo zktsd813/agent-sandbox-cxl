@@ -22,6 +22,7 @@ def main():
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--keep-guest-images',action='store_true',help='Only update L1 executables and init, preserving embedded L2 fixtures')
     parser.add_argument('--kvm-module-dir',type=Path,help='Use rebuilt disposable-L1 kvm.ko and kvm-intel.ko from this directory')
+    parser.add_argument('--shared-probe',type=Path,help='Use a rebuilt static probe, including KVM keepalive')
     args=parser.parse_args()
     base=args.base_assets.resolve(strict=True);fc=args.firecracker.resolve(strict=True)
     dest=args.output.resolve()
@@ -43,6 +44,9 @@ def main():
         shutil.copy2(dest/'resident-control',root/'lab/resident-control')
         shutil.copy2(dest/'resident-bootstrap',root/'lab/resident-bootstrap')
         shutil.copy2(dest/'control-rpc',root/'lab/control-rpc')
+        if args.shared_probe:
+            shutil.copy2(args.shared_probe, dest/'shared-probe')
+            shutil.copy2(args.shared_probe, root/'lab/shared-probe')
         shutil.copy2(HERE/'guest-init.sh',root/'init')
         (root/'init').chmod(0o755)
         if args.kvm_module_dir:
@@ -82,7 +86,7 @@ def main():
         'binary_sha256':lab.sha256(dest/'resident-bootstrap')}
     original['control_rpc']={'source_sha256':lab.sha256(HERE/'control_rpc.c'),
         'binary_sha256':lab.sha256(dest/'control-rpc'), 'init_sha256':lab.sha256(HERE/'guest-init.sh'),
-        'operations':[1,2,3]}
+        'operations':[1,2,3,4]}
     original['artifacts']={p.name:lab.sha256(p) for p in dest.iterdir() if p.is_file() and p.name!='manifest.json'}
     lab.save_json(dest/'manifest.json',original)
     print(json.dumps({'assets':str(dest),'firecracker':vmm,'controller':original['resident_control']},indent=2))

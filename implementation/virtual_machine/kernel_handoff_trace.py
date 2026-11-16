@@ -13,6 +13,45 @@ OPTIONAL_FUNCTIONS={'nested_root':('kvm','kvm_dax_nested_root_sync'),
                     'tlb_guest':('kvm_intel','vmx_flush_tlb_guest')}
 
 
+def trajectory_start(c):
+    # Histograms count in-kernel without filling a ring buffer per fault.
+    # Ring tracing is reserved for the infrequent nested handoff probes.
+    start(c)
+    for role in ('A', 'B'):
+        script = 'T=/sys/kernel/tracing\n'
+        for name, symbol in (('create_vm', 'kvm_create_vm'), ('create_vcpu', 'kvm_vm_ioctl_create_vcpu')):
+            script += f"echo 'p:trajectory/{name} kvm:{symbol}' >> $T/kprobe_events\n"
+        for event in ('kvm/kvm_exit', 'kvm/kvm_page_fault', 'trajectory/create_vm', 'trajectory/create_vcpu'):
+            suffix = ' if exit_reason == 48' if event == 'kvm/kvm_exit' else ''
+            script += f"echo 'hist:keys=common_pid{suffix}' > $T/events/{event}/trigger\n"
+        c.shell(role, script, 'trajectory-count-start')
+
+
+def trajectory_counts(c):
+    result = {}
+    for role in ('A', 'B'):
+        counts = {}
+        for name, event in (('ept_violation', 'kvm/kvm_exit'), ('page_fault', 'kvm/kvm_page_fault'),
+                            ('create_vm', 'trajectory/create_vm'), ('create_vcpu', 'trajectory/create_vcpu')):
+            raw, file = c.shell(role, f'cat /sys/kernel/tracing/events/{event}/hist', 'trajectory-'+name)
+            totals = re.findall(r'Totals:\s*Hits:\s*(\d+)\s+Entries:\s*(\d+)\s+Dropped:\s*(\d+)', raw)
+            if len(totals) != 1 or int(totals[0][2]):
+                raise ValueError('Missing or dropped histogram: '+raw)
+            counts[name] = int(totals[0][0])
+            counts[name+'_file'] = file
+        result[role] = counts
+    return result
+
+
+def trajectory_mappings(c, s):
+    raw, file = c.shell(s.role, f'read p t < {s.directory}/fc.pid\n'
+        '/lab/shared-probe vm-stats "$p"', 'trajectory-spte')
+    sizes = {name:int(value) for name,value in re.findall(r'^(pages_[421][kmg]) (\d+)\s*$', raw, re.M)}
+    if set(sizes) != {'pages_4k', 'pages_2m', 'pages_1g'}:
+        raise ValueError('Actual leaf mapping counters missing: '+raw)
+    return {'role': s.role, 'file': file, **sizes}
+
+
 def start(c, *, reuse=False):
     script='mount -t tracefs tracefs /sys/kernel/tracing 2>/dev/null || true\nT=/sys/kernel/tracing\necho 0 > $T/tracing_on\necho nop > $T/current_tracer\necho mono > $T/trace_clock\necho 1024 > $T/buffer_size_kb\necho > $T/trace\n'
     for name,(module,function) in ({} if reuse else FUNCTIONS | OPTIONAL_FUNCTIONS).items():

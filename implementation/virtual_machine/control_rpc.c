@@ -89,6 +89,41 @@ done:
  if(fd>=0)close(fd);
  free(response);return status;
 }
+// Persistent HTTP connections, prepared before pause. Ordinary Firecracker
+// API replies are bounded and framed by Content-Length (204 has no body).
+static int http(const char *body,uint32_t bytes,int output,unsigned timeout_ms) {
+ static int fd=-1;
+ static char previous[108];
+ const char *split=memchr(body,0,bytes);
+ if(!split)return 125;
+ size_t length=split-body;
+ if(length<5||length>=sizeof(previous)||(strncmp(body,"/run/",5)&&strncmp(body,"/tmp/",5)))return 125;
+ if(fd<0||strcmp(previous,body)) {
+  if(fd>=0)close(fd);
+  fd=socket(AF_UNIX,SOCK_STREAM|SOCK_CLOEXEC,0);
+  struct sockaddr_un address={.sun_family=AF_UNIX};
+  memcpy(address.sun_path,body,length);
+  if(fd<0||connect(fd,(void *)&address,sizeof(address)))goto fail;
+  strcpy(previous,body);
+ }
+ if(transfer(fd,(void *)(split+1),bytes-length-1,1,timeout_ms))goto fail;
+ char response[65536];size_t used=0,total=0;
+ while(used<sizeof(response)-1) {
+  if(transfer(fd,response+used,1,0,timeout_ms))goto fail;
+  response[++used]=0;
+  if(used>=4&&!memcmp(response+used-4,"\r\n\r\n",4)) {
+   const char *size=strcasestr(response,"\r\nContent-Length:");
+   total=used+(size?strtoul(size+17,NULL,10):0);
+   break;
+  }
+ }
+ if(!total||total>=sizeof(response))goto fail;
+ if(transfer(fd,response+used,total-used,0,timeout_ms)||transfer(output,response,total,1,timeout_ms))goto fail;
+ return 0;
+fail:
+ if(fd>=0)close(fd);
+ fd=-1;return 125;
+}
 int main(int argc,char **argv) {
  if(argc!=3||strlen(argv[2])>32||!strlen(argv[2])||strspn(argv[2],"0123456789abcdef")!=strlen(argv[2]))return 2;
  char nonce[32]={0};memcpy(nonce,argv[2],strlen(argv[2]));
@@ -120,6 +155,8 @@ int main(int argc,char **argv) {
    if(transfer(output,(void *)message,strlen(message),1,q.timeout_ms))die("error output");
   } else if(q.operation==1 && !memchr(body,0,q.bytes)) {
    r.status=execute(body,output,q.timeout_ms);
+  } else if(q.operation==4) {
+   r.status=http(body,q.bytes,output,q.timeout_ms);
   } else if(q.operation==3) {
    r.status=relay(body,q.bytes,output,q.timeout_ms);
   } else if(q.operation==2 && q.bytes>=8) {

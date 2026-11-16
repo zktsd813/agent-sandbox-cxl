@@ -65,7 +65,11 @@ class Controller:
             self.control_timings[-1]['rpc'] = dict(self.vms[role]['_last_control_timing'])
         return raw, name
     def api(self, role, directory, path, method, body):
-        raw = nfs.api(self.vms[role], directory, path, method, body)
+        if getattr(getattr(self, 'args', None), 'trajectory_policy', None):
+            import control_rpc
+            raw = control_rpc.http(self.vms[role], directory+'/api.sock', method, path, body)
+        else:
+            raw = nfs.api(self.vms[role], directory, path, method, body)
         name = self.raw("api", raw)
         values = json_lines(raw, "LAB_API_JSON ")
         require(len(values) == 1 and values[0]["status"] == 204, f"API failed: {raw}")
@@ -217,7 +221,8 @@ class HandoffController(Controller):
     def __init__(self, config, out, args):
         Controller.__init__(self, config, out, args.memory_mib, 1)
         self.args, self.mode = args, args.mode
-        self.metadata_base = 8192 * MIB
+        self.metadata_base = (4096 if config.get('cxl_mib') == 8192 else 8192) * MIB
+        self.arena_base = (6144 if config.get('cxl_mib') == 8192 else 12288) * MIB
         self.fixture = json.loads((Path(config['assets']) / 'manifest.json').read_text())
         self.trace = self.fixture['traces'][args.name]
         self.root = '/run/swe-handoff-' + os.urandom(8).hex()
@@ -330,7 +335,7 @@ class HandoffController(Controller):
                 FC_RESIDENT_BLOCK_PATH="/disk/sandbox.raw")
         if restore_manifest:
             local = s.directory + "/restore-manifest.json"
-            if purpose != "resident-prepare":
+            if purpose not in ("resident-prepare", "snapshot-prepare"):
                 self.shell(s.role, f"mkdir -p {s.directory}\ncp {shlex.quote(restore_manifest)} {local}",
                            "local-memory-manifest", 120)
             env["FC_POOL_MEMORY_RESTORE"] = local
@@ -398,9 +403,9 @@ class HandoffController(Controller):
                 'echo 1 > /sys/module/kvm/parameters/dax_nested_root_sync\n'
                 'echo 1 > /sys/module/kvm/parameters/dax_scattered\n'
                 'echo $resource > /sys/module/kvm/parameters/dax_data_base\n'
-                f'echo {8192*MIB} > /sys/module/kvm/parameters/dax_data_bytes\n'
+                f'echo {self.metadata_base} > /sys/module/kvm/parameters/dax_data_bytes\n'
                 f'echo {node} > /sys/module/kvm/parameters/dax_node\necho {mode} > /sys/module/kvm/parameters/dax_shared\n'
-                f"printf '%x,%x\\n' \"$((resource + {12288*MIB}))\" {128*MIB} > /sys/module/kvm/parameters/dax_pool\n"
+                f"printf '%x,%x\\n' \"$((resource + {self.arena_base}))\" {128*MIB} > /sys/module/kvm/parameters/dax_pool\n"
                 'cat /sys/module/kvm/parameters/dax_pool', 'direct-kernel-setup')
 
     def boot_vm(self, s):
@@ -425,7 +430,7 @@ class HandoffController(Controller):
                 lab.snapshot_cleanup_script(include_boot_vm=True) +
                 f'\nmkdir -p {self.root} /storage /disk /remote', 'prepare')
         name = self.trace['name']
-        immutable_cache = self.mode == 'direct'
+        immutable_cache = True
         self.shell('A', f'mount -t ext4 -o rw,noatime {device} /storage\n'
             f'ln {shlex.quote("/storage/" + name + ".raw")} /storage/sandbox.raw\n'
             + ('mount -o remount,ro /storage\n' if immutable_cache else '') +
@@ -444,7 +449,15 @@ class HandoffController(Controller):
                 'echo 1 > /sys/module/kvm/parameters/dax_scattered', 'pool-driver')
         for role in ('A', 'B'):
             self.shell(role, 'sync\necho 3 > /proc/sys/vm/drop_caches', 'initial-host-cache-drop')
-        return {'immutable_nfs_cache': immutable_cache}
+        self.keepalives = []
+        for role in ('A', 'B'):
+            directory = self.root+'/keepalive'
+            raw, name = self.shell(role, f'mkdir {directory}\n'
+                f'/lab/shared-probe kvm-keepalive > {directory}/log 2>&1 &\n'+nfs.record_pid(directory)+
+                f'n=0\nwhile ! grep -q KVM_KEEPALIVE_READY {directory}/log; do\n'
+                'n=$((n+1))\n[ $n -lt 100 ]\nsleep .01\ndone\n'+f'cat {directory}/log', 'keepalive')
+            self.keepalives.append({'role': role, 'directory': directory, 'file': name})
+        return {'immutable_nfs_cache': immutable_cache, 'keepalive': self.keepalives}
 
     def wait_event(self, role, directory, event, label=None, timeout=120):
         pattern = f'"event":"{event}"'
@@ -465,9 +478,11 @@ class HandoffController(Controller):
         self.serial_number += 1
         token = f'v{s.vm}e{s.epoch}c{self.serial_number}'
         command = f'{operation} {args[0]} {token}' if operation in ('run', 'run_async') else ' '.join([operation, token, *map(str,args)])
+        sent_ns = time.monotonic_ns()
         self.shell(s.role, f"printf '%s\\n' {shlex.quote(command)} > {s.directory}/input", 'guest-input')
         row = self.wait_event(s.role, s.directory, event or 'trace_identity', token, timeout)
-        row.update(vm=s.vm, role=s.role, tier=s.tier, epoch=s.epoch, operation=operation, arguments=list(args))
+        row.update(vm=s.vm, role=s.role, tier=s.tier, epoch=s.epoch, operation=operation, arguments=list(args),
+                   host_send_ns=sent_ns, host_receive_ns=time.monotonic_ns())
         self.commands.append(row)
         return row
 
@@ -516,9 +531,32 @@ class HandoffController(Controller):
         self.receipts.append({'file': name, 'kind': kind, 'sha256': hashlib.sha256(data).hexdigest()})
         return data, name
 
+    def prepare_snapshot_target(self, s, destination):
+        import copy
+        target = copy.copy(s)
+        target.role, target.epoch = destination, s.epoch + 1
+        started = time.monotonic_ns()
+        self.start_vm(target, restore_manifest='deferred', purpose='snapshot-prepare')
+        # An empty API process has no KVM VM/vCPU. Its deferred manifest is
+        # published only after snapshot/create has sealed the source mapper.
+        raw, evidence = self.shell(destination,
+            f'read p t < {target.directory}/fc.pid\ncat /proc/$p/maps\nls -l /proc/$p/fd', 'snapshot-ready')
+        require('kvm-vm' not in raw and 'kvm-vcpu' not in raw, 'Prepared snapshot worker owns a VM')
+        if getattr(self.args, 'trajectory_policy', None):
+            import control_rpc
+            self.raw('snapshot-control-ready', control_rpc.http(self.vms[destination],
+                target.directory+'/api.sock', 'GET', '/', {}))
+        target.preparation = {'ready_ns': time.monotonic_ns(), 'start_ns': started,
+                              'file': evidence, 'directory': target.directory, 'source_paused': False}
+        self.snapshot_target = target
+        return target.preparation
+
     def state_handoff(self, s, destination):
         require(self.mode == 'state-only' and s.tier == 'cxl' and destination != s.role, 'Invalid state handoff')
         source, old_directory, old_epoch = s.role, s.directory, s.epoch
+        target = getattr(self, 'snapshot_target', None)
+        require(target is not None and target.role == destination and target.epoch == s.epoch + 1,
+                'Prepare a fresh snapshot destination before requesting handoff')
         started = time.monotonic_ns()
         self.pause(s)
         state_path = old_directory + '/state-only.bin'
@@ -531,15 +569,13 @@ class HandoffController(Controller):
         manifest_file = self.receipts[-1]['file']
         require(0 < len(state) < MIB, 'Unexpected state-only payload size')
         stopped = self.raw('state-source-stop', nfs.stop_fc(self.vms[source], old_directory))
-        s.epoch += 1
-        s.role = destination
-        target = f'{self.root}/vm{s.vm}-epoch{s.epoch}'
-        self.shell(destination, f'mkdir -p {target}', 'destination-directory')
-        self.write_bytes(destination, target+'/state-only.bin', state, 'state-only-transfer')
-        self.write_bytes(destination, target+'/incoming-manifest.json', manifest, 'placement-transfer')
-        self.start_vm(s, restore_manifest=target+'/incoming-manifest.json')
+        self.write_bytes(destination, target.directory+'/state-only.bin', state, 'state-only-transfer')
+        self.write_bytes(destination, target.directory+'/restore-manifest.json', manifest, 'placement-transfer')
+        s.epoch, s.role = target.epoch, destination
+        for key in ('directory', 'plan', 'report', 'manifest_path'):
+            setattr(s, key, getattr(target, key))
         # Restore consumes the sealed handle and resumes only after validation.
-        load = self.api(destination, s.directory, '/snapshot/load', 'PUT', {'snapshot_path': target+'/state-only.bin',
+        load = self.api(destination, s.directory, '/snapshot/load', 'PUT', {'snapshot_path': target.directory+'/state-only.bin',
             'mem_backend': {'backend_type': 'File', 'backend_path': '/dev/dax0.0'}, 'resume_vm': True})
         s.manifest = None
         row = {'kind': 'state-only', 'runtime_path': 'state-v2', 'vm': s.vm, 'source': source, 'destination': destination,
@@ -547,7 +583,10 @@ class HandoffController(Controller):
             'source_stop_file': stopped, 'create_api': create, 'load_api': load,
             'state_file': state_file, 'state_bytes': len(state),
             'manifest_file': manifest_file, 'manifest_bytes': len(manifest), 'ram_snapshot_bytes': 0,
-            'ram_transfer_bytes': 0, 'controller_pause_to_resume_ns': time.monotonic_ns()-started, 'result': 'passed'}
+            'ram_transfer_bytes': 0, 'request_ns': started, 'resume_ns': time.monotonic_ns(),
+            'preparation': target.preparation,
+            'controller_pause_to_resume_ns': time.monotonic_ns()-started, 'result': 'passed'}
+        self.snapshot_target = None
         self.transitions.append(row)
         return row
 
@@ -695,6 +734,72 @@ class HandoffController(Controller):
         return operation
 
 
+def trajectory_replay(c, s, report, save):
+    import kernel_handoff_trace as kt
+    args = c.args
+    heavy = json.loads(Path(args.heavy_plan).read_text())['indices'][args.name]
+    moving = args.mode != 'baseline'
+    boundaries = [x['index'] for x in c.trace['commands']
+                  if moving and (args.trajectory_policy == 'all' or x['index'] in heavy)]
+    report['boundaries'] = boundaries
+    c.promote(s)  # All modes, including no-move, execute from the same CXL RAM.
+    if args.mode == 'direct':
+        from resident_fast import prepare
+        prepare(c, s)
+    if args.mode == 'state-only' and boundaries:
+        c.prepare_snapshot_target(s, 'B')
+    if args.count_faults:
+        kt.trajectory_start(c)
+        report['fault_initial'] = kt.trajectory_counts(c)
+    started = time.monotonic_ns()
+    for command in c.trace['commands']:
+        index = command['index']
+        if index in boundaries:
+            destination = 'B' if s.role == 'A' else 'A'
+            requested = time.monotonic_ns()
+            hop = (c.direct_handoff if s.direct else c.state_handoff)(s, destination)
+            hop.update(host_request_ns=requested, host_resume_ns=time.monotonic_ns(), before_command=index)
+            if args.count_faults and args.mode == 'state-only':
+                raw, file = c.shell(s.role, f'read p t < {s.directory}/fc.pid\n'
+                    f'cat /proc/$p/maps\nls -l /proc/$p/fd\ncat {s.report}', 'snapshot-restored')
+                require('kvm-vm' in raw and 'kvm-vcpu' in raw, 'Restored KVM objects missing')
+                hop['restored_file'] = file
+        before = kt.trajectory_counts(c) if args.count_faults else None
+        row = c.trace_command(s, 'run', index, event='trace_end',
+                              timeout=int(c.trace['environment'].get('timeout', 60))+30)
+        value = row['receipt']
+        require(not value['timed_out'] and value['command_sha256'] == command['command_sha256'] and
+                value['rc'] == (command['expected_returncode'] or 0), f'Trace diverged at {index}: {value}')
+        row['guest_duration_s'] = value['end_s']-value['start_s']
+        row['host_duration_ns'] = row['host_receive_ns']-row['host_send_ns']
+        if args.count_faults:
+            after = kt.trajectory_counts(c)
+            row['fault_before'], row['fault_after'] = before, after
+            row['faults'] = {role: {key: after[role][key]-before[role][key]
+                for key in ('ept_violation', 'page_fault')} for role in ('A', 'B')}
+        c.trace_commands.append(row)
+        # Keep the next fresh destination ready while the current VM owns RAM.
+        # This preparation is outside pause and command intervals; its wall
+        # cost remains visible in observed_replay_ns.
+        if args.mode == 'state-only' and index in boundaries and index != boundaries[-1]:
+            c.prepare_snapshot_target(s, 'B' if s.role == 'A' else 'A')
+        save()
+    report['observed_replay_ns'] = time.monotonic_ns()-started
+    report['trajectory_handoff_ns'] = sum(t['host_resume_ns']-t['host_request_ns']
+        for t in c.transitions if 'host_request_ns' in t)
+    report['trajectory_total_ns'] = report['trajectory_handoff_ns'] + sum(x['host_duration_ns'] for x in c.trace_commands)
+    report['trajectory_clock'] = 'L0 CLOCK_MONOTONIC ns; send FIFO request through RPC to complete trace_end receipt. Includes control polling. Total=sum(command intervals)+request-to-resume intervals. Observed wall includes preparation, collection and JSON writes.'
+    if args.count_faults:
+        report['fault_final'] = kt.trajectory_counts(c)
+        report['spte_final'] = kt.trajectory_mappings(c, s)
+        for role in ('A', 'B'):
+            raw, file = c.shell(role, 'T=/sys/kernel/tracing\necho 0 > $T/tracing_on\n'
+                'cat $T/trace\ncat $T/per_cpu/cpu*/stats', 'trajectory-nested-trace')
+            report.setdefault('nested_traces', []).append({'role': role, 'file': file,
+                'intervals': kt.parse(raw) if args.mode == 'direct' and boundaries else []})
+    c.demote(s)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--mode', choices=('baseline','state-only','direct'), required=True)
@@ -706,6 +811,9 @@ def main():
     parser.add_argument("--inflight-handoff-index", type=int, help="Test two handoffs while this real command is alive")
     parser.add_argument("--resident-repromote-handoff", action="store_true")
     parser.add_argument("--direct-profile-roundtrips", type=int, default=0)
+    parser.add_argument('--trajectory-policy', choices=('heavy', 'all'))
+    parser.add_argument('--heavy-plan')
+    parser.add_argument('--count-faults', action='store_true')
     args = parser.parse_args()
     require(0 <= args.direct_profile_roundtrips <= 20 and
             (not args.direct_profile_roundtrips or args.mode == 'direct'), 'Invalid direct profile repetitions')
@@ -714,7 +822,7 @@ def main():
     require(not args.kernel_trace or args.mode == 'direct', 'Kernel tracing requires direct mode')
     require(args.memory_mib == 2048, 'Use the bounded 2GiB workload layout')
     run, config = lab.current_run()
-    require(config['cxl_mib'] == 16384 and bool(config.get('dax_handoff')) == (args.mode == 'direct'), 'Wrong fresh pair mode/capacity')
+    require(config['cxl_mib'] in (8192, 16384) and bool(config.get('dax_handoff')) == (args.mode == 'direct'), 'Wrong fresh pair mode/capacity')
     out = run / ('swe-handoff-' + str(time.time_ns()))
     out.mkdir()
     c = HandoffController(config, out, args)
@@ -726,7 +834,7 @@ def main():
         'api_events': c.api_events, 'launches': c.launches,
         'resident_readiness':c.resident_readiness, 'resident_preparations':c.resident_preparations,
         'allocator_events': c.allocator.events, 'audits': c.audits,
-        'layout': {'private_start': 2*MIB, 'private_end': 3072*MIB, 'kvm_arena': 12288*MIB},
+        'layout': {'private_start': 2*MIB, 'private_end': 3072*MIB, 'kvm_arena': c.arena_base},
         'limitations': ['Coherent nested KVM; one run per trace/mode', ('Two extra handoffs inside a running command' if args.inflight_handoff_index is not None else 'Transitions between recorded commands'),
             'Same patched DRAM baseline, not pristine Firecracker', 'One VM per trial; full private RAM copy for tier changes']}
     sources = ('experiment_sources.py', 'handoff_bench.py', 'swe-handoff-l2-init.sh', 'swe-handoff-guest-run.sh',
@@ -751,7 +859,9 @@ def main():
         require(args.inflight_handoff_index is None or first <= args.inflight_handoff_index < second,
                 'In-flight command must run on remote CXL before demotion')
         started = time.monotonic_ns()
-        for command in c.trace['commands']:
+        if args.trajectory_policy:
+            trajectory_replay(c, s, report, save)
+        for command in ([] if args.trajectory_policy else c.trace['commands']):
             index = command['index']
             if args.mode != 'baseline' and index in (first,second):
                 if index == first:
@@ -759,6 +869,8 @@ def main():
                     if args.mode == 'direct':
                         from resident_fast import prepare
                         prepare(c, s)
+                    else:
+                        c.prepare_snapshot_target(s, 'B')
                     for _ in range(args.direct_profile_roundtrips):
                         c.direct_handoff(s, 'B')
                         c.direct_handoff(s, 'A')
@@ -766,6 +878,7 @@ def main():
                     (c.direct_handoff if s.direct else c.state_handoff)(s,'B')
                 else:
                     if args.full_audit: c.audit_memory(s)
+                    if args.mode == 'state-only': c.prepare_snapshot_target(s, 'A')
                     (c.direct_handoff if s.direct else c.state_handoff)(s,'A')
                     c.demote(s)
                 save()
@@ -779,7 +892,7 @@ def main():
             row.update(guest_duration_s=value['end_s']-value['start_s'])
             c.trace_commands.append(row)
             save()
-        if args.mode != 'baseline':
+        if args.mode != 'baseline' and not args.trajectory_policy:
             c.promote(s)
             if args.resident_repromote_handoff:
                 c.direct_handoff(s, 'B')
@@ -803,6 +916,12 @@ def main():
         report.update(result='failed',error=repr(exc))
         raise
     finally:
+        report['keepalive_cleanup'] = []
+        for keeper in getattr(c, 'keepalives', []):
+            role, directory = keeper['role'], keeper['directory']
+            nfs.stop_fc(c.vms[role], directory)
+            raw, name = c.shell(role, source_fence_script(directory), 'keepalive-final-fence')
+            report['keepalive_cleanup'].append({**keeper, 'file': name, 'fenced': 'FENCED ' in raw})
         report['controller_cleanup'] = []
         for role, server in getattr(c, 'resident_servers', {}).items():
             nfs.stop_fc(c.vms[role], server['directory'])

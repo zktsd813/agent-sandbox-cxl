@@ -2519,6 +2519,54 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
 
 int main(int argc, char **argv)
 {
+    if (argc == 3 && !strcmp(argv[1], "vm-stats")) {
+        int pid = atoi(argv[2]), found = 0;
+        if (pid <= 1) return 2;
+        int pidfd = syscall(SYS_pidfd_open, pid, 0);
+        if (pidfd < 0) die("stats pidfd");
+        char path[128], link[256];
+        snprintf(path, sizeof(path), "/proc/%d/fd", pid);
+        DIR *dir = opendir(path);
+        if (!dir) die("stats fd directory");
+        struct dirent *entry;
+        while ((entry = readdir(dir))) {
+            snprintf(path, sizeof(path), "/proc/%d/fd/%d", pid, atoi(entry->d_name));
+            ssize_t size = readlink(path, link, sizeof(link)-1);
+            if (size < 0) continue;
+            link[size] = 0;
+            if (!strstr(link, "kvm-vm")) continue;
+            int vm = syscall(SYS_pidfd_getfd, pidfd, atoi(entry->d_name), 0);
+            if (vm < 0) die("stats getfd");
+            int stats = ioctl(vm, KVM_GET_STATS_FD, 0);
+            if (stats < 0) die("KVM stats fd");
+            struct kvm_stats_header header;
+            if (pread(stats, &header, sizeof(header), 0) != sizeof(header)) die("stats header");
+            size_t stride = sizeof(struct kvm_stats_desc)+header.name_size;
+            if (!header.num_desc || header.num_desc > 4096 || stride > 4096) return 1;
+            char *data = malloc(stride);
+            for (unsigned i = 0; i < header.num_desc; i++) {
+                if (pread(stats, data, stride, header.desc_offset+i*stride) != (ssize_t)stride) die("stats descriptor");
+                struct kvm_stats_desc *desc = (void *)data;
+                if (!memchr(desc->name, 0, header.name_size)) return 1;
+                if (!strcmp(desc->name, "pages_4k") || !strcmp(desc->name, "pages_2m") || !strcmp(desc->name, "pages_1g")) {
+                    uint64_t value;
+                    if (pread(stats, &value, sizeof(value), header.data_offset+desc->offset) != sizeof(value)) die("stats value");
+                    printf("%s %"PRIu64"\n", desc->name, value); found++;
+                }
+            }
+            free(data); close(stats); close(vm);
+        }
+        closedir(dir); close(pidfd);
+        return found == 3 ? 0 : 1;
+    }
+    if (argc == 2 && !strcmp(argv[1], "kvm-keepalive")) {
+        int kvm = open("/dev/kvm", O_RDWR | O_CLOEXEC);
+        if (kvm < 0) die("keepalive open");
+        int vm = ioctl(kvm, KVM_CREATE_VM, 0);
+        if (vm < 0) die("keepalive VM");
+        puts("KVM_KEEPALIVE_READY"); fflush(stdout);
+        for (;;) pause();
+    }
     if (argc > 1 && !strcmp(argv[1], "api")) {
         if ((argc != 6 && argc != 7) || !*argv[2] || strlen(argv[2]) >= sizeof(((struct sockaddr_un *)0)->sun_path) ||
             !*argv[3] || strpbrk(argv[3], " \t\r\n") || argv[4][0] != '/' || strpbrk(argv[4], " \r\n")) {
