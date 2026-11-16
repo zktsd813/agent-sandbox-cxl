@@ -318,6 +318,8 @@ def verify_trace(e, report):
     boot, pid, inode = (identities[0][k] for k in ("boot_id", "pid", "fd_inode"))
     need((boot, pid) == (ready["boot_id"], ready["pid"]) and ready["command_count"] == len(commands), "boot workload identity")
     need([row["fd_ordinal"] for row in identities] == list(range(len(identities))), "FD observation sequence reset/gap")
+    auxiliary = report.get('parallel_build')
+    aux_end = guest(e, auxiliary['ended'], 'trace_build_end') if auxiliary else None
     for identity in identities:
         need((identity["boot_id"], identity["pid"], identity["fd_inode"]) == (boot, pid, inode)
              and identity["fd_deleted"] is True and inode > 0, "guest process or open FD replaced")
@@ -327,8 +329,32 @@ def verify_trace(e, report):
         complete = identity["next_index"]
         need(0 <= complete <= len(commands), "identity progress range")
         state = f"{boot} {complete} {raw_ends[complete - 1]['output_sha256']}\n" if complete else f"{boot} 0\n"
+        if aux_end and int(identity['label'].rsplit('c',1)[1]) > int(aux_end['label'].rsplit('c',1)[1]):
+            state = f"{boot} {complete} {aux_end['output_sha256']}\n"
         need(identity["sentinel_sha256"] == sha(state.encode()), "mutable trace state changed")
-    need(files["results/state"] == f"{boot} {len(commands)} {raw_ends[-1]['output_sha256']}\n".encode(), "final guest state")
+    final_hash = aux_end['output_sha256'] if aux_end else raw_ends[-1]['output_sha256']
+    need(files["results/state"] == f"{boot} {len(commands)} {final_hash}\n".encode(), "final guest state")
+    if auxiliary:
+        start = guest(e, auxiliary['started'], 'trace_async_started')
+        need(aux_end['index'] == len(commands) == start['index'] == aux_end['next_index'] and
+             aux_end['rc'] == 0 and aux_end['timed_out'] is False and aux_end['run_label'] == start['label'],
+             'auxiliary build failed or changed trace progress')
+        prefix='results/parallel-build'
+        need(json.loads(files[prefix+'.json']) == aux_end and sha(files[prefix+'.out']) == aux_end['output_sha256']
+             and sha(files[prefix+'.command']) == aux_end['command_sha256']
+             and auxiliary['command'].encode() in files[prefix+'.command'], 'auxiliary build bytes changed')
+        observations=auxiliary['observations']
+        need(len(observations)==7, 'incomplete build observations')
+        for observation in observations:
+            live=guest(e,observation,'trace_running')
+            need(live['active'] is True and live['process_state'] not in ('Z','X','x','missing') and
+                 all(live[k]==start[k] for k in ('index','command_pid','start_ticks')), 'build process replaced or stopped')
+        snapshots=[files[prefix+'.cpu-'+suffix] for suffix in
+                   ['before', *[o['receipt']['label'] for o in observations], 'after']]
+        counters=[[list(map(int,line.split()[1:8+1])) for line in sample.decode().splitlines()] for sample in snapshots]
+        need(all(len(sample)==report['arguments']['vcpus'] for sample in counters), 'build CPU count changed')
+        for before,after in zip(counters,counters[1:]):
+            need(all(all(b>=a for a,b in zip(x,y)) for x,y in zip(before,after)), 'build CPU counters went backwards')
     need(math.isclose(duration, report["guest_duration_s"], abs_tol=1e-8), "aggregate command duration changed")
     return {"commands": len(commands), "returncodes": [r["rc"] for r in raw_ends], "submission": submitted,
             "tests": tests, "guest_command_seconds": duration, "block_read_ios": read_ios,
@@ -665,6 +691,17 @@ def verify(path):
         order = [proof['started']['file'],observed[0]['file'],files[0],observed[1]['file'],
                  files[1],observed[2]['file'],command['file']]
         need([e.order[f] for f in order] == sorted(e.order[f] for f in order), 'In-flight evidence reordered')
+    if r['arguments'].get('parallel_build'):
+        build=r['parallel_build']; selected=[h for h in handoffs if h['fast_file'] in build['hops']]
+        need(len(selected)==(6 if r['mode']=='direct' else 0), 'parallel build handoff count')
+        need([h['fast_file'] for h in selected]==build['hops'], 'parallel build handoffs reordered')
+        order=[build['started']['file']]
+        for i,observation in enumerate(build['observations']):
+            need(observation['role']==('B' if r['mode']=='direct' and i%2 else 'A'), 'parallel build endpoint')
+            order.append(observation['file'])
+            if i<len(selected): order.append(selected[i]['fast_file'])
+        order.append(build['ended']['file'])
+        need([e.order[f] for f in order]==sorted(e.order[f] for f in order), 'parallel build evidence reordered')
     return {'result':'passed','mode':r['mode'],'trace':r['trace']['name'],
         'report_sha256':sha(path.read_bytes()),**execution_identity(r),**workload,
         'transitions':dict(counts),'inflight_commands':len(inflight),
