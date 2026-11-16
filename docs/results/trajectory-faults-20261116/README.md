@@ -1,6 +1,6 @@
 # 궤적 전체의 복원 fault 비용 (2026-11-16)
 
-1–4단계의 측정 결과다. Prefault 추가는 다음 단계에서 진행한다.
+본문은 1–4단계의 확정 결과다. 5단계의 예비 채우기 구현과 추가 실험은 [PREFAULT.md](PREFAULT.md)에 둔다.
 
 가상 머신(VM, virtual machine)의 메모리를 Compute Express Link(CXL)에 둔다.
 Snapshot은 매번 새 Kernel-based Virtual Machine(KVM) 객체를 만든다.
@@ -12,7 +12,7 @@ Direct hand-off는 기존 확장 페이지 테이블(EPT, extended page tables)�
 - bud05, Xeon Gold 6548Y+, host 메모리 node 0만 쓴다.
 - 모든 실행은 `numactl --cpunodebind=0 --membind=0` 아래다.
 - 물리 host를 L0이라 쓴다. Nested lab의 바깥 QEMU가 L1 A/B다. 그 안의 Firecracker VM이 L2다.
-- L1은 각각 6 GiB, 가상 CPU(vCPU) 4개다. 공유 CXL backing은 8 GiB다.
+- L1은 각각 6 GiB, 가상 중앙처리장치(vCPU, virtual central processing unit) 4개다. 공유 CXL backing은 8 GiB다.
   공유 제어 메모리는 64 MiB다. 예산은 20,544 MiB다.
 - L2는 2 GiB, 1 vCPU다. 실행 CPU 범위는 8–15다.
 - 모든 방식의 L1 CPU 모델에서 AMX(Advanced Matrix Extensions)와
@@ -22,7 +22,7 @@ Direct hand-off는 기존 확장 페이지 테이블(EPT, extended page tables)�
 - L1 KVM은 모두 `nx_huge_pages=never enable_pmu=0`이다.
   Intel 모듈은 `pml=0 enable_apicv=0 flexpriority=0 preemption_timer=0`이다.
   PMU(performance monitoring unit)와 page modification logging(PML)을 끈다.
-  인터럽트 가상화(APICv)와 관련 timer도 같은 설정이다.
+  인터럽트 가상화(APICv, Advanced Programmable Interrupt Controller virtualization)와 관련 timer도 같은 설정이다.
   이 값은 각 L1의 sysfs에서 읽어 결과 identity에 넣었다.
 - VM을 띄울 때마다 `lab.lock`을 잡고 node 0 free를 확인한다.
   예산에 4 GiB를 더한 24,640 MiB보다 적으면 시작하지 않는다.
@@ -68,7 +68,7 @@ fixture·정책·방식·반복 순서를 한꺼번에 섞는다.
 
 모든 이동 요청·Resume 응답·명령 송신·결과 수신은 L0의
 `CLOCK_MONOTONIC` 나노초 시계로 기록한다.
-명령 시간은 FIFO 송신 요청 직전부터 완전한 결과 receipt 수신까지다.
+명령 시간은 선입선출(FIFO, first-in first-out) 통신의 송신 요청 직전부터 완전한 결과 receipt 수신까지다.
 Guest 실행만의 시간은 아니다. 제어 전달과 최대 20 ms의 polling이 들어간다.
 각 run의 loadavg와 `ps -eo pid,user,psr,pcpu,comm` 원본을 전후에 남긴다.
 수집용 `ps`를 제외한 다른 node 0 프로세스가 5% 이상이면 분석에서 흔들린 run으로 표시한다.
@@ -115,7 +115,7 @@ EPT를 비운 뒤 첫 scan의 fixed fault와 leaf는 각각 131,073개와 257개
 뒤의 다섯 scan은 모두 fixed fault 0회였다.
 분모는 L0 KVM vCPU의 `pf_fixed` 증가분이다.
 Host tracefs는 접근할 수 없어 L0 EPT exit를 직접 세지 못했다.
-이 값에도 cache/TLB 효과와 VM-entry 비용이 남는다. 순수 상수로 보지 않는다.
+이 값에도 cache와 주소 변환 캐시(TLB, translation lookaside buffer) 효과와 VM-entry 비용이 남는다. 순수 상수로 보지 않는다.
 기존 host 설정은 TDP MMU 켬, NX huge-page 보완 끔, THP madvise다.
 TDP MMU는 two-dimensional paging memory management unit이다.
 NX는 no-execute, THP는 transparent huge page다. 이 설정은 바꾸지 않았다.
@@ -124,7 +124,7 @@ NX는 no-execute, THP는 transparent huge page다. 이 설정은 바꾸지 않�
 SWE의 실제 매핑은 4 KiB다.
 L1에서 센 RAM 주소 fault 수에 0.986 µs를 곱한 값은 물리 서버의 **추정 매핑 비용**이다.
 장치 주소 fault는 이 환산에서 제외한다.
-VMM 생성, EPT 해제, 장치 복원, cache와 주소 변환 캐시(TLB, translation lookaside buffer)의 warm-up, 전송 비용은 그 추정에 없다.
+VMM 생성, EPT 해제, 장치 복원, cache와 TLB의 warm-up, 전송 비용은 그 추정에 없다.
 2 MiB 비용에 같은 4 KiB fault 수를 곱해서 huge-page 궤적을 예측하지 않는다.
 
 ## 예비 검증
