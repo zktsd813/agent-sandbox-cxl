@@ -70,6 +70,7 @@ fixture·정책·방식·반복 순서를 한꺼번에 섞는다.
 `CLOCK_MONOTONIC` 나노초 시계로 기록한다.
 명령 시간은 선입선출(FIFO, first-in first-out) 통신의 송신 요청 직전부터 완전한 결과 receipt 수신까지다.
 Guest 실행만의 시간은 아니다. 제어 전달과 최대 20 ms의 polling이 들어간다.
+분포의 p95는 95백분위수다.
 각 run의 loadavg와 `ps -eo pid,user,psr,pcpu,comm` 원본을 전후에 남긴다.
 수집용 `ps`를 제외한 다른 node 0 프로세스가 5% 이상이면 분석에서 흔들린 run으로 표시한다.
 이 값은 `ps`의 프로세스 수명 평균이라 짧은 간섭을 놓칠 수 있다.
@@ -133,7 +134,7 @@ VMM 생성, EPT 해제, 장치 복원, cache와 TLB의 warm-up, 전송 비용은
 ## 예비 검증
 
 CPU 조건을 맞춘 Gin heavy 계수 실행(`cpucheck3`)은 세 방식 모두 독립 검증을 통과했다.
-실제 guest CPU flag의 SHA-256 해시는 세 방식 모두
+실제 guest CPU flag의 SHA-256(Secure Hash Algorithm, 256-bit) 해시는 세 방식 모두
 `e1f41f5ed6b13e3822ae62064cc3f9f90cc6772cb244e8a6567b6f5300a5a262`였다.
 양쪽 L1의 여섯 KVM 모듈 설정도 같았다.
 
@@ -292,3 +293,5 @@ Direct는 같은 357회 동안 VM/vCPU 생성이 0회였다.
 이 단계에서는 물리 multi-host 지연이나 hand-off의 전체 물리 이득을 결론내리지 않는다.
 
 5단계 구현과 기능 시험은 [PREFAULT.md](PREFAULT.md)에 기록했다. 기본 1–4단계의 확정 결과와 추가 실험의 실행 binary는 구분한다.
+
+추가 5단계도 유효 궤적 180회와 30개 조건의 3회 반복을 완료했다. 전체 RAM 계수 실행 18개에서 첫 이동 뒤 RAM fault는 모두 0회였다. 대신 이 lab의 채우기 kernel 경과 시간은 이동당 약 617 ms였다. 기존 범위는 약 21–150 ms였다. 전체 표와 관측자 비용의 구분은 [PREFAULT.md](PREFAULT.md)를 본다.

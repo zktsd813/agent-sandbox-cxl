@@ -1,0 +1,189 @@
+{
+  "result": "passed",
+  "accepted_trajectories": 180,
+  "timing": 90,
+  "counting": 90,
+  "conditions": 30,
+  "repetitions_per_condition_per_instrument": 3,
+  "commands": 6300,
+  "count_parts": {
+    "prefcount2": 49,
+    "prefcount4": 41
+  },
+  "same_shuffled_plan": true,
+  "count_seed": 20261118,
+  "time_seed": 20261119,
+  "excluded_trials": [
+    {
+      "suite": "implementation/virtual_machine/.local/run14/prefcount2/report.json",
+      "id": "php-cs-fixer__php-cs-fixer-8331-state-only-all-r0",
+      "result": "failed",
+      "error": "RuntimeError('Independent workload verification failed: php-cs-fixer__php-cs-fixer-8331-state-only-all-r0')"
+    }
+  ],
+  "execution_inputs_sha256": "a5cc5937b7f060c15bb3de95e4856813e35566de5097cef472b65cfbe83a2dac",
+  "guest_cpu_flags_sha256": "e1f41f5ed6b13e3822ae62064cc3f9f90cc6772cb244e8a6567b6f5300a5a262",
+  "creation_counts": {
+    "baseline": {
+      "moves": 0,
+      "new_vm": 0,
+      "new_vcpu": 0
+    },
+    "state-only": {
+      "moves": 357,
+      "new_vm": 357,
+      "new_vcpu": 357
+    },
+    "prefault-mapped": {
+      "moves": 357,
+      "new_vm": 357,
+      "new_vcpu": 357
+    },
+    "prefault-all": {
+      "moves": 357,
+      "new_vm": 357,
+      "new_vcpu": 357
+    },
+    "direct": {
+      "moves": 357,
+      "new_vm": 0,
+      "new_vcpu": 0
+    }
+  },
+  "all_counted_leaves_are_4k": true,
+  "inactive_leaves_zero": true,
+  "all_ram_prefault_after_first_move": [
+    {
+      "fixture": "php-cs-fixer__php-cs-fixer-8331",
+      "policy": "all",
+      "repeat": 1,
+      "ram_faults_after_first_move": 0
+    },
+    {
+      "fixture": "gin-gonic__gin-3741",
+      "policy": "all",
+      "repeat": 2,
+      "ram_faults_after_first_move": 0
+    },
+    {
+      "fixture": "php-cs-fixer__php-cs-fixer-8331",
+      "policy": "heavy",
+      "repeat": 2,
+      "ram_faults_after_first_move": 0
+    },
+    {
+      "fixture": "php-cs-fixer__php-cs-fixer-8331",
+      "policy": "all",
+      "repeat": 2,
+      "ram_faults_after_first_move": 0
+    },
+    {
+      "fixture": "gin-gonic__gin-3741",
+      "policy": "heavy",
+      "repeat": 1,
+      "ram_faults_after_first_move": 0
+    },
+    {
+      "fixture": "gin-gonic__gin-3741",
+      "policy": "heavy",
+      "repeat": 2,
+      "ram_faults_after_first_move": 0
+    },
+    {
+      "fixture": "php-cs-fixer__php-cs-fixer-8331",
+      "policy": "all",
+      "repeat": 0,
+      "ram_faults_after_first_move": 0
+    },
+    {
+      "fixture": "micropython__micropython-13039",
+      "policy": "all",
+      "repeat": 1,
+      "ram_faults_after_first_move": 0
+    },
+    {
+      "fixture": "micropython__micropython-13039",
+      "policy": "all",
+      "repeat": 0,
+      "ram_faults_after_first_move": 0
+    },
+    {
+      "fixture": "micropython__micropython-13039",
+      "policy": "heavy",
+      "repeat": 0,
+      "ram_faults_after_first_move": 0
+    },
+    {
+      "fixture": "micropython__micropython-13039",
+      "policy": "heavy",
+      "repeat": 2,
+      "ram_faults_after_first_move": 0
+    },
+    {
+      "fixture": "gin-gonic__gin-3741",
+      "policy": "all",
+      "repeat": 1,
+      "ram_faults_after_first_move": 0
+    },
+    {
+      "fixture": "micropython__micropython-13039",
+      "policy": "heavy",
+      "repeat": 1,
+      "ram_faults_after_first_move": 0
+    },
+    {
+      "fixture": "gin-gonic__gin-3741",
+      "policy": "heavy",
+      "repeat": 0,
+      "ram_faults_after_first_move": 0
+    },
+    {
+      "fixture": "php-cs-fixer__php-cs-fixer-8331",
+      "policy": "heavy",
+      "repeat": 1,
+      "ram_faults_after_first_move": 0
+    },
+    {
+      "fixture": "gin-gonic__gin-3741",
+      "policy": "all",
+      "repeat": 0,
+      "ram_faults_after_first_move": 0
+    },
+    {
+      "fixture": "php-cs-fixer__php-cs-fixer-8331",
+      "policy": "heavy",
+      "repeat": 0,
+      "ram_faults_after_first_move": 0
+    },
+    {
+      "fixture": "micropython__micropython-13039",
+      "policy": "all",
+      "repeat": 2,
+      "ram_faults_after_first_move": 0
+    }
+  ],
+  "snapshot_state_bytes": {
+    "min": 13938,
+    "max": 13950
+  },
+  "snapshot_ram_dump_transfer_bytes": 0,
+  "minimum_prelaunch_node0_free_mib": 25053,
+  "lab_budget_mib": 20544,
+  "headroom_mib": 4096,
+  "timing_disturbed": 2,
+  "count_disturbed": 0,
+  "all_360_valid_qemu_identities_fenced": true,
+  "all_valid_backing_dirs_removed": true,
+  "all_owned_run_cleanup": {
+    "pointer_runs": 395,
+    "qemu_identities": 790,
+    "result": "passed",
+    "raw_sha256": "105fd89778be6c25f81705579e678a489eb8cec67131a5916d7b6f9340dec4fa"
+  },
+  "audit_source_sha256": "d95e51f740da4cf1af6f73f937b75f025ccf49d8330783be5d06a0158e274947",
+  "raw_verification_sha256": {
+    "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run14/prefcount-final-verification.json": "42fdc433afe88848c4fbdb0f33258b701dc296ccfcd9d014423b29f4e69793d8",
+    "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run14/preftime1/suite-verification.json": "d129a8da828784de8354bb419811aa0b04e544cc8f59dd0323284e05d700d762"
+  },
+  "base_patches_unchanged_since_675a9d5": true
+}
