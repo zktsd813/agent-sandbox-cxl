@@ -135,9 +135,48 @@ def resident_report(path):
     return result
 
 
+def native_report(path):
+    trial=json.loads(path.read_text())
+    need(trial['result']=='passed' and trial['exclusive_quiet'] and trial['cleanup']['backing_removed'],
+         'Native diagnosis failed or leaked backing')
+    raw=Path(trial['report']); report=json.loads(raw.read_text())
+    need(report['result']=='passed' and report['profile'] and report['resume_profile'], 'Missing native profiles')
+    for role,expected in report['samples'].items():
+        lines=(raw.parent/(role+'.log')).read_text().splitlines()
+        actual=[json.loads(line.removeprefix('LINUX_DIRECT_JSON ')) for line in lines if line.startswith('LINUX_DIRECT_JSON ')]
+        need(actual==expected, 'Native raw samples changed')
+    samples=sum(report['samples'].values(),[])
+    sources=sorted((x for x in samples if x['event']=='source'),key=lambda x:x['round'])
+    destinations=sorted((x for x in samples if x['event']=='destination'),key=lambda x:x['round'])
+    rounds=report['iterations']+report['warmup']
+    need(len(sources)==len(destinations)==rounds, 'Native handoff count')
+    for i,(source,target) in enumerate(zip(sources,destinations)):
+        need(source['round']==target['round']==i and target['sequence']>source['sequence']
+             and target['role']!=source['role'], 'Native execution continuity')
+    for cpu in range(trial['vcpus']):
+        history=sorted((x for x in samples if x['event']=='smp' and x['cpu']==cpu),key=lambda x:x['round'])
+        need(len(history)==rounds and all(x['round']==i and x['ack']==i+1 and
+             not any(x[k] for k in ('errors','clock_errors','tsc_errors')) for i,x in enumerate(history)),
+             'Native per-CPU continuity')
+    result={'trial':reference(path),'raw':reference(raw),'vcpus':trial['vcpus'],'directions':{},'cleanup':trial['cleanup']}
+    for role in ('A','B'):
+        pairs=[(a,b) for a,b in zip(sources,destinations) if a['role']==role and a['round']>=report['warmup']]
+        need(len(pairs)==100, 'Native direction sample count')
+        stages={
+            'pause_to_guest_ack_ms':[a['guest_observed_us']/1000 for a,b in pairs],
+            'pause_to_remote_controller_ack_ms':[a['handoff_us']/1000 for a,b in pairs],
+            'kernel_detach_ms':[a['kernel_detach_us']/1000 for a,b in pairs],
+            'kernel_attach_ms':[b['kernel_attach_us']/1000 for a,b in pairs],
+            'first_run_to_entry_ms':[b['run_to_entry_us']/1000 for a,b in pairs],
+            'entry_to_guest_ack_ms':[b['entry_to_guest_write_us']/1000 for a,b in pairs]}
+        result['directions'][role+('→B' if role=='A' else '→A')]={k:summary(v) for k,v in stages.items()}
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--swe',type=Path,nargs='*',default=[])
+    parser.add_argument('--native',type=Path,nargs='*',default=[])
     parser.add_argument('--resident',type=Path,nargs='*',default=[])
     parser.add_argument('--output',type=Path,required=True)
     args = parser.parse_args()
@@ -153,6 +192,7 @@ def main():
         comparisons.append({'vcpus':vcpus,'matched':True,'compared':list(keys)})
     result = {'schema':'multi-vcpu-followup-v1','swe':swe,'comparisons':comparisons,
               'resident':[resident_report(path) for path in args.resident],
+              'native_diagnosis':[native_report(path) for path in args.native],
               'cpu_accounting':'x86 Linux USER_HZ=100; busy=user+nice+system+irq+softirq; active threshold=max(1 tick,1% wall); interval wall uses mean per-CPU accounted ticks when no uptime timestamp exists'}
     args.output.write_text(json.dumps(result,indent=2,ensure_ascii=False)+'\n')
     print(args.output)
