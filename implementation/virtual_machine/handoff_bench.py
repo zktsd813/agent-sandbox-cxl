@@ -555,8 +555,9 @@ class HandoffController(Controller):
         require('kvm-vm' not in raw and 'kvm-vcpu' not in raw, 'Prepared snapshot worker owns a VM')
         if getattr(self.args, 'trajectory_policy', None):
             import control_rpc
-            self.raw('snapshot-control-ready', control_rpc.http(self.vms[destination],
-                target.directory+'/api.sock', 'GET', '/', {}))
+            answer = control_rpc.http(self.vms[destination], target.directory+'/api.sock', 'GET', '/', {})
+            require(json_lines(answer, 'LAB_API_JSON ')[0]['status'] == 200, 'Snapshot API readiness failed')
+            self.raw('snapshot-control-ready', answer)
         target.preparation = {'ready_ns': time.monotonic_ns(), 'start_ns': started,
                               'file': evidence, 'directory': target.directory, 'source_paused': False}
         self.snapshot_target = target

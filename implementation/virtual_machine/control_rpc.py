@@ -81,5 +81,5 @@ def http(vm, path, method, route, body):
     start = time.monotonic_ns()
     response = call(vm, 4, path.encode()+b'\0'+request, 120)
     status = int(response.split(' ', 2)[1])
-    return 'LAB_API_JSON '+__import__('json').dumps({'status': status, 'expected_status': 204,
+    return 'LAB_API_JSON '+__import__('json').dumps({'status': status, 'expected_status': 200 if method == 'GET' else 204,
         'duration_us': (time.monotonic_ns()-start)/1000})+'\n'+response
