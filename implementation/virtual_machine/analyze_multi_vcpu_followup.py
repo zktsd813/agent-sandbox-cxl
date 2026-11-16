@@ -81,6 +81,9 @@ def resident_report(path):
     raw = Path(trial['report'])
     report = json.loads(raw.read_text())
     verify_sources(report,raw.parent)
+    for receipt in report['receipts']:
+        need(hashlib.sha256((raw.parent/receipt['file']).read_bytes()).hexdigest()==receipt['sha256'],
+             'Resident raw receipt checksum changed')
     need(report['result']=='passed' and set(report['resident_processes'])=={'A','B'}, 'Missing Firecracker pair')
     for evidence in report['resident_processes'].values():
         need('/lab/firecracker' in (raw.parent/evidence['file']).read_text(), 'Endpoint is not Firecracker')
@@ -109,6 +112,9 @@ def resident_report(path):
                 for i in range(8):
                     stages[f'{side}_{i}_ms'] = [r['fast']['ack'][side+'_ns'][i]/1e6 for r in group]
         if result['resume_profile']:
+            need(all(r['fast']['ack']['entry_ns']>=r['fast']['ack']['run_ns']
+                     and r['fast']['ack']['ack_guest_tsc']>=r['fast']['ack']['entry_guest_tsc'] for r in group),
+                 'Invalid entry/guest timestamp ordering')
             stages['first_run_to_entry_ms'] = [(r['fast']['ack']['entry_ns']-r['fast']['ack']['run_ns'])/1e6 for r in group]
             stages['entry_to_epoch_detection_ms'] = [(r['fast']['ack']['ack_guest_tsc']-r['fast']['ack']['entry_guest_tsc'])
                        /r['fast']['ack']['tsc_khz'] for r in group]
