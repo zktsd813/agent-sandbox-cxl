@@ -30,7 +30,7 @@ SOURCES = ("experiment_sources.py", "swe_handoff_run.py", "handoff_bench.py", "s
     "lab.py", "shared_probe.c", "resident_fast.py",
     "resident_control.c", "resident_bootstrap.c", "resident_prepare.py", "control_rpc.c", "control_rpc.py",
     "guest-init.sh", "resident_wire.h", "resident_proxy.py", "kernel_handoff_trace.py",
-    "firecracker.patch", "kvm-dax-state.patch", "kvm-dax-source.json", "kvm-prefault.patch", "firecracker-prefault.patch")
+    "firecracker.patch", "kvm-dax-state.patch", "kvm-dax-source.json", "kvm-prefault.patch", "firecracker-prefault.patch", "prefault_probe.c")
 
 
 def arguments():
@@ -59,6 +59,7 @@ def arguments():
     parser.add_argument('--prefault', choices=('all','mapped'))
     parser.add_argument('--prefault-variants', nargs='+', choices=('all','mapped'))
     parser.add_argument('--prefault-activate', action='store_true')
+    parser.add_argument('--prefault-probe', type=Path)
     parser.add_argument('--repetitions', type=int, default=1)
     parser.add_argument('--seed', type=int, default=20261116)
     parser.add_argument('--l1-memory-mib', type=int, default=6144)
@@ -201,6 +202,8 @@ def main():
             if policy:
                 bench.extend(['--trajectory-policy', policy, '--heavy-plan', str(args.heavy_plan.resolve())])
                 if args.count_faults: bench.append('--count-faults')
+            if args.prefault_probe:
+                bench.extend(['--prefault-probe',str(args.prefault_probe.resolve())])
             if prefault:
                 bench.extend(['--prefault',prefault])
                 if args.prefault_activate: bench.append('--prefault-activate')

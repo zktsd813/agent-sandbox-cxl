@@ -852,6 +852,7 @@ def main():
     parser.add_argument('--count-faults', action='store_true')
     parser.add_argument('--prefault', choices=('all','mapped'))
     parser.add_argument('--prefault-activate', action='store_true')
+    parser.add_argument('--prefault-probe', help='Static ABI probe uploaded only to these disposable L1s')
     args = parser.parse_args()
     require(not args.prefault or (args.mode == 'state-only' and args.trajectory_policy), 'Prefault requires snapshot trajectory')
     require(not args.prefault_activate or args.prefault, 'Activation requires prefault')
@@ -890,6 +891,16 @@ def main():
     try:
         lab.verify(argparse.Namespace(timeout=180))
         report['storage_setup'] = c.setup()
+        if args.prefault_probe:
+            probe = Path(args.prefault_probe).read_bytes()
+            report['prefault_probes'] = []
+            for role in ('A','B'):
+                raw, file = c.write_bytes(role, '/tmp/prefault-probe', probe, 'prefault-probe',
+                    after='chmod 755 /tmp/prefault-probe\n/tmp/prefault-probe')
+                values = json_lines(raw,'PREFAULT_PROBE_JSON ')
+                require(len(values) == 1 and values[0]['result'] == 'passed', 'Prefault ABI self-test failed')
+                report['prefault_probes'].append({'role':role,'file':file,'result':values[0],
+                    'binary_sha256':hashlib.sha256(probe).hexdigest()})
         if args.mode == 'direct':
             c.configure_direct()
         report['boot'] = c.boot_vm(s)
@@ -977,7 +988,7 @@ def main():
                 c.fetch_bytes(role,directory+'/fc.log','final-guest-log')
                 c.fetch_bytes(role,directory+'/vmm.log','final-vmm-log')
                 if args.prefault:
-                    c.shell(role, f'cat {directory}/stderr.log\ncat {directory}/prefault-report.json 2>/dev/null || true',
+                    c.shell(role, f'cat {directory}/stderr.log\ncat {directory}/prefault-report.json 2>/dev/null || true\ndmesg | tail -n 40',
                             'final-prefault-diagnostic')
                 report['cleanup'].append({'role':role,'directory':directory,'file':name,'fenced':'FENCED ' in raw})
             except BaseException as exc:

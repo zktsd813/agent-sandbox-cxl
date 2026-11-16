@@ -178,7 +178,7 @@
 +	}
 +	if (generation != kvm_vcpu_memslots(vcpu)->generation ||
 +	    sequence != READ_ONCE(kvm->mmu_invalidate_seq)) {
-+		pr_info("kvm-lab-prefault: changed gen=%llu/%llu seq=%llu/%llu processed=%llu\n",
++		pr_warn("kvm-lab-prefault: changed gen=%llu/%llu seq=%llu/%llu processed=%llu\n",
 +			generation, kvm_vcpu_memslots(vcpu)->generation, sequence,
 +			(u64)READ_ONCE(kvm->mmu_invalidate_seq), q->processed_pages);
 +		r = -EAGAIN;
@@ -191,7 +191,7 @@
 +	srcu_read_unlock(&kvm->srcu, idx);
 +done:
 +	if (r && r != -ENOSPC)
-+		pr_info("kvm-lab-prefault: op=%llu ret=%d processed=%llu count=%llu\n",
++		pr_warn("kvm-lab-prefault: op=%llu ret=%d processed=%llu count=%llu\n",
 +			q->operation, r, q->processed_pages, q->count);
 +	kvfree(ranges);
 +	q->elapsed_ns = ktime_get_ns() - start;

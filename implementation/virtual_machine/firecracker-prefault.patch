@@ -63,7 +63,7 @@
                  return Err(invalid("promote requires private DRAM backing"));
 --- /dev/null
 +++ b/src/vmm/src/prefault.rs
-@@ -0,0 +1,141 @@
+@@ -0,0 +1,151 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Opt-in, paused one-vCPU x86 experiment. No guest bytes are read or copied.
 +use std::fs::{self, File};
@@ -181,9 +181,19 @@
 +    let expected = validate(&ranges, &ram)?;
 +    let activate = std::env::var("FC_PREFAULT_ACTIVATE").as_deref() == Ok("1");
 +    let mut q = Request { abi:1, operation:2, flags:u64::from(activate), ranges:ranges.as_ptr() as u64, count:ranges.len() as u64, ..Request::default() };
-+    let result = call(fd, &mut q);
++    let mut attempts = Vec::new();
++    let result = loop {
++        let result = call(fd, &mut q);
++        attempts.push(serde_json::json!({"processed_pages":q.processed_pages,
++            "kernel_ns":q.elapsed_ns,"errno":result.as_ref().err().and_then(|e|e.raw_os_error())}));
++        if result.as_ref().err().and_then(|e|e.raw_os_error()) == Some(libc::EAGAIN) && attempts.len() < 4 {
++            continue; // Restart the entire admitted range list; never Resume a partial attempt.
++        }
++        break result;
++    };
++    let kernel_ns:u64 = attempts.iter().map(|x|x["kernel_ns"].as_u64().unwrap()).sum();
 +    let report = serde_json::json!({"abi":1,"mode":mode,"activate":activate,"range_count":ranges.len(),
-+        "expected_pages":expected,"processed_pages":q.processed_pages,"kernel_ns":q.elapsed_ns,
++        "expected_pages":expected,"processed_pages":q.processed_pages,"kernel_ns":kernel_ns,"attempts":attempts,
 +        "wall_ns":start.elapsed().as_nanos() as u64,"result":if result.is_ok(){"passed"}else{"failed"},
 +        "errno":result.as_ref().err().and_then(|e|e.raw_os_error())});
 +    if let Ok(path) = std::env::var("FC_PREFAULT_REPORT") { fs::write(path, serde_json::to_vec(&report).map_err(io::Error::other)?)?; }
