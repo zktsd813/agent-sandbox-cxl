@@ -152,6 +152,10 @@ Histogram은 각 L1에서 순서대로 읽는다. 명령 경계에 RPC 시간만
 Direct의 fault가 0이어야 하는 대상은 이미 매핑한 page다.
 새로 쓰는 page의 fault까지 없어지는 것은 아니다.
 무이동의 fault와 나란히 봐야 한다.
+이번 수집은 주소를 RAM·장치 구간으로 나눴다. 각 fault 주소를 이동 직전 SPTE 집합과 대조하지 않았다.
+따라서 direct의 기존 page 재접근 fault가 정확히 0임을 증명한 것은 아니다.
+무이동보다 늘어난 소수 fault를 모두 새 page라고 단정하지 않는다.
+Mapper의 첫 쓰기에는 `zap_vma_ptes` 경로도 있다. 기존 entry 무효화의 조사 후보이며, 이번 집계만으로 원인이라고 확정하지 않는다.
 A는 로컬 lower disk, B는 NFS를 쓴다. 무이동 대비 시간에는 이 차이도 들어간다.
 메모리는 coherent 파일 backing이다. 실물 비일관 CXL multi-host는 검증하지 않았다.
 
