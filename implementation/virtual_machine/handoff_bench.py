@@ -331,6 +331,11 @@ class HandoffController(Controller):
             "FC_DAX_FIXED_HVA": "0x400000000000", "FC_DAX_SNAPSHOT": "1"}
         if getattr(self.args, 'trajectory_policy', None):
             env.update(FC_DAX_SNAPSHOT_COMPAT='1', FC_DAX_NO_NESTED_GUEST='1')
+        if getattr(self.args, 'prefault', None) and purpose == 'snapshot-prepare':
+            env.update(FC_PREFAULT_MODE=self.args.prefault,
+                FC_PREFAULT_RANGES=s.directory+'/prefault-ranges.json',
+                FC_PREFAULT_REPORT=s.directory+'/prefault-report.json',
+                FC_PREFAULT_ACTIVATE='1' if self.args.prefault_activate else '0')
         resident = s.direct
         if resident:
             env.update(FC_DAX_RESIDENT="1", FC_RESIDENT_NATIVE="1",
@@ -571,6 +576,13 @@ class HandoffController(Controller):
                 'Prepare a fresh snapshot destination before requesting handoff')
         started = time.monotonic_ns()
         self.pause(s)
+        source_ranges = None
+        if getattr(self.args, 'prefault', None) == 'mapped':
+            source_ranges, event = self.memory_operation(s, 'prefault-ranges')
+            require(source_ranges['result'] == 'passed' and source_ranges['ram_snapshot_bytes'] == 0,
+                    'Source mapped-range query failed')
+            self.write_json(destination, target.directory+'/prefault-ranges.json', source_ranges,
+                            'prefault-range-transfer')
         state_path = old_directory + '/state-only.bin'
         # Snapshot creation already drains devices and seals the current mapper.
         create = self.api(source, old_directory, '/snapshot/create', 'PUT',
@@ -596,7 +608,8 @@ class HandoffController(Controller):
             'state_file': state_file, 'state_bytes': len(state),
             'manifest_file': manifest_file, 'manifest_bytes': len(manifest), 'ram_snapshot_bytes': 0,
             'ram_transfer_bytes': 0, 'request_ns': started, 'resume_ns': time.monotonic_ns(),
-            'preparation': target.preparation,
+            'preparation': target.preparation, 'target_directory':target.directory,
+            'prefault_mode':getattr(self.args, 'prefault', None), 'source_ranges':source_ranges,
             'controller_pause_to_resume_ns': time.monotonic_ns()-started, 'result': 'passed'}
         self.snapshot_target = None
         self.transitions.append(row)
@@ -813,6 +826,13 @@ def trajectory_replay(c, s, report, save):
                 'cat $T/trace\ncat $T/per_cpu/cpu*/stats', 'trajectory-nested-trace')
             report.setdefault('nested_traces', []).append({'role': role, 'file': file,
                 'intervals': kt.parse(raw) if args.mode == 'direct' and boundaries else []})
+    if args.prefault:
+        for hop in c.transitions:
+            if hop.get('prefault_mode'):
+                receipt = c.fetch_json(hop['destination'], hop['target_directory']+'/prefault-report.json', 'prefault-report')
+                require(receipt['result'] == 'passed' and receipt['processed_pages'] == receipt['expected_pages'],
+                        'Incomplete prefault before Resume')
+                hop.update(prefault=receipt, prefault_file=c.receipts[-1]['file'])
     c.demote(s)
 
 
@@ -830,7 +850,11 @@ def main():
     parser.add_argument('--trajectory-policy', choices=('heavy', 'all'))
     parser.add_argument('--heavy-plan')
     parser.add_argument('--count-faults', action='store_true')
+    parser.add_argument('--prefault', choices=('all','mapped'))
+    parser.add_argument('--prefault-activate', action='store_true')
     args = parser.parse_args()
+    require(not args.prefault or (args.mode == 'state-only' and args.trajectory_policy), 'Prefault requires snapshot trajectory')
+    require(not args.prefault_activate or args.prefault, 'Activation requires prefault')
     require(0 <= args.direct_profile_roundtrips <= 20 and
             (not args.direct_profile_roundtrips or args.mode == 'direct'), 'Invalid direct profile repetitions')
     require(args.inflight_handoff_index is None or (args.mode == 'direct' and not args.full_audit),

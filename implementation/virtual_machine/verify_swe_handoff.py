@@ -630,6 +630,21 @@ def verify(path):
         need([(x['source'],x['destination'],x['source_epoch'],x['destination_epoch']) for x in handoffs] ==
              [('A' if i%2==0 else 'B','B' if i%2==0 else 'A',i,i+1) for i in range(nhops)], 'Trajectory itinerary')
         need([x['before_command'] for x in handoffs] == r['boundaries'], 'Trajectory policy boundaries')
+        if r['arguments'].get('prefault'):
+            for hop in handoffs:
+                receipt = e.json(hop['prefault_file'])
+                need(receipt == hop['prefault'] and receipt['result'] == 'passed' and
+                     receipt['mode'] == r['arguments']['prefault'] and
+                     receipt['activate'] == r['arguments']['prefault_activate'] and
+                     receipt['processed_pages'] == receipt['expected_pages'], 'Prefault receipt mismatch')
+                if receipt['mode'] == 'all':
+                    need(receipt['expected_pages'] == memory//PAGE, 'Incomplete all-RAM prefault')
+                else:
+                    source = hop['source_ranges']
+                    need(source['vm_id'] == str(hop['vm']) and int(source['run_epoch']) == hop['source_epoch'] and
+                         source['mapped_pages'] == receipt['expected_pages'] and source['ram_snapshot_bytes'] == 0,
+                         'Mapped source identity/coverage mismatch')
+                    need(sum(x['bytes']//PAGE for x in source['ranges']) == source['mapped_pages'], 'Mapped range sum')
         for row in r['commands']:
             need(row['host_send_ns'] < row['host_receive_ns'], 'Host command clock')
             if r['arguments'].get('count_faults'):

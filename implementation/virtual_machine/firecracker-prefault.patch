@@ -1,0 +1,207 @@
+--- a/src/vmm/src/lib.rs
++++ b/src/vmm/src/lib.rs
+@@ -81,6 +81,8 @@
+ #[cfg(target_arch = "x86_64")]
+ pub(crate) mod direct;
+ pub(crate) mod pool_memory;
++#[cfg(target_arch = "x86_64")]
++pub(crate) mod prefault;
+ /// Emulates virtual and hardware devices.
+ #[allow(missing_docs)]
+ pub mod devices;
+--- a/src/vmm/src/builder.rs
++++ b/src/vmm/src/builder.rs
+@@ -5,6 +5,8 @@
+ 
+ use std::fmt::Debug;
+ use std::io;
++#[cfg(target_arch = "x86_64")]
++use std::os::fd::AsRawFd;
+ #[cfg(feature = "gdb")]
+ use std::sync::mpsc;
+ use std::sync::{Arc, Mutex};
+@@ -420,6 +422,8 @@
+     VmUpdateConfig(#[from] MachineConfigError),
+     /// Failed to restore MMIO device: {0}
+     RestoreMmioDevice(#[from] MicrovmStateError),
++    /// Prefault failed before any vCPU was started: {0}
++    Prefault(io::Error),
+     /// Failed to start vCPUs as no vCPU seccomp filter found.
+     MissingVcpuSeccompFilters,
+     /// Failed to start vCPUs: {0}
+@@ -565,6 +569,14 @@
+         device_manager,
+     };
+ 
++    #[cfg(target_arch = "x86_64")]
++    if std::env::var_os("FC_PREFAULT_MODE").is_some() {
++        if vcpus.len() != 1 { return Err(BuildMicrovmFromSnapshotError::Prefault(io::Error::other("prefault experiment requires one vCPU"))); }
++        crate::prefault::restore(vcpus[0].kvm_vcpu.fd.as_raw_fd(), kvm_vm.guest_memory())
++            .map_err(BuildMicrovmFromSnapshotError::Prefault)?;
++        timing.mark("prefault_before_resume");
++    }
++
+     // Move vcpus to their own threads and start their state machine in the 'Paused' state.
+     kvm_vm.start_vcpus(
+         vcpus,
+--- a/src/vmm/src/pool_memory.rs
++++ b/src/vmm/src/pool_memory.rs
+@@ -556,6 +556,14 @@
+     let mut copied = 0u64;
+     let mut dram_vmas = Vec::new();
+     match p.operation.as_str() {
++        #[cfg(target_arch = "x86_64")]
++        "prefault-ranges" => {
++            let mut result = crate::prefault::query(mem)?;
++            result["vm_id"] = serde_json::json!(p.vm_id);
++            result["run_epoch"] = serde_json::json!(p.run_epoch);
++            result["operation"] = serde_json::json!(p.operation);
++            return write_json(&env("FC_POOL_MEMORY_REPORT")?, &result);
++        }
+         "promote" => {
+             if active() {
+                 return Err(invalid("promote requires private DRAM backing"));
+--- /dev/null
++++ b/src/vmm/src/prefault.rs
+@@ -0,0 +1,141 @@
++// SPDX-License-Identifier: Apache-2.0
++//! Opt-in, paused one-vCPU x86 experiment. No guest bytes are read or copied.
++use std::fs::{self, File};
++use std::io;
++use std::os::fd::{AsRawFd, FromRawFd, RawFd};
++use std::time::Instant;
++use serde::{Deserialize, Serialize};
++use vm_memory::{Address, GuestMemoryBackend, GuestMemoryRegion};
++use crate::vstate::memory::GuestMemoryMmap;
++
++const PAGE: u64 = 4096;
++const MAX_PAGES: u64 = 1 << 20;
++const IOCTL: libc::c_ulong = 0xc050_aeee;
++#[repr(C)]
++#[derive(Clone, Copy, Default, Debug, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub(crate) struct Range { pub gpa: u64, pub bytes: u64 }
++#[repr(C)]
++#[derive(Default)]
++struct Request {
++    abi: u64, operation: u64, flags: u64, gpa: u64, bytes: u64,
++    ranges: u64, capacity: u64, count: u64, processed_pages: u64, elapsed_ns: u64,
++}
++fn invalid(s: impl Into<String>) -> io::Error { io::Error::new(io::ErrorKind::InvalidInput, s.into()) }
++fn call(fd: RawFd, q: &mut Request) -> io::Result<()> {
++    // SAFETY: fixed 80-byte ABI and owned live buffers throughout the syscall.
++    if unsafe { libc::ioctl(fd, IOCTL as _, q) } < 0 { return Err(io::Error::last_os_error()); }
++    Ok(())
++}
++fn ram_ranges(mem: &GuestMemoryMmap) -> Vec<Range> {
++    mem.iter().map(|r| Range { gpa:r.start_addr().raw_value(), bytes:r.len() }).collect()
++}
++fn validate(ranges: &[Range], ram: &[Range]) -> io::Result<u64> {
++    let mut previous = 0;
++    let mut pages = 0u64;
++    if ranges.len() as u64 > MAX_PAGES { return Err(invalid("too many ranges")); }
++    for r in ranges {
++        let end = r.gpa.checked_add(r.bytes).ok_or_else(|| invalid("range overflow"))?;
++        if r.bytes == 0 || (r.gpa | r.bytes) % PAGE != 0 || r.gpa < previous ||
++            !ram.iter().any(|slot| r.gpa >= slot.gpa && slot.gpa.checked_add(slot.bytes).is_some_and(|limit| end <= limit)) {
++            return Err(invalid("unaligned, overlapping or non-RAM range"));
++        }
++        pages = pages.checked_add(r.bytes/PAGE).ok_or_else(|| invalid("page count overflow"))?;
++        if pages > MAX_PAGES { return Err(invalid("range budget exceeded")); }
++        previous = end;
++    }
++    Ok(pages)
++}
++fn source_fd() -> io::Result<File> {
++    // A Firecracker process owns one VM. This experiment admits only vCPU0;
++    // the kernel also rejects SMP. Duplicate its existing fd; do not create a
++    // VM/vCPU or use a cross-process KVM fd (which would fail the mm check).
++    let mut ids = Vec::new();
++    for entry in fs::read_dir("/proc/self/fd")? {
++        let entry = entry?;
++        if fs::read_link(entry.path()).is_ok_and(|p| p.to_string_lossy() == "anon_inode:kvm-vcpu:0") {
++            if let Ok(id) = entry.file_name().to_string_lossy().parse::<i32>() { ids.push(id); }
++        }
++    }
++    let id = *ids.iter().min().ok_or_else(|| invalid("no vCPU0 fd"))?;
++    // SAFETY: the paused VMM owns this fd, and the duplicate has independent ownership.
++    let duplicate = unsafe { libc::fcntl(id, libc::F_DUPFD_CLOEXEC, 0) };
++    if duplicate < 0 { return Err(io::Error::last_os_error()); }
++    Ok(unsafe { File::from_raw_fd(duplicate) })
++}
++pub(crate) fn query(mem: &GuestMemoryMmap) -> io::Result<serde_json::Value> {
++    let fd = source_fd()?;
++    let start = Instant::now();
++    let mut ranges = Vec::new();
++    let mut kernel_ns = 0;
++    let ram = ram_ranges(mem);
++    for r in &ram {
++        let mut q = Request { abi:1, operation:1, gpa:r.gpa, bytes:r.bytes, ..Request::default() };
++        if let Err(error) = call(fd.as_raw_fd(), &mut q) {
++            if error.raw_os_error() != Some(libc::ENOSPC) { return Err(error); }
++        }
++        kernel_ns += q.elapsed_ns;
++        if q.count > MAX_PAGES { return Err(invalid("kernel range count exceeds budget")); }
++        let mut batch = vec![Range::default(); q.count as usize];
++        q.capacity = q.count;
++        q.ranges = batch.as_mut_ptr() as u64;
++        call(fd.as_raw_fd(), &mut q)?;
++        kernel_ns += q.elapsed_ns;
++        if q.count > batch.len() as u64 { return Err(invalid("mapped range set changed")); }
++        batch.truncate(q.count as usize);
++        ranges.extend(batch);
++    }
++    let pages = validate(&ranges, &ram)?;
++    Ok(serde_json::json!({"abi":1,"ranges":ranges,"mapped_pages":pages,
++        "ram_bytes":ram.iter().map(|r|r.bytes).sum::<u64>(),"kernel_ns":kernel_ns,
++        "wall_ns":start.elapsed().as_nanos() as u64,"result":"passed","ram_snapshot_bytes":0}))
++}
++#[derive(Deserialize)]
++struct SourceRanges { abi:u64, vm_id:String, run_epoch:String, ram_bytes:u64, mapped_pages:u64, ranges:Vec<Range> }
++pub(crate) fn restore(fd: RawFd, mem: &GuestMemoryMmap) -> io::Result<()> {
++    let Ok(mode) = std::env::var("FC_PREFAULT_MODE") else { return Ok(()); };
++    let start = Instant::now();
++    let ram = ram_ranges(mem);
++    let ranges = match mode.as_str() {
++        "all" => ram.clone(),
++        "mapped" => {
++            let path = std::env::var("FC_PREFAULT_RANGES").map_err(io::Error::other)?;
++            let file = File::open(path)?;
++            if file.metadata()?.len() > 16*1024*1024 { return Err(invalid("range metadata too large")); }
++            let source:SourceRanges = serde_json::from_reader(file).map_err(io::Error::other)?;
++            let source_epoch:u64 = source.run_epoch.parse().map_err(io::Error::other)?;
++            let target_epoch:u64 = std::env::var("FC_POOL_RUN_EPOCH").map_err(io::Error::other)?.parse().map_err(io::Error::other)?;
++            if source.abi != 1 || source.vm_id != std::env::var("FC_POOL_VM_ID").map_err(io::Error::other)? ||
++                source_epoch.checked_add(1) != Some(target_epoch) || source.ram_bytes != ram.iter().map(|r|r.bytes).sum::<u64>() ||
++                validate(&source.ranges, &ram)? != source.mapped_pages { return Err(invalid("source range identity/geometry mismatch")); }
++            source.ranges
++        },
++        _ => return Err(invalid("unknown prefault mode")),
++    };
++    let expected = validate(&ranges, &ram)?;
++    let activate = std::env::var("FC_PREFAULT_ACTIVATE").as_deref() == Ok("1");
++    let mut q = Request { abi:1, operation:2, flags:u64::from(activate), ranges:ranges.as_ptr() as u64, count:ranges.len() as u64, ..Request::default() };
++    let result = call(fd, &mut q);
++    let report = serde_json::json!({"abi":1,"mode":mode,"activate":activate,"range_count":ranges.len(),
++        "expected_pages":expected,"processed_pages":q.processed_pages,"kernel_ns":q.elapsed_ns,
++        "wall_ns":start.elapsed().as_nanos() as u64,"result":if result.is_ok(){"passed"}else{"failed"},
++        "errno":result.as_ref().err().and_then(|e|e.raw_os_error())});
++    if let Ok(path) = std::env::var("FC_PREFAULT_REPORT") { fs::write(path, serde_json::to_vec(&report).map_err(io::Error::other)?)?; }
++    eprintln!("PREFAULT_JSON {report}");
++    result?;
++    if q.processed_pages != expected { return Err(invalid("partial prefault completion")); }
++    Ok(())
++}
++#[cfg(test)]
++mod tests {
++    use super::*;
++    #[test] fn abi_layout() { assert_eq!(std::mem::size_of::<Request>(),80); assert_eq!(std::mem::size_of::<Range>(),16); }
++    #[test] fn range_admission() {
++        let ram=[Range{gpa:0,bytes:4*PAGE},Range{gpa:8*PAGE,bytes:PAGE}];
++        assert_eq!(validate(&[Range{gpa:PAGE,bytes:2*PAGE},Range{gpa:8*PAGE,bytes:PAGE}],&ram).unwrap(),3);
++        for bad in [Range{gpa:1,bytes:PAGE},Range{gpa:0,bytes:0},Range{gpa:3*PAGE,bytes:2*PAGE},Range{gpa:u64::MAX-4095,bytes:PAGE}] {
++            assert!(validate(&[bad],&ram).is_err());
++        }
++        assert!(validate(&[Range{gpa:0,bytes:2*PAGE},Range{gpa:PAGE,bytes:PAGE}],&ram).is_err());
++    }
++}

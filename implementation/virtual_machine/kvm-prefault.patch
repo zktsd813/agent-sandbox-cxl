@@ -1,0 +1,224 @@
+--- a/arch/x86/kvm/mmu.h
++++ b/arch/x86/kvm/mmu.h
+@@ -3,6 +3,8 @@
+ #define __KVM_X86_MMU_H
+ 
+ #include <linux/kvm_host.h>
++#include <linux/kvm_prefault.h>
++int kvm_mmu_lab_range(struct kvm_vcpu *vcpu, struct kvm_lab_mmu_request *req);
+ #include "kvm_cache_regs.h"
+ #include "cpuid.h"
+ 
+--- a/arch/x86/kvm/x86.c
++++ b/arch/x86/kvm/x86.c
+@@ -5658,6 +5658,18 @@
+ 
+ 	u.buffer = NULL;
+ 	switch (ioctl) {
++	case KVM_LAB_MMU_RANGE: {
++		struct kvm_lab_mmu_request req;
++		if (copy_from_user(&req, argp, sizeof(req))) {
++			r = -EFAULT;
++			break;
++		}
++		r = kvm_mmu_lab_range(vcpu, &req);
++		if (copy_to_user(argp, &req, sizeof(req)))
++			r = -EFAULT;
++		break;
++	}
++
+ 	case KVM_GET_LAPIC: {
+ 		r = -EINVAL;
+ 		if (!lapic_in_kernel(vcpu))
+--- a/arch/x86/kvm/mmu/mmu.c
++++ b/arch/x86/kvm/mmu/mmu.c
+@@ -16,6 +16,10 @@
+  */
+ #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+ 
++#include <linux/overflow.h>
++#include <linux/sched/signal.h>
++#include <linux/string.h>
++#include <asm/kvm_para.h>
+ #include "irq.h"
+ #include "ioapic.h"
+ #include "mmu.h"
+@@ -4250,6 +4254,149 @@
+ 		return;
+ 
+ 	kvm_mmu_do_page_fault(vcpu, work->cr2_or_gpa, 0, true, NULL);
++}
++
++/* Paused single-vCPU direct-MMU experiment; vcpu_load is held by x86 ioctl. */
++#define LAB_MAX_PAGES (1U << 20)
++static bool lab_ram_range(struct kvm_vcpu *vcpu, u64 gpa, u64 bytes)
++{
++	struct kvm_memory_slot *first, *last;
++	u64 end;
++	if (!bytes || ((gpa | bytes) & (PAGE_SIZE - 1)) ||
++	    check_add_overflow(gpa, bytes, &end) || end > BIT_ULL(52) ||
++	    (bytes >> PAGE_SHIFT) > LAB_MAX_PAGES)
++		return false;
++	first = kvm_vcpu_gfn_to_memslot(vcpu, gpa >> PAGE_SHIFT);
++	last = kvm_vcpu_gfn_to_memslot(vcpu, (end - 1) >> PAGE_SHIFT);
++	return first && first == last &&
++		!(first->flags & (KVM_MEMSLOT_INVALID | KVM_MEM_READONLY));
++}
++
++int kvm_mmu_lab_range(struct kvm_vcpu *vcpu, struct kvm_lab_mmu_request *q)
++{
++	struct kvm *kvm = vcpu->kvm;
++	struct kvm_lab_mmu_range *ranges = NULL;
++	u64 start = ktime_get_ns(), generation, sequence, count = 0;
++	u64 addr, end, previous = U64_MAX, pages = 0;
++	int idx, r = -EINVAL;
++	bool query = q->operation == KVM_LAB_MMU_QUERY;
++	BUILD_BUG_ON(sizeof(*q) != 80);
++	q->processed_pages = q->elapsed_ns = 0;
++	if (q->abi != 1 || (q->flags & ~KVM_LAB_MMU_ACTIVATE) ||
++	    (!query && q->operation != KVM_LAB_MMU_FILL) ||
++	    q->capacity > LAB_MAX_PAGES || q->count > LAB_MAX_PAGES ||
++	    (query && q->flags))
++		goto done;
++	if (atomic_read(&kvm->online_vcpus) != 1 || is_guest_mode(vcpu) ||
++	    ((q->flags & KVM_LAB_MMU_ACTIVATE) &&
++	     (vcpu->arch.apf.msr_en_val & KVM_ASYNC_PF_ENABLED))) {
++		r = -EOPNOTSUPP;
++		goto done;
++	}
++	if (query) {
++		if (q->capacity) {
++			ranges = kvcalloc(q->capacity, sizeof(*ranges), GFP_KERNEL);
++			if (!ranges) { r = -ENOMEM; goto done; }
++		}
++	} else if (q->count) {
++		ranges = vmemdup_user(u64_to_user_ptr(q->ranges),
++				     q->count * sizeof(*ranges));
++		if (IS_ERR(ranges)) { r = PTR_ERR(ranges); ranges = NULL; goto done; }
++		for (count = 0; count < q->count; count++) {
++			u64 stop;
++			if (!ranges[count].bytes ||
++			    check_add_overflow(ranges[count].gpa, ranges[count].bytes, &stop) ||
++			    ((ranges[count].gpa | ranges[count].bytes) & (PAGE_SIZE - 1)) ||
++			    (count && ranges[count].gpa < previous) ||
++			    (ranges[count].bytes >> PAGE_SHIFT) > LAB_MAX_PAGES - pages)
++				goto done;
++			pages += ranges[count].bytes >> PAGE_SHIFT;
++			previous = stop;
++		}
++	}
++	idx = srcu_read_lock(&kvm->srcu);
++	generation = kvm_vcpu_memslots(vcpu)->generation;
++	sequence = READ_ONCE(kvm->mmu_invalidate_seq);
++	if (generation & KVM_MEMSLOT_GEN_UPDATE_IN_PROGRESS) { r = -EAGAIN; goto unlock; }
++	r = kvm_mmu_reload(vcpu);
++	if (r) goto unlock;
++	if (!vcpu->arch.mmu->root_role.direct) { r = -EOPNOTSUPP; goto unlock; }
++	if (query) {
++		if (!lab_ram_range(vcpu, q->gpa, q->bytes)) { r = -EINVAL; goto unlock; }
++		end = q->gpa + q->bytes;
++		previous = U64_MAX;
++		count = 0;
++		for (addr = q->gpa; addr < end; ) {
++			struct kvm_shadow_walk_iterator it;
++			u64 next = addr + PAGE_SIZE;
++			bool present = false;
++			write_lock(&kvm->mmu_lock);
++			rcu_read_lock();
++			for_each_shadow_entry(vcpu, addr, it) {
++				u64 spte = READ_ONCE(*it.sptep);
++				u64 span = 1ULL << (PAGE_SHIFT + 9 * (it.level - 1));
++				if (!is_shadow_present_pte(spte) || is_last_spte(spte, it.level)) {
++					next = min(end, (addr & ~(span - 1)) + span);
++					present = is_shadow_present_pte(spte);
++					break;
++				}
++			}
++			rcu_read_unlock();
++			write_unlock(&kvm->mmu_lock);
++			if (present) {
++				if (previous != addr) {
++					count++;
++					if (count <= q->capacity)
++						ranges[count - 1] = (struct kvm_lab_mmu_range){addr, 0};
++				}
++				if (count <= q->capacity)
++					ranges[count - 1].bytes += next - addr;
++				q->processed_pages += (next - addr) >> PAGE_SHIFT;
++				previous = next;
++			} else previous = U64_MAX;
++			addr = next;
++			if (signal_pending(current)) { r = -EINTR; goto unlock; }
++			cond_resched();
++		}
++		q->count = count;
++		r = count > q->capacity ? -ENOSPC : 0;
++	} else {
++		for (count = 0; count < q->count; count++) {
++			if (!lab_ram_range(vcpu, ranges[count].gpa, ranges[count].bytes)) { r = -EINVAL; goto unlock; }
++			end = ranges[count].gpa + ranges[count].bytes;
++			for (addr = ranges[count].gpa; addr < end; addr += PAGE_SIZE) {
++				int retry;
++				for (retry = 0; retry < 8; retry++) {
++					r = kvm_mmu_do_page_fault(vcpu, addr, PFERR_WRITE_MASK | PFERR_USER_MASK,
++						!(q->flags & KVM_LAB_MMU_ACTIVATE), NULL);
++					if (r != RET_PF_RETRY) break;
++					cond_resched();
++				}
++				if (r != RET_PF_FIXED && r != RET_PF_SPURIOUS) {
++					r = r < 0 ? r : -EAGAIN;
++					goto unlock;
++				}
++				q->processed_pages++;
++				if (signal_pending(current)) { r = -EINTR; goto unlock; }
++				cond_resched();
++			}
++		}
++		r = 0;
++	}
++	if (generation != kvm_vcpu_memslots(vcpu)->generation ||
++	    sequence != READ_ONCE(kvm->mmu_invalidate_seq)) {
++		r = -EAGAIN;
++		q->processed_pages = 0;
++	}
++	if (!r && query && q->count &&
++	    copy_to_user(u64_to_user_ptr(q->ranges), ranges, q->count * sizeof(*ranges)))
++		r = -EFAULT;
++unlock:
++	srcu_read_unlock(&kvm->srcu, idx);
++done:
++	kvfree(ranges);
++	q->elapsed_ns = ktime_get_ns() - start;
++	return r;
+ }
+ 
+ static int __kvm_faultin_pfn(struct kvm_vcpu *vcpu, struct kvm_page_fault *fault)
+--- /dev/null
++++ b/include/uapi/linux/kvm_prefault.h
+@@ -0,0 +1,26 @@
++/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
++#ifndef _UAPI_LINUX_KVM_PREFAULT_H
++#define _UAPI_LINUX_KVM_PREFAULT_H
++#include <linux/types.h>
++#include <linux/ioctl.h>
++
++/* Experimental x86 vCPU ABI, not the upstream KVM_PRE_FAULT_MEMORY ABI.
++ * The owner pauses its sole vCPU and freezes memslots while using it.
++ * QUERY observes current direct-MMU RAM leaves; capacity=0 returns count and
++ * ENOSPC. FILL takes count sorted nonoverlapping writable RAM ranges.
++ * FILL defaults to prefetch=true. ACTIVATE emulates a write access instead,
++ * avoiding access-tracking SPTEs, and requires guest async-PF disabled.
++ * EAGAIN means restart the whole operation. Other errors may be partial;
++ * processed_pages is informational, never permission to Resume on error.
++ */
++struct kvm_lab_mmu_range { __u64 gpa, bytes; };
++struct kvm_lab_mmu_request {
++	__u64 abi, operation, flags;
++	__u64 gpa, bytes, ranges, capacity, count;
++	__u64 processed_pages, elapsed_ns;
++};
++#define KVM_LAB_MMU_QUERY 1
++#define KVM_LAB_MMU_FILL 2
++#define KVM_LAB_MMU_ACTIVATE 1
++#define KVM_LAB_MMU_RANGE _IOWR(0xae, 0xee, struct kvm_lab_mmu_request)
++#endif

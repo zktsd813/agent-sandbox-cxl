@@ -30,7 +30,7 @@ SOURCES = ("experiment_sources.py", "swe_handoff_run.py", "handoff_bench.py", "s
     "lab.py", "shared_probe.c", "resident_fast.py",
     "resident_control.c", "resident_bootstrap.c", "resident_prepare.py", "control_rpc.c", "control_rpc.py",
     "guest-init.sh", "resident_wire.h", "resident_proxy.py", "kernel_handoff_trace.py",
-    "firecracker.patch", "kvm-dax-state.patch", "kvm-dax-source.json")
+    "firecracker.patch", "kvm-dax-state.patch", "kvm-dax-source.json", "kvm-prefault.patch", "firecracker-prefault.patch")
 
 
 def arguments():
@@ -56,6 +56,8 @@ def arguments():
     parser.add_argument('--trajectory-policies', nargs='+', choices=('heavy', 'all'))
     parser.add_argument('--heavy-plan', type=Path)
     parser.add_argument('--count-faults', action='store_true')
+    parser.add_argument('--prefault', choices=('all','mapped'))
+    parser.add_argument('--prefault-activate', action='store_true')
     parser.add_argument('--repetitions', type=int, default=1)
     parser.add_argument('--seed', type=int, default=20261116)
     parser.add_argument('--l1-memory-mib', type=int, default=6144)
@@ -77,6 +79,10 @@ def arguments():
         parser.error("Do not repeat trace names or modes")
     if args.trajectory_policies and (not args.heavy_plan or args.repetitions < 1 or args.kernel_trace):
         parser.error('Trajectory requires a heavy plan, positive repetitions and no per-hop kernel-trace option')
+    if args.prefault and (args.modes != ['state-only'] or not args.trajectory_policies):
+        parser.error('Prefault requires only state-only trajectory mode')
+    if args.prefault_activate and not args.prefault:
+        parser.error('Activation requires prefault')
     return args
 
 
@@ -190,6 +196,9 @@ def main():
             if policy:
                 bench.extend(['--trajectory-policy', policy, '--heavy-plan', str(args.heavy_plan.resolve())])
                 if args.count_faults: bench.append('--count-faults')
+            if args.prefault:
+                bench.extend(['--prefault',args.prefault])
+                if args.prefault_activate: bench.append('--prefault-activate')
             if mode == "direct" and not policy:
                 bench.append("--resident-repromote-handoff")
             if args.restore_timing:
