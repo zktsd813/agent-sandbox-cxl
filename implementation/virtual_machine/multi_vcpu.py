@@ -56,8 +56,11 @@ def main():
 
     def run(name, *arguments):
         print(name, flush=True)
+        argv = [*command, *map(str, arguments)]
+        if name == "prepare":
+            argv = ["nice", "-n", "19", *argv]
         with (args.output / (name + ".log")).open("wb") as log:
-            subprocess.run([*command, *map(str, arguments)], env=env, stdout=log,
+            subprocess.run(argv, env=env, stdout=log,
                            stderr=subprocess.STDOUT, check=True, timeout=1800)
 
     print("Waiting for lab.lock and quiet.lock", flush=True)
