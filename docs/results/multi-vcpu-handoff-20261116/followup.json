@@ -1,0 +1,1425 @@
+{
+  "schema": "multi-vcpu-followup-v1",
+  "swe": [
+    {
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/followup-gin2final/gin-gonic__gin-3741-baseline/report.json",
+        "sha256": "c51862eaf2e9f1a687cf5742447d0c9d3dc6c787c013944aa05e799054e6d6a2"
+      },
+      "verification": {
+        "result": "passed",
+        "mode": "baseline",
+        "trace": "gin-gonic__gin-3741",
+        "report_sha256": "c51862eaf2e9f1a687cf5742447d0c9d3dc6c787c013944aa05e799054e6d6a2",
+        "execution_inputs_sha256": "efa47408ebdfc89f33c2f6f181ee308ba488bb989d32d64d112cc26cd2483653",
+        "workload_inputs_sha256": "aeef0f662353049290dc8aeead9079b9c83fbb42a76605570f1eaeb6a3b8335b",
+        "commands": 27,
+        "returncodes": [
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          127,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "submission": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151",
+          "startup_warning_count": 1
+        },
+        "tests": [
+          {
+            "index": 4,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          },
+          {
+            "index": 12,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          },
+          {
+            "index": 16,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          }
+        ],
+        "guest_command_seconds": 7.679999999999998,
+        "block_read_ios": 12289,
+        "remote_nfs_reads": null,
+        "boot_id": "a1cf6b31-84c9-473e-b984-f5ecb87eef39",
+        "identity_observations": 2,
+        "transitions": {},
+        "inflight_commands": 0,
+        "runtime_image_rehash": false,
+        "per_handoff_guest_probes": false,
+        "profiled_kernel_handoffs": 0,
+        "limitations": [
+          "Coherent nested lab; immutable fixture identity comes from build records, not runtime rehash",
+          "No per-handoff source fault probes; owner rejection tests run separately",
+          "Per-command NFS counter polling removed; NFS read count was not measured"
+        ]
+      },
+      "go_test_cpu": {
+        "4": {
+          "wall_s": 4.029999999999999,
+          "accounted_elapsed_s": 3.9450000000000003,
+          "per_cpu_busy_s": {
+            "cpu0": 2.88,
+            "cpu1": 2.75
+          },
+          "working_cpus": 2,
+          "average_executing_cores": 1.3970223325062037
+        },
+        "12": {
+          "wall_s": 1.7699999999999996,
+          "accounted_elapsed_s": 1.75,
+          "per_cpu_busy_s": {
+            "cpu0": 1.4,
+            "cpu1": 1.36
+          },
+          "working_cpus": 2,
+          "average_executing_cores": 1.5593220338983054
+        },
+        "16": {
+          "wall_s": 1.5299999999999994,
+          "accounted_elapsed_s": 1.51,
+          "per_cpu_busy_s": {
+            "cpu0": 1.12,
+            "cpu1": 1.16
+          },
+          "working_cpus": 2,
+          "average_executing_cores": 1.4901960784313732
+        }
+      },
+      "parallel_build_cpu": {
+        "wall_s": 14.78,
+        "accounted_elapsed_s": 14.77,
+        "per_cpu_busy_s": {
+          "cpu0": 14.34,
+          "cpu1": 14.4
+        },
+        "working_cpus": 2,
+        "average_executing_cores": 1.9445196211096079,
+        "intervals": [
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.165,
+            "per_cpu_busy_s": {
+              "cpu0": 0.14,
+              "cpu1": 0.16
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.8181818181818183
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.175,
+            "per_cpu_busy_s": {
+              "cpu0": 0.18,
+              "cpu1": 0.17
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 2.0
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.175,
+            "per_cpu_busy_s": {
+              "cpu0": 0.17,
+              "cpu1": 0.17
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.942857142857143
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17,
+            "per_cpu_busy_s": {
+              "cpu0": 0.15,
+              "cpu1": 0.15
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.764705882352941
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.18,
+            "per_cpu_busy_s": {
+              "cpu0": 0.1,
+              "cpu1": 0.13
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.277777777777778
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.175,
+            "per_cpu_busy_s": {
+              "cpu0": 0.17,
+              "cpu1": 0.1
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.5428571428571431
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17,
+            "per_cpu_busy_s": {
+              "cpu0": 0.17,
+              "cpu1": 0.17
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 2.0
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 13.56,
+            "per_cpu_busy_s": {
+              "cpu0": 13.26,
+              "cpu1": 13.35
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.9623893805309733
+          }
+        ],
+        "handoffs": 0,
+        "command": "go build -a -p \"$(getconf _NPROCESSORS_ONLN)\" ./..."
+      }
+    },
+    {
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/followup-gin2direct/gin-gonic__gin-3741-direct/report.json",
+        "sha256": "c9b6a10ca2197f0ceea0ef354abdf8ec2ca2694bdf2b6e37fee00a970f9beece"
+      },
+      "verification": {
+        "result": "passed",
+        "mode": "direct",
+        "trace": "gin-gonic__gin-3741",
+        "report_sha256": "c9b6a10ca2197f0ceea0ef354abdf8ec2ca2694bdf2b6e37fee00a970f9beece",
+        "execution_inputs_sha256": "efa47408ebdfc89f33c2f6f181ee308ba488bb989d32d64d112cc26cd2483653",
+        "workload_inputs_sha256": "aeef0f662353049290dc8aeead9079b9c83fbb42a76605570f1eaeb6a3b8335b",
+        "commands": 27,
+        "returncodes": [
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          127,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "submission": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151",
+          "startup_warning_count": 1
+        },
+        "tests": [
+          {
+            "index": 4,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          },
+          {
+            "index": 12,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          },
+          {
+            "index": 16,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          }
+        ],
+        "guest_command_seconds": 8.53,
+        "block_read_ios": 11514,
+        "remote_nfs_reads": null,
+        "boot_id": "3898d968-49e6-454d-9639-42b9ea9337c7",
+        "identity_observations": 10,
+        "transitions": {
+          "promotion": 2,
+          "direct": 12,
+          "demotion": 2
+        },
+        "inflight_commands": 1,
+        "runtime_image_rehash": false,
+        "per_handoff_guest_probes": false,
+        "profiled_kernel_handoffs": 0,
+        "limitations": [
+          "Coherent nested lab; immutable fixture identity comes from build records, not runtime rehash",
+          "No per-handoff source fault probes; owner rejection tests run separately",
+          "Per-command NFS counter polling removed; NFS read count was not measured"
+        ]
+      },
+      "go_test_cpu": {
+        "4": {
+          "wall_s": 4.08,
+          "accounted_elapsed_s": 4.005,
+          "per_cpu_busy_s": {
+            "cpu0": 3.02,
+            "cpu1": 2.96
+          },
+          "working_cpus": 2,
+          "average_executing_cores": 1.465686274509804
+        },
+        "12": {
+          "wall_s": 2.460000000000001,
+          "accounted_elapsed_s": 2.425,
+          "per_cpu_busy_s": {
+            "cpu0": 1.95,
+            "cpu1": 1.84
+          },
+          "working_cpus": 2,
+          "average_executing_cores": 1.5406504065040645,
+          "intervals": [
+            {
+              "wall_s": null,
+              "accounted_elapsed_s": 0.02,
+              "per_cpu_busy_s": {
+                "cpu0": 0.02,
+                "cpu1": 0.01
+              },
+              "working_cpus": 2,
+              "average_executing_cores": 1.5
+            },
+            {
+              "wall_s": null,
+              "accounted_elapsed_s": 0.02,
+              "per_cpu_busy_s": {
+                "cpu0": 0.02,
+                "cpu1": 0.0
+              },
+              "working_cpus": 1,
+              "average_executing_cores": 1.0
+            },
+            {
+              "wall_s": null,
+              "accounted_elapsed_s": 0.03,
+              "per_cpu_busy_s": {
+                "cpu0": 0.02,
+                "cpu1": 0.02
+              },
+              "working_cpus": 2,
+              "average_executing_cores": 1.3333333333333335
+            },
+            {
+              "wall_s": null,
+              "accounted_elapsed_s": 2.355,
+              "per_cpu_busy_s": {
+                "cpu0": 1.89,
+                "cpu1": 1.81
+              },
+              "working_cpus": 2,
+              "average_executing_cores": 1.5711252653927814
+            }
+          ]
+        },
+        "16": {
+          "wall_s": 1.6199999999999992,
+          "accounted_elapsed_s": 1.605,
+          "per_cpu_busy_s": {
+            "cpu0": 1.21,
+            "cpu1": 1.21
+          },
+          "working_cpus": 2,
+          "average_executing_cores": 1.4938271604938278
+        }
+      },
+      "parallel_build_cpu": {
+        "wall_s": 16.1,
+        "accounted_elapsed_s": 16.07,
+        "per_cpu_busy_s": {
+          "cpu0": 15.55,
+          "cpu1": 15.64
+        },
+        "working_cpus": 2,
+        "average_executing_cores": 1.9372670807453416,
+        "intervals": [
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.175,
+            "per_cpu_busy_s": {
+              "cpu0": 0.13,
+              "cpu1": 0.16
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.6571428571428575
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.18,
+            "per_cpu_busy_s": {
+              "cpu0": 0.17,
+              "cpu1": 0.18
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.9444444444444444
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.175,
+            "per_cpu_busy_s": {
+              "cpu0": 0.18,
+              "cpu1": 0.17
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 2.0
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17,
+            "per_cpu_busy_s": {
+              "cpu0": 0.17,
+              "cpu1": 0.17
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 2.0
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.175,
+            "per_cpu_busy_s": {
+              "cpu0": 0.17,
+              "cpu1": 0.18
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 2.0
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.185,
+            "per_cpu_busy_s": {
+              "cpu0": 0.15,
+              "cpu1": 0.15
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.6216216216216215
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17,
+            "per_cpu_busy_s": {
+              "cpu0": 0.13,
+              "cpu1": 0.09
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.2941176470588234
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 14.84,
+            "per_cpu_busy_s": {
+              "cpu0": 14.45,
+              "cpu1": 14.54
+            },
+            "working_cpus": 2,
+            "average_executing_cores": 1.9535040431266846
+          }
+        ],
+        "handoffs": 6,
+        "command": "go build -a -p \"$(getconf _NPROCESSORS_ONLN)\" ./..."
+      }
+    },
+    {
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/followup-gin8/gin-gonic__gin-3741-baseline/report.json",
+        "sha256": "907c74ac53dbbda00ea226a74868253656dd9b47202ad7c7d33f99b3345e590a"
+      },
+      "verification": {
+        "result": "passed",
+        "mode": "baseline",
+        "trace": "gin-gonic__gin-3741",
+        "report_sha256": "907c74ac53dbbda00ea226a74868253656dd9b47202ad7c7d33f99b3345e590a",
+        "execution_inputs_sha256": "ec2c0025b46dea4b8d4597fee4c84cfc45cd592125ea6fa0ff587abb02484bd8",
+        "workload_inputs_sha256": "aeef0f662353049290dc8aeead9079b9c83fbb42a76605570f1eaeb6a3b8335b",
+        "commands": 27,
+        "returncodes": [
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          127,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "submission": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151",
+          "startup_warning_count": 1
+        },
+        "tests": [
+          {
+            "index": 4,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          },
+          {
+            "index": 12,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          },
+          {
+            "index": 16,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          }
+        ],
+        "guest_command_seconds": 4.87,
+        "block_read_ios": 14151,
+        "remote_nfs_reads": null,
+        "boot_id": "e357356e-0525-4c9c-aec5-f5d2a8aa6399",
+        "identity_observations": 2,
+        "transitions": {},
+        "inflight_commands": 0,
+        "runtime_image_rehash": false,
+        "per_handoff_guest_probes": false,
+        "profiled_kernel_handoffs": 0,
+        "limitations": [
+          "Coherent nested lab; immutable fixture identity comes from build records, not runtime rehash",
+          "No per-handoff source fault probes; owner rejection tests run separately",
+          "Per-command NFS counter polling removed; NFS read count was not measured"
+        ]
+      },
+      "go_test_cpu": {
+        "4": {
+          "wall_s": 2.21,
+          "accounted_elapsed_s": 2.17125,
+          "per_cpu_busy_s": {
+            "cpu0": 0.69,
+            "cpu1": 0.79,
+            "cpu2": 0.93,
+            "cpu3": 0.78,
+            "cpu4": 0.62,
+            "cpu5": 0.63,
+            "cpu6": 0.68,
+            "cpu7": 0.76
+          },
+          "working_cpus": 8,
+          "average_executing_cores": 2.660633484162896
+        },
+        "12": {
+          "wall_s": 1.21,
+          "accounted_elapsed_s": 1.18875,
+          "per_cpu_busy_s": {
+            "cpu0": 0.39,
+            "cpu1": 0.37,
+            "cpu2": 0.37,
+            "cpu3": 0.26,
+            "cpu4": 0.52,
+            "cpu5": 0.43,
+            "cpu6": 0.23,
+            "cpu7": 0.24
+          },
+          "working_cpus": 8,
+          "average_executing_cores": 2.322314049586777
+        },
+        "16": {
+          "wall_s": 1.0600000000000005,
+          "accounted_elapsed_s": 1.04125,
+          "per_cpu_busy_s": {
+            "cpu0": 0.29,
+            "cpu1": 0.31,
+            "cpu2": 0.27,
+            "cpu3": 0.39,
+            "cpu4": 0.22,
+            "cpu5": 0.34,
+            "cpu6": 0.27,
+            "cpu7": 0.26
+          },
+          "working_cpus": 8,
+          "average_executing_cores": 2.2169811320754707
+        }
+      },
+      "parallel_build_cpu": {
+        "wall_s": 6.26,
+        "accounted_elapsed_s": 6.22375,
+        "per_cpu_busy_s": {
+          "cpu0": 3.93,
+          "cpu1": 4.18,
+          "cpu2": 3.49,
+          "cpu3": 3.78,
+          "cpu4": 3.7,
+          "cpu5": 3.74,
+          "cpu6": 3.96,
+          "cpu7": 3.53
+        },
+        "working_cpus": 8,
+        "average_executing_cores": 4.84185303514377,
+        "intervals": [
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17375000000000002,
+            "per_cpu_busy_s": {
+              "cpu0": 0.11,
+              "cpu1": 0.12,
+              "cpu2": 0.12,
+              "cpu3": 0.12,
+              "cpu4": 0.12,
+              "cpu5": 0.12,
+              "cpu6": 0.13,
+              "cpu7": 0.13
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 5.582733812949639
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.16875,
+            "per_cpu_busy_s": {
+              "cpu0": 0.09,
+              "cpu1": 0.0,
+              "cpu2": 0.0,
+              "cpu3": 0.01,
+              "cpu4": 0.0,
+              "cpu5": 0.01,
+              "cpu6": 0.08,
+              "cpu7": 0.0
+            },
+            "working_cpus": 4,
+            "average_executing_cores": 1.1259259259259258
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.175,
+            "per_cpu_busy_s": {
+              "cpu0": 0.01,
+              "cpu1": 0.02,
+              "cpu2": 0.01,
+              "cpu3": 0.06,
+              "cpu4": 0.07,
+              "cpu5": 0.02,
+              "cpu6": 0.04,
+              "cpu7": 0.06
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 1.657142857142857
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.175,
+            "per_cpu_busy_s": {
+              "cpu0": 0.02,
+              "cpu1": 0.05,
+              "cpu2": 0.01,
+              "cpu3": 0.09,
+              "cpu4": 0.02,
+              "cpu5": 0.01,
+              "cpu6": 0.02,
+              "cpu7": 0.06
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 1.6000000000000003
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17125,
+            "per_cpu_busy_s": {
+              "cpu0": 0.08,
+              "cpu1": 0.14,
+              "cpu2": 0.09,
+              "cpu3": 0.01,
+              "cpu4": 0.01,
+              "cpu5": 0.1,
+              "cpu6": 0.08,
+              "cpu7": 0.12
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 3.678832116788321
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17375000000000002,
+            "per_cpu_busy_s": {
+              "cpu0": 0.18,
+              "cpu1": 0.16,
+              "cpu2": 0.06,
+              "cpu3": 0.11,
+              "cpu4": 0.06,
+              "cpu5": 0.11,
+              "cpu6": 0.12,
+              "cpu7": 0.03
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 4.776978417266187
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17125,
+            "per_cpu_busy_s": {
+              "cpu0": 0.04,
+              "cpu1": 0.16,
+              "cpu2": 0.12,
+              "cpu3": 0.06,
+              "cpu4": 0.05,
+              "cpu5": 0.04,
+              "cpu6": 0.17,
+              "cpu7": 0.17
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 4.72992700729927
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 5.015,
+            "per_cpu_busy_s": {
+              "cpu0": 3.4,
+              "cpu1": 3.53,
+              "cpu2": 3.08,
+              "cpu3": 3.32,
+              "cpu4": 3.37,
+              "cpu5": 3.33,
+              "cpu6": 3.32,
+              "cpu7": 2.96
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 5.246261216350947
+          }
+        ],
+        "handoffs": 0,
+        "command": "go build -a -p \"$(getconf _NPROCESSORS_ONLN)\" ./..."
+      }
+    },
+    {
+      "raw": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest-mvcpu/implementation/virtual_machine/.local/followup-gin8/gin-gonic__gin-3741-direct/report.json",
+        "sha256": "e160ed5e5d247d20d4b66c872f2c78bb6bd058ac48ff335fbb03fc4211f7d4fa"
+      },
+      "verification": {
+        "result": "passed",
+        "mode": "direct",
+        "trace": "gin-gonic__gin-3741",
+        "report_sha256": "e160ed5e5d247d20d4b66c872f2c78bb6bd058ac48ff335fbb03fc4211f7d4fa",
+        "execution_inputs_sha256": "ec2c0025b46dea4b8d4597fee4c84cfc45cd592125ea6fa0ff587abb02484bd8",
+        "workload_inputs_sha256": "aeef0f662353049290dc8aeead9079b9c83fbb42a76605570f1eaeb6a3b8335b",
+        "commands": 27,
+        "returncodes": [
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          127,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "submission": {
+          "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+          "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151",
+          "startup_warning_count": 1
+        },
+        "tests": [
+          {
+            "index": 4,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          },
+          {
+            "index": 12,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          },
+          {
+            "index": 16,
+            "kind": "go",
+            "packages": [
+              [
+                "?",
+                "github.com/gin-gonic/gin/ginS"
+              ],
+              [
+                "?",
+                "github.com/gin-gonic/gin/internal/json"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/binding"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/internal/bytesconv"
+              ],
+              [
+                "ok",
+                "github.com/gin-gonic/gin/render"
+              ]
+            ]
+          }
+        ],
+        "guest_command_seconds": 5.630000000000002,
+        "block_read_ios": 12691,
+        "remote_nfs_reads": null,
+        "boot_id": "ed1d6f4c-ca18-4169-a1b5-a2d6807c56f4",
+        "identity_observations": 10,
+        "transitions": {
+          "promotion": 2,
+          "direct": 12,
+          "demotion": 2
+        },
+        "inflight_commands": 1,
+        "runtime_image_rehash": false,
+        "per_handoff_guest_probes": false,
+        "profiled_kernel_handoffs": 0,
+        "limitations": [
+          "Coherent nested lab; immutable fixture identity comes from build records, not runtime rehash",
+          "No per-handoff source fault probes; owner rejection tests run separately",
+          "Per-command NFS counter polling removed; NFS read count was not measured"
+        ]
+      },
+      "go_test_cpu": {
+        "4": {
+          "wall_s": 2.33,
+          "accounted_elapsed_s": 2.27,
+          "per_cpu_busy_s": {
+            "cpu0": 0.68,
+            "cpu1": 0.75,
+            "cpu2": 0.96,
+            "cpu3": 0.84,
+            "cpu4": 0.79,
+            "cpu5": 0.82,
+            "cpu6": 0.74,
+            "cpu7": 0.91
+          },
+          "working_cpus": 8,
+          "average_executing_cores": 2.7854077253218885
+        },
+        "12": {
+          "wall_s": 1.75,
+          "accounted_elapsed_s": 1.7149999999999999,
+          "per_cpu_busy_s": {
+            "cpu0": 0.53,
+            "cpu1": 0.39,
+            "cpu2": 0.69,
+            "cpu3": 0.4,
+            "cpu4": 0.5,
+            "cpu5": 0.33,
+            "cpu6": 0.49,
+            "cpu7": 0.64
+          },
+          "working_cpus": 8,
+          "average_executing_cores": 2.2685714285714287,
+          "intervals": [
+            {
+              "wall_s": null,
+              "accounted_elapsed_s": 0.01,
+              "per_cpu_busy_s": {
+                "cpu0": 0.0,
+                "cpu1": 0.0,
+                "cpu2": 0.01,
+                "cpu3": 0.0,
+                "cpu4": 0.0,
+                "cpu5": 0.0,
+                "cpu6": 0.0,
+                "cpu7": 0.0
+              },
+              "working_cpus": 1,
+              "average_executing_cores": 1.0
+            },
+            {
+              "wall_s": null,
+              "accounted_elapsed_s": 0.0275,
+              "per_cpu_busy_s": {
+                "cpu0": 0.0,
+                "cpu1": 0.0,
+                "cpu2": 0.02,
+                "cpu3": 0.0,
+                "cpu4": 0.0,
+                "cpu5": 0.0,
+                "cpu6": 0.0,
+                "cpu7": 0.0
+              },
+              "working_cpus": 1,
+              "average_executing_cores": 0.7272727272727273
+            },
+            {
+              "wall_s": null,
+              "accounted_elapsed_s": 0.025,
+              "per_cpu_busy_s": {
+                "cpu0": 0.0,
+                "cpu1": 0.01,
+                "cpu2": 0.03,
+                "cpu3": 0.02,
+                "cpu4": 0.01,
+                "cpu5": 0.01,
+                "cpu6": 0.01,
+                "cpu7": 0.01
+              },
+              "working_cpus": 7,
+              "average_executing_cores": 4.0
+            },
+            {
+              "wall_s": null,
+              "accounted_elapsed_s": 1.6524999999999999,
+              "per_cpu_busy_s": {
+                "cpu0": 0.53,
+                "cpu1": 0.38,
+                "cpu2": 0.63,
+                "cpu3": 0.38,
+                "cpu4": 0.49,
+                "cpu5": 0.32,
+                "cpu6": 0.48,
+                "cpu7": 0.63
+              },
+              "working_cpus": 8,
+              "average_executing_cores": 2.32375189107413
+            }
+          ]
+        },
+        "16": {
+          "wall_s": 1.129999999999999,
+          "accounted_elapsed_s": 1.0987500000000001,
+          "per_cpu_busy_s": {
+            "cpu0": 0.53,
+            "cpu1": 0.46,
+            "cpu2": 0.3,
+            "cpu3": 0.32,
+            "cpu4": 0.3,
+            "cpu5": 0.17,
+            "cpu6": 0.26,
+            "cpu7": 0.21
+          },
+          "working_cpus": 8,
+          "average_executing_cores": 2.256637168141595
+        }
+      },
+      "parallel_build_cpu": {
+        "wall_s": 7.0699999999999985,
+        "accounted_elapsed_s": 6.97125,
+        "per_cpu_busy_s": {
+          "cpu0": 4.53,
+          "cpu1": 4.28,
+          "cpu2": 4.0,
+          "cpu3": 4.05,
+          "cpu4": 4.28,
+          "cpu5": 4.14,
+          "cpu6": 4.17,
+          "cpu7": 4.42
+        },
+        "working_cpus": 8,
+        "average_executing_cores": 4.790664780763791,
+        "intervals": [
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.1625,
+            "per_cpu_busy_s": {
+              "cpu0": 0.08,
+              "cpu1": 0.09,
+              "cpu2": 0.09,
+              "cpu3": 0.07,
+              "cpu4": 0.1,
+              "cpu5": 0.08,
+              "cpu6": 0.12,
+              "cpu7": 0.08
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 4.369230769230769
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17250000000000001,
+            "per_cpu_busy_s": {
+              "cpu0": 0.1,
+              "cpu1": 0.1,
+              "cpu2": 0.09,
+              "cpu3": 0.1,
+              "cpu4": 0.16,
+              "cpu5": 0.12,
+              "cpu6": 0.1,
+              "cpu7": 0.1
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 5.0434782608695645
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.18,
+            "per_cpu_busy_s": {
+              "cpu0": 0.01,
+              "cpu1": 0.13,
+              "cpu2": 0.02,
+              "cpu3": 0.01,
+              "cpu4": 0.06,
+              "cpu5": 0.01,
+              "cpu6": 0.02,
+              "cpu7": 0.01
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 1.5000000000000002
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.18,
+            "per_cpu_busy_s": {
+              "cpu0": 0.07,
+              "cpu1": 0.02,
+              "cpu2": 0.02,
+              "cpu3": 0.01,
+              "cpu4": 0.01,
+              "cpu5": 0.01,
+              "cpu6": 0.07,
+              "cpu7": 0.07
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 1.5555555555555558
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17625,
+            "per_cpu_busy_s": {
+              "cpu0": 0.12,
+              "cpu1": 0.01,
+              "cpu2": 0.0,
+              "cpu3": 0.01,
+              "cpu4": 0.0,
+              "cpu5": 0.01,
+              "cpu6": 0.06,
+              "cpu7": 0.01
+            },
+            "working_cpus": 6,
+            "average_executing_cores": 1.24822695035461
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17500000000000002,
+            "per_cpu_busy_s": {
+              "cpu0": 0.02,
+              "cpu1": 0.02,
+              "cpu2": 0.07,
+              "cpu3": 0.0,
+              "cpu4": 0.07,
+              "cpu5": 0.05,
+              "cpu6": 0.14,
+              "cpu7": 0.07
+            },
+            "working_cpus": 7,
+            "average_executing_cores": 2.5142857142857142
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 0.17125,
+            "per_cpu_busy_s": {
+              "cpu0": 0.11,
+              "cpu1": 0.15,
+              "cpu2": 0.03,
+              "cpu3": 0.09,
+              "cpu4": 0.1,
+              "cpu5": 0.11,
+              "cpu6": 0.06,
+              "cpu7": 0.12
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 4.4963503649635035
+          },
+          {
+            "wall_s": null,
+            "accounted_elapsed_s": 5.75375,
+            "per_cpu_busy_s": {
+              "cpu0": 4.02,
+              "cpu1": 3.76,
+              "cpu2": 3.68,
+              "cpu3": 3.76,
+              "cpu4": 3.78,
+              "cpu5": 3.75,
+              "cpu6": 3.6,
+              "cpu7": 3.96
+            },
+            "working_cpus": 8,
+            "average_executing_cores": 5.267868781229632
+          }
+        ],
+        "handoffs": 6,
+        "command": "go build -a -p \"$(getconf _NPROCESSORS_ONLN)\" ./..."
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "vcpus": 2,
+      "matched": true,
+      "compared": [
+        "execution_inputs_sha256",
+        "workload_inputs_sha256",
+        "returncodes",
+        "tests",
+        "submission"
+      ]
+    },
+    {
+      "vcpus": 8,
+      "matched": true,
+      "compared": [
+        "execution_inputs_sha256",
+        "workload_inputs_sha256",
+        "returncodes",
+        "tests",
+        "submission"
+      ]
+    }
+  ],
+  "resident": [],
+  "cpu_accounting": "x86 Linux USER_HZ=100; busy=user+nice+system+irq+softirq; active threshold=max(1 tick,1% wall); interval wall uses mean per-CPU accounted ticks when no uptime timestamp exists",
+  "status": "functional-passed; resident timing running",
+  "notes": [
+    "Two matched Gin baseline/direct pairs; original 27 commands unchanged",
+    "Auxiliary rebuild verified separately; six live handoffs",
+    "Resident measurement pilot is excluded from final timing samples"
+  ]
+}

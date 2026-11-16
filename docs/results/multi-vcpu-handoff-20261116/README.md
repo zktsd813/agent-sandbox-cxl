@@ -66,3 +66,47 @@ C probe는 경고를 오류로 처리해 빌드했다. 기존 1 vCPU의 EPT 폐�
 이 worktree의 `.local`은 약 11.29 GiB다(`du -sh`: 12G).
 빌드 입력 복사본·산출물·원시 자료와 실패 trial의 private disk 증거를 포함한다.
 큰 storage 원본은 symlink로 참조했다. 원본 입력과 host 설정은 바꾸지 않았다.
+
+## 후속 검증
+
+16번 실행이다. 양쪽 가상 머신 모니터(Virtual Machine Monitor, VMM)를 Firecracker로
+상주시킨 resident direct 경로를 확인했다. 준비 helper만 native 코드다.
+가상 CPU 2개와 8개에서 Gin의 원문 명령 27개를 모두 재생했다.
+각 구성의 무이동 baseline과 반환값, 세 번의 test 패키지 요약, 최종 diff가 같았다.
+독립 verifier와 별도 분석기가 원시 자료를 다시 읽었다.
+
+`go test ./...`의 Go 동시 실행 한도(`GOMAXPROCS`)는 바꾸지 않았다.
+명령 전후와 이동 사이에 `/proc/stat`의 CPU별 누적 시간을 기록했다.
+사용자 시간 단위(`USER_HZ`)는 초당 100회다.
+작업 시간은 user, nice, system, irq, softirq의 합이다. idle, iowait, steal은 제외했다.
+아래 평균 코어 수는 작업 시간 합을 guest 명령 경과 시간으로 나눈 값이다.
+명령 실행시간은 병렬성 확인용 단일 표본이다.
+
+| vCPU | 명령 | CPU 사용 개수 | baseline 평균 코어 | 이동 실행 평균 코어 | 이동 실행 guest 초 |
+|---:|---|---:|---:|---:|---:|
+| 2 | 원문 test, 명령 12 | 2 | 1.56 | 1.54 | 2.46 |
+| 8 | 원문 test, 명령 12 | 8 | 2.32 | 2.27 | 1.75 |
+| 2 | 강제 패키지 재빌드 | 2 | 1.94 | 1.94 | 16.10 |
+| 8 | 강제 패키지 재빌드 | 8 | 4.84 | 4.79 | 7.07 |
+
+CPU 사용 개수의 기준은 CPU별 작업 시간이 1 tick 또는 구간의 1% 이상인 경우다.
+원문 test는 B→A→B로 옮겼다. 같은 프로세스 식별자(Process Identifier, PID)와
+시작 tick을 세 번 확인했다.
+
+추가 명령은 같은 Gin guest의 `go build -a -p "$(getconf _NPROCESSORS_ONLN)" ./...`다.
+`-a`는 캐시된 패키지도 다시 컴파일한다. `-p`에는 guest의 vCPU 수를 넣는다.
+원문 명령의 변경 없이 병렬 컴파일 시간을 확보하려고 골랐다.
+이 명령이 도는 동안 A→B→A를 세 번 반복했다. 같은 PID와 시작 tick을 일곱 번 확인했다.
+CPU별 누적 값은 모든 구간에서 감소하지 않았다.
+8 vCPU 이동 빌드의 CPU별 작업 시간은 4.53, 4.28, 4.00, 4.05, 4.28, 4.14, 4.17, 4.42초다.
+한 구간에서 관측한 평균 실행 코어 수의 최대는 5.27개다.
+각 direct trial은 원문 test 중 2회, 재빌드 중 6회를 포함해 총 12회 이동했다.
+
+기능 시험은 바깥 VM마다 4 GiB, guest는 2 GiB다.
+빈 주소 공간을 줄인 4 GiB 파일 CXL 구성을 추가했다.
+RAM 영역은 2–3072 MiB다. 장부는 3072 MiB 뒤, KVM 객체 arena는 3584 MiB 뒤다.
+시작 전 node 0 free가 전체 예산과 4 GiB 여유보다 큰지 검사했다.
+큰 기존 구성의 메모리 검사가 두 번 시작을 거절했다. 해당 시도는 VM을 띄우지 않았다.
+
+양쪽 Firecracker의 방향별 시간 측정과 1·2 vCPU 구간 계측은 이어서 기록한다.
+원시 자료 위치와 해시는 [followup.json](followup.json)에 있다.
