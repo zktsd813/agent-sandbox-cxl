@@ -89,24 +89,30 @@ L1 커널은 기존 설정에서 `CONFIG_HIST_TRIGGERS=y`만 추가해 별도 �
 [physical_ept_cost.c](../../../implementation/virtual_machine/physical_ept_cost.c)는
 일반 L0 KVM에 작은 32-bit guest를 만든다. guest paging은 끈다.
 L0에서 이미 할당한 512 MiB를 guest가 4 KiB 간격으로 쓴다.
-첫 scan에서 반복 scan 다섯 번의 중앙값을 뺀다.
+먼저 여섯 번 쓴다. vCPU가 멈춘 동안 같은 VM의 RAM slot을 삭제한다.
+실제 EPT leaf가 0개가 됐는지 확인한다. 같은 backing을 다시 등록한다.
+재접근 scan에서 다음 반복 scan 다섯 번의 중앙값을 뺀다.
+RAM·guest register·데이터는 유지한다. 초기 scan 값도 원시 자료에 남긴다.
 `MADV_NOHUGEPAGE`와 `MADV_HUGEPAGE`로 backing만 바꾼다.
 매핑 크기는 실제 KVM leaf 수로 확인한다. host 설정은 바꾸지 않는다.
 
 | 실제 leaf | 반복 | fault당 비용 중앙값 | 범위 |
 |---|---:|---:|---:|
-| 4 KiB | 3 | 0.989 µs | 0.987–1.027 µs |
-| 2 MiB | 3 | 1.376 µs | 1.363–1.453 µs |
+| 4 KiB | 3 | 0.985 µs | 0.981–0.999 µs |
+| 2 MiB | 3 | 1.060 µs | 1.041–1.073 µs |
 
-첫 scan의 fixed fault와 leaf는 각각 131,073개와 257개였다.
+EPT를 비운 뒤 첫 scan의 fixed fault와 leaf는 각각 131,073개와 257개였다.
 뒤의 다섯 scan은 모두 fixed fault 0회였다.
 분모는 L0 KVM vCPU의 `pf_fixed` 증가분이다.
 Host tracefs는 접근할 수 없어 L0 EPT exit를 직접 세지 못했다.
-이 값에는 cache 효과와 첫 VM-entry 비용도 남는다. 순수 상수로 보지 않는다.
+이 값에도 cache/TLB 효과와 VM-entry 비용이 남는다. 순수 상수로 보지 않는다.
+기존 host 설정은 TDP MMU 켬, NX huge-page 보완 끔, THP madvise다.
+TDP MMU는 two-dimensional paging memory management unit이다.
+NX는 no-execute, THP는 transparent huge page다. 이 설정은 바꾸지 않았다.
 원시 scan 값과 바이너리 해시는 [physical-summary.json](physical-summary.json)에 있다.
 
 SWE의 실제 매핑은 4 KiB다.
-L1에서 센 RAM 주소 fault 수에 0.989 µs를 곱한 값은 물리 서버의 **추정 매핑 비용**이다.
+L1에서 센 RAM 주소 fault 수에 0.985 µs를 곱한 값은 물리 서버의 **추정 매핑 비용**이다.
 장치 주소 fault는 이 환산에서 제외한다.
 VMM 생성, EPT 해제, 장치 복원, cache와 주소 변환 캐시(TLB, translation lookaside buffer)의 warm-up, 전송 비용은 그 추정에 없다.
 2 MiB 비용에 같은 4 KiB fault 수를 곱해서 huge-page 궤적을 예측하지 않는다.
