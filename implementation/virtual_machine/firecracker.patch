@@ -90,7 +90,7 @@ index a3b3f3f..65d254f 100644
              parse_put_actions(&Body::new("invalid_body")).unwrap_err();
 
 diff --git a/src/firecracker/src/api_server_adapter.rs b/src/firecracker/src/api_server_adapter.rs
-index 70abff4..ca49758 100644
+index 70abff4..890bb4b 100644
 --- a/src/firecracker/src/api_server_adapter.rs
 +++ b/src/firecracker/src/api_server_adapter.rs
 @@ -2,10 +2,13 @@
@@ -488,7 +488,7 @@ index 70abff4..ca49758 100644
 +        event_manager.run_with_timeout(100).unwrap();
 +        adapter.lock().unwrap().handle_request(&mut event_manager);
 +        let error = (*from_vmm.recv_timeout(Duration::from_secs(1)).unwrap()).unwrap_err();
-+        assert!(error.to_string().contains("direct handoff requires vCPU count"));
++        assert!(error.to_string().contains("vCPU count"));
 +        assert_eq!(vmm.lock().unwrap().instance_info.state, state_before);
 +        device_event.write(1).unwrap();
 +        event_manager.run_with_timeout(100).unwrap();

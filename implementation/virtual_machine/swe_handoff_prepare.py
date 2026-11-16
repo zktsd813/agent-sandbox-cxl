@@ -39,7 +39,10 @@ def main():
     parser.add_argument('--mapper-module', type=Path, required=True)
     parser.add_argument('--kvm-module-dir', type=Path, required=True)
     parser.add_argument('--l1-kernel', type=Path, required=True)
+    parser.add_argument('--l1-config', type=Path, help='Require built-in NFS server support and record the L1 config')
     args = parser.parse_args()
+    if args.l1_config and 'CONFIG_NFSD=y' not in args.l1_config.read_text().splitlines():
+        raise ValueError('L1 needs built-in CONFIG_NFSD=y for the NFS fixture')
     base = args.trace_assets.resolve(strict=True)
     dest = args.assets.resolve()
     if dest.exists():
@@ -69,6 +72,8 @@ def main():
                     'l1-kernel': args.l1_kernel, 'pool_memory_module.ko': args.mapper_module}
     for name, source in replacements.items():
         shutil.copy2(source, dest/name)
+    if args.l1_config:
+        shutil.copy2(args.l1_config, dest/'l1-kernel.config')
     shutil.copy2(args.guest_config, dest/'l2-handoff.config')
     commands = {}
     for source, binary in (('resident_control.c', 'resident-control'), ('control_rpc.c', 'control-rpc'),
