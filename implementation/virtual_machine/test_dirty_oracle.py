@@ -61,5 +61,39 @@ class MaintenanceReceipts(unittest.TestCase):
         self.assertEqual(self.oracle.consumed[2], 10)
 
 
+class AccumulatedReplay(unittest.TestCase):
+    def test_cleaned_pages_count_at_handoff_and_missing_union_is_rejected(self):
+        import hashlib
+        from pathlib import Path
+        import tempfile
+        from verify_swe_handoff import verify_cache_receipts
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);(root/'dirty-oracle').mkdir();rows=[]
+            def event(phase,epoch,node,bitmap,changed=None,start=0):
+                sequence=len(rows)+1
+                source=phase in (1,2,4,6)
+                planes=[bitmap,0,bitmap,bitmap if source else 0,0 if source else bitmap,0 if source else bitmap]
+                data=struct.pack('<6Q',*planes)
+                (root/'dirty-oracle'/f'{sequence}.bitmap').write_bytes(data)
+                row=dict(sequence=sequence,phase=phase,epoch=epoch,node=node,pages=64,
+                    missing_pages=0,other_changed_pages=0,coverage_verified=True,inv_from=start,inv_to=epoch)
+                if changed is not None:
+                    raw=struct.pack('<Q',changed)
+                    (root/'dirty-oracle'/f'{sequence}.changed').write_bytes(raw)
+                    row.update(changed_bitmap_sha256=hashlib.sha256(raw).hexdigest(),bitmap_sha256=hashlib.sha256(data).hexdigest())
+                rows.append(row)
+            full=(1<<64)-1
+            event(1,1,1,full,changed=0)
+            event(4,2,1,3)
+            event(5,2,2,full)
+            event(2,3,1,4,changed=3)  # both changed pages were only in the live clean
+            event(3,3,2,4,start=2)
+            result=verify_cache_receipts({'dirty_oracle':rows},root)
+            self.assertEqual((result['cleans'],result['preinvalidations']),(1,1))
+            (root/'dirty-oracle/2.bitmap').write_bytes(struct.pack('<6Q',1,0,1,1,0,0))
+            with self.assertRaisesRegex(ValueError,'accumulated published sets'):
+                verify_cache_receipts({'dirty_oracle':rows},root)
+
+
 if __name__ == '__main__':
     unittest.main()
