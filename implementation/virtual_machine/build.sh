@@ -206,6 +206,7 @@ test_sources() {
     fc_cargo test -p vmm test_direct_handoff_preflight_rejects_devices_and_excess_vcpus
     fc_cargo test -p vmm direct::tests
     fc_cargo test -p vmm pool_memory::tests
+    fc_cargo test -p vmm noncoherent::tests
     if [[ "${CXL_LAB_PREFAULT:-0}" == 1 ]]; then
         fc_cargo test -p vmm prefault::tests
     fi

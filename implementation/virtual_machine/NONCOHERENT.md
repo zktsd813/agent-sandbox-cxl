@@ -113,3 +113,28 @@ RAM 밖 변경은 KVM arena, mapper/token/log/제어, 그 밖으로 나눈다.
 Lab은 cache가 일관이다. 정확성 주장은 목록 완전성과 실제 범위 영수증에 한정한다.
 실제 stale 재현과 물리 multi-host 성능을 주장하지 않는다.
 실측은 node 0 DRAM backing이다. line 수에 주어진 CXL 단가를 곱한 값은 환산으로 표시한다.
+
+## 구현에서 확정한 세부 사항
+
+Log header의 next_epoch는 다음 미발행 번호다. Packet의 마지막 epoch는 next_epoch-1이다.
+Header는 64 byte다. Cookie 두 개로 mapper allocation identity를 묶는다.
+Slot은 16 byte(epoch와 page 수)와 bitmap을 64 byte 경계에 맞춘다.
+64 MiB mapper metadata 예약 안에서 log는 +32 MiB, 시험 gate는 +40 MiB,
+CXL mailbox는 +48 MiB에 둔다. Mapper table은 최대 RAM 4 GiB에서도 +17 MiB 아래다.
+Consumed는 cookie별 /run 파일에 둔다. L1의 /run은 host별 DRAM tmpfs다.
+VMM wrapper를 바꿔도 이어진다. 읽는 쪽은 CXL log에 쓰지 않는다.
+
+Mapper table은 allocation 동안 불변이다. 처음 보내기/방문 때 table 전체를 처리한다.
+매 이동에서는 변하는 header 4 KiB를 처리한다. Token·장치 packet의 CXL mailbox 사본도
+내려쓰고, 받는 쪽에서 먼저 무효화해 전송된 packet과 비교한다.
+Kernel arena 영수증은 host DRAM에 둔다. 시간 기록 때문에 내려쓴 객체를 다시 더럽히지 않는다.
+
+추가 raw writer도 찾았다. resident_control.c의 시험용 heartbeat epoch는
+기존에 export 뒤 raw DAX mapping으로 썼다. Cache 유지보수 모드에서는 이 쓰기를 없앤다.
+VMM이 모든 vCPU를 정지한 뒤 GuestMemory.write_obj로 쓰고 장부를 걷는다.
+이 변경은 시험용 ACK trigger의 순서도 정리한다. Gate와 ACK polling은 coherent lab 전용이다.
+
+Promotion은 전체 RAM record를 발행한다. 그 뒤 두 장부를 다시 시작한다.
+0/16/64/256 MiB 시험의 payload 쓰기는 guest ACK 뒤에 한다.
+완료 표식을 본 뒤 다음 pause를 요청한다. Payload 쓰기 시간은 pause→ACK에 포함하지 않는다.
+0 MiB도 heartbeat와 clock 등 실제로 쓰인 page가 조금 있다. 실제 목록을 함께 보고한다.

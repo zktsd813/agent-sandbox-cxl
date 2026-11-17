@@ -51,6 +51,7 @@ def arguments():
     parser.add_argument("--cxl-mib", type=int, choices=(4096,8192,16384))
     parser.add_argument("--parallel-build", action="store_true")
     parser.add_argument("--dirty-ledger", action="store_true")
+    parser.add_argument("--noncoherent", action="store_true")
     parser.add_argument("--dirty-oracle", action="store_true")
     parser.add_argument("--page-hash", type=Path)
     parser.add_argument("--pml", choices=("on", "off"), default="off")
@@ -74,6 +75,7 @@ def arguments():
     parser.add_argument('--seed', type=int, default=20261116)
     parser.add_argument('--skip-trials', type=int, default=0, help='Resume a recorded shuffled plan in a fresh output/session; preserve the completed prefix separately')
     args = parser.parse_args()
+    if args.noncoherent: args.dirty_ledger=True
     if not re.fullmatch(r"[a-z0-9_-]{1,29}", args.session):
         parser.error("Use a fresh lowercase session name of at most 29 characters")
     if not re.fullmatch(r"[0-9]+(?:-[0-9]+)?(?:,[0-9]+(?:-[0-9]+)?)*", args.cpus):
@@ -216,6 +218,7 @@ def main():
             bench = prefix + [str(HERE / "handoff_bench.py"), "--mode", mode, "--name", name,
                               "--memory-mib", str(args.memory_mib), "--vcpus", str(args.vcpus),
                               "--direct-profile-roundtrips", str(args.direct_profile_roundtrips)]
+            if args.noncoherent: bench.append("--noncoherent")
             if args.dirty_ledger:
                 bench.append('--dirty-ledger')
             if args.dirty_oracle:

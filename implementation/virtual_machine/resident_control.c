@@ -285,7 +285,11 @@ static struct outcome handoff(struct request q,const char *peer,int client,char 
   q.state_len=response[1];q.manifest_len=0;recv_all(native_fd,state,q.state_len);
   o.send=(struct api_result){.status=204,.us=(ns()-start)/1000.};
  } else { o.send=api("PUT","/actions","{\"action_type\": \"DirectSend\"}"); }
- if(heartbeat)atomic_store_explicit(&heartbeat->epoch,q.epoch,memory_order_release);
+ if(heartbeat) {
+  const char *tracked=getenv("RESIDENT_BENCH_TRACKED_EPOCH");
+  if(tracked && !strcmp(tracked,"1"))check(atomic_load(&heartbeat->epoch)==q.epoch,"tracked VMM benchmark epoch");
+  else atomic_store_explicit(&heartbeat->epoch,q.epoch,memory_order_release);
+ }
  phase_mark(&profile,"export_api");
  select_owner(2147483647);phase_mark(&profile,"source_fence");q.operation=0;
  if(!memory) {

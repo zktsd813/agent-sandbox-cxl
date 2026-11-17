@@ -88,8 +88,21 @@ while read -r OP ARG TOKEN EXTRA; do
             VCPUS=$(awk '/^cpu[0-9]+ / {n++} END {print n}' /proc/stat)
             MODE=1; SLEEP=0
             if [ "$EXTRA" = idle ]; then MODE=0; VCPUS=1; SLEEP=2; fi
+            case "$EXTRA" in
+                dirty*) MODE=0; VCPUS=1; SLEEP=2; export LAB_HEARTBEAT_DIRTY_MIB=${EXTRA#dirty} ;;
+                *) unset LAB_HEARTBEAT_DIRTY_MIB ;;
+            esac
             LAB_HEARTBEAT_VCPUS=$VCPUS LAB_HEARTBEAT_SMP=$MODE LAB_HEARTBEAT_TIMING=1 taskset 1 /lab/shared-probe heartbeat A "$SLEEP" 1 > "$R/heartbeat.log" 2>&1 &
-            printf '{"event":"trace_heartbeat","label":"%s","pid":%s}\n' "$TOKEN" "$!"
+            HEARTBEAT_PID=$!
+            if [ "${LAB_HEARTBEAT_DIRTY_MIB+x}" = x ]; then
+                attempt=0
+                while ! grep -q '^L2_DIRTY_READY' "$R/heartbeat.log"; do
+                    kill -0 "$HEARTBEAT_PID" || { cat "$R/heartbeat.log"; exit 1; }
+                    attempt=$((attempt+1)); [ "$attempt" -lt 12000 ] || exit 1
+                    sleep .01
+                done
+            fi
+            printf '{"event":"trace_heartbeat","label":"%s","pid":%s}\n' "$TOKEN" "$HEARTBEAT_PID"
             ;;
         build_async)
             [ "$RUNNING" -eq 0 ] && [ "$NEXT" -eq "$COUNT" ] || exit 1

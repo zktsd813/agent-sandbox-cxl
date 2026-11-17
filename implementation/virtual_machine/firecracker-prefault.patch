@@ -1,8 +1,8 @@
 --- a/src/vmm/src/lib.rs
 +++ b/src/vmm/src/lib.rs
-@@ -81,6 +81,8 @@
- #[cfg(target_arch = "x86_64")]
+@@ -82,6 +82,8 @@
  pub(crate) mod direct;
+ pub(crate) mod noncoherent;
  pub(crate) mod pool_memory;
 +#[cfg(target_arch = "x86_64")]
 +pub(crate) mod prefault;

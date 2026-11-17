@@ -201,7 +201,7 @@ numactl --physcpubind=0-23 --membind=0 python3 "$V/multi_vcpu.py" \
 Direct는 현재 1~8 vCPU·동일 kernel/CPU 모델·고정 HVA·MMIO·read-only block 조건이다.
 양쪽 vCPU 수와 ID가 같아야 한다. 1/2/4/8개를 검증했다. CPU hotplug는 지원하지 않는다.
 Balloon·hotplug·pmem·지원하지 않는 장치 구성은 사전에 거절한다.
-KVM shared header/token ABI는 2(token 464 B), direct JSON은 v2, resident packet은 v3다.
+KVM shared header/token ABI는 2(token 464 B), direct JSON은 v3, resident packet은 v4다.
 Mapper `/dev/cxl_pool` ABI 4(handle 152 B, config/query 56 B, Firecracker manifest v4)는 유지한다.
 이전 ABI는 거절한다. 같은 binary·kernel·mapper로 양쪽을 준비한다.
 
@@ -209,3 +209,9 @@ Mapper `/dev/cxl_pool` ABI 4(handle 152 B, config/query 56 B, Firecracker manife
 물리 host 성능에서 이 비용을 임의로 빼지 않는다. 일반 TLB 무효화·단일 owner·CXL 가시성은 별도 보장이다.
 비일관 물리 multi-host CXL, writable direct, 장애 복구와
 최신 resident 경로의 MPTCP/PML 통합은 검증하지 않았다.
+
+
+비일관 hand-off 실험은 [NONCOHERENT.md](NONCOHERENT.md)를 따른다.
+`--noncoherent`는 생성 때부터 dirty tracking을 켠다. PML은 `--pml on`으로 별도 선택한다.
+Log와 CXL mailbox는 mapper metadata 예약 안에 둔다. Kernel cache 유지보수도 이 옵션에서만 켠다.
+결과와 제한은 [2026-11-17 기록](../../docs/results/noncoherent-handoff-20261117/README.md)에 있다.

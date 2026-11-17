@@ -1009,6 +1009,16 @@ static void guest_heartbeat(int sleeping, int quiet)
     atomic_store(&hb->instance_id, instance);
     atomic_store(&hb->first_sweep_ns, 0);atomic_store(&hb->warm_sweep_ns, 0);
     atomic_store(&hb->warm_done, 0);
+    const char *dirty_setting=getenv("LAB_HEARTBEAT_DIRTY_MIB");
+    unsigned dirty_mib=dirty_setting?strtoul(dirty_setting,NULL,10):0;
+    if(dirty_setting && dirty_mib!=0 && dirty_mib!=16 && dirty_mib!=64 && dirty_mib!=256) {
+        fprintf(stderr,"Unsupported controlled dirty size\n");exit(1);
+    }
+    size_t dirty_words=(size_t)dirty_mib*1024*1024/8;
+    volatile uint64_t *dirty=dirty_words?mmap(NULL,dirty_words*8,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0):NULL;
+    if(dirty_words && (void *)dirty==MAP_FAILED)die("controlled dirty memory");
+    for(size_t i=0;i<dirty_words;i++)dirty[i]=i;
+    uint64_t dirty_epoch=0;
     int timing=env_enabled("LAB_HEARTBEAT_TIMING");
     const unsigned spins=128;
     int churn=env_enabled("LAB_HEARTBEAT_CHURN");
@@ -1031,6 +1041,7 @@ static void guest_heartbeat(int sleeping, int quiet)
         fflush(stdout);
     }
     atomic_store_explicit(&hb->magic, HB_MAGIC, memory_order_release);
+    if(dirty_setting){printf("L2_DIRTY_READY mib=%u\n",dirty_mib);fflush(stdout);}
     uint64_t previous = 0;
     for (;;) {
         uint64_t epoch = atomic_load_explicit(&hb->epoch, memory_order_acquire);
@@ -1088,6 +1099,14 @@ static void guest_heartbeat(int sleeping, int quiet)
                 fflush(stdout);
             }
             if (!dense) atomic_store_explicit(&hb->verified, epoch, memory_order_release);
+            if(dirty_setting) {
+                /* Outside pause-to-ACK: validate the previous epoch, then write
+                 * the full requested payload before allowing the next pause. */
+                for(size_t i=0;i<dirty_words;i++)if(dirty[i]!=(i^dirty_epoch))atomic_fetch_add(&hb->errors,1);
+                for(size_t i=0;i<dirty_words;i++)dirty[i]=i^epoch;
+                dirty_epoch=epoch;
+                atomic_store_explicit(&hb->warm_done,epoch,memory_order_release);
+            }
             previous = epoch;
         }
         if (sleeping) usleep(sleeping == 2 ? 1000 : 100);

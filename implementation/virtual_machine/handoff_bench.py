@@ -333,7 +333,14 @@ class HandoffController(Controller):
             "FC_POOL_MEMORY_MANIFEST": s.manifest_path, "FC_POOL_MEMORY_DEVICE": "/dev/cxl_pool",
             "FC_DAX_FIXED_HVA": "0x400000000000", "FC_DAX_SNAPSHOT": "1",
             "FC_DAX_SNAPSHOT_COMPAT": "1"}
+        if getattr(self.args, 'noncoherent', False):
+            env['FC_NONCOHERENT']='1'
+            if s.role=='B' and getattr(self.args,'skip_invalidate_page',-1)>=0:
+                env['FC_NONCOHERENT_SKIP_PAGE']=str(self.args.skip_invalidate_page)
+            if getattr(self.args,'resident_bench',None):
+                env.update(FC_BENCH_EPOCH_GPA=str(64*MIB),FC_BENCH_INITIAL_EPOCH=str(s.epoch))
         if getattr(self.args, 'dirty_ledger', False):
+            env['FC_NONCOHERENT_NODE']='1' if s.role=='A' else '2'
             env.update(FC_DIRTY_LEDGER='1', FC_DIRTY_OUTPUT=s.directory+'/dirty')
             if getattr(self.args, 'dirty_oracle', False): env['FC_DIRTY_ORACLE'] = '1'
         if getattr(self.args, 'trajectory_policy', None):
@@ -411,7 +418,10 @@ class HandoffController(Controller):
 
     def configure_direct(self):
         for role, node, mode in (('A', 1, 1), ('B', 2, 2)):
-            self.shell(role, 'echo 2147483647 > /sys/module/kvm/parameters/dax_owner_pid\n'
+            cache = 'echo 1 > /sys/module/kvm/parameters/dax_noncoherent\necho 1 > /sys/module/kvm/parameters/dax_cache_check\n' if getattr(self.args,'noncoherent',False) else ''
+            if role=='A' and getattr(self.args,'cache_skip_line',-1)>=0:
+                cache+=f'echo {self.args.cache_skip_line} > /sys/module/kvm/parameters/dax_cache_skip_line\n'
+            self.shell(role, cache+'echo 2147483647 > /sys/module/kvm/parameters/dax_owner_pid\n'
                 + ('echo 1 > /sys/module/kvm/parameters/dax_handoff_profile\n' if self.args.restore_timing else '') +
                 (f'echo {int(getattr(self.args, "resume_profile",False))} > /sys/module/kvm/parameters/dax_resume_profile\n' if getattr(self.args,'resident_bench',None) else '') +
                 'resource=$(cat /sys/bus/dax/devices/dax0.0/resource)\n'
@@ -919,6 +929,12 @@ def mixed_io(args):
             c.write_bytes(destination,manifest_path,manifest,'io-manifest-transfer')
             # This socket belongs only to the fenced previous wrapper in this L1.
             c.shell(destination,f'rm -f {c.root}/io.sock','io-retired-socket')
+            if args.drop_consumed_once and epoch==12:
+                handle=json.loads(manifest)['handle']
+                path=f"/run/noncoherent-{handle['cookie_lo']:016x}-{handle['cookie_hi']:016x}.epoch"
+                c.shell(destination,'rm -f '+path,'drop-owned-consumed-state')
+                report['consumed_reset']={'epoch':epoch,'node':destination,'path':path}
+
             s.role, s.epoch = destination, s.epoch+1
             c.start_vm(s,restore_manifest=manifest_path,direct_import=state_path,purpose='mixed-import')
             c.api(destination,s.directory,'/actions','PUT',{'action_type':'InstanceStart'})
@@ -980,7 +996,7 @@ def resident_measure(args):
         c.setup()
         c.configure_direct()
         report['boot'] = c.boot_vm(s)
-        report['heartbeat'] = c.trace_command(s,'heartbeat',args.resident_bench,event='trace_heartbeat')
+        report['heartbeat'] = c.trace_command(s,'heartbeat',('dirty'+str(args.dirty_mib)) if args.resident_bench=='dirty' else args.resident_bench,event='trace_heartbeat')
         time.sleep(.2)
         c.promote(s)
         frames = sorted(c.allocator.grants[s.owner].frames)
@@ -988,8 +1004,24 @@ def resident_measure(args):
         c.bench_offset = frames[64*MIB//PAGE]
         from resident_fast import prepare
         prepare(c,s)
+        def wait_payload():
+            if args.resident_bench!='dirty': return
+            import struct
+            deadline=time.monotonic()+120
+            with Path(config['cxl_backing']).open('rb',buffering=0) as stream:
+                while True:
+                    stream.seek(c.bench_offset+136)
+                    ready=struct.unpack('<Q',stream.read(8))[0]
+                    if ready==s.epoch:
+                        stream.seek(c.bench_offset+40)
+                        require(struct.unpack('<Q',stream.read(8))[0]==0,'Controlled payload checksum failed')
+                        return
+                    require(time.monotonic()<deadline,'Controlled writer did not complete before next pause')
+                    time.sleep(.001)
         for i in range(2*(args.warmup+args.iterations)):
             time.sleep(.02)  # active dwell is excluded from the C interval
+            wait_payload()
+
             row = c.direct_handoff(s,'B' if s.role=='A' else 'A')
             row['sample_index'] = i//2
             row['measured'] = i//2 >= args.warmup
@@ -1003,6 +1035,7 @@ def resident_measure(args):
                     require('/lab/firecracker' in raw, 'Endpoint is not Firecracker')
                     report['resident_processes'][role] = {'file':name,'identity':raw}
             lab.save_json(out/'report.json',report)
+        wait_payload()
         report['direction_summary_ms'] = {}
         for source in ('A','B'):
             rows = [r for r in c.transitions if r.get('measured') and r['source']==source]
@@ -1047,9 +1080,10 @@ def resident_measure(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--resident-bench', choices=('idle','busy'))
+    parser.add_argument('--resident-bench', choices=('idle','busy','dirty'))
     parser.add_argument('--mixed-io', action='store_true')
     parser.add_argument('--io-fixture')
+    parser.add_argument('--dirty-mib',type=int,choices=(0,16,64,256),default=0)
     parser.add_argument('--iterations',type=int,default=100)
     parser.add_argument('--warmup',type=int,default=10)
     parser.add_argument('--profile',action='store_true')
@@ -1069,12 +1103,17 @@ def main():
     parser.add_argument('--heavy-plan')
     parser.add_argument('--count-faults', action='store_true')
     parser.add_argument('--dirty-ledger', action='store_true')
+    parser.add_argument('--noncoherent', action='store_true')
+    parser.add_argument('--cache-skip-line',type=int,default=-1)
+    parser.add_argument('--skip-invalidate-page',type=int,default=-1)
+    parser.add_argument('--drop-consumed-once', action='store_true')
     parser.add_argument('--dirty-oracle', action='store_true')
     parser.add_argument('--page-hash')
     parser.add_argument('--prefault', choices=('all','mapped'))
     parser.add_argument('--prefault-activate', action='store_true')
     parser.add_argument('--prefault-probe', help='Static ABI probe uploaded only to these disposable L1s')
     args = parser.parse_args()
+    if args.noncoherent: args.dirty_ledger=True
     require(not args.prefault or (args.mode == 'state-only' and args.trajectory_policy), 'Prefault requires snapshot trajectory')
     require(not args.prefault_activate or args.prefault, 'Activation requires prefault')
     require(0 <= args.direct_profile_roundtrips <= 20 and
@@ -1086,7 +1125,7 @@ def main():
         require(args.mode=='direct' and args.dirty_ledger and args.io_fixture and args.memory_mib==2048, 'Mixed I/O requires tracked direct and the fixture binary')
         return mixed_io(args)
     if args.resident_bench:
-        require(args.mode=='direct' and args.memory_mib==128, 'Resident benchmark needs a 128MiB direct VM')
+        require(args.mode=='direct' and args.memory_mib in (128,2048), 'Resident benchmark needs a bounded direct VM')
         return resident_measure(args)
     require(args.memory_mib == 2048, 'Use the bounded 2GiB workload layout')
     run, config = lab.current_run()

@@ -1555,10 +1555,10 @@ index 2a75945..fe91a5d 100644
      type ConstructorArgs = MmioTransportConstructorArgs;
 diff --git a/src/vmm/src/direct.rs b/src/vmm/src/direct.rs
 new file mode 100644
-index 0000000..e790b71
+index 0000000..81c14be
 --- /dev/null
 +++ b/src/vmm/src/direct.rs
-@@ -0,0 +1,872 @@
+@@ -0,0 +1,900 @@
 +// Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 +// SPDX-License-Identifier: Apache-2.0
 +
@@ -1638,6 +1638,7 @@ index 0000000..e790b71
 +struct DirectState {
 +    schema: String,
 +    token: HandoffToken,
++    last_epoch: u64,
 +    machine_config: MachineConfig,
 +    boot_source: BootSourceConfig,
 +    memory: GuestMemoryState,
@@ -1682,11 +1683,11 @@ index 0000000..e790b71
 +    io_enabled() && std::env::var_os("FC_DAX_DIRECT_IMPORT").is_some()
 +}
 +
-+type ResidentPacket = (u32, HandoffToken, DevicesState, crate::pool_memory::Manifest);
++type ResidentPacket = (u32, HandoffToken, u64, DevicesState, crate::pool_memory::Manifest);
 +fn decode_resident_packet(bytes: &[u8]) -> io::Result<ResidentPacket> {
 +    if bytes.is_empty() || bytes.len() >= 65536 { return Err(invalid("resident packet size")); }
 +    let packet: ResidentPacket = bitcode::deserialize(bytes).map_err(|e| invalid(e.to_string()))?;
-+    if packet.0 != 3 { return Err(invalid("resident packet version")); }
++    if packet.0 != 4 { return Err(invalid("resident packet version")); }
 +    Ok(packet)
 +}
 +
@@ -1829,6 +1830,16 @@ index 0000000..e790b71
 +            .map_err(VmmError::DaxHandoff)?) };
 +        let started = std::time::Instant::now();
 +        timing.mark("validate_and_open");
++        // The lab ACK trigger is guest RAM too. Write it while paused, through
++        // the tracked VMM mapping, before harvesting or cache writeback.
++        if let Ok(gpa)=std::env::var("FC_BENCH_EPOCH_GPA") {
++            use vm_memory::{Bytes,GuestAddress};
++            let gpa=gpa.parse::<u64>().map_err(|e|VmmError::DaxHandoff(io::Error::other(e)))?;
++            let old:u64=vm.guest_memory().read_obj(GuestAddress(gpa+16)).map_err(|e|VmmError::DaxHandoff(io::Error::other(e)))?;
++            let base=std::env::var("FC_BENCH_INITIAL_EPOCH").ok().and_then(|s|s.parse::<u64>().ok()).unwrap_or(0);
++            let next=if old==0 {base+1} else {old+1};
++            vm.guest_memory().write_obj(next,GuestAddress(gpa+16)).map_err(|e|VmmError::DaxHandoff(io::Error::other(e)))?;
++        }
 +        let devices = self.device_manager.save(); // Drains async I/O and captures resulting used rings.
 +        self.check_block_snapshot_preparation()
 +            .map_err(|e| VmmError::DaxHandoff(io::Error::other(e.to_string())))?;
@@ -1838,27 +1849,30 @@ index 0000000..e790b71
 +                return Err(VmmError::DaxPreflight("noncoherent handoff requires dirty tracking from creation"));
 +            }
 +            self.device_manager.mark_virtio_queue_memory_dirty(vm.guest_memory());
-+            Some(crate::noncoherent::collect(vm).map_err(VmmError::DaxHandoff)?)
++            Some(crate::noncoherent::require(crate::noncoherent::collect(vm)))
 +        } else { None };
++
++        let last_epoch = if let Some(ledger)=&ledger { crate::noncoherent::require(crate::noncoherent::send(vm.guest_memory(),ledger)) } else {0};
 +
 +        if resident_enabled() || io_test() {
 +            let VirtioDevices::Mmio(mmio) = &mut self.device_manager.virtio_devices else { unreachable!() };
 +            mmio.park_direct(events);
 +        }
 +        let mapper = if memory_wire {
-+            Some(crate::pool_memory::seal_for_handoff_memory(vm.guest_memory()).map_err(VmmError::DaxHandoff)?)
++            Some(crate::noncoherent::after_harvest(crate::pool_memory::seal_for_handoff_memory(vm.guest_memory())).map_err(VmmError::DaxHandoff)?)
 +        } else {
-+            crate::pool_memory::seal_for_handoff(vm.guest_memory()).map_err(VmmError::DaxHandoff)?;
++            crate::noncoherent::after_harvest(crate::pool_memory::seal_for_handoff(vm.guest_memory())).map_err(VmmError::DaxHandoff)?;
 +            None
 +        };
 +        timing.mark("seal_mapper");
 +        let manifest = if memory_wire { Vec::new() } else {
-+            bounded_read(&env_path("FC_POOL_MEMORY_MANIFEST").map_err(VmmError::DaxHandoff)?)
++            crate::noncoherent::after_harvest(env_path("FC_POOL_MEMORY_MANIFEST").and_then(|p|bounded_read(&p)))
 +                .map_err(VmmError::DaxHandoff)?
 +        };
 +        let mut state = DirectState {
-+            schema: "direct-device-handoff-v2".into(),
++            schema: "direct-device-handoff-v3".into(),
 +            token: HandoffToken::default(),
++            last_epoch,
 +            machine_config: self.machine_config.clone(),
 +            boot_source: self.boot_source_config.clone(),
 +            memory: vm.guest_memory().describe(),
@@ -1886,9 +1900,6 @@ index 0000000..e790b71
 +                return Err(io::Error::last_os_error());
 +            }
 +            timing.mark("peek_token");
-+            if let Some(ledger) = &ledger {
-+                crate::noncoherent::boundary(vm.guest_memory(), 2, state.token.pool_used, Some(ledger))?;
-+            }
 +
 +            if resident_enabled() {
 +                crate::pool_memory::park_resident(vm.guest_memory())?;
@@ -1902,10 +1913,15 @@ index 0000000..e790b71
 +                timing.mark("park_resident");
 +            }
 +            let bytes = if let Some(mapper) = &mapper {
-+                bitcode::serialize(&(3u32, &state.token, &state.devices, mapper)).map_err(io::Error::other)?
++                bitcode::serialize(&(4u32, &state.token, state.last_epoch, &state.devices, mapper)).map_err(io::Error::other)?
 +            } else { serde_json::to_vec(&state).map_err(io::Error::other)? };
 +            if bytes.len() >= 65536 { return Err(invalid("resident packet too large")); }
 +            timing.mark("serialize_devices");
++            if let Some(ledger)=&ledger {
++                crate::noncoherent::complete(vm.guest_memory(),&bytes,state.last_epoch,state.token.pool_used,
++                    vm.kvm().fd.as_raw_fd(),ledger)?;
++            }
++
 +            if let Some(output) = output.as_mut() { output.write_all(&bytes)?; }
 +            timing.mark("write_devices");
 +            Ok(bytes)
@@ -1974,8 +1990,8 @@ index 0000000..e790b71
 +            return Err(VmmError::DaxPreflight("resident import requires a healthy parked owner"));
 +        }
 +        let mut timing = crate::persist::RestoreTiming::new("direct_resident_import");
-+        let (_, token, devices, mapper) = decode_resident_packet(bytes).map_err(err)?;
-+        let mut state = DirectState { schema: "direct-device-handoff-v2".into(), token, devices,
++        let (_, token, last_epoch, devices, mapper) = decode_resident_packet(bytes).map_err(err)?;
++        let mut state = DirectState { schema: "direct-device-handoff-v3".into(), token, last_epoch, devices,
 +            machine_config: self.machine_config.clone(), boot_source: self.boot_source_config.clone(),
 +            memory: self.vm.as_kvm().unwrap().guest_memory().describe(), memory_manifest_sha256: String::new() };
 +        validate_state(&state).map_err(err)?;
@@ -1994,10 +2010,14 @@ index 0000000..e790b71
 +        timing.mark("read_validate_metadata");
 +        self.reuse_restore_failed = true; // Any failure from here is permanently fail-closed.
 +        let vm = self.vm.as_kvm().ok_or(VmmError::NotSupported)?;
-+        crate::pool_memory::import_resident_state(vm.guest_memory(), mapper).map_err(err)?;
++        crate::noncoherent::require(crate::noncoherent::prepare(&mapper,bytes,state.last_epoch));
++        crate::noncoherent::after_harvest(crate::pool_memory::import_resident_state(vm.guest_memory(), mapper)).map_err(err)?;
 +        timing.mark("import_mapper");
-+        vm.attach_resident(&mut state.token).map_err(err)?;
++        crate::noncoherent::after_harvest(vm.attach_resident(&mut state.token)).map_err(err)?;
 +        timing.mark("attach");
++        crate::noncoherent::require(crate::noncoherent::received(vm.guest_memory(),state.last_epoch,
++            state.token.pool_used,vm.kvm().fd.as_raw_fd()));
++
 +        let (VirtioDevices::Mmio(devices), VirtioDevicesState::Mmio(saved)) =
 +            (&mut self.device_manager.virtio_devices, &state.devices.virtio_state) else { unreachable!() };
 +        devices.restore_direct_resident(vm.guest_memory(), saved).map_err(|e| err(invalid(e)))?;
@@ -2059,7 +2079,8 @@ index 0000000..e790b71
 +
 +fn validate_state(state: &DirectState) -> io::Result<()> {
 +    let t = &state.token;
-+    if state.schema != "direct-device-handoff-v2"
++    if state.schema != "direct-device-handoff-v3"
++        || (crate::noncoherent::active() && (state.last_epoch==0 || !state.machine_config.track_dirty_pages))
 +        || u32::from(state.machine_config.vcpu_count) != t.vcpu_count
 +        || !valid_cpu_identities(t)
 +        || state.machine_config.huge_pages != HugePageConfig::None
@@ -2128,15 +2149,17 @@ index 0000000..e790b71
 +    fn error(e: impl std::fmt::Display) -> StartMicrovmError {
 +        StartMicrovmError::Internal(VmmError::DaxHandoff(io::Error::other(e.to_string())))
 +    }
-+    let mut state: DirectState = serde_json::from_slice(
-+        &bounded_read(&env_path("FC_DAX_DIRECT_IMPORT").map_err(error)?).map_err(error)?,
-+    )
-+    .map_err(error)?;
++    let state_bytes=bounded_read(&env_path("FC_DAX_DIRECT_IMPORT").map_err(error)?).map_err(error)?;
++    let mut state: DirectState = serde_json::from_slice(&state_bytes).map_err(error)?;
 +    validate_state(&state).map_err(error)?;
 +    let manifest =
 +        bounded_read(&env_path("FC_POOL_MEMORY_RESTORE").map_err(error)?).map_err(error)?;
 +    if sha256(&manifest) != state.memory_manifest_sha256 {
 +        return Err(error("direct memory manifest checksum mismatch"));
++    }
++    if crate::noncoherent::active() {
++        let m: crate::pool_memory::Manifest=serde_json::from_slice(&manifest).map_err(error)?;
++        crate::noncoherent::require(crate::noncoherent::prepare(&m,&state_bytes,state.last_epoch));
 +    }
 +    timing.mark("read_validate_metadata");
 +    let dax = env_path("FC_DAX_RAM").map_err(error)?;
@@ -2163,6 +2186,9 @@ index 0000000..e790b71
 +    vm.adopt_direct_memory(regions, &state.memory, &state.token)
 +        .map_err(error)?;
 +    timing.mark("adopt_memory");
++    crate::noncoherent::require(crate::noncoherent::received(vm.guest_memory(),state.last_epoch,
++        state.token.pool_used,vm.kvm().fd.as_raw_fd()));
++
 +    let vcpus = vm.create_vcpus(state.machine_config.vcpu_count).map_err(error)?;
 +    timing.mark("vcpu_wrapper");
 +    let vm = Arc::new(vm);
@@ -2233,7 +2259,8 @@ index 0000000..e790b71
 +
 +    fn valid_state() -> DirectState {
 +        DirectState {
-+            schema: "direct-device-handoff-v2".into(),
++            schema: "direct-device-handoff-v3".into(),
++            last_epoch: 0,
 +            token: HandoffToken {
 +                vm_offset: 4096,
 +                vcpu_offset: 8192,
@@ -2384,10 +2411,10 @@ index 0000000..e790b71
 +            "device_bytes":1<<30,"reserved":[0,0],"generation":1,"faults":0,"exhausted":0,
 +            "allocation_generation":1
 +        })).unwrap();
-+        let bytes = bitcode::serialize(&(3u32, &state.token, &state.devices, &mapper)).unwrap();
++        let bytes = bitcode::serialize(&(4u32, &state.token, state.last_epoch, &state.devices, &mapper)).unwrap();
 +        let packet = decode_resident_packet(&bytes).unwrap();
 +        assert_eq!(packet.1, state.token);
-+        assert_eq!(serde_json::to_value(packet.3).unwrap(), serde_json::to_value(&mapper).unwrap());
++        assert_eq!(serde_json::to_value(packet.4).unwrap(), serde_json::to_value(&mapper).unwrap());
 +        for end in 0..bytes.len() { assert!(decode_resident_packet(&bytes[..end]).is_err()); }
 +        let old = bitcode::serialize(&(1u32, &state.token, &state.devices, &mapper)).unwrap();
 +        assert!(decode_resident_packet(&old).is_err());
@@ -2404,10 +2431,11 @@ index 0000000..e790b71
 +        for hop in report["hops"].as_array().unwrap() {
 +            let Some(packet_path) = hop["packet_file"].as_str() else { continue; };
 +            let bytes = std::fs::read(root.join(packet_path)).unwrap();
-+            let (_, token, devices, mapper) = decode_resident_packet(&bytes).unwrap();
++            let (_, token, last_epoch, devices, mapper) = decode_resident_packet(&bytes).unwrap();
 +            let state: DirectState = serde_json::from_slice(&std::fs::read(root.join(hop["state_file"].as_str().unwrap())).unwrap()).unwrap();
 +            let expected: serde_json::Value = serde_json::from_slice(&std::fs::read(root.join(hop["sealed_file"].as_str().unwrap())).unwrap()).unwrap();
 +            assert_eq!(token, state.token);
++            assert_eq!(last_epoch,state.last_epoch);
 +            assert_eq!(serde_json::to_value(devices).unwrap(), serde_json::to_value(state.devices).unwrap());
 +            assert_eq!(serde_json::to_value(mapper).unwrap(), expected);
 +            for end in 0..bytes.len() { assert!(decode_resident_packet(&bytes[..end]).is_err(), "accepted truncated packet {end}"); }
@@ -2432,7 +2460,7 @@ index 0000000..e790b71
 +    }
 +}
 diff --git a/src/vmm/src/lib.rs b/src/vmm/src/lib.rs
-index 41b7b8d..62b327e 100644
+index 41b7b8d..e546e3f 100644
 --- a/src/vmm/src/lib.rs
 +++ b/src/vmm/src/lib.rs
 @@ -78,6 +78,10 @@ pub mod builder;
@@ -2493,7 +2521,7 @@ index 41b7b8d..62b327e 100644
 
      /// VM object.
      pub vm: Vm,
-@@ -461,23 +484,142 @@ impl Vmm {
+@@ -461,23 +484,149 @@ impl Vmm {
 
      /// Sends a resume command to the vCPUs.
      pub fn resume_vm(&mut self) -> Result<(), VmmError> {
@@ -2600,6 +2628,13 @@ index 41b7b8d..62b327e 100644
 +            vm.direct_set_local_ram(true).map_err(VmmError::DaxHandoff)?;
 +        }
 +        pool_memory::apply(vm.guest_memory()).map_err(VmmError::MemoryTier)?;
++        if crate::noncoherent::take_bulk_reset() {
++            crate::noncoherent::require(vm.get_dirty_bitmap().map_err(|e|io::Error::other(e.to_string())));
++            for region in vm.guest_memory().iter() {
++                if let Some(bitmap)=(**region).bitmap() { bitmap.reset(); }
++            }
++        }
++
 +        #[cfg(target_arch = "x86_64")]
 +        if crate::direct::io_enabled() && crate::pool_memory::enabled() {
 +            vm.direct_set_local_ram(!crate::pool_memory::active()).map_err(VmmError::DaxHandoff)?;
@@ -2637,7 +2672,7 @@ index 41b7b8d..62b327e 100644
          self.instance_info.state = VmState::Paused;
          Ok(())
      }
-@@ -498,6 +640,15 @@ impl Vmm {
+@@ -498,6 +647,15 @@ impl Vmm {
 
      /// Saves the state of a paused Microvm.
      pub fn save_state(&mut self, vm_info: &VmInfo) -> Result<MicrovmState, MicrovmStateError> {
@@ -2653,7 +2688,7 @@ index 41b7b8d..62b327e 100644
          self.check_unsnapshottable_devices()?;
 
          // We need to save device state before saving KVM state.
-@@ -506,11 +657,17 @@ impl Vmm {
+@@ -506,11 +664,17 @@ impl Vmm {
          // state before we save device state, that interrupt will never be delivered to the guest
          // upon resuming from the snapshot.
          let device_states = self.device_manager.save();
@@ -2672,7 +2707,7 @@ index 41b7b8d..62b327e 100644
          let kvm_state = kvm_vm.kvm().save_state();
          let vm_state = {
              #[cfg(target_arch = "x86_64")]
-@@ -528,6 +685,8 @@ impl Vmm {
+@@ -528,6 +692,8 @@ impl Vmm {
                      .map_err(MicrovmStateError::SaveVmState)?
              }
          };
@@ -2683,10 +2718,10 @@ index 41b7b8d..62b327e 100644
              vm_info: vm_info.clone(),
 diff --git a/src/vmm/src/noncoherent.rs b/src/vmm/src/noncoherent.rs
 new file mode 100644
-index 0000000..65d9058
+index 0000000..bb72f6a
 --- /dev/null
 +++ b/src/vmm/src/noncoherent.rs
-@@ -0,0 +1,94 @@
+@@ -0,0 +1,439 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Opt-in dirty ledger and a stopped-boundary lab oracle. Never enabled by default.
 +use std::fs::{File, OpenOptions};
@@ -2700,6 +2735,16 @@ index 0000000..65d9058
 +use crate::vstate::vm::KvmVm;
 +
 +pub(crate) fn enabled() -> bool { std::env::var_os("FC_DIRTY_LEDGER").is_some() }
++pub(crate) fn active() -> bool { std::env::var("FC_NONCOHERENT").as_deref() == Ok("1") }
++pub(crate) fn require<T>(result: io::Result<T>) -> T {
++    result.unwrap_or_else(|error| {
++        crate::logger::error_unrestricted!("NONCOHERENT_FATAL {error}");
++        std::process::abort()
++    })
++}
++pub(crate) fn after_harvest<T>(result: io::Result<T>) -> io::Result<T> {
++    if enabled() { Ok(require(result)) } else { result }
++}
 +fn invalid(s: impl ToString) -> io::Error { io::Error::other(s.to_string()) }
 +pub(crate) struct Ledger { pub kvm: Vec<u64>, pub device: Vec<u64>, pub union: Vec<u64>, pub collect_ns: u64 }
 +pub(crate) fn collect(vm: &KvmVm) -> io::Result<Ledger> {
@@ -2725,6 +2770,295 @@ index 0000000..65d9058
 +// stopped owner. Words 8..15 belong to L0. The hashing executable opens backing RO.
 +// Metadata map entries end below +17MiB even for the maximum supported 4GiB RAM.
 +const GATE_BYTES: usize = 1024 * 1024;
++const MIB: usize = 1024 * 1024;
++const LOG: usize = 32 * MIB;
++const MAILBOX: usize = 48 * MIB;
++const LOG_MAGIC: u64 = 0x4e43484c4f473031;
++const MAIL_MAGIC: u64 = 0x4e434d424f583031;
++const K: u64 = 8;
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub(crate) struct Identity {
++    pub cookie: [u64; 2], pub metadata: u64, pub device_bytes: u64, pub pages: usize,
++}
++struct Shared {
++    address: usize, _file: File, id: Identity, consumed: u64, control_seen: bool,
++    epoch: u64, inv_from: u64, inv_to: u64,
++    wb: Vec<u64>, inv_requested: Vec<u64>, inv: Vec<u64>,
++    wb_ns: u64, log_ns: u64, read_ns: u64, inv_ns: u64, control_ns: u64, log_lines: u64, read_lines: u64, control_lines: u64, kernel: [u64; 8],
++}
++unsafe impl Send for Shared {} // Mapping accessed only under the process-local mutex.
++impl Drop for Shared {
++    fn drop(&mut self) { unsafe { libc::munmap(self.address as *mut libc::c_void, 64*MIB); } }
++}
++fn fence(invalidate: bool) {
++    unsafe {
++        if invalidate { std::arch::asm!("mfence", options(nostack, preserves_flags)); }
++        else { std::arch::asm!("sfence", options(nostack, preserves_flags)); }
++    }
++}
++fn lines(address: usize, bytes: usize, invalidate: bool) -> u64 {
++    let first = address & !63;
++    let end = (address + bytes + 63) & !63;
++    for p in (first..end).step_by(64) {
++        // SAFETY: caller owns a checked, mapped range. CPUID is checked before use.
++        unsafe {
++            if invalidate { std::arch::asm!("clflushopt [{p}]", p=in(reg)p, options(nostack,preserves_flags)); }
++            else { std::arch::asm!("clwb [{p}]", p=in(reg)p, options(nostack,preserves_flags)); }
++        }
++    }
++    ((end-first)/64) as u64
++}
++fn full(pages: usize) -> Vec<u64> {
++    let mut result = vec![u64::MAX; pages.div_ceil(64)];
++    if pages%64 != 0 { *result.last_mut().unwrap() = (1u64 << (pages%64))-1; }
++    result
++}
++fn emit_guest(mem: &GuestMemoryMmap, bitmap: &[u64], invalidate: bool) -> io::Result<(Vec<u64>,u64)> {
++    let region = mem.iter().next().ok_or_else(||invalid("RAM absent"))?;
++    let base = region.as_ptr() as usize;
++    let pages = region.len() as usize/4096;
++    if bitmap.len() != pages.div_ceil(64) { return Err(invalid("cache bitmap geometry")); }
++    let mut covered = vec![0u64; bitmap.len()];
++    let skip = std::env::var("FC_NONCOHERENT_SKIP_PAGE").ok().and_then(|s|s.parse::<usize>().ok());
++    let mut emitted = 0;
++    for (word, bits) in bitmap.iter().enumerate() {
++        let mut bits = *bits;
++        while bits != 0 {
++            let page = word*64 + bits.trailing_zeros() as usize;
++            if page >= pages { return Err(invalid("cache bitmap outside RAM")); }
++            if skip != Some(page) {
++                let address = base + page*4096;
++                emitted += lines(address,4096,invalidate);
++                // The receipt derives its GPA from the emitted address.
++                let actual = (address-base)/4096;
++                covered[actual/64] |= 1 << (actual%64);
++            }
++            bits &= bits-1;
++        }
++    }
++    fence(invalidate);
++    if covered != bitmap { return Err(invalid("emitted guest ranges do not cover requested pages")); }
++    Ok((covered,emitted))
++}
++fn replay_records(pages: usize, consumed: u64, last: u64,
++    mut load: impl FnMut(u64)->io::Result<(u64,u64,Vec<u64>)>) -> io::Result<Vec<u64>> {
++    if consumed>last { return Err(invalid("future consumed epoch")); }
++    if last-consumed>K { return Ok(full(pages)); }
++    let mut result=vec![0u64;pages.div_ceil(64)];
++    let allowed=full(pages);
++    for epoch in consumed+1..=last {
++        let (actual,count,words)=load(epoch)?;
++        if actual!=epoch || words.len()!=result.len()
++            || count!=words.iter().map(|b|b.count_ones() as u64).sum::<u64>()
++            || words.iter().zip(&allowed).any(|(b,a)|b & !a !=0) {
++            return Err(invalid("missing/corrupt log record"));
++        }
++        for (r,b) in result.iter_mut().zip(words) { *r|=b; }
++    }
++    Ok(result)
++}
++impl Shared {
++    fn new(id: Identity) -> io::Result<Self> {
++        let features = std::arch::x86_64::__cpuid_count(7,0).ebx;
++        if features & (3 << 23) != 3 << 23 { return Err(invalid("CLWB/CLFLUSHOPT unavailable")); }
++        let configured: u64 = std::env::var("FC_POOL_MEMORY_METADATA_OFFSET").map_err(invalid)?.parse().map_err(invalid)?;
++        if id.metadata != configured || id.metadata%4096 != 0 || id.pages == 0 || id.pages > 1<<20
++            || id.device_bytes < 64*MIB as u64 || id.metadata > id.device_bytes-64*MIB as u64 {
++            return Err(invalid("noncoherent metadata reservation"));
++        }
++        let file = OpenOptions::new().read(true).write(true).open("/dev/dax0.0")?;
++        let p = unsafe { libc::mmap(std::ptr::null_mut(),64*MIB,libc::PROT_READ|libc::PROT_WRITE,
++            libc::MAP_SHARED,file.as_raw_fd(),id.metadata as libc::off_t) };
++        if p == libc::MAP_FAILED { return Err(io::Error::last_os_error()); }
++        let mut result = Self { address:p as usize,_file:file,id,consumed:0,control_seen:false,
++            epoch:0,inv_from:0,inv_to:0,wb:vec![],inv_requested:vec![],inv:vec![],
++            wb_ns:0,log_ns:0,read_ns:0,inv_ns:0,control_ns:0,log_lines:0,read_lines:0,control_lines:0,kernel:[0;8] };
++        match std::fs::read(result.consumed_path()) {
++            Ok(bytes) if bytes.len()==8 => result.consumed=u64::from_le_bytes(bytes.try_into().unwrap()),
++            Ok(_) => return Err(invalid("invalid host-local consumed epoch")),
++            Err(e) if e.kind()==io::ErrorKind::NotFound => {},
++            Err(e) => return Err(e),
++        }
++        Ok(result)
++    }
++    fn consumed_path(&self) -> String {
++        format!("/run/noncoherent-{:016x}-{:016x}.epoch",self.id.cookie[0],self.id.cookie[1])
++    }
++    fn consume(&mut self, epoch: u64) -> io::Result<()> {
++        let path=self.consumed_path();
++        std::fs::write(format!("{path}.new"),epoch.to_le_bytes())?;
++        std::fs::rename(format!("{path}.new"),path)?;
++        self.consumed=epoch;
++        Ok(())
++    }
++    fn read(&self, offset: usize) -> u64 { unsafe { ((self.address+offset) as *const u64).read_volatile() } }
++    fn write(&self, offset: usize, value: u64) { unsafe { ((self.address+offset) as *mut u64).write_volatile(value); } }
++    fn stride(&self) -> usize { (16+self.id.pages.div_ceil(64)*8+63)&!63 }
++    fn slot(&self, epoch: u64) -> usize { LOG+64+((epoch-1)%K) as usize*self.stride() }
++    fn header(&self) -> io::Result<u64> {
++        if self.read(LOG)!=LOG_MAGIC || self.read(LOG+8)!=1 || self.read(LOG+16)!=self.id.cookie[0]
++            || self.read(LOG+24)!=self.id.cookie[1] || self.read(LOG+32)!=self.id.pages as u64
++            || self.read(LOG+48)!=K || self.read(LOG+56)!=self.stride() as u64 || self.read(LOG+40)==0 {
++            return Err(invalid("noncoherent log identity/geometry"));
++        }
++        Ok(self.read(LOG+40))
++    }
++    fn publish(&mut self, bitmap: &[u64], initialize: bool) -> io::Result<u64> {
++        if initialize {
++            for (i,value) in [LOG_MAGIC,1,self.id.cookie[0],self.id.cookie[1],self.id.pages as u64,1,K,self.stride() as u64].iter().enumerate() {
++                self.write(LOG+i*8,*value);
++            }
++        }
++        let epoch=self.header()?;
++        let next=epoch.checked_add(1).ok_or_else(||invalid("log epoch overflow"))?;
++        let slot=self.slot(epoch);
++        self.write(slot,epoch);
++        self.write(slot+8,bitmap.iter().map(|b|b.count_ones() as u64).sum());
++        unsafe { std::ptr::copy_nonoverlapping(bitmap.as_ptr(),(self.address+slot+16) as *mut u64,bitmap.len()); }
++        self.log_lines=lines(self.address+slot,self.stride(),false); fence(false);
++        self.write(LOG+40,next);
++        self.log_lines+=lines(self.address+LOG,64,false); fence(false);
++        self.consume(epoch)?;
++        self.epoch=epoch;
++        Ok(epoch)
++    }
++    fn control(&mut self, invalidate: bool) -> u64 {
++        let bytes=if self.control_seen {4096} else {4096+self.id.pages*16};
++        let n=lines(self.address,bytes,invalidate); fence(invalidate);
++        self.control_seen=true;
++        n
++    }
++    fn mailbox_write(&self, bytes: &[u8], epoch: u64) -> io::Result<u64> {
++        if bytes.is_empty() || bytes.len()>=65536 { return Err(invalid("mailbox packet size")); }
++        unsafe { std::ptr::copy_nonoverlapping(bytes.as_ptr(),(self.address+MAILBOX+64) as *mut u8,bytes.len()); }
++        let emitted=lines(self.address+MAILBOX+64,bytes.len(),false); fence(false);
++        for (i,v) in [MAIL_MAGIC,epoch,bytes.len() as u64,self.id.cookie[0],self.id.cookie[1]].iter().enumerate() {
++            self.write(MAILBOX+i*8,*v);
++        }
++        let emitted=emitted+lines(self.address+MAILBOX,64,false); fence(false);
++        Ok(emitted)
++    }
++    fn mailbox_read(&self, bytes: &[u8], epoch: u64) -> io::Result<u64> {
++        let emitted=lines(self.address+MAILBOX,64,true); fence(true);
++        if epoch==0 || self.read(MAILBOX)!=MAIL_MAGIC || self.read(MAILBOX+8)!=epoch
++            || self.read(MAILBOX+16)!=bytes.len() as u64 || bytes.len()>=65536
++            || self.read(MAILBOX+24)!=self.id.cookie[0] || self.read(MAILBOX+32)!=self.id.cookie[1] {
++            return Err(invalid("stale/foreign handoff mailbox"));
++        }
++        let emitted=emitted+lines(self.address+MAILBOX+64,bytes.len(),true); fence(true);
++        let stored=unsafe { std::slice::from_raw_parts((self.address+MAILBOX+64) as *const u8,bytes.len()) };
++        if stored!=bytes { return Err(invalid("handoff mailbox/token mismatch")); }
++        Ok(emitted)
++    }
++    fn replay(&mut self, last: u64) -> io::Result<Vec<u64>> {
++        self.read_lines=lines(self.address+LOG,64,true); fence(true);
++        if self.header()? != last.checked_add(1).ok_or_else(||invalid("epoch overflow"))? || self.consumed>last {
++            return Err(invalid("log epoch is not the handoff packet epoch"));
++        }
++        replay_records(self.id.pages,self.consumed,last,|epoch| {
++            let slot=self.slot(epoch);
++            self.read_lines+=lines(self.address+slot,self.stride(),true); fence(true);
++            let words=unsafe { std::slice::from_raw_parts((self.address+slot+16) as *const u64,self.id.pages.div_ceil(64)) }.to_vec();
++            Ok((self.read(slot),self.read(slot+8),words))
++        })
++    }
++}
++fn with_shared<T>(id: Identity, f: impl FnOnce(&mut Shared)->io::Result<T>) -> io::Result<T> {
++    static SHARED: OnceLock<Mutex<Option<Shared>>> = OnceLock::new();
++    let mut guard=SHARED.get_or_init(||Mutex::new(None)).lock().unwrap();
++    if guard.as_ref().is_none_or(|s|s.id!=id) { *guard=Some(Shared::new(id)?); }
++    f(guard.as_mut().unwrap())
++}
++fn identity() -> io::Result<Identity> {
++    crate::pool_memory::manifest_for_profile().ok_or_else(||invalid("shared RAM absent"))?.noncoherent_identity()
++}
++fn kernel_stats(fd: i32, invalidate: bool, arena: u64) -> io::Result<[u64;8]> {
++    let mut stats=[0u64;8];
++    if unsafe { libc::ioctl(fd,0x8040aef8u32 as _,stats.as_mut_ptr()) }<0 { return Err(io::Error::last_os_error()); }
++    let index=usize::from(invalidate);
++    if stats[2+index]<arena || stats[6+index]!=1 { return Err(invalid("kernel arena coverage receipt missing")); }
++    Ok(stats)
++}
++pub(crate) fn send(mem: &GuestMemoryMmap, ledger: &Ledger) -> io::Result<u64> {
++    if !active() { return Ok(0); }
++    with_shared(identity()?,|s| {
++        let start=Instant::now();
++        s.wb=emit_guest(mem,&ledger.union,false)?.0;
++        s.wb_ns=start.elapsed().as_nanos() as u64;
++        let start=Instant::now(); let epoch=s.publish(&ledger.union,false)?;
++        s.log_ns=start.elapsed().as_nanos() as u64;
++        Ok(epoch)
++    })
++}
++static BULK_RESET: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
++pub(crate) fn take_bulk_reset() -> bool { BULK_RESET.swap(false,std::sync::atomic::Ordering::AcqRel) }
++fn bulk(mem: &GuestMemoryMmap) -> io::Result<()> {
++    with_shared(identity()?,|s| {
++        let bitmap=full(s.id.pages);
++        let start=Instant::now(); s.wb=emit_guest(mem,&bitmap,false)?.0;
++        s.wb_ns=start.elapsed().as_nanos() as u64;
++        let start=Instant::now(); s.publish(&bitmap,true)?;
++        s.log_ns=start.elapsed().as_nanos() as u64;
++        s.control(false);
++        Ok(())
++    })?;
++    BULK_RESET.store(true,std::sync::atomic::Ordering::Release);
++    Ok(())
++}
++pub(crate) fn prepare(manifest: &crate::pool_memory::Manifest, bytes: &[u8], epoch: u64) -> io::Result<()> {
++    if !active() { return Ok(()); }
++    with_shared(manifest.noncoherent_identity()?,|s| {
++        let start=Instant::now(); s.control_lines=s.mailbox_read(bytes,epoch)?; s.control_lines+=s.control(true);
++        s.control_ns=start.elapsed().as_nanos() as u64; Ok(())
++    })
++}
++pub(crate) fn received(mem: &GuestMemoryMmap, epoch: u64, arena: u64, fd: i32) -> io::Result<()> {
++    if !active() { return Ok(()); }
++    let stats=kernel_stats(fd,true,arena)?;
++    with_shared(identity()?,|s| {
++        s.kernel=stats;
++        s.inv_from=s.consumed; s.inv_to=epoch; s.epoch=epoch;
++        let start=Instant::now(); s.inv_requested=s.replay(epoch)?;
++        s.read_ns=start.elapsed().as_nanos() as u64;
++        let start=Instant::now(); s.inv=emit_guest(mem,&s.inv_requested,true)?.0;
++        s.inv_ns=start.elapsed().as_nanos() as u64;
++        let consumed_started=Instant::now(); s.consume(epoch)?;
++        s.read_ns+=consumed_started.elapsed().as_nanos() as u64;
++        crate::logger::info_unrestricted!("NONCOHERENT_JSON {}",serde_json::json!({
++            "event":"import","epoch":epoch,"log_read_ns":s.read_ns,"invalidate_ns":s.inv_ns,
++            "lines":s.inv.iter().map(|b|b.count_ones() as u64*64).sum::<u64>(),"kernel":s.kernel,"control_ns":s.control_ns,"read_lines":s.read_lines,"control_lines":s.control_lines}));
++        Ok(())
++    })?;
++    boundary(mem,3,arena,None)
++}
++pub(crate) fn complete(mem: &GuestMemoryMmap, bytes: &[u8], epoch: u64, arena: u64, fd: i32, ledger: &Ledger) -> io::Result<()> {
++    if active() {
++        let stats=kernel_stats(fd,false,arena)?;
++        with_shared(identity()?,|s| {
++            s.kernel=stats; let start=Instant::now(); s.control_lines=s.control(false); s.control_lines+=s.mailbox_write(bytes,epoch)?;
++            s.control_ns=start.elapsed().as_nanos() as u64;
++            crate::logger::info_unrestricted!("NONCOHERENT_JSON {}",serde_json::json!({
++                "event":"export","epoch":epoch,"collect_ns":ledger.collect_ns,"writeback_ns":s.wb_ns,
++                "publish_ns":s.log_ns,"lines":s.wb.iter().map(|b|b.count_ones() as u64*64).sum::<u64>(),"kernel":s.kernel,
++                "control_ns":s.control_ns,"publish_lines":s.log_lines,"control_lines":s.control_lines}));
++            Ok(())
++        })?;
++    }
++    boundary(mem,2,arena,Some(ledger))
++}
++
++struct OracleState { words:[u64;16], wb:Vec<u64>, requested:Vec<u64>, inv:Vec<u64> }
++fn oracle_state(words: usize) -> io::Result<OracleState> {
++    with_shared(identity()?,|s| {
++        let mut wb=s.wb.clone(); wb.resize(words,0);
++        let mut requested=s.inv_requested.clone(); requested.resize(words,0);
++        let mut inv=s.inv.clone(); inv.resize(words,0);
++        Ok(OracleState { words:[s.epoch,s.inv_from,s.inv_to,s.wb_ns,s.log_ns,s.read_ns,s.inv_ns,
++            s.kernel[0],s.kernel[1],s.kernel[2],s.kernel[3],s.kernel[4],s.kernel[5],s.kernel[6],s.kernel[7],s.control_ns],
++            wb,requested,inv })
++    })
++}
 +struct Gate { address: usize, _file: File }
 +unsafe impl Send for Gate {} // Serialized by the mutex; no reference escapes.
 +impl Gate {
@@ -2741,7 +3075,10 @@ index 0000000..65d9058
 +    fn write(&self, word: usize, v: u64) { unsafe { (self.address as *mut u64).add(word).write_volatile(v); } }
 +}
 +pub(crate) fn boundary(mem: &GuestMemoryMmap, phase: u64, arena: u64, ledger: Option<&Ledger>) -> io::Result<()> {
-+    if !enabled() || std::env::var("FC_DIRTY_ORACLE").as_deref() != Ok("1") { return Ok(()); }
++    if !enabled() { return Ok(()); }
++    if phase==1 && active() { bulk(mem)?; }
++    if std::env::var("FC_DIRTY_ORACLE").as_deref() != Ok("1") { return Ok(()); }
++    let oracle_started=Instant::now();
 +    static GATE: OnceLock<Mutex<Option<Gate>>> = OnceLock::new();
 +    let mut guard = GATE.get_or_init(|| Mutex::new(None)).lock().unwrap();
 +    if guard.is_none() { *guard = Some(Gate::new()?); }
@@ -2749,20 +3086,32 @@ index 0000000..65d9058
 +    let region = mem.iter().next().ok_or_else(|| invalid("oracle RAM absent"))?;
 +    let pages = region.len() as usize / 4096;
 +    let words = pages.div_ceil(64);
-+    if 128 + words * 8 * 3 > GATE_BYTES { return Err(invalid("oracle bitmap too large")); }
++    if 256 + words * 8 * 6 > GATE_BYTES { return Err(invalid("oracle bitmap too large")); }
 +    let sequence = gate.read(0).checked_add(1).ok_or_else(|| invalid("oracle sequence overflow"))?;
-+    let full = vec![u64::MAX; words];
++    let full = full(pages);
 +    let empty = vec![0u64; words];
-+    let (union, kernel, device) = ledger.map(|l| (&l.union, &l.kvm, &l.device)).unwrap_or((&full, &empty, &full));
++    let nc=if active() { Some(oracle_state(words)?) } else { None };
++    let imported=nc.as_ref().filter(|_|phase==3).map(|s|&s.requested).unwrap_or(&full);
++    let (union, kernel, device) = ledger.map(|l| (&l.union, &l.kvm, &l.device)).unwrap_or((imported, &empty, imported));
 +    for (index, bitmap) in [union, kernel, device].iter().enumerate() {
 +        // SAFETY: each bitmap is exactly words u64 and the checked gate is exclusively owned.
 +        unsafe { std::ptr::copy_nonoverlapping(bitmap.as_ptr(),
-+            (gate.address as *mut u8).add(128 + index * words * 8).cast::<u64>(), words); }
++            (gate.address as *mut u8).add((if active() {256} else {128}) + index * words * 8).cast::<u64>(), words); }
 +    }
++    if let Some(nc)=&nc {
++        for (i,value) in nc.words.iter().enumerate() { gate.write(16+i,*value); }
++        for (index,bitmap) in [&nc.wb,&nc.requested,&nc.inv].iter().enumerate() {
++            unsafe { std::ptr::copy_nonoverlapping(bitmap.as_ptr(),
++                (gate.address as *mut u8).add(256+(index+3)*words*8).cast::<u64>(),words); }
++        }
++    }
++    gate.write(6,u64::from(active()));
++    gate.write(7,std::env::var("FC_NONCOHERENT_NODE").ok().and_then(|s|s.parse::<u64>().ok()).unwrap_or(0));
 +    gate.write(1, phase); gate.write(2, pages as u64); gate.write(3, region.as_ptr() as u64);
 +    gate.write(4, arena); gate.write(5, ledger.map_or(0, |l|l.collect_ns));
 +    std::sync::atomic::fence(std::sync::atomic::Ordering::SeqCst);
 +    gate.write(0, sequence);
++    if active() { lines(gate.address,256+6*words*8,false); fence(false); }
 +    let start = Instant::now();
 +    while gate.read(8) != sequence {
 +        if start.elapsed() > Duration::from_secs(120) { return Err(invalid("oracle timeout; remain stopped")); }
@@ -2779,7 +3128,38 @@ index 0000000..65d9058
 +            for bitmap in [&l.union, &l.kvm, &l.device] { for word in bitmap { file.write_all(&word.to_le_bytes())?; } }
 +        }
 +    }
++    if let Some(nc)=&nc {
++        crate::logger::info_unrestricted!("NONCOHERENT_ORACLE_JSON {}",serde_json::json!({
++            "phase":phase,"epoch":nc.words[0],"ns":oracle_started.elapsed().as_nanos() as u64}));
++    }
 +    Ok(())
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    #[test]
++    fn exactly_k_records_survive_wrap() {
++        let bits=replay_records(128,4,12,|e|Ok((e,1,vec![1<<e,0]))).unwrap();
++        assert_eq!(bits,vec![0x1fe0,0]);
++        assert_eq!(replay_records(128,12,12,|_|panic!("already consumed")).unwrap(),vec![0,0]);
++    }
++    #[test]
++    fn delayed_reader_invalidates_full_ram_without_reading_reused_records() {
++        assert_eq!(replay_records(65,3,12,|_|panic!("reused slot must not be trusted")).unwrap(),vec![u64::MAX,1]);
++    }
++    #[test]
++    fn stale_future_and_corrupt_records_fail_closed() {
++        assert!(replay_records(128,13,12,|_|panic!()).is_err());
++        assert!(replay_records(128,0,1,|e|Ok((e+1,1,vec![1,0]))).is_err());
++        assert!(replay_records(128,0,1,|e|Ok((e,0,vec![1,0]))).is_err());
++        assert!(replay_records(128,0,1,|e|Ok((e,1,vec![1]))).is_err());
++    }
++    #[test]
++    fn bitmap_tail_must_not_escape_guest_ram() {
++        assert!(replay_records(65,0,1,|e|Ok((e,1,vec![0,2]))).is_err());
++        assert_eq!(replay_records(65,0,1,|e|Ok((e,1,vec![0,1]))).unwrap(),vec![0,1]);
++    }
 +}
 diff --git a/src/vmm/src/persist.rs b/src/vmm/src/persist.rs
 index 71a0345..2dfd978 100644
@@ -3094,10 +3474,10 @@ index 71a0345..2dfd978 100644
          let mut vmm = default_vmm();
 diff --git a/src/vmm/src/pool_memory.rs b/src/vmm/src/pool_memory.rs
 new file mode 100644
-index 0000000..4dfd1b2
+index 0000000..5854ef6
 --- /dev/null
 +++ b/src/vmm/src/pool_memory.rs
-@@ -0,0 +1,784 @@
+@@ -0,0 +1,791 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! VM-private persistent CXL logical RAM and whole-RAM tier changes.
 +//! Private controller plans assign exclusive frames. The kernel owns the mapping
@@ -3247,6 +3627,13 @@ index 0000000..4dfd1b2
 +    allocation_generation: u64,
 +    #[serde(default)]
 +    state_sha256: Option<String>,
++}
++impl Manifest {
++    pub(crate) fn noncoherent_identity(&self) -> io::Result<crate::noncoherent::Identity> {
++        let h=self.handle.ok_or_else(||invalid("noncoherent mapper handle absent"))?;
++        Ok(crate::noncoherent::Identity { cookie:[h.cookie_lo,h.cookie_hi], metadata:h.metadata_offset,
++            device_bytes:h.device_bytes,pages:h.count as usize })
++    }
 +}
 +struct Active {
 +    file: Arc<File>,
@@ -3733,7 +4120,7 @@ index 0000000..4dfd1b2
 +            // Remapping preserves the bitmap object, but bypassed writes need explicit marks.
 +            for region in mem.iter() { region.bitmap().mark_dirty(0, region.len() as usize); }
 +            checkpoint_ready(mem)?;
-+            crate::noncoherent::boundary(mem, 1, 0, None)?;
++            crate::noncoherent::require(crate::noncoherent::boundary(mem, 1, 0, None));
 +        }
 +        "export" => {
 +            checkpoint_ready(mem)?;

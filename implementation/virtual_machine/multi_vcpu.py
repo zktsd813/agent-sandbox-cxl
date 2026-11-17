@@ -31,12 +31,18 @@ def main():
     p.add_argument("--iterations", type=int, default=400)
     p.add_argument("--warmup", type=int, default=10)
     p.add_argument("--measure", action="store_true", help="Hold quiet.lock exclusively")
-    p.add_argument("--resident-bench", choices=("idle","busy"))
+    p.add_argument("--resident-bench", choices=("idle","busy","dirty"))
     p.add_argument("--mixed-io", action="store_true")
     p.add_argument("--io-fixture", type=Path)
     p.add_argument("--cxl-mib", type=int, choices=(2048,4096,8192))
+    p.add_argument("--memory-mib", type=int, choices=(128,2048))
+    p.add_argument("--dirty-mib", type=int, choices=(0,16,64,256), default=0)
     p.add_argument("--assets", type=Path)
     p.add_argument("--dirty-ledger", action="store_true")
+    p.add_argument("--noncoherent", action="store_true")
+    p.add_argument("--cache-skip-line",type=int,default=-1)
+    p.add_argument("--skip-invalidate-page",type=int,default=-1)
+    p.add_argument("--drop-consumed-once", action="store_true")
     p.add_argument("--dirty-oracle", action="store_true")
     p.add_argument("--page-hash", type=Path)
     p.add_argument("--pml", choices=("on", "off"), default="off")
@@ -48,8 +54,10 @@ def main():
     p.add_argument("--firecracker", type=Path, default=LOCAL / "fc/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker")
     p.add_argument("--qemu", type=Path, default=LOCAL / "qemu-runtime/bin/qemu-system-x86_64")
     args = p.parse_args()
+    if args.noncoherent: args.dirty_ledger=True
     fixture_trial = bool(args.resident_bench or args.mixed_io)
-    cxl_mib = args.cxl_mib or (8192 if args.mixed_io else 2048)
+    memory_mib = args.memory_mib or (2048 if args.mixed_io or args.resident_bench=="dirty" else 128)
+    cxl_mib = args.cxl_mib or (4096 if memory_mib==2048 else 2048)
     prefix = "io-mix-*" if args.mixed_io else ("resident-bench-*" if args.resident_bench else "direct-linux-handoff-*")
     if fixture_trial and (not args.assets or not args.measure):
         p.error("resident benchmark needs --assets and exclusive --measure")
@@ -141,9 +149,10 @@ def main():
             if args.test_running_vcpu:
                 bench_args += ["--test-running-vcpu"]
             if fixture_trial:
-                bench_args = ["--mode","direct","--name","gin-gonic__gin-3741","--memory-mib",128,
+                bench_args = ["--mode","direct","--name","gin-gonic__gin-3741","--memory-mib",memory_mib,
                     "--vcpus",args.vcpus,"--resident-bench",args.resident_bench,
                     "--iterations",args.iterations,"--warmup",args.warmup]
+                if args.resident_bench=="dirty": bench_args += ["--dirty-mib",args.dirty_mib]
                 if args.mixed_io:
                     if not args.io_fixture or not args.dirty_oracle: raise ValueError('Mixed I/O requires fixture and oracle')
                     bench_args = ['--mode','direct','--name','gin-gonic__gin-3741','--memory-mib',2048,
@@ -151,6 +160,10 @@ def main():
                         '--iterations',args.iterations,'--warmup',0]
                 if args.profile: bench_args += ["--profile","--restore-timing"]
                 if args.resume_profile: bench_args += ["--resume-profile"]
+                if args.noncoherent: bench_args += ['--noncoherent']
+                if args.cache_skip_line>=0: bench_args += ["--cache-skip-line",args.cache_skip_line]
+                if args.skip_invalidate_page>=0: bench_args += ["--skip-invalidate-page",args.skip_invalidate_page]
+                if args.drop_consumed_once: bench_args += ['--drop-consumed-once']
                 if args.dirty_ledger: bench_args += ['--dirty-ledger']
                 if args.dirty_oracle:
                     if not args.dirty_ledger or not args.page_hash: raise ValueError('Oracle requires ledger and hash tool')
