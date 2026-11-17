@@ -129,6 +129,14 @@ def main():
     manifest['inputs'].update({key: {'path': str(path.resolve()), 'sha256': lab.sha256(path)}
         for key, path in (('firecracker', args.firecracker), ('l1_kernel', args.l1_kernel), ('l2_kernel', args.guest_kernel))})
     manifest['inputs']['kvm_modules'] = modules
+    if args.shared_probe:
+        # The inherited probe source belongs to the base fixture, not this
+        # replacement. Keep that provenance and hash the actual replacement.
+        if 'probe_source' in manifest['inputs']:
+            manifest['inputs']['base_probe_source'] = manifest['inputs'].pop('probe_source')
+        manifest['source_hashes'].pop('shared_probe.c', None)
+        manifest['inputs']['shared_probe_binary'] = {
+            'path': str(args.shared_probe.resolve()), 'sha256': lab.sha256(args.shared_probe)}
     if args.io_fixture:
         manifest['inputs']['io_fixture'] = {'path':str(args.io_fixture.resolve()),'sha256':lab.sha256(args.io_fixture),'source_sha256':lab.sha256(HERE/'io_mix.c')}
     manifest['handoff'] = {'inputs': {name: {'path': str(path.resolve()), 'sha256': lab.sha256(path)}
