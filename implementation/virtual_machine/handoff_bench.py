@@ -1067,6 +1067,9 @@ def resident_measure(args):
             except Exception as exc:
                 report.update(result='failed', oracle_error=repr(exc))
             report['dirty_oracle'] = oracle.rows
+        for role in ('A','B'):
+            try:c.shell(role,'cat /sys/module/kvm/parameters/dax_pool','final-cache-state-'+role)
+            except Exception as error:report.setdefault('collection_errors',[]).append(str(error))
         for role,worker in getattr(c,'resident_workers',{}).items():
             for name in ('fc.log','vmm.log','stderr.log'):
                 try:c.fetch_bytes(role,worker['directory']+'/'+name,'final-'+role+'-'+name)
