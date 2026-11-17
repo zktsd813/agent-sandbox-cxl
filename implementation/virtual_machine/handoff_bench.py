@@ -887,9 +887,15 @@ def trajectory_replay(c, s, report, save):
                 delay=0
                 if args.clean_wait=='1': delay=1.0
                 elif args.clean_wait=='recorded' and not same_batch: delay=min(10.0,recorded_waits[command['batch']])
+                # LLM time starts when the tool result is received. Cleaning
+                # uses that interval; only the remaining part is slept here.
+                deadline=row['host_receive_ns']+int(delay*1e9)
                 begin=time.monotonic_ns()
-                time.sleep(delay)
-                report.setdefault('waits',[]).append(dict(after_command=index,planned_s=delay,actual_ns=time.monotonic_ns()-begin))
+                time.sleep(max(0,(deadline-begin)/1e9))
+                ended=time.monotonic_ns()
+                report.setdefault('waits',[]).append(dict(after_command=index,planned_s=delay,
+                    sleep_ns=ended-begin,actual_ns=ended-row['host_receive_ns'],
+                    late_ns=max(0,ended-deadline)))
         # Keep the next fresh destination ready while the current VM owns RAM.
         # This preparation is outside pause and command intervals; its wall
         # cost remains visible in observed_replay_ns.

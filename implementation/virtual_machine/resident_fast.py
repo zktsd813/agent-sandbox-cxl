@@ -195,6 +195,11 @@ def reuse_after(c,s,args,out):
             fences.append(dict(role=role,directory=directory,file=name))
     object_acks=[admin(c,role,'arena',offset,1,0) for role in ('A','B')]
     require(all(r['capacity']==16*MIB and r['lines']==16*MIB//64 for r in object_acks),'Object invalidation ACK incomplete')
+    directory=c.resident_workers['B']['directory']
+    raw,partial_ack_file=c.shell('B',f'if /lab/resident-control arena {directory} 172.30.0.2 '
+        f'{c.resident_control_nonce} {offset} 2 1; then exit 1; else echo REUSE_ACK_REFUSED; fi',
+        'partial-reuse-ack')
+    require('REUSE_ACK_REFUSED' in raw,'Kernel accepted an incomplete reuse ACK set')
     ram_acks=invalidate_grant(c,s,{'handle':handle})
     freed=c.allocator.release(s.owner,fenced=True,detached=True,invalidated_hosts=ram_acks)
     require(set(freed)==old_frames,'Released another VM grant')
@@ -250,6 +255,6 @@ def reuse_after(c,s,args,out):
         lab.save_json(destination/'report.json',report)
     return dict(result=report['result'],first_host='B',same_ram_frames=True,same_object_arena=True,
         object_offset=offset,object_capacity=16*MIB,object_acks=object_acks,ram_acks=ram_acks,
-        zero_pages_verified=len(old_frames),
+        zero_pages_verified=len(old_frames),partial_ack_refused=True,partial_ack_file=partial_ack_file,
         fences=fences,arm=arm,vm2_report='reuse-vm2/report.json',vm2_handoffs=6,
         old_cookie=[handle['cookie_lo'],handle['cookie_hi']],new_cookie=[current['cookie_lo'],current['cookie_hi']])
