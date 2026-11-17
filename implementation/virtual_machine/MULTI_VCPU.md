@@ -54,8 +54,11 @@ Direct JSON schema와 resident binary packet 버전도 올린다.
 
 ## interrupt와 동시성
 
-- APICv와 posted interrupt, PML(Page Modification Logging), nested guest는 계속 끈다.
+- APICv와 posted interrupt, nested guest는 계속 끈다.
   destination의 vCPU array가 완성되기 전에는 timer나 PIT worker를 깨우지 않는다.
+- PML(Page Modification Logging)은 기본 off다. `--pml on`으로 선택할 수 있다.
+  Dirty bitmap과 PML page는 DAX에 둔다. detach에서 모든 PML index가 511인지 검사한다.
+  비일관 hand-off의 장부·cache 순서는 [NONCOHERENT.md](NONCOHERENT.md)를 따른다.
 - APIC map은 DAX에 있는 LAPIC만 가리킨다. 모든 ID와 pointer를 확인하며 source의
   RCU reader와 callback은 소유권 공개 전에 drain한다. IPI는 보존된 IRR/ISR와
   request bit를 사용한다. kick 대상 pid와 physical CPU 번호는 destination에서 갱신한다.

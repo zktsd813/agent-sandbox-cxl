@@ -45,11 +45,17 @@ KVM bitmap과 Firecracker bitmap의 합집합을 쓴다.
 | devices/virtio/net/tap.rs, vsock packet | iovec/VolatileSlice로 수신 | 위 iovec와 vm-memory 표시를 따라간다 |
 | vstate/memory.rs mprotect, madvise, mincore | 주소/상주 상태 syscall | guest RAM 내용 쓰기가 아니다 |
 | direct.rs ioctl, pool_memory.rs Query/Audit | 로컬 출력 buffer에 커널이 쓰기 | guest RAM 내용 쓰기가 아니다 |
+| devices/vmclock.rs | clock page 갱신 | GuestMemory.write_obj의 bitmap을 따른다 |
+| resident_control.c heartbeat epoch | 시험 ACK trigger | export 뒤 raw 쓰기를 제거한다. 정지 후 VMM의 GuestMemory.write_obj로 옮긴다 |
 | iovec 테스트의 copy_nonoverlapping, memory 테스트의 write_bytes | 테스트 전용 | 생산 경로와 분리 |
 
 Direct의 기존 장치 계약은 read-only virtio block이다.
 Network와 vsock은 장부 경로 감사와 실제 hand-off 지원을 구분해 검증한다.
 장치를 거절하는 기존 검사를 단순히 지우지 않는다.
+Balloon, memory device, pmem, vhost는 이 direct 장치 계약에서 거절한다.
+KVM의 steal-time과 asynchronous page fault도 기존 preflight에서 거절한다.
+vcpu_load의 pvclock 갱신 요청은 다음 KVM_RUN에서 처리한다.
+장부 수집 뒤 실제 guest RAM에 쓰는 허용 경로는 확인되지 않았다.
 
 ## KVM 객체와 제어 영역
 
@@ -102,7 +108,9 @@ INVEPT(Invalidate Translations Derived from EPT)는 기존 attach의 요청을 �
 ## 정답지와 주장 범위
 
 L0(물리 host)의 읽기 전용 C 도구로 CXL backing의 모든 4 KiB page hash를 구한다.
-첫 실행 전과 export 완료/import 전의 정지된 경계에서 비교한다.
+첫 CXL 실행 전과 export 완료/import 전의 정지된 경계에서 비교한다.
+이 lab은 DRAM에서 부팅한 뒤 정지해 promotion한다. 그 전체 복사가 첫 기준이다.
+장부는 DRAM VM 생성 때부터 켠다. 첫 CXL record는 RAM 전체다.
 Mapper의 GPA→file offset으로 바뀐 guest page와 이번 목록을 대조한다.
 바뀐 page가 목록에 없으면 실패다. 이전 hash는 다음 경계까지 보존한다.
 RAM 밖 변경은 KVM arena, mapper/token/log/제어, 그 밖으로 나눈다.

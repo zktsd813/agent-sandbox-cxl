@@ -86,7 +86,7 @@ VM을 A에서 B로 옮길 때 B가 갖춰야 하는 것은 네 가지다.
 | HPA 동일성 | 모든 서버의 CXL window base, HDM decoder, DAX offset이 같아야 EPT를 이어받을 수 있다 | 고정 HVA·PFN 검사 있음. 서버 간 비교 스크립트 없음 |
 | devdax 노출 | pool을 system RAM으로 online하지 않는다(각 커널이 서로 덮어씀) | lab은 VM 전용 CXL frame mapper(`/dev/cxl_pool`, ABI 4) |
 | 단일 소유자 | VM 메모리와 EPT는 현재 소유 host만 쓴다. owner epoch로 직렬화 | seal → handle → import, epoch, lease 검사 있음. 서버 간 atomic 없음(한 host 안 lab) |
-| coherence | 비일관 CXL에서는 넘기기 전 write-back(guest dirty line, EPT A/D bit, mailbox), 받은 뒤 invalidate와 INVEPT가 정확성 조건 | **미구현.** lab의 CXL은 한 host 안 emulation이라 하드웨어가 맞춰 준다 |
+| coherence | 비일관 CXL에서는 넘기기 전 write-back(guest dirty line, EPT A/D bit, mailbox), 받은 뒤 invalidate와 INVEPT가 정확성 조건 | 옵션 구현. KVM·장치 장부, 단일 작성자 log와 cache 유지. [11-17 검증](results/noncoherent-handoff-20261117/README.md)에서 목록 누락·범위 누락 0. Coherent lab이며 실제 stale 재현은 하지 않았다 |
 | EPT 불변성 | DAX라 host mm이 swap·migration·reclaim을 하지 않아 이어받은 EPT에 mmu notifier 이벤트가 없다 | DAX arena는 EPT page를 재사용하지 않는다 |
 | 같은 구성 | CPU 모델, microcode, 커널, KVM 모듈 동일 | lab은 양쪽 같은 binary. Intel direct L1은 XFD/AMX를 숨겨야 vCPU 생성이 된다 |
 | device 연속성 | tap, socket, conntrack, block fd는 CXL에 둘 수 없다 | 읽기 전용 block만. network·쓰기 가능 disk direct는 미구현 |
@@ -314,7 +314,7 @@ M4+P가 가장 강한 상대다. 관문 G2가 "hand-off 정지 시간 ≤ M4+P"�
 | ID | 내용 | 상태 |
 |---|---|---|
 | D1 | hand-off 구간 분해(정지, 상태 전달, EPT 이어받기, 장치, 재개) | 부분(kernel trace로 attach·EPT·nested root 구간) |
-| D2 | 메모리 1~16GB, vCPU 1·2·4, dirty set, flush 방식별 시간. 메모리 크기에 평평해야 함 | 안 함. 참고: 10-21에 CLWB/CLFLUSHOPT write-back + invalidate를 쟀다. 1GiB에서 0.1/1/10/100%를 썼을 때 0.13/0.91/10.5/98.0 ms였다. 1%만 써도 RAM 전체를 훑으면 99.8 ms다. dirty 범위를 PML 등으로 좁혀야 한다([results/cache-pml-20261021](../implementation/virtual_machine/results/cache-pml-20261021/)) |
+| D2 | 메모리 1~16GB, vCPU 1·2·4, dirty set, flush 방식별 시간. 메모리 크기에 평평해야 함 | 일부: [11-17](results/noncoherent-handoff-20261117/README.md)에 RAM 2GiB·1 vCPU·쓰기 0/16/64/256MiB를 쟀다. 메모리 크기 전체 sweep은 남았다. 참고: 10-21에 CLWB/CLFLUSHOPT write-back + invalidate를 쟀다. 1GiB에서 0.1/1/10/100%를 썼을 때 0.13/0.91/10.5/98.0 ms였다. 1%만 써도 RAM 전체를 훑으면 99.8 ms다. dirty 범위를 PML 등으로 좁혀야 한다([results/cache-pml-20261021](../implementation/virtual_machine/results/cache-pml-20261021/)) |
 | D3 | 옮긴 뒤 95% 속도 회복 시간, M3·M4·M4+P와 같은 기준 | 안 함 |
 | D4 | EPT 이어받기 vs 재구축 vs prefault × page size(4K/2M/1G) × working set | 안 함 |
 | D5 | 수천 번 왕복 stress, write-back/invalidate를 하나씩 빼고 오류 재현 | 부분(거절·변조 시험, 왕복 수십 번) |

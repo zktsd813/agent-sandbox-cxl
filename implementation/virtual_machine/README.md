@@ -208,10 +208,11 @@ Mapper `/dev/cxl_pool` ABI 4(handle 152 B, config/query 56 B, Firecracker manife
 `dax_nested_root_sync=1`은 nested lab의 outer KVM shadow EPT 보완이다.
 물리 host 성능에서 이 비용을 임의로 빼지 않는다. 일반 TLB 무효화·단일 owner·CXL 가시성은 별도 보장이다.
 비일관 물리 multi-host CXL, writable direct, 장애 복구와
-최신 resident 경로의 MPTCP/PML 통합은 검증하지 않았다.
+최신 resident 경로의 MPTCP 통합은 검증하지 않았다.
 
 
 비일관 hand-off 실험은 [NONCOHERENT.md](NONCOHERENT.md)를 따른다.
 `--noncoherent`는 생성 때부터 dirty tracking을 켠다. PML은 `--pml on`으로 별도 선택한다.
+중첩 lab에서 PML을 켠 resident direct를 1/2 vCPU로 검증했다.
 Log와 CXL mailbox는 mapper metadata 예약 안에 둔다. Kernel cache 유지보수도 이 옵션에서만 켠다.
 결과와 제한은 [2026-11-17 기록](../../docs/results/noncoherent-handoff-20261117/README.md)에 있다.
