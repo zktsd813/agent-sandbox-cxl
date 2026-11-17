@@ -216,8 +216,11 @@ def main():
                             shutil.copytree(report.parent/'reuse-vm2',args.output/'reuse-vm2',dirs_exist_ok=True)
                     if fixture_trial and result["cleanup"]["backing_removed"]:
                         storage=Path(config["home_storage_image"]["path"])
-                        if result["result"]=="passed" and storage==Path(config["run"])/"home-storage.raw" and not storage.is_symlink():
+                        # The fixture mounts this private template copy read-only.
+                        # Keep receipts and hashes for failures, not another disk copy.
+                        if storage==Path(config["run"])/"home-storage.raw" and not storage.is_symlink():
                             storage.unlink()
+                            result['cleanup']['storage_copy_removed']=True
             result["worktree_local_du"] = subprocess.check_output(["du", "-sh", str(LOCAL)], text=True).strip()
             (args.output / "trial.json").write_text(json.dumps(result, indent=2) + "\n")
             print(json.dumps(result, indent=2), flush=True)
