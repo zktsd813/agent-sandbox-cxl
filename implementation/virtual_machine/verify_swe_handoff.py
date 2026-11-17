@@ -493,7 +493,10 @@ def verify(path):
     need(len(r['cleanup']) == len(launches), 'Runtime cleanup missing')
     configs = [a['request'] for a in r['api_events'] if a['path'] == '/machine-config']
     vcpus = r['arguments'].get('vcpus',1)
-    need(vcpus in (1,2,4,8) and configs == [{'vcpu_count': vcpus, 'mem_size_mib': 2048}], 'Wrong VM configuration')
+    expected_config = {'vcpu_count': vcpus, 'mem_size_mib': 2048}
+    if r['arguments'].get('dirty_ledger'):
+        expected_config['track_dirty_pages'] = True
+    need(vcpus in (1,2,4,8) and configs == [expected_config], 'Wrong VM configuration')
     disks = [a['request'] for a in r['api_events'] if a['path'] == '/drives/data']
     need(len(disks) == 1 and disks[0]['is_read_only'] and disks[0]['path_on_host'] == '/disk/sandbox.raw',
          'Wrong immutable block device')
