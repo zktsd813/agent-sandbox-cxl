@@ -885,10 +885,8 @@ def mixed_io(args):
         lab.verify(argparse.Namespace(timeout=180))
         report['storage_setup'] = c.setup()
         c.configure_direct()
-        binary = Path(args.io_fixture).read_bytes()
         for role in ('A','B'):
-            c.write_bytes(role, '/lab/io-mix', binary, 'install-io', after='chmod 755 /lab/io-mix')
-            c.shell(role, '/lab/io-mix tap fcnet0 172.31.0.1', 'L1-only-tap')
+            c.shell(role, 'test -x /lab/io-mix\n/lab/io-mix tap fcnet0 172.31.0.1', 'L1-only-tap')
         report['boot'] = c.boot_vm(s)
         identity = c.command_vm(s, 'identity')
         c.promote(s)
