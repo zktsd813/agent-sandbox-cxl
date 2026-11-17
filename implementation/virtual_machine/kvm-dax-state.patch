@@ -437,7 +437,7 @@ index 253fb20..cc813a8 100644
  #define PT_WRITABLE_SHIFT 1
  #define PT_USER_SHIFT 2
 diff --git a/arch/x86/kvm/mmu/mmu.c b/arch/x86/kvm/mmu/mmu.c
-index f7901cb..cee4c77 100644
+index f7901cb..41f7f05 100644
 --- a/arch/x86/kvm/mmu/mmu.c
 +++ b/arch/x86/kvm/mmu/mmu.c
 @@ -713,7 +713,7 @@ static void mmu_free_memory_caches(struct kvm_vcpu *vcpu)
@@ -519,7 +519,7 @@ index f7901cb..cee4c77 100644
  	if (!page)
  		return -ENOMEM;
  
-@@ -6045,6 +6046,114 @@ int kvm_mmu_create(struct kvm_vcpu *vcpu)
+@@ -6045,6 +6046,141 @@ int kvm_mmu_create(struct kvm_vcpu *vcpu)
  	return ret;
  }
  
@@ -548,6 +548,33 @@ index f7901cb..cee4c77 100644
 +	 * The guest is paused and the previous owner has been fenced. */
 +	u8 *root = (u8 *)__va(vcpu->arch.mmu->root.hpa) + 1;
 +	WRITE_ONCE(*root, READ_ONCE(*root));
++}
++
++/* Nested lab only: the next VM can use different EPT page GPAs in the same
++ * extent. Touch the OLD tracked pages before overwriting them, otherwise a
++ * new root that outer KVM has never tracked cannot zap its old shadow cache.
++ * Both wrappers are dead; every dirtied test line is invalidated before ACK. */
++int kvm_mmu_dax_retire(struct kvm_dax_shared *s, u64 *lines)
++{
++    unsigned long first=(unsigned long)s, end=first+s->bump;
++    struct kvm_mmu_page *sp;
++    u64 p,count=0;
++    if (!dax_nested_root_sync) return 0;
++    if (s->bump<PAGE_SIZE || s->bump>16UL*1024*1024) return -EINVAL;
++    for (p=s->ept_pages;p;p=sp->dax_next) {
++        unsigned long table;
++        u8 *byte;
++        if (++count>s->ept_page_count || p<first || p>end-sizeof(*sp)) return -EXDEV;
++        sp=(void *)(unsigned long)p;
++        table=(unsigned long)sp->spt;
++        if (!IS_ALIGNED(table,PAGE_SIZE) || table<first || table>end-PAGE_SIZE) return -EXDEV;
++        byte=(u8 *)table+1;
++        WRITE_ONCE(*byte,READ_ONCE(*byte));
++        asm volatile("clflushopt (%0)" : : "r" ((void *)table) : "memory");
++        (*lines)++;
++    }
++    asm volatile("mfence" : : : "memory");
++    return 0;
 +}
 +
 +int kvm_mmu_dax_ept_rebind(struct kvm_vcpu *vcpu, bool attach)
@@ -1418,10 +1445,10 @@ index 41cce50..ba06cbf 100644
  	return -ENOMEM;
 diff --git a/include/linux/kvm_dax.h b/include/linux/kvm_dax.h
 new file mode 100644
-index 0000000..9c55269
+index 0000000..91bbb09
 --- /dev/null
 +++ b/include/linux/kvm_dax.h
-@@ -0,0 +1,199 @@
+@@ -0,0 +1,200 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +#ifndef __LINUX_KVM_DAX_H
 +#define __LINUX_KVM_DAX_H
@@ -1494,6 +1521,7 @@ index 0000000..9c55269
 +	p = (void *)s + KVM_DAX_RESUME_PROFILE_OFFSET;
 +	return READ_ONCE(p->enabled) ? p : NULL;
 +}
++int kvm_mmu_dax_retire(struct kvm_dax_shared *s, u64 *lines);
 +int kvm_dax_arena_ioctl(unsigned long arg);
 +int kvm_dax_begin_vm(void);
 +int kvm_dax_select_vm(u64 offset);
@@ -1800,10 +1828,10 @@ index 1b90acb..16a9c78 100644
  }
 diff --git a/virt/kvm/dax_pool.c b/virt/kvm/dax_pool.c
 new file mode 100644
-index 0000000..8875b34
+index 0000000..d34d88c
 --- /dev/null
 +++ b/virt/kvm/dax_pool.c
-@@ -0,0 +1,426 @@
+@@ -0,0 +1,427 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/* Single-owner laboratory allocator over an already bound device-DAX range. */
 +#include <linux/io.h>
@@ -2077,6 +2105,7 @@ index 0000000..8875b34
 +        }
 +        asm volatile("mfence" : : : "memory");
 +        if (s->state!=KVM_DAX_DETACHED) return -EBUSY;
++        { int ret=kvm_mmu_dax_retire(s,&q.lines); if (ret) return ret; }
 +        dax_retired_offset=q.offset;
 +        if (dax_vm==s) dax_vm=NULL;
 +    } else if (q.stage==2) {

@@ -198,7 +198,7 @@ def reuse_after(c,s,args,out):
             require('FENCED ' in raw,'Old wrapper fd lifetime not fenced')
             fences.append(dict(role=role,directory=directory,file=name))
     object_acks=[admin(c,role,'arena',offset,1,0) for role in ('A','B')]
-    require(all(r['capacity']==16*MIB and r['lines']==16*MIB//64 for r in object_acks),'Object invalidation ACK incomplete')
+    require(all(r['capacity']==16*MIB and r['lines']>=16*MIB//64 for r in object_acks),'Object invalidation ACK incomplete')
     directory=c.resident_workers['B']['directory']
     raw,partial_ack_file=c.shell('B',f'if /lab/resident-control arena {directory} 172.30.0.2 '
         f'{c.resident_control_nonce} {offset} 2 1; then exit 1; else echo REUSE_ACK_REFUSED; fi',
