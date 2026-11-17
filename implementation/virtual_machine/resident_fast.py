@@ -175,7 +175,7 @@ def audit_parked(c,role):
 
 def reuse_after(c,s,args,out):
     """Destroy VM1, collect A+B ACKs, start VM2 on B in the same extents."""
-    import json,re,struct
+    import copy,json,re,struct
     from pathlib import Path
     from dirty_oracle import DirtyOracle,MIB
     from handoff_bench import HandoffController,source_fence_script
@@ -183,6 +183,9 @@ def reuse_after(c,s,args,out):
     old_frames=set(c.allocator.grants[s.owner].frames)
     raw,_=c.shell(s.role,'cat /sys/module/kvm/parameters/dax_pool','retiring-arena')
     offset=int(re.search(r'vm_base=(\d+)',raw)[1])
+    old_allocation=re.search(r'allocation_id=(\d+)',raw)
+    require(old_allocation is not None,'Reuse test requires allocation identities')
+    old_allocation=int(old_allocation[1])
     fences=[]
     for role,worker in c.resident_workers.items():
         # The only lab holders of VM/vCPU fds are these VMMs; controllers hold
@@ -220,11 +223,12 @@ def reuse_after(c,s,args,out):
     with Path(c.config['cxl_backing']).open('r+b',buffering=0) as stream:
         stream.seek(handle['metadata_offset']+40*MIB);stream.write(bytes(256))
     destination=out/'reuse-vm2';destination.mkdir()
-    c2=HandoffController(c.config,destination,args);c2.allocator.generation=c.allocator.generation
+    vm2_args=copy.copy(args);vm2_args.vcpus=2 if args.vcpus==1 else 1
+    c2=HandoffController(c.config,destination,vm2_args);c2.allocator.generation=c.allocator.generation
     s2=c2.sandboxes[0];s2.role='B'
     for role in ('A','B'):c2.shell(role,f'mkdir -p {c2.root}','reuse-root')
     oracle=DirtyOracle(c.config,destination,c2.metadata_base+s2.vm*64*MIB,c2.kvm_arena,args.page_hash)
-    report=dict(result='running',arguments=vars(args),config=c.config,transitions=c2.transitions,receipts=c2.receipts)
+    report=dict(result='running',arguments=vars(vm2_args),config=c.config,transitions=c2.transitions,receipts=c2.receipts)
     parent=json.loads((out/'report.json').read_text())
     for key in ('source_hashes','source_reference'): report[key]=parent[key]
     try:
@@ -244,6 +248,8 @@ def reuse_after(c,s,args,out):
             report.setdefault('audits',[]).append(audit_parked(c2,hop['source']))
         raw,name=c2.shell(s2.role,'cat /sys/module/kvm/parameters/dax_pool','new-arena')
         require(int(re.search(r'vm_base=(\d+)',raw)[1])==offset,'VM2 did not reuse object arena')
+        new_allocation=int(re.search(r'allocation_id=(\d+)',raw)[1])
+        require(new_allocation!=old_allocation,'Native EPT metadata reused the old VM identity')
         report['arena_file']=name
         admin(c2,s2.role,'retire')
         report['result']='passed'
@@ -259,5 +265,6 @@ def reuse_after(c,s,args,out):
     return dict(result=report['result'],first_host='B',same_ram_frames=True,same_object_arena=True,
         object_offset=offset,object_capacity=16*MIB,object_acks=object_acks,ram_acks=ram_acks,
         zero_pages_verified=len(old_frames),partial_ack_refused=True,partial_ack_file=partial_ack_file,
+        old_allocation=old_allocation,new_allocation=new_allocation,vm1_vcpus=args.vcpus,vm2_vcpus=vm2_args.vcpus,
         fences=fences,arm=arm,vm2_report='reuse-vm2/report.json',vm2_handoffs=6,
         old_cookie=[handle['cookie_lo'],handle['cookie_hi']],new_cookie=[current['cookie_lo'],current['cookie_hi']])

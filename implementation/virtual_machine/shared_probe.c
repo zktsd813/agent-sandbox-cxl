@@ -919,7 +919,8 @@ static void guest_smp_heartbeat(unsigned count)
     }
     int fd = open("/dev/mem", O_RDWR | O_SYNC);
     if (fd < 0) die("SMP /dev/mem");
-    smp_hb = mmap(NULL, 2*1024*1024, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 64 * 1024 * 1024);
+    int race = env_enabled("LAB_HEARTBEAT_RACE_PAGES");
+    smp_hb = mmap(NULL, race ? 17*4096 : 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 64 * 1024 * 1024);
     if (smp_hb == MAP_FAILED) die("SMP heartbeat map");
     close(fd); memset(smp_hb, 0, sizeof(*smp_hb)); smp_count = count;
     pthread_t writers[8], pings[8];
@@ -938,7 +939,7 @@ static void guest_smp_heartbeat(unsigned count)
     for (;;) {
         uint64_t epoch = atomic_load_explicit(&smp_hb->epoch, memory_order_acquire);
         atomic_fetch_add(&smp_hb->sequence, 1);
-        if (env_enabled("LAB_HEARTBEAT_RACE_PAGES")) {
+        if (race) {
             uint64_t value=atomic_load(&smp_hb->sequence);
             for (unsigned page=1;page<=16;page++)
                 *(volatile uint64_t *)((char *)smp_hb+page*4096)=value;
