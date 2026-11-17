@@ -333,6 +333,9 @@ class HandoffController(Controller):
             "FC_POOL_MEMORY_MANIFEST": s.manifest_path, "FC_POOL_MEMORY_DEVICE": "/dev/cxl_pool",
             "FC_DAX_FIXED_HVA": "0x400000000000", "FC_DAX_SNAPSHOT": "1",
             "FC_DAX_SNAPSHOT_COMPAT": "1"}
+        if getattr(self.args, 'dirty_ledger', False):
+            env.update(FC_DIRTY_LEDGER='1', FC_DIRTY_OUTPUT=s.directory+'/dirty')
+            if getattr(self.args, 'dirty_oracle', False): env['FC_DIRTY_ORACLE'] = '1'
         if getattr(self.args, 'trajectory_policy', None):
             env['FC_DAX_NO_NESTED_GUEST'] = '1'
         if getattr(self.args, 'prefault', None) and purpose == 'snapshot-prepare':
@@ -428,6 +431,8 @@ class HandoffController(Controller):
                 'boot_args': 'console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init' + (' memmap=2M$64M nmi_watchdog=0' if getattr(self.args,'resident_bench',None) else '')},
             '/drives/data': {'drive_id': 'data', 'path_on_host': '/disk/sandbox.raw', 'is_root_device': False,
                 'is_read_only': True, 'cache_type': 'Writeback', 'io_engine': self.io_engine}}
+        if getattr(self.args, 'dirty_ledger', False):
+            components['/machine-config']['track_dirty_pages'] = True
         for path, body in components.items():
             self.api(s.role, s.directory, path, 'PUT', body)
         self.api(s.role, s.directory, '/actions', 'PUT', {'action_type': 'InstanceStart'})
@@ -963,6 +968,9 @@ def main():
     parser.add_argument('--trajectory-policy', choices=('heavy', 'all'))
     parser.add_argument('--heavy-plan')
     parser.add_argument('--count-faults', action='store_true')
+    parser.add_argument('--dirty-ledger', action='store_true')
+    parser.add_argument('--dirty-oracle', action='store_true')
+    parser.add_argument('--page-hash')
     parser.add_argument('--prefault', choices=('all','mapped'))
     parser.add_argument('--prefault-activate', action='store_true')
     parser.add_argument('--prefault-probe', help='Static ABI probe uploaded only to these disposable L1s')
@@ -984,6 +992,10 @@ def main():
     out.mkdir()
     c = HandoffController(config, out, args)
     s = c.sandboxes[0]
+    oracle = None
+    if args.dirty_oracle:
+        from dirty_oracle import DirtyOracle
+        oracle = DirtyOracle(config, out, c.metadata_base+s.vm*64*MIB, c.kvm_arena, args.page_hash)
     report = {'schema': 'swe-handoff-trace-v1', 'result': 'running', 'mode': args.mode, 'name': args.name,
         'arguments': dict(vars(args)), 'config': config, 'fixture': c.fixture, 'trace': c.trace,
         'commands': c.trace_commands, 'control_commands': c.commands, 'receipts': c.receipts,
@@ -994,7 +1006,7 @@ def main():
         'layout': {'private_start': 2*MIB, 'private_end': 3072*MIB, 'kvm_arena': c.kvm_arena, 'metadata_base':c.metadata_base},
         'limitations': ['Coherent nested KVM; one run per trace/mode', ('Two extra handoffs inside a running command' if args.inflight_handoff_index is not None else 'Transitions between recorded commands'),
             'Same patched DRAM baseline, not pristine Firecracker', 'One VM per trial; full private RAM copy for tier changes']}
-    sources = ('experiment_sources.py', 'handoff_bench.py', 'swe-handoff-l2-init.sh', 'swe-handoff-guest-run.sh',
+    sources = ('dirty_oracle.py', 'page_hash.c', 'experiment_sources.py', 'handoff_bench.py', 'swe-handoff-l2-init.sh', 'swe-handoff-guest-run.sh',
         'resident_fast.py', 'resident_control.c', 'resident_wire.h', 'resident_proxy.py', 'resident_bootstrap.c',
         'control_rpc.c', 'control_rpc.py', 'guest-init.sh', 'nfs_bench.py', 'lab.py')
     report['source_hashes'], report['source_reference'] = record_sources(HERE, sources)
@@ -1087,6 +1099,12 @@ def main():
         report.update(result='failed',error=repr(exc))
         raise
     finally:
+        if oracle:
+            try:
+                oracle.close()
+            except Exception as exc:
+                report.update(result='failed', oracle_error=repr(exc))
+            report['dirty_oracle'] = oracle.rows
         report['keepalive_cleanup'] = []
         for keeper in getattr(c, 'keepalives', []):
             role, directory = keeper['role'], keeper['directory']

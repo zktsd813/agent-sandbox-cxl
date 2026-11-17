@@ -1555,10 +1555,10 @@ index 2a75945..fe91a5d 100644
      type ConstructorArgs = MmioTransportConstructorArgs;
 diff --git a/src/vmm/src/direct.rs b/src/vmm/src/direct.rs
 new file mode 100644
-index 0000000..f5cc482
+index 0000000..637dd03
 --- /dev/null
 +++ b/src/vmm/src/direct.rs
-@@ -0,0 +1,853 @@
+@@ -0,0 +1,865 @@
 +// Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 +// SPDX-License-Identifier: Apache-2.0
 +
@@ -1758,12 +1758,11 @@ index 0000000..f5cc482
 +
 +pub(crate) fn validate_live(vmm: &Vmm) -> Result<(), VmmError> {
 +    if !(1..=MAX_VCPUS).contains(&vmm.machine_config.vcpu_count)
-+        || vmm.machine_config.track_dirty_pages
 +        || vmm.machine_config.huge_pages != HugePageConfig::None
 +        || !matches!(vmm.device_manager.virtio_devices, VirtioDevices::Mmio(_))
 +    {
 +        return Err(VmmError::DaxPreflight(
-+            "direct I/O requires a supported vCPU count, 4 KiB untracked RAM and MMIO",
++            "direct I/O requires a supported vCPU count, 4 KiB RAM and MMIO",
 +        ));
 +    }
 +    let mut valid = true;
@@ -1826,6 +1825,14 @@ index 0000000..f5cc482
 +        self.check_block_snapshot_preparation()
 +            .map_err(|e| VmmError::DaxHandoff(io::Error::other(e.to_string())))?;
 +        timing.mark("drain_and_save_devices");
++        let ledger = if crate::noncoherent::enabled() {
++            if !self.machine_config.track_dirty_pages {
++                return Err(VmmError::DaxPreflight("noncoherent handoff requires dirty tracking from creation"));
++            }
++            self.device_manager.mark_virtio_queue_memory_dirty(vm.guest_memory());
++            Some(crate::noncoherent::collect(vm).map_err(VmmError::DaxHandoff)?)
++        } else { None };
++
 +        if resident_enabled() {
 +            let VirtioDevices::Mmio(mmio) = &mut self.device_manager.virtio_devices else { unreachable!() };
 +            mmio.park_direct(events);
@@ -1871,6 +1878,10 @@ index 0000000..f5cc482
 +                return Err(io::Error::last_os_error());
 +            }
 +            timing.mark("peek_token");
++            if let Some(ledger) = &ledger {
++                crate::noncoherent::boundary(vm.guest_memory(), 2, state.token.pool_used, Some(ledger))?;
++            }
++
 +            if resident_enabled() {
 +                crate::pool_memory::park_resident(vm.guest_memory())?;
 +                *resident_token().lock().unwrap() = Some(state.token.clone());
@@ -2043,7 +2054,6 @@ index 0000000..f5cc482
 +    if state.schema != "direct-device-handoff-v2"
 +        || u32::from(state.machine_config.vcpu_count) != t.vcpu_count
 +        || !valid_cpu_identities(t)
-+        || state.machine_config.track_dirty_pages
 +        || state.machine_config.huge_pages != HugePageConfig::None
 +        || t.vm_creates != 1
 +        || t.vcpu_creates != u64::from(t.vcpu_count)
@@ -2131,7 +2141,7 @@ index 0000000..f5cc482
 +        &[(GuestAddress(0), state.token.ram_bytes as usize)],
 +        &dax,
 +        offset,
-+        false,
++        state.machine_config.track_dirty_pages,
 +        false,
 +    )
 +    .map_err(error)?;
@@ -2261,6 +2271,9 @@ index 0000000..f5cc482
 +    fn direct_contract_accepts_only_detached_same_graph_geometry() {
 +        let state = valid_state();
 +        assert!(validate_state(&state).is_ok());
++        let mut tracked = valid_state();
++        tracked.machine_config.track_dirty_pages = true;
++        assert!(validate_state(&tracked).is_ok());
 +        for mutate in [
 +            |s: &mut DirectState| s.token.flags = 1,
 +            |s: &mut DirectState| s.token.generation = 0,
@@ -2271,7 +2284,6 @@ index 0000000..f5cc482
 +            |s: &mut DirectState| s.token.ram_bytes -= 4096,
 +            |s: &mut DirectState| s.memory.regions[0].plugged = vec![false],
 +            |s: &mut DirectState| s.machine_config.mem_size_mib = usize::MAX,
-+            |s: &mut DirectState| s.machine_config.track_dirty_pages = true,
 +            |s: &mut DirectState| s.machine_config.vcpu_count = 2,
 +            |s: &mut DirectState| s.devices.acpi_state.vmgenid.addr = u64::MAX,
 +            |s: &mut DirectState| s.devices.acpi_state.vmclock.guest_address = u64::MAX,
@@ -2413,20 +2425,21 @@ index 0000000..f5cc482
 +    }
 +}
 diff --git a/src/vmm/src/lib.rs b/src/vmm/src/lib.rs
-index 41b7b8d..ef08aa7 100644
+index 41b7b8d..62b327e 100644
 --- a/src/vmm/src/lib.rs
 +++ b/src/vmm/src/lib.rs
-@@ -78,6 +78,9 @@ pub mod builder;
+@@ -78,6 +78,10 @@ pub mod builder;
  /// Types for guest configuration.
  pub mod cpu_config;
  pub(crate) mod device_manager;
 +#[cfg(target_arch = "x86_64")]
 +pub(crate) mod direct;
++pub(crate) mod noncoherent;
 +pub(crate) mod pool_memory;
  /// Emulates virtual and hardware devices.
  #[allow(missing_docs)]
  pub mod devices;
-@@ -96,6 +99,8 @@ pub mod pci;
+@@ -96,6 +100,8 @@ pub mod pci;
  pub mod persist;
  /// Resource store for configured microVM resources.
  pub mod resources;
@@ -2435,7 +2448,7 @@ index 41b7b8d..ef08aa7 100644
  /// microVM RPC API adapters.
  pub mod rpc_interface;
  /// Seccomp filter utilities.
-@@ -169,6 +174,9 @@ pub use crate::vstate::vm::{StartVcpusError, Vm};
+@@ -169,6 +175,9 @@ pub use crate::vstate::vm::{StartVcpusError, Vm};
 
  /// Shorthand type for the EventManager flavour used by Firecracker.
  pub type EventManager = BaseEventManager<Arc<Mutex<dyn MutEventSubscriber>>>;
@@ -2445,7 +2458,7 @@ index 41b7b8d..ef08aa7 100644
 
  // Since the exit code names e.g. `SIGBUS` are most appropriate yet trigger a test error with the
  // clippy lint `upper_case_acronyms` we have disabled this lint for this enum.
-@@ -217,6 +225,16 @@ pub const HTTP_MAX_PAYLOAD_SIZE: usize = 51200;
+@@ -217,6 +226,16 @@ pub const HTTP_MAX_PAYLOAD_SIZE: usize = 51200;
  /// have permissions to open the KVM fd).
  #[derive(Debug, thiserror::Error, displaydoc::Display)]
  pub enum VmmError {
@@ -2462,7 +2475,7 @@ index 41b7b8d..ef08aa7 100644
      #[cfg(target_arch = "aarch64")]
      /// Invalid command line error.
      Cmdline,
-@@ -303,6 +321,10 @@ pub struct Vmm {
+@@ -303,6 +322,10 @@ pub struct Vmm {
      pub machine_config: MachineConfig,
      boot_source_config: BootSourceConfig,
      shutdown_exit_code: Option<FcExitCode>,
@@ -2473,7 +2486,7 @@ index 41b7b8d..ef08aa7 100644
 
      /// VM object.
      pub vm: Vm,
-@@ -461,23 +483,142 @@ impl Vmm {
+@@ -461,23 +484,142 @@ impl Vmm {
 
      /// Sends a resume command to the vCPUs.
      pub fn resume_vm(&mut self) -> Result<(), VmmError> {
@@ -2617,7 +2630,7 @@ index 41b7b8d..ef08aa7 100644
          self.instance_info.state = VmState::Paused;
          Ok(())
      }
-@@ -498,6 +639,15 @@ impl Vmm {
+@@ -498,6 +640,15 @@ impl Vmm {
 
      /// Saves the state of a paused Microvm.
      pub fn save_state(&mut self, vm_info: &VmInfo) -> Result<MicrovmState, MicrovmStateError> {
@@ -2633,7 +2646,7 @@ index 41b7b8d..ef08aa7 100644
          self.check_unsnapshottable_devices()?;
 
          // We need to save device state before saving KVM state.
-@@ -506,11 +656,17 @@ impl Vmm {
+@@ -506,11 +657,17 @@ impl Vmm {
          // state before we save device state, that interrupt will never be delivered to the guest
          // upon resuming from the snapshot.
          let device_states = self.device_manager.save();
@@ -2652,7 +2665,7 @@ index 41b7b8d..ef08aa7 100644
          let kvm_state = kvm_vm.kvm().save_state();
          let vm_state = {
              #[cfg(target_arch = "x86_64")]
-@@ -528,6 +684,8 @@ impl Vmm {
+@@ -528,6 +685,8 @@ impl Vmm {
                      .map_err(MicrovmStateError::SaveVmState)?
              }
          };
@@ -2661,6 +2674,106 @@ index 41b7b8d..ef08aa7 100644
 
          Ok(MicrovmState {
              vm_info: vm_info.clone(),
+diff --git a/src/vmm/src/noncoherent.rs b/src/vmm/src/noncoherent.rs
+new file mode 100644
+index 0000000..65d9058
+--- /dev/null
++++ b/src/vmm/src/noncoherent.rs
+@@ -0,0 +1,94 @@
++// SPDX-License-Identifier: Apache-2.0
++//! Opt-in dirty ledger and a stopped-boundary lab oracle. Never enabled by default.
++use std::fs::{File, OpenOptions};
++use std::io::{self, Write};
++use std::os::fd::AsRawFd;
++use std::sync::{Mutex, OnceLock};
++use std::time::{Duration, Instant};
++use vm_memory::{GuestMemoryBackend, GuestMemoryRegion};
++use vm_memory::bitmap::Bitmap;
++use crate::vstate::memory::GuestMemoryMmap;
++use crate::vstate::vm::KvmVm;
++
++pub(crate) fn enabled() -> bool { std::env::var_os("FC_DIRTY_LEDGER").is_some() }
++fn invalid(s: impl ToString) -> io::Error { io::Error::other(s.to_string()) }
++pub(crate) struct Ledger { pub kvm: Vec<u64>, pub device: Vec<u64>, pub union: Vec<u64>, pub collect_ns: u64 }
++pub(crate) fn collect(vm: &KvmVm) -> io::Result<Ledger> {
++    let start = Instant::now();
++    let mem = vm.guest_memory();
++    if mem.num_regions() != 1 { return Err(invalid("ledger requires one RAM region")); }
++    let region = mem.iter().next().unwrap();
++    let bitmap = (**region).bitmap().as_ref().ok_or_else(|| invalid("dirty tracking absent"))?;
++    let mut kernel = vm.get_dirty_bitmap().map_err(invalid)?;
++    let kvm = kernel.remove(&0).ok_or_else(|| invalid("dirty slot 0 absent"))?;
++    let pages = region.len() as usize / 4096;
++    if !kernel.is_empty() || kvm.len() != pages.div_ceil(64) { return Err(invalid("dirty log geometry")); }
++    let mut device = vec![0u64; kvm.len()];
++    for page in 0..pages {
++        if bitmap.dirty_at(page * 4096) { device[page / 64] |= 1 << (page % 64); }
++    }
++    let union = kvm.iter().zip(&device).map(|(k,d)| k | d).collect();
++    bitmap.reset(); // vCPUs stopped, asynchronous I/O drained, queues conservatively marked.
++    Ok(Ledger { kvm, device, union, collect_ns: start.elapsed().as_nanos() as u64 })
++}
++
++// A lab-only gate in unused mapper metadata. Header words 0..7 belong to the
++// stopped owner. Words 8..15 belong to L0. The hashing executable opens backing RO.
++// Metadata map entries end below +17MiB even for the maximum supported 4GiB RAM.
++const GATE_BYTES: usize = 1024 * 1024;
++struct Gate { address: usize, _file: File }
++unsafe impl Send for Gate {} // Serialized by the mutex; no reference escapes.
++impl Gate {
++    fn new() -> io::Result<Self> {
++        let base: u64 = std::env::var("FC_POOL_MEMORY_METADATA_OFFSET").map_err(invalid)?.parse().map_err(invalid)?;
++        let file = OpenOptions::new().read(true).write(true).open("/dev/dax0.0")?;
++        // SAFETY: this opt-in experiment reserves +40MiB..+41MiB in a 64MiB metadata extent.
++        let p = unsafe { libc::mmap(std::ptr::null_mut(), GATE_BYTES, libc::PROT_READ | libc::PROT_WRITE,
++            libc::MAP_SHARED, file.as_raw_fd(), (base + 40 * 1024 * 1024) as libc::off_t) };
++        if p == libc::MAP_FAILED { return Err(io::Error::last_os_error()); }
++        Ok(Self { address: p as usize, _file: file })
++    }
++    fn read(&self, word: usize) -> u64 { unsafe { (self.address as *const u64).add(word).read_volatile() } }
++    fn write(&self, word: usize, v: u64) { unsafe { (self.address as *mut u64).add(word).write_volatile(v); } }
++}
++pub(crate) fn boundary(mem: &GuestMemoryMmap, phase: u64, arena: u64, ledger: Option<&Ledger>) -> io::Result<()> {
++    if !enabled() || std::env::var("FC_DIRTY_ORACLE").as_deref() != Ok("1") { return Ok(()); }
++    static GATE: OnceLock<Mutex<Option<Gate>>> = OnceLock::new();
++    let mut guard = GATE.get_or_init(|| Mutex::new(None)).lock().unwrap();
++    if guard.is_none() { *guard = Some(Gate::new()?); }
++    let gate = guard.as_ref().unwrap();
++    let region = mem.iter().next().ok_or_else(|| invalid("oracle RAM absent"))?;
++    let pages = region.len() as usize / 4096;
++    let words = pages.div_ceil(64);
++    if 128 + words * 8 * 3 > GATE_BYTES { return Err(invalid("oracle bitmap too large")); }
++    let sequence = gate.read(0).checked_add(1).ok_or_else(|| invalid("oracle sequence overflow"))?;
++    let full = vec![u64::MAX; words];
++    let empty = vec![0u64; words];
++    let (union, kernel, device) = ledger.map(|l| (&l.union, &l.kvm, &l.device)).unwrap_or((&full, &empty, &full));
++    for (index, bitmap) in [union, kernel, device].iter().enumerate() {
++        // SAFETY: each bitmap is exactly words u64 and the checked gate is exclusively owned.
++        unsafe { std::ptr::copy_nonoverlapping(bitmap.as_ptr(),
++            (gate.address as *mut u8).add(128 + index * words * 8).cast::<u64>(), words); }
++    }
++    gate.write(1, phase); gate.write(2, pages as u64); gate.write(3, region.as_ptr() as u64);
++    gate.write(4, arena); gate.write(5, ledger.map_or(0, |l|l.collect_ns));
++    std::sync::atomic::fence(std::sync::atomic::Ordering::SeqCst);
++    gate.write(0, sequence);
++    let start = Instant::now();
++    while gate.read(8) != sequence {
++        if start.elapsed() > Duration::from_secs(120) { return Err(invalid("oracle timeout; remain stopped")); }
++        std::thread::sleep(Duration::from_millis(1));
++    }
++    if gate.read(9) != 1 { return Err(invalid("oracle found missing pages; remain stopped")); }
++    if let Some(l) = ledger {
++        let count = |b: &Vec<u64>| b.iter().map(|w|w.count_ones() as u64).sum::<u64>();
++        crate::logger::info_unrestricted!("DIRTY_LEDGER_JSON {}", serde_json::json!({
++            "sequence":sequence,"pages":count(&l.union),"kvm_pages":count(&l.kvm),
++            "device_pages":count(&l.device),"collect_ns":l.collect_ns,"arena_bytes":arena}));
++        if let Ok(path) = std::env::var("FC_DIRTY_OUTPUT") {
++            let mut file = File::create(format!("{path}-{sequence}.bitmap"))?;
++            for bitmap in [&l.union, &l.kvm, &l.device] { for word in bitmap { file.write_all(&word.to_le_bytes())?; } }
++        }
++    }
++    Ok(())
++}
 diff --git a/src/vmm/src/persist.rs b/src/vmm/src/persist.rs
 index 71a0345..2dfd978 100644
 --- a/src/vmm/src/persist.rs
@@ -2974,10 +3087,10 @@ index 71a0345..2dfd978 100644
          let mut vmm = default_vmm();
 diff --git a/src/vmm/src/pool_memory.rs b/src/vmm/src/pool_memory.rs
 new file mode 100644
-index 0000000..985aafb
+index 0000000..4dfd1b2
 --- /dev/null
 +++ b/src/vmm/src/pool_memory.rs
-@@ -0,0 +1,779 @@
+@@ -0,0 +1,784 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! VM-private persistent CXL logical RAM and whole-RAM tier changes.
 +//! Private controller plans assign exclusive frames. The kernel owns the mapping
@@ -2990,6 +3103,7 @@ index 0000000..985aafb
 +
 +use crate::vstate::memory::{GuestMemoryMmap, GuestRegionMmap, MemoryError};
 +use serde::{Deserialize, Serialize};
++use vm_memory::bitmap::Bitmap;
 +use vm_memory::{Address, FileOffset, GuestAddress, GuestMemoryBackend, GuestMemoryRegion};
 +
 +const PAGE: u64 = 4096;
@@ -3609,7 +3723,10 @@ index 0000000..985aafb
 +            }
 +            set_mapping_failed(false);
 +            *state().lock().unwrap() = Some(Active { file, manifest: m });
++            // Remapping preserves the bitmap object, but bypassed writes need explicit marks.
++            for region in mem.iter() { region.bitmap().mark_dirty(0, region.len() as usize); }
 +            checkpoint_ready(mem)?;
++            crate::noncoherent::boundary(mem, 1, 0, None)?;
 +        }
 +        "export" => {
 +            checkpoint_ready(mem)?;
@@ -3673,6 +3790,7 @@ index 0000000..985aafb
 +                let copy = View { ptr, bytes };
 +                unsafe {
 +                    std::ptr::copy_nonoverlapping(region.as_ptr(), ptr.cast::<u8>(), bytes);
++                    region.bitmap().mark_dirty(0, bytes);
 +                }
 +                copies.push((copy, region.as_ptr()));
 +                copied += bytes as u64;
@@ -4630,7 +4748,7 @@ index ca743fa..d563c7d 100644
                  self.vmm
                      .lock()
 diff --git a/src/vmm/src/vstate/memory.rs b/src/vmm/src/vstate/memory.rs
-index 888e8c5..6f0d493 100644
+index 888e8c5..503cf32 100644
 --- a/src/vmm/src/vstate/memory.rs
 +++ b/src/vmm/src/vstate/memory.rs
 @@ -6,11 +6,13 @@
@@ -4761,7 +4879,7 @@ index 888e8c5..6f0d493 100644
 
          let mut builder = MmapRegionBuilder::new_with_bitmap(
              size,
-@@ -923,6 +1002,106 @@ pub fn create(
+@@ -923,6 +1002,107 @@ pub fn create(
          .collect::<Result<Vec<_>, _>>()
  }
 
@@ -4845,6 +4963,7 @@ index 888e8c5..6f0d493 100644
 +                // SAFETY: the caller exclusively owns this cold-boot allocation.
 +                unsafe {
 +                    std::ptr::write_bytes(region.as_ptr(), 0, size);
++                    region.bitmap().mark_dirty(0, size);
 +                }
 +            }
 +            crate::logger::info!(
@@ -4868,7 +4987,7 @@ index 888e8c5..6f0d493 100644
  /// Creates a GuestMemoryMmap with `size` in MiB backed by a memfd.
  pub fn memfd_backed(
      regions: &[(GuestAddress, usize)],
-@@ -944,12 +1123,55 @@ pub fn memfd_backed(
+@@ -944,12 +1124,55 @@ pub fn memfd_backed(
      )
  }
 
@@ -4924,7 +5043,7 @@ index 888e8c5..6f0d493 100644
      create(
          regions,
          libc::MAP_PRIVATE | libc::MAP_ANONYMOUS | huge_pages.mmap_flags(),
-@@ -2308,6 +2530,44 @@ mod tests {
+@@ -2308,6 +2531,44 @@ mod tests {
          ));
      }
 

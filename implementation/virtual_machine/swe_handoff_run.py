@@ -31,7 +31,7 @@ SOURCES = ("experiment_sources.py", "swe_handoff_run.py", "handoff_bench.py", "s
     "resident_control.c", "resident_bootstrap.c", "resident_prepare.py", "control_rpc.c", "control_rpc.py",
     "guest-init.sh", "resident_wire.h", "resident_proxy.py", "kernel_handoff_trace.py",
     "firecracker.patch", "kvm-dax-state.patch", "kvm-dax-source.json", "kvm-prefault.patch", "firecracker-prefault.patch", "prefault_probe.c",
-    "multi_vcpu.py")
+    "multi_vcpu.py", "dirty_oracle.py", "page_hash.c")
 
 
 def arguments():
@@ -50,6 +50,10 @@ def arguments():
     parser.add_argument("--l1-memory-mib", type=int, choices=(4096,6144,8192))
     parser.add_argument("--cxl-mib", type=int, choices=(4096,8192,16384))
     parser.add_argument("--parallel-build", action="store_true")
+    parser.add_argument("--dirty-ledger", action="store_true")
+    parser.add_argument("--dirty-oracle", action="store_true")
+    parser.add_argument("--page-hash", type=Path)
+    parser.add_argument("--pml", choices=("on", "off"), default="off")
     parser.add_argument("--restore-timing", action="store_true")
     parser.add_argument("--kernel-trace", action="store_true")
     parser.add_argument("--inflight-handoff-index", type=int)
@@ -92,6 +96,8 @@ def arguments():
         parser.error('Prefault variants require trajectory, unique variants, and no single prefault option')
     if args.prefault_activate and not (args.prefault or args.prefault_variants):
         parser.error('Activation requires prefault')
+    if args.dirty_oracle and (not args.dirty_ledger or args.modes != ['direct'] or not args.page_hash):
+        parser.error('Dirty oracle requires direct-only ledger and page-hash executable')
     return args
 
 
@@ -204,11 +210,16 @@ def main():
                 "--migration-network", "--network-backend", args.network_backend, "--memory-backing-dir", "/dev/shm",
                 "--direct-cpu-model",
                 "--home-storage-image", str(assets / "storage.raw"), "--qemu", str(qemu)]
+            start.extend(["--pml", args.pml])
             if mode == "direct":
                 start.append("--dax-handoff")
             bench = prefix + [str(HERE / "handoff_bench.py"), "--mode", mode, "--name", name,
                               "--memory-mib", str(args.memory_mib), "--vcpus", str(args.vcpus),
                               "--direct-profile-roundtrips", str(args.direct_profile_roundtrips)]
+            if args.dirty_ledger:
+                bench.append('--dirty-ledger')
+            if args.dirty_oracle:
+                bench.extend(['--dirty-oracle', '--page-hash', str(args.page_hash.resolve())])
             if policy:
                 bench.extend(['--trajectory-policy', policy, '--heavy-plan', str(args.heavy_plan.resolve())])
                 if args.count_faults: bench.append('--count-faults')

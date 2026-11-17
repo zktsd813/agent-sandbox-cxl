@@ -523,6 +523,8 @@ def start(args):
                    "-serial", "chardev:console", "-qmp", f"unix:{qmp_path},server=on,wait=off"]
             if getattr(args, 'direct_cpu_model', False) and not args.dax_handoff:
                 cmd[cmd.index('-append')+1] += ' nokaslr'
+            if getattr(args, 'pml', 'off') == 'on':
+                cmd[cmd.index('-append')+1] += ' lab.pml=1'
             if getattr(args, 'direct_cpu_model', False):
                 cmd[cmd.index('-append')+1] += ' lab.direct_compat=1'
             if control_rpc:
@@ -2702,6 +2704,7 @@ def main():
     p.add_argument("--socket-listener", choices=["A", "B"], default="A", help="Choose the QEMU socket listener; starts it before the connecting peer (default A)")
     p.add_argument("--storage-image", type=Path, help="Attach the same read-only raw disk to both L1s for storage experiments; QEMU uses cache=none")
     p.add_argument("--home-storage-image", type=Path, help="Copy a raw storage template into this run and attach it writable only to L1 A; B must use NFS")
+    p.add_argument("--pml", choices=("on", "off"), default="off", help="Opt-in L1 PML; host unchanged")
     p.set_defaults(func=start)
     p = subs.add_parser("verify", help="Wait for guest checks and validate host backing")
     p.add_argument("--timeout", type=float, default=180)
