@@ -142,6 +142,9 @@ def maintain(c,s):
 
 
 def admin(c,role,operation,*arguments):
+    # Nonresident mixed-I/O release has no control server to provide a nonce.
+    if not hasattr(c,'resident_control_nonce'):
+        c.resident_control_nonce = secrets.token_hex(16)
     directory=getattr(c,'resident_workers',{}).get(role,{}).get('directory',c.root)
     ip='172.30.0.1' if role=='A' else '172.30.0.2'
     raw,name=c.shell(role,f'/lab/resident-control {operation} {directory} {ip} {c.resident_control_nonce} '+
