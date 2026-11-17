@@ -26,6 +26,13 @@
 #define CPM_ACTIVE 1
 #define CPM_SEALED 2
 #define CPM_RETIRED 3
+static atomic64_t nonowner_ioctl, nonowner_release;
+static int cpm_audit_get(char *buffer,const struct kernel_param *kp)
+{
+    return scnprintf(buffer,PAGE_SIZE,"ioctl=%lld release=%lld\n",atomic64_read(&nonowner_ioctl),atomic64_read(&nonowner_release));
+}
+static const struct kernel_param_ops cpm_audit_ops={.get=cpm_audit_get};
+module_param_cb(nonowner_counts,&cpm_audit_ops,NULL,0400);
 struct cpm_header {
     u64 magic;
     struct cpm_handle handle;
@@ -39,7 +46,7 @@ struct cpm {
     struct cpm_header *header;
     u64 epoch, cookie_lo, cookie_hi;
     void *base;
-    bool ready, mapped;
+    bool ready, mapped, local_owner;
     struct vm_area_struct *owner_vma;
     /* Host DRAM only. Observer never changes the owner's CXL metadata. */
     struct cpm_cache observer;
@@ -55,7 +62,7 @@ static void invalidate_range(void *address, u64 bytes)
     asm volatile("mfence" : : : "memory");
 }
 
-static int cache_pages(struct cpm *c, void __user *user)
+static int cache_pages(struct cpm *c, void __user *user, bool zero, bool writeback)
 {
     struct cpm_cache q;
     struct cpm_header *header;
@@ -64,8 +71,8 @@ static int cache_pages(struct cpm *c, void __user *user)
     size_t bytes;
     int ret = -EINVAL;
     if (copy_from_user(&q, user, sizeof(q))) return -EFAULT;
-    if (!boot_cpu_has(X86_FEATURE_CLFLUSHOPT)) return -EOPNOTSUPP;
-    if (!q.pages || q.pages > CPM_MAX_PAGES || q.reserved ||
+    if (!boot_cpu_has(X86_FEATURE_CLFLUSHOPT) || ((zero || writeback) && !boot_cpu_has(X86_FEATURE_CLWB))) return -EOPNOTSUPP;
+    if (!q.pages || q.pages > CPM_MAX_PAGES || (zero ? q.reserved!=3 : q.reserved!=0) ||
         (q.phys_base | q.device_bytes | q.metadata_offset) & (PAGE_SIZE-1) ||
         !q.device_bytes || q.phys_base + q.device_bytes < q.phys_base ||
         q.metadata_offset > q.device_bytes ||
@@ -102,17 +109,33 @@ static int cache_pages(struct cpm *c, void __user *user)
     if (!covered) { ret = -ENOMEM; goto out; }
     if (q.pages % BITS_PER_LONG && bits[BITS_TO_LONGS(q.pages)-1] >> (q.pages % BITS_PER_LONG))
         goto out;
+    if (zero && !bitmap_full(bits,q.pages)) goto out;
     start = ktime_get_ns(); q.lines = 0;
     for_each_set_bit(page, bits, q.pages) {
         void *address = c->observer_base + c->observer_map[page].offset;
         if (page == q.skip_page) continue;
         for (line = 0; line < PAGE_SIZE; line += 64) {
-            asm volatile("clflushopt (%0)" : : "r" ((char *)address+line) : "memory");
+            if (zero) {
+                unsigned int word;
+                for (word=0;word<64;word+=8)
+                    asm volatile("movnti %1,(%0)" : : "r" ((char *)address+line+word),"r" (0ULL) : "memory");
+            } else if (writeback) asm volatile("clwb (%0)" : : "r" ((char *)address+line) : "memory");
+            else asm volatile("clflushopt (%0)" : : "r" ((char *)address+line) : "memory");
             q.lines++;
         }
         __set_bit(page, covered);
     }
-    asm volatile("mfence" : : : "memory");
+    if (zero) {
+        asm volatile("sfence" : : : "memory");
+        header=c->observer_base+q.metadata_offset;
+        /* All participating hosts acknowledged invalidation before zeroing.
+         * The trusted lab coordinator is the only allocator writer here. */
+        WRITE_ONCE(header->handle.state,CPM_RETIRED);
+        for (line=0;line<PAGE_SIZE;line+=64)
+            asm volatile("clwb (%0)" : : "r" ((char *)header+line) : "memory");
+        asm volatile("sfence" : : : "memory");
+    } else if (writeback) asm volatile("sfence" : : : "memory");
+    else asm volatile("mfence" : : : "memory");
     q.elapsed_ns = ktime_get_ns()-start;
     if (!bitmap_equal(bits, covered, q.pages)) { ret = -EIO; goto out; }
     ret = copy_to_user(u64_to_user_ptr(q.covered), covered, bytes) ||
@@ -129,7 +152,7 @@ out:
 
 static bool owns(struct cpm *c)
 {
-    return c->epoch == READ_ONCE(c->state->owner_epoch) &&
+    return c->local_owner && c->epoch == READ_ONCE(c->state->owner_epoch) &&
         c->cookie_lo == READ_ONCE(c->state->cookie_lo) &&
         c->cookie_hi == READ_ONCE(c->state->cookie_hi);
 }
@@ -187,7 +210,7 @@ static vm_fault_t cpm_fault(struct vm_fault *vmf)
     mutex_lock(&c->lock);
     if (c->header && (!owns(c) ||
         (write && READ_ONCE(c->state->state) != CPM_ACTIVE) ||
-        READ_ONCE(c->state->state) == CPM_RETIRED)) {
+        (c->local_owner && READ_ONCE(c->state->state) == CPM_RETIRED))) {
         ret = VM_FAULT_SIGBUS; goto out;
     }
     if (index >= c->cfg.count) { ret = VM_FAULT_SIGBUS; goto out; }
@@ -302,6 +325,7 @@ static void persistent_pointers(struct cpm *c, struct cpm_header *h)
 {
     c->header = h; c->state = &h->handle; c->cfg = h->config;
     c->map = (void *)h + PAGE_SIZE;
+    c->local_owner=true;
     c->epoch = c->state->owner_epoch;
     c->cookie_lo = c->state->cookie_lo; c->cookie_hi = c->state->cookie_hi;
 }
@@ -412,7 +436,8 @@ static long cpm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     long ret = 0;
     if (!capable(CAP_SYS_RAWIO))
         return -EPERM;
-    if (cmd == CPM_CACHE) return cache_pages(c, user);
+    if (cmd == CPM_CACHE || cmd == CPM_ZERO || cmd == CPM_WRITEBACK) return cache_pages(c,user,cmd==CPM_ZERO,cmd==CPM_WRITEBACK);
+    if (cmd == CPM_PARK) { c->local_owner=false; return 0; }
     if (cmd == CPM_CREATE || cmd == CPM_IMPORT) {
         mutex_lock(&c->lock);
         ret = cmd == CPM_CREATE ? create_persistent(c, user) : import_persistent(c, user);
@@ -421,6 +446,7 @@ static long cpm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     }
     if (!smp_load_acquire(&c->ready))
         return -EINVAL;
+    if (c->header && !c->local_owner) { atomic64_inc(&nonowner_ioctl); return -ESTALE; }
     if (c->header && !owns(c)) return -ESTALE;
     if (cmd == CPM_STATUS || cmd == CPM_SEAL || cmd == CPM_RETIRE) {
         struct cpm_handle h;
@@ -512,7 +538,8 @@ static int cpm_release(struct inode *inode, struct file *file)
     kvfree(c->observer_map);
     if (c->observer_base) memunmap(c->observer_base);
     if (c->header) {
-        if (owns(c))
+        if (!c->local_owner) atomic64_inc(&nonowner_release);
+        if (c->local_owner && owns(c))
             cmpxchg(&c->state->state, CPM_ACTIVE, CPM_RETIRED);
     } else {
         kvfree(c->map);

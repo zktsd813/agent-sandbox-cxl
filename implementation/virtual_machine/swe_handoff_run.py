@@ -52,6 +52,10 @@ def arguments():
     parser.add_argument("--parallel-build", action="store_true")
     parser.add_argument("--dirty-ledger", action="store_true")
     parser.add_argument("--noncoherent", action="store_true")
+    parser.add_argument("--reuse-test", action="store_true")
+    parser.add_argument("--audit-parked", action="store_true")
+    parser.add_argument("--arena-limit-bytes", type=int,default=0)
+    parser.add_argument("--fail-maintenance", choices=("writeback","epoch","record"))
     parser.add_argument("--preclean", action="store_true")
     parser.add_argument("--clean-paused", action="store_true", help="Test only: pause and hash each clean")
     parser.add_argument("--clean-wait", choices=("0","1","recorded"), default="0")
@@ -79,6 +83,7 @@ def arguments():
     parser.add_argument('--seed', type=int, default=20261116)
     parser.add_argument('--skip-trials', type=int, default=0, help='Resume a recorded shuffled plan in a fresh output/session; preserve the completed prefix separately')
     args = parser.parse_args()
+    if args.reuse_test or args.fail_maintenance or args.arena_limit_bytes: parser.error('Use multi_vcpu.py for destructive negative/reuse fixtures')
     if args.noncoherent: args.dirty_ledger=True
     if not re.fullmatch(r"[a-z0-9_-]{1,29}", args.session):
         parser.error("Use a fresh lowercase session name of at most 29 characters")

@@ -172,3 +172,70 @@ KVM_GET_DIRTY_LOG → Firecracker bitmap 수집/초기화 → RAM clwb/sfence �
 받는 쪽은 mapper의 kernel WB direct mapping에서 RAM bitmap을 무효화한다.
 Guest HVA의 PTE를 만들지 않는다. 독립 observer fd는 불변 GPA→offset 표의 로컬 사본만 가진다.
 Observer는 공유 mapper lease/epoch/stat을 쓰지 않는다. consumed는 기존 host DRAM tmpfs다.
+
+## 4단계: VM 영역과 수명 계약
+
+VM 생성은 전역 pool에서 16 MiB를 한 번 예약한다. 첫 page는 그 VM의 descriptor다.
+나머지는 VM·vCPU, VMCS, EPT, bitmap, PML, kvm_run, APIC map 등의 bump 할당이다.
+전역 cmpxchg는 예약 때만 쓴다. VM bump는 소유 host의 로컬 spinlock 아래에서만 고친다.
+캐시 유지 범위는 descriptor를 포함한 `[vm_base, vm_bump)`다.
+범위 초과와 정수 넘침은 NULL과 FAILED로 끝낸다. DRAM fallback을 하지 않는다.
+현재 lab의 host당 한 active graph 계약은 유지한다. 다른 graph 생성은 EBUSY다.
+동시 여러 VM 실행을 지원하는 스케줄러를 이번에 만들었다고 주장하지 않는다.
+실제 비일관 서버에서는 네트워크의 중앙 관리자가 겹치지 않는 VM 영역을 배정해야 한다.
+공유 전역 bump를 실제 비일관 서버의 분산 할당기로 사용하지 않는다.
+
+VM 제거는 pause·I/O drain·detach가 끝난 뒤에만 시작한다.
+Lab의 모든 VM/vCPU fd 보유자는 해당 Firecracker 두 프로세스뿐이다.
+두 wrapper와 제어기를 종료하고 PID(Process Identifier) 재사용까지 검사한다.
+그 뒤 A와 B가 guest RAM 전체와 VM 객체의 예약 범위 전체를 무효화한다.
+객체 영역 회수 ioctl은 RCU(Read-Copy Update) 콜백도 먼저 기다린다.
+A·B 영수증이 모두 있어야 재사용을 arm한다. 일부 ACK만으로는 다음 VM을 만들지 않는다.
+새 RAM은 non-temporal store로 0을 쓰고 SFENCE한다. 새 mapper는 새 cookie와 allocation generation을 갖는다.
+새 VM의 promotion 복사도 non-temporal store와 SFENCE를 쓴다.
+기존 객체의 DAX bump free는 메모리를 반환하지 않는다. 공유 RCU head도 enqueue하지 않는다.
+오래된 wrapper의 fd가 살아 있는 상태로 객체 주소를 재사용하는 것은 허용하지 않는다.
+이 lab의 pinned graph가 보유한 native 참조는 L1 종료 때까지 남는다.
+일반 kernel에서 모든 참조를 파괴하는 생산용 수명 관리와 구분한다.
+
+## 비소유 kernel 진입 감사의 코드 계약
+
+진입 판정은 host DRAM의 영역별 owner 표를 쓴다. 공유 struct kvm을 먼저 읽지 않는다.
+Detach 마지막 WB 뒤 owner 표를 닫는다. Attach는 영역을 무효화한 뒤 내부 복원을 허용한다.
+공유 객체가 아닌 로컬 file·VMA·카운터만 다루는 작업은 계속 허용한다.
+
+| 경로 | 카운터 | 비소유 처리 |
+|---|---:|---|
+| allocator | 0 | NULL |
+| mmu notifier의 invalidate/change/young/release | 1 | 공유 lock·SRCU에 들어가기 전에 반환. detach에서 unregister/drain |
+| kvm_get_kvm, get_safe | 2 | 공유 refcount를 고치지 않음. safe는 false |
+| kvm_put_kvm, put_no_destroy | 3 | pinned graph의 참조 반납을 지연 |
+| VM/vCPU file release | 4 | vCPU→kvm pointer를 읽기 전 반환 |
+| stats fd, debugfs open/read/write/release, PEEK | 5 | EACCES 또는 로컬 자원만 반납 |
+| APIC hrtimer | 6 | 재등록 없이 중단. detach가 이미 cancel/drain |
+| irqfd eventfd wakeup | 7 | 공유 irqfd→kvm pointer를 읽기 전 반환. 기존 quiesce 유지 |
+| preempt notifier | 8 | 공유 vCPU 필드 접근 전에 반환 |
+| VM/vCPU ioctl | 9 | REATTACH 외에는 공유 객체 접근 전에 EIO |
+| vCPU mmap/fault | 10 | EACCES 또는 SIGBUS |
+| arena 회수·조회 | 12 | 관리 작업의 비소유 진입을 별도 계수 |
+| dax_pool sysfs 조회 | 13 | detach 때 만든 host DRAM 사본만 반환 |
+| DAX MMU 지연 free | 14 | 공유 RCU head enqueue 자체를 제거 |
+| mapper lease/epoch/stat/release | 별도 모듈 카운터 | CPM_PARK 뒤 로컬 판정으로 거절. observer는 불변 표 사본만 사용 |
+
+실제 진입 수와 검증 결과는 결과 문서에 기록한다. 카운터 0이라는 주장만으로 경로를 안전하다고 하지 않는다.
+직접 매핑으로 보이는 객체에 비소유 CPU의 추측 실행이 cache line을 들일 수 있다.
+이것은 architectural writer가 생긴다는 뜻은 아니다. Guard 뒤의 쓰기는 commit하지 못한다.
+새 attach의 객체 영역 무효화는 그때까지 들어온 line을 버린다.
+RAM은 새 log record의 page를 무효화한다. 범위를 넘긴 log는 전체 RAM을 처리한다.
+따라서 추측으로 생긴 옛 line도 재개 전에 처리된다. 실제 비일관 장치의 증명은 별도 시험이다.
+
+## 실패와 사전 처리의 경계
+
+정리 알림은 단일 작성자가 동기적으로 보낸다. 상대의 처리가 끝나기 전 다음 record를 발행하지 않는다.
+주기적인 독립 reader와 동시에 ring slot을 덮어쓰는 일반 프로토콜은 이번 범위가 아니다.
+소비 실패, 잘못된 record, cache 명령/영수증 오류는 abort한다.
+Packet epoch가 무효화 뒤 header보다 앞서 보이면 header line을 네 번 다시 무효화해 읽는다.
+여전히 맞지 않으면 재개하지 않는다. 미래 consumed도 거절한다.
+K개를 넘긴 reader는 기록을 추측하지 않고 RAM 전체를 무효화한다.
+송신과 수신 RAM 유지보수는 둘 다 mapper의 kernel 매핑을 사용한다.
+수신만 바꾸면 park의 HVA fault가 다음 송신 WB로 옮겨 가므로 두 경로를 함께 바꾼다.

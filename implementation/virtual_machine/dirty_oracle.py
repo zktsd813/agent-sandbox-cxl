@@ -93,7 +93,7 @@ class DirtyOracle:
                 missing = [i for i in changed_gpa if not (checked_bitmap[i//8] >> (i%8)) & 1]
                 # KVM bump cannot shrink. First baseline may precede export, so
                 # classify the whole reserved arena then use actual used bytes.
-                arena_end = self.arena + (used or 128*MIB)
+                arena_end = self.arena + 128*MIB  # reserved pool; VM descriptors may start after its root page
                 outside = changed - guest
                 objects = {i for i in outside if self.arena <= i*PAGE < arena_end}
                 control = {i for i in outside if self.metadata <= i*PAGE < self.metadata+64*MIB}

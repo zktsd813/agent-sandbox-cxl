@@ -31,6 +31,8 @@ struct kvm_dax_resume_profile {
 #include <time.h>
 #include <unistd.h>
 #include "resident_wire.h"
+#include "pool_memory_uapi.h"
+#include <sys/ioctl.h>
 
 #define CAP (64*1024)
 #define PORT 19091
@@ -256,7 +258,7 @@ static void print_api(const char *name,const struct api_result *a) {
 
 static void validate_request(const struct request *q,const char *nonce) {
  check(q->magic==MAGIC && q->nonce[32]==0 && !strcmp(q->nonce,nonce)
-       && q->label[95]==0 && q->label[0] && q->first<=1 && q->operation<=4 && !q->reserved && q->persistent<=1,"request identity");
+       && q->label[95]==0 && q->label[0] && q->first<=1 && q->operation<=6 && !q->reserved && q->persistent<=1,"request identity");
  check(strlen(q->label)<90 && strspn(q->label,"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-:.")==strlen(q->label),"request label");
  if(q->operation==1 || q->operation==2) {
   struct in_addr address;
@@ -321,12 +323,48 @@ static uint64_t number(const char *s) {
  char *end;errno=0;unsigned long long n=strtoull(s,&end,10);
  check(s[0] && strspn(s,"0123456789")==strlen(s) && !errno && !*end,"integer argument");return n;
 }
+static uint64_t sysfs_number(const char *path) {
+ FILE *f=fopen(path,"r");char line[128];check(f&&fgets(line,sizeof(line),f),"sysfs read");fclose(f);return strtoull(line,NULL,0);
+}
 int main(int argc,char **argv) {
  const char *profile_env=getenv("FC_RESIDENT_PROFILE");profile_enabled=profile_env&&!strcmp(profile_env,"1");
- check(argc==5||argc==6||argc==12,"usage: serve DIR IP NONCE | request DIR LOCAL_IP NONCE FIRST LABEL PEER VM EPOCH START BYTES");
+ check(argc==5||argc==6||argc==8||argc==10||argc==12,"usage: serve DIR IP NONCE | request DIR LOCAL_IP NONCE FIRST LABEL PEER VM EPOCH START BYTES");
  check(strlen(argv[2])<sizeof(directory)&&!strncmp(argv[2],"/run/swe-handoff-",17),"owned directory required");strcpy(directory,argv[2]);path(socket_path,sizeof(socket_path),"api.sock");
  check(strlen(argv[4])==32&&strspn(argv[4],"0123456789abcdef")==32,"session nonce");signal(SIGPIPE,SIG_IGN);
 
+ if(!strcmp(argv[1],"cache")) {
+  check(argc==10,"cache DIR IP NONCE METADATA COOKIE_LO COOKIE_HI PAGES MODE");
+  uint64_t pages=number(argv[8]);check(pages&&pages<=(1U<<20),"cache pages");
+  size_t words=(pages+63)/64;uint64_t *bits=calloc(words,8),*covered=calloc(words,8);check(bits&&covered,"cache bits");
+  for(size_t i=0;i<words;i++)bits[i]=UINT64_MAX;
+  if(pages%64)bits[words-1]=(UINT64_C(1)<<(pages%64))-1;
+  int zero=!strcmp(argv[9],"zero");check(zero||!strcmp(argv[9],"invalidate"),"cache mode");
+  struct cpm_cache q={.phys_base=sysfs_number("/sys/bus/dax/devices/dax0.0/resource"),
+   .device_bytes=sysfs_number("/sys/bus/dax/devices/dax0.0/size"),.metadata_offset=number(argv[5]),
+   .cookie_lo=number(argv[6]),.cookie_hi=number(argv[7]),.pages=pages,.bitmap=(uintptr_t)bits,
+   .covered=(uintptr_t)covered,.skip_page=UINT64_MAX,.reserved=zero?3:0};
+  int fd=open("/dev/cxl_pool",O_RDWR|O_CLOEXEC);check(fd>=0,"cache open");
+  check(ioctl(fd,zero?CPM_ZERO:CPM_CACHE,&q)==0,"cache ioctl");
+  check(q.lines==pages*64&&!memcmp(bits,covered,words*8),"cache coverage");close(fd);free(bits);free(covered);
+  printf("NONCOHERENT_CACHE_JSON {\"pages\":%"PRIu64",\"lines\":%"PRIu64",\"ns\":%"PRIu64",\"zero\":%d}\n",pages,(uint64_t)q.lines,(uint64_t)q.elapsed_ns,zero);
+  return 0;
+ }
+ if(!strcmp(argv[1],"arena")) {
+  check(argc==8,"arena DIR IP NONCE OFFSET STAGE ACKS");
+  uint64_t q[6]={number(argv[5]),0,0,0,number(argv[6]),number(argv[7])};
+  int fd=open("/dev/kvm",O_RDWR|O_CLOEXEC);check(fd>=0,"arena open");
+  check(ioctl(fd,0xc030aef9UL,q)==0,"arena ioctl");close(fd);
+  printf("NONCOHERENT_ARENA_JSON {\"offset\":%"PRIu64",\"capacity\":%"PRIu64",\"used\":%"PRIu64",\"lines\":%"PRIu64",\"stage\":%"PRIu64",\"acks\":%"PRIu64"}\n",q[0],q[1],q[2],q[3],q[4],q[5]);
+  return 0;
+ }
+ if(!strcmp(argv[1],"retire")||!strcmp(argv[1],"audit")) {
+  check(argc==5,"retire/audit DIR IP NONCE");
+  struct request q={.magic=MAGIC,.operation=!strcmp(argv[1],"retire")?5:6};
+  strcpy(q.nonce,argv[4]);strcpy(q.label,argv[1]);validate_request(&q,argv[4]);
+  int fd=local_socket(0);uint64_t response[2];send_all(fd,&q,sizeof(q));recv_all(fd,response,sizeof(response));close(fd);
+  check(response[0]==0,"retire/audit failed");
+  printf("NONCOHERENT_ADMIN_JSON {\"operation\":%u,\"ns\":%"PRIu64"}\n",q.operation,response[1]);return 0;
+ }
  if(!strcmp(argv[1],"maintain")) {
   check(argc==6,"maintain DIR IP NONCE PAUSED");
   struct request q={.magic=MAGIC,.operation=3,.first=(uint32_t)number(argv[5])};
@@ -388,6 +426,14 @@ int main(int argc,char **argv) {
    else {fd=accept4(trigger?local:listener,NULL,NULL,SOCK_CLOEXEC);if(fd<0)fail("accept");timeout(fd);
     if(!trigger){int one=1;if(setsockopt(fd,IPPROTO_TCP,TCP_NODELAY,&one,sizeof(one)))fail("accepted TCP_NODELAY");}}
    struct request q;recv_all(fd,&q,sizeof(q));validate_request(&q,argv[4]);
+   if(q.operation==5 || q.operation==6) {
+    check(trigger && !q.state_len && !q.manifest_len,"admin request channel");
+    check(connect_native(),"admin endpoint absent");
+    unsigned char command=q.operation==5?3:8;uint64_t response[2],begin=ns();
+    send_all(native_fd,&command,1);recv_all(native_fd,response,sizeof(response));
+    if(!response[0] && command==3) {char packet[CAP];check(response[1]>0&&response[1]<CAP,"retire packet bound");recv_all(native_fd,packet,response[1]);}
+    response[1]=ns()-begin;send_all(fd,response,sizeof(response));close(fd);continue;
+   }
    if(q.operation==3 || q.operation==4) {
     check(!q.state_len && !q.manifest_len && !q.epoch &&
           (q.operation==3 ? trigger : (!trigger && fd==peer_fd)),"maintenance request channel");

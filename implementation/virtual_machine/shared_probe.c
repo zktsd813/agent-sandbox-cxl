@@ -919,7 +919,7 @@ static void guest_smp_heartbeat(unsigned count)
     }
     int fd = open("/dev/mem", O_RDWR | O_SYNC);
     if (fd < 0) die("SMP /dev/mem");
-    smp_hb = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 64 * 1024 * 1024);
+    smp_hb = mmap(NULL, 2*1024*1024, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 64 * 1024 * 1024);
     if (smp_hb == MAP_FAILED) die("SMP heartbeat map");
     close(fd); memset(smp_hb, 0, sizeof(*smp_hb)); smp_count = count;
     pthread_t writers[8], pings[8];
@@ -938,6 +938,11 @@ static void guest_smp_heartbeat(unsigned count)
     for (;;) {
         uint64_t epoch = atomic_load_explicit(&smp_hb->epoch, memory_order_acquire);
         atomic_fetch_add(&smp_hb->sequence, 1);
+        if (env_enabled("LAB_HEARTBEAT_RACE_PAGES")) {
+            uint64_t value=atomic_load(&smp_hb->sequence);
+            for (unsigned page=1;page<=16;page++)
+                *(volatile uint64_t *)((char *)smp_hb+page*4096)=value;
+        }
         if (epoch != previous) {
             atomic_store(&smp_hb->epoch_detect_tsc, migration_tsc());
             for (unsigned cpu = 0; cpu < count; cpu++)
@@ -2108,7 +2113,7 @@ static void boundary_clock_sync(struct boundary_clock *clock, char role,
 static struct kvm_dax_resume_profile *boundary_profile(int dax)
 {
     if (!env_enabled("LAB_DAX_RESUME_PROFILE")) return NULL;
-    void *page = mmap(NULL, 4096, PROT_READ, MAP_SHARED, dax, direct_layout_offset(256));
+    void *page = mmap(NULL, 4096, PROT_READ, MAP_SHARED, dax, direct_layout_offset(272));
     if (page == MAP_FAILED) die("Boundary profile map");
     return (void *)((char *)page + KVM_DAX_RESUME_PROFILE_OFFSET);
 }
@@ -2477,12 +2482,12 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
     struct kvm_dax_profile *profile=MAP_FAILED;
     struct kvm_dax_resume_profile *resume_profile=MAP_FAILED;
     if(getenv("LAB_DAX_PROFILE")){
-        void *page=mmap(NULL,4096,PROT_READ,MAP_SHARED,dax,direct_layout_offset(256));
+        void *page=mmap(NULL,4096,PROT_READ,MAP_SHARED,dax,direct_layout_offset(272));
         if(page==MAP_FAILED)die("Linux direct profile map");
         profile=(void *)((char *)page+KVM_DAX_PROFILE_OFFSET);
     }
     if(getenv("LAB_DAX_RESUME_PROFILE")){
-        void *page=mmap(NULL,4096,PROT_READ,MAP_SHARED,dax,direct_layout_offset(256));
+        void *page=mmap(NULL,4096,PROT_READ,MAP_SHARED,dax,direct_layout_offset(272));
         if(page==MAP_FAILED)die("Linux direct resume profile map");
         resume_profile=(void *)((char *)page+KVM_DAX_RESUME_PROFILE_OFFSET);
     }

@@ -105,8 +105,9 @@ def offset_ranges(offsets):
     return result
 
 class FrameAllocator:
-    def __init__(self, start, end):
+    def __init__(self, start, end, require_invalidation=False):
         require(0 <= start < end and (start | end) % PAGE == 0, "invalid allocator bounds")
+        self.require_invalidation = require_invalidation
         self.start, self.end = start, end
         self.free_ranges = [(start, end)]
         self.free_pages = (end-start)//PAGE
@@ -137,8 +138,9 @@ class FrameAllocator:
                             "pages": pages, "ranges": offset_ranges(frames)})
         return frames
 
-    def release(self, owner, *, fenced, detached):
+    def release(self, owner, *, fenced, detached, invalidated_hosts=()):
         require(fenced is True and detached is True, "cannot release live/unfenced CXL backing")
+        require(not self.require_invalidation or set(invalidated_hosts)=={"A","B"}, "both hosts must acknowledge invalidation before CXL reuse")
         require(owner in self.grants, "unknown or already released owner")
         grant = self.grants.pop(owner)
         returned = offset_ranges(grant.frames)
@@ -154,7 +156,7 @@ class FrameAllocator:
         self.free_pages += len(grant.frames)
         self.events.append({"operation": "release", "owner": owner, "generation": grant.generation,
                             "pages": len(grant.frames), "ranges": returned,
-                            "fenced": True, "detached": True})
+                            "fenced": True, "detached": True, "invalidated_hosts":sorted(invalidated_hosts)})
         return sorted(grant.frames)
 
     def check(self):
@@ -233,7 +235,7 @@ class HandoffController(Controller):
         s = self.sandboxes[0]
         s.direct, s.manifest, s.owner = self.mode == 'direct', None, None
         self.io_engine = 'Async'
-        self.allocator = FrameAllocator(2 * MIB, (256 if config['cxl_mib']==2048 else 3072) * MIB)
+        self.allocator = FrameAllocator(2 * MIB, (256 if config['cxl_mib']==2048 else 3072) * MIB, bool(getattr(args,'noncoherent',False)))
         self.commands, self.trace_commands = [], []
         self.memory_events, self.api_events, self.launches = [], [], []
         self.audits = []
@@ -335,6 +337,8 @@ class HandoffController(Controller):
             "FC_DAX_SNAPSHOT_COMPAT": "1"}
         if getattr(self.args, 'noncoherent', False):
             env['FC_NONCOHERENT']='1'
+            failure=getattr(self.args,'fail_maintenance',None)
+            if failure and (s.role=='A' if failure=='writeback' else s.role=='B'): env['FC_NONCOHERENT_FAIL']=failure
             if s.role=='B' and getattr(self.args,'skip_invalidate_page',-1)>=0:
                 env['FC_NONCOHERENT_SKIP_PAGE']=str(self.args.skip_invalidate_page)
             if getattr(self.args,'resident_bench',None):
@@ -421,6 +425,7 @@ class HandoffController(Controller):
             cache = 'echo 1 > /sys/module/kvm/parameters/dax_noncoherent\necho 1 > /sys/module/kvm/parameters/dax_cache_check\n' if getattr(self.args,'noncoherent',False) else ''
             if role=='A' and getattr(self.args,'cache_skip_line',-1)>=0:
                 cache+=f'echo {self.args.cache_skip_line} > /sys/module/kvm/parameters/dax_cache_skip_line\n'
+            if getattr(self.args,'arena_limit_bytes',0): cache+=f'echo {self.args.arena_limit_bytes} > /sys/module/kvm/parameters/dax_vm_limit_bytes\n'
             self.shell(role, cache+'echo 2147483647 > /sys/module/kvm/parameters/dax_owner_pid\n'
                 + ('echo 1 > /sys/module/kvm/parameters/dax_handoff_profile\n' if self.args.restore_timing else '') +
                 (f'echo {int(getattr(self.args, "resume_profile",False))} > /sys/module/kvm/parameters/dax_resume_profile\n' if getattr(self.args,'resident_bench',None) else '') +
@@ -748,7 +753,11 @@ class HandoffController(Controller):
                     and m["inode"] == 0 and m["path"] == "", "Demotion retains nonprivate/non-DRAM backing")
             cursor = m["end"]
         require(cursor == end, "Demotion anonymous RAM mapping incomplete")
-        freed = self.allocator.release(s.owner, fenced=True, detached=True)
+        invalidated=[]
+        if getattr(self.args,'noncoherent',False):
+            from resident_fast import invalidate_grant
+            invalidated=invalidate_grant(self,s,previous['manifest'])
+        freed = self.allocator.release(s.owner, fenced=True, detached=True,invalidated_hosts=invalidated)
         s.owner, s.tier, s.manifest = None, "dram", None
         self.resume(s)
         after = self.command_vm(s, "check")
@@ -870,7 +879,10 @@ def trajectory_replay(c, s, report, save):
             report.setdefault('cleans',[]).append(maintain(c,s))
             # Wait belongs to the next LLM interval, before a heavy-command move.
             if index+1 in boundaries:
-                delay = 1.0 if args.clean_wait=='1' else (min(10.0,recorded_waits[command['batch']]) if args.clean_wait=='recorded' else 0)
+                same_batch=(index+1<len(c.trace['commands']) and c.trace['commands'][index+1]['batch']==command['batch'])
+                delay=0
+                if args.clean_wait=='1': delay=1.0
+                elif args.clean_wait=='recorded' and not same_batch: delay=min(10.0,recorded_waits[command['batch']])
                 begin=time.monotonic_ns()
                 time.sleep(delay)
                 report.setdefault('waits',[]).append(dict(after_command=index,planned_s=delay,actual_ns=time.monotonic_ns()-begin))
@@ -1053,9 +1065,25 @@ def resident_measure(args):
                     report.setdefault('cleans',[]).append(maintain(c,s))
                 time.sleep(1.0 if args.clean_wait=='1' else 0)
 
+            if args.resident_bench=='race':
+                import struct
+                with Path(config['cxl_backing']).open('rb',buffering=0) as stream:
+                    stream.seek(c.bench_offset+PAGE);before=struct.unpack('<Q',stream.read(8))[0]
+                    deadline=time.monotonic()+30
+                    while True:
+                        values=[]
+                        for page in range(1,17):
+                            stream.seek(c.bench_offset+page*PAGE);values.append(struct.unpack('<Q',stream.read(8))[0])
+                        if min(values)>before:break
+                        require(time.monotonic()<deadline,'Race writer did not progress after last clean')
+                        time.sleep(.001)
+                report.setdefault('race_progress',[]).append(dict(before=before,after=values,host_ns=time.monotonic_ns()))
             row = c.direct_handoff(s,'B' if s.role=='A' else 'A')
             row['sample_index'] = i//2
             row['measured'] = i//2 >= args.warmup
+            if args.audit_parked and i>=0:
+                from resident_fast import audit_parked
+                report.setdefault('parked_audits',[]).append(audit_parked(c,row['source']))
             ack = row['fast']['ack']
             require(ack['epoch'] == s.epoch and ack['verified'] == s.epoch
                     and row['fast']['guest_ack_ns'] > 0, 'Missing guest acknowledgement')
@@ -1080,13 +1108,28 @@ def resident_measure(args):
             raw,name=c.shell(role,'cat /sys/module/kvm/parameters/dax_pool\ncat /proc/sys/kernel/tainted','final-kernel-identity')
             require(re.search(rf'vm_create_calls=1 vcpu_create_calls={args.vcpus}\b',raw), 'KVM graph recreated')
             report['validation'][role] = {'file':name,'raw':raw}
-        if args.resident_bench=='busy':
+        if args.resident_bench in ('busy','race'):
             samples=[]
             for hop,row in enumerate(r for r in c.transitions if r.get('kind')=='direct'):
                 for cpu,values in enumerate(row['fast']['ack']['cpus'][:args.vcpus]):
                     samples.append(dict(event='smp',round=hop,cpu=cpu,sequence=values[0],ack=values[1],
                          timer=values[2],ipi=values[3],ping=values[4],errors=0,clock_errors=0,tsc_errors=0))
             report['smp_validation'] = lab.validate_smp_handoff(samples,len(samples)//args.vcpus,args.vcpus)
+        if args.resident_bench=='race':
+            require(oracle is not None,'Race test requires oracle')
+            for boundary in oracle.rows:
+                if boundary['phase']!=2:continue
+                data=(oracle.output/f"{boundary['sequence']}.bitmap").read_bytes()
+                bitmap=int.from_bytes(data[:((boundary['pages']+63)//64)*8],'little')
+                mask=((1<<16)-1)<<(64*MIB//PAGE+1)
+                require(bitmap&mask==mask,'Continuously written fixed GPA pages absent at handoff')
+            report['race_pages']={'gpa_start':64*MIB+PAGE,'pages':16,'handoff_lists_verified':True}
+        if args.reuse_test:
+            require(oracle is not None,'Reuse test requires oracle')
+            from resident_fast import reuse_after,admin
+            admin(c,s.role,'retire')
+            oracle.close();report['dirty_oracle']=oracle.rows;oracle=None
+            report['reuse']=reuse_after(c,s,args,out)
         report['result']='passed'
     except BaseException as error:
         report.update(result='failed',error=repr(error))
@@ -1114,7 +1157,7 @@ def resident_measure(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--resident-bench', choices=('idle','busy','dirty'))
+    parser.add_argument('--resident-bench', choices=('idle','busy','dirty','race'))
     parser.add_argument('--mixed-io', action='store_true')
     parser.add_argument('--io-fixture')
     parser.add_argument('--dirty-mib',type=int,choices=(0,16,64,256),default=0)
@@ -1138,6 +1181,10 @@ def main():
     parser.add_argument('--count-faults', action='store_true')
     parser.add_argument('--dirty-ledger', action='store_true')
     parser.add_argument('--noncoherent', action='store_true')
+    parser.add_argument('--reuse-test', action='store_true')
+    parser.add_argument('--audit-parked', action='store_true')
+    parser.add_argument('--arena-limit-bytes',type=int,default=0)
+    parser.add_argument('--fail-maintenance',choices=('writeback','epoch','record'))
     parser.add_argument('--preclean', action='store_true')
     parser.add_argument('--clean-paused', action='store_true')
     parser.add_argument('--clean-wait', choices=('0','1','recorded'), default='0')

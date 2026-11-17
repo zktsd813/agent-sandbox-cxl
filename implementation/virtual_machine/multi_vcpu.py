@@ -31,7 +31,7 @@ def main():
     p.add_argument("--iterations", type=int, default=400)
     p.add_argument("--warmup", type=int, default=10)
     p.add_argument("--measure", action="store_true", help="Hold quiet.lock exclusively")
-    p.add_argument("--resident-bench", choices=("idle","busy","dirty"))
+    p.add_argument("--resident-bench", choices=("idle","busy","dirty","race"))
     p.add_argument("--mixed-io", action="store_true")
     p.add_argument("--io-fixture", type=Path)
     p.add_argument("--cxl-mib", type=int, choices=(2048,4096,8192))
@@ -40,6 +40,10 @@ def main():
     p.add_argument("--assets", type=Path)
     p.add_argument("--dirty-ledger", action="store_true")
     p.add_argument("--noncoherent", action="store_true")
+    p.add_argument("--reuse-test", action="store_true")
+    p.add_argument("--audit-parked", action="store_true")
+    p.add_argument("--arena-limit-bytes", type=int,default=0)
+    p.add_argument("--fail-maintenance", choices=("writeback","epoch","record"))
     p.add_argument("--preclean", action="store_true")
     p.add_argument("--clean-paused", action="store_true", help="Test only: pause and hash each clean")
     p.add_argument("--clean-wait", choices=("0","1","recorded"), default="0")
@@ -165,6 +169,10 @@ def main():
                 if args.profile: bench_args += ["--profile","--restore-timing"]
                 if args.resume_profile: bench_args += ["--resume-profile"]
                 if args.noncoherent: bench_args += ['--noncoherent']
+                if args.reuse_test: bench_args += ['--reuse-test']
+                if args.audit_parked: bench_args += ['--audit-parked']
+                if args.arena_limit_bytes: bench_args += ['--arena-limit-bytes',args.arena_limit_bytes]
+                if args.fail_maintenance: bench_args += ['--fail-maintenance',args.fail_maintenance]
                 if args.preclean: bench_args += ['--preclean','--clean-wait',args.clean_wait,'--clean-repeats',args.clean_repeats]
                 if args.clean_paused: bench_args += ['--clean-paused']
                 if args.cache_skip_line>=0: bench_args += ["--cache-skip-line",args.cache_skip_line]

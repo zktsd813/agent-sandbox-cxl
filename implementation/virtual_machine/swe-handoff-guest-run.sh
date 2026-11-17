@@ -88,6 +88,8 @@ while read -r OP ARG TOKEN EXTRA; do
             VCPUS=$(awk '/^cpu[0-9]+ / {n++} END {print n}' /proc/stat)
             MODE=1; SLEEP=0
             if [ "$EXTRA" = idle ]; then MODE=0; VCPUS=1; SLEEP=2; fi
+            unset LAB_HEARTBEAT_RACE_PAGES
+            [ "$EXTRA" != race ] || export LAB_HEARTBEAT_RACE_PAGES=1
             case "$EXTRA" in
                 dirty*) MODE=0; VCPUS=1; SLEEP=2; export LAB_HEARTBEAT_DIRTY_MIB=${EXTRA#dirty} ;;
                 *) unset LAB_HEARTBEAT_DIRTY_MIB ;;

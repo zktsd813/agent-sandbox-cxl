@@ -52,6 +52,7 @@ def main():
             original['mapper_override']={'path':str(args.mapper_module.resolve()),
                 'sha256':lab.sha256(args.mapper_module), 'source_sha256':lab.sha256(HERE/'pool_memory_module.c'),
                 'uapi_sha256':lab.sha256(HERE/'pool_memory_uapi.h')}
+            original['handoff']['inputs']['pool_memory_module.ko']={'path':str(args.mapper_module.resolve()),'sha256':lab.sha256(args.mapper_module)}
         if args.shared_probe:
             shutil.copy2(args.shared_probe, dest/'shared-probe')
             shutil.copy2(args.shared_probe, root/'lab/shared-probe')
@@ -78,6 +79,7 @@ def main():
                 with (base/archive).open('rb') as stream:
                     subprocess.run(['cpio','-id','--quiet','--no-absolute-filenames'],cwd=guest,stdin=stream,check=True)
                 shutil.copy2(HERE/'swe-handoff-guest-run.sh',guest/'lab/swe-handoff-guest-run.sh')
+                if args.shared_probe: shutil.copy2(args.shared_probe,guest/'lab/shared-probe')
                 lab.pack_initramfs(guest,dest/archive)
                 shutil.copy2(dest/archive,root/'lab'/archive)
                 original['traces'][name]['initramfs_path']=str(dest/archive)
@@ -89,6 +91,11 @@ def main():
     original['handoff']['inputs']['firecracker']=vmm
     if not args.keep_guest_images:
         original['source_hashes']['swe-handoff-guest-run.sh']=lab.sha256(HERE/'swe-handoff-guest-run.sh')
+        if args.shared_probe:
+            original['source_hashes']['shared_probe.c']=lab.sha256(HERE/'shared_probe.c')
+            original['inputs']['probe_source']={'path':str(HERE/'shared_probe.c'),'sha256':lab.sha256(HERE/'shared_probe.c')}
+    if args.shared_probe:
+        original['shared_probe_override']={'path':str(args.shared_probe.resolve()),'sha256':lab.sha256(args.shared_probe)}
     original['resident_control']={'source_sha256':lab.sha256(source),
         'wire_sha256':lab.sha256(HERE/'resident_wire.h'),
         'binary_sha256':lab.sha256(dest/'resident-control'),'build_argv':command,

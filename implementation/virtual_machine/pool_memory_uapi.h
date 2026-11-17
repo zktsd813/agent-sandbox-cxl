@@ -48,5 +48,8 @@ struct cpm_cache {
     __u64 bitmap, covered, lines, elapsed_ns;
     __u64 skip_page, reserved;
 };
+#define CPM_PARK _IO('P', 0x7c)
+#define CPM_WRITEBACK _IOWR('P', 0x7e, struct cpm_cache)
+#define CPM_ZERO _IOWR('P', 0x7d, struct cpm_cache)
 #define CPM_CACHE _IOWR('P', 0x7b, struct cpm_cache)
 #endif

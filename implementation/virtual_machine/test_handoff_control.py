@@ -29,6 +29,17 @@ class AllocationTests(unittest.TestCase):
         self.assertEqual(before, after)
         self.assertGreater(self.a.grants["v2"].generation, generation)
 
+    def test_noncoherent_release_waits_for_every_host_ack(self):
+        allocator = FrameAllocator(PAGE, 5*PAGE, require_invalidation=True)
+        frames = allocator.allocate('v1', 4)
+        for hosts in ((), ('A',), ('B',)):
+            with self.assertRaisesRegex(RuntimeError, 'both hosts'):
+                allocator.release('v1', fenced=True, detached=True, invalidated_hosts=hosts)
+            self.assertEqual(allocator.free_pages, 0)
+            with self.assertRaises(RuntimeError): allocator.allocate('v2', 1)
+        allocator.release('v1', fenced=True, detached=True, invalidated_hosts=('A','B'))
+        self.assertEqual(allocator.allocate('v2', 4), frames)
+
     def test_old_valid_manifest_rejected_after_same_owner_frame_reuse(self):
         old = promotion_layout(self.a, 'v1', 4*PAGE)
         self.a.release('v1', fenced=True, detached=True)

@@ -92,7 +92,7 @@ index a3b3f3f..8ab6475 100644
              parse_put_actions(&Body::new("invalid_body")).unwrap_err();
  
 diff --git a/src/firecracker/src/api_server_adapter.rs b/src/firecracker/src/api_server_adapter.rs
-index 70abff4..01ddcd1 100644
+index 70abff4..97b968f 100644
 --- a/src/firecracker/src/api_server_adapter.rs
 +++ b/src/firecracker/src/api_server_adapter.rs
 @@ -2,10 +2,13 @@
@@ -109,7 +109,7 @@ index 70abff4..01ddcd1 100644
  
  use event_manager::{EventOps, Events, MutEventSubscriber, SubscriberOps};
  use vmm::logger::{ProcessTimeReporter, error_unrestricted, info_unrestricted, warn_unrestricted};
-@@ -48,6 +51,193 @@ struct ApiServerAdapter {
+@@ -48,6 +51,194 @@ struct ApiServerAdapter {
      request: Option<ApiRequest>,
  }
  
@@ -145,13 +145,14 @@ index 70abff4..01ddcd1 100644
 +                    Err(error) => { error_unrestricted!("Resident command failed: {error}"); libc::EIO as u64 }
 +                }
 +            }
-+            3 | 4 | 5 | 6 | 7 => {
++            3 | 4 | 5 | 6 | 7 | 8 => {
 +                let mut vm = vmm.lock().unwrap();
 +                let result = match command {
 +                    3 => vm.send_resident_memory(events).map(|bytes| payload = bytes),
 +                    4 => vm.receive_resident_memory(events, &input),
 +                    5 | 7 => vm.clean_memory(command==7),
-+                    _ => vm.preinvalidate_memory(),
++                    6 => vm.preinvalidate_memory(),
++                    _ => vm.audit_parked(),
 +                };
 +                match result {
 +                    Ok(()) => 0,
@@ -303,7 +304,7 @@ index 70abff4..01ddcd1 100644
  impl ApiServerAdapter {
      /// Runs the vmm to completion, while any arising control events are deferred
      /// to a `RuntimeApiController`.
-@@ -58,6 +248,9 @@ impl ApiServerAdapter {
+@@ -58,6 +249,9 @@ impl ApiServerAdapter {
          vmm: Arc<Mutex<Vmm>>,
          event_manager: &mut EventManager,
      ) -> Result<(), ApiServerError> {
@@ -313,7 +314,7 @@ index 70abff4..01ddcd1 100644
          let api_adapter = Arc::new(Mutex::new(Self {
              api_event_fd,
              from_api,
-@@ -66,10 +259,34 @@ impl ApiServerAdapter {
+@@ -66,10 +260,34 @@ impl ApiServerAdapter {
              request: None,
          }));
          event_manager.add_subscriber(api_adapter.clone());
@@ -348,7 +349,7 @@ index 70abff4..01ddcd1 100644
              api_adapter
                  .lock()
                  .expect("Poisoned lock")
-@@ -84,33 +301,36 @@ impl ApiServerAdapter {
+@@ -84,33 +302,36 @@ impl ApiServerAdapter {
          Ok(())
      }
  
@@ -392,7 +393,7 @@ index 70abff4..01ddcd1 100644
                          break;
                      }
                  }
-@@ -272,3 +492,107 @@ pub(crate) fn run_with_api(
+@@ -272,3 +493,107 @@ pub(crate) fn run_with_api(
  
      result
  }
@@ -1559,10 +1560,10 @@ index 2a75945..fe91a5d 100644
      type ConstructorArgs = MmioTransportConstructorArgs;
 diff --git a/src/vmm/src/direct.rs b/src/vmm/src/direct.rs
 new file mode 100644
-index 0000000..275b00c
+index 0000000..898c61b
 --- /dev/null
 +++ b/src/vmm/src/direct.rs
-@@ -0,0 +1,928 @@
+@@ -0,0 +1,962 @@
 +// Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 +// SPDX-License-Identifier: Apache-2.0
 +
@@ -1826,12 +1827,46 @@ index 0000000..275b00c
 +        Ok(())
 +    }
 +
++    /// Discard published RAM pages while this resident has no execution lease.
 +    pub fn preinvalidate_memory(&self) -> Result<(), VmmError> {
 +        if !crate::noncoherent::active() || !resident_parked() {
 +            return Err(VmmError::DaxPreflight("preinvalidate requires parked observer"));
 +        }
 +        let vm=self.vm.as_kvm().ok_or(VmmError::DaxPreflight("KVM required"))?;
 +        crate::noncoherent::require(crate::noncoherent::preinvalidate(vm.guest_memory()));
++        Ok(())
++    }
++
++    /// Lab-only parked-fd stress; every rejected ioctl must stay outside CXL.
++    pub fn audit_parked(&self) -> Result<(), VmmError> {
++        if !resident_parked() {return Err(VmmError::DaxPreflight("audit requires parked resident"));}
++        let error=|e:io::Error|VmmError::DaxHandoff(e);
++        let mut tested=0;
++        for entry in std::fs::read_dir("/proc/self/fd").map_err(error)? {
++            let entry=entry.map_err(error)?;
++            let target=std::fs::read_link(entry.path()).map_err(error)?.to_string_lossy().into_owned();
++            if !target.contains("kvm-vcpu") && !target.contains("kvm-vm") && !target.contains("kvm-dax-vm") {continue;}
++            let fd=entry.file_name().to_string_lossy().parse::<i32>().map_err(|_|error(invalid("fd number")))?;
++            let copy=unsafe {libc::dup(fd)};
++            if copy<0 {return Err(error(io::Error::last_os_error()));}
++            // KVM_GET_STATS_FD and KVM_GET_NR_MMU_PAGES/GET_REGS must fail
++            // before touching the parked graph, regardless of argument validity.
++            let status=unsafe {libc::ioctl(copy,0xaeceu32 as _,0)};
++            if status>=0 {unsafe {libc::close(status);libc::close(copy);};return Err(error(invalid("parked stats ioctl accepted")));}
++            if target.contains("vcpu") {
++                let p=unsafe {libc::mmap(std::ptr::null_mut(),4096,libc::PROT_READ|libc::PROT_WRITE,libc::MAP_SHARED,copy,0)};
++                if p!=libc::MAP_FAILED {unsafe {libc::munmap(p,4096);libc::close(copy);};return Err(error(invalid("parked vcpu mmap accepted")));}
++            }
++            unsafe {libc::close(copy);}
++            tested+=1;
++        }
++        for _ in 0..100 {
++            let p=unsafe {libc::mmap(std::ptr::null_mut(),4096,libc::PROT_READ|libc::PROT_WRITE,libc::MAP_PRIVATE|libc::MAP_ANONYMOUS,-1,0)};
++            if p==libc::MAP_FAILED {return Err(error(io::Error::last_os_error()));}
++            unsafe {libc::munmap(p,4096);}
++        }
++        if tested<2 {return Err(error(invalid("parked VM/vCPU fds absent")));}
++        crate::logger::info_unrestricted!("NONCOHERENT_AUDIT_JSON {}",serde_json::json!({"fds":tested,"anonymous_mmaps":100,"passed":true}));
 +        Ok(())
 +    }
 +
@@ -2750,10 +2785,10 @@ index 41b7b8d..e546e3f 100644
              vm_info: vm_info.clone(),
 diff --git a/src/vmm/src/noncoherent.rs b/src/vmm/src/noncoherent.rs
 new file mode 100644
-index 0000000..4d95304
+index 0000000..b14dc24
 --- /dev/null
 +++ b/src/vmm/src/noncoherent.rs
-@@ -0,0 +1,494 @@
+@@ -0,0 +1,518 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Opt-in dirty ledger and a stopped-boundary lab oracle. Never enabled by default.
 +use std::fs::{File, OpenOptions};
@@ -2987,7 +3022,8 @@ index 0000000..4d95304
 +    fn replay(&mut self, last: u64) -> io::Result<Vec<u64>> {
 +        // A packet can arrive before a remote header becomes observable. Each
 +        // retry discards the old line. Never resume on a future packet epoch.
-+        let expected=last.checked_add(1).ok_or_else(||invalid("epoch overflow"))?;
++        let future=u64::from(std::env::var("FC_NONCOHERENT_FAIL").as_deref()==Ok("epoch"));
++        let expected=last.checked_add(1+future).ok_or_else(||invalid("epoch overflow"))?;
 +        let mut observed=0;
 +        self.read_lines=0;
 +        for _ in 0..4 {
@@ -3003,21 +3039,22 @@ index 0000000..4d95304
 +            let slot=self.slot(epoch);
 +            self.read_lines+=lines(self.address+slot,self.stride(),true); fence(true);
 +            let words=unsafe { std::slice::from_raw_parts((self.address+slot+16) as *const u64,self.id.pages.div_ceil(64)) }.to_vec();
-+            Ok((self.read(slot),self.read(slot+8),words))
++            let corrupt=u64::from(std::env::var("FC_NONCOHERENT_FAIL").as_deref()==Ok("record"));
++            Ok((self.read(slot)+corrupt,self.read(slot+8),words))
 +        })
 +    }
-+    fn invalidate(&self, bitmap: &[u64]) -> io::Result<Vec<u64>> {
++    fn maintain(&self, bitmap: &[u64], invalidate: bool) -> io::Result<Vec<u64>> {
 +        if bitmap.len()!=self.id.pages.div_ceil(64) { return Err(invalid("invalidate bitmap geometry")); }
 +        let mut covered=vec![0u64;bitmap.len()];
 +        let skip=std::env::var("FC_NONCOHERENT_SKIP_PAGE").ok().and_then(|s|s.parse::<u64>().ok()).unwrap_or(u64::MAX);
 +        let mut request=[self.id.phys_base,self.id.device_bytes,self.id.metadata,self.id.cookie[0],
 +            self.id.cookie[1],self.id.pages as u64,bitmap.as_ptr() as u64,covered.as_mut_ptr() as u64,0,0,skip,0];
 +        // CPM_CACHE: independent observer, immutable GPA table, kernel direct map.
-+        if unsafe {libc::ioctl(self.observer.as_raw_fd(),0xc060507bu32 as _,request.as_mut_ptr())}<0 {
++        if unsafe {libc::ioctl(self.observer.as_raw_fd(),(if invalidate {0xc060507bu32} else {0xc060507eu32}) as _,request.as_mut_ptr())}<0 {
 +            return Err(io::Error::last_os_error());
 +        }
 +        if covered!=bitmap || request[8]!=bitmap.iter().map(|b|b.count_ones() as u64*64).sum::<u64>() {
-+            return Err(invalid("kernel guest invalidation receipt mismatch"));
++            return Err(invalid("kernel guest maintenance receipt mismatch"));
 +        }
 +        Ok(covered)
 +    }
@@ -3041,9 +3078,10 @@ index 0000000..4d95304
 +}
 +pub(crate) fn send(mem: &GuestMemoryMmap, ledger: &Ledger) -> io::Result<u64> {
 +    if !active() { return Ok(0); }
++    if std::env::var("FC_NONCOHERENT_FAIL").as_deref()==Ok("writeback") {return Err(invalid("injected writeback failure after harvest"));}
 +    with_shared(identity()?,|s| {
 +        let start=Instant::now();
-+        s.wb=emit_guest(mem,&ledger.union,false)?.0;
++        s.wb=if std::env::var_os("FC_NONCOHERENT_USER_WRITEBACK").is_some() {emit_guest(mem,&ledger.union,false)?.0} else {s.maintain(&ledger.union,false)?};
 +        s.wb_ns=start.elapsed().as_nanos() as u64;
 +        let start=Instant::now(); let epoch=s.publish(&ledger.union,false)?;
 +        s.log_ns=start.elapsed().as_nanos() as u64;
@@ -3052,10 +3090,10 @@ index 0000000..4d95304
 +}
 +static BULK_RESET: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 +pub(crate) fn take_bulk_reset() -> bool { BULK_RESET.swap(false,std::sync::atomic::Ordering::AcqRel) }
-+fn bulk(mem: &GuestMemoryMmap) -> io::Result<()> {
++fn bulk(_mem: &GuestMemoryMmap) -> io::Result<()> {
 +    with_shared(identity()?,|s| {
 +        let bitmap=full(s.id.pages);
-+        let start=Instant::now(); s.wb=emit_guest(mem,&bitmap,false)?.0;
++        let start=Instant::now(); s.wb=s.maintain(&bitmap,false)?;
 +        s.wb_ns=start.elapsed().as_nanos() as u64;
 +        let start=Instant::now(); s.publish(&bitmap,true)?;
 +        s.log_ns=start.elapsed().as_nanos() as u64;
@@ -3082,7 +3120,7 @@ index 0000000..4d95304
 +        s.read_ns=start.elapsed().as_nanos() as u64;
 +        let start=Instant::now(); s.inv=if std::env::var_os("FC_NONCOHERENT_USER_INVALIDATE").is_some() {
 +            emit_guest(mem,&s.inv_requested,true)?.0
-+        } else {s.invalidate(&s.inv_requested)?};
++        } else {s.maintain(&s.inv_requested,true)?};
 +        s.inv_ns=start.elapsed().as_nanos() as u64;
 +        let consumed_started=Instant::now(); s.consume(epoch)?;
 +        s.read_ns+=consumed_started.elapsed().as_nanos() as u64;
@@ -3109,7 +3147,7 @@ index 0000000..4d95304
 +        s.inv_from=s.consumed; s.inv_to=epoch; s.epoch=epoch;
 +        let start=Instant::now(); s.inv_requested=s.replay(epoch)?;
 +        s.read_ns=start.elapsed().as_nanos() as u64;
-+        let start=Instant::now(); s.inv=s.invalidate(&s.inv_requested)?;
++        let start=Instant::now(); s.inv=s.maintain(&s.inv_requested,true)?;
 +        s.inv_ns=start.elapsed().as_nanos() as u64;
 +        s.consume(epoch)?;
 +        crate::logger::info_unrestricted!("NONCOHERENT_JSON {}",serde_json::json!({
@@ -3246,6 +3284,27 @@ index 0000000..4d95304
 +    fn bitmap_tail_must_not_escape_guest_ram() {
 +        assert!(replay_records(65,0,1,|e|Ok((e,1,vec![0,2]))).is_err());
 +        assert_eq!(replay_records(65,0,1,|e|Ok((e,1,vec![0,1]))).unwrap(),vec![0,1]);
++    }
++}
++
++/// Cold exclusive RAM initialization; no cached dirty lines survive the fence.
++pub(crate) unsafe fn zero_non_temporal(target: *mut u8, bytes: usize) {
++    assert_eq!((target as usize | bytes)&15,0);
++    unsafe {
++        let zero=std::arch::x86_64::_mm_setzero_si128();
++        for i in (0..bytes).step_by(16) { std::arch::x86_64::_mm_stream_si128(target.add(i).cast(),zero); }
++        std::arch::x86_64::_mm_sfence();
++    }
++}
++/// Promotion copies only paused, exclusively granted RAM.
++pub(crate) unsafe fn copy_non_temporal(source: *const u8, target: *mut u8, bytes: usize) {
++    assert_eq!((target as usize | bytes)&15,0);
++    unsafe {
++        for i in (0..bytes).step_by(16) {
++            let value=std::arch::x86_64::_mm_loadu_si128(source.add(i).cast());
++            std::arch::x86_64::_mm_stream_si128(target.add(i).cast(),value);
++        }
++        std::arch::x86_64::_mm_sfence();
 +    }
 +}
 diff --git a/src/vmm/src/persist.rs b/src/vmm/src/persist.rs
@@ -3561,10 +3620,10 @@ index 71a0345..2dfd978 100644
          let mut vmm = default_vmm();
 diff --git a/src/vmm/src/pool_memory.rs b/src/vmm/src/pool_memory.rs
 new file mode 100644
-index 0000000..1b2b758
+index 0000000..5769231
 --- /dev/null
 +++ b/src/vmm/src/pool_memory.rs
-@@ -0,0 +1,791 @@
+@@ -0,0 +1,799 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! VM-private persistent CXL logical RAM and whole-RAM tier changes.
 +//! Private controller plans assign exclusive frames. The kernel owns the mapping
@@ -3891,6 +3950,11 @@ index 0000000..1b2b758
 +/// Revoke every local RAM access after KVM detach, including already present PTEs.
 +/// This changes VMAs, not guest contents, and performs no per-page userspace scan.
 +pub(crate) fn park_resident(mem: &GuestMemoryMmap) -> io::Result<()> {
++    {
++        let guard=state().lock().unwrap();
++        let a=guard.as_ref().ok_or_else(||invalid("park without mapper"))?;
++        if unsafe {libc::ioctl(a.file.as_raw_fd(),0x507cu32 as _)}<0 {return Err(io::Error::last_os_error());}
++    }
 +    for region in mem.iter() {
 +        // SAFETY: vCPUs paused, I/O drained, event subscribers removed, KVM detached.
 +        let p = unsafe { libc::mmap(region.as_ptr().cast(), region.len() as usize, libc::PROT_NONE,
@@ -4177,8 +4241,11 @@ index 0000000..1b2b758
 +                let source = mem.get_host_address(GuestAddress(page.gpa)).map_err(io::Error::other)?;
 +                // SAFETY: the admitted exclusive extent and paused logical region
 +                // cover this run; no payload comparison or per-page syscall.
-+                unsafe { std::ptr::copy_nonoverlapping(source,
-+                    target.ptr.cast::<u8>().add(page.offset as usize), bytes); }
++                unsafe {
++                    let destination=target.ptr.cast::<u8>().add(page.offset as usize);
++                    if crate::noncoherent::active() { crate::noncoherent::copy_non_temporal(source,destination,bytes); }
++                    else {std::ptr::copy_nonoverlapping(source,destination,bytes);}
++                }
 +                copied += bytes as u64;
 +                index = end;
 +            }
@@ -5236,7 +5303,7 @@ index ca743fa..aa67d10 100644
                  self.vmm
                      .lock()
 diff --git a/src/vmm/src/vstate/memory.rs b/src/vmm/src/vstate/memory.rs
-index 888e8c5..503cf32 100644
+index 888e8c5..0e886f7 100644
 --- a/src/vmm/src/vstate/memory.rs
 +++ b/src/vmm/src/vstate/memory.rs
 @@ -6,11 +6,13 @@
@@ -5367,7 +5434,7 @@ index 888e8c5..503cf32 100644
  
          let mut builder = MmapRegionBuilder::new_with_bitmap(
              size,
-@@ -923,6 +1002,107 @@ pub fn create(
+@@ -923,6 +1002,108 @@ pub fn create(
          .collect::<Result<Vec<_>, _>>()
  }
  
@@ -5450,7 +5517,8 @@ index 888e8c5..503cf32 100644
 +            if initialize {
 +                // SAFETY: the caller exclusively owns this cold-boot allocation.
 +                unsafe {
-+                    std::ptr::write_bytes(region.as_ptr(), 0, size);
++                    if crate::noncoherent::active() {crate::noncoherent::zero_non_temporal(region.as_ptr(),size);}
++                    else {std::ptr::write_bytes(region.as_ptr(), 0, size);}
 +                    region.bitmap().mark_dirty(0, size);
 +                }
 +            }
@@ -5475,7 +5543,7 @@ index 888e8c5..503cf32 100644
  /// Creates a GuestMemoryMmap with `size` in MiB backed by a memfd.
  pub fn memfd_backed(
      regions: &[(GuestAddress, usize)],
-@@ -944,12 +1124,55 @@ pub fn memfd_backed(
+@@ -944,12 +1125,55 @@ pub fn memfd_backed(
      )
  }
  
@@ -5531,7 +5599,7 @@ index 888e8c5..503cf32 100644
      create(
          regions,
          libc::MAP_PRIVATE | libc::MAP_ANONYMOUS | huge_pages.mmap_flags(),
-@@ -2308,6 +2531,44 @@ mod tests {
+@@ -2308,6 +2532,44 @@ mod tests {
          ));
      }
  
