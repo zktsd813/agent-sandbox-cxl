@@ -695,6 +695,10 @@ class HandoffController(Controller):
             directory = f"{self.root}/vm{s.vm}-epoch{target.epoch}-resident-prepare"
             self.start_vm(target, restore_manifest=directory+"/restore-manifest.json",
                 direct_import=directory+"/direct-import.json", purpose="resident-prepare")
+            if getattr(self.args,'noncoherent',False):
+                require(s.manifest is not None,'Cold observer needs the initial allocation identity')
+                self.write_json(destination,directory+'/restore-manifest.json',s.manifest,'observer-baseline')
+                self.api(destination,directory,'/actions','PUT',{'action_type':'DirectObserve'})
         worker = self.resident_workers[destination]
         api = worker.get('prepared_api') if fresh else None
         if api is None:

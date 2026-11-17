@@ -441,7 +441,11 @@ int main(int argc,char **argv) {
     if(connect_native()) {
      unsigned char command=q.operation==3 ? (q.first?7:5) : 6;
      send_all(native_fd,&command,1);recv_all(native_fd,response,2*sizeof(uint64_t));
-    } else {check(q.operation==4,"owner clean endpoint absent");}
+    } else {
+     check(q.operation==4,"owner clean endpoint absent");
+     struct api_result result=api("PUT","/actions","{\"action_type\": \"DirectObserve\"}");
+     response[1]=(uint64_t)(result.us*1000.);
+    }
     if(q.operation==3 && !response[0] && peer_fd>=0) {
      q.operation=4;uint64_t remote[3];send_all(peer_fd,&q,sizeof(q));recv_all(peer_fd,remote,sizeof(remote));
      response[0]=remote[0];response[2]=remote[1];

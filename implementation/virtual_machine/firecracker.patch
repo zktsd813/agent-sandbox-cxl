@@ -42,10 +42,10 @@ index ecc1118..672acec 100644
              && let Some((metric, action)) = metric_with_action
          {
 diff --git a/src/firecracker/src/api_server/request/actions.rs b/src/firecracker/src/api_server/request/actions.rs
-index a3b3f3f..8ab6475 100644
+index a3b3f3f..c339f7c 100644
 --- a/src/firecracker/src/api_server/request/actions.rs
 +++ b/src/firecracker/src/api_server/request/actions.rs
-@@ -16,8 +16,16 @@ use super::StatusCode;
+@@ -16,8 +16,17 @@ use super::StatusCode;
  #[derive(Debug, Deserialize, Serialize)]
  enum ActionType {
      FlushMetrics,
@@ -54,6 +54,7 @@ index a3b3f3f..8ab6475 100644
 +    DirectPrepare,
 +    DirectSend,
 +    DirectClean,
++    DirectObserve,
 +    DirectReceive,
      InstanceStart,
      SendCtrlAltDel,
@@ -62,12 +63,13 @@ index a3b3f3f..8ab6475 100644
  }
  
  // The model of the json body from a sync request. We use Serde to transform each associated
-@@ -35,8 +43,16 @@ pub(crate) fn parse_put_actions(body: &Body) -> Result<ParsedRequest, RequestErr
+@@ -35,8 +44,17 @@ pub(crate) fn parse_put_actions(body: &Body) -> Result<ParsedRequest, RequestErr
      })?;
  
      match action_body.action_type {
 +        ActionType::MemoryTier => Ok(ParsedRequest::new_sync(VmmAction::MemoryTier)),
 +        ActionType::DirectPrepare => Ok(ParsedRequest::new_sync(VmmAction::DirectPrepare)),
++        ActionType::DirectObserve => Ok(ParsedRequest::new_sync(VmmAction::DirectObserve)),
 +        ActionType::DirectClean => Ok(ParsedRequest::new_sync(VmmAction::DirectClean)),
 +        ActionType::DirectSend => Ok(ParsedRequest::new_sync(VmmAction::DirectSend)),
 +        ActionType::DirectReceive => Ok(ParsedRequest::new_sync(VmmAction::DirectReceive)),
@@ -79,7 +81,7 @@ index a3b3f3f..8ab6475 100644
          ActionType::SendCtrlAltDel => {
              // SendCtrlAltDel not supported on aarch64.
              #[cfg(target_arch = "aarch64")]
-@@ -57,6 +73,11 @@ mod tests {
+@@ -57,6 +75,11 @@ mod tests {
  
      #[test]
      fn test_parse_put_actions_request() {
@@ -1560,10 +1562,10 @@ index 2a75945..fe91a5d 100644
      type ConstructorArgs = MmioTransportConstructorArgs;
 diff --git a/src/vmm/src/direct.rs b/src/vmm/src/direct.rs
 new file mode 100644
-index 0000000..898c61b
+index 0000000..8363b29
 --- /dev/null
 +++ b/src/vmm/src/direct.rs
-@@ -0,0 +1,962 @@
+@@ -0,0 +1,971 @@
 +// Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 +// SPDX-License-Identifier: Apache-2.0
 +
@@ -1806,6 +1808,15 @@ index 0000000..898c61b
 +        if !resident_enabled() || resident_parked() { return Err(VmmError::DaxPreflight("resident sender is not owner")); }
 +        self.pause_vm()?;
 +        self.export_inner(events, true)
++    }
++
++    /// Prime a cold destination's host-local observer without creating KVM fds.
++    pub fn observe_noncoherent() -> Result<(), VmmError> {
++        if !crate::noncoherent::active() {return Err(VmmError::DaxPreflight("observer requires noncoherent mode"));}
++        let bytes=env_path("FC_POOL_MEMORY_RESTORE").and_then(|p|bounded_read(&p)).map_err(VmmError::DaxHandoff)?;
++        let manifest=crate::noncoherent::require(serde_json::from_slice::<crate::pool_memory::Manifest>(&bytes).map_err(io::Error::other));
++        crate::noncoherent::require(crate::noncoherent::preinvalidate_cold(&manifest));
++        Ok(())
 +    }
 +
 +    /// Runs only on the VMM event loop, like synchronous device emulation.
@@ -2785,10 +2796,10 @@ index 41b7b8d..e546e3f 100644
              vm_info: vm_info.clone(),
 diff --git a/src/vmm/src/noncoherent.rs b/src/vmm/src/noncoherent.rs
 new file mode 100644
-index 0000000..b14dc24
+index 0000000..cd672de
 --- /dev/null
 +++ b/src/vmm/src/noncoherent.rs
-@@ -0,0 +1,518 @@
+@@ -0,0 +1,527 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Opt-in dirty ledger and a stopped-boundary lab oracle. Never enabled by default.
 +use std::fs::{File, OpenOptions};
@@ -3140,8 +3151,8 @@ index 0000000..b14dc24
 +    })?;
 +    boundary(mem,if stopped {6} else {4},0,Some(ledger))
 +}
-+pub(crate) fn preinvalidate(mem: &GuestMemoryMmap) -> io::Result<()> {
-+    with_shared(identity()?,|s| {
++fn preinvalidate_identity(id: Identity, hva: u64) -> io::Result<()> {
++    with_shared(id,|s| {
 +        lines(s.address+LOG,64,true); fence(true);
 +        let epoch=s.header()?-1;
 +        s.inv_from=s.consumed; s.inv_to=epoch; s.epoch=epoch;
@@ -3155,7 +3166,13 @@ index 0000000..b14dc24
 +            "pages":s.inv.iter().map(|b|b.count_ones() as u64).sum::<u64>()}));
 +        Ok(())
 +    })?;
-+    boundary(mem,5,0,None)
++    boundary_identity(id,id.pages,hva,5,0,None)
++}
++pub(crate) fn preinvalidate(mem: &GuestMemoryMmap) -> io::Result<()> {
++    preinvalidate_identity(identity()?,mem.iter().next().unwrap().as_ptr() as u64)
++}
++pub(crate) fn preinvalidate_cold(manifest: &crate::pool_memory::Manifest) -> io::Result<()> {
++    preinvalidate_identity(manifest.noncoherent_identity()?,0)
 +}
 +pub(crate) fn complete(mem: &GuestMemoryMmap, bytes: &[u8], epoch: u64, arena: u64, fd: i32, ledger: &Ledger) -> io::Result<()> {
 +    if active() {
@@ -3174,8 +3191,8 @@ index 0000000..b14dc24
 +}
 +
 +struct OracleState { words:[u64;16], wb:Vec<u64>, requested:Vec<u64>, inv:Vec<u64> }
-+fn oracle_state(words: usize) -> io::Result<OracleState> {
-+    with_shared(identity()?,|s| {
++fn oracle_state(id: Identity, words: usize) -> io::Result<OracleState> {
++    with_shared(id,|s| {
 +        let mut wb=s.wb.clone(); wb.resize(words,0);
 +        let mut requested=s.inv_requested.clone(); requested.resize(words,0);
 +        let mut inv=s.inv.clone(); inv.resize(words,0);
@@ -3203,19 +3220,22 @@ index 0000000..b14dc24
 +    if !enabled() { return Ok(()); }
 +    if phase==1 && active() { bulk(mem)?; }
 +    if std::env::var("FC_DIRTY_ORACLE").as_deref() != Ok("1") { return Ok(()); }
++    let region = mem.iter().next().ok_or_else(|| invalid("oracle RAM absent"))?;
++    boundary_identity(identity()?,region.len() as usize/4096,region.as_ptr() as u64,phase,arena,ledger)
++}
++fn boundary_identity(id: Identity, pages: usize, hva: u64, phase: u64, arena: u64, ledger: Option<&Ledger>) -> io::Result<()> {
++    if std::env::var("FC_DIRTY_ORACLE").as_deref() != Ok("1") {return Ok(());}
 +    let oracle_started=Instant::now();
 +    static GATE: OnceLock<Mutex<Option<Gate>>> = OnceLock::new();
 +    let mut guard = GATE.get_or_init(|| Mutex::new(None)).lock().unwrap();
 +    if guard.is_none() { *guard = Some(Gate::new()?); }
 +    let gate = guard.as_ref().unwrap();
-+    let region = mem.iter().next().ok_or_else(|| invalid("oracle RAM absent"))?;
-+    let pages = region.len() as usize / 4096;
 +    let words = pages.div_ceil(64);
 +    if 256 + words * 8 * 6 > GATE_BYTES { return Err(invalid("oracle bitmap too large")); }
 +    let sequence = gate.read(0).checked_add(1).ok_or_else(|| invalid("oracle sequence overflow"))?;
 +    let full = full(pages);
 +    let empty = vec![0u64; words];
-+    let nc=if active() { Some(oracle_state(words)?) } else { None };
++    let nc=if active() { Some(oracle_state(id,words)?) } else { None };
 +    let imported=nc.as_ref().filter(|_|phase==3 || phase==5).map(|s|&s.requested).unwrap_or(&full);
 +    let (union, kernel, device) = ledger.map(|l| (&l.union, &l.kvm, &l.device)).unwrap_or((imported, &empty, imported));
 +    for (index, bitmap) in [union, kernel, device].iter().enumerate() {
@@ -3232,7 +3252,7 @@ index 0000000..b14dc24
 +    }
 +    gate.write(6,u64::from(active()));
 +    gate.write(7,std::env::var("FC_NONCOHERENT_NODE").ok().and_then(|s|s.parse::<u64>().ok()).unwrap_or(0));
-+    gate.write(1, phase); gate.write(2, pages as u64); gate.write(3, region.as_ptr() as u64);
++    gate.write(1, phase); gate.write(2, pages as u64); gate.write(3, hva);
 +    gate.write(4, arena); gate.write(5, ledger.map_or(0, |l|l.collect_ns));
 +    std::sync::atomic::fence(std::sync::atomic::Ordering::SeqCst);
 +    gate.write(0, sequence);
@@ -5148,10 +5168,10 @@ index 0000000..1f118dc
 +    }
 +}
 diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
-index ca743fa..aa67d10 100644
+index ca743fa..006e491 100644
 --- a/src/vmm/src/rpc_interface.rs
 +++ b/src/vmm/src/rpc_interface.rs
-@@ -100,6 +100,18 @@ pub enum VmmAction {
+@@ -100,6 +100,20 @@ pub enum VmmAction {
      PatchMMDS(Value),
      /// Pause the guest, by pausing the microVM VCPUs.
      Pause,
@@ -5165,12 +5185,14 @@ index ca743fa..aa67d10 100644
 +    DirectSend,
 +    /// Best-effort live RAM writeback on the VMM event loop.
 +    DirectClean,
++    /// Read published RAM records before the first attach.
++    DirectObserve,
 +    /// Import and resume the destination in one dispatch.
 +    DirectReceive,
      /// Repopulate the MMDS contents.
      PutMMDS(Value),
      /// Configure the guest vCPU features.
-@@ -133,6 +145,9 @@ pub enum VmmAction {
+@@ -133,6 +147,9 @@ pub enum VmmAction {
      /// driver is listening on the guest end, this can be used to shut down the microVM gracefully.
      #[cfg(target_arch = "x86_64")]
      SendCtrlAltDel,
@@ -5180,7 +5202,7 @@ index ca743fa..aa67d10 100644
      /// Update the balloon size, after microVM start.
      UpdateBalloon(BalloonUpdateConfig),
      /// Update the balloon statistics polling interval, after microVM start.
-@@ -313,6 +328,8 @@ impl fmt::Debug for PrebootApiController<'_> {
+@@ -313,6 +330,8 @@ impl fmt::Debug for PrebootApiController<'_> {
  /// Error type for [`PrebootApiController::load_snapshot`]
  #[derive(Debug, thiserror::Error, displaydoc::Display)]
  pub enum LoadSnapshotError {
@@ -5189,7 +5211,7 @@ index ca743fa..aa67d10 100644
      /// Loading a microVM snapshot not allowed after configuring boot-specific resources.
      LoadSnapshotNotAllowed,
      /// Failed to restore from snapshot: {0}
-@@ -495,7 +512,23 @@ impl<'a> PrebootApiController<'a> {
+@@ -495,7 +514,27 @@ impl<'a> PrebootApiController<'a> {
              SetBalloonDevice(config) => self.set_balloon_device(config),
              SetVsockDevice(config) => self.set_vsock_device(config),
              SetMmdsConfiguration(config) => self.set_mmds_config(config),
@@ -5198,6 +5220,10 @@ index ca743fa..aa67d10 100644
 +                Ok(VmmData::Empty)
 +            }
              StartMicroVm => self.start_microvm(),
++            DirectObserve => {
++                Vmm::observe_noncoherent()?;
++                Ok(VmmData::Empty)
++            }
 +            DirectReceive => {
 +                if !crate::direct::import_enabled() {
 +                    return Err(VmmActionError::NotSupported("direct import is not configured".into()));
@@ -5213,7 +5239,7 @@ index ca743fa..aa67d10 100644
              UpdateMachineConfiguration(config) => self.update_machine_config(config),
              SetEntropyDevice(config) => self.set_entropy_device(config),
              SetMemoryHotplugDevice(config) => self.set_memory_hotplug_device(config),
-@@ -503,6 +536,10 @@ impl<'a> PrebootApiController<'a> {
+@@ -503,6 +542,10 @@ impl<'a> PrebootApiController<'a> {
              CreateSnapshot(_)
              | FlushMetrics
              | Pause
@@ -5224,7 +5250,7 @@ index ca743fa..aa67d10 100644
              | Resume
              | GetBalloonStats
              | GetMemoryHotplugStatus
-@@ -517,7 +554,7 @@ impl<'a> PrebootApiController<'a> {
+@@ -517,7 +560,7 @@ impl<'a> PrebootApiController<'a> {
              | StopFreePageHinting
              | HotUnplugDevice(_) => Err(VmmActionError::OperationNotSupportedPreBoot),
              #[cfg(target_arch = "x86_64")]
@@ -5233,12 +5259,12 @@ index ca743fa..aa67d10 100644
          }
      }
  
-@@ -700,6 +737,18 @@ impl RuntimeApiController {
+@@ -700,6 +743,18 @@ impl RuntimeApiController {
          event_manager: &mut EventManager,
      ) -> Result<VmmData, VmmActionError> {
          use self::VmmAction::*;
 +        if crate::direct::resident_parked() && !matches!(&request,
-+            DirectPrepare | GetVmInstanceInfo | GetVmMachineConfig | GetVmmVersion) {
++            DirectPrepare | DirectObserve | GetVmInstanceInfo | GetVmMachineConfig | GetVmmVersion) {
 +            return Err(VmmActionError::NotSupported("parked resident rejects guest/device operations".into()));
 +        }
 +        #[cfg(target_arch = "x86_64")]
@@ -5252,7 +5278,7 @@ index ca743fa..aa67d10 100644
          match request {
              // Supported operations allowed post-boot.
              CreateSnapshot(snapshot_create_cfg) => self.create_snapshot(&snapshot_create_cfg),
-@@ -786,6 +835,49 @@ impl RuntimeApiController {
+@@ -786,6 +841,53 @@ impl RuntimeApiController {
                  .hot_unplug_device(device_id, event_manager)
                  .map(|()| VmmData::Empty),
              Pause => self.pause(),
@@ -5267,6 +5293,10 @@ index ca743fa..aa67d10 100644
 +
 +            DirectExport => {
 +                self.vmm.lock().expect("Poisoned lock").direct_export(event_manager)?;
++                Ok(VmmData::Empty)
++            }
++            DirectObserve => {
++                self.vmm.lock().expect("Poisoned lock").preinvalidate_memory()?;
 +                Ok(VmmData::Empty)
 +            }
 +            DirectClean => {
