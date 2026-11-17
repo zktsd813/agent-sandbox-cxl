@@ -224,6 +224,8 @@ def reuse_after(c,s,args,out):
     for role in ('A','B'):c2.shell(role,f'mkdir -p {c2.root}','reuse-root')
     oracle=DirtyOracle(c.config,destination,c2.metadata_base+s2.vm*64*MIB,c2.kvm_arena,args.page_hash)
     report=dict(result='running',arguments=vars(args),config=c.config,transitions=c2.transitions,receipts=c2.receipts)
+    parent=lab.load_json(out/'report.json') if hasattr(lab,'load_json') else json.loads((out/'report.json').read_text())
+    for key in ('source_hashes','source_reference'): report[key]=parent[key]
     try:
         report['boot']=c2.boot_vm(s2)
         report['heartbeat']=c2.trace_command(s2,'heartbeat',('dirty'+str(args.dirty_mib)) if args.resident_bench=='dirty' else args.resident_bench,event='trace_heartbeat')

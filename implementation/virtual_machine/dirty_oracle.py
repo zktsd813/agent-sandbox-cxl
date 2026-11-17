@@ -59,7 +59,8 @@ class DirtyOracle:
                 if phase in (3, 4, 5):
                     if phase == 4: accumulated |= union
                     row = dict(sequence=request, phase=phase, pages=pages, hash_boundary=False,
-                        missing_pages=0, other_changed_pages=0, listed_pages=union.bit_count(), **coverage)
+                        missing_pages=0, other_changed_pages=0, listed_pages=union.bit_count(),
+                        collect_ns=collect_ns, **coverage)
                     self.rows.append(row)
                     (self.output/f'{request}.bitmap').write_bytes(bitmaps)
                     (self.output/'summary.json').write_text(json.dumps(self.rows,indent=2)+'\n')

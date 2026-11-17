@@ -695,7 +695,7 @@ class HandoffController(Controller):
             directory = f"{self.root}/vm{s.vm}-epoch{target.epoch}-resident-prepare"
             self.start_vm(target, restore_manifest=directory+"/restore-manifest.json",
                 direct_import=directory+"/direct-import.json", purpose="resident-prepare")
-            if getattr(self.args,'noncoherent',False):
+            if getattr(self.args,'noncoherent',False) and not getattr(self.args,'legacy_observer',False):
                 require(s.manifest is not None,'Cold observer needs the initial allocation identity')
                 self.write_json(destination,directory+'/restore-manifest.json',s.manifest,'observer-baseline')
                 self.api(destination,directory,'/actions','PUT',{'action_type':'DirectObserve'})
@@ -1192,6 +1192,7 @@ def main():
     parser.add_argument('--dirty-ledger', action='store_true')
     parser.add_argument('--noncoherent', action='store_true')
     parser.add_argument('--reuse-test', action='store_true')
+    parser.add_argument('--legacy-observer', action='store_true', help='Diagnostic: old resident fixtures without DirectObserve')
     parser.add_argument('--audit-parked', action='store_true')
     parser.add_argument('--arena-limit-bytes',type=int,default=0)
     parser.add_argument('--fail-maintenance',choices=('writeback','epoch','record'))

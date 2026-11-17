@@ -41,6 +41,7 @@ def main():
     p.add_argument("--dirty-ledger", action="store_true")
     p.add_argument("--noncoherent", action="store_true")
     p.add_argument("--reuse-test", action="store_true")
+    p.add_argument("--legacy-observer", action="store_true")
     p.add_argument("--audit-parked", action="store_true")
     p.add_argument("--arena-limit-bytes", type=int,default=0)
     p.add_argument("--fail-maintenance", choices=("writeback","epoch","record"))
@@ -170,6 +171,7 @@ def main():
                 if args.resume_profile: bench_args += ["--resume-profile"]
                 if args.noncoherent: bench_args += ['--noncoherent']
                 if args.reuse_test: bench_args += ['--reuse-test']
+                if args.legacy_observer: bench_args += ['--legacy-observer']
                 if args.audit_parked: bench_args += ['--audit-parked']
                 if args.arena_limit_bytes: bench_args += ['--arena-limit-bytes',args.arena_limit_bytes]
                 if args.fail_maintenance: bench_args += ['--fail-maintenance',args.fail_maintenance]
@@ -210,6 +212,8 @@ def main():
                         "backing_removed": not Path(config.get("ephemeral_memory_dir") or config["run"]).exists()}
                     for report in Path(config["run"]).glob(prefix+"/report.json"):
                         shutil.copy2(report, args.output / "handoff.json")
+                        if args.reuse_test and (report.parent/'reuse-vm2').exists():
+                            shutil.copytree(report.parent/'reuse-vm2',args.output/'reuse-vm2',dirs_exist_ok=True)
                     if fixture_trial and result["cleanup"]["backing_removed"]:
                         storage=Path(config["home_storage_image"]["path"])
                         if result["result"]=="passed" and storage==Path(config["run"])/"home-storage.raw" and not storage.is_symlink():
