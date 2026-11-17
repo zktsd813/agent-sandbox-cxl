@@ -188,8 +188,9 @@ def reuse_after(c,s,args,out):
         # The only lab holders of VM/vCPU fds are these VMMs; controllers hold
         # pidfds and Unix sockets only. Close every wrapper before arena reuse.
         for directory in (worker['directory']+'/control',worker['directory']):
-            script=f'read p t < {directory}/fc.pid\nkill -KILL "$p" 2>/dev/null || true\n'
-            script+='n=0; while [ -e /proc/$p/stat ]; do state=$(cat /proc/$p/stat); case "$state" in *") Z "*|*") X "*) break;; esac; n=$((n+1)); [ $n -lt 500 ]; sleep .01; done\n'
+            script=f'read p expected < {directory}/fc.pid\n'
+            script+='if record=$(cat /proc/$p/stat 2>/dev/null); then record=${record##*) }; set -- $record; state=$1; shift 19; observed=$1; if [ "$observed" = "$expected" ]; then case "$state" in Z|X) ;; *) kill -KILL "$p" 2>/dev/null || true;; esac; fi; fi\n'
+            script+='n=0; while [ -e /proc/$p/stat ]; do if state=$(cat /proc/$p/stat 2>/dev/null); then case "$state" in *") Z "*|*") X "*) break;; esac; else [ ! -e /proc/$p/stat ]; break; fi; n=$((n+1)); [ $n -lt 500 ]; sleep .01; done\n'
             raw,name=c.shell(role,script+source_fence_script(directory),'retired-wrapper-fence')
             require('FENCED ' in raw,'Old wrapper fd lifetime not fenced')
             fences.append(dict(role=role,directory=directory,file=name))
