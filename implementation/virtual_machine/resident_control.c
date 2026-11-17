@@ -256,7 +256,7 @@ static void print_api(const char *name,const struct api_result *a) {
 
 static void validate_request(const struct request *q,const char *nonce) {
  check(q->magic==MAGIC && q->nonce[32]==0 && !strcmp(q->nonce,nonce)
-       && q->label[95]==0 && q->label[0] && q->first<=1 && q->operation<=2 && !q->reserved && q->persistent<=1,"request identity");
+       && q->label[95]==0 && q->label[0] && q->first<=1 && q->operation<=4 && !q->reserved && q->persistent<=1,"request identity");
  check(strlen(q->label)<90 && strspn(q->label,"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-:.")==strlen(q->label),"request label");
  if(q->operation==1 || q->operation==2) {
   struct in_addr address;
@@ -327,6 +327,17 @@ int main(int argc,char **argv) {
  check(strlen(argv[2])<sizeof(directory)&&!strncmp(argv[2],"/run/swe-handoff-",17),"owned directory required");strcpy(directory,argv[2]);path(socket_path,sizeof(socket_path),"api.sock");
  check(strlen(argv[4])==32&&strspn(argv[4],"0123456789abcdef")==32,"session nonce");signal(SIGPIPE,SIG_IGN);
 
+ if(!strcmp(argv[1],"maintain")) {
+  check(argc==6,"maintain DIR IP NONCE PAUSED");
+  struct request q={.magic=MAGIC,.operation=3,.first=(uint32_t)number(argv[5])};
+  strcpy(q.nonce,argv[4]);strcpy(q.label,"clean");validate_request(&q,argv[4]);
+  int fd=local_socket(0);uint64_t response[3];
+  send_all(fd,&q,sizeof(q));recv_all(fd,response,sizeof(response));close(fd);
+  check(response[0]==0,"clean or preinvalidate failed");
+  printf("NONCOHERENT_MAINT_JSON {\"clean_ns\":%"PRIu64",\"preinvalidate_ns\":%"PRIu64",\"stopped\":%u}\n",response[1],response[2],q.first);
+  return 0;
+ }
+
  if(!strcmp(argv[1],"launch")) {
   check(argc==5||argc==6,"launch arguments");uint64_t begin=ns();char control[256],log[256];
   path(control,sizeof(control),"control");path(log,sizeof(log),"control/log");
@@ -377,6 +388,20 @@ int main(int argc,char **argv) {
    else {fd=accept4(trigger?local:listener,NULL,NULL,SOCK_CLOEXEC);if(fd<0)fail("accept");timeout(fd);
     if(!trigger){int one=1;if(setsockopt(fd,IPPROTO_TCP,TCP_NODELAY,&one,sizeof(one)))fail("accepted TCP_NODELAY");}}
    struct request q;recv_all(fd,&q,sizeof(q));validate_request(&q,argv[4]);
+   if(q.operation==3 || q.operation==4) {
+    check(!q.state_len && !q.manifest_len && !q.epoch &&
+          (q.operation==3 ? trigger : (!trigger && fd==peer_fd)),"maintenance request channel");
+    uint64_t response[3]={0};
+    if(connect_native()) {
+     unsigned char command=q.operation==3 ? (q.first?7:5) : 6;
+     send_all(native_fd,&command,1);recv_all(native_fd,response,2*sizeof(uint64_t));
+    } else {check(q.operation==4,"owner clean endpoint absent");}
+    if(q.operation==3 && !response[0] && peer_fd>=0) {
+     q.operation=4;uint64_t remote[3];send_all(peer_fd,&q,sizeof(q));recv_all(peer_fd,remote,sizeof(remote));
+     response[0]=remote[0];response[2]=remote[1];
+    }
+    send_all(fd,response,sizeof(response));if(trigger)close(fd);continue;
+   }
    if(q.operation==2) {
     check(!trigger && peer_fd<0 && q.persistent && !q.state_len && !q.manifest_len && !q.epoch && !q.reserved,
           "invalid peer preparation");

@@ -23,6 +23,7 @@ def main():
     parser.add_argument('--keep-guest-images',action='store_true',help='Only update L1 executables and init, preserving embedded L2 fixtures')
     parser.add_argument('--kvm-module-dir',type=Path,help='Use rebuilt disposable-L1 kvm.ko and kvm-intel.ko from this directory')
     parser.add_argument('--shared-probe',type=Path,help='Use a rebuilt static probe, including KVM keepalive')
+    parser.add_argument('--mapper-module',type=Path,help='Use a rebuilt disposable-L1 mapper')
     parser.add_argument('--l1-kernel',type=Path,help='Use a rebuilt disposable L1 bzImage')
     args=parser.parse_args()
     base=args.base_assets.resolve(strict=True);fc=args.firecracker.resolve(strict=True)
@@ -45,6 +46,12 @@ def main():
         shutil.copy2(dest/'resident-control',root/'lab/resident-control')
         shutil.copy2(dest/'resident-bootstrap',root/'lab/resident-bootstrap')
         shutil.copy2(dest/'control-rpc',root/'lab/control-rpc')
+        if args.mapper_module:
+            shutil.copy2(args.mapper_module, dest/'pool_memory_module.ko')
+            shutil.copy2(args.mapper_module, root/'lab/pool_memory_module.ko')
+            original['mapper_override']={'path':str(args.mapper_module.resolve()),
+                'sha256':lab.sha256(args.mapper_module), 'source_sha256':lab.sha256(HERE/'pool_memory_module.c'),
+                'uapi_sha256':lab.sha256(HERE/'pool_memory_uapi.h')}
         if args.shared_probe:
             shutil.copy2(args.shared_probe, dest/'shared-probe')
             shutil.copy2(args.shared_probe, root/'lab/shared-probe')

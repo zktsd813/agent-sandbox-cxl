@@ -819,6 +819,23 @@ def trajectory_replay(c, s, report, save):
     if args.count_faults:
         kt.trajectory_start(c)
         report['fault_initial'] = kt.trajectory_counts(c)
+    recorded_waits = {}
+    if args.clean_wait == 'recorded':
+        source = Path(c.config['assets'])/'traces'/f'{args.name}.traj.json'
+        messages = json.loads(source.read_text())['messages']
+        batch = -1
+        last_tool = None
+        for message in messages:
+            stamp = message.get('extra',{}).get('timestamp')
+            if message['role'] == 'assistant' and message.get('extra',{}).get('actions'):
+                if last_tool is not None and stamp is not None:
+                    recorded_waits[batch] = max(0.0, float(stamp)-float(last_tool))
+                batch += 1
+                last_tool = None
+            elif message['role'] == 'tool' and stamp is not None:
+                last_tool = stamp
+        report['recorded_waits_s'] = recorded_waits
+        report['wait_source'] = str(source)
     started = time.monotonic_ns()
     for command in c.trace['commands']:
         index = command['index']
@@ -848,6 +865,15 @@ def trajectory_replay(c, s, report, save):
             row['faults'] = {role: {key: after[role][key]-before[role][key]
                 for key in ('ept_violation', 'page_fault', 'ram_ept_violation', 'mmio_ept_violation')} for role in ('A', 'B')}
         c.trace_commands.append(row)
+        if args.preclean:
+            from resident_fast import maintain
+            report.setdefault('cleans',[]).append(maintain(c,s))
+            # Wait belongs to the next LLM interval, before a heavy-command move.
+            if index+1 in boundaries:
+                delay = 1.0 if args.clean_wait=='1' else (min(10.0,recorded_waits[command['batch']]) if args.clean_wait=='recorded' else 0)
+                begin=time.monotonic_ns()
+                time.sleep(delay)
+                report.setdefault('waits',[]).append(dict(after_command=index,planned_s=delay,actual_ns=time.monotonic_ns()-begin))
         # Keep the next fresh destination ready while the current VM owns RAM.
         # This preparation is outside pause and command intervals; its wall
         # cost remains visible in observed_replay_ns.
@@ -1021,6 +1047,11 @@ def resident_measure(args):
         for i in range(2*(args.warmup+args.iterations)):
             time.sleep(.02)  # active dwell is excluded from the C interval
             wait_payload()
+            if args.preclean:
+                from resident_fast import maintain
+                for _ in range(args.clean_repeats):
+                    report.setdefault('cleans',[]).append(maintain(c,s))
+                time.sleep(1.0 if args.clean_wait=='1' else 0)
 
             row = c.direct_handoff(s,'B' if s.role=='A' else 'A')
             row['sample_index'] = i//2
@@ -1107,6 +1138,10 @@ def main():
     parser.add_argument('--count-faults', action='store_true')
     parser.add_argument('--dirty-ledger', action='store_true')
     parser.add_argument('--noncoherent', action='store_true')
+    parser.add_argument('--preclean', action='store_true')
+    parser.add_argument('--clean-paused', action='store_true')
+    parser.add_argument('--clean-wait', choices=('0','1','recorded'), default='0')
+    parser.add_argument('--clean-repeats', type=int, default=1)
     parser.add_argument('--cache-skip-line',type=int,default=-1)
     parser.add_argument('--skip-invalidate-page',type=int,default=-1)
     parser.add_argument('--drop-consumed-once', action='store_true')
@@ -1116,6 +1151,9 @@ def main():
     parser.add_argument('--prefault-activate', action='store_true')
     parser.add_argument('--prefault-probe', help='Static ABI probe uploaded only to these disposable L1s')
     args = parser.parse_args()
+    if args.preclean and not args.noncoherent: parser.error("Preclean requires noncoherent mode")
+    if not 1 <= args.clean_repeats <= 1000: parser.error("clean-repeats must be 1..1000")
+    if args.clean_paused and not args.preclean: parser.error("clean-paused requires preclean")
     if args.noncoherent: args.dirty_ledger=True
     require(not args.prefault or (args.mode == 'state-only' and args.trajectory_policy), 'Prefault requires snapshot trajectory')
     require(not args.prefault_activate or args.prefault, 'Activation requires prefault')

@@ -40,4 +40,13 @@ struct cpm_create {
 #define CPM_SEAL _IOWR('P', 0x77, struct cpm_handle)
 #define CPM_IMPORT _IOWR('P', 0x78, struct cpm_handle)
 #define CPM_RETIRE _IOWR('P', 0x7a, struct cpm_handle)
+/* Read-only observer. No lease, epoch, statistics or guest PTE updates.
+ * Bitmap and receipt use one bit per GPA page. The receipt is produced while
+ * issuing cache instructions, then copied out after MFENCE. */
+struct cpm_cache {
+    __u64 phys_base, device_bytes, metadata_offset, cookie_lo, cookie_hi, pages;
+    __u64 bitmap, covered, lines, elapsed_ns;
+    __u64 skip_page, reserved;
+};
+#define CPM_CACHE _IOWR('P', 0x7b, struct cpm_cache)
 #endif

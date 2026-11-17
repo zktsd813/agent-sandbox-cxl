@@ -16,6 +16,9 @@
 #include <linux/vmalloc.h>
 #include <linux/random.h>
 #include <linux/kvm_dax.h>
+#include <linux/bitmap.h>
+#include <linux/ktime.h>
+#include <asm/cpufeature.h>
 #include "pool_memory_uapi.h"
 
 #define CPM_MAX_PAGES (1UL << 20)
@@ -38,7 +41,91 @@ struct cpm {
     void *base;
     bool ready, mapped;
     struct vm_area_struct *owner_vma;
+    /* Host DRAM only. Observer never changes the owner's CXL metadata. */
+    struct cpm_cache observer;
+    struct cpm_entry *observer_map;
+    void *observer_base;
 };
+
+static void invalidate_range(void *address, u64 bytes)
+{
+    u64 i;
+    for (i = 0; i < bytes; i += 64)
+        asm volatile("clflushopt (%0)" : : "r" ((char *)address + i) : "memory");
+    asm volatile("mfence" : : : "memory");
+}
+
+static int cache_pages(struct cpm *c, void __user *user)
+{
+    struct cpm_cache q;
+    struct cpm_header *header;
+    unsigned long *bits = NULL, *covered = NULL;
+    u64 page, line, start;
+    size_t bytes;
+    int ret = -EINVAL;
+    if (copy_from_user(&q, user, sizeof(q))) return -EFAULT;
+    if (!boot_cpu_has(X86_FEATURE_CLFLUSHOPT)) return -EOPNOTSUPP;
+    if (!q.pages || q.pages > CPM_MAX_PAGES || q.reserved ||
+        (q.phys_base | q.device_bytes | q.metadata_offset) & (PAGE_SIZE-1) ||
+        !q.device_bytes || q.phys_base + q.device_bytes < q.phys_base ||
+        q.metadata_offset > q.device_bytes ||
+        PAGE_SIZE + q.pages * sizeof(struct cpm_entry) > q.device_bytes-q.metadata_offset)
+        return -EINVAL;
+    mutex_lock(&c->lock);
+    if (!c->observer_base) {
+        c->observer_base = memremap(q.phys_base, q.device_bytes, MEMREMAP_WB);
+        if (!c->observer_base) { ret = -ENXIO; goto out; }
+        header = c->observer_base + q.metadata_offset;
+        invalidate_range(header, PAGE_SIZE);
+        if (header->magic != CPM_MAGIC || header->handle.cookie_lo != q.cookie_lo ||
+            header->handle.cookie_hi != q.cookie_hi || header->handle.count != q.pages ||
+            header->handle.phys_base != q.phys_base || header->handle.device_bytes != q.device_bytes ||
+            header->handle.metadata_offset != q.metadata_offset) goto bad_observer;
+        invalidate_range((void *)header+PAGE_SIZE, q.pages*sizeof(struct cpm_entry));
+        c->observer_map = kvmemdup((void *)header+PAGE_SIZE,
+                                  q.pages*sizeof(struct cpm_entry), GFP_KERNEL);
+        if (!c->observer_map) { ret = -ENOMEM; goto bad_observer; }
+        for (page = 0; page < q.pages; page++) {
+            u64 offset = c->observer_map[page].offset;
+            if (c->observer_map[page].flags || offset & (PAGE_SIZE-1) ||
+                offset > q.device_bytes-PAGE_SIZE ||
+                (offset >= q.metadata_offset && offset-q.metadata_offset < PAGE_SIZE+q.pages*16))
+                goto bad_observer;
+        }
+        c->observer = q;
+    }
+    if (memcmp(&q, &c->observer, 6*sizeof(u64))) { ret = -ESTALE; goto out; }
+    bytes = BITS_TO_LONGS(q.pages)*sizeof(unsigned long);
+    bits = memdup_user(u64_to_user_ptr(q.bitmap), bytes);
+    if (IS_ERR(bits)) { ret = PTR_ERR(bits); bits = NULL; goto out; }
+    covered = bitmap_zalloc(q.pages, GFP_KERNEL);
+    if (!covered) { ret = -ENOMEM; goto out; }
+    if (q.pages % BITS_PER_LONG && bits[BITS_TO_LONGS(q.pages)-1] >> (q.pages % BITS_PER_LONG))
+        goto out;
+    start = ktime_get_ns(); q.lines = 0;
+    for_each_set_bit(page, bits, q.pages) {
+        void *address = c->observer_base + c->observer_map[page].offset;
+        if (page == q.skip_page) continue;
+        for (line = 0; line < PAGE_SIZE; line += 64) {
+            asm volatile("clflushopt (%0)" : : "r" ((char *)address+line) : "memory");
+            q.lines++;
+        }
+        __set_bit(page, covered);
+    }
+    asm volatile("mfence" : : : "memory");
+    q.elapsed_ns = ktime_get_ns()-start;
+    if (!bitmap_equal(bits, covered, q.pages)) { ret = -EIO; goto out; }
+    ret = copy_to_user(u64_to_user_ptr(q.covered), covered, bytes) ||
+          copy_to_user(user, &q, sizeof(q)) ? -EFAULT : 0;
+    goto out;
+bad_observer:
+    kvfree(c->observer_map); c->observer_map = NULL;
+    memunmap(c->observer_base); c->observer_base = NULL;
+out:
+    kvfree(bits); bitmap_free(covered);
+    mutex_unlock(&c->lock);
+    return ret;
+}
 
 static bool owns(struct cpm *c)
 {
@@ -325,6 +412,7 @@ static long cpm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     long ret = 0;
     if (!capable(CAP_SYS_RAWIO))
         return -EPERM;
+    if (cmd == CPM_CACHE) return cache_pages(c, user);
     if (cmd == CPM_CREATE || cmd == CPM_IMPORT) {
         mutex_lock(&c->lock);
         ret = cmd == CPM_CREATE ? create_persistent(c, user) : import_persistent(c, user);
@@ -421,6 +509,8 @@ static int cpm_open(struct inode *inode, struct file *file)
 static int cpm_release(struct inode *inode, struct file *file)
 {
     struct cpm *c = file->private_data;
+    kvfree(c->observer_map);
+    if (c->observer_base) memunmap(c->observer_base);
     if (c->header) {
         if (owns(c))
             cmpxchg(&c->state->state, CPM_ACTIVE, CPM_RETIRED);

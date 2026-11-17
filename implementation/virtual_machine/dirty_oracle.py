@@ -37,6 +37,7 @@ class DirtyOracle:
     def run(self):
         previous = None
         sequence = 0
+        accumulated = 0
         try:
             while not self.stop_event.wait(.001):
                 request = struct.unpack_from('<Q', self.mem, self.gate)[0]
@@ -45,7 +46,7 @@ class DirtyOracle:
                 if request != sequence + 1:
                     raise ValueError('Skipped oracle boundary')
                 _, phase, pages, hva, used, collect_ns = struct.unpack_from('<6Q', self.mem, self.gate)
-                if not 0 < pages <= 1 << 20 or phase not in (1, 2, 3):
+                if not 0 < pages <= 1 << 20 or phase not in (1, 2, 3, 4, 5, 6):
                     raise ValueError('Invalid oracle geometry/phase')
                 maintained, node = struct.unpack_from('<2Q', self.mem, self.gate+48)
                 extra = struct.unpack_from('<16Q', self.mem, self.gate+128) if maintained else None
@@ -55,7 +56,8 @@ class DirtyOracle:
                 bitmaps = self.mem[self.gate+offset:self.gate+offset+words*8*count]
                 union, kernel, device = [int.from_bytes(bitmaps[i*words*8:(i+1)*words*8], 'little') for i in range(3)]
                 coverage = self.check_maintenance(phase, node, pages, used, extra, bitmaps) if maintained else {}
-                if phase == 3:
+                if phase in (3, 4, 5):
+                    if phase == 4: accumulated |= union
                     row = dict(sequence=request, phase=phase, pages=pages, hash_boundary=False,
                         missing_pages=0, other_changed_pages=0, listed_pages=union.bit_count(), **coverage)
                     self.rows.append(row)
@@ -86,7 +88,9 @@ class DirtyOracle:
                 guest = set(o // PAGE for o in offsets)
                 changed = set() if previous is None else {i for i,(a,b) in enumerate(zip(previous,current)) if a != b}
                 changed_gpa = [i for i,o in enumerate(offsets) if o//PAGE in changed]
-                missing = [i for i in changed_gpa if not (bitmaps[i//8] >> (i%8)) & 1]
+                accumulated |= union
+                checked_bitmap = accumulated.to_bytes(words*8, "little")
+                missing = [i for i in changed_gpa if not (checked_bitmap[i//8] >> (i%8)) & 1]
                 # KVM bump cannot shrink. First baseline may precede export, so
                 # classify the whole reserved arena then use actual used bytes.
                 arena_end = self.arena + (used or 128*MIB)
@@ -95,7 +99,7 @@ class DirtyOracle:
                 control = {i for i in outside if self.metadata <= i*PAGE < self.metadata+64*MIB}
                 other = outside - objects - control
                 row = dict(sequence=request, phase=phase, pages=pages, ram_hva=hva, hash_boundary=True, **coverage,
-                           changed_guest_pages=len(changed_gpa), missing_pages=len(missing),
+                           changed_guest_pages=len(changed_gpa), checked_pages=accumulated.bit_count(), missing_pages=len(missing),
                            missing_gpa_pages=missing[:32], listed_pages=union.bit_count(),
                            unchanged_listed_pages=union.bit_count()-sum((bitmaps[i//8] >> (i%8))&1 for i in changed_gpa),
                            kvm_only=(kernel & ~device).bit_count(), device_only=(device & ~kernel).bit_count(),
@@ -105,6 +109,7 @@ class DirtyOracle:
                            arena_bytes=used, oracle_ns=time.monotonic_ns()-started)
                 changed_bitmap=bytearray(words*8)
                 for page in changed_gpa: changed_bitmap[page//8] |= 1 << (page%8)
+                (self.output/f'{request}.checked').write_bytes(checked_bitmap)
                 (self.output/f'{request}.changed').write_bytes(changed_bitmap)
                 row['changed_bitmap_sha256']=hashlib.sha256(changed_bitmap).hexdigest()
                 row['bitmap_sha256']=hashlib.sha256(bitmaps).hexdigest()
@@ -116,6 +121,7 @@ class DirtyOracle:
                 if previous is None and phase != 1:
                     raise ValueError('Missing stopped baseline')
                 previous, sequence = current, request
+                accumulated = 0
                 struct.pack_into('<Q', self.mem, self.gate+72, 1)
                 struct.pack_into('<Q', self.mem, self.gate+64, request)
         except BaseException as exc:
@@ -137,7 +143,7 @@ class DirtyOracle:
             raise ValueError('Log cookie differs from the persistent mapper')
         if (magic,version,log_pages,slots,stride)!=(0x4e43484c4f473031,1,pages,8,(16+words*8+63)&~63) or next_epoch!=epoch+1:
             raise ValueError('Oracle observed a foreign or incomplete log header')
-        if phase in (1,2):
+        if phase in (1,2,4,6):
             if phase==1:
                 self.records.clear()
                 self.consumed.clear()
@@ -166,7 +172,7 @@ class DirtyOracle:
                     expected |= self.records[e]
             if requested!=expected or bitmap!=expected or expected & ~invalidated:
                 raise ValueError('Actual receiver ranges do not cover the log union')
-            if kinv_ok!=1 or kinv_bytes<arena or kinv_lines!=(kinv_bytes+63)//64+64:
+            if phase==3 and (kinv_ok!=1 or kinv_bytes<arena or kinv_lines!=(kinv_bytes+63)//64+64):
                 raise ValueError('Actual kernel invalidation receipt omits the arena')
             self.consumed[node]=epoch
         return dict(node=node,epoch=epoch,inv_from=inv_from,inv_to=inv_to,
@@ -175,7 +181,7 @@ class DirtyOracle:
             kernel_writeback_bytes=kwb_bytes,kernel_invalidate_bytes=kinv_bytes,
             kernel_writeback_lines=kwb_lines,kernel_invalidate_lines=kinv_lines,
             writeback_lines=wb.bit_count()*64,invalidate_lines=invalidated.bit_count()*64,
-            coverage_verified=True,full_invalidate_fallback=phase==3 and epoch-inv_from>8)
+            coverage_verified=True,full_invalidate_fallback=phase in (3,5) and epoch-inv_from>8)
 
     def close(self):
         self.stop_event.set()

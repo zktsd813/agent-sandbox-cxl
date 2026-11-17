@@ -40,6 +40,10 @@ def main():
     p.add_argument("--assets", type=Path)
     p.add_argument("--dirty-ledger", action="store_true")
     p.add_argument("--noncoherent", action="store_true")
+    p.add_argument("--preclean", action="store_true")
+    p.add_argument("--clean-paused", action="store_true", help="Test only: pause and hash each clean")
+    p.add_argument("--clean-wait", choices=("0","1","recorded"), default="0")
+    p.add_argument("--clean-repeats", type=int, default=1)
     p.add_argument("--cache-skip-line",type=int,default=-1)
     p.add_argument("--skip-invalidate-page",type=int,default=-1)
     p.add_argument("--drop-consumed-once", action="store_true")
@@ -161,6 +165,8 @@ def main():
                 if args.profile: bench_args += ["--profile","--restore-timing"]
                 if args.resume_profile: bench_args += ["--resume-profile"]
                 if args.noncoherent: bench_args += ['--noncoherent']
+                if args.preclean: bench_args += ['--preclean','--clean-wait',args.clean_wait,'--clean-repeats',args.clean_repeats]
+                if args.clean_paused: bench_args += ['--clean-paused']
                 if args.cache_skip_line>=0: bench_args += ["--cache-skip-line",args.cache_skip_line]
                 if args.skip_invalidate_page>=0: bench_args += ["--skip-invalidate-page",args.skip_invalidate_page]
                 if args.drop_consumed_once: bench_args += ['--drop-consumed-once']

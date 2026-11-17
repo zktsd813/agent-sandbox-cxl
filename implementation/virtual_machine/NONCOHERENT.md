@@ -146,3 +146,29 @@ Promotion은 전체 RAM record를 발행한다. 그 뒤 두 장부를 다시 시
 0/16/64/256 MiB 시험의 payload 쓰기는 guest ACK 뒤에 한다.
 완료 표식을 본 뒤 다음 pause를 요청한다. Payload 쓰기 시간은 pause→ACK에 포함하지 않는다.
 0 MiB도 heartbeat와 clock 등 실제로 쓰인 page가 조금 있다. 실제 목록을 함께 보고한다.
+
+## 3단계: 실행 중 정리의 경합 계약
+
+정리는 장치 event를 처리하는 VMM thread에서만 호출한다. 정리는 VM을 멈추지 않는다.
+KVM_GET_DIRTY_LOG → Firecracker bitmap 수집/초기화 → RAM clwb/sfence → log 발행 순서다.
+정리 중 실패하면 장부를 이미 지웠을 수 있으므로 프로세스를 abort한다.
+
+| 쓰기 경로 | 정리와 겹칠 때 | 처리 |
+|---|---|---|
+| guest CPU | D bit 초기화 뒤 쓰기는 다음 장부. TLB flush 완료 전 쓰기는 뒤 clwb가 덮음 | PML buffer의 미처리 기록은 다음 장부. 최종 hand-off는 vCPU 정지/exit 뒤 수집 |
+| iovec.rs, queue.rs 동기 쓰기 | bitmap을 먼저 표시하고 씀 | 같은 VMM thread라 정리와 실행이 끼어들지 않음. 저장된 queue pointer 범위는 매번 보수적으로 표시 |
+| io_uring block 읽기 | kernel worker가 VMM 밖에서 guest RAM에 씀 | async_io.rs의 pop → mark_dirty_mem_and_unwrap에서 완료 후 표시. 미완료 읽기는 다음 정리. 최종 hand-off는 drain 뒤 수집 |
+| KVM kvm_write_guest, pvclock | 쓴 뒤 dirty 표시 | 초기화 전 표시는 이번 clwb, 뒤 표시는 다음 장부. hand-off 때 vCPU/observer drain |
+| VMClock | GuestMemory.write_obj로 표시 | VMM event loop에서 실행 |
+| boot loader, 0 채우기, promotion/demotion | 실행 전 또는 정지 상태의 대량 쓰기 | 정리와 동시 실행 금지. 전체 범위 처리 계약 유지 |
+| network/vsock 수신 | VMM 동기 iovec 경로 | 기존 resident 장치 계약에서 거절. 혼합 I/O 시험만 연결 종료 후 export |
+| balloon/pmem/vhost/외부 memory device | VMM 밖 writer 가능 | 기존 direct preflight에서 거절 |
+| 시험 heartbeat 제어기 | 과거 export 뒤 raw 쓰기 | 18에서 제거. 정지한 VMM의 추적 쓰기만 허용 |
+
+허용하는 VMM 밖 RAM writer는 guest vCPU/KVM과 io_uring worker다.
+전자는 KVM 장부, 후자는 완료 장부와 최종 drain으로 덮는다.
+그 밖의 RAM writer thread를 추가하면 direct 계약을 확장하기 전까지 거절해야 한다.
+
+받는 쪽은 mapper의 kernel WB direct mapping에서 RAM bitmap을 무효화한다.
+Guest HVA의 PTE를 만들지 않는다. 독립 observer fd는 불변 GPA→offset 표의 로컬 사본만 가진다.
+Observer는 공유 mapper lease/epoch/stat을 쓰지 않는다. consumed는 기존 host DRAM tmpfs다.

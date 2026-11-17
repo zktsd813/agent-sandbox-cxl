@@ -125,3 +125,16 @@ def handoff(c,s,destination):
     row['request_transport']=c.control_timings[-1].get('request_transport','legacy')
     c.transitions.append(row)
     return row
+
+
+def maintain(c,s):
+    """Clean on the owner VMM thread, then notify the parked observer."""
+    require(c.args.noncoherent and s.tier=='cxl', 'Maintenance requires shared tracked owner')
+    directory=c.resident_workers[s.role]['directory']
+    ip='172.30.0.1' if s.role=='A' else '172.30.0.2'
+    started=time.monotonic_ns()
+    raw,name=c.shell(s.role,f'/lab/resident-control maintain {directory} {ip} {c.resident_control_nonce} '
+        f'{int(c.args.clean_paused)}','noncoherent-maintain',180)
+    values=json_lines(raw,'NONCOHERENT_MAINT_JSON ')
+    require(len(values)==1,'Maintenance acknowledgement missing')
+    return dict(role=s.role,epoch=s.epoch,file=name,host_duration_ns=time.monotonic_ns()-started,**values[0])

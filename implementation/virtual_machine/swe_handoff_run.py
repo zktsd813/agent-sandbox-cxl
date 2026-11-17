@@ -52,6 +52,10 @@ def arguments():
     parser.add_argument("--parallel-build", action="store_true")
     parser.add_argument("--dirty-ledger", action="store_true")
     parser.add_argument("--noncoherent", action="store_true")
+    parser.add_argument("--preclean", action="store_true")
+    parser.add_argument("--clean-paused", action="store_true", help="Test only: pause and hash each clean")
+    parser.add_argument("--clean-wait", choices=("0","1","recorded"), default="0")
+    parser.add_argument("--clean-repeats", type=int, default=1)
     parser.add_argument("--dirty-oracle", action="store_true")
     parser.add_argument("--page-hash", type=Path)
     parser.add_argument("--pml", choices=("on", "off"), default="off")
@@ -219,6 +223,9 @@ def main():
                               "--memory-mib", str(args.memory_mib), "--vcpus", str(args.vcpus),
                               "--direct-profile-roundtrips", str(args.direct_profile_roundtrips)]
             if args.noncoherent: bench.append("--noncoherent")
+            if args.preclean:
+                bench.extend(['--preclean','--clean-wait',args.clean_wait,'--clean-repeats',str(args.clean_repeats)])
+            if args.clean_paused: bench.append('--clean-paused')
             if args.dirty_ledger:
                 bench.append('--dirty-ledger')
             if args.dirty_oracle:
