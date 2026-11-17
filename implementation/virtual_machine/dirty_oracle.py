@@ -4,6 +4,7 @@ Only the controller ACK cache line is written by L0. It is a lab gate, never
 part of the handoff protocol. Failure is acknowledged as failure, never resumed.
 """
 import array
+import hashlib
 import json
 import mmap
 from pathlib import Path
@@ -28,6 +29,7 @@ class DirtyOracle:
         self.binary = str(Path(binary).resolve(strict=True))
         self.rows, self.error = [], None
         self.records, self.consumed = {}, {}
+        self.mapping = None
         self.stop_event = threading.Event()
         self.thread = threading.Thread(target=self.run, name='dirty-oracle', daemon=True)
         self.thread.start()
@@ -72,7 +74,13 @@ class DirtyOracle:
                 path.unlink()  # Retain two hash arrays in DRAM, no accumulating raw dumps.
                 if union != kernel | device:
                     raise ValueError('Ledger union mismatch')
-                offsets = [struct.unpack_from('<Q', self.mem, self.metadata+PAGE+i*16)[0] for i in range(pages)]
+                table=self.mem[self.metadata+PAGE:self.metadata+PAGE+pages*16]
+                if phase==1:
+                    self.mapping=table
+                    (self.output/'mapping.bin').write_bytes(table)
+                elif table!=self.mapping:
+                    raise ValueError('Immutable mapper changed between clean boundaries')
+                offsets = [struct.unpack_from('<Q', table, i*16)[0] for i in range(pages)]
                 if len(set(offsets)) != pages or any(o % PAGE or o >= len(self.mem) for o in offsets):
                     raise ValueError('Invalid persistent mapper table')
                 guest = set(o // PAGE for o in offsets)
@@ -95,6 +103,11 @@ class DirtyOracle:
                            control_changed_pages=len(control), other_changed_pages=len(other),
                            other_file_pages=sorted(other)[:32], collect_ns=collect_ns,
                            arena_bytes=used, oracle_ns=time.monotonic_ns()-started)
+                changed_bitmap=bytearray(words*8)
+                for page in changed_gpa: changed_bitmap[page//8] |= 1 << (page%8)
+                (self.output/f'{request}.changed').write_bytes(changed_bitmap)
+                row['changed_bitmap_sha256']=hashlib.sha256(changed_bitmap).hexdigest()
+                row['bitmap_sha256']=hashlib.sha256(bitmaps).hexdigest()
                 self.rows.append(row)
                 (self.output/f'{request}.bitmap').write_bytes(bitmaps)
                 (self.output/'summary.json').write_text(json.dumps(self.rows, indent=2)+'\n')

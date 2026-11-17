@@ -471,6 +471,43 @@ def kernel_intervals(text):
     return rows
 
 
+def verify_cache_receipts(report, root):
+    """Replay saved page sets independently of the online oracle and VMM."""
+    rows=report.get('dirty_oracle',[])
+    need(rows and all(x.get('coverage_verified') for x in rows), 'Missing cache coverage receipts')
+    records, consumed={},{}
+    for row in rows:
+        need(row['missing_pages']==0 and row['other_changed_pages']==0, 'Oracle reported an omission')
+        words=(row['pages']+63)//64
+        data=(root/'dirty-oracle'/f"{row['sequence']}.bitmap").read_bytes()
+        need(len(data)==words*8*6,'Cache receipt bitmap geometry')
+        planes=[int.from_bytes(data[i*words*8:(i+1)*words*8],'little')for i in range(6)]
+        bitmap,kernel,device,wb,requested,invalidated=planes
+        epoch,node=row['epoch'],row['node']
+        if row['phase'] in (1,2):
+            if row['phase']==1:
+                records.clear();consumed.clear()
+                need(bitmap==(1<<row['pages'])-1,'Incomplete full-RAM publication')
+            need(epoch==len(records)+1 and bitmap==kernel|device and bitmap & ~wb==0,'Writeback coverage or epoch mismatch')
+            records[epoch]=bitmap
+            consumed[node]=epoch
+            if 'changed_bitmap_sha256' in row:
+                changed=(root/'dirty-oracle'/f"{row['sequence']}.changed").read_bytes()
+                need(hashlib.sha256(changed).hexdigest()==row['changed_bitmap_sha256']
+                     and hashlib.sha256(data).hexdigest()==row['bitmap_sha256'],'Altered oracle page sets')
+                need(int.from_bytes(changed,'little') & ~bitmap==0,'Changed GPA omitted from published set')
+        else:
+            start=row['inv_from']
+            need(start<=consumed.get(node,0) and row['inv_to']==epoch,'Skipped unconsumed epoch')
+            expected=(1<<row['pages'])-1 if epoch-start>8 else 0
+            if epoch-start<=8:
+                for e in range(start+1,epoch+1):expected|=records[e]
+            need(requested==bitmap==expected and expected & ~invalidated==0,'Incomplete receiver invalidation')
+            consumed[node]=epoch
+    return {'events':len(rows),'exports':sum(r['phase']==2 for r in rows),
+            'imports':sum(r['phase']==3 for r in rows),'missing_pages':0,'coverage_verified':True}
+
+
 def verify(path):
     path = Path(path)
     r = json.loads(path.read_bytes())
@@ -480,6 +517,8 @@ def verify(path):
     need(memory == 2048*MIB and r['mode'] in ('baseline', 'state-only', 'direct'), 'Unexpected runtime geometry')
     verify_sources(r, path.parent)
     workload = verify_trace(e, r)
+    if r['arguments'].get('noncoherent') and r['arguments'].get('dirty_oracle'):
+        verify_cache_receipts(r,path.parent)
     launches = {}
     for launch in r['launches']:
         pids = re.findall(r'^EXEC_PROCESS (\d+) (\d+)\s*$', e.text(launch['file']), re.M)
