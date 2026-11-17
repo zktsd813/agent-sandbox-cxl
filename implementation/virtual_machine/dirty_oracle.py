@@ -94,9 +94,14 @@ class DirtyOracle:
                 missing = [i for i in changed_gpa if not (checked_bitmap[i//8] >> (i%8)) & 1]
                 # KVM bump cannot shrink. First baseline may precede export, so
                 # classify the whole reserved arena then use actual used bytes.
-                arena_end = self.arena + 128*MIB  # reserved pool; VM descriptors may start after its root page
+                root_bump, root_vm = struct.unpack_from('<2Q', self.mem, self.arena+8)
+                # This lab admits one graph and starts its first private slot
+                # at +16 MiB. Reuse keeps that slot. Legacy roots hold the VM.
+                private = root_vm == 0 and root_bump >= 32*MIB
+                arena_start = self.arena + (16*MIB if private else 0)
+                arena_end = arena_start + (used or (16 if private else 128)*MIB)
                 outside = changed - guest
-                objects = {i for i in outside if self.arena <= i*PAGE < arena_end}
+                objects = {i for i in outside if arena_start <= i*PAGE < arena_end}
                 control = {i for i in outside if self.metadata <= i*PAGE < self.metadata+64*MIB}
                 other = outside - objects - control
                 row = dict(sequence=request, phase=phase, pages=pages, ram_hva=hva, hash_boundary=True, **coverage,
@@ -107,7 +112,8 @@ class DirtyOracle:
                            both=(kernel & device).bit_count(), object_changed_pages=len(objects),
                            control_changed_pages=len(control), other_changed_pages=len(other),
                            other_file_pages=sorted(other)[:32], collect_ns=collect_ns,
-                           arena_bytes=used, oracle_ns=time.monotonic_ns()-started)
+                           arena_bytes=used, object_base_offset=arena_start, object_limit_offset=arena_end,
+                           oracle_ns=time.monotonic_ns()-started)
                 changed_bitmap=bytearray(words*8)
                 for page in changed_gpa: changed_bitmap[page//8] |= 1 << (page%8)
                 (self.output/f'{request}.checked').write_bytes(checked_bitmap)
