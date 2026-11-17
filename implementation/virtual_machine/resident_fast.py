@@ -142,7 +142,7 @@ def maintain(c,s):
 
 
 def admin(c,role,operation,*arguments):
-    directory=c.resident_workers[role]['directory']
+    directory=getattr(c,'resident_workers',{}).get(role,{}).get('directory',c.root)
     ip='172.30.0.1' if role=='A' else '172.30.0.2'
     raw,name=c.shell(role,f'/lab/resident-control {operation} {directory} {ip} {c.resident_control_nonce} '+
         ' '.join(map(str,arguments)),'noncoherent-'+operation,180)
@@ -169,7 +169,7 @@ def audit_parked(c,role):
     import re
     counts={int(k):int(v) for k,v in re.findall(r'^PATH (\d+) (\d+)$',raw,re.M)}
     require(len(counts)==16 and counts[9]>0 and counts[10]>0,'Parked ioctl/mmap guards not exercised')
-    require(all(counts[k]==0 for k in (0,1,2,3,5,6,7,8,14)),'Unexpected nonowner asynchronous or reference access')
+    require(all(counts[k]==0 for k in (0,1,2,3,5,6,7,8,14,15)),'Unexpected nonowner asynchronous or reference access')
     return dict(result,counters=counts,counter_file=name)
 
 
