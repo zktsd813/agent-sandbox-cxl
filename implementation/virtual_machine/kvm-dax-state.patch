@@ -2451,7 +2451,7 @@ index 1e567d1..42e6cea 100644
  	free_irq_routing_table(new);
  
 diff --git a/virt/kvm/kvm_main.c b/virt/kvm/kvm_main.c
-index 486800a..244752e 100644
+index 486800a..16d9c21 100644
 --- a/virt/kvm/kvm_main.c
 +++ b/virt/kvm/kvm_main.c
 @@ -27,6 +27,7 @@
@@ -3512,7 +3512,6 @@ index 486800a..244752e 100644
 +    profile=(void *)s+KVM_DAX_PROFILE_OFFSET;
 +    r=kvm_dax_cache_sync(true);
 +    if (r) return r;
-+    kvm_dax_set_local_owner(true); /* Internal attach; guest remains stopped. */
 +	if (smp_load_acquire(&s->state) != KVM_DAX_DETACHED)
 +		return -EBUSY;
 +	if (in.abi_version != KVM_DAX_ABI_VERSION ||
@@ -3580,6 +3579,7 @@ index 486800a..244752e 100644
 +			put_unused_fd(fd);
 +		return -EBUSY;
 +	}
++    kvm_dax_set_local_owner(true); /* Validated and claimed; guest remains stopped. */
 +	if (dax_handoff_profile)
 +		memset(profile->attach, 0, sizeof(profile->attach));
 +	dax_profile_step(profile->attach, 0, &profile_last);
