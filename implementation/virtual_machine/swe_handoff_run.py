@@ -31,7 +31,7 @@ SOURCES = ("experiment_sources.py", "swe_handoff_run.py", "handoff_bench.py", "s
     "resident_control.c", "resident_bootstrap.c", "resident_prepare.py", "control_rpc.c", "control_rpc.py",
     "guest-init.sh", "resident_wire.h", "resident_proxy.py", "kernel_handoff_trace.py",
     "firecracker.patch", "kvm-dax-state.patch", "kvm-dax-source.json", "kvm-prefault.patch", "firecracker-prefault.patch", "prefault_probe.c",
-    "multi_vcpu.py", "dirty_oracle.py", "page_hash.c")
+    "multi_vcpu.py", "dirty_oracle.py", "page_hash.c", "io_mix.c")
 
 
 def arguments():

@@ -32,6 +32,9 @@ def main():
     p.add_argument("--warmup", type=int, default=10)
     p.add_argument("--measure", action="store_true", help="Hold quiet.lock exclusively")
     p.add_argument("--resident-bench", choices=("idle","busy"))
+    p.add_argument("--mixed-io", action="store_true")
+    p.add_argument("--io-fixture", type=Path)
+    p.add_argument("--cxl-mib", type=int, choices=(2048,4096,8192))
     p.add_argument("--assets", type=Path)
     p.add_argument("--dirty-ledger", action="store_true")
     p.add_argument("--dirty-oracle", action="store_true")
@@ -45,7 +48,10 @@ def main():
     p.add_argument("--firecracker", type=Path, default=LOCAL / "fc/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker")
     p.add_argument("--qemu", type=Path, default=LOCAL / "qemu-runtime/bin/qemu-system-x86_64")
     args = p.parse_args()
-    if args.resident_bench and (not args.assets or not args.measure):
+    fixture_trial = bool(args.resident_bench or args.mixed_io)
+    cxl_mib = args.cxl_mib or (8192 if args.mixed_io else 2048)
+    prefix = "io-mix-*" if args.mixed_io else ("resident-bench-*" if args.resident_bench else "direct-linux-handoff-*")
+    if fixture_trial and (not args.assets or not args.measure):
         p.error("resident benchmark needs --assets and exclusive --measure")
     args.output = args.output.resolve()
     if not args.output.is_relative_to(HERE.parents[1]):
@@ -81,14 +87,14 @@ def main():
         fcntl.flock(lab_lock, fcntl.LOCK_EX)
         fcntl.flock(quiet_lock, fcntl.LOCK_EX if args.measure else fcntl.LOCK_SH)
         try:
-            if not args.resident_bench:
+            if not fixture_trial:
                 run("prepare", "prepare", "--firecracker", args.firecracker,
                     "--l1-kernel", LOCAL / "kernel-build/arch/x86/boot/bzImage",
                     "--module-dir", LOCAL / "kernel-modules/lib/modules/6.6.0-rc6-dcd-v3",
                     "--l2-kernel", INPUTS / "guest-swe-build/vmlinux")
             # 2 x 4 GiB L1 RAM + one shared 2 GiB CXL file + ivshmem + 4 GiB reserve.
-            budget = (2 * 4096 + 2048 + (64 if args.resident_bench else 4)) * 1024 * 1024
-            if args.resident_bench:
+            budget = (2 * 4096 + cxl_mib + (64 if fixture_trial else 4)) * 1024 * 1024
+            if fixture_trial:
                 with (assets/'storage.raw').open('rb') as stream:
                     os.posix_fadvise(stream.fileno(), 0, 0, os.POSIX_FADV_DONTNEED)
             result['numa_hardware'] = subprocess.check_output(['numactl', '--hardware'], text=True)
@@ -98,10 +104,10 @@ def main():
             if free < budget + result["reserve_bytes"]:
                 raise RuntimeError("node 0 free memory below budget + 4 GiB")
             start = ["start", "--vcpus", max(4,args.vcpus+2), "--memory-mib",4096,
-                "--shared-mib",64 if args.resident_bench else 4,"--cxl-mib",2048,"--dax-handoff","--dax-guest",
+                "--shared-mib",64 if fixture_trial else 4,"--cxl-mib",cxl_mib,"--dax-handoff","--dax-guest",
                 "--dax-4k","--network-backend","socket","--memory-backing-dir","/dev/shm","--qemu",args.qemu]
             start += ["--pml", args.pml]
-            if args.resident_bench:
+            if fixture_trial:
                 start += ["--migration-network","--home-storage-image",assets/"storage.raw"]
             run("start", *start)
             run("verify", "verify")
@@ -134,10 +140,15 @@ def main():
                 bench_args += ["--resume-profile"]
             if args.test_running_vcpu:
                 bench_args += ["--test-running-vcpu"]
-            if args.resident_bench:
+            if fixture_trial:
                 bench_args = ["--mode","direct","--name","gin-gonic__gin-3741","--memory-mib",128,
                     "--vcpus",args.vcpus,"--resident-bench",args.resident_bench,
                     "--iterations",args.iterations,"--warmup",args.warmup]
+                if args.mixed_io:
+                    if not args.io_fixture or not args.dirty_oracle: raise ValueError('Mixed I/O requires fixture and oracle')
+                    bench_args = ['--mode','direct','--name','gin-gonic__gin-3741','--memory-mib',2048,
+                        '--vcpus',args.vcpus,'--mixed-io','--io-fixture',args.io_fixture.resolve(),
+                        '--iterations',args.iterations,'--warmup',0]
                 if args.profile: bench_args += ["--profile","--restore-timing"]
                 if args.resume_profile: bench_args += ["--resume-profile"]
                 if args.dirty_ledger: bench_args += ['--dirty-ledger']
@@ -148,7 +159,7 @@ def main():
             else:
                 run("handoff", *bench_args)
             config = json.loads((Path(json.loads(current.read_text())["run"]) / "run.json").read_text())
-            reports = sorted(Path(config["run"]).glob(("resident-bench-*" if args.resident_bench else "direct-linux-handoff-*")+"/report.json"))
+            reports = sorted(Path(config["run"]).glob(prefix+"/report.json"))
             if len(reports) != 1:
                 raise RuntimeError("Expected exactly one handoff report")
             shutil.copy2(reports[0], args.output / "handoff.json")
@@ -170,9 +181,9 @@ def main():
                 finally:
                     result["cleanup"] = {"qemu_pids": [v["pid"] for v in config["vms"].values()],
                         "backing_removed": not Path(config.get("ephemeral_memory_dir") or config["run"]).exists()}
-                    for report in Path(config["run"]).glob(("resident-bench-*" if args.resident_bench else "direct-linux-handoff-*")+"/report.json"):
+                    for report in Path(config["run"]).glob(prefix+"/report.json"):
                         shutil.copy2(report, args.output / "handoff.json")
-                    if args.resident_bench and result["cleanup"]["backing_removed"]:
+                    if fixture_trial and result["cleanup"]["backing_removed"]:
                         storage=Path(config["home_storage_image"]["path"])
                         if result["result"]=="passed" and storage==Path(config["run"])/"home-storage.raw" and not storage.is_symlink():
                             storage.unlink()

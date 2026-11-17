@@ -40,6 +40,7 @@ def main():
     parser.add_argument('--mapper-module', type=Path, required=True)
     parser.add_argument('--kvm-module-dir', type=Path, required=True)
     parser.add_argument('--l1-kernel', type=Path, required=True)
+    parser.add_argument('--io-fixture', type=Path)
     parser.add_argument('--shared-probe', type=Path)
     parser.add_argument('--l1-config', type=Path, help='Require built-in NFS server support and record the L1 config')
     args = parser.parse_args()
@@ -92,6 +93,7 @@ def main():
                      'resident-control', 'resident-bootstrap', 'control-rpc'):
             shutil.copy2(dest/name, host/'lab'/name)
         shutil.copy2(dest/'shared-probe', host/'lab/shared-probe')
+        if args.io_fixture: shutil.copy2(args.io_fixture, host/'lab/io-mix')
         shutil.copy2(HERE/'guest-init.sh', host/'init')
         (host/'init').chmod(0o755)
         modules = {}
@@ -104,6 +106,7 @@ def main():
             archive = name+'-initramfs.cpio'
             unpack(base/archive, guest)
             shutil.copy2(dest/'shared-probe', guest/'lab/shared-probe')
+            if args.io_fixture: shutil.copy2(args.io_fixture, guest/'lab/io-mix')
             shutil.copy2(HERE/'swe-handoff-l2-init.sh', guest/'init')
             (guest/'init').chmod(0o755)
             shutil.copy2(HERE/'swe-handoff-guest-run.sh', guest/'lab/swe-handoff-guest-run.sh')
@@ -126,6 +129,8 @@ def main():
     manifest['inputs'].update({key: {'path': str(path.resolve()), 'sha256': lab.sha256(path)}
         for key, path in (('firecracker', args.firecracker), ('l1_kernel', args.l1_kernel), ('l2_kernel', args.guest_kernel))})
     manifest['inputs']['kvm_modules'] = modules
+    if args.io_fixture:
+        manifest['inputs']['io_fixture'] = {'path':str(args.io_fixture.resolve()),'sha256':lab.sha256(args.io_fixture),'source_sha256':lab.sha256(HERE/'io_mix.c')}
     manifest['handoff'] = {'inputs': {name: {'path': str(path.resolve()), 'sha256': lab.sha256(path)}
                                      for name, path in replacements.items()}}
     manifest['resident_control'] = {'source_sha256': lab.sha256(HERE/'resident_control.c'),

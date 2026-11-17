@@ -67,6 +67,23 @@ while read -r OP ARG TOKEN EXTRA; do
     esac
     case "$TOKEN" in ''|*[!a-zA-Z0-9_-]*) echo '{"event":"trace_protocol_error"}'; continue ;; esac
     case "$OP" in
+        io_start)
+            /lab/io-mix guest "$EXTRA" > "$R/io.log" 2>&1 &
+            IO_PID=$!
+            attempt=0
+            while ! grep -q '^IO_MIX_READY' "$R/io.log"; do
+                kill -0 "$IO_PID" || { cat "$R/io.log"; exit 1; }
+                attempt=$((attempt+1)); [ "$attempt" -lt 2000 ] || exit 1
+                sleep .01
+            done
+            printf '{"event":"trace_io_started","label":"%s"}\n' "$TOKEN"
+            ;;
+        io_finish)
+            wait "$IO_PID" || { cat "$R/io.log"; exit 1; }
+            payload=$(grep '^IO_MIX_PASS ' "$R/io.log")
+            payload=${payload#IO_MIX_PASS }
+            printf '{"event":"trace_io_result","label":"%s","payload":%s}\n' "$TOKEN" "$payload"
+            ;;
         heartbeat)
             VCPUS=$(awk '/^cpu[0-9]+ / {n++} END {print n}' /proc/stat)
             MODE=1; SLEEP=0

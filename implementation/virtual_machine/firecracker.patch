@@ -1555,10 +1555,10 @@ index 2a75945..fe91a5d 100644
      type ConstructorArgs = MmioTransportConstructorArgs;
 diff --git a/src/vmm/src/direct.rs b/src/vmm/src/direct.rs
 new file mode 100644
-index 0000000..637dd03
+index 0000000..e790b71
 --- /dev/null
 +++ b/src/vmm/src/direct.rs
-@@ -0,0 +1,865 @@
+@@ -0,0 +1,872 @@
 +// Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 +// SPDX-License-Identifier: Apache-2.0
 +
@@ -1756,6 +1756,13 @@ index 0000000..637dd03
 +        && valid_cpu_identities(token) && token.flags == 1
 +}
 +
++// Bounded lab fixture: each network/vsock connection closes before export.
++// Resident network state and persistent socket migration remain unsupported.
++fn io_test() -> bool {
++    crate::noncoherent::enabled() && !resident_enabled()
++        && std::env::var("FC_DIRTY_IO_TEST").as_deref() == Ok("1")
++}
++
 +pub(crate) fn validate_live(vmm: &Vmm) -> Result<(), VmmError> {
 +    if !(1..=MAX_VCPUS).contains(&vmm.machine_config.vcpu_count)
 +        || vmm.machine_config.huge_pages != HugePageConfig::None
@@ -1769,6 +1776,7 @@ index 0000000..637dd03
 +    vmm.device_manager.for_each_virtio_device(|kind, dev| {
 +        valid &= match kind {
 +            VirtioDeviceType::Block => matches!(dev.as_any().downcast_ref::<Block>(), Some(Block::Virtio(b)) if b.read_only),
++            VirtioDeviceType::Net | VirtioDeviceType::Vsock => io_test(),
 +            _ => false,
 +        };
 +    });
@@ -1833,7 +1841,7 @@ index 0000000..637dd03
 +            Some(crate::noncoherent::collect(vm).map_err(VmmError::DaxHandoff)?)
 +        } else { None };
 +
-+        if resident_enabled() {
++        if resident_enabled() || io_test() {
 +            let VirtioDevices::Mmio(mmio) = &mut self.device_manager.virtio_devices else { unreachable!() };
 +            mmio.park_direct(events);
 +        }
@@ -2094,8 +2102,7 @@ index 0000000..637dd03
 +    let VirtioDevicesState::Mmio(devs) = &state.devices.virtio_state else {
 +        return Err(invalid("direct requires MMIO"));
 +    };
-+    if !devs.net_devices.is_empty()
-+        || devs.vsock_device.is_some()
++    if (!io_test() && (!devs.net_devices.is_empty() || devs.vsock_device.is_some()))
 +        || devs.entropy_device.is_some()
 +        || devs.memory_device.is_some()
 +        || !devs.pmem_devices.is_empty()

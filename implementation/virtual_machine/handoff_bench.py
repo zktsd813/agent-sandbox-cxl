@@ -343,7 +343,8 @@ class HandoffController(Controller):
                 FC_PREFAULT_RANGES=s.directory+'/prefault-ranges.json',
                 FC_PREFAULT_REPORT=s.directory+'/prefault-report.json',
                 FC_PREFAULT_ACTIVATE='1' if self.args.prefault_activate else '0')
-        resident = s.direct
+        resident = s.direct and not getattr(self.args, "mixed_io", False)
+        if getattr(self.args, "mixed_io", False): env["FC_DIRTY_IO_TEST"] = "1"
         if resident:
             env.update(FC_DAX_RESIDENT="1", FC_RESIDENT_NATIVE="1",
                 FC_RESIDENT_BLOCK_PATH="/disk/sandbox.raw")
@@ -433,6 +434,9 @@ class HandoffController(Controller):
                 'is_read_only': True, 'cache_type': 'Writeback', 'io_engine': self.io_engine}}
         if getattr(self.args, 'dirty_ledger', False):
             components['/machine-config']['track_dirty_pages'] = True
+        if getattr(self.args, 'mixed_io', False):
+            components['/network-interfaces/net'] = {'iface_id':'net','host_dev_name':'fcnet0','guest_mac':'06:00:ac:1f:00:02'}
+            components['/vsock'] = {'guest_cid':3,'uds_path':self.root+'/io.sock'}
         for path, body in components.items():
             self.api(s.role, s.directory, path, 'PUT', body)
         self.api(s.role, s.directory, '/actions', 'PUT', {'action_type': 'InstanceStart'})
@@ -863,6 +867,91 @@ def trajectory_replay(c, s, report, save):
     c.demote(s)
 
 
+def mixed_io(args):
+    """Exercise all RAM writers with closed I/O connections and fresh VMM wrappers."""
+    from dirty_oracle import DirtyOracle
+    run, config = lab.current_run()
+    out = run / ('io-mix-' + str(time.time_ns()))
+    out.mkdir()
+    c = HandoffController(config, out, args)
+    s = c.sandboxes[0]
+    report = {'schema':'noncoherent-io-mix-v1', 'result':'running', 'arguments':vars(args),
+              'config':config, 'transitions':c.transitions, 'receipts':c.receipts, 'io':[]}
+    report['source_hashes'], report['source_reference'] = record_sources(HERE,
+        ('handoff_bench.py','io_mix.c','dirty_oracle.py','page_hash.c','firecracker.patch',
+         'kvm-dax-state.patch','swe-handoff-guest-run.sh','multi_vcpu.py'))
+    oracle = DirtyOracle(config, out, c.metadata_base+s.vm*64*MIB, c.kvm_arena, args.page_hash)
+    try:
+        lab.verify(argparse.Namespace(timeout=180))
+        report['storage_setup'] = c.setup()
+        c.configure_direct()
+        binary = Path(args.io_fixture).read_bytes()
+        for role in ('A','B'):
+            c.write_bytes(role, '/lab/io-mix', binary, 'install-io', after='chmod 755 /lab/io-mix')
+            c.shell(role, '/lab/io-mix tap fcnet0 172.31.0.1', 'L1-only-tap')
+        report['boot'] = c.boot_vm(s)
+        identity = c.command_vm(s, 'identity')
+        c.promote(s)
+        generation = 0
+        for epoch in range(1, 2*args.iterations+1):
+            c.trace_command(s,'io_start',str(epoch),event='trace_io_started')
+            raw, host_file = c.shell(s.role, f'/lab/io-mix host {epoch} {c.root}/io.sock', 'io-host')
+            require(f'IO_MIX_HOST_PASS {epoch}' in raw, 'I/O sender did not verify reply')
+            guest = c.trace_command(s,'io_finish',str(epoch),event='trace_io_result')
+            payload = guest['receipt']['payload']
+            require(payload == {'epoch':epoch,'ram_bytes':16*MIB,'block_bytes':MIB,
+                    'udp_bytes':16384,'vsock_bytes':65536,'checksum':8355840}, 'I/O payload verification failed')
+            report['io'].append({'source':s.role,'epoch':epoch,'host_file':host_file,'guest':guest})
+            source, old_directory = s.role, s.directory
+            c.pause(s)
+            c.api(source,old_directory,'/actions','PUT',{'action_type':'DirectExport'})
+            state = c.fetch_bytes(source,old_directory+'/direct-export.json','io-direct-state')
+            manifest = c.fetch_bytes(source,s.manifest_path,'io-sealed-manifest')
+            token = json.loads(state)['token']
+            require(token['generation']==generation+1 and token['vm_creates']==1
+                    and token['vcpu_creates']==args.vcpus, 'I/O test recreated or skipped the KVM graph')
+            generation = token['generation']
+            nfs.stop_fc(c.vms[source],old_directory)
+            c.shell(source,source_fence_script(old_directory),'io-source-fence')
+            destination = 'B' if source=='A' else 'A'
+            state_path = f'{c.root}/io-state-{epoch}.json'
+            manifest_path = f'{c.root}/io-manifest-{epoch}.json'
+            c.write_bytes(destination,state_path,state,'io-state-transfer')
+            c.write_bytes(destination,manifest_path,manifest,'io-manifest-transfer')
+            # This socket belongs only to the fenced previous wrapper in this L1.
+            c.shell(destination,f'rm -f {c.root}/io.sock','io-retired-socket')
+            s.role, s.epoch = destination, s.epoch+1
+            c.start_vm(s,restore_manifest=manifest_path,direct_import=state_path,purpose='mixed-import')
+            c.api(destination,s.directory,'/actions','PUT',{'action_type':'InstanceStart'})
+            c.resume(s)
+            c.same_identity(identity,c.command_vm(s,'identity'))
+            c.transitions.append({'kind':'mixed-direct','source':source,'destination':destination,
+                                  'generation':generation,'token':token,'result':'passed'})
+            lab.save_json(out/'report.json',report)
+        c.demote(s)
+        report['result'] = 'passed'
+    except BaseException as error:
+        report.update(result='failed',error=repr(error))
+        raise
+    finally:
+        try:
+            oracle.close()
+        except Exception as error:
+            report.update(result='failed',oracle_error=repr(error))
+        report['dirty_oracle'] = oracle.rows
+        for role,directory in reversed(c.active):
+            try:
+                nfs.stop_fc(c.vms[role],directory)
+                c.fetch_bytes(role,directory+'/vmm.log','io-final-vmm')
+                c.fetch_bytes(role,directory+'/stderr.log','io-final-stderr')
+            except Exception as error:
+                report.setdefault('collection_errors',[]).append(repr(error))
+        for keeper in getattr(c,'keepalives',[]):
+            nfs.stop_fc(c.vms[keeper['role']],keeper['directory'])
+        lab.save_json(out/'report.json',report)
+        print('IO_MIX_REPORT '+str(out/'report.json'),flush=True)
+
+
 def resident_measure(args):
     """Exercise the actual resident device/mapper path with a shared guest ACK.
 
@@ -960,6 +1049,8 @@ def resident_measure(args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--resident-bench', choices=('idle','busy'))
+    parser.add_argument('--mixed-io', action='store_true')
+    parser.add_argument('--io-fixture')
     parser.add_argument('--iterations',type=int,default=100)
     parser.add_argument('--warmup',type=int,default=10)
     parser.add_argument('--profile',action='store_true')
@@ -992,6 +1083,9 @@ def main():
     require(args.inflight_handoff_index is None or (args.mode == 'direct' and not args.full_audit),
             'In-flight test requires direct runtime mode')
     require(not args.kernel_trace or args.mode == 'direct', 'Kernel tracing requires direct mode')
+    if args.mixed_io:
+        require(args.mode=='direct' and args.dirty_ledger and args.io_fixture and args.memory_mib==2048, 'Mixed I/O requires tracked direct and the fixture binary')
+        return mixed_io(args)
     if args.resident_bench:
         require(args.mode=='direct' and args.memory_mib==128, 'Resident benchmark needs a 128MiB direct VM')
         return resident_measure(args)
