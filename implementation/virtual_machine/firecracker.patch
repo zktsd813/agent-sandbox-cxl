@@ -1562,10 +1562,10 @@ index 2a75945..fe91a5d 100644
      type ConstructorArgs = MmioTransportConstructorArgs;
 diff --git a/src/vmm/src/direct.rs b/src/vmm/src/direct.rs
 new file mode 100644
-index 0000000..8363b29
+index 0000000..5373bc5
 --- /dev/null
 +++ b/src/vmm/src/direct.rs
-@@ -0,0 +1,971 @@
+@@ -0,0 +1,963 @@
 +// Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 +// SPDX-License-Identifier: Apache-2.0
 +
@@ -1966,17 +1966,9 @@ index 0000000..8363b29
 +            timing.mark("unbind_ioevents");
 +            vm.dax_direct_handoff(false)?;
 +            timing.mark("export_detach_ioctls");
-+            // PEEK is a read-only global metadata operation; source VM ioctls are now revoked.
-+            if unsafe {
-+                libc::ioctl(
-+                    vm.kvm().fd.as_raw_fd(),
-+                    (read_ioctl() | 4) as _,
-+                    &mut state.token as *mut HandoffToken,
-+                )
-+            } < 0
-+            {
-+                return Err(io::Error::last_os_error());
-+            }
++            // Detach already returned this token. Retain its host-DRAM copy;
++            // reading the shared graph again after relinquishing ownership is forbidden.
++            state.token=vm.exported_token()?;
 +            timing.mark("peek_token");
 +
 +            if resident_enabled() {
@@ -6003,7 +5995,7 @@ index 5af0b76..18fc374 100644
                  (NotAllowed(_), NotAllowed(_))
                  | (SavedState(_), SavedState(_))
 diff --git a/src/vmm/src/vstate/vm.rs b/src/vmm/src/vstate/vm.rs
-index dfedd64..31e7a7b 100644
+index dfedd64..24a48ae 100644
 --- a/src/vmm/src/vstate/vm.rs
 +++ b/src/vmm/src/vstate/vm.rs
 @@ -7,9 +7,10 @@
@@ -6019,18 +6011,19 @@ index dfedd64..31e7a7b 100644
  use std::sync::{Arc, Barrier, Mutex, MutexGuard};
  
  #[cfg(target_arch = "x86_64")]
-@@ -63,6 +64,10 @@ pub struct RoutingEntry {
+@@ -63,6 +64,11 @@ pub struct RoutingEntry {
  /// Architecture independent parts of a VM.
  #[derive(Debug)]
  pub struct VmCommon {
 +    dax_detached: AtomicBool,
++    dax_export_token: Mutex<Option<crate::direct::HandoffToken>>,
 +    /// This userspace wrapper adopted an existing direct-handoff KVM graph.
 +    pub(crate) dax_imported: bool,
 +    dax_irqs: Mutex<Vec<(EventFd, u32)>>,
      /// The KVM file descriptor used to access this KvmVm.
      pub fd: VmFd,
      max_memslots: u32,
-@@ -145,6 +150,7 @@ impl Vm {
+@@ -145,6 +151,7 @@ impl Vm {
  impl KvmVm {
      /// Create a KVM VM
      pub fn create_common(kvm: Kvm) -> Result<VmCommon, VmError> {
@@ -6038,7 +6031,7 @@ index dfedd64..31e7a7b 100644
          // It is known that KVM_CREATE_VM occasionally fails with EINTR on heavily loaded machines
          // with many VMs.
          //
-@@ -181,9 +187,20 @@ impl KvmVm {
+@@ -181,9 +188,21 @@ impl KvmVm {
              attempt += 1;
          };
  
@@ -6055,12 +6048,13 @@ index dfedd64..31e7a7b 100644
 -        Ok(VmCommon {
 +        let common = VmCommon {
 +            dax_detached: AtomicBool::new(false),
++            dax_export_token: Mutex::new(None),
 +            dax_imported: imported,
 +            dax_irqs: Mutex::new(Vec::new()),
              fd,
              max_memslots: kvm.max_nr_memslots(),
              guest_memory: GuestMemoryMmap::default(),
-@@ -197,14 +214,17 @@ impl KvmVm {
+@@ -197,14 +216,17 @@ impl KvmVm {
              vcpus_exit_evt,
              #[cfg(test)]
              fail_set_user_memory_region_in: AtomicU32::new(0),
@@ -6080,7 +6074,7 @@ index dfedd64..31e7a7b 100644
  
          let mut vcpus = Vec::with_capacity(vcpu_count as usize);
          for cpu_idx in 0..vcpu_count {
-@@ -277,6 +297,10 @@ impl KvmVm {
+@@ -277,6 +299,10 @@ impl KvmVm {
          }
          drop(handles);
          barrier.wait();
@@ -6091,7 +6085,7 @@ index dfedd64..31e7a7b 100644
  
          Ok(())
      }
-@@ -292,9 +316,7 @@ impl KvmVm {
+@@ -292,9 +318,7 @@ impl KvmVm {
          if handles
              .iter()
              .map(|handle| {
@@ -6102,7 +6096,7 @@ index dfedd64..31e7a7b 100644
              })
              .any(|response| !matches!(response, Ok(crate::VcpuResponse::Paused)))
          {
-@@ -303,6 +325,10 @@ impl KvmVm {
+@@ -303,6 +327,10 @@ impl KvmVm {
          Ok(())
      }
  
@@ -6113,7 +6107,7 @@ index dfedd64..31e7a7b 100644
      /// Sends a resume event to all vCPUs and waits for acknowledgement.
      pub fn resume_vcpus(&self) -> Result<(), crate::VmmError> {
          let mut handles = self.vcpus_handles();
-@@ -314,9 +340,7 @@ impl KvmVm {
+@@ -314,9 +342,7 @@ impl KvmVm {
          if handles
              .iter()
              .map(|handle| {
@@ -6124,7 +6118,7 @@ index dfedd64..31e7a7b 100644
              })
              .any(|response| !matches!(response, Ok(crate::VcpuResponse::Resumed)))
          {
-@@ -329,10 +353,25 @@ impl KvmVm {
+@@ -329,10 +355,25 @@ impl KvmVm {
      pub fn save_vcpu_states(
          &self,
      ) -> Result<Vec<crate::vstate::vcpu::VcpuState>, crate::persist::MicrovmStateError> {
@@ -6150,7 +6144,7 @@ index dfedd64..31e7a7b 100644
              handle
                  .send_event(crate::VcpuEvent::SaveState)
                  .map_err(MicrovmStateError::SignalVcpu)?;
-@@ -542,11 +581,158 @@ impl KvmVm {
+@@ -542,11 +583,163 @@ impl KvmVm {
          Ok(())
      }
  
@@ -6194,6 +6188,10 @@ index dfedd64..31e7a7b 100644
 +        }
 +        self.common.dax_detached.store(false, Ordering::Release);
 +        Ok(())
++    }
++
++    pub(crate) fn exported_token(&self) -> io::Result<crate::direct::HandoffToken> {
++        self.common.dax_export_token.lock().unwrap().clone().ok_or_else(||io::Error::other("detached token absent"))
 +    }
 +
 +    pub(crate) fn direct_is_detached(&self) -> bool {
@@ -6290,6 +6288,7 @@ index dfedd64..31e7a7b 100644
 +            if unsafe { libc::ioctl(self.fd().as_raw_fd(), (read | 2) as _, &mut meta) } < 0 {
 +                return Err(std::io::Error::last_os_error());
 +            }
++            *self.common.dax_export_token.lock().unwrap()=Some(meta.clone());
 +            self.common.dax_detached.store(true, Ordering::Release);
 +        }
 +        info!(
@@ -6309,7 +6308,7 @@ index dfedd64..31e7a7b 100644
      /// Gets a reference to this [`KvmVm`]'s [`GuestMemoryMmap`] object
      pub fn guest_memory(&self) -> &GuestMemoryMmap {
          &self.common.guest_memory
-@@ -666,6 +852,13 @@ impl KvmVm {
+@@ -666,6 +859,13 @@ impl KvmVm {
      /// Register a device IRQ
      pub fn register_irq(&self, fd: &EventFd, gsi: u32) -> Result<(), errno::Error> {
          self.common.fd.register_irqfd(fd, gsi)?;
