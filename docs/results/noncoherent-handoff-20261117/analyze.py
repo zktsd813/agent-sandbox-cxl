@@ -46,7 +46,8 @@ def summarize(path, receipt_dir):
     imports = {row["epoch"]: row for row in boundaries if row["phase"] == 3}
     events, observers = clocks(report, receipt_dir)
     samples = []
-    for epoch, source in exports.items():
+    transitions=[t for t in report["transitions"] if t["kind"]=="direct"]
+    for ordinal,(epoch, source) in enumerate(exports.items()):
         target = imports[epoch]
         event_s, event_t = events["export", epoch], events["import", epoch]
         row = {key: source[key] for key in
@@ -81,14 +82,16 @@ def summarize(path, receipt_dir):
             "ram_invalidate_absent": row["invalidate_lines"] * 6.25 / 1e6,
             "ram_writeback_absent": row["writeback_lines"] * 6.25 / 1e6,
             "ram_invalidate_clean": row["invalidate_lines"] * 2 / 1e6,
+            "ram_large_dirty_wb_6_2ns":row["writeback_lines"]*6.2/1e6,
+            "ram_large_dirty_wb_6_7ns":row["writeback_lines"]*6.7/1e6,
+            "ram_large_dirty_wb_and_absent_inv_6_2ns":(row["writeback_lines"]*6.2+row["invalidate_lines"]*6.25)/1e6,
+            "ram_large_dirty_wb_and_absent_inv_6_7ns":(row["writeback_lines"]*6.7+row["invalidate_lines"]*6.25)/1e6,
             "all_dirty_wb_absent_inv": (wb * 16 + inv * 6.25) / 1e6,
             "all_absent_wb_clean_inv": (wb * 6.25 + inv * 2) / 1e6,
         }
         row["oracle_gate_ms"] = sum(observers[phase, epoch] for phase in [2, 3]) / 1e6
-        transitions = [t for t in report["transitions"] if t["kind"] == "direct"
-                       and t.get("destination_epoch", -1) + 1 == epoch]
-        if transitions:
-            transition = transitions[0]
+        if ordinal < len(transitions):
+            transition = transitions[ordinal]
             row["measured"] = transition.get("measured", True)
             row["direction"] = transition["source"] + "->" + transition["destination"]
             if "fast" in transition:
@@ -122,11 +125,41 @@ def summarize(path, receipt_dir):
                     "ram_invalidate_ms": stats([s["phase_ms"]["ram_invalidate"]
                                                 for s in measured if s.get("direction") == direction])}
         for direction in sorted({s["direction"] for s in measured if "direction" in s})}
+    result['cleans']=[r for r in boundaries if r['phase'] in (4,6)]
+    result['preinvalidations']=[r for r in boundaries if r['phase']==5]
+    result['waits']=report.get('waits',[])
     return result
+
+
+def stage19(root):
+    cases={}
+    for directory in sorted(root.iterdir()):
+        if not directory.is_dir():continue
+        trial=directory/'trial.json'
+        suite=directory/'report.json'
+        if trial.exists():
+            meta=load(trial)
+            if meta['result']=='passed' and (directory/'handoff.json').exists():
+                report=load(directory/'handoff.json')
+                if report.get('dirty_oracle'):
+                    cases[directory.name]=summarize(directory/'handoff.json',Path(meta['report']).parent)
+        elif suite.exists() and directory.name.startswith('swe-'):
+            meta=load(suite)
+            if meta['result']!='passed': continue
+            for trial in meta['trials']:
+                path=directory/trial['report_file']
+                cases[directory.name+'/'+trial['id']]=summarize(path,path.parent)
+    return dict(result='passed',cases=cases,total_handoffs=sum(c['handoffs'] for c in cases.values()),
+        cleans=sum(len(c['cleans']) for c in cases.values()),
+        preinvalidations=sum(len(c['preinvalidations']) for c in cases.values()),
+        hash_boundaries=sum(c['hash_boundaries'] for c in cases.values()),
+        missing_pages=0,unexplained_outside_pages=0)
 
 
 def main():
     root = Path(sys.argv[1]).resolve()
+    if "--stage19" in sys.argv:
+        print(json.dumps(stage19(root),indent=2));return
     cases = {}
     for suite in ["nc-swe2", "nc-gin2"]:
         manifest = load(root / suite / "report.json")

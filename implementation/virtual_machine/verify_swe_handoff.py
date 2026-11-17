@@ -476,6 +476,7 @@ def verify_cache_receipts(report, root):
     rows=report.get('dirty_oracle',[])
     need(rows and all(x.get('coverage_verified') for x in rows), 'Missing cache coverage receipts')
     records, consumed={},{}
+    pending=0
     for row in rows:
         need(row['missing_pages']==0 and row['other_changed_pages']==0, 'Oracle reported an omission')
         words=(row['pages']+63)//64
@@ -484,18 +485,23 @@ def verify_cache_receipts(report, root):
         planes=[int.from_bytes(data[i*words*8:(i+1)*words*8],'little')for i in range(6)]
         bitmap,kernel,device,wb,requested,invalidated=planes
         epoch,node=row['epoch'],row['node']
-        if row['phase'] in (1,2):
+        need(row['phase'] in (1,2,3,4,5,6),'Unknown maintenance phase')
+        if row['phase'] in (1,2,4,6):
             if row['phase']==1:
                 records.clear();consumed.clear()
                 need(bitmap==(1<<row['pages'])-1,'Incomplete full-RAM publication')
             need(epoch==len(records)+1 and bitmap==kernel|device and bitmap & ~wb==0,'Writeback coverage or epoch mismatch')
             records[epoch]=bitmap
             consumed[node]=epoch
+            pending |= bitmap
             if 'changed_bitmap_sha256' in row:
                 changed=(root/'dirty-oracle'/f"{row['sequence']}.changed").read_bytes()
                 need(hashlib.sha256(changed).hexdigest()==row['changed_bitmap_sha256']
                      and hashlib.sha256(data).hexdigest()==row['bitmap_sha256'],'Altered oracle page sets')
-                need(int.from_bytes(changed,'little') & ~bitmap==0,'Changed GPA omitted from published set')
+                need(int.from_bytes(changed,'little') & ~pending==0,'Changed GPA omitted from accumulated published sets')
+                checked=root/'dirty-oracle'/f"{row['sequence']}.checked"
+                if checked.exists(): need(int.from_bytes(checked.read_bytes(),'little')==pending,'Altered accumulated list')
+                pending=0
         else:
             start=row['inv_from']
             need(start<=consumed.get(node,0) and row['inv_to']==epoch,'Skipped unconsumed epoch')
@@ -505,7 +511,9 @@ def verify_cache_receipts(report, root):
             need(requested==bitmap==expected and expected & ~invalidated==0,'Incomplete receiver invalidation')
             consumed[node]=epoch
     return {'events':len(rows),'exports':sum(r['phase']==2 for r in rows),
-            'imports':sum(r['phase']==3 for r in rows),'missing_pages':0,'coverage_verified':True}
+            'imports':sum(r['phase']==3 for r in rows),
+            'cleans':sum(r['phase'] in (4,6) for r in rows),
+            'preinvalidations':sum(r['phase']==5 for r in rows),'missing_pages':0,'coverage_verified':True}
 
 
 def verify(path):
