@@ -901,6 +901,7 @@ def mixed_io(args):
                     'udp_bytes':16384,'vsock_bytes':65536,'checksum':8355840}, 'I/O payload verification failed')
             report['io'].append({'source':s.role,'epoch':epoch,'host_file':host_file,'guest':guest})
             source, old_directory = s.role, s.directory
+            identity = c.command_vm(s, 'identity')
             c.pause(s)
             c.api(source,old_directory,'/actions','PUT',{'action_type':'DirectExport'})
             state = c.fetch_bytes(source,old_directory+'/direct-export.json','io-direct-state')
