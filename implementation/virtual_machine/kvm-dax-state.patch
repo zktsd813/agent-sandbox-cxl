@@ -285,7 +285,7 @@ index 995eb50..c24cead 100644
  
  void kvm_get_ioapic(struct kvm *kvm, struct kvm_ioapic_state *state)
 diff --git a/arch/x86/kvm/lapic.c b/arch/x86/kvm/lapic.c
-index 3e977db..2ca6b5e 100644
+index 3e977db..e81a5dc 100644
 --- a/arch/x86/kvm/lapic.c
 +++ b/arch/x86/kvm/lapic.c
 @@ -211,7 +211,7 @@ static void kvm_apic_map_free(struct rcu_head *rcu)
@@ -318,6 +318,15 @@ index 3e977db..2ca6b5e 100644
  			new = NULL;
  			if (r == -E2BIG) {
  				cond_resched();
+@@ -476,7 +476,7 @@ void kvm_recalculate_apic_map(struct kvm *kvm)
+ 			       UPDATE_IN_PROGRESS, CLEAN);
+ 	mutex_unlock(&kvm->arch.apic_map_lock);
+ 
+-	if (old)
++	if (old && !kvm_dax_contains(old))
+ 		call_rcu(&old->rcu, kvm_apic_map_free);
+ 
+ 	kvm_make_scan_ioapic_request(kvm);
 @@ -2479,9 +2479,9 @@ void kvm_free_lapic(struct kvm_vcpu *vcpu)
  		static_branch_slow_dec_deferred(&apic_sw_disabled);
  
@@ -428,7 +437,7 @@ index 253fb20..cc813a8 100644
  #define PT_WRITABLE_SHIFT 1
  #define PT_USER_SHIFT 2
 diff --git a/arch/x86/kvm/mmu/mmu.c b/arch/x86/kvm/mmu/mmu.c
-index f7901cb..8be7ed0 100644
+index f7901cb..cee4c77 100644
 --- a/arch/x86/kvm/mmu/mmu.c
 +++ b/arch/x86/kvm/mmu/mmu.c
 @@ -713,7 +713,7 @@ static void mmu_free_memory_caches(struct kvm_vcpu *vcpu)
@@ -510,7 +519,7 @@ index f7901cb..8be7ed0 100644
  	if (!page)
  		return -ENOMEM;
  
-@@ -6045,6 +6046,113 @@ int kvm_mmu_create(struct kvm_vcpu *vcpu)
+@@ -6045,6 +6046,114 @@ int kvm_mmu_create(struct kvm_vcpu *vcpu)
  	return ret;
  }
  
@@ -544,14 +553,15 @@ index f7901cb..8be7ed0 100644
 +int kvm_mmu_dax_ept_rebind(struct kvm_vcpu *vcpu, bool attach)
 +{
 +	/* Native metadata is stable in this kernel for never-reused DAX pages. */
-+	static u64 seen_head, seen_vm;
++	static u64 seen_head, seen_vm, seen_allocation;
 +	struct kvm_dax_shared *s = kvm_dax_shared();
 +	struct kvm_mmu_page *sp;
 +	u64 p, count = 0;
 +
-+	if (seen_vm != s->vm) {
++	if (seen_vm != s->vm || seen_allocation != s->allocation_id) {
 +		seen_head = 0;
 +		seen_vm = s->vm;
++        seen_allocation = s->allocation_id;
 +	}
 +	if (!tdp_mmu_enabled || !VALID_PAGE(vcpu->arch.mmu->root.hpa) ||
 +	    !kvm_dax_contains(__va(vcpu->arch.mmu->root.hpa)))
@@ -1408,10 +1418,10 @@ index 41cce50..ba06cbf 100644
  	return -ENOMEM;
 diff --git a/include/linux/kvm_dax.h b/include/linux/kvm_dax.h
 new file mode 100644
-index 0000000..a21a20a
+index 0000000..9c55269
 --- /dev/null
 +++ b/include/linux/kvm_dax.h
-@@ -0,0 +1,198 @@
+@@ -0,0 +1,199 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +#ifndef __LINUX_KVM_DAX_H
 +#define __LINUX_KVM_DAX_H
@@ -1462,6 +1472,7 @@ index 0000000..a21a20a
 +	u32 abi_version, vcpu_count;
 +	u64 source_tsc;
 +	struct kvm_dax_vcpu_state vcpus[KVM_DAX_MAX_VCPUS];
++    u64 allocation_id; /* Distinguish a new VM at the same virtual address. */
 +};
 +enum { KVM_DAX_EMPTY, KVM_DAX_OWNED, KVM_DAX_DETACHED, KVM_DAX_BUSY, KVM_DAX_FAILED };
 +struct kvm_dax_shared *kvm_dax_shared(void);
@@ -1789,10 +1800,10 @@ index 1b90acb..16a9c78 100644
  }
 diff --git a/virt/kvm/dax_pool.c b/virt/kvm/dax_pool.c
 new file mode 100644
-index 0000000..36a99a8
+index 0000000..8875b34
 --- /dev/null
 +++ b/virt/kvm/dax_pool.c
-@@ -0,0 +1,424 @@
+@@ -0,0 +1,426 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/* Single-owner laboratory allocator over an already bound device-DAX range. */
 +#include <linux/io.h>
@@ -1807,6 +1818,7 @@ index 0000000..36a99a8
 +#include <linux/overflow.h>
 +#include <linux/uaccess.h>
 +#include <linux/capability.h>
++#include <linux/random.h>
 +
 +static struct dev_pagemap *dax_pgmap;
 +static phys_addr_t dax_phys;
@@ -1893,6 +1905,7 @@ index 0000000..36a99a8
 +    ret=kvm_dax_select_vm(first);
 +    if (ret) return ret;
 +    memset(dax_vm,0,PAGE_SIZE);
++    dax_vm->allocation_id=get_random_u64() ?: 1;
 +    dax_vm->abi_version=KVM_DAX_ABI_VERSION;
 +    dax_vm->bump=PAGE_SIZE;
 +    dax_vm->kva=(unsigned long)dax_base;
@@ -2173,7 +2186,7 @@ index 0000000..36a99a8
 +			"vm_create_calls=%llu vcpu_create_calls=%llu\n",
 +			s->vm_create_calls, s->vcpu_create_calls);
 +    if (dax_vm) n += scnprintf(buffer+n,PAGE_SIZE-n,
-+        "vm_base=%llu vm_bump=%llu vm_capacity=%lu\n", kvm_dax_offset(dax_vm),s->bump,DAX_VM_BYTES);
++        "vm_base=%llu vm_bump=%llu vm_capacity=%lu allocation_id=%llu\n", kvm_dax_offset(dax_vm),s->bump,DAX_VM_BYTES,s->allocation_id);
 +	return n;
 +}
 +
