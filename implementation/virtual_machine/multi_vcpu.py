@@ -33,6 +33,10 @@ def main():
     p.add_argument("--measure", action="store_true", help="Hold quiet.lock exclusively")
     p.add_argument("--resident-bench", choices=("idle","busy"))
     p.add_argument("--assets", type=Path)
+    p.add_argument("--dirty-ledger", action="store_true")
+    p.add_argument("--dirty-oracle", action="store_true")
+    p.add_argument("--page-hash", type=Path)
+    p.add_argument("--pml", choices=("on", "off"), default="off")
     p.add_argument("--profile", action="store_true")
     p.add_argument("--resume-profile", action="store_true")
     p.add_argument("--kernel-mode", type=int, choices=(2,3), default=3)
@@ -84,6 +88,10 @@ def main():
                     "--l2-kernel", INPUTS / "guest-swe-build/vmlinux")
             # 2 x 4 GiB L1 RAM + one shared 2 GiB CXL file + ivshmem + 4 GiB reserve.
             budget = (2 * 4096 + 2048 + (64 if args.resident_bench else 4)) * 1024 * 1024
+            if args.resident_bench:
+                with (assets/'storage.raw').open('rb') as stream:
+                    os.posix_fadvise(stream.fileno(), 0, 0, os.POSIX_FADV_DONTNEED)
+            result['numa_hardware'] = subprocess.check_output(['numactl', '--hardware'], text=True)
             free = node0_free()
             result.update(node0_free_before_bytes=free, budget_bytes=budget,
                           reserve_bytes=4 * 1024**3)
@@ -92,6 +100,7 @@ def main():
             start = ["start", "--vcpus", max(4,args.vcpus+2), "--memory-mib",4096,
                 "--shared-mib",64 if args.resident_bench else 4,"--cxl-mib",2048,"--dax-handoff","--dax-guest",
                 "--dax-4k","--network-backend","socket","--memory-backing-dir","/dev/shm","--qemu",args.qemu]
+            start += ["--pml", args.pml]
             if args.resident_bench:
                 start += ["--migration-network","--home-storage-image",assets/"storage.raw"]
             run("start", *start)
@@ -131,6 +140,10 @@ def main():
                     "--iterations",args.iterations,"--warmup",args.warmup]
                 if args.profile: bench_args += ["--profile","--restore-timing"]
                 if args.resume_profile: bench_args += ["--resume-profile"]
+                if args.dirty_ledger: bench_args += ['--dirty-ledger']
+                if args.dirty_oracle:
+                    if not args.dirty_ledger or not args.page_hash: raise ValueError('Oracle requires ledger and hash tool')
+                    bench_args += ['--dirty-oracle', '--page-hash', args.page_hash.resolve()]
                 run("resident",*bench_args)
             else:
                 run("handoff", *bench_args)
@@ -139,6 +152,8 @@ def main():
             if len(reports) != 1:
                 raise RuntimeError("Expected exactly one handoff report")
             shutil.copy2(reports[0], args.output / "handoff.json")
+            if args.dirty_oracle:
+                shutil.copytree(reports[0].parent/'dirty-oracle', args.output/'dirty-oracle')
             if json.loads(reports[0].read_text())["result"] != "passed":
                 raise RuntimeError("Benchmark did not pass")
             result.update(result="passed", report=str(reports[0]), run=config["run"])

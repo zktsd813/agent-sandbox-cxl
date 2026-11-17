@@ -880,9 +880,13 @@ def resident_measure(args):
               'boundary':'source C CLOCK_MONOTONIC immediately before resident send/pause to acquire-observed remote guest ACK; 50us polling included',
               'idle':'one heartbeat sleeps 1ms; other vCPUs have no workload',
               'busy':'same pinned 512KiB checksum writers and futex ring as stage 15'}
-    sources = ('handoff_bench.py','resident_fast.py','resident_control.c','resident_wire.h',
+    sources = ('dirty_oracle.py','page_hash.c','handoff_bench.py','resident_fast.py','resident_control.c','resident_wire.h',
                'shared_probe.c','swe-handoff-guest-run.sh','multi_vcpu.py')
     report['source_hashes'],report['source_reference'] = record_sources(HERE,sources)
+    oracle = None
+    if args.dirty_oracle:
+        from dirty_oracle import DirtyOracle
+        oracle = DirtyOracle(config, out, c.metadata_base+s.vm*64*MIB, c.kvm_arena, args.page_hash)
     try:
         lab.verify(argparse.Namespace(timeout=180))
         c.setup()
@@ -936,6 +940,12 @@ def resident_measure(args):
         report.update(result='failed',error=repr(error))
         raise
     finally:
+        if oracle:
+            try:
+                oracle.close()
+            except Exception as exc:
+                report.update(result='failed', oracle_error=repr(exc))
+            report['dirty_oracle'] = oracle.rows
         for role,worker in getattr(c,'resident_workers',{}).items():
             for name in ('fc.log','vmm.log','stderr.log'):
                 try:c.fetch_bytes(role,worker['directory']+'/'+name,'final-'+role+'-'+name)
