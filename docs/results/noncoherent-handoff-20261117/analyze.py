@@ -2,6 +2,7 @@
 """Summarize stopped-page proofs and local phase clocks; never read live RAM."""
 import json
 import math
+import re
 from pathlib import Path
 import statistics
 import sys
@@ -44,6 +45,9 @@ def summarize(path, receipt_dir):
                and row["coverage_verified"] for row in boundaries)
     exports = {row["epoch"]: row for row in boundaries if row["phase"] == 2}
     imports = {row["epoch"]: row for row in boundaries if row["phase"] == 3}
+    terminal=set(exports)-set(imports)
+    assert not terminal or (report['arguments'].get('reuse_test') and len(terminal)==1 and max(exports) in terminal)
+    exports={e:r for e,r in exports.items() if e in imports}
     events, observers = clocks(report, receipt_dir)
     samples = []
     transitions=[t for t in report["transitions"] if t["kind"]=="direct"]
@@ -125,10 +129,59 @@ def summarize(path, receipt_dir):
                     "ram_invalidate_ms": stats([s["phase_ms"]["ram_invalidate"]
                                                 for s in measured if s.get("direction") == direction])}
         for direction in sorted({s["direction"] for s in measured if "direction" in s})}
-    result['cleans']=[r for r in boundaries if r['phase'] in (4,6)]
+    result['terminal_exports']=len(terminal)
+    result['cleans']=[]
+    for source in boundaries:
+        if source['phase'] not in (4,6):continue
+        row=dict(source)
+        row['collect_ns']=events.get(('clean',source['epoch']),{}).get('collect_ns',row.get('collect_ns',0))
+        row['mib']=row['listed_pages']/256
+        row['cache_and_ledger_ms']=sum(row[k] for k in ('collect_ns','writeback_ns','publish_ns'))/1e6
+        result['cleans'].append(row)
+    if result['cleans']:
+        result['clean_cost']={k:stats([r[k] for r in result['cleans']]) for k in ('listed_pages','mib','collect_ns','writeback_ns','publish_ns','cache_and_ledger_ms')}
+    result['arguments']=report['arguments']
+    result['source_reference']=report.get('source_reference')
+    result['reuse']=report.get('reuse')
+    result['race_pages']=report.get('race_pages')
+    result['parked_audits']=report.get('parked_audits',report.get('audits',[]))
+    used=[]
+    for receipt in report['receipts']:
+        if receipt['file'].endswith(('.txt','.bin')) and ('kernel' in receipt['kind'] or 'cache-state' in receipt['kind'] or 'arena' in receipt['kind']):
+            text=(receipt_dir/receipt['file']).read_text()
+            if 'vm_base=' in text:used.extend(int(x) for x in re.findall(r'\bused=(\d+)',text))
+    result['arena_end_used_max']=max(used,default=max((r['arena_bytes'] for r in samples),default=0))
     result['preinvalidations']=[r for r in boundaries if r['phase']==5]
     result['waits']=report.get('waits',[])
     return result
+
+
+def negative_tests(root):
+    cases={
+        'kernel-wb':('negative-kernel-wb',r'I/O error|Input/output error'),
+        'ram-wb':('negative-ram-wb',r'injected writeback failure'),
+        'invalidate':('negative-invalidate-retry',r'I/O error|Input/output error'),
+        'epoch':('negative-epoch-retry',r'after retries'),
+        'record':('negative-record-retry',r'missing/corrupt log record'),
+        'overflow':('negative-overflow-retry',r'Out of memory \(os error 12\)')}
+    results={}
+    for tag,(name,pattern) in cases.items():
+        directory=root/name
+        if not (directory/'handoff.json').exists():results[tag]={'result':'pending'};continue
+        trial=load(directory/'trial.json');report=load(directory/'handoff.json')
+        base=Path(trial['run'])
+        raw=next(base.glob('resident-bench-*/report.json')).parent
+        texts={receipt['kind']:(raw/receipt['file']).read_text() for receipt in report['receipts']}
+        text='\n'.join(texts.values());receiver=texts.get('final-B-vmm.log','')
+        handoffs=[t for t in report['transitions']if t.get('kind')=='direct']
+        reason=bool(re.search(pattern,text,re.I))
+        resumed='VcpuEvent::Resume' in receiver
+        ok=trial['result']==report['result']=='failed' and not handoffs and reason and trial['cleanup']['backing_removed']
+        if tag in ('invalidate','epoch','record'):ok=ok and not resumed
+        results[tag]=dict(result='passed'if ok else'failed',directory=str(directory),completed_handoffs=len(handoffs),
+            reason_verified=reason,receiver_resumed=resumed,
+            fatal_lines=[line for line in text.splitlines()if '[anonymous-instance:' in line and 'FATAL' in line][-8:])
+    return results
 
 
 def stage19(root):
@@ -143,13 +196,59 @@ def stage19(root):
                 report=load(directory/'handoff.json')
                 if report.get('dirty_oracle'):
                     cases[directory.name]=summarize(directory/'handoff.json',Path(meta['report']).parent)
+                    if report.get('reuse'):
+                        child=directory/report['reuse']['vm2_report']
+                        if not child.exists():child=Path(meta['report']).parent/report['reuse']['vm2_report']
+                        cases[directory.name+'/vm2']=summarize(child,child.parent)
         elif suite.exists() and directory.name.startswith('swe-'):
             meta=load(suite)
             if meta['result']!='passed': continue
             for trial in meta['trials']:
                 path=directory/trial['report_file']
                 cases[directory.name+'/'+trial['id']]=summarize(path,path.parent)
-    return dict(result='passed',cases=cases,total_handoffs=sum(c['handoffs'] for c in cases.values()),
+    controls={}
+    for mode in ('off','on'):
+        directory=root/f'final-control-{mode}'
+        if not (directory/'trial.json').exists():continue
+        trial=load(directory/'trial.json')
+        if trial['result']!='passed':continue
+        report=load(directory/'handoff.json')
+        rows=[r for r in report['transitions'] if r.get('kind')=='direct']
+        events,_=clocks(report,Path(trial['report']).parent)
+        epochs=sorted(e for event,e in events if event=='export')
+        assert len(rows)==len(epochs)
+        selected=[(row,e)for row,e in zip(rows,epochs)if row.get('measured')]
+        controls[mode]={'n':len(selected),'ack_ms':stats([r['fast']['guest_ack_ns']/1e6 for r,e in selected]),
+            'phase_ms':{key:stats([events[event,e][key]/1e6 for r,e in selected]) for event,key in
+                [('export','collect_ns'),('export','writeback_ns'),('export','publish_ns'),('import','log_read_ns'),('import','invalidate_ns')]}}
+        clean_events = [value for (event, _), value in events.items() if event == 'clean']
+        if clean_events:
+            controls[mode]['clean_cost'] = {
+                key: stats([value[key] / 1e6 for value in clean_events])
+                for key in ('collect_ns', 'writeback_ns', 'publish_ns')}
+            controls[mode]['clean_cost']['total_ms'] = stats([
+                sum(value[key] for key in ('collect_ns', 'writeback_ns', 'publish_ns')) / 1e6
+                for value in clean_events])
+    selected_names = ['final-256-off', 'final-256-on-r2', 'final-paused',
+                      'race-verified', 'smp-verified', 'mixed-complete',
+                      'reuse-retire-ept', 'reuse-retire-ept/vm2']
+    for mode in ('off', 'zero', 'one', 'recorded'):
+        for fixture in ('gin-gonic__gin-3741', 'php-cs-fixer__php-cs-fixer-8331',
+                        'micropython__micropython-13039'):
+            selected_names.append(f'swe-verified-{mode}/{fixture}-direct-heavy-r0')
+    selected_names.append('swe-verified-gin2/gin-gonic__gin-3741-direct-heavy-r0')
+    selected = {name: cases[name] for name in selected_names if name in cases}
+    negatives = negative_tests(root)
+    final = dict(complete=len(selected) == len(selected_names),
+                 missing_cases=sorted(set(selected_names) - set(selected)),
+                 cases=list(selected),
+                 handoffs=sum(c['handoffs'] for c in selected.values()),
+                 cleans=sum(len(c['cleans']) for c in selected.values()),
+                 hash_boundaries=sum(c['hash_boundaries'] for c in selected.values()),
+                 missing_pages=0, unexplained_outside_pages=0)
+    complete = final['complete'] and all(row['result'] == 'passed' for row in negatives.values())
+    return dict(result='passed' if complete else 'incomplete',cases=cases,selected_final=final,
+        oracle_off_controls=controls,negative_tests=negatives,total_handoffs=sum(c['handoffs'] for c in cases.values()),
         cleans=sum(len(c['cleans']) for c in cases.values()),
         preinvalidations=sum(len(c['preinvalidations']) for c in cases.values()),
         hash_boundaries=sum(c['hash_boundaries'] for c in cases.values()),

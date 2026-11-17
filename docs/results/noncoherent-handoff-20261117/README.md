@@ -1,6 +1,7 @@
 # 비일관 CXL hand-off (2026-11-17)
 
-0·1·2단계 결과를 기록한다.
+0~4단계 결과를 기록한다. 0~2단계 본문은 18 실행 당시 기록이다.
+3·4단계와 그 한계는 아래에 따로 덧붙였다.
 Compute Express Link(CXL)의 실제 비일관 장치는 쓰지 않았다.
 물리 host L0의 Non-Uniform Memory Access(NUMA) node 0만 썼다.
 두 바깥 가상 머신(VM, Virtual Machine)을 L1 A/B라 부른다.
@@ -244,7 +245,7 @@ Dirty WB/absent invalidation을 상한 쪽 가정으로,
 absent WB/clean cached invalidation을 다른 cache 상태의 비교로 함께 둔다.
 이는 모든 CXL 접근의 엄밀한 상·하한이라는 뜻은 아니다.
 
-## 남은 위험과 다음 brief
+## 18 종료 시점의 남은 위험과 다음 brief
 
 이 lab은 coherent backing이다. 내려쓰기를 빼도 값이 우연히 맞을 수 있다.
 이번 정확성 근거는 page 목록의 완전성과 실제 발행한 범위의 덮임이다.
@@ -260,7 +261,7 @@ Network/vsock은 연결을 닫은 혼합 direct fixture로 검증했다.
 이어 LLM 대기 중 미리 정리와 수신 측 미리 무효화를 붙일 수 있다.
 실제 비일관 multi-host 장치 시험은 별도 승인 범위에서 해야 한다.
 
-## 정리와 저장 공간
+## 18의 정리와 저장 공간
 
 이 실행과 연결된 lab config 43개에서 살아 있는 소유 VM이 없음을 확인했다.
 소유한 공유 메모리 backing과 임시 hash 배열도 남지 않았다.
@@ -268,3 +269,231 @@ Network/vsock은 연결을 닫은 혼합 direct fixture로 검증했다.
 시작 때 .local 54 GiB, / 여유 134 GiB였다.
 실행은 약 2시간 30분이었다. 0~2단계의 요청된 본시험을 완료했다.
 Local commit만 만들었고 push하지 않았다.
+
+## 3단계: LLM 대기 중 미리 정리
+
+LLM(Large Language Model, 대규모 언어 모델) 응답을 기다리는 구간에 live clean을 넣었다.
+VM은 멈추지 않는다. 장치 emulation과 같은 VMM thread에서 실행한다.
+KVM_GET_DIRTY_LOG → Firecracker bitmap 수집 → RAM CLWB → SFENCE → record 발행 순서다.
+정지 clean 시험만 vCPU를 멈추고 입출력을 비운다.
+경합별 논리는 [설계 메모](../../../implementation/virtual_machine/NONCOHERENT.md)에 있다.
+
+받는 쪽은 새 record 알림을 받으면 미리 무효화하고 host DRAM의 consumed를 올린다.
+첫 attach 전의 cold observer도 처리한다. Hand-off 때는 마지막 record만 남는다.
+알림 처리가 끝나기 전에 다음 record를 발행하지 않는 단일 작성자 방식이다.
+독립적인 주기 reader와 ring overwrite의 동시 실행을 추가한 것은 아니다.
+
+RAM 유지보수는 mapper의 kernel direct map에서 실행한다.
+HVA(Host Virtual Address, host 가상 주소) page table을 다시 만드는 fault가 없다.
+수신만 바꾼 중간 구현에서는 같은 fault가 다음 송신 WB로 옮겨 갔다.
+그래서 송신 WB(Writeback, 내려쓰기)와 수신 무효화를 함께 옮겼다.
+Mapper는 불변 GPA(Guest Physical Address, guest 물리 주소) 표의 로컬 사본만 읽는다.
+비소유 observer는 공유 lease·epoch·stat을 쓰지 않는다.
+
+### 256 MiB 반복 대조
+
+방향별 warmup 10회, 측정 100회다. 각 arm은 총 220 hand-off다.
+두 arm 모두 kernel direct map을 쓴다. 아래 값은 측정 200회의 중앙값이다.
+
+| 항목 | 정리 없음 | 미리 정리 |
+|---|---:|---:|
+| Hand-off 목록 | 65,742 page / 256.805 MiB | 59 page / 0.230 MiB |
+| 장부 수집 | 1.734 ms | 0.867 ms |
+| 송신 RAM WB | 7.565 ms | 0.071 ms |
+| Record 발행 | 0.041 ms | 0.035 ms |
+| 수신 log 읽기 | 0.156 ms | 0.154 ms |
+| 수신 RAM 무효화 | 7.572 ms | 0.080 ms |
+| 객체 WB / 무효화 | 0.050 / 0.053 ms | 0.053 / 0.053 ms |
+
+수신 사전 무효화가 hand-off에서 덜어 낸 RAM 단계는 중앙값 차이 7.492 ms다.
+18의 HVA 경로 256 MiB 무효화 약 59.8 ms와 비교하면,
+정리 없이도 fault 없는 경로는 약 7.57 ms다. 서로 다른 실행의 비교다.
+객체·log·제어 비용과 최종 목록 수집 비용은 남는다.
+
+정답지 없는 별도 대조군도 각각 220회다. 측정 구간의 정지→guest ACK 중앙값은
+20.812 ms → 5.078 ms다. p95는 21.459 ms → 5.456 ms다.
+최초 2 GiB cold observer 무효화는 약 620 ms였다. 최초 준비 비용으로 따로 센다.
+이는 한 coherent host의 중첩 lab 결과다. 실제 비일관 CXL hand-off 시간은 아니다.
+고정 순서의 작은 arm 비교이며 무작위 반복 실험은 아니다.
+
+정리 1회의 목록 중앙값은 256.801 MiB다.
+장부 수집 1.745 ms + WB 7.240 ms + 발행 0.041 ms다.
+세 비용 합의 중앙값은 9.031 ms다. 수신 사전 처리와 알림 왕복은 별도다.
+이 220회 전체에는 warmup과 최초 정리가 들어 있다.
+수집 비용 p95는 107.220 ms, 최대 1,733.801 ms다.
+따라서 live clean의 지연 상한이나 항상 LLM 대기 안에 끝난다는 보장은 하지 않는다.
+정답지 없는 대조군도 정리 합 중앙값 8.997 ms, p95 317.204 ms, 최대 1,471.179 ms였다.
+대기 W는 tool 결과 수신부터 센다. 정리가 쓴 시간은 W에서 빼고 남은 시간만 잔다.
+실제 대기, 예정 대기, 초과 시간도 저장했다.
+
+### CXL 단가 환산
+
+18과 같은 64 byte line 단가를 유지했다.
+Dirty WB 16 ns, absent WB/무효화 6.25 ns, clean cached 무효화 2 ns다.
+마지막 수준 cache인 LLC(Last Level Cache)는 약 60 MB다.
+그보다 큰 목록에는 [기존 wbcost.jsonl](dcd-flush-cost/wbcost.jsonl)의 256 MiB·1 GiB dirty 행도 적용했다.
+이 행의 실제 명령은 CLFLUSHOPT다. 송신 WB의 대체 가정으로 약 6.2~6.7 ns/line을 썼다.
+큰 목록의 CLWB를 이번에 직접 측정한 값은 아니다. 기존 파일만 읽었고 장치는 접근하지 않았다.
+256 MiB 대조군의 RAM WB+무효화 환산은 다음과 같다.
+
+| 가정 | 정리 없음 | 미리 정리 뒤 잔여 |
+|---|---:|---:|
+| Dirty WB 16 ns + absent 무효화 6.25 ns | 93.617 ms | 0.084 ms |
+| 큰 목록 dirty 단가 대체 6.2~6.7 ns + absent 무효화 6.25 ns | 52.383~54.487 ms | 작은 잔여에는 위 행 사용 |
+
+객체·log·제어 line까지 18의 첫 가정으로 합치면 94.160 ms → 0.628 ms다.
+이는 cache 명령 부분만의 환산이다. 장부, 주소 변환, 정지·재개, 통신 시간을 포함하지 않는다.
+대기 구간으로 옮긴 WB와 무효화 비용이 사라지는 것은 아니다.
+
+### SWE와 정답지
+
+세 fixture의 전체 궤적에 무거운 명령 정책을 적용했다.
+W=0, 1초, 원시 궤적의 tool 결과→다음 assistant 응답 간격(최대 10초)을 비교했다.
+같은 batch의 다음 명령은 recorded W=0이다. 명령이 끝날 때마다 정리한다.
+최종 표와 단계별 분포는 아래 표와 summary.json의 stage3에 있다.
+
+단위는 MiB다. 각 cell은 목록의 중앙값(최대)이다. 각 조건은 fixture당 1회다.
+
+| Fixture | 조건별 hand-off | 정리 없음 | W=0 | W=1초 | 기록 간격 |
+|---|---:|---:|---:|---:|---:|
+| Gin | 3 | 198.047 (561.277) | 0.012 (0.180) | 0.266 (0.305) | 0.324 (0.363) |
+| PHP-CS-Fixer | 5 | 33.180 (55.199) | 0.141 (0.371) | 0.266 (0.324) | 0.324 (0.430) |
+| MicroPython | 6 | 28.695 (222.855) | 0.012 (0.156) | 0.275 (0.508) | 0.277 (0.512) |
+
+다음은 정리 없음 → W=1초의 RAM 단계 중앙값이다. 모든 W의 단계별 분포는 JSON에 있다.
+
+| Fixture | WB ms | 무효화 ms | 정리 1회 MiB 중앙값(최대) | 수집+WB+발행 ms 중앙값(최대) |
+|---|---:|---:|---:|---:|
+| Gin | 5.977 → 0.082 | 5.959 → 0.081 | 3.012 (563.043) | 1.194 (19.292) |
+| PHP-CS-Fixer | 1.235 → 0.081 | 1.056 → 0.083 | 2.766 (45.812) | 1.137 (2.651) |
+| MicroPython | 0.973 → 0.091 | 0.896 → 0.083 | 2.531 (222.391) | 1.116 (7.950) |
+
+수신 사전 처리와 알림 왕복은 정리 합에서 제외했다. Bytes와 각 record의 시간은 JSON에 남겼다.
+W=0의 실제 간격은 정리·알림 때문에 약 11~62 ms였다. W=1은 약 1초였다.
+기록 간격은 약 1.068~10초였다. 예정값과 실제값, 초과 시간은 각 report에 있다.
+
+| Fixture | 18 단가의 RAM 환산 ms, 정리 없음 → W=1 | 큰 목록 대체 가정 ms, 정리 없음 |
+|---|---:|---:|
+| Gin | 72.197 → 0.097 | 40.398~42.020 |
+| PHP-CS-Fixer | 12.095 → 0.097 | 중앙 목록은 LLC보다 작음 |
+| MicroPython | 10.461 → 0.100 | 중앙 목록은 LLC보다 작음 |
+
+Gin 2 vCPU, W=1초도 3회 이동이 통과했다. 잔여 목록은 중앙값 0.445 MiB, 최대 0.547 MiB다.
+첫 준비의 전체 RAM 처리와 대기로 옮긴 비용은 위 hand-off 수치에 포함하지 않는다.
+
+정지 clean은 각 경계의 바뀐 page가 이번 목록 안에 있는지 hash로 검사한다.
+Live clean은 멈추지 않고, 다음 hand-off에서 지난 경계 이후 목록의 합집합과 비교한다.
+별도의 경합 시험은 guest가 고정 16 page를 계속 쓰는 동안 clean을 600회 실행했다.
+마지막 clean 뒤에도 그 page들의 값이 전진함을 확인했다.
+두 hand-off의 마지막 목록에 16 page가 모두 있었다.
+원시 bitmap을 다시 읽는 독립 검증도 실행했다. 고의로 page를 빼는 단위 시험은 실패를 검출했다.
+
+## 4단계: VM별 객체 영역과 재사용
+
+VM 생성 때 전역 bump에서 전용 16 MiB를 한 번 예약한다.
+이후 VM·vCPU·VMCS(Virtual Machine Control Structure)·EPT(Extended Page Tables)·dirty bitmap·PML·kvm_run과
+APIC(Advanced Programmable Interrupt Controller) map은
+그 VM의 bump에서 할당한다. Bump lock과 owner 판정은 host DRAM에 있다.
+Hand-off의 객체 유지 범위는 descriptor를 포함한 [vm_base, vm_bump)다.
+초과하면 NULL과 FAILED로 끝난다. DRAM fallback이나 재개를 하지 않는다.
+실제 서버의 영역 배정자는 네트워크 중앙 관리자여야 한다.
+Lab의 생성용 전역 cmpxchg를 비일관 host 사이 allocator로 쓰지 않는다.
+
+| SWE 궤적 | vCPU | 끝 사용량 byte | MiB |
+|---|---:|---:|---:|
+| Gin | 1 | 2,018,400 | 1.925 |
+| PHP-CS-Fixer | 1 | 773,472 | 0.738 |
+| MicroPython | 1 | 1,088,864 | 1.038 |
+| Gin | 2 | 2,258,720 | 2.154 |
+
+16 MiB는 기록한 최대 사용량의 두 배보다 크다.
+현재 lab의 host당 active KVM graph 하나라는 계약은 유지한다.
+동시 여러 VM의 전체 수명 관리까지 구현한 것은 아니다.
+
+VM1의 마지막 detach 뒤 양쪽 Firecracker와 제어기를 종료했다.
+PID 재사용과 종료 중 reaping도 검사한다.
+양쪽 host가 전체 RAM과 예약 객체 영역 16 MiB를 무효화하고 ACK한다.
+한쪽 ACK만 넣은 재사용 arm은 거절됐다.
+새 RAM은 non-temporal store로 0을 채우고 SFENCE한다.
+전체 524,288 page의 0 hash를 확인했다.
+VM2는 같은 RAM frame과 같은 객체 영역에서 B부터 시작했다.
+VM1은 vCPU 1개, VM2는 2개다. 새 cookie와 allocation_id도 확인했다.
+VM1 4회, VM2 6회의 hand-off와 guest·정답지 검증이 통과했다.
+
+서로 다른 vCPU 수의 첫 재사용 시험에서는 guest invalid opcode가 났다.
+같은 주소의 native EPT backlink metadata에 allocation_id 구분을 추가했다.
+또한 이전 EPT root의 L0 shadow를 영역 반환 전에 버리도록 수정했다.
+새 root의 주소만 건드리는 기존 방법은 다른 배치의 이전 root를 놓칠 수 있었다.
+이 수정은 dax_nested_root_sync가 켜진 중첩 lab의 회수 단계에만 실행한다.
+실제 비일관 하드웨어의 비소유 실행 중 객체를 쓰는 경로로 쓰지 않는다.
+
+### 비소유 kernel 감사와 닫힌 실패
+
+경로별 guard와 counter는 설계 메모의 표에 있다.
+MMU(Memory Management Unit) notifier, refcount, file release, stats/debugfs,
+APIC timer, irqfd의 wakeup·비동기 work,
+preempt notifier, 전원 관리 notifier, mapper lease/epoch 경로를 검사했다.
+Guard는 공유 kvm/vCPU 필드를 읽기 전에 host DRAM의 owner 표를 본다.
+Detach 때 notifier·timer·irqfd를 해제하고 drain한다.
+Timer/work queue 내부는 callback guard 전에 공유 list를 만질 수 있으므로 동기 취소·drain이 필수다.
+kvmclock의 두 delayed work도 동기 취소한다. PIT(Programmable Interval Timer)도 기존 quiesce 계약을 따른다.
+DAX MMU/APIC map의 RCU(Read-Copy Update) callback은 공유 head를 enqueue하지 않는다.
+비소유 refcount 반납과 file release는 pinned graph의 native 참조를 남긴다.
+이 참조는 L1 종료 때까지 남는다. 생산용 kernel의 일반 파괴·회수 증명은 아니다.
+
+Parked VMM에 VM/vCPU fd dup·stats ioctl·vcpu mmap과 익명 mmap/munmap 100회를 시켰다.
+비소유 ioctl과 vCPU mmap counter가 증가했고 접근은 거절됐다.
+누적 counter snapshot의 최댓값은 다음과 같다. 서로 다른 host·시점의 값을 합한 수가 아니다.
+
+| 경로 | 최댓값 | 처리 |
+|---|---:|---|
+| VM/vCPU ioctl, 9 | 50 | EIO로 거절 |
+| vCPU mmap/fault, 10 | 40 | 접근 거절 |
+| VM/vCPU file release, 4 | 2 | 공유 객체를 읽지 않고 참조 반납 지연 |
+| arena 관리, 12 | 1 | 정지·fd fence·전체 무효화 뒤 회수만 허용 |
+| sysfs snapshot, 13 | 1 | host DRAM 사본만 읽음 |
+| mapper release | 9 | 로컬 파일 자원만 반납. 공유 lease를 쓰지 않음 |
+| mapper 비소유 ioctl | 0 | Observer는 별도 불변 표 사본 사용 |
+
+비소유 비동기 callback·refcount 경로는 이 시험에서 0이었다.
+0이라는 관측이 모든 외부 workload에서 진입하지 않는다는 증명은 아니다.
+객체 direct map에 추측 실행으로 들어온 line은 attach의 객체 무효화가 덮는다.
+RAM의 이전 line은 새 record 처리 또는 backlog의 전체 무효화가 덮는다.
+
+오류 주입 6종은 모두 예상 오류로 abort했다. 완료 hand-off는 모두 0이다.
+송신 KVM WB line 누락, 송신 RAM WB 오류, 수신 RAM 무효화 오류,
+packet의 미래 epoch, 손상 record, 64 KiB 객체 영역 초과를 각각 넣었다.
+수신 오류 3종에는 Resume가 없었다.
+밀린 기록이 K=8을 넘으면 전체 RAM을 처리한다. 전체 처리도 실패하면 abort한다.
+부분 ACK 거절은 영역 재사용 시험에서도 확인했다.
+
+### 검증 범위와 원시 자료
+
+최종 선택 집합은 601 hand-off, 1,172 clean, 634 hash 경계다.
+누락 page와 설명 없는 RAM 밖 변화는 모두 0이다.
+SWE 59회, 256 MiB 두 arm 440회, 정지 clean 10회, 경합 2회,
+SMP 20회, 혼합 I/O 60회, 재사용 10회다.
+별도 정답지 없는 시간 대조는 440회다. 최신 kernel의 이전 2 MiB probe 재시험 20회도 따로 통과했다.
+Python 54개와 Rust 계약 23개가 통과했다. 선택 시험 8개 skip, Rust 1개 ignore다.
+기본 patch 역적용과 prefault overlay dry-run은 fuzz=0으로 통과했다.
+
+성능 arm은 45c28cb 계열의 kernel fixture다. 현재 코드와 kernel cache 경로가 같다.
+최종 기능·재사용·SWE arm은 48ab93c의 kernel fixture다.
+그 뒤 nonresident 반환 제어기의 필드 누락 수정은 혼합 입출력으로 따로 검사한다.
+소스 revision, 모듈·실행 파일 hash와 fixture 계보는 각 report에 있다.
+현재 kernel 소스 재빌드의 두 모듈 hash는 최종 fixture와 일치한다.
+
+원시는 implementation/virtual_machine/.local/run19에 있다.
+분석은 `analyze.py implementation/virtual_machine/.local/run19 --stage19`로 재생한다.
+summary.json은 최종 선택 집합과 중간 진단 집합을 구분한다.
+실행 중 소스가 달라진 SWE 묶음, 수정 전 재사용·probe 실패, 예산 거절은 최종 집합에서 제외했다.
+18의 기존 0~2단계 원시 결과와 요약은 보존했다.
+실제 비일관 CXL과 다른 서버의 stale 재현은 여전히 별도 승인 범위다.
+Node 2, host DAX와 dcdctl은 사용하지 않았다.
+
+### 19의 정리
+
+이 실행의 lab config 68개에서 살아 있는 소유 VM이 없었다.
+공유 backing, control socket directory, stopped storage copy와 임시 hash 배열도 남지 않았다.
+최종 .local은 89 GiB, run19는 6.5 GiB다. / 여유는 약 98.2 GiB다.
+약 1시간 55분 동안 수행했다. commit은 로컬에만 남겼다. push하지 않았다.

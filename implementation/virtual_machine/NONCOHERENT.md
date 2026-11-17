@@ -213,13 +213,14 @@ Detach 마지막 WB 뒤 owner 표를 닫는다. Attach는 영역을 무효화한
 | VM/vCPU file release | 4 | vCPU→kvm pointer를 읽기 전 반환 |
 | stats fd, debugfs open/read/write/release, PEEK | 5 | EACCES 또는 로컬 자원만 반납 |
 | APIC hrtimer | 6 | 재등록 없이 중단. detach가 이미 cancel/drain |
-| irqfd eventfd wakeup | 7 | 공유 irqfd→kvm pointer를 읽기 전 반환. 기존 quiesce 유지 |
+| irqfd eventfd wakeup, inject/resample/shutdown work | 7 | 공유 irqfd→kvm pointer를 읽기 전 반환. 기존 quiesce 유지 |
 | preempt notifier | 8 | 공유 vCPU 필드 접근 전에 반환 |
 | VM/vCPU ioctl | 9 | REATTACH 외에는 공유 객체 접근 전에 EIO |
 | vCPU mmap/fault | 10 | EACCES 또는 SIGBUS |
 | arena 회수·조회 | 12 | 관리 작업의 비소유 진입을 별도 계수 |
 | dax_pool sysfs 조회 | 13 | detach 때 만든 host DRAM 사본만 반환 |
-| DAX MMU 지연 free | 14 | 공유 RCU head enqueue 자체를 제거 |
+| DAX MMU/APIC map 지연 free | 14 | 공유 RCU head enqueue 자체를 제거 |
+| 전원 관리 notifier | 15 | 공유 객체와 lock 접근 전 반환. detach에서 unregister |
 | mapper lease/epoch/stat/release | 별도 모듈 카운터 | CPM_PARK 뒤 로컬 판정으로 거절. observer는 불변 표 사본만 사용 |
 
 실제 진입 수와 검증 결과는 결과 문서에 기록한다. 카운터 0이라는 주장만으로 경로를 안전하다고 하지 않는다.
@@ -239,3 +240,23 @@ Packet epoch가 무효화 뒤 header보다 앞서 보이면 header line을 네 �
 K개를 넘긴 reader는 기록을 추측하지 않고 RAM 전체를 무효화한다.
 송신과 수신 RAM 유지보수는 둘 다 mapper의 kernel 매핑을 사용한다.
 수신만 바꾸면 park의 HVA fault가 다음 송신 WB로 옮겨 가므로 두 경로를 함께 바꾼다.
+
+## 같은 주소 재사용과 중첩 변환
+
+VM descriptor에 임의 allocation_id를 둔다. 새 VM마다 값을 바꾼다.
+Native EPT(Extended Page Table) page의 로컬 backlink cache는 주소뿐 아니라 이 값도 비교한다.
+같은 주소를 가진 새 VM에 이전 graph의 로컬 page metadata를 붙이지 않는다.
+
+Lab의 L0 KVM은 L1 EPT page를 shadow한다. VM의 vCPU 수가 바뀌면 EPT root의 주소도 바뀔 수 있다.
+새 root만 건드리면 이전 root의 shadow를 버리지 못하는 경우가 있었다.
+따라서 영역 회수 전에 이전 EPT page 목록을 범위 검사하고 각 page의 같은 byte를 다시 쓴다.
+L0의 write protection이 이전 shadow page를 버리게 한다. 마지막에 그 line도 무효화한다.
+이 동작은 두 host가 VM을 멈추고 fd 보유자를 종료한 회수 단계에만 있다.
+살아 있는 비소유 VM 객체를 바꾸지 않는다.
+기존 dax_nested_root_sync=1인 중첩 lab에서만 실행한다. 실제 하드웨어의 기본값은 꺼짐이다.
+실제 비일관 하드웨어의 EPT 변환 처리는 attach의 INVEPT(확장 페이지 테이블 변환 무효화 명령)와 별도로 검증해야 한다.
+
+Callback guard만으로 scheduler의 공유 queue 접근까지 막을 수는 없다.
+Detach의 동기 timer 취소, work drain, notifier unregister가 먼저 끝나야 한다.
+kvm_arch_dax_vm_handoff는 kvmclock sync/update delayed work를 cancel_delayed_work_sync한다.
+PIT도 기존 정지·work drain 계약을 따른다. Guest vCPU 정지 뒤 새 work를 발행하지 않는다.
