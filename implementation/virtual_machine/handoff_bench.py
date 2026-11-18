@@ -338,6 +338,7 @@ class HandoffController(Controller):
         if getattr(self.args, 'noncoherent', False):
             env['FC_NONCOHERENT']='1'
             if getattr(self.args,'manual_protect',False):env['FC_DIRTY_MANUAL']='1'
+            if getattr(self.args,'manual_protect',False):env['FC_DIRTY_MANUAL']='1'
             if getattr(self.args,'clean_helper',False):env['FC_NONCOHERENT_HELPER']='1'
             if getattr(self.args,'service_probe',False):env['FC_SERVICE_PROBE']='1'
             if getattr(self.args,'tail_profile',False): env['FC_DIRTY_TIMING']='1'
@@ -1219,6 +1220,7 @@ def main():
     parser.add_argument('--arena-limit-bytes',type=int,default=0)
     parser.add_argument('--fail-maintenance',choices=('writeback','epoch','record'))
     parser.add_argument('--tail-profile', action='store_true')
+    parser.add_argument("--manual-protect",action="store_true")
     parser.add_argument("--manual-protect",action="store_true")
     parser.add_argument('--clean-helper',action='store_true')
     parser.add_argument('--service-probe',action='store_true')

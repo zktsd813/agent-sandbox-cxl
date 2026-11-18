@@ -316,3 +316,19 @@ Nested EPT fault나 scheduling은 여전히 한 호출을 오래 멈출 수 있�
 모든 clear가 끝난 뒤 WB와 record를 발행한다. 새 수거와 hand-off는 helper join 뒤다.
 따라서 clear·WB 사이에 쓴 page를 잃지 않는다. 오류는 발행 전에 abort한다.
 이 시험은 정답지와 전후 비교에서 도움이 확인될 때만 최종 코드에 유지한다.
+
+## 20: 수동 dirty 보호의 선택 시험
+
+`FC_DIRTY_MANUAL`은 생성 직후 MANUAL_DIRTY_LOG_PROTECT2의 ENABLE만 켠다.
+INITIALLY_SET은 켜지 않는다. 수거 전부터 dirty tracking이 켜져 있다.
+GET은 bitmap 사본만 만든다. WB 전에 켜진 bitmap block만 CLEAR_DIRTY_LOG로 지운다.
+한 호출은 최대 4,096 GPA page다. 이는 lock 안 작업 수의 상한이며 wall time 상한은 아니다.
+Nested EPT fault나 scheduling은 여전히 한 호출을 오래 멈출 수 있다.
+빈 block은 지우지 않는다. Helper 옵션에서는 CLEAR도 helper가 실행한다.
+이 경우 helper가 소유한 KVM VM fd의 dup만 사용한다. 소유 판정은 thread group 기준이다.
+
+이번 snapshot에 없는 page는 지우지 않는다. 새 쓰기 bit가 다음 수거에 남는다.
+목록 page의 clear 전 쓰기는 뒤따르는 WB가 덮는다. Clear 뒤 쓰기는 다시 기록된다.
+모든 clear가 끝난 뒤 WB와 record를 발행한다. 새 수거와 hand-off는 helper join 뒤다.
+따라서 clear·WB 사이에 쓴 page를 잃지 않는다. 오류는 발행 전에 abort한다.
+이 시험은 정답지와 전후 비교에서 도움이 확인될 때만 최종 코드에 유지한다.
