@@ -48,3 +48,26 @@ def stop_perf(handle):
             process.wait(timeout=10)
     log.close()
     return process.returncode
+
+
+def release_project_cache(local):
+    """Hint clean, regular cache files in this VM project only; caller holds locks."""
+    import os
+    local = Path(local).resolve()
+    count = total = 0
+    started = time.monotonic_ns()
+    for path in local.rglob('*'):
+        if path.is_symlink() or not path.is_file() or path.stat().st_size < 1024*1024:
+            continue
+        if not path.resolve().is_relative_to(local):
+            continue
+        try:
+            size = path.stat().st_size
+            with path.open('rb') as stream:
+                os.posix_fadvise(stream.fileno(), 0, 0, os.POSIX_FADV_DONTNEED)
+            count += 1
+            total += size
+        except FileNotFoundError:
+            continue
+    return dict(root=str(local), regular_files=count, logical_bytes=total,
+                elapsed_ns=time.monotonic_ns()-started, operation='POSIX_FADV_DONTNEED; read-only; no global drop')

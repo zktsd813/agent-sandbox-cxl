@@ -270,6 +270,13 @@ def main():
                 free = int(re.search(r'node 0 free: (\d+) MB', hardware)[1])
                 arm['budget_mib'] = 2*l1_mib+cxl_mib+64
                 if free < arm['budget_mib']+4096:
+                    from tail_probe import release_project_cache
+                    with (HERE.parents[1]/'.codex-runs/quiet.lock').open('a') as cache_lock:
+                        fcntl.flock(cache_lock,fcntl.LOCK_EX)
+                        arm['project_cache_hint']=release_project_cache(HERE/'.local')
+                    free=int(next(line.split()[-2] for line in Path('/sys/devices/system/node/node0/meminfo').read_text().splitlines() if 'MemFree:' in line))//1024
+                    arm['node0_free_after_hint_mib']=free
+                if free < arm['budget_mib']+4096:
                     raise RuntimeError(f'Node 0 free {free} MiB < lab budget + 4GiB')
                 arm["start"] = command(start, env, output / (trial_id + "-start.log"))
                 if arm["start"]["returncode"]:

@@ -128,6 +128,11 @@ def main():
             result.update(node0_free_before_bytes=free, budget_bytes=budget,
                           reserve_bytes=4 * 1024**3)
             if free < budget + result["reserve_bytes"]:
+                from tail_probe import release_project_cache
+                result['project_cache_hint']=release_project_cache(LOCAL)
+                result['numa_hardware_after_hint']=subprocess.check_output(['numactl','--hardware'],text=True)
+                free=node0_free();result['node0_free_after_hint_bytes']=free
+            if free < budget + result["reserve_bytes"]:
                 raise RuntimeError("node 0 free memory below budget + 4 GiB")
             start = ["start", "--vcpus", max(4,args.vcpus+2), "--memory-mib",4096,
                 "--shared-mib",64 if fixture_trial else 4,"--cxl-mib",cxl_mib,"--dax-handoff","--dax-guest",
