@@ -65,6 +65,8 @@ class DirtyOracle:
                     receipts=(*struct.unpack_from('<6Q',self.mem,self.gate+80),0,0)
                 if receipts and receipts[5] in (1,2):
                     wb,inv,log,read,control,version,initial,_=receipts
+                    if version==2 and (initial not in (0,64+(pages*16+63)//64) or receipts[7]):
+                        raise ValueError('Kernel observer initialization receipt differs from emitted metadata ranges')
                     if phase in (1,2,4,6) and wb!=union.bit_count()*64:
                         raise ValueError('Kernel RAM CLWB count differs from listed pages*64')
                     if phase in (3,5) and inv!=coverage['invalidate_lines']:
