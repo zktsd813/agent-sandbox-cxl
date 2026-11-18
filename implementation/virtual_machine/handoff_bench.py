@@ -423,11 +423,14 @@ class HandoffController(Controller):
 
     def configure_direct(self):
         for role, node, mode in (('A', 1, 1), ('B', 2, 2)):
+            if getattr(self.args,'tail_profile',False):
+                self.shell(role,'echo 1 > /proc/sys/kernel/sched_schedstats\necho 1 > /sys/module/kvm/parameters/dax_dirty_timing','enable-dirty-timing')
+            timing='echo 1 > /proc/sys/kernel/sched_schedstats\necho 1 > /sys/module/kvm/parameters/dax_dirty_timing\n' if getattr(self.args,'tail_profile',False) else ''
             cache = 'echo 1 > /sys/module/kvm/parameters/dax_noncoherent\necho 1 > /sys/module/kvm/parameters/dax_cache_check\n' if getattr(self.args,'noncoherent',False) else ''
             if role=='A' and getattr(self.args,'cache_skip_line',-1)>=0:
                 cache+=f'echo {self.args.cache_skip_line} > /sys/module/kvm/parameters/dax_cache_skip_line\n'
             if getattr(self.args,'arena_limit_bytes',0): cache+=f'echo {self.args.arena_limit_bytes} > /sys/module/kvm/parameters/dax_vm_limit_bytes\n'
-            self.shell(role, cache+'echo 2147483647 > /sys/module/kvm/parameters/dax_owner_pid\n'
+            self.shell(role, timing+cache+'echo 2147483647 > /sys/module/kvm/parameters/dax_owner_pid\n'
                 + ('echo 1 > /sys/module/kvm/parameters/dax_handoff_profile\n' if self.args.restore_timing else '') +
                 (f'echo {int(getattr(self.args, "resume_profile",False))} > /sys/module/kvm/parameters/dax_resume_profile\n' if getattr(self.args,'resident_bench',None) else '') +
                 'resource=$(cat /sys/bus/dax/devices/dax0.0/resource)\n'
@@ -445,7 +448,7 @@ class HandoffController(Controller):
         components = {'/machine-config': {'vcpu_count': self.vcpus, 'mem_size_mib': self.memory_mib},
             '/boot-source': {'kernel_image_path': '/lab/l2-vmlinux',
                 'initrd_path': f'/lab/{self.trace["name"]}-initramfs.cpio',
-                'boot_args': 'console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init' + (' memmap=2M$64M nmi_watchdog=0' if getattr(self.args,'resident_bench',None) else '')},
+                'boot_args': 'console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init' + ((' memmap=2M$64M nmi_watchdog=0'+(' memmap=256M$128M' if getattr(self.args,'dirty_lines',0) else '')) if getattr(self.args,'resident_bench',None) else '')},
             '/drives/data': {'drive_id': 'data', 'path_on_host': '/disk/sandbox.raw', 'is_root_device': False,
                 'is_read_only': True, 'cache_type': 'Writeback', 'io_engine': self.io_engine}}
         if getattr(self.args, 'dirty_ledger', False):
@@ -1034,7 +1037,7 @@ def resident_measure(args):
               'idle':'one heartbeat sleeps 1ms; other vCPUs have no workload',
               'busy':'same pinned 512KiB checksum writers and futex ring as stage 15'}
     sources = ('dirty_oracle.py','page_hash.c','handoff_bench.py','resident_fast.py','resident_control.c','resident_wire.h',
-               'shared_probe.c','swe-handoff-guest-run.sh','multi_vcpu.py')
+               'shared_probe.c','swe-handoff-guest-run.sh','multi_vcpu.py','tail_probe.py')
     report['source_hashes'],report['source_reference'] = record_sources(HERE,sources)
     oracle = None
     if args.dirty_oracle:
@@ -1043,12 +1046,9 @@ def resident_measure(args):
     try:
         lab.verify(argparse.Namespace(timeout=180))
         c.setup()
-        if args.tail_profile:
-            for role in ('A','B'):
-                c.shell(role,'echo 1 > /proc/sys/kernel/sched_schedstats\necho 1 > /sys/module/kvm/parameters/dax_dirty_timing','enable-dirty-timing')
         c.configure_direct()
         report['boot'] = c.boot_vm(s)
-        report['heartbeat'] = c.trace_command(s,'heartbeat',('dirty'+str(args.dirty_mib)) if args.resident_bench=='dirty' else args.resident_bench,event='trace_heartbeat')
+        report['heartbeat'] = c.trace_command(s,'heartbeat',('dirty'+str(args.dirty_mib)+(f':{args.dirty_lines}:{args.dirty_mode}' if args.dirty_lines else '')) if args.resident_bench=='dirty' else args.resident_bench,event='trace_heartbeat')
         time.sleep(.2)
         c.promote(s)
         frames = sorted(c.allocator.grants[s.owner].frames)
@@ -1177,6 +1177,8 @@ def main():
     parser.add_argument('--resident-bench', choices=('idle','busy','dirty','race'))
     parser.add_argument('--mixed-io', action='store_true')
     parser.add_argument('--io-fixture')
+    parser.add_argument('--dirty-lines',type=int,choices=(0,1,8,64),default=0)
+    parser.add_argument('--dirty-mode',choices=('change','same','read'),default='change')
     parser.add_argument('--dirty-mib',type=int,choices=(0,16,64,256),default=0)
     parser.add_argument('--iterations',type=int,default=100)
     parser.add_argument('--warmup',type=int,default=10)
@@ -1360,13 +1362,20 @@ def main():
             nfs.stop_fc(c.vms[role], directory)
             raw, name = c.shell(role, source_fence_script(directory), 'keepalive-final-fence')
             report['keepalive_cleanup'].append({**keeper, 'file': name, 'fenced': 'FENCED ' in raw})
+        if args.tail_profile:
+            for role in ('A','B'):
+                c.shell(role,'dmesg','dirty-kernel-times-'+role)
         report['controller_cleanup'] = []
         for role, server in getattr(c, 'resident_servers', {}).items():
             nfs.stop_fc(c.vms[role], server['directory'])
-            if args.restore_timing:
+            if args.restore_timing or args.tail_profile:
                 c.fetch_bytes(role,server['directory']+'/log','final-controller-log')
             raw, name = c.shell(role,source_fence_script(server['directory']),'controller-final-fence')
             report['controller_cleanup'].append({**server, 'role':role, 'prepare_file':server['file'], 'file':name, 'fenced':'FENCED ' in raw})
+        if args.tail_profile:
+            for role in ('A','B'):
+                try:c.shell(role,'dmesg','dirty-kernel-times-'+role)
+                except Exception as error:report.setdefault('collection_errors',[]).append(str(error))
         report['cleanup'] = []
         for role, directory in reversed(c.active):
             try:

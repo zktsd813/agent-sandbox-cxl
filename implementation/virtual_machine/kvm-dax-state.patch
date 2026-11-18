@@ -2521,7 +2521,7 @@ index 1e567d1..42e6cea 100644
  	free_irq_routing_table(new);
  
 diff --git a/virt/kvm/kvm_main.c b/virt/kvm/kvm_main.c
-index 486800a..55c547c 100644
+index 486800a..778dec3 100644
 --- a/virt/kvm/kvm_main.c
 +++ b/virt/kvm/kvm_main.c
 @@ -27,6 +27,7 @@
@@ -2940,7 +2940,7 @@ index 486800a..55c547c 100644
 +/* Disposable L1 diagnostic. Never changes the host or the dirty-log ABI. */
 +static bool dax_dirty_timing;
 +module_param(dax_dirty_timing, bool, 0600);
-+struct dax_dirty_times { u64 begin, slots, sync, mmu_wait, clear, flush, copy; };
++struct dax_dirty_times { u64 begin, slots, sync, mmu_wait, clear, flush, copy, arch_sum, arch_max, arch_gfn, calls; };
 +static int kvm_get_dirty_log_protect(struct kvm *kvm, struct kvm_dirty_log *log,
 +                                    struct dax_dirty_times *t)
  {
@@ -2975,9 +2975,22 @@ index 486800a..55c547c 100644
  		for (i = 0; i < n / sizeof(long); i++) {
  			unsigned long mask;
  			gfn_t offset;
-@@ -2202,14 +2313,19 @@ static int kvm_get_dirty_log_protect(struct kvm *kvm, struct kvm_dirty_log *log)
- 			kvm_arch_mmu_enable_log_dirty_pt_masked(kvm, memslot,
- 								offset, mask);
+@@ -2199,17 +2310,30 @@ static int kvm_get_dirty_log_protect(struct kvm *kvm, struct kvm_dirty_log *log)
+ 			dirty_bitmap_buffer[i] = mask;
+ 
+ 			offset = i * BITS_PER_LONG;
+-			kvm_arch_mmu_enable_log_dirty_pt_masked(kvm, memslot,
+-								offset, mask);
++            if (dax_dirty_timing) {
++                u64 call_begin = ktime_get_ns(), elapsed;
++                kvm_arch_mmu_enable_log_dirty_pt_masked(kvm, memslot, offset, mask);
++                elapsed = ktime_get_ns() - call_begin;
++                t->arch_sum += elapsed;
++                t->calls++;
++                if (elapsed > t->arch_max) { t->arch_max = elapsed; t->arch_gfn = offset; }
++            } else {
++                kvm_arch_mmu_enable_log_dirty_pt_masked(kvm, memslot, offset, mask);
++            }
  		}
 +		t->clear = ktime_get_ns() - stamp;
  		KVM_MMU_UNLOCK(kvm);
@@ -2995,7 +3008,7 @@ index 486800a..55c547c 100644
  	return 0;
  }
  
-@@ -2237,12 +2353,15 @@ static int kvm_vm_ioctl_get_dirty_log(struct kvm *kvm,
+@@ -2237,12 +2361,15 @@ static int kvm_vm_ioctl_get_dirty_log(struct kvm *kvm,
  				      struct kvm_dirty_log *log)
  {
  	int r;
@@ -3009,12 +3022,12 @@ index 486800a..55c547c 100644
  
  	mutex_unlock(&kvm->slots_lock);
 +	if (dax_dirty_timing)
-+		pr_info("DIRTY_TIME tid=%d begin=%llu total=%llu slots=%llu sync=%llu mmu_wait=%llu clear=%llu flush=%llu copy=%llu rc=%d\n",
-+			current->pid,t.begin,ktime_get_ns()-t.begin,t.slots,t.sync,t.mmu_wait,t.clear,t.flush,t.copy,r);
++		pr_info("DIRTY_TIME tid=%d begin=%llu total=%llu slots=%llu sync=%llu mmu_wait=%llu clear=%llu flush=%llu copy=%llu arch_sum=%llu arch_max=%llu arch_gfn=%llu calls=%llu rc=%d\n",
++			current->pid,t.begin,ktime_get_ns()-t.begin,t.slots,t.sync,t.mmu_wait,t.clear,t.flush,t.copy,t.arch_sum,t.arch_max,t.arch_gfn,t.calls,r);
  	return r;
  }
  
-@@ -2618,6 +2737,11 @@ static int hva_to_pfn_remapped(struct vm_area_struct *vma,
+@@ -2618,6 +2745,11 @@ static int hva_to_pfn_remapped(struct vm_area_struct *vma,
  	pte_t pte;
  	spinlock_t *ptl;
  	int r;
@@ -3026,7 +3039,7 @@ index 486800a..55c547c 100644
  
  	r = follow_pte(vma->vm_mm, addr, &ptep, &ptl);
  	if (r) {
-@@ -2642,6 +2766,24 @@ static int hva_to_pfn_remapped(struct vm_area_struct *vma,
+@@ -2642,6 +2774,24 @@ static int hva_to_pfn_remapped(struct vm_area_struct *vma,
  	pte = ptep_get(ptep);
  
  	if (write_fault && !pte_write(pte)) {
@@ -3051,7 +3064,7 @@ index 486800a..55c547c 100644
  		pfn = KVM_PFN_ERR_RO_FAULT;
  		goto out;
  	}
-@@ -3837,6 +3979,8 @@ static bool kvm_page_in_dirty_ring(struct kvm *kvm, unsigned long pgoff)
+@@ -3837,6 +3987,8 @@ static bool kvm_page_in_dirty_ring(struct kvm *kvm, unsigned long pgoff)
  
  static vm_fault_t kvm_vcpu_fault(struct vm_fault *vmf)
  {
@@ -3060,7 +3073,7 @@ index 486800a..55c547c 100644
  	struct kvm_vcpu *vcpu = vmf->vma->vm_file->private_data;
  	struct page *page;
  
-@@ -3867,6 +4011,8 @@ static const struct vm_operations_struct kvm_vcpu_vm_ops = {
+@@ -3867,6 +4019,8 @@ static const struct vm_operations_struct kvm_vcpu_vm_ops = {
  
  static int kvm_vcpu_mmap(struct file *file, struct vm_area_struct *vma)
  {
@@ -3069,7 +3082,7 @@ index 486800a..55c547c 100644
  	struct kvm_vcpu *vcpu = file->private_data;
  	unsigned long pages = vma_pages(vma);
  
-@@ -3881,6 +4027,8 @@ static int kvm_vcpu_mmap(struct file *file, struct vm_area_struct *vma)
+@@ -3881,6 +4035,8 @@ static int kvm_vcpu_mmap(struct file *file, struct vm_area_struct *vma)
  
  static int kvm_vcpu_release(struct inode *inode, struct file *filp)
  {
@@ -3078,7 +3091,7 @@ index 486800a..55c547c 100644
  	struct kvm_vcpu *vcpu = filp->private_data;
  
  	kvm_put_kvm(vcpu->kvm);
-@@ -3942,6 +4090,10 @@ static void kvm_create_vcpu_debugfs(struct kvm_vcpu *vcpu)
+@@ -3942,6 +4098,10 @@ static void kvm_create_vcpu_debugfs(struct kvm_vcpu *vcpu)
   */
  static int kvm_vm_ioctl_create_vcpu(struct kvm *kvm, u32 id)
  {
@@ -3089,7 +3102,7 @@ index 486800a..55c547c 100644
  	int r;
  	struct kvm_vcpu *vcpu;
  	struct page *page;
-@@ -3964,19 +4116,24 @@ static int kvm_vm_ioctl_create_vcpu(struct kvm *kvm, u32 id)
+@@ -3964,19 +4124,24 @@ static int kvm_vm_ioctl_create_vcpu(struct kvm *kvm, u32 id)
  	kvm->created_vcpus++;
  	mutex_unlock(&kvm->lock);
  
@@ -3118,7 +3131,7 @@ index 486800a..55c547c 100644
  
  	kvm_vcpu_init(vcpu, kvm, id);
  
-@@ -4005,6 +4162,10 @@ static int kvm_vm_ioctl_create_vcpu(struct kvm *kvm, u32 id)
+@@ -4005,6 +4170,10 @@ static int kvm_vm_ioctl_create_vcpu(struct kvm *kvm, u32 id)
  	}
  
  	vcpu->vcpu_idx = atomic_read(&kvm->online_vcpus);
@@ -3129,7 +3142,7 @@ index 486800a..55c547c 100644
  	r = xa_reserve(&kvm->vcpu_array, vcpu->vcpu_idx, GFP_KERNEL_ACCOUNT);
  	if (r)
  		goto unlock_vcpu_destroy;
-@@ -4041,9 +4202,10 @@ static int kvm_vm_ioctl_create_vcpu(struct kvm *kvm, u32 id)
+@@ -4041,9 +4210,10 @@ static int kvm_vm_ioctl_create_vcpu(struct kvm *kvm, u32 id)
  arch_vcpu_destroy:
  	kvm_arch_vcpu_destroy(vcpu);
  vcpu_free_run_page:
@@ -3142,7 +3155,7 @@ index 486800a..55c547c 100644
  vcpu_decrement:
  	mutex_lock(&kvm->lock);
  	kvm->created_vcpus--;
-@@ -4065,6 +4227,8 @@ static int kvm_vcpu_ioctl_set_sigmask(struct kvm_vcpu *vcpu, sigset_t *sigset)
+@@ -4065,6 +4235,8 @@ static int kvm_vcpu_ioctl_set_sigmask(struct kvm_vcpu *vcpu, sigset_t *sigset)
  static ssize_t kvm_vcpu_stats_read(struct file *file, char __user *user_buffer,
  			      size_t size, loff_t *offset)
  {
@@ -3151,7 +3164,7 @@ index 486800a..55c547c 100644
  	struct kvm_vcpu *vcpu = file->private_data;
  
  	return kvm_stats_read(vcpu->stats_id, &kvm_vcpu_stats_header,
-@@ -4074,6 +4238,8 @@ static ssize_t kvm_vcpu_stats_read(struct file *file, char __user *user_buffer,
+@@ -4074,6 +4246,8 @@ static ssize_t kvm_vcpu_stats_read(struct file *file, char __user *user_buffer,
  
  static int kvm_vcpu_stats_release(struct inode *inode, struct file *file)
  {
@@ -3160,7 +3173,7 @@ index 486800a..55c547c 100644
  	struct kvm_vcpu *vcpu = file->private_data;
  
  	kvm_put_kvm(vcpu->kvm);
-@@ -4088,6 +4254,8 @@ static const struct file_operations kvm_vcpu_stats_fops = {
+@@ -4088,6 +4262,8 @@ static const struct file_operations kvm_vcpu_stats_fops = {
  
  static int kvm_vcpu_ioctl_get_stats_fd(struct kvm_vcpu *vcpu)
  {
@@ -3169,7 +3182,7 @@ index 486800a..55c547c 100644
  	int fd;
  	struct file *file;
  	char name[15 + ITOA_MAX_LEN + 1];
-@@ -4115,13 +4283,15 @@ static int kvm_vcpu_ioctl_get_stats_fd(struct kvm_vcpu *vcpu)
+@@ -4115,13 +4291,15 @@ static int kvm_vcpu_ioctl_get_stats_fd(struct kvm_vcpu *vcpu)
  static long kvm_vcpu_ioctl(struct file *filp,
  			   unsigned int ioctl, unsigned long arg)
  {
@@ -3186,7 +3199,7 @@ index 486800a..55c547c 100644
  		return -EIO;
  
  	if (unlikely(_IOC_TYPE(ioctl) != KVMIO))
-@@ -4137,9 +4307,18 @@ static long kvm_vcpu_ioctl(struct file *filp,
+@@ -4137,9 +4315,18 @@ static long kvm_vcpu_ioctl(struct file *filp,
  
  	if (mutex_lock_killable(&vcpu->mutex))
  		return -EINTR;
@@ -3205,7 +3218,7 @@ index 486800a..55c547c 100644
  		r = -EINVAL;
  		if (arg)
  			goto out;
-@@ -4166,7 +4345,7 @@ static long kvm_vcpu_ioctl(struct file *filp,
+@@ -4166,7 +4353,7 @@ static long kvm_vcpu_ioctl(struct file *filp,
  		struct kvm_regs *kvm_regs;
  
  		r = -ENOMEM;
@@ -3214,7 +3227,7 @@ index 486800a..55c547c 100644
  		if (!kvm_regs)
  			goto out;
  		r = kvm_arch_vcpu_ioctl_get_regs(vcpu, kvm_regs);
-@@ -4177,7 +4356,7 @@ static long kvm_vcpu_ioctl(struct file *filp,
+@@ -4177,7 +4364,7 @@ static long kvm_vcpu_ioctl(struct file *filp,
  			goto out_free1;
  		r = 0;
  out_free1:
@@ -3223,7 +3236,7 @@ index 486800a..55c547c 100644
  		break;
  	}
  	case KVM_SET_REGS: {
-@@ -4189,12 +4368,12 @@ static long kvm_vcpu_ioctl(struct file *filp,
+@@ -4189,12 +4376,12 @@ static long kvm_vcpu_ioctl(struct file *filp,
  			goto out;
  		}
  		r = kvm_arch_vcpu_ioctl_set_regs(vcpu, kvm_regs);
@@ -3239,7 +3252,7 @@ index 486800a..55c547c 100644
  		r = -ENOMEM;
  		if (!kvm_sregs)
  			goto out;
-@@ -4286,7 +4465,7 @@ static long kvm_vcpu_ioctl(struct file *filp,
+@@ -4286,7 +4473,7 @@ static long kvm_vcpu_ioctl(struct file *filp,
  		break;
  	}
  	case KVM_GET_FPU: {
@@ -3248,7 +3261,7 @@ index 486800a..55c547c 100644
  		r = -ENOMEM;
  		if (!fpu)
  			goto out;
-@@ -4318,8 +4497,8 @@ static long kvm_vcpu_ioctl(struct file *filp,
+@@ -4318,8 +4505,8 @@ static long kvm_vcpu_ioctl(struct file *filp,
  	}
  out:
  	mutex_unlock(&vcpu->mutex);
@@ -3259,7 +3272,7 @@ index 486800a..55c547c 100644
  	return r;
  }
  
-@@ -4491,7 +4670,7 @@ static int kvm_ioctl_create_device(struct kvm *kvm,
+@@ -4491,7 +4678,7 @@ static int kvm_ioctl_create_device(struct kvm *kvm,
  	if (test)
  		return 0;
  
@@ -3268,7 +3281,7 @@ index 486800a..55c547c 100644
  	if (!dev)
  		return -ENOMEM;
  
-@@ -4502,7 +4681,7 @@ static int kvm_ioctl_create_device(struct kvm *kvm,
+@@ -4502,7 +4689,7 @@ static int kvm_ioctl_create_device(struct kvm *kvm,
  	ret = ops->create(dev, type);
  	if (ret < 0) {
  		mutex_unlock(&kvm->lock);
@@ -3277,7 +3290,7 @@ index 486800a..55c547c 100644
  		return ret;
  	}
  	list_add(&dev->vm_node, &kvm->devices);
-@@ -4743,6 +4922,8 @@ static int kvm_vm_ioctl_enable_cap_generic(struct kvm *kvm,
+@@ -4743,6 +4930,8 @@ static int kvm_vm_ioctl_enable_cap_generic(struct kvm *kvm,
  static ssize_t kvm_vm_stats_read(struct file *file, char __user *user_buffer,
  			      size_t size, loff_t *offset)
  {
@@ -3286,7 +3299,7 @@ index 486800a..55c547c 100644
  	struct kvm *kvm = file->private_data;
  
  	return kvm_stats_read(kvm->stats_id, &kvm_vm_stats_header,
-@@ -4752,6 +4933,8 @@ static ssize_t kvm_vm_stats_read(struct file *file, char __user *user_buffer,
+@@ -4752,6 +4941,8 @@ static ssize_t kvm_vm_stats_read(struct file *file, char __user *user_buffer,
  
  static int kvm_vm_stats_release(struct inode *inode, struct file *file)
  {
@@ -3295,7 +3308,7 @@ index 486800a..55c547c 100644
  	struct kvm *kvm = file->private_data;
  
  	kvm_put_kvm(kvm);
-@@ -4766,6 +4949,8 @@ static const struct file_operations kvm_vm_stats_fops = {
+@@ -4766,6 +4957,8 @@ static const struct file_operations kvm_vm_stats_fops = {
  
  static int kvm_vm_ioctl_get_stats_fd(struct kvm *kvm)
  {
@@ -3304,7 +3317,7 @@ index 486800a..55c547c 100644
  	int fd;
  	struct file *file;
  
-@@ -4795,9 +4980,24 @@ static long kvm_vm_ioctl(struct file *filp,
+@@ -4795,9 +4988,24 @@ static long kvm_vm_ioctl(struct file *filp,
  	void __user *argp = (void __user *)arg;
  	int r;
  
@@ -3330,7 +3343,7 @@ index 486800a..55c547c 100644
  	case KVM_CREATE_VCPU:
  		r = kvm_vm_ioctl_create_vcpu(kvm, arg);
  		break;
-@@ -4942,7 +5142,7 @@ static long kvm_vm_ioctl(struct file *filp,
+@@ -4942,7 +5150,7 @@ static long kvm_vm_ioctl(struct file *filp,
  		}
  		r = kvm_set_irq_routing(kvm, entries, routing.nr,
  					routing.flags);
@@ -3339,7 +3352,7 @@ index 486800a..55c547c 100644
  		break;
  	}
  #endif /* CONFIG_HAVE_KVM_IRQ_ROUTING */
-@@ -5116,12 +5316,565 @@ static int kvm_dev_ioctl_create_vm(unsigned long type)
+@@ -5116,12 +5324,565 @@ static int kvm_dev_ioctl_create_vm(unsigned long type)
  	return r;
  }
  
@@ -3905,7 +3918,7 @@ index 486800a..55c547c 100644
  	case KVM_GET_API_VERSION:
  		if (arg)
  			goto out;
-@@ -5377,7 +6130,7 @@ static void kvm_io_bus_destroy(struct kvm_io_bus *bus)
+@@ -5377,7 +6138,7 @@ static void kvm_io_bus_destroy(struct kvm_io_bus *bus)
  
  		kvm_iodevice_destructor(pos);
  	}
@@ -3914,7 +3927,7 @@ index 486800a..55c547c 100644
  }
  
  static inline int kvm_io_bus_cmp(const struct kvm_io_range *r1,
-@@ -5561,8 +6314,8 @@ int kvm_io_bus_register_dev(struct kvm *kvm, enum kvm_bus bus_idx, gpa_t addr,
+@@ -5561,8 +6322,8 @@ int kvm_io_bus_register_dev(struct kvm *kvm, enum kvm_bus bus_idx, gpa_t addr,
  	if (bus->dev_count - bus->ioeventfd_count > NR_IOBUS_DEVS - 1)
  		return -ENOSPC;
  
@@ -3925,7 +3938,7 @@ index 486800a..55c547c 100644
  	if (!new_bus)
  		return -ENOMEM;
  
-@@ -5583,7 +6336,7 @@ int kvm_io_bus_register_dev(struct kvm *kvm, enum kvm_bus bus_idx, gpa_t addr,
+@@ -5583,7 +6344,7 @@ int kvm_io_bus_register_dev(struct kvm *kvm, enum kvm_bus bus_idx, gpa_t addr,
  		(bus->dev_count - i) * sizeof(struct kvm_io_range));
  	rcu_assign_pointer(kvm->buses[bus_idx], new_bus);
  	synchronize_srcu_expedited(&kvm->srcu);
@@ -3934,7 +3947,7 @@ index 486800a..55c547c 100644
  
  	return 0;
  }
-@@ -5609,8 +6362,8 @@ int kvm_io_bus_unregister_dev(struct kvm *kvm, enum kvm_bus bus_idx,
+@@ -5609,8 +6370,8 @@ int kvm_io_bus_unregister_dev(struct kvm *kvm, enum kvm_bus bus_idx,
  	if (i == bus->dev_count)
  		return 0;
  
@@ -3945,7 +3958,7 @@ index 486800a..55c547c 100644
  	if (new_bus) {
  		memcpy(new_bus, bus, struct_size(bus, range, i));
  		new_bus->dev_count--;
-@@ -5632,7 +6385,7 @@ int kvm_io_bus_unregister_dev(struct kvm *kvm, enum kvm_bus bus_idx,
+@@ -5632,7 +6393,7 @@ int kvm_io_bus_unregister_dev(struct kvm *kvm, enum kvm_bus bus_idx,
  	}
  
  	kvm_iodevice_destructor(dev);
@@ -3954,7 +3967,7 @@ index 486800a..55c547c 100644
  	return 0;
  }
  
-@@ -5666,6 +6419,8 @@ static int kvm_debugfs_open(struct inode *inode, struct file *file,
+@@ -5666,6 +6427,8 @@ static int kvm_debugfs_open(struct inode *inode, struct file *file,
  			   int (*get)(void *, u64 *), int (*set)(void *, u64),
  			   const char *fmt)
  {
@@ -3963,7 +3976,7 @@ index 486800a..55c547c 100644
  	int ret;
  	struct kvm_stat_data *stat_data = inode->i_private;
  
-@@ -5691,6 +6446,7 @@ static int kvm_debugfs_release(struct inode *inode, struct file *file)
+@@ -5691,6 +6454,7 @@ static int kvm_debugfs_release(struct inode *inode, struct file *file)
  	struct kvm_stat_data *stat_data = inode->i_private;
  
  	simple_attr_release(inode, file);
@@ -3971,7 +3984,7 @@ index 486800a..55c547c 100644
  	kvm_put_kvm(stat_data->kvm);
  
  	return 0;
-@@ -5698,6 +6454,8 @@ static int kvm_debugfs_release(struct inode *inode, struct file *file)
+@@ -5698,6 +6462,8 @@ static int kvm_debugfs_release(struct inode *inode, struct file *file)
  
  static int kvm_get_stat_per_vm(struct kvm *kvm, size_t offset, u64 *val)
  {
@@ -3980,7 +3993,7 @@ index 486800a..55c547c 100644
  	*val = *(u64 *)((void *)(&kvm->stat) + offset);
  
  	return 0;
-@@ -5705,6 +6463,8 @@ static int kvm_get_stat_per_vm(struct kvm *kvm, size_t offset, u64 *val)
+@@ -5705,6 +6471,8 @@ static int kvm_get_stat_per_vm(struct kvm *kvm, size_t offset, u64 *val)
  
  static int kvm_clear_stat_per_vm(struct kvm *kvm, size_t offset)
  {
@@ -3989,7 +4002,7 @@ index 486800a..55c547c 100644
  	*(u64 *)((void *)(&kvm->stat) + offset) = 0;
  
  	return 0;
-@@ -5712,6 +6472,8 @@ static int kvm_clear_stat_per_vm(struct kvm *kvm, size_t offset)
+@@ -5712,6 +6480,8 @@ static int kvm_clear_stat_per_vm(struct kvm *kvm, size_t offset)
  
  static int kvm_get_stat_per_vcpu(struct kvm *kvm, size_t offset, u64 *val)
  {
@@ -3998,7 +4011,7 @@ index 486800a..55c547c 100644
  	unsigned long i;
  	struct kvm_vcpu *vcpu;
  
-@@ -5725,6 +6487,8 @@ static int kvm_get_stat_per_vcpu(struct kvm *kvm, size_t offset, u64 *val)
+@@ -5725,6 +6495,8 @@ static int kvm_get_stat_per_vcpu(struct kvm *kvm, size_t offset, u64 *val)
  
  static int kvm_clear_stat_per_vcpu(struct kvm *kvm, size_t offset)
  {
@@ -4007,7 +4020,7 @@ index 486800a..55c547c 100644
  	unsigned long i;
  	struct kvm_vcpu *vcpu;
  
-@@ -5736,6 +6500,8 @@ static int kvm_clear_stat_per_vcpu(struct kvm *kvm, size_t offset)
+@@ -5736,6 +6508,8 @@ static int kvm_clear_stat_per_vcpu(struct kvm *kvm, size_t offset)
  
  static int kvm_stat_data_get(void *data, u64 *val)
  {
@@ -4016,7 +4029,7 @@ index 486800a..55c547c 100644
  	int r = -EFAULT;
  	struct kvm_stat_data *stat_data = data;
  
-@@ -5755,6 +6521,8 @@ static int kvm_stat_data_get(void *data, u64 *val)
+@@ -5755,6 +6529,8 @@ static int kvm_stat_data_get(void *data, u64 *val)
  
  static int kvm_stat_data_clear(void *data, u64 val)
  {
@@ -4025,7 +4038,7 @@ index 486800a..55c547c 100644
  	int r = -EFAULT;
  	struct kvm_stat_data *stat_data = data;
  
-@@ -5777,6 +6545,8 @@ static int kvm_stat_data_clear(void *data, u64 val)
+@@ -5777,6 +6553,8 @@ static int kvm_stat_data_clear(void *data, u64 val)
  
  static int kvm_stat_data_open(struct inode *inode, struct file *file)
  {
@@ -4034,7 +4047,7 @@ index 486800a..55c547c 100644
  	__simple_attr_check_format("%llu\n", 0ull);
  	return kvm_debugfs_open(inode, file, kvm_stat_data_get,
  				kvm_stat_data_clear, "%llu\n");
-@@ -5883,7 +6653,7 @@ static void kvm_uevent_notify_change(unsigned int type, struct kvm *kvm)
+@@ -5883,7 +6661,7 @@ static void kvm_uevent_notify_change(unsigned int type, struct kvm *kvm)
  	active = kvm_active_vms;
  	mutex_unlock(&kvm_lock);
  
@@ -4043,7 +4056,7 @@ index 486800a..55c547c 100644
  	if (!env)
  		return;
  
-@@ -5899,19 +6669,19 @@ static void kvm_uevent_notify_change(unsigned int type, struct kvm *kvm)
+@@ -5899,19 +6677,19 @@ static void kvm_uevent_notify_change(unsigned int type, struct kvm *kvm)
  	add_uevent_var(env, "PID=%d", kvm->userspace_pid);
  
  	if (!IS_ERR(kvm->debugfs_dentry)) {
@@ -4066,7 +4079,7 @@ index 486800a..55c547c 100644
  }
  
  static void kvm_init_debug(void)
-@@ -5953,6 +6723,8 @@ struct kvm_vcpu *preempt_notifier_to_vcpu(struct preempt_notifier *pn)
+@@ -5953,6 +6731,8 @@ struct kvm_vcpu *preempt_notifier_to_vcpu(struct preempt_notifier *pn)
  
  static void kvm_sched_in(struct preempt_notifier *pn, int cpu)
  {
@@ -4075,7 +4088,7 @@ index 486800a..55c547c 100644
  	struct kvm_vcpu *vcpu = preempt_notifier_to_vcpu(pn);
  
  	WRITE_ONCE(vcpu->preempted, false);
-@@ -5966,6 +6738,8 @@ static void kvm_sched_in(struct preempt_notifier *pn, int cpu)
+@@ -5966,6 +6746,8 @@ static void kvm_sched_in(struct preempt_notifier *pn, int cpu)
  static void kvm_sched_out(struct preempt_notifier *pn,
  			  struct task_struct *next)
  {
@@ -4084,7 +4097,7 @@ index 486800a..55c547c 100644
  	struct kvm_vcpu *vcpu = preempt_notifier_to_vcpu(pn);
  
  	if (current->on_rq) {
-@@ -6066,6 +6840,8 @@ int kvm_init(unsigned vcpu_size, unsigned vcpu_align, struct module *module)
+@@ -6066,6 +6848,8 @@ int kvm_init(unsigned vcpu_size, unsigned vcpu_align, struct module *module)
  	/* A kmem cache lets us meet the alignment requirements of fx_save. */
  	if (!vcpu_align)
  		vcpu_align = __alignof__(struct kvm_vcpu);
@@ -4093,7 +4106,7 @@ index 486800a..55c547c 100644
  	kvm_vcpu_cache =
  		kmem_cache_create_usercopy("kvm_vcpu", vcpu_size, vcpu_align,
  					   SLAB_ACCOUNT,
-@@ -6159,6 +6935,7 @@ void kvm_exit(void)
+@@ -6159,6 +6943,7 @@ void kvm_exit(void)
  	cpuhp_remove_state_nocalls(CPUHP_AP_KVM_ONLINE);
  #endif
  	kvm_irqfd_exit();

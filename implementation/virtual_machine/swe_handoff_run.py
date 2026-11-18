@@ -56,6 +56,8 @@ def arguments():
     parser.add_argument("--audit-parked", action="store_true")
     parser.add_argument("--arena-limit-bytes", type=int,default=0)
     parser.add_argument("--fail-maintenance", choices=("writeback","epoch","record"))
+    parser.add_argument("--tail-profile", action="store_true")
+    parser.add_argument("--tail-profile",action="store_true")
     parser.add_argument("--preclean", action="store_true")
     parser.add_argument("--clean-paused", action="store_true", help="Test only: pause and hash each clean")
     parser.add_argument("--clean-wait", choices=("0","1","recorded"), default="0")
@@ -228,6 +230,8 @@ def main():
                               "--memory-mib", str(args.memory_mib), "--vcpus", str(args.vcpus),
                               "--direct-profile-roundtrips", str(args.direct_profile_roundtrips)]
             if args.noncoherent: bench.append("--noncoherent")
+            if args.tail_profile: bench.append("--tail-profile")
+            if args.tail_profile: bench.append("--tail-profile")
             if args.preclean:
                 bench.extend(['--preclean','--clean-wait',args.clean_wait,'--clean-repeats',str(args.clean_repeats)])
             if args.clean_paused: bench.append('--clean-paused')

@@ -2793,10 +2793,10 @@ index 41b7b8d..e546e3f 100644
              vm_info: vm_info.clone(),
 diff --git a/src/vmm/src/noncoherent.rs b/src/vmm/src/noncoherent.rs
 new file mode 100644
-index 0000000..34725b6
+index 0000000..8d9755d
 --- /dev/null
 +++ b/src/vmm/src/noncoherent.rs
-@@ -0,0 +1,559 @@
+@@ -0,0 +1,574 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Opt-in dirty ledger and a stopped-boundary lab oracle. Never enabled by default.
 +use std::fs::{File, OpenOptions};
@@ -2892,6 +2892,7 @@ index 0000000..34725b6
 +    address: usize, _file: File, observer: File, id: Identity, consumed: u64, control_seen: bool,
 +    epoch: u64, inv_from: u64, inv_to: u64,
 +    wb: Vec<u64>, inv_requested: Vec<u64>, inv: Vec<u64>,
++    ram_wb_lines: std::cell::Cell<u64>, ram_inv_lines: std::cell::Cell<u64>,
 +    wb_ns: u64, log_ns: u64, read_ns: u64, inv_ns: u64, control_ns: u64, log_lines: u64, read_lines: u64, control_lines: u64, kernel: [u64; 8],
 +}
 +unsafe impl Send for Shared {} // Mapping accessed only under the process-local mutex.
@@ -2981,6 +2982,7 @@ index 0000000..34725b6
 +        let observer=OpenOptions::new().read(true).write(true).open("/dev/cxl_pool")?;
 +        let mut result = Self { address:p as usize,_file:file,observer,id,consumed:0,control_seen:false,
 +            epoch:0,inv_from:0,inv_to:0,wb:vec![],inv_requested:vec![],inv:vec![],
++            ram_wb_lines: std::cell::Cell::new(0),ram_inv_lines: std::cell::Cell::new(0),
 +            wb_ns:0,log_ns:0,read_ns:0,inv_ns:0,control_ns:0,log_lines:0,read_lines:0,control_lines:0,kernel:[0;8] };
 +        match std::fs::read(result.consumed_path()) {
 +            Ok(bytes) if bytes.len()==8 => result.consumed=u64::from_le_bytes(bytes.try_into().unwrap()),
@@ -2988,7 +2990,16 @@ index 0000000..34725b6
 +            Err(e) if e.kind()==io::ErrorKind::NotFound => {},
 +            Err(e) => return Err(e),
 +        }
++        result.maintain(&vec![0;id.pages.div_ceil(64)],true)?;
 +        Ok(result)
++    }
++    fn cache_metadata(&self, offset: usize, bytes: usize, invalidate: bool) -> u64 {
++        let mut q=[self.id.phys_base,self.id.device_bytes,self.id.metadata,self.id.cookie[0],
++            self.id.cookie[1],self.id.pages as u64,offset as u64,bytes as u64,u64::from(invalidate),0,0,0];
++        if unsafe {libc::ioctl(self.observer.as_raw_fd(),0xc0605080u32 as _,q.as_mut_ptr())}<0 {
++            require::<()>(Err(io::Error::last_os_error()));
++        }
++        q[9]
 +    }
 +    fn consumed_path(&self) -> String {
 +        format!("/run/noncoherent-{:016x}-{:016x}.epoch",self.id.cookie[0],self.id.cookie[1])
@@ -3024,37 +3035,37 @@ index 0000000..34725b6
 +        self.write(slot,epoch);
 +        self.write(slot+8,bitmap.iter().map(|b|b.count_ones() as u64).sum());
 +        unsafe { std::ptr::copy_nonoverlapping(bitmap.as_ptr(),(self.address+slot+16) as *mut u64,bitmap.len()); }
-+        self.log_lines=lines(self.address+slot,self.stride(),false); fence(false);
++        self.log_lines=self.cache_metadata(slot,self.stride(),false); fence(false);
 +        self.write(LOG+40,next);
-+        self.log_lines+=lines(self.address+LOG,64,false); fence(false);
++        self.log_lines+=self.cache_metadata(LOG,64,false); fence(false);
 +        self.consume(epoch)?;
 +        self.epoch=epoch;
 +        Ok(epoch)
 +    }
 +    fn control(&mut self, invalidate: bool) -> u64 {
 +        let bytes=if self.control_seen {4096} else {4096+self.id.pages*16};
-+        let n=lines(self.address,bytes,invalidate); fence(invalidate);
++        let n=self.cache_metadata(0,bytes,invalidate); fence(invalidate);
 +        self.control_seen=true;
 +        n
 +    }
 +    fn mailbox_write(&self, bytes: &[u8], epoch: u64) -> io::Result<u64> {
 +        if bytes.is_empty() || bytes.len()>=65536 { return Err(invalid("mailbox packet size")); }
 +        unsafe { std::ptr::copy_nonoverlapping(bytes.as_ptr(),(self.address+MAILBOX+64) as *mut u8,bytes.len()); }
-+        let emitted=lines(self.address+MAILBOX+64,bytes.len(),false); fence(false);
++        let emitted=self.cache_metadata(MAILBOX+64,bytes.len(),false); fence(false);
 +        for (i,v) in [MAIL_MAGIC,epoch,bytes.len() as u64,self.id.cookie[0],self.id.cookie[1]].iter().enumerate() {
 +            self.write(MAILBOX+i*8,*v);
 +        }
-+        let emitted=emitted+lines(self.address+MAILBOX,64,false); fence(false);
++        let emitted=emitted+self.cache_metadata(MAILBOX,64,false); fence(false);
 +        Ok(emitted)
 +    }
 +    fn mailbox_read(&self, bytes: &[u8], epoch: u64) -> io::Result<u64> {
-+        let emitted=lines(self.address+MAILBOX,64,true); fence(true);
++        let emitted=self.cache_metadata(MAILBOX,64,true); fence(true);
 +        if epoch==0 || self.read(MAILBOX)!=MAIL_MAGIC || self.read(MAILBOX+8)!=epoch
 +            || self.read(MAILBOX+16)!=bytes.len() as u64 || bytes.len()>=65536
 +            || self.read(MAILBOX+24)!=self.id.cookie[0] || self.read(MAILBOX+32)!=self.id.cookie[1] {
 +            return Err(invalid("stale/foreign handoff mailbox"));
 +        }
-+        let emitted=emitted+lines(self.address+MAILBOX+64,bytes.len(),true); fence(true);
++        let emitted=emitted+self.cache_metadata(MAILBOX+64,bytes.len(),true); fence(true);
 +        let stored=unsafe { std::slice::from_raw_parts((self.address+MAILBOX+64) as *const u8,bytes.len()) };
 +        if stored!=bytes { return Err(invalid("handoff mailbox/token mismatch")); }
 +        Ok(emitted)
@@ -3067,7 +3078,7 @@ index 0000000..34725b6
 +        let mut observed=0;
 +        self.read_lines=0;
 +        for _ in 0..4 {
-+            self.read_lines+=lines(self.address+LOG,64,true); fence(true);
++            self.read_lines+=self.cache_metadata(LOG,64,true); fence(true);
 +            observed=self.header()?;
 +            if observed>=expected { break; }
 +            std::thread::yield_now();
@@ -3077,7 +3088,7 @@ index 0000000..34725b6
 +        }
 +        replay_records(self.id.pages,self.consumed,last,|epoch| {
 +            let slot=self.slot(epoch);
-+            self.read_lines+=lines(self.address+slot,self.stride(),true); fence(true);
++            self.read_lines+=self.cache_metadata(slot,self.stride(),true); fence(true);
 +            let words=unsafe { std::slice::from_raw_parts((self.address+slot+16) as *const u64,self.id.pages.div_ceil(64)) }.to_vec();
 +            let corrupt=u64::from(std::env::var("FC_NONCOHERENT_FAIL").as_deref()==Ok("record"));
 +            Ok((self.read(slot)+corrupt,self.read(slot+8),words))
@@ -3096,6 +3107,7 @@ index 0000000..34725b6
 +        if covered!=bitmap || request[8]!=bitmap.iter().map(|b|b.count_ones() as u64*64).sum::<u64>() {
 +            return Err(invalid("kernel guest maintenance receipt mismatch"));
 +        }
++        if invalidate {self.ram_inv_lines.set(request[8]);} else {self.ram_wb_lines.set(request[8]);}
 +        Ok(covered)
 +    }
 +
@@ -3137,7 +3149,7 @@ index 0000000..34725b6
 +        s.wb_ns=start.elapsed().as_nanos() as u64;
 +        let start=Instant::now(); s.publish(&bitmap,true)?;
 +        s.log_ns=start.elapsed().as_nanos() as u64;
-+        s.control(false);
++        s.control_lines=s.control(false);
 +        Ok(())
 +    })?;
 +    BULK_RESET.store(true,std::sync::atomic::Ordering::Release);
@@ -3175,20 +3187,22 @@ index 0000000..34725b6
 +    with_shared(identity()?,|s| {
 +        crate::logger::info_unrestricted!("NONCOHERENT_JSON {}",serde_json::json!({
 +            "event":"clean","epoch":s.epoch,"pages":ledger.union.iter().map(|b|b.count_ones() as u64).sum::<u64>(),
-+            "collect_ns":ledger.collect_ns,"writeback_ns":s.wb_ns,"publish_ns":s.log_ns,"stopped":stopped}));
++            "collect_ns":ledger.collect_ns,"writeback_ns":s.wb_ns,"publish_ns":s.log_ns,"stopped":stopped,
++            "ram_lines":s.ram_wb_lines.get(),"publish_lines":s.log_lines}));
 +        Ok(())
 +    })?;
 +    boundary(mem,if stopped {6} else {4},0,Some(ledger))
 +}
 +fn preinvalidate_identity(id: Identity, hva: u64) -> io::Result<()> {
 +    with_shared(id,|s| {
-+        lines(s.address+LOG,64,true); fence(true);
++        let header_lines=s.cache_metadata(LOG,64,true); fence(true);
 +        let epoch=s.header()?-1;
 +        s.inv_from=s.consumed; s.inv_to=epoch; s.epoch=epoch;
 +        let start=Instant::now(); s.inv_requested=s.replay(epoch)?;
 +        s.read_ns=start.elapsed().as_nanos() as u64;
 +        let start=Instant::now(); s.inv=s.maintain(&s.inv_requested,true)?;
 +        s.inv_ns=start.elapsed().as_nanos() as u64;
++        s.read_lines+=header_lines;
 +        s.consume(epoch)?;
 +        crate::logger::info_unrestricted!("NONCOHERENT_JSON {}",serde_json::json!({
 +            "event":"preinvalidate","epoch":epoch,"from":s.inv_from,"log_read_ns":s.read_ns,"invalidate_ns":s.inv_ns,
@@ -3219,13 +3233,13 @@ index 0000000..34725b6
 +    boundary(mem,2,arena,Some(ledger))
 +}
 +
-+struct OracleState { words:[u64;16], wb:Vec<u64>, requested:Vec<u64>, inv:Vec<u64> }
++struct OracleState { receipts:[u64;6],words:[u64;16], wb:Vec<u64>, requested:Vec<u64>, inv:Vec<u64> }
 +fn oracle_state(id: Identity, words: usize) -> io::Result<OracleState> {
 +    with_shared(id,|s| {
 +        let mut wb=s.wb.clone(); wb.resize(words,0);
 +        let mut requested=s.inv_requested.clone(); requested.resize(words,0);
 +        let mut inv=s.inv.clone(); inv.resize(words,0);
-+        Ok(OracleState { words:[s.epoch,s.inv_from,s.inv_to,s.wb_ns,s.log_ns,s.read_ns,s.inv_ns,
++        Ok(OracleState { receipts:[s.ram_wb_lines.get(),s.ram_inv_lines.get(),s.log_lines,s.read_lines,s.control_lines,1],words:[s.epoch,s.inv_from,s.inv_to,s.wb_ns,s.log_ns,s.read_ns,s.inv_ns,
 +            s.kernel[0],s.kernel[1],s.kernel[2],s.kernel[3],s.kernel[4],s.kernel[5],s.kernel[6],s.kernel[7],s.control_ns],
 +            wb,requested,inv })
 +    })
@@ -3273,6 +3287,7 @@ index 0000000..34725b6
 +            (gate.address as *mut u8).add((if active() {256} else {128}) + index * words * 8).cast::<u64>(), words); }
 +    }
 +    if let Some(nc)=&nc {
++        for (i,value) in nc.receipts.iter().enumerate() { gate.write(10+i,*value); }
 +        for (i,value) in nc.words.iter().enumerate() { gate.write(16+i,*value); }
 +        for (index,bitmap) in [&nc.wb,&nc.requested,&nc.inv].iter().enumerate() {
 +            unsafe { std::ptr::copy_nonoverlapping(bitmap.as_ptr(),

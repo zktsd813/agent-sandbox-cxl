@@ -429,6 +429,40 @@ done:
     return ret;
 }
 
+static long cache_metadata_range(struct cpm *c, void __user *user)
+{
+    struct cpm_cache_range q;
+    u64 first, end, offset, start;
+    int ret = -EINVAL;
+    if (copy_from_user(&q, user, sizeof(q))) return -EFAULT;
+    if (!boot_cpu_has(X86_FEATURE_CLFLUSHOPT) || !boot_cpu_has(X86_FEATURE_CLWB)) return -EOPNOTSUPP;
+    if (q.reserved || q.operation > 1 || !q.bytes || q.offset >= 64ULL*1024*1024 ||
+        q.bytes > 64ULL*1024*1024-q.offset) return -EINVAL;
+    mutex_lock(&c->lock);
+    /* cache_pages initialized and validated an immutable observer mapping.
+     * No owner lease, shared epoch, or shared statistics are modified here. */
+    if (!c->observer_base || !c->observer_map ||
+        memcmp(&q, &c->observer, 6*sizeof(u64)) ||
+        q.metadata_offset > q.device_bytes || 64ULL*1024*1024 > q.device_bytes-q.metadata_offset)
+        goto out;
+    first = q.offset & ~63ULL;
+    end = ALIGN(q.offset+q.bytes,64);
+    q.lines = 0; start = ktime_get_ns();
+    for (offset=first;offset<end;offset+=64) {
+        void *address = c->observer_base+q.metadata_offset+offset;
+        if (q.operation) asm volatile("clflushopt (%0)" : : "r" (address) : "memory");
+        else asm volatile("clwb (%0)" : : "r" (address) : "memory");
+        q.lines++;
+    }
+    if (q.operation) asm volatile("mfence" : : : "memory");
+    else asm volatile("sfence" : : : "memory");
+    q.elapsed_ns=ktime_get_ns()-start;
+    ret=copy_to_user(user,&q,sizeof(q)) ? -EFAULT : 0;
+out:
+    mutex_unlock(&c->lock);
+    return ret;
+}
+
 static long cpm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
     struct cpm *c = file->private_data;
@@ -436,6 +470,7 @@ static long cpm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     long ret = 0;
     if (!capable(CAP_SYS_RAWIO))
         return -EPERM;
+    if (cmd == CPM_CACHE_RANGE) return cache_metadata_range(c,user);
     if (cmd == CPM_CACHE || cmd == CPM_ZERO || cmd == CPM_WRITEBACK) return cache_pages(c,user,cmd==CPM_ZERO,cmd==CPM_WRITEBACK);
     if (cmd == CPM_PARK) { c->local_owner=false; return 0; }
     if (cmd == CPM_CREATE || cmd == CPM_IMPORT) {

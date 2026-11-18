@@ -1024,6 +1024,21 @@ static void guest_heartbeat(int sleeping, int quiet)
     volatile uint64_t *dirty=dirty_words?mmap(NULL,dirty_words*8,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0):NULL;
     if(dirty_words && (void *)dirty==MAP_FAILED)die("controlled dirty memory");
     for(size_t i=0;i<dirty_words;i++)dirty[i]=i;
+    const char *line_setting=getenv("LAB_HEARTBEAT_DIRTY_LINES");
+    unsigned dirty_lines=line_setting?strtoul(line_setting,NULL,10):0;
+    const char *dirty_mode=getenv("LAB_HEARTBEAT_DIRTY_MODE");
+    int read_only=dirty_mode && !strcmp(dirty_mode,"read");
+    int same_value=dirty_mode && !strcmp(dirty_mode,"same");
+    if (dirty_lines && dirty_lines!=1 && dirty_lines!=8 && dirty_lines!=64) {fprintf(stderr,"dirty line count\n");exit(1);}
+    if (dirty_lines && dirty_words) {
+        if (munmap((void *)dirty,dirty_words*8)) die("unmap anonymous dirty payload");
+        int payload_fd=open("/dev/mem",O_RDWR|O_CLOEXEC);
+        if (payload_fd<0) die("open controlled physical payload");
+        dirty=mmap(NULL,dirty_words*8,PROT_READ|PROT_WRITE,MAP_SHARED,payload_fd,128*1024*1024);
+        close(payload_fd);
+        if ((void *)dirty==MAP_FAILED) die("controlled physical payload");
+        for(size_t i=0;i<dirty_words;i++) dirty[i]=i;
+    }
     uint64_t dirty_epoch=0;
     int timing=env_enabled("LAB_HEARTBEAT_TIMING");
     const unsigned spins=128;
@@ -1108,8 +1123,19 @@ static void guest_heartbeat(int sleeping, int quiet)
             if(dirty_setting) {
                 /* Outside pause-to-ACK: validate the previous epoch, then write
                  * the full requested payload before allowing the next pause. */
-                for(size_t i=0;i<dirty_words;i++)if(dirty[i]!=(i^dirty_epoch))atomic_fetch_add(&hb->errors,1);
-                for(size_t i=0;i<dirty_words;i++)dirty[i]=i^epoch;
+                for(size_t i=0;i<dirty_words;i++) {
+                    int changed=!dirty_lines || (!read_only && !same_value && i%512<dirty_lines*8 && i%8==0);
+                    uint64_t expected=i^(changed?dirty_epoch:0);
+                    if(dirty[i]!=expected) atomic_fetch_add(&hb->errors,1);
+                }
+                if (!dirty_lines) for(size_t i=0;i<dirty_words;i++) dirty[i]=i^epoch;
+                else if (!read_only) {
+                    for(size_t page=0;page<dirty_words;page+=512)
+                        for(unsigned line=0;line<dirty_lines;line++) {
+                            size_t i=page+line*8;
+                            dirty[i]=i^(same_value?0:epoch);
+                        }
+                }
                 dirty_epoch=epoch;
                 atomic_store_explicit(&hb->warm_done,epoch,memory_order_release);
             }

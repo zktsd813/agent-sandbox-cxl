@@ -36,6 +36,8 @@ def main():
     p.add_argument("--io-fixture", type=Path)
     p.add_argument("--cxl-mib", type=int, choices=(2048,4096,8192))
     p.add_argument("--memory-mib", type=int, choices=(128,2048))
+    p.add_argument("--dirty-lines",type=int,choices=(0,1,8,64),default=0)
+    p.add_argument("--dirty-mode",choices=("change","same","read"),default="change")
     p.add_argument("--dirty-mib", type=int, choices=(0,16,64,256), default=0)
     p.add_argument("--assets", type=Path)
     p.add_argument("--dirty-ledger", action="store_true")
@@ -166,7 +168,7 @@ def main():
                 bench_args = ["--mode","direct","--name","gin-gonic__gin-3741","--memory-mib",memory_mib,
                     "--vcpus",args.vcpus,"--resident-bench",args.resident_bench,
                     "--iterations",args.iterations,"--warmup",args.warmup]
-                if args.resident_bench=="dirty": bench_args += ["--dirty-mib",args.dirty_mib]
+                if args.resident_bench=="dirty": bench_args += ["--dirty-mib",args.dirty_mib,"--dirty-lines",args.dirty_lines,"--dirty-mode",args.dirty_mode]
                 if args.mixed_io:
                     if not args.io_fixture or not args.dirty_oracle: raise ValueError('Mixed I/O requires fixture and oracle')
                     bench_args = ['--mode','direct','--name','gin-gonic__gin-3741','--memory-mib',2048,

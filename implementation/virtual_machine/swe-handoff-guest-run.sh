@@ -91,7 +91,13 @@ while read -r OP ARG TOKEN EXTRA; do
             unset LAB_HEARTBEAT_RACE_PAGES
             [ "$EXTRA" != race ] || export LAB_HEARTBEAT_RACE_PAGES=1
             case "$EXTRA" in
-                dirty*) MODE=0; VCPUS=1; SLEEP=2; export LAB_HEARTBEAT_DIRTY_MIB=${EXTRA#dirty} ;;
+                dirty*) MODE=0; VCPUS=1; SLEEP=2
+                    dirty_spec=${EXTRA#dirty}
+                    export LAB_HEARTBEAT_DIRTY_MIB=${dirty_spec%%:*}
+                    case "$dirty_spec" in
+                        *:*) dirty_spec=${dirty_spec#*:}; export LAB_HEARTBEAT_DIRTY_LINES=${dirty_spec%%:*} LAB_HEARTBEAT_DIRTY_MODE=${dirty_spec#*:} ;;
+                        *) unset LAB_HEARTBEAT_DIRTY_LINES LAB_HEARTBEAT_DIRTY_MODE ;;
+                    esac ;;
                 *) unset LAB_HEARTBEAT_DIRTY_MIB ;;
             esac
             LAB_HEARTBEAT_VCPUS=$VCPUS LAB_HEARTBEAT_SMP=$MODE LAB_HEARTBEAT_TIMING=1 taskset 1 /lab/shared-probe heartbeat A "$SLEEP" 1 > "$R/heartbeat.log" 2>&1 &

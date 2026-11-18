@@ -22,6 +22,14 @@ struct cpm_pte { __u64 pfn, flags; };
 struct cpm_audit { __u64 address, count, ptes; };
 #define CPM_QUERY _IOWR('P', 0x71, struct cpm_query)
 #define CPM_AUDIT _IOWR('P', 0x74, struct cpm_audit)
+/* Cache instructions for this observer's reserved 64MiB metadata extent.
+ * offset is relative to metadata_offset; operation: 0=writeback, 1=invalidate.
+ * lines is incremented at each instruction, never inferred from a bitmap. */
+struct cpm_cache_range {
+    __u64 phys_base, device_bytes, metadata_offset, cookie_lo, cookie_hi, pages;
+    __u64 offset, bytes, operation, lines, elapsed_ns, reserved;
+};
+#define CPM_CACHE_RANGE _IOWR('P', 0x80, struct cpm_cache_range)
 /* ABI 4 keeps this VM's authoritative mapper in a reserved CXL extent.
  * Handles contain no per-page arrays. Import consumes a sealed owner epoch;
  * callers must fence the source process and drain every writer first. */
