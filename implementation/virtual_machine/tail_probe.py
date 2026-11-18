@@ -11,7 +11,7 @@ def host_state(vms):
     tasks = {}
     for role, vm in vms.items():
         if '_profile_tids' not in vm:
-            vm['_profile_tids'] = [row['thread-id'] for row in lab.qmp(vm['qmp'],'query-cpus-fast')['return']]
+            vm['_profile_tids'] = [row['thread-id'] for row in lab.qmp(vm['qmp'],'query-cpus-fast')]
         for task in Path(f"/proc/{vm['pid']}/task").iterdir():
             try:
                 name = (task/'comm').read_text().strip()
