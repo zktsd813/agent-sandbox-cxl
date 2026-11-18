@@ -339,7 +339,7 @@ class HandoffController(Controller):
             env['FC_NONCOHERENT']='1'
             if getattr(self.args,'manual_protect',False):env['FC_DIRTY_MANUAL']='1'
             if getattr(self.args,'clean_helper',False):env['FC_NONCOHERENT_HELPER']='1'
-            if getattr(self.args,'service_probe',False):env['FC_SERVICE_PROBE']='1'
+            if getattr(self.args,'service_probe',False) or getattr(self.args,'guest_io_probe',False):env['FC_SERVICE_PROBE']='1'
             if getattr(self.args,'tail_profile',False): env['FC_DIRTY_TIMING']='1'
             failure=getattr(self.args,'fail_maintenance',None)
             if failure and (s.role=='A' if failure=='writeback' else s.role=='B'): env['FC_NONCOHERENT_FAIL']=failure
@@ -1059,6 +1059,8 @@ def resident_measure(args):
         c.bench_offset = frames[64*MIB//PAGE]
         from resident_fast import prepare
         prepare(c,s)
+        if args.guest_io_probe:
+            report['guest_io_probe_start']=c.trace_command(s,'io_probe_start',event='trace_io_probe_started')
         if args.service_probe:
             for role,worker in c.resident_workers.items():
                 directory=worker['directory']
@@ -1116,6 +1118,10 @@ def resident_measure(args):
                     report['resident_processes'][role] = {'file':name,'identity':raw}
             lab.save_json(out/'report.json',report)
         wait_payload()
+        if args.guest_io_probe:
+            result=c.trace_command(s,'io_probe_stop',event='trace_io_probe_result',timeout=300)
+            _,name=c.frame(s,result,'IO_LATENCY','guest-io-latency')
+            report['guest_io_probe']={'file':name,'receipt':result['receipt']}
         report['direction_summary_ms'] = {}
         for source in ('A','B'):
             rows = [r for r in c.transitions if r.get('measured') and r['source']==source]
@@ -1162,6 +1168,11 @@ def resident_measure(args):
             except Exception as exc:
                 report.update(result='failed', oracle_error=repr(exc))
             report['dirty_oracle'] = oracle.rows
+        if report['result']=='failed':
+            for role,worker in getattr(c,'resident_workers',{}).items():
+                directory=worker['directory']
+                try:c.shell(role,f'read p t < {directory}/fc.pid\nfor task in /proc/$p/task/*; do cat $task/comm $task/schedstat $task/stack; done\ndmesg | tail -n 80','failure-thread-stacks')
+                except Exception as error:report.setdefault('collection_errors',[]).append(str(error))
         for role in ('A','B'):
             if args.tail_profile:
                 try:c.shell(role,'dmesg','dirty-kernel-times-'+role)
@@ -1221,6 +1232,7 @@ def main():
     parser.add_argument('--tail-profile', action='store_true')
     parser.add_argument("--manual-protect",action="store_true")
     parser.add_argument('--clean-helper',action='store_true')
+    parser.add_argument('--guest-io-probe',action='store_true')
     parser.add_argument('--service-probe',action='store_true')
     parser.add_argument('--preclean', action='store_true')
     parser.add_argument('--clean-paused', action='store_true')

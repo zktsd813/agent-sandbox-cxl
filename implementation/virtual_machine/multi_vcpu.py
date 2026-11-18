@@ -49,6 +49,7 @@ def main():
     p.add_argument("--fail-maintenance", choices=("writeback","epoch","record"))
     p.add_argument("--manual-protect",action="store_true")
     p.add_argument("--clean-helper",action="store_true")
+    p.add_argument("--guest-io-probe",action="store_true")
     p.add_argument("--service-probe",action="store_true")
     p.add_argument("--preclean", action="store_true")
     p.add_argument("--clean-paused", action="store_true", help="Test only: pause and hash each clean")
@@ -189,6 +190,7 @@ def main():
                 if args.tail_profile: bench_args += ["--tail-profile"]
                 if args.manual_protect: bench_args += ["--manual-protect"]
                 if args.clean_helper: bench_args += ["--clean-helper"]
+                if args.guest_io_probe: bench_args += ["--guest-io-probe"]
                 if args.service_probe: bench_args += ["--service-probe"]
                 if args.preclean: bench_args += ['--preclean','--clean-wait',args.clean_wait,'--clean-repeats',args.clean_repeats]
                 if args.clean_paused: bench_args += ['--clean-paused']

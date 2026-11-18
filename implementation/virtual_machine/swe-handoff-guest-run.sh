@@ -67,6 +67,28 @@ while read -r OP ARG TOKEN EXTRA; do
     esac
     case "$TOKEN" in ''|*[!a-zA-Z0-9_-]*) echo '{"event":"trace_protocol_error"}'; continue ;; esac
     case "$OP" in
+        io_probe_start)
+            /lab/shared-probe io-latency > "$R/io-latency.log" 2>&1 &
+            IO_PROBE_PID=$!
+            attempt=0
+            while ! grep -q '^IO_LATENCY_READY' "$R/io-latency.log"; do
+                kill -0 "$IO_PROBE_PID" || { cat "$R/io-latency.log"; exit 1; }
+                attempt=$((attempt+1)); [ "$attempt" -lt 2000 ] || exit 1
+                sleep .01
+            done
+            printf '{"event":"trace_io_probe_started","label":"%s"}\n' "$TOKEN"
+            ;;
+        io_probe_stop)
+            kill -TERM "$IO_PROBE_PID"
+            wait "$IO_PROBE_PID" || true
+            gzip -c "$R/io-latency.log" > /ram/io-latency.gz
+            SIZE=$(stat -c '%s' /ram/io-latency.gz)
+            SHA=$(sha256sum /ram/io-latency.gz); SHA=${SHA%% *}
+            printf 'IO_LATENCY_BEGIN %s %s %s\n' "$TOKEN" "$SIZE" "$SHA"
+            uuencode -m /ram/io-latency.gz io-latency.gz | sed '1d;$d'
+            printf 'IO_LATENCY_END %s\n' "$TOKEN"
+            printf '{"event":"trace_io_probe_result","label":"%s","bytes":%s,"sha256":"%s"}\n' "$TOKEN" "$SIZE" "$SHA"
+            ;;
         io_start)
             /lab/io-mix guest "$EXTRA" > "$R/io.log" 2>&1 &
             IO_PID=$!

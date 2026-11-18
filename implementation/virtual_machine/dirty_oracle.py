@@ -60,7 +60,9 @@ class DirtyOracle:
                 bitmaps = self.mem[self.gate+offset:self.gate+offset+words*8*count]
                 union, kernel, device = [int.from_bytes(bitmaps[i*words*8:(i+1)*words*8], 'little') for i in range(3)]
                 coverage = self.check_maintenance(phase, node, pages, used, extra, bitmaps) if maintained else {}
-                receipts=struct.unpack_from('<6Q',self.mem,self.gate+80) if maintained else None
+                receipts=struct.unpack_from('<6Q',self.mem,self.gate+MIB-64) if maintained else None
+                if receipts and receipts[5]!=1: # Read old immutable coherent-lab fixtures too.
+                    receipts=struct.unpack_from('<6Q',self.mem,self.gate+80)
                 if receipts and receipts[5]==1:
                     wb,inv,log,read,control,_=receipts
                     if phase in (1,2,4,6) and wb!=union.bit_count()*64:

@@ -6,6 +6,7 @@
 #include <inttypes.h>
 #include <linux/ethtool.h>
 #include <linux/kvm.h>
+#include <linux/fs.h>
 #include <linux/sockios.h>
 #ifndef CXL_KVM_DAX_HEADER
 #define CXL_KVM_DAX_HEADER "../linux/include/uapi/linux/kvm_dax.h"
@@ -2776,8 +2777,39 @@ static void linux_handoff(char role,unsigned rounds,uint64_t nonce)
     close(kvm);close(dax);alarm(0);
 }
 
+/* Lab-only readonly block latency. The buffer stays in tracked guest RAM. */
+static uint64_t io_clock_ns(void)
+{
+    struct timespec t;
+    if (clock_gettime(CLOCK_MONOTONIC,&t)) die("IO clock");
+    return (uint64_t)t.tv_sec*1000000000+t.tv_nsec;
+}
+static void guest_io_latency(void)
+{
+    int disk=open("/dev/vda",O_RDONLY|O_DIRECT|O_CLOEXEC);
+    int memory=open("/dev/mem",O_RDONLY|O_CLOEXEC);
+    uint64_t bytes=0;
+    if (disk<0 || memory<0 || ioctl(disk,BLKGETSIZE64,&bytes) || bytes<131072) die("IO disk");
+    struct heartbeat *hb=mmap(NULL,4096,PROT_READ,MAP_SHARED,memory,64*1024*1024);
+    if (hb==MAP_FAILED) die("IO heartbeat");
+    close(memory);
+    void *buffer=NULL;
+    if (posix_memalign(&buffer,4096,65536)) die("IO buffer");
+    setvbuf(stdout,NULL,_IOLBF,0);
+    puts("IO_LATENCY_READY");
+    for (uint64_t index=0;;index++) {
+        uint64_t epoch=atomic_load_explicit(&hb->epoch,memory_order_acquire),begin=io_clock_ns();
+        ssize_t got=pread(disk,buffer,65536,(off_t)(((index*17)%(bytes/65536))*65536));
+        uint64_t ended=io_clock_ns(),after=atomic_load_explicit(&hb->epoch,memory_order_acquire);
+        if (got!=65536) die("IO short read");
+        printf("IO_LATENCY_JSON {\"epoch\":%"PRIu64",\"after_epoch\":%"PRIu64",\"begin_ns\":%"PRIu64",\"end_ns\":%"PRIu64",\"bytes\":65536}\n",epoch,after,begin,ended);
+        usleep(1000);
+    }
+}
+
 int main(int argc, char **argv)
 {
+    if (argc==2 && !strcmp(argv[1],"io-latency")) {guest_io_latency();return 0;}
     if (argc == 2 && !strcmp(argv[1], "kvm-keepalive")) {
         int kvm = open("/dev/kvm", O_RDWR | O_CLOEXEC);
         if (kvm < 0) die("keepalive open");

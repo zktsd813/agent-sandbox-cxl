@@ -2818,7 +2818,7 @@ index 41b7b8d..e546e3f 100644
              vm_info: vm_info.clone(),
 diff --git a/src/vmm/src/noncoherent.rs b/src/vmm/src/noncoherent.rs
 new file mode 100644
-index 0000000..f9c1841
+index 0000000..bb61285
 --- /dev/null
 +++ b/src/vmm/src/noncoherent.rs
 @@ -0,0 +1,620 @@
@@ -3358,7 +3358,7 @@ index 0000000..f9c1841
 +            (gate.address as *mut u8).add((if active() {256} else {128}) + index * words * 8).cast::<u64>(), words); }
 +    }
 +    if let Some(nc)=&nc {
-+        for (i,value) in nc.receipts.iter().enumerate() { gate.write(10+i,*value); }
++        for (i,value) in nc.receipts.iter().enumerate() { gate.write((GATE_BYTES-64)/8+i,*value); }
 +        for (i,value) in nc.words.iter().enumerate() { gate.write(16+i,*value); }
 +        for (index,bitmap) in [&nc.wb,&nc.requested,&nc.inv].iter().enumerate() {
 +            unsafe { std::ptr::copy_nonoverlapping(bitmap.as_ptr(),
@@ -3371,7 +3371,7 @@ index 0000000..f9c1841
 +    gate.write(4, arena); gate.write(5, ledger.map_or(0, |l|l.collect_ns));
 +    std::sync::atomic::fence(std::sync::atomic::Ordering::SeqCst);
 +    gate.write(0, sequence);
-+    if active() { lines(gate.address,256+6*words*8,false); fence(false); }
++    if active() { lines(gate.address,256+6*words*8,false); lines(gate.address+GATE_BYTES-64,64,false); fence(false); }
 +    let start = Instant::now();
 +    while gate.read(8) != sequence {
 +        if start.elapsed() > Duration::from_secs(120) { return Err(invalid("oracle timeout; remain stopped")); }
