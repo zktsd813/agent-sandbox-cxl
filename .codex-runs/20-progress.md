@@ -37,3 +37,4 @@
 - 07:33 UTC: 実 guest O_DIRECT disk probe와 gate 독립 영수증 cce14e5, baseline/NC ACK trigger 통일 a3f7b52, 프로젝트 자체 cache hint fd6daf8, 실패 thread stack 수집 b315dac. 이전 service auto-2는 native reply EOF/EAGAIN으로 실패. API stress 없는 guest disk smoke는4 clean/4 hand-off 누락0. API stress 재시도10회도 통과했으나 단발 실패 원인은 미확정이다.
 - Node0 free가15GiB대로 내려가 기존12GiB lab+4GiB guard에 거절됨. guard는 유지한다. multi runner에 L1 RAM 선택(기본4GiB, 새2GiB)을 추가한다. 이후 최종 비교는 L1 2GiB×2, emulated CXL4GiB, guest2GiB로 통일한다. 첫 진단4GiB L1 결과와 구별한다.
 - manual protect 예비 비교는 GET만 빨라졌으나 총 clean은 악화됐다. 아직 최종 채택하지 않음. 실제 guest I/O 비교 sync/helper/manual ABAB를 먼저 측정한다.
+- L1 2GiB smoke는 초기 private guest RAM2GiB mmap에 ENOMEM으로 거절됐다. 실행 전 실패이며3GiB L1으로 수정한다. 이때 총lab10.0625GiB+reserve4GiB다. 모든 최종 arm에3GiB를 쓴다.
