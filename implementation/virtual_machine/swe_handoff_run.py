@@ -47,7 +47,8 @@ def arguments():
     parser.add_argument("--memory-mib", type=int, default=2048)
     parser.add_argument("--vcpus", type=int, choices=(1,2,4,8), default=1)
     # Default: 6144/8192 for trajectory runs, 8192/16384 otherwise.
-    parser.add_argument("--l1-memory-mib", type=int, choices=(3072,4096,6144,8192))
+    parser.add_argument("--l1-memory-mib", type=int, choices=(1024,1536,2048,3072,4096,6144,8192))
+    parser.add_argument("--l1-overcommit",action="store_true",help="Disposable L1 only: permit the sparse private boot mapping")
     parser.add_argument("--cxl-mib", type=int, choices=(4096,8192,16384))
     parser.add_argument("--parallel-build", action="store_true")
     parser.add_argument("--dirty-ledger", action="store_true")
@@ -291,6 +292,15 @@ def main():
                                 ['ps','-eo','pid,user,psr,pcpu,comm'], text=True))
                     perf_handle=None
                     try:
+                        if args.l1_overcommit:
+                            current_run=Path(json.loads(pointer.read_text())["run"])
+                            current_config=json.loads((current_run/'run.json').read_text())
+                            arm['l1_overcommit']={}
+                            for role,vm in current_config['vms'].items():
+                                text=lab.guest_command(vm,'cat /proc/sys/vm/overcommit_memory\necho 1 > /proc/sys/vm/overcommit_memory\ncat /proc/sys/vm/overcommit_memory\ncat /proc/meminfo')
+                                name=trial_id+'-l1-overcommit-'+role+'.txt'
+                                (output/name).write_text(text)
+                                arm['l1_overcommit'][role]=name
                         if args.tail_profile:
                             from tail_probe import start_perf
                             current_run=Path(json.loads(pointer.read_text())["run"])
