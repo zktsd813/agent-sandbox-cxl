@@ -36,6 +36,7 @@ def main():
     p.add_argument("--io-fixture", type=Path)
     p.add_argument("--cxl-mib", type=int, choices=(2048,4096,8192))
     p.add_argument("--memory-mib", type=int, choices=(128,2048))
+    p.add_argument("--l1-memory-mib", type=int, choices=(2048,4096),default=4096)
     p.add_argument("--dirty-lines",type=int,choices=(0,1,8,64),default=0)
     p.add_argument("--dirty-mode",choices=("change","same","read"),default="change")
     p.add_argument("--dirty-mib", type=int, choices=(0,16,64,256), default=0)
@@ -119,7 +120,8 @@ def main():
                     "--module-dir", LOCAL / "kernel-modules/lib/modules/6.6.0-rc6-dcd-v3",
                     "--l2-kernel", INPUTS / "guest-swe-build/vmlinux")
             # 2 x 4 GiB L1 RAM + one shared 2 GiB CXL file + ivshmem + 4 GiB reserve.
-            budget = (2 * 4096 + cxl_mib + (64 if fixture_trial else 4)) * 1024 * 1024
+            budget = (2 * args.l1_memory_mib + cxl_mib + (64 if fixture_trial else 4)) * 1024 * 1024
+            result['l1_memory_mib']=args.l1_memory_mib
             if fixture_trial:
                 with (assets/'storage.raw').open('rb') as stream:
                     os.posix_fadvise(stream.fileno(), 0, 0, os.POSIX_FADV_DONTNEED)
@@ -134,7 +136,7 @@ def main():
                 free=node0_free();result['node0_free_after_hint_bytes']=free
             if free < budget + result["reserve_bytes"]:
                 raise RuntimeError("node 0 free memory below budget + 4 GiB")
-            start = ["start", "--vcpus", max(4,args.vcpus+2), "--memory-mib",4096,
+            start = ["start", "--vcpus", max(4,args.vcpus+2), "--memory-mib",args.l1_memory_mib,
                 "--shared-mib",64 if fixture_trial else 4,"--cxl-mib",cxl_mib,"--dax-handoff","--dax-guest",
                 "--dax-4k","--network-backend","socket","--memory-backing-dir","/dev/shm","--qemu",args.qemu]
             start += ["--pml", args.pml]
