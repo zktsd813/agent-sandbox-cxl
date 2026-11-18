@@ -338,6 +338,7 @@ class HandoffController(Controller):
         if getattr(self.args, 'noncoherent', False):
             env['FC_NONCOHERENT']='1'
             if getattr(self.args,'clean_helper',False):env['FC_NONCOHERENT_HELPER']='1'
+            if getattr(self.args,'service_probe',False):env['FC_SERVICE_PROBE']='1'
             if getattr(self.args,'tail_profile',False): env['FC_DIRTY_TIMING']='1'
             failure=getattr(self.args,'fail_maintenance',None)
             if failure and (s.role=='A' if failure=='writeback' else s.role=='B'): env['FC_NONCOHERENT_FAIL']=failure

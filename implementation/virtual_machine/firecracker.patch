@@ -2818,10 +2818,10 @@ index 41b7b8d..e546e3f 100644
              vm_info: vm_info.clone(),
 diff --git a/src/vmm/src/noncoherent.rs b/src/vmm/src/noncoherent.rs
 new file mode 100644
-index 0000000..d8c539d
+index 0000000..8449a6e
 --- /dev/null
 +++ b/src/vmm/src/noncoherent.rs
-@@ -0,0 +1,587 @@
+@@ -0,0 +1,591 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Opt-in dirty ledger and a stopped-boundary lab oracle. Never enabled by default.
 +use std::fs::{File, OpenOptions};
@@ -3169,9 +3169,13 @@ index 0000000..d8c539d
 +    if !active() { return Ok(0); }
 +    if std::env::var("FC_NONCOHERENT_FAIL").as_deref()==Ok("writeback") {return Err(invalid("injected writeback failure after harvest"));}
 +    with_shared(identity()?,|s| {
++        let begin_ns=mono_ns();
 +        let start=Instant::now();
 +        s.wb=if std::env::var_os("FC_NONCOHERENT_USER_WRITEBACK").is_some() {emit_guest(mem,&ledger.union,false)?.0} else {s.maintain(&ledger.union,false)?};
 +        s.wb_ns=start.elapsed().as_nanos() as u64;
++        if std::env::var_os("FC_SERVICE_PROBE").is_some() {
++            crate::logger::info_unrestricted!("WRITEBACK_SPAN_JSON {}",serde_json::json!({"begin_ns":begin_ns,"end_ns":mono_ns()}));
++        }
 +        let start=Instant::now(); let epoch=s.publish(&ledger.union,false)?;
 +        s.log_ns=start.elapsed().as_nanos() as u64;
 +        Ok(epoch)
