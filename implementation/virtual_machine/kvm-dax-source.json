@@ -31,7 +31,7 @@
       "base_sha256": "430e267cc903e01369c4b4e1d3b61d2e05e12c0c50f8d243238b09296354e76a"
     },
     "arch/x86/kvm/lapic.c": {
-      "patched_sha256": "68957c3a68d76e4cbea38654d0630eb38468862a1f110f0e441c4d208aa2bf25",
+      "patched_sha256": "1b904ac7ae75ba5a1fc179a79b3b5f1c741372678bf95fcc4cd93ae8fbee3935",
       "base_sha256": "cb4bc8f83babd1ff9ad1823102eafc3a66910f5179681920c22c0ca86725ae4f"
     },
     "arch/x86/kvm/lapic.h": {
@@ -43,15 +43,15 @@
       "base_sha256": "c60ba2cfdcb935509d37b861b3a65f6ccf7e43a328e6c671d32fba72975b2ed0"
     },
     "arch/x86/kvm/mmu/mmu.c": {
-      "patched_sha256": "c80392666f89a36a50d2d3931ff46fc32c7a1f44a843f167f3a8b6d6825a8267",
+      "patched_sha256": "2597eae495f1cab6ec0c3deb3bed8e8293185b3edb0c80ea57dcd586b16fb9b4",
       "base_sha256": "e687fdf436053dd0d41ffc403e89a82bc70663a519629da38ee4bd5a52d569a8"
     },
     "arch/x86/kvm/mmu/tdp_mmu.c": {
-      "patched_sha256": "1ae40031ea9525a71e8ac81481e6f6e64b787a869488e2f39ecafdb34dfccc08",
+      "patched_sha256": "18fb81356a0ab035e293d6eebf71085ae919cdcf82a19a1399a03d630ba64090",
       "base_sha256": "416eb7932f2e3e12a039293eba4a958e173046ec62d786aa69f8b96217fb293a"
     },
     "arch/x86/kvm/vmx/vmx.c": {
-      "patched_sha256": "c6b5137e20cf0bcdd3b8fe7d270c79068b06d3b8802e12c1af0b905982f6ea2d",
+      "patched_sha256": "baa6f47e977315a2261aeb18baf27a15a582caf5109097d3f09e7eeb76bdba47",
       "base_sha256": "c54419b71478ec971c57dab1df7b0cebf3168989a27f3f65540d8d036d05c4ce"
     },
     "arch/x86/kvm/x86.c": {
@@ -59,15 +59,15 @@
       "base_sha256": "fe9ae905263db74ef5876a2ae49e0ce1d82a6e15866703b64fd6586c39eed2a4"
     },
     "include/linux/kvm_dax.h": {
-      "patched_sha256": "bc3f7b34b526b753be5cbb6d9eefa676cd1aab026cba4038528e26b7ed8e743a",
+      "patched_sha256": "d896a09a0694faf2241092be95171eb909d197915b4194f52dfb4209c1fb6b48",
       "new": true
     },
     "include/linux/kvm_host.h": {
-      "patched_sha256": "ecf4b875435e8688abc61b5aa0616e9086f4e71968f02fc6ad59a57da52f657b",
+      "patched_sha256": "684c10e002a0a156beefcdbb324a643eadea94903f7a9b243a11ffa1aaef32db",
       "base_sha256": "166219e363e1462216d5b753032bd8179b6a639b9e63ef966f9923cc51aa83f6"
     },
     "include/uapi/linux/kvm_dax.h": {
-      "patched_sha256": "e56d8e55e94e239e70f46ea0894559f1962530c541737ebeb2ca1d47fc5ac408",
+      "patched_sha256": "b50a10a7985a27242d3df745497d50dde59ee09af401553f1c779a0cbb150004",
       "new": true
     },
     "virt/kvm/Makefile.kvm": {
@@ -79,11 +79,11 @@
       "base_sha256": "414f9b16edb7fd8562af7730ccdf47f6278c1b5ac17dcde46748b7f091fa8ffb"
     },
     "virt/kvm/dax_pool.c": {
-      "patched_sha256": "7dd805248e86dd1442c5e8989f38c3bbc605e878e227e52313c4acd4c7656bd2",
+      "patched_sha256": "cfa2513970bf5cad9ee69c1e2c5ffc971445bd00ca2f4e817c1adcbbb89f6fb5",
       "new": true
     },
     "virt/kvm/eventfd.c": {
-      "patched_sha256": "5a519f0a67615ccde47791d7eb2b3e1096242b91044db1e636b4644b54201619",
+      "patched_sha256": "17ba3622051f0e93c8b5195da9bb9a8dafbc201c1741b279b37268993d850509",
       "base_sha256": "64a195e57968c2a7b078e4f7f8c4684d2c1c8b9a0d7fe03f1685a73138ae5c99"
     },
     "virt/kvm/irqchip.c": {
@@ -91,7 +91,7 @@
       "base_sha256": "2c9b22d33f02399d0a1503236b39d96a83e8c6dbe659a706f6ce10424042c64e"
     },
     "virt/kvm/kvm_main.c": {
-      "patched_sha256": "8f3de0ee141661c8fd34f49804168fe740482ef3725736f5233fcb7b769d95ee",
+      "patched_sha256": "35ef7cb2790a1896412eb63c780f30c758d9306d517b3ea267688895328eeb98",
       "base_sha256": "0f70d265644639479a3fc4c7ecfccd3adb44134b4fe682612f236cae16f3dcf3"
     },
     "arch/x86/kvm/mmu/mmu_internal.h": {
@@ -101,6 +101,10 @@
     "kernel/module/main.c": {
       "base_sha256": "1698bcd686cc75e2724c82f8b952599dbdc0e4086fe8151b58606676a0d3b98c",
       "patched_sha256": "4fc5b0fc32ab6f7c92c794c055f64c055bb01b96c16eb09125e8be1024515840"
+    },
+    "arch/x86/kvm/mmu/spte.c": {
+      "base_sha256": "78c73ca8bc22d1cfffca95b9c31a7e1b20c0f66b2f283cc0814de31624cd9616",
+      "patched_sha256": "dd4a8de5e9ce26d51b5ee67c3356a4969f5225e4b98314c7f4a32c4043ce1719"
     }
   },
   "direct_handoff": {

@@ -278,7 +278,7 @@ Range는 그 observer의 불변 identity와 64 MiB metadata 예약 안에서만 
 Observer 초기화는 기존 검증된 GPA 표를 DRAM에 복사한다. 공유 소유권은 쓰지 않는다.
 최초 observer 표 검증의 무효화와 lab 정답지 gate는 준비 비용으로 분리한다.
 Log의 RAM 목록 bit 수와 RAM 명령 수/64가 다르면 닫힌 실패로 끝낸다.
-정답지 gate의 남은 word는 실제 kernel 영수증 전달에만 사용한다. 생산 ABI가 아니다.
+정답지 gate의 마지막 독립 cache line은 실제 kernel 영수증 전달에만 사용한다. L0 ACK line과 겹치지 않는다. 생산 ABI가 아니다.
 
 Line 정답지는 4 KiB page hash가 바뀐 경우만 64 B line XXH64를 다시 계산한다.
 처음에는 모든 line의 기준 hash를 만든다. 상태 파일은 종료할 때 삭제한다.
@@ -295,24 +295,25 @@ Helper는 RAM CLWB→SFENCE→log record·header 발행 뒤에만 native ACK를 
 Snapshot 뒤의 쓰기는 새 bitmap에 남는다. Helper가 새 값까지 내려써도 안전하다.
 새 clean과 export는 이전 helper를 join한다. Snapshot을 겹쳐 수집하거나 발행 순서를 바꾸지 않는다.
 Import 준비도 이전 작업이 끝난 뒤 한다. 작업 중 mapping을 park하거나 바꾸지 않는다.
-기본 helper는 KVM fd와 장치 객체를 읽지 않는다. 수동 dirty 보호 옵션은 아래 예외를 따른다. Mapper observer와 log mutex만 사용한다.
+Helper는 KVM fd와 장치 객체를 읽지 않는다. Mapper observer와 log mutex만 사용한다.
 오류·thread panic·ACK socket 오류는 abort한다. 부분 성공을 ACK하지 않는다.
 
 이 옵션은 KVM 수집 중의 VMM 막힘을 없애지 못한다.
 중첩 lab에서의 D bit 처리 꼬리를 helper의 개선으로 주장하지 않는다.
 
-## 20: 수동 dirty 보호의 선택 시험
+## 20: 채택하지 않은 경로
 
-`FC_DIRTY_MANUAL`은 생성 직후 MANUAL_DIRTY_LOG_PROTECT2의 ENABLE만 켠다.
-INITIALLY_SET은 켜지 않는다. 수거 전부터 dirty tracking이 켜져 있다.
-GET은 bitmap 사본만 만든다. WB 전에 켜진 bitmap block만 CLEAR_DIRTY_LOG로 지운다.
-한 호출은 최대 4,096 GPA page다. 이는 lock 안 작업 수의 상한이며 wall time 상한은 아니다.
-Nested EPT fault나 scheduling은 여전히 한 호출을 오래 멈출 수 있다.
-빈 block은 지우지 않는다. Helper 옵션에서는 CLEAR도 helper가 실행한다.
-이 경우 helper가 소유한 KVM VM fd의 dup만 사용한다. 소유 판정은 thread group 기준이다.
+수동 dirty 보호는 과거 commit 57b7caf~255547c의 별도 바이너리로 시험했다.
+GET만 빨라지고 조각별 CLEAR가 총 정리와 guest I/O 지연을 늘렸다.
+최종 경로에서 제거했다. Dirty ring은 실제 직접 KVM 비용과 구현 비용을 보고 보류했다.
 
-이번 snapshot에 없는 page는 지우지 않는다. 새 쓰기 bit가 다음 수거에 남는다.
-목록 page의 clear 전 쓰기는 뒤따르는 WB가 덮는다. Clear 뒤 쓰기는 다시 기록된다.
-모든 clear가 끝난 뒤 WB와 record를 발행한다. 새 수거와 hand-off는 helper join 뒤다.
-따라서 clear·WB 사이에 쓴 page를 잃지 않는다. 오류는 발행 전에 abort한다.
-이 시험은 정답지와 전후 비교에서 도움이 확인될 때만 최종 코드에 유지한다.
+객체 영역은 전체 사용 범위를 계속 처리한다.
+`make_spte`는 일반 entry의 A bit를 미리 켠다. Prefetch는 예외다.
+A=0 entry가 있는 EPT page 전체와 모든 software writer를 덮는 표시를 아직 증명하지 못했다.
+GPA dirty 목록만으로 객체 page를 줄이지 않는다.
+처음 보는 host의 전체 RAM 무효화도 이전 ACK와 그 뒤 mapping 부재 증명이 없어 유지한다.
+
+정지 microbench의 SPTE 원인 counter는 lab 전용이다.
+`dax_dirty_timing`이 켜졌을 때만 make_spte의 dirty 표시를 센다.
+GPA128..384MiB의 고유 page bit를 원자적으로 걷어 read-only payload의 최초 mapping 표시를 구별한다.
+Live 경계에서 이 counter를 값 변화 정답지로 쓰지 않는다.

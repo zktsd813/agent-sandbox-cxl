@@ -48,7 +48,6 @@ def main():
     p.add_argument("--audit-parked", action="store_true")
     p.add_argument("--arena-limit-bytes", type=int,default=0)
     p.add_argument("--fail-maintenance", choices=("writeback","epoch","record"))
-    p.add_argument("--manual-protect",action="store_true")
     p.add_argument("--clean-helper",action="store_true")
     p.add_argument("--guest-io-probe",action="store_true")
     p.add_argument("--service-probe",action="store_true")
@@ -71,7 +70,6 @@ def main():
     p.add_argument("--firecracker", type=Path, default=LOCAL / "fc/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker")
     p.add_argument("--qemu", type=Path, default=LOCAL / "qemu-runtime/bin/qemu-system-x86_64")
     args = p.parse_args()
-    if args.manual_protect and not args.noncoherent:p.error("Manual protect requires noncoherent mode")
     if args.noncoherent: args.dirty_ledger=True
     fixture_trial = bool(args.resident_bench or args.mixed_io)
     memory_mib = args.memory_mib or (2048 if args.mixed_io or args.resident_bench=="dirty" else 128)
@@ -195,7 +193,6 @@ def main():
                 if args.arena_limit_bytes: bench_args += ['--arena-limit-bytes',args.arena_limit_bytes]
                 if args.fail_maintenance: bench_args += ['--fail-maintenance',args.fail_maintenance]
                 if args.tail_profile: bench_args += ["--tail-profile"]
-                if args.manual_protect: bench_args += ["--manual-protect"]
                 if args.clean_helper: bench_args += ["--clean-helper"]
                 if args.guest_io_probe: bench_args += ["--guest-io-probe"]
                 if args.service_probe: bench_args += ["--service-probe"]

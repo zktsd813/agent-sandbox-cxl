@@ -339,7 +339,6 @@ class HandoffController(Controller):
             env.update(FC_BENCH_EPOCH_GPA=str(64*MIB),FC_BENCH_INITIAL_EPOCH=str(s.epoch))
         if getattr(self.args, 'noncoherent', False):
             env['FC_NONCOHERENT']='1'
-            if getattr(self.args,'manual_protect',False):env['FC_DIRTY_MANUAL']='1'
             if getattr(self.args,'clean_helper',False):env['FC_NONCOHERENT_HELPER']='1'
             if getattr(self.args,'service_probe',False) or getattr(self.args,'guest_io_probe',False):env['FC_SERVICE_PROBE']='1'
             if getattr(self.args,'tail_profile',False): env['FC_DIRTY_TIMING']='1'
@@ -1230,7 +1229,6 @@ def main():
     parser.add_argument('--arena-limit-bytes',type=int,default=0)
     parser.add_argument('--fail-maintenance',choices=('writeback','epoch','record'))
     parser.add_argument('--tail-profile', action='store_true')
-    parser.add_argument("--manual-protect",action="store_true")
     parser.add_argument('--clean-helper',action='store_true')
     parser.add_argument('--guest-io-probe',action='store_true')
     parser.add_argument('--service-probe',action='store_true')
@@ -1247,7 +1245,6 @@ def main():
     parser.add_argument('--prefault-activate', action='store_true')
     parser.add_argument('--prefault-probe', help='Static ABI probe uploaded only to these disposable L1s')
     args = parser.parse_args()
-    if args.manual_protect and not args.noncoherent:parser.error("Manual protect requires noncoherent mode")
     if args.clean_helper and (not args.preclean or args.clean_paused):parser.error("Helper requires live preclean")
     if args.preclean and not args.noncoherent: parser.error("Preclean requires noncoherent mode")
     if not 1 <= args.clean_repeats <= 1000: parser.error("clean-repeats must be 1..1000")

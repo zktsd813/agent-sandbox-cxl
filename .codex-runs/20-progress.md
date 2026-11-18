@@ -38,3 +38,8 @@
 - Node0 free가15GiB대로 내려가 기존12GiB lab+4GiB guard에 거절됨. guard는 유지한다. multi runner에 L1 RAM 선택(기본4GiB, 새2GiB)을 추가한다. 이후 최종 비교는 L1 2GiB×2, emulated CXL4GiB, guest2GiB로 통일한다. 첫 진단4GiB L1 결과와 구별한다.
 - manual protect 예비 비교는 GET만 빨라졌으나 총 clean은 악화됐다. 아직 최종 채택하지 않음. 실제 guest I/O 비교 sync/helper/manual ABAB를 먼저 측정한다.
 - L1 2GiB smoke는 초기 private guest RAM2GiB mmap에 ENOMEM으로 거절됐다. 실행 전 실패이며3GiB L1으로 수정한다. 이때 총lab10.0625GiB+reserve4GiB다. 모든 최종 arm에3GiB를 쓴다.
+- 07:54 UTC: 실제 disk I/O sync/helper/manual/sync/helper/manual 각220 clean/220 hand-off 완료. L1 3GiB×2, guest2GiB, CXL4GiB, 측정200씩. manual 첫 arm 총clean 중앙값1020.6ms, GET0.115ms지만rearm1013.1ms. 최종 manual 옵션을 제거한다. 자동수집 helper는 일반collect epoch의 disk 최악지연을 줄였으며 두 쌍 모두 분석한다.
+- 추가 동시 실행 대조: upstream dirty_log_perf_test가 GET 동안 host에서 vCPU를 기다리게 함을 확인했다. host wait 동안 _vcpu_run을 반복하는 명시적 live 변형을 별도 binary로 만들었다. L0/L1/L0/L1 각220에서 최대2.318/0.883/2.422/1.464ms, >50ms 모두0. 기존 stopped 일반 KVM뿐 아니라 live 일반 KVM도 빠르다. 공유 DAX EPT hand-off lab 경로와 구별한다. 변형은 dirty_log_live.patch로 보존한다.
+- 재현47개 tail의 slots/sync/mmu lock/flush/copy 최대는 각각0.000307/0.004591/0.011463/0.063/0.139294ms. clear 최대6377.23ms. L1 VMM run delay 최대0.736ms, L0 vCPU run delay 최대0.718ms. tail창의 vmstat reclaim/compaction/swap/majorfault delta와 steal tick 모두0.
+- 객체 kernel 영수증의 기존 lines 값이 loopbound였음을 감사에서 확인. 성공시coverage와 같지만20의 실제발행counter 요구에 맞춰 header 및 body의 각 asm 뒤 emitted++로 수정. 이 전의account-*는RAM/log/control 진단만 사용하고 최종accounting matrix를 새kernel로 전부 다시 실행한다.
+- SPTE dirty 표시 원인을 작은 stopped read-only 시험에서 확인하기 위한 선택counter 추가. timing 옵션을 켠 경우에만 make_spte 표시수/prefetch수와 GPA128..384MiB 고유page를 센다. 일반경로기본false. Object 좁히기는prefetch A=0와softwarewriter완전성증명부족으로 보류. Cold observer 전체무효화 유지.

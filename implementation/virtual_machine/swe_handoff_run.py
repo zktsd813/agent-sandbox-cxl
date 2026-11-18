@@ -47,7 +47,7 @@ def arguments():
     parser.add_argument("--memory-mib", type=int, default=2048)
     parser.add_argument("--vcpus", type=int, choices=(1,2,4,8), default=1)
     # Default: 6144/8192 for trajectory runs, 8192/16384 otherwise.
-    parser.add_argument("--l1-memory-mib", type=int, choices=(4096,6144,8192))
+    parser.add_argument("--l1-memory-mib", type=int, choices=(3072,4096,6144,8192))
     parser.add_argument("--cxl-mib", type=int, choices=(4096,8192,16384))
     parser.add_argument("--parallel-build", action="store_true")
     parser.add_argument("--dirty-ledger", action="store_true")
