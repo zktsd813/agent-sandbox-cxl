@@ -2818,15 +2818,15 @@ index 41b7b8d..e546e3f 100644
              vm_info: vm_info.clone(),
 diff --git a/src/vmm/src/noncoherent.rs b/src/vmm/src/noncoherent.rs
 new file mode 100644
-index 0000000..8449a6e
+index 0000000..f9c1841
 --- /dev/null
 +++ b/src/vmm/src/noncoherent.rs
-@@ -0,0 +1,591 @@
+@@ -0,0 +1,620 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Opt-in dirty ledger and a stopped-boundary lab oracle. Never enabled by default.
 +use std::fs::{File, OpenOptions};
 +use std::io::{self, Write};
-+use std::os::fd::AsRawFd;
++use std::os::fd::{AsRawFd,FromRawFd,OwnedFd};
 +use std::sync::{Mutex, OnceLock};
 +use std::time::{Duration, Instant};
 +use vm_memory::{GuestMemoryBackend, GuestMemoryRegion};
@@ -2845,7 +2845,7 @@ index 0000000..8449a6e
 +    if enabled() { Ok(require(result)) } else { result }
 +}
 +fn invalid(s: impl ToString) -> io::Error { io::Error::other(s.to_string()) }
-+pub(crate) struct Ledger { pub kvm: Vec<u64>, pub device: Vec<u64>, pub union: Vec<u64>, pub collect_ns: u64 }
++pub(crate) struct Ledger { pub kvm: Vec<u64>, pub device: Vec<u64>, pub union: Vec<u64>, pub collect_ns: u64, manual_fd: Option<OwnedFd>, rearm_ns: std::cell::Cell<u64> }
 +fn mono_ns() -> u64 {
 +    let mut t=libc::timespec {tv_sec:0,tv_nsec:0};
 +    unsafe {libc::clock_gettime(libc::CLOCK_MONOTONIC,&mut t)};
@@ -2892,7 +2892,12 @@ index 0000000..8449a6e
 +        crate::logger::info_unrestricted!("COLLECT_JSON {}",serde_json::json!({"begin_ns":begin_ns,"end_ns":end_ns,
 +            "ioctl_ns":ioctl_ns,"scan_ns":scan_ns,"reset_ns":reset_ns,"collect_ns":collect_ns,"before":before,"after":after}));
 +    }
-+    Ok(Ledger { kvm, device, union, collect_ns })
++    let manual_fd=if std::env::var_os("FC_DIRTY_MANUAL").is_some() {
++        let fd=unsafe {libc::fcntl(vm.fd().as_raw_fd(),libc::F_DUPFD_CLOEXEC,0)};
++        if fd<0 {return Err(io::Error::last_os_error());}
++        Some(unsafe {OwnedFd::from_raw_fd(fd)})
++    } else {None};
++    Ok(Ledger { kvm, device, union, collect_ns, manual_fd, rearm_ns:std::cell::Cell::new(0) })
 +}
 +
 +// A lab-only gate in unused mapper metadata. Header words 0..7 belong to the
@@ -3150,6 +3155,29 @@ index 0000000..8449a6e
 +    if stats[2+index]<arena || stats[6+index]!=1 { return Err(invalid("kernel arena coverage receipt missing")); }
 +    Ok(stats)
 +}
++pub(crate) fn enable_manual(fd: i32) {
++    if std::env::var_os("FC_DIRTY_MANUAL").is_none() {return;}
++    let mut cap=kvm_bindings::kvm_enable_cap {cap:kvm_bindings::KVM_CAP_MANUAL_DIRTY_LOG_PROTECT2,..Default::default()};
++    cap.args[0]=kvm_bindings::KVM_DIRTY_LOG_MANUAL_PROTECT_ENABLE as u64;
++    if unsafe {libc::ioctl(fd,0x4068aea3u32 as _,&cap)}<0 {require::<()>(Err(io::Error::last_os_error()));}
++}
++fn rearm(ledger: &Ledger) -> io::Result<()> {
++    let Some(fd)=&ledger.manual_fd else {return Ok(());};
++    #[repr(C)]
++    struct Clear {slot:u32,pages:u32,first:u64,bitmap:*const u64}
++    let start=Instant::now();let mut calls=0;let mut maximum=0;
++    // At most 4096 GPA pages per ioctl. Empty word blocks need no clear.
++    for (index,words) in ledger.kvm.chunks(64).enumerate() {
++        if words.iter().all(|w|*w==0) {continue;}
++        let mut clear=Clear {slot:0,pages:(words.len()*64) as u32,first:(index*4096) as u64,bitmap:words.as_ptr()};
++        let call=Instant::now();
++        if unsafe {libc::ioctl(fd.as_raw_fd(),0xc018aec0u32 as _,&mut clear)}<0 {return Err(io::Error::last_os_error());}
++        maximum=maximum.max(call.elapsed().as_nanos() as u64);calls+=1;
++    }
++    let elapsed=start.elapsed().as_nanos() as u64;ledger.rearm_ns.set(elapsed);
++    crate::logger::info_unrestricted!("MANUAL_CLEAR_JSON {}",serde_json::json!({"calls":calls,"ns":elapsed,"max_ns":maximum,"chunk_pages":4096}));
++    Ok(())
++}
 +static CLEAN_JOB: Mutex<Option<std::thread::JoinHandle<()>>> = Mutex::new(None);
 +pub(crate) fn finish_clean() {
 +    if let Some(job)=CLEAN_JOB.lock().unwrap().take() {
@@ -3168,6 +3196,7 @@ index 0000000..8449a6e
 +pub(crate) fn send(mem: &GuestMemoryMmap, ledger: &Ledger) -> io::Result<u64> {
 +    if !active() { return Ok(0); }
 +    if std::env::var("FC_NONCOHERENT_FAIL").as_deref()==Ok("writeback") {return Err(invalid("injected writeback failure after harvest"));}
++    rearm(ledger)?; // Clear precedes WB: pre-clear writes are covered by this WB.
 +    with_shared(identity()?,|s| {
 +        let begin_ns=mono_ns();
 +        let start=Instant::now();
@@ -3229,7 +3258,7 @@ index 0000000..8449a6e
 +    with_shared(identity()?,|s| {
 +        crate::logger::info_unrestricted!("NONCOHERENT_JSON {}",serde_json::json!({
 +            "event":"clean","epoch":s.epoch,"pages":ledger.union.iter().map(|b|b.count_ones() as u64).sum::<u64>(),
-+            "collect_ns":ledger.collect_ns,"writeback_ns":s.wb_ns,"publish_ns":s.log_ns,"stopped":stopped,
++            "collect_ns":ledger.collect_ns,"rearm_ns":ledger.rearm_ns.get(),"writeback_ns":s.wb_ns,"publish_ns":s.log_ns,"stopped":stopped,
 +            "ram_lines":s.ram_wb_lines.get(),"publish_lines":s.log_lines}));
 +        Ok(())
 +    })?;
@@ -6089,7 +6118,7 @@ index 5af0b76..18fc374 100644
                  (NotAllowed(_), NotAllowed(_))
                  | (SavedState(_), SavedState(_))
 diff --git a/src/vmm/src/vstate/vm.rs b/src/vmm/src/vstate/vm.rs
-index dfedd64..24a48ae 100644
+index dfedd64..a8d8823 100644
 --- a/src/vmm/src/vstate/vm.rs
 +++ b/src/vmm/src/vstate/vm.rs
 @@ -7,9 +7,10 @@
@@ -6125,10 +6154,11 @@ index dfedd64..24a48ae 100644
          // It is known that KVM_CREATE_VM occasionally fails with EINTR on heavily loaded machines
          // with many VMs.
          //
-@@ -181,9 +188,21 @@ impl KvmVm {
+@@ -181,9 +188,22 @@ impl KvmVm {
              attempt += 1;
          };
  
++        crate::noncoherent::enable_manual(fd.as_raw_fd());
 +        timing.mark("kvm_create_vm_ioctl");
 +        let common = Self::common_from_fd(kvm, fd, false)?;
 +        timing.finish();
@@ -6148,7 +6178,7 @@ index dfedd64..24a48ae 100644
              fd,
              max_memslots: kvm.max_nr_memslots(),
              guest_memory: GuestMemoryMmap::default(),
-@@ -197,14 +216,17 @@ impl KvmVm {
+@@ -197,14 +217,17 @@ impl KvmVm {
              vcpus_exit_evt,
              #[cfg(test)]
              fail_set_user_memory_region_in: AtomicU32::new(0),
@@ -6168,7 +6198,7 @@ index dfedd64..24a48ae 100644
  
          let mut vcpus = Vec::with_capacity(vcpu_count as usize);
          for cpu_idx in 0..vcpu_count {
-@@ -277,6 +299,10 @@ impl KvmVm {
+@@ -277,6 +300,10 @@ impl KvmVm {
          }
          drop(handles);
          barrier.wait();
@@ -6179,7 +6209,7 @@ index dfedd64..24a48ae 100644
  
          Ok(())
      }
-@@ -292,9 +318,7 @@ impl KvmVm {
+@@ -292,9 +319,7 @@ impl KvmVm {
          if handles
              .iter()
              .map(|handle| {
@@ -6190,7 +6220,7 @@ index dfedd64..24a48ae 100644
              })
              .any(|response| !matches!(response, Ok(crate::VcpuResponse::Paused)))
          {
-@@ -303,6 +327,10 @@ impl KvmVm {
+@@ -303,6 +328,10 @@ impl KvmVm {
          Ok(())
      }
  
@@ -6201,7 +6231,7 @@ index dfedd64..24a48ae 100644
      /// Sends a resume event to all vCPUs and waits for acknowledgement.
      pub fn resume_vcpus(&self) -> Result<(), crate::VmmError> {
          let mut handles = self.vcpus_handles();
-@@ -314,9 +342,7 @@ impl KvmVm {
+@@ -314,9 +343,7 @@ impl KvmVm {
          if handles
              .iter()
              .map(|handle| {
@@ -6212,7 +6242,7 @@ index dfedd64..24a48ae 100644
              })
              .any(|response| !matches!(response, Ok(crate::VcpuResponse::Resumed)))
          {
-@@ -329,10 +355,25 @@ impl KvmVm {
+@@ -329,10 +356,25 @@ impl KvmVm {
      pub fn save_vcpu_states(
          &self,
      ) -> Result<Vec<crate::vstate::vcpu::VcpuState>, crate::persist::MicrovmStateError> {
@@ -6238,7 +6268,7 @@ index dfedd64..24a48ae 100644
              handle
                  .send_event(crate::VcpuEvent::SaveState)
                  .map_err(MicrovmStateError::SignalVcpu)?;
-@@ -542,11 +583,163 @@ impl KvmVm {
+@@ -542,11 +584,163 @@ impl KvmVm {
          Ok(())
      }
  
@@ -6402,7 +6432,7 @@ index dfedd64..24a48ae 100644
      /// Gets a reference to this [`KvmVm`]'s [`GuestMemoryMmap`] object
      pub fn guest_memory(&self) -> &GuestMemoryMmap {
          &self.common.guest_memory
-@@ -666,6 +859,13 @@ impl KvmVm {
+@@ -666,6 +860,13 @@ impl KvmVm {
      /// Register a device IRQ
      pub fn register_irq(&self, fd: &EventFd, gsi: u32) -> Result<(), errno::Error> {
          self.common.fd.register_irqfd(fd, gsi)?;
