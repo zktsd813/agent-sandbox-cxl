@@ -7,12 +7,15 @@ import time
 
 
 def host_state(vms):
+    import lab
     tasks = {}
     for role, vm in vms.items():
+        if '_profile_tids' not in vm:
+            vm['_profile_tids'] = [row['thread-id'] for row in lab.qmp(vm['qmp'],'query-cpus-fast')['return']]
         for task in Path(f"/proc/{vm['pid']}/task").iterdir():
             try:
                 name = (task/'comm').read_text().strip()
-                if name.startswith('CPU '):
+                if int(task.name) in vm['_profile_tids']:
                     tasks[f'{role}:{task.name}'] = dict(name=name,
                         schedstat=list(map(int, (task/'schedstat').read_text().split())))
             except FileNotFoundError:
@@ -27,7 +30,7 @@ def host_state(vms):
 def start_perf(vms, output):
     tids = [key.split(':')[1] for key in host_state(vms)['tasks']]
     perf = '/usr/lib/linux-tools/6.8.0-149-generic/perf'
-    argv = [perf,'record','--clockid','mono','-F','499','-e','cycles','-g','-t',','.join(tids),'-o',str(output/'perf.data')]
+    argv = [perf,'record','--clockid','monotonic','-F','499','-e','cycles','-g','-t',','.join(tids),'-o',str(output/'perf.data')]
     (output/'perf-command.json').write_text(json.dumps(argv)+'\n')
     log = (output/'perf.log').open('wb')
     process = subprocess.Popen(argv, stdout=log, stderr=subprocess.STDOUT)
