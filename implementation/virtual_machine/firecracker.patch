@@ -2818,10 +2818,10 @@ index 41b7b8d..e546e3f 100644
              vm_info: vm_info.clone(),
 diff --git a/src/vmm/src/noncoherent.rs b/src/vmm/src/noncoherent.rs
 new file mode 100644
-index 0000000..33a5c57
+index 0000000..4319689
 --- /dev/null
 +++ b/src/vmm/src/noncoherent.rs
-@@ -0,0 +1,592 @@
+@@ -0,0 +1,636 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Opt-in dirty ledger and a stopped-boundary lab oracle. Never enabled by default.
 +use std::fs::{File, OpenOptions};
@@ -3157,6 +3157,14 @@ index 0000000..33a5c57
 +        if job.join().is_err() {std::process::abort();}
 +    }
 +}
++pub(crate) fn before_api(action: &crate::rpc_interface::VmmAction) {
++    use crate::rpc_interface::VmmAction::*;
++    // Device callbacks may continue, but control actions can replace mappings
++    // or device state. Only these immutable metadata replies bypass the fence.
++    if !matches!(action, GetVmInstanceInfo | GetVmMachineConfig | GetVmmVersion) {
++        finish_clean();
++    }
++}
 +pub(crate) fn clean_async(mem: GuestMemoryMmap, ledger: Ledger, complete: Box<dyn FnOnce()+Send>) {
 +    let mut guard=CLEAN_JOB.lock().unwrap();
 +    assert!(guard.is_none());
@@ -3370,6 +3378,42 @@ index 0000000..33a5c57
 +#[cfg(test)]
 +mod tests {
 +    use super::*;
++    #[test]
++    fn metadata_stays_responsive_and_state_changes_wait_for_clean() {
++        use crate::rpc_interface::VmmAction;
++        use std::sync::mpsc;
++        let (release, wait_release) = mpsc::channel();
++        let worker = std::thread::spawn(move || wait_release.recv().unwrap());
++        {
++            let mut job = CLEAN_JOB.lock().unwrap();
++            assert!(job.is_none());
++            *job = Some(worker);
++        }
++        let (read_done, read_reply) = mpsc::channel();
++        let reader = std::thread::spawn(move || {
++            before_api(&VmmAction::GetVmInstanceInfo);
++            read_done.send(()).unwrap();
++        });
++        if read_reply.recv_timeout(Duration::from_secs(1)).is_err() {
++            release.send(()).unwrap();
++            reader.join().unwrap();
++            panic!("metadata API waited for the cleaner");
++        }
++        reader.join().unwrap();
++        let (entered, wait_entered) = mpsc::channel();
++        let (changed, change_reply) = mpsc::channel();
++        let changer = std::thread::spawn(move || {
++            entered.send(()).unwrap();
++            before_api(&VmmAction::MemoryTier);
++            changed.send(()).unwrap();
++        });
++        wait_entered.recv_timeout(Duration::from_secs(1)).unwrap();
++        let premature = change_reply.recv_timeout(Duration::from_millis(50));
++        release.send(()).unwrap();
++        changer.join().unwrap();
++        assert!(premature.is_err(), "state changed before cleaner completion");
++        change_reply.recv_timeout(Duration::from_secs(1)).unwrap();
++    }
 +    #[test]
 +    fn exactly_k_records_survive_wrap() {
 +        let bits=replay_records(128,4,12,|e|Ok((e,1,vec![1<<e,0]))).unwrap();
@@ -5255,7 +5299,7 @@ index 0000000..1f118dc
 +    }
 +}
 diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
-index ca743fa..006e491 100644
+index ca743fa..dfa9c4a 100644
 --- a/src/vmm/src/rpc_interface.rs
 +++ b/src/vmm/src/rpc_interface.rs
 @@ -100,6 +100,20 @@ pub enum VmmAction {
@@ -5346,10 +5390,11 @@ index ca743fa..006e491 100644
          }
      }
  
-@@ -700,6 +743,18 @@ impl RuntimeApiController {
+@@ -700,6 +743,19 @@ impl RuntimeApiController {
          event_manager: &mut EventManager,
      ) -> Result<VmmData, VmmActionError> {
          use self::VmmAction::*;
++        crate::noncoherent::before_api(&request);
 +        if crate::direct::resident_parked() && !matches!(&request,
 +            DirectPrepare | DirectObserve | GetVmInstanceInfo | GetVmMachineConfig | GetVmmVersion) {
 +            return Err(VmmActionError::NotSupported("parked resident rejects guest/device operations".into()));
@@ -5365,7 +5410,7 @@ index ca743fa..006e491 100644
          match request {
              // Supported operations allowed post-boot.
              CreateSnapshot(snapshot_create_cfg) => self.create_snapshot(&snapshot_create_cfg),
-@@ -786,6 +841,53 @@ impl RuntimeApiController {
+@@ -786,6 +842,53 @@ impl RuntimeApiController {
                  .hot_unplug_device(device_id, event_manager)
                  .map(|()| VmmData::Empty),
              Pause => self.pause(),

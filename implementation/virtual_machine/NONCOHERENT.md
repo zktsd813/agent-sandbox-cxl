@@ -292,9 +292,17 @@ KVM와 장치 bitmap snapshot은 계속 VMM thread에서 만든다.
 Snapshot의 소유 Vec와 RAM mapping의 Arc 사본을 helper로 넘긴다.
 Helper는 RAM CLWB→SFENCE→log record·header 발행 뒤에만 native ACK를 보낸다.
 동시에 VMM은 장치와 읽기 API를 처리할 수 있다.
-Snapshot 뒤의 쓰기는 새 bitmap에 남는다. Helper가 새 값까지 내려써도 안전하다.
+일반 장치 buffer 쓰기는 쓰기 전 bitmap 표시를 따른다. io_uring은 완료 경로의 표시를 따른다.
+Snapshot 뒤 이 쓰기는 새 bitmap에 남는다. Helper가 새 값까지 내려써도 안전하다.
+Virtqueue의 raw pointer metadata 쓰기는 고정 범위로 따로 덮는다.
+모든 clean과 최종 export는 수집 직전에 활성 queue 전체를 다시 표시한다.
+Snapshot 뒤 raw used-ring 쓰기에 새 bit가 없어도 다음 snapshot의 강제 표시가 덮는다.
+읽기 전용 descriptor·available ring까지 섞이는 보수적 목록이다.
 새 clean과 export는 이전 helper를 join한다. Snapshot을 겹쳐 수집하거나 발행 순서를 바꾸지 않는다.
 Import 준비도 이전 작업이 끝난 뒤 한다. 작업 중 mapping을 park하거나 바꾸지 않는다.
+일반 API도 instance 정보·machine 설정·version 조회만 fence를 건너뛴다.
+Pause, MemoryTier, snapshot, 재사용 등 나머지 제어 요청은 helper를 먼저 join한다.
+그래서 제어기가 상태 변경 요청을 겹쳐 보내도 RAM mapping과 장치 상태를 바꾸기 전에 작업이 끝난다.
 Helper는 KVM fd와 장치 객체를 읽지 않는다. Mapper observer와 log mutex만 사용한다.
 오류·thread panic·ACK socket 오류는 abort한다. 부분 성공을 ACK하지 않는다.
 
