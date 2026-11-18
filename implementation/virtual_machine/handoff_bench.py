@@ -1237,6 +1237,7 @@ def main():
     parser.add_argument('--prefault-activate', action='store_true')
     parser.add_argument('--prefault-probe', help='Static ABI probe uploaded only to these disposable L1s')
     args = parser.parse_args()
+    if args.manual_protect and not args.noncoherent:parser.error("Manual protect requires noncoherent mode")
     if args.clean_helper and (not args.preclean or args.clean_paused):parser.error("Helper requires live preclean")
     if args.preclean and not args.noncoherent: parser.error("Preclean requires noncoherent mode")
     if not 1 <= args.clean_repeats <= 1000: parser.error("clean-repeats must be 1..1000")

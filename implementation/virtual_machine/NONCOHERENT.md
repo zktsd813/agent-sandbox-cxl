@@ -295,7 +295,7 @@ Helper는 RAM CLWB→SFENCE→log record·header 발행 뒤에만 native ACK를 
 Snapshot 뒤의 쓰기는 새 bitmap에 남는다. Helper가 새 값까지 내려써도 안전하다.
 새 clean과 export는 이전 helper를 join한다. Snapshot을 겹쳐 수집하거나 발행 순서를 바꾸지 않는다.
 Import 준비도 이전 작업이 끝난 뒤 한다. 작업 중 mapping을 park하거나 바꾸지 않는다.
-Helper는 KVM fd와 장치 객체를 읽지 않는다. Mapper observer와 log mutex만 사용한다.
+기본 helper는 KVM fd와 장치 객체를 읽지 않는다. 수동 dirty 보호 옵션은 아래 예외를 따른다. Mapper observer와 log mutex만 사용한다.
 오류·thread panic·ACK socket 오류는 abort한다. 부분 성공을 ACK하지 않는다.
 
 이 옵션은 KVM 수집 중의 VMM 막힘을 없애지 못한다.

@@ -70,6 +70,7 @@ def main():
     p.add_argument("--firecracker", type=Path, default=LOCAL / "fc/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker")
     p.add_argument("--qemu", type=Path, default=LOCAL / "qemu-runtime/bin/qemu-system-x86_64")
     args = p.parse_args()
+    if args.manual_protect and not args.noncoherent:p.error("Manual protect requires noncoherent mode")
     if args.noncoherent: args.dirty_ledger=True
     fixture_trial = bool(args.resident_bench or args.mixed_io)
     memory_mib = args.memory_mib or (2048 if args.mixed_io or args.resident_bench=="dirty" else 128)
