@@ -282,9 +282,19 @@ def main():
                         (output/(trial_id+'-load-'+phase+'.txt')).write_text(
                             Path('/proc/loadavg').read_text()+subprocess.check_output(
                                 ['ps','-eo','pid,user,psr,pcpu,comm'], text=True))
+                    perf_handle=None
                     try:
+                        if args.tail_profile:
+                            from tail_probe import start_perf
+                            current_run=Path(json.loads(pointer.read_text())["run"])
+                            current_config=json.loads((current_run/'run.json').read_text())
+                            perf_output=output/(trial_id+'-perf');perf_output.mkdir()
+                            perf_handle=start_perf(current_config['vms'],perf_output)
                         arm["bench"] = command(bench, env, output / (trial_id + "-bench.log"))
                     finally:
+                        if perf_handle:
+                            from tail_probe import stop_perf
+                            arm['perf_returncode']=stop_perf(perf_handle)
                         (output/(trial_id+'-load-after.txt')).write_text(
                             Path('/proc/loadavg').read_text()+subprocess.check_output(
                                 ['ps','-eo','pid,user,psr,pcpu,comm'], text=True))
