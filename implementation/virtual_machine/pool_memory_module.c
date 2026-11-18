@@ -52,14 +52,18 @@ struct cpm {
     struct cpm_cache observer;
     struct cpm_entry *observer_map;
     void *observer_base;
+    u64 observer_init_inv_lines;
 };
 
-static void invalidate_range(void *address, u64 bytes)
+static u64 invalidate_range(void *address, u64 bytes)
 {
-    u64 i;
-    for (i = 0; i < bytes; i += 64)
+    u64 i, emitted = 0;
+    for (i = 0; i < bytes; i += 64) {
         asm volatile("clflushopt (%0)" : : "r" ((char *)address + i) : "memory");
+        emitted++;
+    }
     asm volatile("mfence" : : : "memory");
+    return emitted;
 }
 
 static int cache_pages(struct cpm *c, void __user *user, bool zero, bool writeback)
@@ -83,12 +87,12 @@ static int cache_pages(struct cpm *c, void __user *user, bool zero, bool writeba
         c->observer_base = memremap(q.phys_base, q.device_bytes, MEMREMAP_WB);
         if (!c->observer_base) { ret = -ENXIO; goto out; }
         header = c->observer_base + q.metadata_offset;
-        invalidate_range(header, PAGE_SIZE);
+        c->observer_init_inv_lines += invalidate_range(header, PAGE_SIZE);
         if (header->magic != CPM_MAGIC || header->handle.cookie_lo != q.cookie_lo ||
             header->handle.cookie_hi != q.cookie_hi || header->handle.count != q.pages ||
             header->handle.phys_base != q.phys_base || header->handle.device_bytes != q.device_bytes ||
             header->handle.metadata_offset != q.metadata_offset) goto bad_observer;
-        invalidate_range((void *)header+PAGE_SIZE, q.pages*sizeof(struct cpm_entry));
+        c->observer_init_inv_lines += invalidate_range((void *)header+PAGE_SIZE, q.pages*sizeof(struct cpm_entry));
         c->observer_map = kvmemdup((void *)header+PAGE_SIZE,
                                   q.pages*sizeof(struct cpm_entry), GFP_KERNEL);
         if (!c->observer_map) { ret = -ENOMEM; goto bad_observer; }
@@ -470,6 +474,14 @@ static long cpm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     long ret = 0;
     if (!capable(CAP_SYS_RAWIO))
         return -EPERM;
+    if (cmd == CPM_CACHE_INIT_STATS) {
+        u64 lines;
+        mutex_lock(&c->lock);
+        if (!c->observer_base) ret = -ENOENT;
+        lines = c->observer_init_inv_lines;
+        mutex_unlock(&c->lock);
+        return ret ? ret : copy_to_user(user, &lines, sizeof(lines)) ? -EFAULT : 0;
+    }
     if (cmd == CPM_CACHE_RANGE) return cache_metadata_range(c,user);
     if (cmd == CPM_CACHE || cmd == CPM_ZERO || cmd == CPM_WRITEBACK) return cache_pages(c,user,cmd==CPM_ZERO,cmd==CPM_WRITEBACK);
     if (cmd == CPM_PARK) { c->local_owner=false; return 0; }

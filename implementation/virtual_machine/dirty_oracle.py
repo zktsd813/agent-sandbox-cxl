@@ -60,18 +60,20 @@ class DirtyOracle:
                 bitmaps = self.mem[self.gate+offset:self.gate+offset+words*8*count]
                 union, kernel, device = [int.from_bytes(bitmaps[i*words*8:(i+1)*words*8], 'little') for i in range(3)]
                 coverage = self.check_maintenance(phase, node, pages, used, extra, bitmaps) if maintained else {}
-                receipts=struct.unpack_from('<6Q',self.mem,self.gate+MIB-64) if maintained else None
-                if receipts and receipts[5]!=1: # Read old immutable coherent-lab fixtures too.
-                    receipts=struct.unpack_from('<6Q',self.mem,self.gate+80)
-                if receipts and receipts[5]==1:
-                    wb,inv,log,read,control,_=receipts
+                receipts=struct.unpack_from('<8Q',self.mem,self.gate+MIB-64) if maintained else None
+                if receipts and receipts[5] not in (1,2): # Read old immutable coherent-lab fixtures too.
+                    receipts=(*struct.unpack_from('<6Q',self.mem,self.gate+80),0,0)
+                if receipts and receipts[5] in (1,2):
+                    wb,inv,log,read,control,version,initial,_=receipts
                     if phase in (1,2,4,6) and wb!=union.bit_count()*64:
                         raise ValueError('Kernel RAM CLWB count differs from listed pages*64')
                     if phase in (3,5) and inv!=coverage['invalidate_lines']:
                         raise ValueError('Kernel RAM invalidation count differs from emitted ranges')
                     coverage['kernel_emitted_lines']={'ram':wb if phase in (1,2,4,6) else inv,
                         'objects':coverage['kernel_writeback_lines'] if phase==2 else coverage['kernel_invalidate_lines'] if phase==3 else 0,
-                        'log':log if phase in (1,2,4,6) else read,'control':control if phase in (1,2,3) else 0}
+                        'log':log if phase in (1,2,4,6) else read,'control':control if phase in (1,2,3) else 0,
+                        'control_init_invalidate':initial if version==2 else None}
+                    coverage['instruction_counter_version']=version
                 elif self.line_mode:
                     raise ValueError('Line oracle requires kernel cache instruction receipts')
                 if phase in (3, 4, 5):

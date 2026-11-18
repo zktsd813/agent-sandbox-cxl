@@ -2818,10 +2818,10 @@ index 41b7b8d..e546e3f 100644
              vm_info: vm_info.clone(),
 diff --git a/src/vmm/src/noncoherent.rs b/src/vmm/src/noncoherent.rs
 new file mode 100644
-index 0000000..4319689
+index 0000000..76748a9
 --- /dev/null
 +++ b/src/vmm/src/noncoherent.rs
-@@ -0,0 +1,636 @@
+@@ -0,0 +1,644 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Opt-in dirty ledger and a stopped-boundary lab oracle. Never enabled by default.
 +use std::fs::{File, OpenOptions};
@@ -2916,6 +2916,7 @@ index 0000000..4319689
 +    epoch: u64, inv_from: u64, inv_to: u64,
 +    wb: Vec<u64>, inv_requested: Vec<u64>, inv: Vec<u64>,
 +    ram_wb_lines: std::cell::Cell<u64>, ram_inv_lines: std::cell::Cell<u64>,
++    init_control_inv_lines: std::cell::Cell<u64>,
 +    wb_ns: u64, log_ns: u64, read_ns: u64, inv_ns: u64, control_ns: u64, log_lines: u64, read_lines: u64, control_lines: u64, kernel: [u64; 8],
 +}
 +unsafe impl Send for Shared {} // Mapping accessed only under the process-local mutex.
@@ -3006,6 +3007,7 @@ index 0000000..4319689
 +        let mut result = Self { address:p as usize,_file:file,observer,id,consumed:0,control_seen:false,
 +            epoch:0,inv_from:0,inv_to:0,wb:vec![],inv_requested:vec![],inv:vec![],
 +            ram_wb_lines: std::cell::Cell::new(0),ram_inv_lines: std::cell::Cell::new(0),
++            init_control_inv_lines: std::cell::Cell::new(0),
 +            wb_ns:0,log_ns:0,read_ns:0,inv_ns:0,control_ns:0,log_lines:0,read_lines:0,control_lines:0,kernel:[0;8] };
 +        match std::fs::read(result.consumed_path()) {
 +            Ok(bytes) if bytes.len()==8 => result.consumed=u64::from_le_bytes(bytes.try_into().unwrap()),
@@ -3014,6 +3016,12 @@ index 0000000..4319689
 +            Err(e) => return Err(e),
 +        }
 +        result.maintain(&vec![0;id.pages.div_ceil(64)],true)?;
++        let mut initial = 0u64;
++        if unsafe {libc::ioctl(result.observer.as_raw_fd(),0x80085081u32 as _,&mut initial)}<0 {
++            return Err(io::Error::last_os_error());
++        }
++        result.init_control_inv_lines.set(initial);
++        crate::logger::info_unrestricted!("NONCOHERENT_INIT_JSON {}",serde_json::json!({"control_invalidate_lines":initial}));
 +        Ok(result)
 +    }
 +    fn cache_metadata(&self, offset: usize, bytes: usize, invalidate: bool) -> u64 {
@@ -3284,13 +3292,13 @@ index 0000000..4319689
 +    boundary(mem,2,arena,Some(ledger))
 +}
 +
-+struct OracleState { receipts:[u64;6],words:[u64;16], wb:Vec<u64>, requested:Vec<u64>, inv:Vec<u64> }
++struct OracleState { receipts:[u64;8],words:[u64;16], wb:Vec<u64>, requested:Vec<u64>, inv:Vec<u64> }
 +fn oracle_state(id: Identity, words: usize) -> io::Result<OracleState> {
 +    with_shared(id,|s| {
 +        let mut wb=s.wb.clone(); wb.resize(words,0);
 +        let mut requested=s.inv_requested.clone(); requested.resize(words,0);
 +        let mut inv=s.inv.clone(); inv.resize(words,0);
-+        Ok(OracleState { receipts:[s.ram_wb_lines.get(),s.ram_inv_lines.get(),s.log_lines,s.read_lines,s.control_lines,1],words:[s.epoch,s.inv_from,s.inv_to,s.wb_ns,s.log_ns,s.read_ns,s.inv_ns,
++        Ok(OracleState { receipts:[s.ram_wb_lines.get(),s.ram_inv_lines.get(),s.log_lines,s.read_lines,s.control_lines,2,s.init_control_inv_lines.replace(0),0],words:[s.epoch,s.inv_from,s.inv_to,s.wb_ns,s.log_ns,s.read_ns,s.inv_ns,
 +            s.kernel[0],s.kernel[1],s.kernel[2],s.kernel[3],s.kernel[4],s.kernel[5],s.kernel[6],s.kernel[7],s.control_ns],
 +            wb,requested,inv })
 +    })
@@ -3325,7 +3333,7 @@ index 0000000..4319689
 +    if guard.is_none() { *guard = Some(Gate::new()?); }
 +    let gate = guard.as_ref().unwrap();
 +    let words = pages.div_ceil(64);
-+    if 256 + words * 8 * 6 > GATE_BYTES { return Err(invalid("oracle bitmap too large")); }
++    if 256 + words * 8 * 6 > GATE_BYTES-64 { return Err(invalid("oracle bitmap too large")); }
 +    let sequence = gate.read(0).checked_add(1).ok_or_else(|| invalid("oracle sequence overflow"))?;
 +    let full = full(pages);
 +    let empty = vec![0u64; words];

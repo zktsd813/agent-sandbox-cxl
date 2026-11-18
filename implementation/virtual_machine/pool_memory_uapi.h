@@ -30,6 +30,8 @@ struct cpm_cache_range {
     __u64 offset, bytes, operation, lines, elapsed_ns, reserved;
 };
 #define CPM_CACHE_RANGE _IOWR('P', 0x80, struct cpm_cache_range)
+/* Read-only, per-observer count of metadata validation CLFLUSHOPT instructions. */
+#define CPM_CACHE_INIT_STATS _IOR('P', 0x81, __u64)
 /* ABI 4 keeps this VM's authoritative mapper in a reserved CXL extent.
  * Handles contain no per-page arrays. Import consumes a sealed owner epoch;
  * callers must fence the source process and drain every writer first. */

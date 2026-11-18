@@ -276,7 +276,10 @@ RAM 유지보수 영수증은 mapper가 각 CLWB/CLFLUSHOPT 명령에서 증가�
 Log와 mailbox·mapper metadata도 `CPM_CACHE_RANGE`의 같은 명령 counter를 사용한다.
 Range는 그 observer의 불변 identity와 64 MiB metadata 예약 안에서만 허용한다.
 Observer 초기화는 기존 검증된 GPA 표를 DRAM에 복사한다. 공유 소유권은 쓰지 않는다.
-최초 observer 표 검증의 무효화와 lab 정답지 gate는 준비 비용으로 분리한다.
+최초 observer 표 검증의 무효화도 커널 발행 지점에서 별도 계수한다.
+읽기 전용 `CPM_CACHE_INIT_STATS`는 그 observer fd의 누적 계수를 돌려준다.
+새 Shared 생성 때 한 번 읽고, 영수증 v2의 첫 경계에 한 번 전달한다.
+송신 WB와 섞지 않고 control 초기 INV로 기록한다. Lab gate의 사용자 공간 명령은 별도다.
 Log의 RAM 목록 bit 수와 RAM 명령 수/64가 다르면 닫힌 실패로 끝낸다.
 정답지 gate의 마지막 독립 cache line은 실제 kernel 영수증 전달에만 사용한다. L0 ACK line과 겹치지 않는다. 생산 ABI가 아니다.
 
