@@ -48,7 +48,6 @@ def main():
     p.add_argument("--arena-limit-bytes", type=int,default=0)
     p.add_argument("--fail-maintenance", choices=("writeback","epoch","record"))
     p.add_argument("--manual-protect",action="store_true")
-    p.add_argument("--manual-protect",action="store_true")
     p.add_argument("--clean-helper",action="store_true")
     p.add_argument("--service-probe",action="store_true")
     p.add_argument("--preclean", action="store_true")
@@ -188,7 +187,6 @@ def main():
                 if args.arena_limit_bytes: bench_args += ['--arena-limit-bytes',args.arena_limit_bytes]
                 if args.fail_maintenance: bench_args += ['--fail-maintenance',args.fail_maintenance]
                 if args.tail_profile: bench_args += ["--tail-profile"]
-                if args.manual_protect: bench_args += ["--manual-protect"]
                 if args.manual_protect: bench_args += ["--manual-protect"]
                 if args.clean_helper: bench_args += ["--clean-helper"]
                 if args.service_probe: bench_args += ["--service-probe"]
