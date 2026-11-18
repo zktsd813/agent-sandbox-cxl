@@ -2,7 +2,29 @@
 import struct
 import unittest
 
-from dirty_oracle import DirtyOracle, MIB
+from dirty_oracle import DirtyOracle, MIB, kernel_receipt
+
+
+class InstructionReceiptVersions(unittest.TestCase):
+    def test_both_v1_locations_remain_readable(self):
+        values=(4096,0,1026,0,74,1)
+        for offset in (80,MIB-64):
+            memory=bytearray(MIB)
+            struct.pack_into('<6Q',memory,offset,*values)
+            self.assertEqual(kernel_receipt(memory,0,64)[:6],values)
+
+    def test_initial_invalidation_is_separate_from_sender_writeback(self):
+        memory=bytearray(MIB)
+        values=(4096,0,1026,0,74,2,80,0)
+        struct.pack_into('<8Q',memory,MIB-64,*values)
+        self.assertEqual(kernel_receipt(memory,0,64),values)
+
+    def test_partial_initial_range_and_reserved_word_are_rejected(self):
+        for initial,reserved in ((79,0),(80,1)):
+            memory=bytearray(MIB)
+            struct.pack_into('<8Q',memory,MIB-64,4096,0,1026,0,74,2,initial,reserved)
+            with self.assertRaisesRegex(ValueError,'initialization receipt'):
+                kernel_receipt(memory,0,64)
 
 
 class MaintenanceReceipts(unittest.TestCase):

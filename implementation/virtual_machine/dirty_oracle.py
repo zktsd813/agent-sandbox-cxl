@@ -18,6 +18,18 @@ PAGE = 4096
 MIB = 1024 * 1024
 
 
+def kernel_receipt(memory, gate, pages):
+    """Read both saved lab layouts; v2 separately reports initial control INV."""
+    values=struct.unpack_from('<8Q',memory,gate+MIB-64)
+    if values[5] not in (1,2):
+        values=(*struct.unpack_from('<6Q',memory,gate+80),0,0)
+    if values[5] not in (1,2):
+        return None
+    if values[5]==2 and (values[6] not in (0,64+(pages*16+63)//64) or values[7]):
+        raise ValueError('Kernel observer initialization receipt differs from emitted metadata ranges')
+    return values
+
+
 class DirtyOracle:
     def __init__(self, config, output, metadata, arena, binary):
         self.output = Path(output) / 'dirty-oracle'
@@ -60,13 +72,9 @@ class DirtyOracle:
                 bitmaps = self.mem[self.gate+offset:self.gate+offset+words*8*count]
                 union, kernel, device = [int.from_bytes(bitmaps[i*words*8:(i+1)*words*8], 'little') for i in range(3)]
                 coverage = self.check_maintenance(phase, node, pages, used, extra, bitmaps) if maintained else {}
-                receipts=struct.unpack_from('<8Q',self.mem,self.gate+MIB-64) if maintained else None
-                if receipts and receipts[5] not in (1,2): # Read old immutable coherent-lab fixtures too.
-                    receipts=(*struct.unpack_from('<6Q',self.mem,self.gate+80),0,0)
-                if receipts and receipts[5] in (1,2):
+                receipts=kernel_receipt(self.mem,self.gate,pages) if maintained else None
+                if receipts:
                     wb,inv,log,read,control,version,initial,_=receipts
-                    if version==2 and (initial not in (0,64+(pages*16+63)//64) or receipts[7]):
-                        raise ValueError('Kernel observer initialization receipt differs from emitted metadata ranges')
                     if phase in (1,2,4,6) and wb!=union.bit_count()*64:
                         raise ValueError('Kernel RAM CLWB count differs from listed pages*64')
                     if phase in (3,5) and inv!=coverage['invalidate_lines']:
