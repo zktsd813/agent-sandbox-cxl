@@ -55,6 +55,7 @@ def main():
     p.add_argument("--dirty-oracle", action="store_true")
     p.add_argument("--page-hash", type=Path)
     p.add_argument("--pml", choices=("on", "off"), default="off")
+    p.add_argument("--tail-profile", action="store_true")
     p.add_argument("--profile", action="store_true")
     p.add_argument("--resume-profile", action="store_true")
     p.add_argument("--kernel-mode", type=int, choices=(2,3), default=3)
@@ -103,6 +104,7 @@ def main():
     with (LOCKS / "lab.lock").open("rb") as lab_lock, (LOCKS / "quiet.lock").open("rb") as quiet_lock:
         fcntl.flock(lab_lock, fcntl.LOCK_EX)
         fcntl.flock(quiet_lock, fcntl.LOCK_EX if args.measure else fcntl.LOCK_SH)
+        perf_handle = None
         try:
             if not fixture_trial:
                 run("prepare", "prepare", "--firecracker", args.firecracker,
@@ -145,6 +147,9 @@ def main():
                 if any(int(node) != 0 and pages for node, pages in nodes.items()):
                     raise RuntimeError("QEMU owned memory allocated outside node 0")
             result["resources"] = resources
+            if args.tail_profile:
+                from tail_probe import start_perf
+                perf_handle = start_perf(config["vms"], args.output)
             bench_args = ["direct-handoff-bench", "--guest", "linux", "--vcpus", args.vcpus,
                           "--iterations", args.iterations, "--warmup", args.warmup, "--kernel-mode", args.kernel_mode,
                           "--executor-cpu", 1, "--guest-cpu", 0, "--control", "http",
@@ -175,6 +180,7 @@ def main():
                 if args.audit_parked: bench_args += ['--audit-parked']
                 if args.arena_limit_bytes: bench_args += ['--arena-limit-bytes',args.arena_limit_bytes]
                 if args.fail_maintenance: bench_args += ['--fail-maintenance',args.fail_maintenance]
+                if args.tail_profile: bench_args += ["--tail-profile"]
                 if args.preclean: bench_args += ['--preclean','--clean-wait',args.clean_wait,'--clean-repeats',args.clean_repeats]
                 if args.clean_paused: bench_args += ['--clean-paused']
                 if args.cache_skip_line>=0: bench_args += ["--cache-skip-line",args.cache_skip_line]
@@ -201,6 +207,9 @@ def main():
             result.update(result="failed", error=str(error))
             raise
         finally:
+            if perf_handle:
+                from tail_probe import stop_perf
+                result["perf_returncode"] = stop_perf(perf_handle)
             if current.exists():
                 config_path = Path(json.loads(current.read_text())["run"]) / "run.json"
                 config = json.loads(config_path.read_text())

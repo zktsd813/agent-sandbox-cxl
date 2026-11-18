@@ -440,7 +440,9 @@ int main(int argc,char **argv) {
     uint64_t response[3]={0};
     if(connect_native()) {
      unsigned char command=q.operation==3 ? (q.first?7:5) : 6;
+     uint64_t begin=ns();
      send_all(native_fd,&command,1);recv_all(native_fd,response,2*sizeof(uint64_t));
+     printf("CLEAN_QUEUE_JSON {\"command\":%u,\"begin_ns\":%"PRIu64",\"reply_ns\":%"PRIu64",\"dispatch_duration_ns\":%"PRIu64"}\n",command,begin,ns(),response[1]);fflush(stdout);
     } else {
      check(q.operation==4,"owner clean endpoint absent");
      struct api_result result=api("PUT","/actions","{\"action_type\": \"DirectObserve\"}");

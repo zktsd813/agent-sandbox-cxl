@@ -94,7 +94,7 @@ index a3b3f3f..c339f7c 100644
              parse_put_actions(&Body::new("invalid_body")).unwrap_err();
  
 diff --git a/src/firecracker/src/api_server_adapter.rs b/src/firecracker/src/api_server_adapter.rs
-index 70abff4..97b968f 100644
+index 70abff4..c37e899 100644
 --- a/src/firecracker/src/api_server_adapter.rs
 +++ b/src/firecracker/src/api_server_adapter.rs
 @@ -2,10 +2,13 @@
@@ -111,7 +111,7 @@ index 70abff4..97b968f 100644
  
  use event_manager::{EventOps, Events, MutEventSubscriber, SubscriberOps};
  use vmm::logger::{ProcessTimeReporter, error_unrestricted, info_unrestricted, warn_unrestricted};
-@@ -48,6 +51,194 @@ struct ApiServerAdapter {
+@@ -48,6 +51,199 @@ struct ApiServerAdapter {
      request: Option<ApiRequest>,
  }
  
@@ -138,6 +138,11 @@ index 70abff4..97b968f 100644
 +        let Some((command, input)) = self.request.take() else { return; };
 +        let start = Instant::now();
 +        let mut payload = Vec::new();
++        if matches!(command,5|7) {
++            let mut t=libc::timespec {tv_sec:0,tv_nsec:0};
++            unsafe {libc::clock_gettime(libc::CLOCK_MONOTONIC,&mut t)};
++            info_unrestricted!("CLEAN_DISPATCH_JSON {}",serde_json::json!({"begin_ns":t.tv_sec as u64*1_000_000_000+t.tv_nsec as u64}));
++        }
 +        let status = match command {
 +            0 => 0,
 +            1 => {
@@ -306,7 +311,7 @@ index 70abff4..97b968f 100644
  impl ApiServerAdapter {
      /// Runs the vmm to completion, while any arising control events are deferred
      /// to a `RuntimeApiController`.
-@@ -58,6 +249,9 @@ impl ApiServerAdapter {
+@@ -58,6 +254,9 @@ impl ApiServerAdapter {
          vmm: Arc<Mutex<Vmm>>,
          event_manager: &mut EventManager,
      ) -> Result<(), ApiServerError> {
@@ -316,7 +321,7 @@ index 70abff4..97b968f 100644
          let api_adapter = Arc::new(Mutex::new(Self {
              api_event_fd,
              from_api,
-@@ -66,10 +260,34 @@ impl ApiServerAdapter {
+@@ -66,10 +265,34 @@ impl ApiServerAdapter {
              request: None,
          }));
          event_manager.add_subscriber(api_adapter.clone());
@@ -351,7 +356,7 @@ index 70abff4..97b968f 100644
              api_adapter
                  .lock()
                  .expect("Poisoned lock")
-@@ -84,33 +302,36 @@ impl ApiServerAdapter {
+@@ -84,33 +307,36 @@ impl ApiServerAdapter {
          Ok(())
      }
  
@@ -395,7 +400,7 @@ index 70abff4..97b968f 100644
                          break;
                      }
                  }
-@@ -272,3 +493,107 @@ pub(crate) fn run_with_api(
+@@ -272,3 +498,107 @@ pub(crate) fn run_with_api(
  
      result
  }
@@ -2788,10 +2793,10 @@ index 41b7b8d..e546e3f 100644
              vm_info: vm_info.clone(),
 diff --git a/src/vmm/src/noncoherent.rs b/src/vmm/src/noncoherent.rs
 new file mode 100644
-index 0000000..cd672de
+index 0000000..34725b6
 --- /dev/null
 +++ b/src/vmm/src/noncoherent.rs
-@@ -0,0 +1,527 @@
+@@ -0,0 +1,559 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Opt-in dirty ledger and a stopped-boundary lab oracle. Never enabled by default.
 +use std::fs::{File, OpenOptions};
@@ -2817,23 +2822,55 @@ index 0000000..cd672de
 +}
 +fn invalid(s: impl ToString) -> io::Error { io::Error::other(s.to_string()) }
 +pub(crate) struct Ledger { pub kvm: Vec<u64>, pub device: Vec<u64>, pub union: Vec<u64>, pub collect_ns: u64 }
++fn mono_ns() -> u64 {
++    let mut t=libc::timespec {tv_sec:0,tv_nsec:0};
++    unsafe {libc::clock_gettime(libc::CLOCK_MONOTONIC,&mut t)};
++    t.tv_sec as u64*1_000_000_000+t.tv_nsec as u64
++}
++fn scheduling() -> serde_json::Value {
++    let mut tasks=serde_json::Map::new();
++    if let Ok(entries)=std::fs::read_dir("/proc/self/task") {
++        for entry in entries.flatten() {
++            let path=entry.path();
++            let name=std::fs::read_to_string(path.join("comm")).unwrap_or_default();
++            let stat=std::fs::read_to_string(path.join("schedstat")).unwrap_or_default();
++            tasks.insert(entry.file_name().to_string_lossy().into_owned(),serde_json::json!({"name":name.trim(),"schedstat":stat.trim()}));
++        }
++    }
++    serde_json::json!({"tasks":tasks,"stat":std::fs::read_to_string("/proc/stat").unwrap_or_default()})
++}
 +pub(crate) fn collect(vm: &KvmVm) -> io::Result<Ledger> {
++    let timed=std::env::var_os("FC_DIRTY_TIMING").is_some();
++    let before=if timed {scheduling()} else {serde_json::Value::Null};
++    let begin_ns=mono_ns();
 +    let start = Instant::now();
 +    let mem = vm.guest_memory();
 +    if mem.num_regions() != 1 { return Err(invalid("ledger requires one RAM region")); }
 +    let region = mem.iter().next().unwrap();
 +    let bitmap = (**region).bitmap().as_ref().ok_or_else(|| invalid("dirty tracking absent"))?;
++    let ioctl_start=Instant::now();
 +    let mut kernel = vm.get_dirty_bitmap().map_err(invalid)?;
++    let ioctl_ns=ioctl_start.elapsed().as_nanos() as u64;
 +    let kvm = kernel.remove(&0).ok_or_else(|| invalid("dirty slot 0 absent"))?;
 +    let pages = region.len() as usize / 4096;
 +    if !kernel.is_empty() || kvm.len() != pages.div_ceil(64) { return Err(invalid("dirty log geometry")); }
++    let scan_start=Instant::now();
 +    let mut device = vec![0u64; kvm.len()];
 +    for page in 0..pages {
 +        if bitmap.dirty_at(page * 4096) { device[page / 64] |= 1 << (page % 64); }
 +    }
-+    let union = kvm.iter().zip(&device).map(|(k,d)| k | d).collect();
++    let scan_ns=scan_start.elapsed().as_nanos() as u64;
++    let reset_start=Instant::now();
 +    bitmap.reset(); // VMM thread: synchronous writers cannot interleave; async completion marks later.
-+    Ok(Ledger { kvm, device, union, collect_ns: start.elapsed().as_nanos() as u64 })
++    let reset_ns=reset_start.elapsed().as_nanos() as u64;
++    let union = kvm.iter().zip(&device).map(|(k,d)| k | d).collect();
++    let collect_ns=start.elapsed().as_nanos() as u64;
++    if timed {
++        let end_ns=mono_ns();let after=scheduling();
++        crate::logger::info_unrestricted!("COLLECT_JSON {}",serde_json::json!({"begin_ns":begin_ns,"end_ns":end_ns,
++            "ioctl_ns":ioctl_ns,"scan_ns":scan_ns,"reset_ns":reset_ns,"collect_ns":collect_ns,"before":before,"after":after}));
++    }
++    Ok(Ledger { kvm, device, union, collect_ns })
 +}
 +
 +// A lab-only gate in unused mapper metadata. Header words 0..7 belong to the

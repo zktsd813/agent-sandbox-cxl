@@ -133,12 +133,18 @@ def maintain(c,s):
     require(c.args.noncoherent and s.tier=='cxl', 'Maintenance requires shared tracked owner')
     directory=c.resident_workers[s.role]['directory']
     ip='172.30.0.1' if s.role=='A' else '172.30.0.2'
+    profiled=getattr(c.args,'tail_profile',False)
+    if profiled:
+        from tail_probe import host_state
+        before=host_state(c.vms)
     started=time.monotonic_ns()
     raw,name=c.shell(s.role,f'/lab/resident-control maintain {directory} {ip} {c.resident_control_nonce} '
         f'{int(c.args.clean_paused)}','noncoherent-maintain',180)
     values=json_lines(raw,'NONCOHERENT_MAINT_JSON ')
     require(len(values)==1,'Maintenance acknowledgement missing')
-    return dict(role=s.role,epoch=s.epoch,file=name,host_duration_ns=time.monotonic_ns()-started,**values[0])
+    duration=time.monotonic_ns()-started
+    observations={'host_before':before,'host_after':host_state(c.vms)} if profiled else {}
+    return dict(role=s.role,epoch=s.epoch,file=name,host_duration_ns=duration,**values[0],**observations)
 
 
 def admin(c,role,operation,*arguments):

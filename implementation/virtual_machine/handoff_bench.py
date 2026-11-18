@@ -337,6 +337,7 @@ class HandoffController(Controller):
             "FC_DAX_SNAPSHOT_COMPAT": "1"}
         if getattr(self.args, 'noncoherent', False):
             env['FC_NONCOHERENT']='1'
+            if getattr(self.args,'tail_profile',False): env['FC_DIRTY_TIMING']='1'
             failure=getattr(self.args,'fail_maintenance',None)
             if failure and (s.role=='A' if failure=='writeback' else s.role=='B'): env['FC_NONCOHERENT_FAIL']=failure
             if s.role=='B' and getattr(self.args,'skip_invalidate_page',-1)>=0:
@@ -1042,6 +1043,9 @@ def resident_measure(args):
     try:
         lab.verify(argparse.Namespace(timeout=180))
         c.setup()
+        if args.tail_profile:
+            for role in ('A','B'):
+                c.shell(role,'echo 1 > /proc/sys/kernel/sched_schedstats\necho 1 > /sys/module/kvm/parameters/dax_dirty_timing','enable-dirty-timing')
         c.configure_direct()
         report['boot'] = c.boot_vm(s)
         report['heartbeat'] = c.trace_command(s,'heartbeat',('dirty'+str(args.dirty_mib)) if args.resident_bench=='dirty' else args.resident_bench,event='trace_heartbeat')
@@ -1152,6 +1156,9 @@ def resident_measure(args):
                 report.update(result='failed', oracle_error=repr(exc))
             report['dirty_oracle'] = oracle.rows
         for role in ('A','B'):
+            if args.tail_profile:
+                try:c.shell(role,'dmesg','dirty-kernel-times-'+role)
+                except Exception as error:report.setdefault('collection_errors',[]).append(str(error))
             try:c.shell(role,'cat /sys/module/kvm/parameters/dax_pool','final-cache-state-'+role)
             except Exception as error:report.setdefault('collection_errors',[]).append(str(error))
         for role,worker in getattr(c,'resident_workers',{}).items():
@@ -1196,6 +1203,7 @@ def main():
     parser.add_argument('--audit-parked', action='store_true')
     parser.add_argument('--arena-limit-bytes',type=int,default=0)
     parser.add_argument('--fail-maintenance',choices=('writeback','epoch','record'))
+    parser.add_argument('--tail-profile', action='store_true')
     parser.add_argument('--preclean', action='store_true')
     parser.add_argument('--clean-paused', action='store_true')
     parser.add_argument('--clean-wait', choices=('0','1','recorded'), default='0')
