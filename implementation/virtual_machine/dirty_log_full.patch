@@ -1,0 +1,55 @@
+--- a/dirty_log_perf_test.c
++++ b/dirty_log_perf_test.c
+@@ -116,7 +116,12 @@
+ 		 * for the entire duration of zapping collapsible SPTEs.
+ 		 */
+ 		while (current_iteration == READ_ONCE(iteration) &&
+-		       READ_ONCE(iteration) >= 0 && !READ_ONCE(host_quit)) {}
++		       READ_ONCE(iteration) >= 0 && !READ_ONCE(host_quit)) {
++            /* Diagnostic variant: keep writing while the host collects. */
++            ret = _vcpu_run(vcpu);
++            TEST_ASSERT(ret == 0 && get_ucall(vcpu, NULL) == UCALL_SYNC,
++                        "live dirty pass failed: %d", ret);
++        }
+ 	}
+ 
+ 	avg = timespec_div(total, vcpu_last_completed_iteration[vcpu_idx]);
+@@ -241,6 +246,18 @@
+ 						   ts_diff);
+ 		pr_info("Iteration %d get dirty log time: %ld.%.9lds\n",
+ 			iteration, ts_diff.tv_sec, ts_diff.tv_nsec);
++
++        {
++            unsigned long dirty_pages = 0, slot, word;
++            for (slot = 0; slot < p->slots; slot++)
++                for (word = 0; word < (pages_per_slot + 63) / 64; word++)
++                    dirty_pages += __builtin_popcountl(bitmaps[slot][word]);
++            pr_info("Iteration %d dirty pages: %lu expected: %lu\n",
++                    iteration, dirty_pages, host_num_pages);
++            if (nr_vcpus == 1 && p->slots == 1 && p->write_percent == 100 && !p->random_access)
++                TEST_ASSERT(dirty_pages == host_num_pages,
++                            "missing dirty pages: %lu / %lu", dirty_pages, host_num_pages);
++        }
+ 
+ 		if (dirty_log_manual_caps) {
+ 			clock_gettime(CLOCK_MONOTONIC, &start);
+--- a/lib/memstress.c
++++ b/lib/memstress.c
+@@ -76,10 +76,13 @@
+ 
+ 			addr = gva + (page * args->guest_page_size);
+ 
+-			if (guest_random_u32(&rand_state) % 100 < args->write_percent)
+-				*(uint64_t *)addr = 0x0123456789ABCDEF;
+-			else
+-				READ_ONCE(*(uint64_t *)addr);
++			if (guest_random_u32(&rand_state) % 100 < args->write_percent) {
++                uint64_t offset;
++                for (offset = 0; offset < args->guest_page_size; offset += 8)
++                    WRITE_ONCE(*(uint64_t *)(addr + offset), 0x0123456789ABCDEF);
++            } else {
++                READ_ONCE(*(uint64_t *)addr);
++            }
+ 		}
+ 
+ 		GUEST_SYNC(1);

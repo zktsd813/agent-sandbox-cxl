@@ -36,8 +36,7 @@ def main():
     p.add_argument("--io-fixture", type=Path)
     p.add_argument("--cxl-mib", type=int, choices=(2048,4096,8192))
     p.add_argument("--memory-mib", type=int, choices=(128,2048))
-    p.add_argument("--l1-memory-mib", type=int, choices=(1024,1536,2048,3072,4096),default=4096)
-    p.add_argument("--l1-overcommit",action="store_true",help="Disposable L1 only: permit the sparse private boot mapping")
+    p.add_argument("--l1-memory-mib", type=int, choices=(2048,3072,4096),default=4096)
     p.add_argument("--dirty-lines",type=int,choices=(0,1,8,64),default=0)
     p.add_argument("--dirty-mode",choices=("change","same","read"),default="change")
     p.add_argument("--dirty-mib", type=int, choices=(0,16,64,256), default=0)
@@ -146,13 +145,6 @@ def main():
             run("start", *start)
             run("verify", "verify")
             config = json.loads((Path(json.loads(current.read_text())["run"]) / "run.json").read_text())
-            if args.l1_overcommit:
-                import lab
-                result['l1_overcommit']={}
-                for role,vm in config['vms'].items():
-                    text=lab.guest_command(vm,'cat /proc/sys/vm/overcommit_memory\necho 1 > /proc/sys/vm/overcommit_memory\ncat /proc/sys/vm/overcommit_memory\ncat /proc/meminfo')
-                    (args.output/f'l1-overcommit-{role}.txt').write_text(text)
-                    result['l1_overcommit'][role]='vm.overcommit_memory=1 in this disposable L1; L0 unchanged'
             resources = {}
             for role, vm in config["vms"].items():
                 status = Path(f"/proc/{vm['pid']}/status").read_text()

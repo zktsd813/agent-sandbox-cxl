@@ -296,6 +296,9 @@ Snapshot의 소유 Vec와 RAM mapping의 Arc 사본을 helper로 넘긴다.
 Helper는 RAM CLWB→SFENCE→log record·header 발행 뒤에만 native ACK를 보낸다.
 동시에 VMM은 장치와 읽기 API를 처리할 수 있다.
 일반 장치 buffer 쓰기는 쓰기 전 bitmap 표시를 따른다. io_uring은 완료 경로의 표시를 따른다.
+동기 장치 callback과 snapshot은 같은 VMM thread에서 돈다.
+그래서 표시와 실제 동기 쓰기 사이에 snapshot이 끼어들지 않는다.
+비동기 읽기는 완료 처리가 새 bitmap을 표시하며, export의 drain은 미완료 작업도 기다린다.
 Snapshot 뒤 이 쓰기는 새 bitmap에 남는다. Helper가 새 값까지 내려써도 안전하다.
 Virtqueue의 raw pointer metadata 쓰기는 고정 범위로 따로 덮는다.
 모든 clean과 최종 export는 수집 직전에 활성 queue 전체를 다시 표시한다.
