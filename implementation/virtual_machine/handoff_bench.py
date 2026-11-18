@@ -1171,7 +1171,7 @@ def resident_measure(args):
         if report['result']=='failed':
             for role,worker in getattr(c,'resident_workers',{}).items():
                 directory=worker['directory']
-                try:c.shell(role,f'read p t < {directory}/fc.pid\nfor task in /proc/$p/task/*; do cat $task/comm $task/schedstat $task/syscall $task/stack; done\ndmesg | tail -n 80','failure-thread-stacks')
+                try:c.shell(role,f'read p t < {directory}/fc.pid\nfor task in /proc/$p/task/*; do cat $task/comm $task/schedstat $task/syscall $task/stack || true; done\ndmesg | tail -n 80','failure-thread-stacks')
                 except Exception as error:report.setdefault('collection_errors',[]).append(str(error))
         for role in ('A','B'):
             if args.tail_profile:
