@@ -260,3 +260,27 @@ Callback guard만으로 scheduler의 공유 queue 접근까지 막을 수는 없
 Detach의 동기 timer 취소, work drain, notifier unregister가 먼저 끝나야 한다.
 kvm_arch_dax_vm_handoff는 kvmclock sync/update delayed work를 cancel_delayed_work_sync한다.
 PIT도 기존 정지·work drain 계약을 따른다. Guest vCPU 정지 뒤 새 work를 발행하지 않는다.
+
+## 20: word 수집과 실제 cache 명령 영수증
+
+장치 bitmap은 `AtomicBitmap::get_and_reset()`으로 걷는다.
+64 page를 담는 u64 word를 원자적으로 읽고 0으로 바꾼다.
+표시가 exchange보다 앞서면 이번 목록에, 뒤면 다음 목록에 남는다.
+Page별 `dirty_at` 뒤 별도 reset 사이의 창을 없앤다.
+VMM thread의 동기 쓰기는 수집 사이에 끼어들지 않는다.
+비동기 완료는 기존 완료 장부를 따른다. 최종 export는 I/O drain 뒤 수집한다.
+목록의 0 word는 이후 set-bit 순회에서 건너뛴다.
+Bitmap word 전체 읽기는 남는다. 비용이 엄밀히 쓴 page 수에만 비례한다고 주장하지 않는다.
+
+RAM 유지보수 영수증은 mapper가 각 CLWB/CLFLUSHOPT 명령에서 증가시킨 counter다.
+Log와 mailbox·mapper metadata도 `CPM_CACHE_RANGE`의 같은 명령 counter를 사용한다.
+Range는 그 observer의 불변 identity와 64 MiB metadata 예약 안에서만 허용한다.
+Observer 초기화는 기존 검증된 GPA 표를 DRAM에 복사한다. 공유 소유권은 쓰지 않는다.
+최초 observer 표 검증의 무효화와 lab 정답지 gate는 준비 비용으로 분리한다.
+Log의 RAM 목록 bit 수와 RAM 명령 수/64가 다르면 닫힌 실패로 끝낸다.
+정답지 gate의 남은 word는 실제 kernel 영수증 전달에만 사용한다. 생산 ABI가 아니다.
+
+Line 정답지는 4 KiB page hash가 바뀐 경우만 64 B line XXH64를 다시 계산한다.
+처음에는 모든 line의 기준 hash를 만든다. 상태 파일은 종료할 때 삭제한다.
+각 정지 clean 경계와 직전 hand-off 경계를 각각 보관한다.
+동일 값 쓰기는 값 변화 하한에 보이지 않는다. PML에는 쓰기로 잡힌다.

@@ -2793,10 +2793,10 @@ index 41b7b8d..e546e3f 100644
              vm_info: vm_info.clone(),
 diff --git a/src/vmm/src/noncoherent.rs b/src/vmm/src/noncoherent.rs
 new file mode 100644
-index 0000000..8d9755d
+index 0000000..6d530ac
 --- /dev/null
 +++ b/src/vmm/src/noncoherent.rs
-@@ -0,0 +1,574 @@
+@@ -0,0 +1,571 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Opt-in dirty ledger and a stopped-boundary lab oracle. Never enabled by default.
 +use std::fs::{File, OpenOptions};
@@ -2805,7 +2805,6 @@ index 0000000..8d9755d
 +use std::sync::{Mutex, OnceLock};
 +use std::time::{Duration, Instant};
 +use vm_memory::{GuestMemoryBackend, GuestMemoryRegion};
-+use vm_memory::bitmap::Bitmap;
 +use crate::vstate::memory::GuestMemoryMmap;
 +use crate::vstate::vm::KvmVm;
 +
@@ -2855,14 +2854,12 @@ index 0000000..8d9755d
 +    let pages = region.len() as usize / 4096;
 +    if !kernel.is_empty() || kvm.len() != pages.div_ceil(64) { return Err(invalid("dirty log geometry")); }
 +    let scan_start=Instant::now();
-+    let mut device = vec![0u64; kvm.len()];
-+    for page in 0..pages {
-+        if bitmap.dirty_at(page * 4096) { device[page / 64] |= 1 << (page % 64); }
-+    }
++    // AtomicBitmap uses one atomic u64 per 64 GPA pages. The exchange is
++    // also the reset: a concurrent mark falls in this snapshot or the next.
++    let device = bitmap.get_and_reset();
++    if device.len()!=kvm.len() {return Err(invalid("device bitmap geometry"));}
 +    let scan_ns=scan_start.elapsed().as_nanos() as u64;
-+    let reset_start=Instant::now();
-+    bitmap.reset(); // VMM thread: synchronous writers cannot interleave; async completion marks later.
-+    let reset_ns=reset_start.elapsed().as_nanos() as u64;
++    let reset_ns=0u64;
 +    let union = kvm.iter().zip(&device).map(|(k,d)| k | d).collect();
 +    let collect_ns=start.elapsed().as_nanos() as u64;
 +    if timed {
