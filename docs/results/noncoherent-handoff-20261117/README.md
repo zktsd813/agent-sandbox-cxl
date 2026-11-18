@@ -497,3 +497,100 @@ Node 2, host DAX와 dcdctl은 사용하지 않았다.
 공유 backing, control socket directory, stopped storage copy와 임시 hash 배열도 남지 않았다.
 최종 .local은 89 GiB, run19는 6.5 GiB다. / 여유는 약 98.2 GiB다.
 약 1시간 55분 동안 수행했다. commit은 로컬에만 남겼다. push하지 않았다.
+
+## 20: 정리 꼬리 원인, 실제로 쓴 양과 내려쓴 양, 최적화 (중간에 멈춤)
+
+2026-11-18 06:04 UTC에 Codex 20으로 시작했다. 10:09 UTC에 사용자 요청으로 멈췄다.
+멈춘 시점의 코드는 `75e8243`이다. 이 장의 숫자는 Claude가 `analyze20.py`로 최종 원시 자료를 다시 읽어 확인했다.
+Codex가 쓰려던 보고서와 SMP 반복 몇 회는 하지 못했다. 진행 기록은 `.codex-runs/20-progress.md`다.
+
+### 정리 꼬리의 원인
+
+19에서 VM을 멈추지 않는 정리(live clean)가 가끔 50 ms를 넘었다. 256 MiB 시험에서 220회 중 13회였고 최대는 1.7초였다.
+
+| 확인한 것 | 결과 |
+|---|---|
+| 재현(정답지 on/off/on/off, 각 220회) | 50 ms 초과 15/8/18/6회, 최대 0.85/3.23/6.40/0.98초 |
+| 최종 코드(`fea665a`)로 220회 | 50 ms 초과 8회, 최대 1.06초. 최적화 뒤에도 남는다 |
+| 꼬리 47회가 생긴 곳 | 모두 L1 KVM이 쓰기 흔적(D bit)을 지우는 단계 |
+| 그 밖의 단계 | 잠금 획득, TLB 비우기, bitmap 복사가 모두 0.14 ms 이하 |
+| scheduling·메모리 회수 | L1 VMM과 L0 vCPU 대기가 최대 0.74 ms. 회수, compaction, swap, steal은 모두 0 |
+| VM을 멈춘 정리(같은 lab) | 220회 최대 15 ms, 50 ms 초과 0 |
+| 일반 KVM 쓰기 기록 시험(L0·L1, 멈춤·실행 중·256 MiB 전부 쓰기) | 각 220회 최대 4.7 ms, 50 ms 초과 0 |
+| L0 perf, 꼬리 구간 | 표본의 42~44%가 L0 KVM `mmu_lock` 읽기 대기(`queued_read_lock_slowpath`). 정상 구간은 0~3.5% |
+| 대기와 짝 | 꼬리 47회 모두, 읽기 대기 표본이 같은 QEMU의 다른 vCPU에서 2 ms 안의 `mmu_sync_children` 표본과 짝을 이룬다 |
+
+원인은 L0 쪽이다.
+- L1이 D bit를 지우면 L0는 자기가 대신 들고 있는 L2용 page table(shadow EPT)을 맞춘다(`kvm_mmu_sync_roots` → `mmu_sync_children`). 이 일은 L0의 `mmu_lock`을 쓰기로 잡는다.
+- 같은 때 다른 vCPU는 guest가 256 MiB를 쓰며 EPT fault를 낸다. 이 fault는 같은 lock을 읽기로 잡아야 해서 기다린다.
+- 그래서 nested lab에서만 생기는 비용으로 본다. 실제 하드웨어에서는 L1이 없어 shadow EPT도 없다.
+
+다만 남은 질문이 있다. 일반 KVM 시험은 L1에서 실행 중에 돌려도 꼬리가 없었다. 그래서 lab의 어떤 조건이 필요한지 아직 모른다. 후보는 두 L1이 같은 EPT page를 함께 매핑하는 hand-off 구성이다. hand-off 없이 한 host에서만 쓰기·정리를 반복하는 대조를 계획했지만 하지 못했다.
+
+### 실제로 쓴 양 대 내려쓴 양
+
+L0 정답지에 64 B line 단위 hash를 더했다. kernel의 내려쓰기 명령 수는 명령마다 실제로 센다. 모든 경계에서 RAM 내려쓰기 명령 수가 목록 page × 64와 같았다.
+
+guest가 page마다 정해진 수의 line을 쓰는 시험이다(16 MiB·256 MiB, VM을 멈춘 정리, 측정 구간만).
+
+| 쓰기 | 목록 page ÷ 바뀐 page | 내려쓴 line ÷ 바뀐 line |
+|---|---:|---:|
+| page마다 1 line | 1.00~1.02 | 63~64 |
+| page마다 8 line | 1.00~1.02 | 8.0~8.3 |
+| page마다 64 line | 1.00~1.02 | 1.0 |
+| 읽기만 | 목록에 없음 | 목록에 없음 |
+| 같은 값 다시 쓰기 | 모두 목록에 있음, 값 변화 0 | — |
+
+- 목록은 page 단위라, page 안에서 일부 line만 쓰면 나머지 line도 내려쓴다.
+- 같은 값을 다시 쓰면 CPU의 쓰기 표시가 켜져서 목록에 들어간다. 값 hash로는 바뀐 것이 없다. 하드웨어가 구별하지 못하는 몫이다.
+- 읽기만 한 page는 목록에 없다. 단, hand-off 직후 받는 쪽 KVM이 새로 만드는 쓰기 가능 mapping은 읽기만 한 page도 한 번 목록에 넣는다. 16 MiB 읽기 시험에서 첫 정리에 4,096 page가 들어갔고 그 뒤에는 0이었다(`spte-read-cause`).
+- 목록에 있지만 값이 안 바뀐 page는 거의 모두 KVM 쪽 표시다. 장치 쪽(Firecracker) 표시는 매 수집마다 virtio queue 영역 3 page가 표시되는 것뿐이다.
+
+실제 부하에서 hand-off 사이 구간마다 잰 값이다(측정 구간만).
+
+| 부하 | 목록 page ÷ 바뀐 page | 목록 line ÷ 바뀐 line | 미리 정리의 반복 포함 내려쓴 line ÷ 바뀐 line |
+|---|---:|---:|---:|
+| 256 MiB 전부 쓰기 | 1.00 | 1.00 | 1.00 |
+| 혼합 입출력 | 1.09 | 1.16 | 1.16 |
+| SWE Gin | 1.04 | 1.15 | 1.22 |
+| SWE MicroPython | 1.08 | 1.35 | 1.66 |
+| SWE PHP-CS-Fixer | 1.11 | 1.33 | 1.88 |
+
+- page 단위 값은 19 원시에서 Claude가 따로 계산한 값(1.04/1.08/1.11)과 같다.
+- SWE에서 목록 page 안의 line은 74~87%가 실제로 바뀌었다.
+- 미리 정리하면 같은 page를 다시 써서 여러 번 내려쓴다. 이 반복분은 LLM 대기 중에 처리된다.
+- hand-off 때 VM 객체 영역은 아직 쓴 양보다 훨씬 많이 처리한다. 내려쓴 line ÷ 바뀐 line은 Gin 3.1, MicroPython 9.8, PHP 13이다. 영역 좁히기는 아래에서 보류했다.
+
+### 최적화
+
+256 MiB 시험이다. 미리 정리를 켰고, 각 arm 220회 중 측정 200회다. 시간은 lab(DRAM) 값이다.
+
+| 바꾼 것 | 전 | 후 | 판정 |
+|---|---|---|---|
+| Firecracker 장부를 page마다 보지 않고 64-bit word째 원자적으로 떼어 읽기 | hand-off 수집 0.873 ms, 비일관 처리 전체 1.29 ms, ACK 5.25~5.49 ms | 0.134 ms, 0.54 ms, 4.20~4.91 ms | 채택 |
+| 정리의 내려쓰기를 장치 thread 밖의 보조 thread로 옮기기 | 정상 수집 구간의 guest disk 최악 지연 중앙값 9.0 ms | 5.8 ms | 선택 옵션(기본 꺼짐). 꼬리 구간은 그대로 |
+| KVM manual protect(읽기와 다시 보호하기를 나누기) | 쓰기 기록 읽기 1.0 ms | 0.115 ms. 다시 보호하기가 약 1초 | 버림. 코드 제거 |
+| 객체 영역 좁히기 | — | — | 보류. 받는 쪽이 미리 끌어온 mapping과 소프트웨어 쓰기를 빠짐없이 잡는다는 근거가 부족 |
+| 처음 보는 host의 전체 무효화 줄이기 | — | — | 보류. 그대로 둔다 |
+
+- 비일관 처리 전체(보내는 쪽 수집 0.13, 내려쓰기 0.07, 발행 0.03, 객체 0.05 ms + 받는 쪽 log 읽기 0.12, 무효화 0.06, 객체 0.05 ms)는 0.52 ms다.
+- 비일관 처리를 끈 같은 시험의 ACK는 4.82/4.89 ms였고 켠 쪽은 4.31/4.28 ms였다. 켠 쪽이 짧은 이유는 아직 가리지 못했다. 그래서 차이로 비용을 말하지 않고 위 구간 합을 쓴다.
+- 보조 thread는 꼬리를 줄이지 못했다. 꼬리는 L0에서 vCPU가 lock을 기다리는 것이라 VMM thread와 무관하다.
+
+### 정확성과 시험
+
+- 누락 page는 0이다. 15개 회계 시험에서 hand-off 102회, 정리 173회, hash 경계 290회였다. 그 밖의 정답지 시험 17개도 모두 0이다.
+- Python 65개(8 skip)가 `75e8243`에서 통과한다(Claude가 다시 돌림). Rust 계약 시험은 마지막 Firecracker 변경 뒤인 09:04에 통과했다.
+- 측정 전에 거절된 실행이 16개 있다. node 0 여유 메모리 부족과 실행 중 소스 변경이 원인이고, 모두 최종 집합에서 뺐다.
+- SMP legacy 경로가 한 번 실패했다("CPU 0 ping did not continue"). 누락 page는 0이었다. 다시 돌린 4회는 통과했다. 원인은 모른다.
+
+### 원시 자료와 남은 일
+
+- 원시는 `implementation/virtual_machine/.local/run20`(8.2 GiB, Git 제외)에 있다.
+- 분석은 `analyze20.py implementation/virtual_machine/.local/run20`으로 재생한다. 결과는 같은 디렉터리의 `stage20-analysis.json`(9.8 MB)이다. 크기 때문에 `summary.json`에는 아직 넣지 않았다.
+- 남은 일:
+  - hand-off 없이 한 host에서만 쓰기·정리를 반복해 꼬리 조건 가리기
+  - 비일관 처리를 켠 쪽 ACK가 더 짧은 이유
+  - 객체 영역 좁히기의 근거
+  - SMP legacy 단발 실패
+- 실제 비일관 CXL, node 2, host DAX와 `dcdctl`은 쓰지 않았다. commit은 로컬에만 있다.
