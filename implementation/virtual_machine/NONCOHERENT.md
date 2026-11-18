@@ -284,3 +284,19 @@ Line 정답지는 4 KiB page hash가 바뀐 경우만 64 B line XXH64를 다시 
 처음에는 모든 line의 기준 hash를 만든다. 상태 파일은 종료할 때 삭제한다.
 각 정지 clean 경계와 직전 hand-off 경계를 각각 보관한다.
 동일 값 쓰기는 값 변화 하한에 보이지 않는다. PML에는 쓰기로 잡힌다.
+
+## 20: 선택 helper clean의 경합
+
+`--clean-helper`는 live clean에만 쓴다. 정지 clean은 거절한다.
+KVM와 장치 bitmap snapshot은 계속 VMM thread에서 만든다.
+Snapshot의 소유 Vec와 RAM mapping의 Arc 사본을 helper로 넘긴다.
+Helper는 RAM CLWB→SFENCE→log record·header 발행 뒤에만 native ACK를 보낸다.
+동시에 VMM은 장치와 읽기 API를 처리할 수 있다.
+Snapshot 뒤의 쓰기는 새 bitmap에 남는다. Helper가 새 값까지 내려써도 안전하다.
+새 clean과 export는 이전 helper를 join한다. Snapshot을 겹쳐 수집하거나 발행 순서를 바꾸지 않는다.
+Import 준비도 이전 작업이 끝난 뒤 한다. 작업 중 mapping을 park하거나 바꾸지 않는다.
+Helper는 KVM fd와 장치 객체를 읽지 않는다. Mapper observer와 log mutex만 사용한다.
+오류·thread panic·ACK socket 오류는 abort한다. 부분 성공을 ACK하지 않는다.
+
+이 옵션은 KVM 수집 중의 VMM 막힘을 없애지 못한다.
+중첩 lab에서의 D bit 처리 꼬리를 helper의 개선으로 주장하지 않는다.

@@ -337,6 +337,7 @@ class HandoffController(Controller):
             "FC_DAX_SNAPSHOT_COMPAT": "1"}
         if getattr(self.args, 'noncoherent', False):
             env['FC_NONCOHERENT']='1'
+            if getattr(self.args,'clean_helper',False):env['FC_NONCOHERENT_HELPER']='1'
             if getattr(self.args,'tail_profile',False): env['FC_DIRTY_TIMING']='1'
             failure=getattr(self.args,'fail_maintenance',None)
             if failure and (s.role=='A' if failure=='writeback' else s.role=='B'): env['FC_NONCOHERENT_FAIL']=failure
@@ -1056,6 +1057,10 @@ def resident_measure(args):
         c.bench_offset = frames[64*MIB//PAGE]
         from resident_fast import prepare
         prepare(c,s)
+        if args.service_probe:
+            for role,worker in c.resident_workers.items():
+                directory=worker['directory']
+                c.shell(role,f'/lab/resident-control service-probe {directory} 0 {c.resident_control_nonce} > {directory}/service-probe.log 2>&1 &\necho $! > {directory}/service-probe.pid','service-probe-start')
         def wait_payload():
             if args.resident_bench!='dirty': return
             import struct
@@ -1162,6 +1167,12 @@ def resident_measure(args):
             try:c.shell(role,'cat /sys/module/kvm/parameters/dax_pool','final-cache-state-'+role)
             except Exception as error:report.setdefault('collection_errors',[]).append(str(error))
         for role,worker in getattr(c,'resident_workers',{}).items():
+            if args.service_probe:
+                directory=worker['directory']
+                try:
+                    c.shell(role,f'kill $(cat {directory}/service-probe.pid)','service-probe-stop')
+                    c.fetch_bytes(role,directory+'/service-probe.log','service-probe-'+role)
+                except Exception as error:report.setdefault('collection_errors',[]).append(str(error))
             for name in ('fc.log','vmm.log','stderr.log'):
                 try:c.fetch_bytes(role,worker['directory']+'/'+name,'final-'+role+'-'+name)
                 except Exception as error:report.setdefault('collection_errors',[]).append(str(error))
@@ -1206,6 +1217,8 @@ def main():
     parser.add_argument('--arena-limit-bytes',type=int,default=0)
     parser.add_argument('--fail-maintenance',choices=('writeback','epoch','record'))
     parser.add_argument('--tail-profile', action='store_true')
+    parser.add_argument('--clean-helper',action='store_true')
+    parser.add_argument('--service-probe',action='store_true')
     parser.add_argument('--preclean', action='store_true')
     parser.add_argument('--clean-paused', action='store_true')
     parser.add_argument('--clean-wait', choices=('0','1','recorded'), default='0')
@@ -1219,6 +1232,7 @@ def main():
     parser.add_argument('--prefault-activate', action='store_true')
     parser.add_argument('--prefault-probe', help='Static ABI probe uploaded only to these disposable L1s')
     args = parser.parse_args()
+    if args.clean_helper and (not args.preclean or args.clean_paused):parser.error("Helper requires live preclean")
     if args.preclean and not args.noncoherent: parser.error("Preclean requires noncoherent mode")
     if not 1 <= args.clean_repeats <= 1000: parser.error("clean-repeats must be 1..1000")
     if args.clean_paused and not args.preclean: parser.error("clean-paused requires preclean")

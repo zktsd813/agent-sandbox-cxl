@@ -94,7 +94,7 @@ index a3b3f3f..c339f7c 100644
              parse_put_actions(&Body::new("invalid_body")).unwrap_err();
  
 diff --git a/src/firecracker/src/api_server_adapter.rs b/src/firecracker/src/api_server_adapter.rs
-index 70abff4..c37e899 100644
+index 70abff4..bd05a6c 100644
 --- a/src/firecracker/src/api_server_adapter.rs
 +++ b/src/firecracker/src/api_server_adapter.rs
 @@ -2,10 +2,13 @@
@@ -111,7 +111,7 @@ index 70abff4..c37e899 100644
  
  use event_manager::{EventOps, Events, MutEventSubscriber, SubscriberOps};
  use vmm::logger::{ProcessTimeReporter, error_unrestricted, info_unrestricted, warn_unrestricted};
-@@ -48,6 +51,199 @@ struct ApiServerAdapter {
+@@ -48,6 +51,212 @@ struct ApiServerAdapter {
      request: Option<ApiRequest>,
  }
  
@@ -138,6 +138,19 @@ index 70abff4..c37e899 100644
 +        let Some((command, input)) = self.request.take() else { return; };
 +        let start = Instant::now();
 +        let mut payload = Vec::new();
++        if command==5 && std::env::var_os("FC_NONCOHERENT_HELPER").is_some() {
++            let mut reply=self.stream.as_ref().unwrap().try_clone().expect("helper reply socket");
++            let complete=Box::new(move || {
++                let mut response=[0u8;16];
++                response[8..].copy_from_slice(&(start.elapsed().as_nanos() as u64).to_le_bytes());
++                if reply.write_all(&response).is_err() {std::process::abort();}
++            });
++            if let Err(error)=vmm.lock().unwrap().clean_memory_with_completion(false,Some(complete)) {
++                error_unrestricted!("Asynchronous clean failed: {error}");std::process::abort();
++            }
++            return;
++        }
++
 +        if matches!(command,5|7) {
 +            let mut t=libc::timespec {tv_sec:0,tv_nsec:0};
 +            unsafe {libc::clock_gettime(libc::CLOCK_MONOTONIC,&mut t)};
@@ -311,7 +324,7 @@ index 70abff4..c37e899 100644
  impl ApiServerAdapter {
      /// Runs the vmm to completion, while any arising control events are deferred
      /// to a `RuntimeApiController`.
-@@ -58,6 +254,9 @@ impl ApiServerAdapter {
+@@ -58,6 +267,9 @@ impl ApiServerAdapter {
          vmm: Arc<Mutex<Vmm>>,
          event_manager: &mut EventManager,
      ) -> Result<(), ApiServerError> {
@@ -321,7 +334,7 @@ index 70abff4..c37e899 100644
          let api_adapter = Arc::new(Mutex::new(Self {
              api_event_fd,
              from_api,
-@@ -66,10 +265,34 @@ impl ApiServerAdapter {
+@@ -66,10 +278,34 @@ impl ApiServerAdapter {
              request: None,
          }));
          event_manager.add_subscriber(api_adapter.clone());
@@ -356,7 +369,7 @@ index 70abff4..c37e899 100644
              api_adapter
                  .lock()
                  .expect("Poisoned lock")
-@@ -84,33 +307,36 @@ impl ApiServerAdapter {
+@@ -84,33 +320,36 @@ impl ApiServerAdapter {
          Ok(())
      }
  
@@ -400,7 +413,7 @@ index 70abff4..c37e899 100644
                          break;
                      }
                  }
-@@ -272,3 +498,107 @@ pub(crate) fn run_with_api(
+@@ -272,3 +511,107 @@ pub(crate) fn run_with_api(
  
      result
  }
@@ -1567,10 +1580,10 @@ index 2a75945..fe91a5d 100644
      type ConstructorArgs = MmioTransportConstructorArgs;
 diff --git a/src/vmm/src/direct.rs b/src/vmm/src/direct.rs
 new file mode 100644
-index 0000000..5373bc5
+index 0000000..72422ec
 --- /dev/null
 +++ b/src/vmm/src/direct.rs
-@@ -0,0 +1,963 @@
+@@ -0,0 +1,975 @@
 +// Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 +// SPDX-License-Identifier: Apache-2.0
 +
@@ -1826,6 +1839,13 @@ index 0000000..5373bc5
 +
 +    /// Runs only on the VMM event loop, like synchronous device emulation.
 +    pub fn clean_memory(&mut self, stopped_oracle: bool) -> Result<(), VmmError> {
++        self.clean_memory_with_completion(stopped_oracle,None)
++    }
++    /// Snapshot on the VMM thread; optionally complete maintenance on a helper.
++    pub fn clean_memory_with_completion(&mut self, stopped_oracle: bool,
++        completion: Option<Box<dyn FnOnce()+Send>>) -> Result<(), VmmError> {
++        crate::noncoherent::finish_clean();
++        if stopped_oracle && completion.is_some() {return Err(VmmError::DaxPreflight("stopped clean cannot be asynchronous"));}
 +        if !crate::noncoherent::active() || !self.machine_config.track_dirty_pages
 +            || resident_parked() || self.instance_info.state != VmState::Running
 +            || crate::pool_memory::mapping_failed() {
@@ -1837,6 +1857,10 @@ index 0000000..5373bc5
 +        if stopped_oracle { self.device_manager.save(); }
 +        self.device_manager.mark_virtio_queue_memory_dirty(vm.guest_memory());
 +        let ledger=crate::noncoherent::require(crate::noncoherent::collect(vm));
++        if let Some(complete)=completion {
++            crate::noncoherent::clean_async(vm.guest_memory().clone(),ledger,complete);
++            return Ok(());
++        }
 +        crate::noncoherent::require(crate::noncoherent::send(vm.guest_memory(),&ledger));
 +        crate::noncoherent::require(crate::noncoherent::cleaned(vm.guest_memory(),&ledger,stopped_oracle));
 +        if stopped_oracle { self.resume_vm()?; }
@@ -1887,6 +1911,7 @@ index 0000000..5373bc5
 +    }
 +
 +    fn export_inner(&mut self, events: &mut EventManager, memory_wire: bool) -> Result<Vec<u8>, VmmError> {
++        crate::noncoherent::finish_clean();
 +        let mut timing = crate::persist::RestoreTiming::new("direct_export");
 +        if !io_enabled()
 +            || self.instance_info.state != VmState::Paused
@@ -2793,10 +2818,10 @@ index 41b7b8d..e546e3f 100644
              vm_info: vm_info.clone(),
 diff --git a/src/vmm/src/noncoherent.rs b/src/vmm/src/noncoherent.rs
 new file mode 100644
-index 0000000..6d530ac
+index 0000000..d8c539d
 --- /dev/null
 +++ b/src/vmm/src/noncoherent.rs
-@@ -0,0 +1,571 @@
+@@ -0,0 +1,587 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Opt-in dirty ledger and a stopped-boundary lab oracle. Never enabled by default.
 +use std::fs::{File, OpenOptions};
@@ -3125,6 +3150,21 @@ index 0000000..6d530ac
 +    if stats[2+index]<arena || stats[6+index]!=1 { return Err(invalid("kernel arena coverage receipt missing")); }
 +    Ok(stats)
 +}
++static CLEAN_JOB: Mutex<Option<std::thread::JoinHandle<()>>> = Mutex::new(None);
++pub(crate) fn finish_clean() {
++    if let Some(job)=CLEAN_JOB.lock().unwrap().take() {
++        if job.join().is_err() {std::process::abort();}
++    }
++}
++pub(crate) fn clean_async(mem: GuestMemoryMmap, ledger: Ledger, complete: Box<dyn FnOnce()+Send>) {
++    let mut guard=CLEAN_JOB.lock().unwrap();
++    assert!(guard.is_none());
++    *guard=Some(std::thread::spawn(move || {
++        require(send(&mem,&ledger));
++        require(cleaned(&mem,&ledger,false));
++        complete(); // Native ACK only follows WB, record publication, and the lab gate.
++    }));
++}
 +pub(crate) fn send(mem: &GuestMemoryMmap, ledger: &Ledger) -> io::Result<u64> {
 +    if !active() { return Ok(0); }
 +    if std::env::var("FC_NONCOHERENT_FAIL").as_deref()==Ok("writeback") {return Err(invalid("injected writeback failure after harvest"));}
@@ -3154,6 +3194,7 @@ index 0000000..6d530ac
 +}
 +pub(crate) fn prepare(manifest: &crate::pool_memory::Manifest, bytes: &[u8], epoch: u64) -> io::Result<()> {
 +    if !active() { return Ok(()); }
++    finish_clean();
 +    with_shared(manifest.noncoherent_identity()?,|s| {
 +        let start=Instant::now(); s.control_lines=s.mailbox_read(bytes,epoch)?; s.control_lines+=s.control(true);
 +        s.control_ns=start.elapsed().as_nanos() as u64; Ok(())

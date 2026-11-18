@@ -47,6 +47,8 @@ def main():
     p.add_argument("--audit-parked", action="store_true")
     p.add_argument("--arena-limit-bytes", type=int,default=0)
     p.add_argument("--fail-maintenance", choices=("writeback","epoch","record"))
+    p.add_argument("--clean-helper",action="store_true")
+    p.add_argument("--service-probe",action="store_true")
     p.add_argument("--preclean", action="store_true")
     p.add_argument("--clean-paused", action="store_true", help="Test only: pause and hash each clean")
     p.add_argument("--clean-wait", choices=("0","1","recorded"), default="0")
@@ -183,6 +185,8 @@ def main():
                 if args.arena_limit_bytes: bench_args += ['--arena-limit-bytes',args.arena_limit_bytes]
                 if args.fail_maintenance: bench_args += ['--fail-maintenance',args.fail_maintenance]
                 if args.tail_profile: bench_args += ["--tail-profile"]
+                if args.clean_helper: bench_args += ["--clean-helper"]
+                if args.service_probe: bench_args += ["--service-probe"]
                 if args.preclean: bench_args += ['--preclean','--clean-wait',args.clean_wait,'--clean-repeats',args.clean_repeats]
                 if args.clean_paused: bench_args += ['--clean-paused']
                 if args.cache_skip_line>=0: bench_args += ["--cache-skip-line",args.cache_skip_line]

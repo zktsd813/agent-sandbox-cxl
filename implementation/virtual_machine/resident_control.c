@@ -332,6 +332,23 @@ int main(int argc,char **argv) {
  check(strlen(argv[2])<sizeof(directory)&&!strncmp(argv[2],"/run/swe-handoff-",17),"owned directory required");strcpy(directory,argv[2]);path(socket_path,sizeof(socket_path),"api.sock");
  check(strlen(argv[4])==32&&strspn(argv[4],"0123456789abcdef")==32,"session nonce");signal(SIGPIPE,SIG_IGN);
 
+ if(!strcmp(argv[1],"service-probe")) {
+  setvbuf(stdout,NULL,_IOLBF,0);connect_api();
+  const char *query="GET / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 0\r\n\r\n";
+  for(unsigned iteration=0;iteration<1000000;iteration++) {
+   char reply[2048]={0};size_t got=0,needed=sizeof(reply);uint64_t begin=ns();
+   send_all(api_fd,query,strlen(query));
+   while(got<needed) {
+    ssize_t n=read(api_fd,reply+got,sizeof(reply)-1-got);if(n<=0)fail("probe response");got+=n;reply[got]=0;
+    char *end=strstr(reply,"\r\n\r\n"),*length=strcasestr(reply,"content-length:");
+    if(end&&length) needed=(size_t)(end+4-reply)+strtoul(length+15,NULL,10);
+    check(needed<sizeof(reply)||!end,"probe response bound");
+   }
+   check(!strncmp(reply,"HTTP/1.1 200",12),"probe status");
+   printf("SERVICE_PROBE_JSON {\"begin_ns\":%"PRIu64",\"end_ns\":%"PRIu64"}\n",begin,ns());usleep(1000);
+  }
+  return 0;
+ }
  if(!strcmp(argv[1],"cache")) {
   check(argc==10,"cache DIR IP NONCE METADATA COOKIE_LO COOKIE_HI PAGES MODE");
   uint64_t pages=number(argv[8]);check(pages&&pages<=(1U<<20),"cache pages");
