@@ -46,7 +46,7 @@ def prepare_servers(c):
         if getattr(c.args,'restore_timing',False):
             command='export FC_RESIDENT_PROFILE=1\n'+command
         if hasattr(c, 'bench_offset'):
-            if getattr(c.args,'noncoherent',False): command='export RESIDENT_BENCH_TRACKED_EPOCH=1\n'+command
+            command='export RESIDENT_BENCH_TRACKED_EPOCH=1\n'+command
             command = (f'export RESIDENT_BENCH_HEARTBEAT={c.bench_offset} RESIDENT_BENCH_ARENA={c.kvm_arena+16*1024*1024}\n'
                 + ('export RESIDENT_BENCH_PROFILE=1\n' if c.args.profile else '')
                 + ('export RESIDENT_BENCH_RESUME_PROFILE=1\n' if c.args.resume_profile else '') + command)

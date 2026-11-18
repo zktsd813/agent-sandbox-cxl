@@ -335,6 +335,8 @@ class HandoffController(Controller):
             "FC_POOL_MEMORY_MANIFEST": s.manifest_path, "FC_POOL_MEMORY_DEVICE": "/dev/cxl_pool",
             "FC_DAX_FIXED_HVA": "0x400000000000", "FC_DAX_SNAPSHOT": "1",
             "FC_DAX_SNAPSHOT_COMPAT": "1"}
+        if getattr(self.args,'resident_bench',None):
+            env.update(FC_BENCH_EPOCH_GPA=str(64*MIB),FC_BENCH_INITIAL_EPOCH=str(s.epoch))
         if getattr(self.args, 'noncoherent', False):
             env['FC_NONCOHERENT']='1'
             if getattr(self.args,'manual_protect',False):env['FC_DIRTY_MANUAL']='1'
@@ -345,8 +347,6 @@ class HandoffController(Controller):
             if failure and (s.role=='A' if failure=='writeback' else s.role=='B'): env['FC_NONCOHERENT_FAIL']=failure
             if s.role=='B' and getattr(self.args,'skip_invalidate_page',-1)>=0:
                 env['FC_NONCOHERENT_SKIP_PAGE']=str(self.args.skip_invalidate_page)
-            if getattr(self.args,'resident_bench',None):
-                env.update(FC_BENCH_EPOCH_GPA=str(64*MIB),FC_BENCH_INITIAL_EPOCH=str(s.epoch))
         if getattr(self.args, 'dirty_ledger', False):
             env['FC_NONCOHERENT_NODE']='1' if s.role=='A' else '2'
             env.update(FC_DIRTY_LEDGER='1', FC_DIRTY_OUTPUT=s.directory+'/dirty')
@@ -1171,7 +1171,7 @@ def resident_measure(args):
         if report['result']=='failed':
             for role,worker in getattr(c,'resident_workers',{}).items():
                 directory=worker['directory']
-                try:c.shell(role,f'read p t < {directory}/fc.pid\nfor task in /proc/$p/task/*; do cat $task/comm $task/schedstat $task/stack; done\ndmesg | tail -n 80','failure-thread-stacks')
+                try:c.shell(role,f'read p t < {directory}/fc.pid\nfor task in /proc/$p/task/*; do cat $task/comm $task/schedstat $task/syscall $task/stack; done\ndmesg | tail -n 80','failure-thread-stacks')
                 except Exception as error:report.setdefault('collection_errors',[]).append(str(error))
         for role in ('A','B'):
             if args.tail_profile:
