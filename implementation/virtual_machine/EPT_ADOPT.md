@@ -90,3 +90,6 @@ Release는 모든 callback을 기다린 뒤 소유권을 보낸다.
 요청 파일은 한 번 소비한다. 기존 전체 promotion·checkpoint 요청과 구분한다.
 API는 paused 상태를 검사하고 장치 저장·I/O drain 뒤 전환한다.
 실패 후에는 worker를 다시 실행하지 않는다.
+
+정상 경로의 계층 상태는 로컬에만 있다. L0 정답지 모드만 기존 gate에 진단 PFN과 bitmap 영수증을 복사한다.
+이는 집 복사 누락을 독립 검출하기 위한 시험 장치다. 수신 host는 이를 읽거나 adopt하지 않는다.

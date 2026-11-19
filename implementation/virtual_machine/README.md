@@ -58,3 +58,10 @@ Runner는 node 0 여유가 lab 예산 + 4 GiB 이상인지 확인하고 LAB → 
 생성한 VM과 `/dev/shm` backing만 종료·정리한다. 결과 파일은 남긴다.
 설계는 [EPT_ADOPT.md](EPT_ADOPT.md), cache 순서는 [NONCOHERENT.md](NONCOHERENT.md),
 실측은 [결과 문서](../../docs/results/ept-adopt-20261119/README.md)에 있다.
+
+2 MiB chunk의 데이터와 최하위 PT를 로컬 DRAM으로 올리는 시험은 새 kernel·mapper·Firecracker가 필요하다.
+이 서버의 최종 검증 자료는 `.local/run23/assets7`이다. 위 runner에서 이 assets를 고르고
+`--tier-chunks 16 --tier-start 64 --tier-refault lazy --dirty-lines 64`를 더한다.
+`--tier-refault eager`는 512개 leaf를 먼저 채운다. `--tier-pre-demote`는 hand-off 전에 미리 내린다.
+`--tier-chunks half` 또는 `written --tier-history <이전 report.json>`으로 명시적으로 고른다.
+비용과 lab 한계는 [EPT 나누기 결과](../../docs/results/ept-tier-split-20261119/README.md)에 있다.

@@ -1,0 +1,941 @@
+{
+  "schema": "ept-tier-split-v1",
+  "date": "2026-11-19",
+  "base_commit": "616d5fd",
+  "final_code_commit": "f042730d38dd863a9cc6ce06265ce203791380bc",
+  "scope": {
+    "memory_mib": 2048,
+    "chunk_mib": 2,
+    "leaf_kib": 4,
+    "ept_extent_mib": 16,
+    "environment": "bud05 node0; nested L0-shadow; coherent DRAM-backed CXL emulation"
+  },
+  "code_lines": {
+    "linux": {
+      "added": 195,
+      "removed": 13,
+      "files": {
+        "arch/x86/include/asm/kvm_host.h": {
+          "added": 0,
+          "removed": 0
+        },
+        "arch/x86/kvm/Kconfig": {
+          "added": 0,
+          "removed": 0
+        },
+        "arch/x86/kvm/mmu/mmu.c": {
+          "added": 0,
+          "removed": 0
+        },
+        "arch/x86/kvm/mmu/mmu_internal.h": {
+          "added": 0,
+          "removed": 0
+        },
+        "arch/x86/kvm/mmu/tdp_mmu.c": {
+          "added": 163,
+          "removed": 12
+        },
+        "arch/x86/kvm/x86.c": {
+          "added": 2,
+          "removed": 0
+        },
+        "include/linux/kvm_dax.h": {
+          "added": 3,
+          "removed": 0
+        },
+        "include/linux/kvm_host.h": {
+          "added": 0,
+          "removed": 0
+        },
+        "include/uapi/linux/kvm_dax.h": {
+          "added": 3,
+          "removed": 0
+        },
+        "virt/kvm/kvm_main.c": {
+          "added": 24,
+          "removed": 1
+        }
+      }
+    },
+    "firecracker": {
+      "added": 164,
+      "removed": 3,
+      "files": {
+        "src/firecracker/src/api_server/request/actions.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/firecracker/src/api_server_adapter.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/src/arch/x86_64/vcpu.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/src/arch/x86_64/vm.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/src/builder.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/src/device_manager/acpi.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/src/device_manager/mmio.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/src/device_manager/mod.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/src/device_manager/persist.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/src/devices/acpi/vmclock.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/src/devices/legacy/i8042.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/src/devices/legacy/serial.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/src/devices/virtio/block/virtio/device.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/src/devices/virtio/block/virtio/persist.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/src/devices/virtio/persist.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/src/ept_adopt.rs": {
+          "added": 2,
+          "removed": 1
+        },
+        "src/vmm/src/ept_tier.rs": {
+          "added": 110,
+          "removed": 0
+        },
+        "src/vmm/src/lib.rs": {
+          "added": 5,
+          "removed": 0
+        },
+        "src/vmm/src/noncoherent.rs": {
+          "added": 32,
+          "removed": 2
+        },
+        "src/vmm/src/persist.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/src/pool_memory.rs": {
+          "added": 15,
+          "removed": 0
+        },
+        "src/vmm/src/rpc_interface.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/src/vstate/memory.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/src/vstate/vcpu.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/src/vstate/vm.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/src/worker.rs": {
+          "added": 0,
+          "removed": 0
+        },
+        "src/vmm/tests/devices.rs": {
+          "added": 0,
+          "removed": 0
+        }
+      }
+    },
+    "mapper": {
+      "added": 94,
+      "removed": 1,
+      "files": {
+        "pool_memory_module.c": {
+          "added": 90,
+          "removed": 1
+        },
+        "pool_memory_uapi.h": {
+          "added": 4,
+          "removed": 0
+        }
+      }
+    },
+    "tests": {
+      "added": 230,
+      "removed": 23,
+      "files": {
+        "dirty_oracle.py": {
+          "added": 71,
+          "removed": 5
+        },
+        "ept_adopt.py": {
+          "added": 83,
+          "removed": 4
+        },
+        "swe_handoff_run.py": {
+          "added": 13,
+          "removed": 3
+        },
+        "verify_swe_handoff.py": {
+          "added": 36,
+          "removed": 2
+        },
+        "test_dirty_oracle.py": {
+          "added": 7,
+          "removed": 0
+        },
+        "lab.py": {
+          "added": 9,
+          "removed": 3
+        },
+        "shared_probe.c": {
+          "added": 7,
+          "removed": 4
+        },
+        "swe-handoff-guest-run.sh": {
+          "added": 4,
+          "removed": 2
+        }
+      }
+    },
+    "raw_experiment": {
+      "added": 241,
+      "removed": 0,
+      "files": {
+        "validate.py": {
+          "added": 63,
+          "removed": 0
+        },
+        "validate7.py": {
+          "added": 88,
+          "removed": 0
+        },
+        "analyze.py": {
+          "added": 90,
+          "removed": 0
+        }
+      }
+    }
+  },
+  "accuracy": {
+    "v6-cxl-200": {
+      "raw": "implementation/virtual_machine/.local/run23/v6-cxl-200/trial/report.json",
+      "source_commit": "94976a178d2e3ac0b42b4a4dba2f729b650595fe",
+      "hops": 400,
+      "missing_pages": 0,
+      "ept_hash_checks": 400,
+      "tier_hash_checks": 0,
+      "changed_dram_pages": 0,
+      "demoted_pages": 0,
+      "device_bitmap_pages_in_dram": 0,
+      "ept_used_bytes": {
+        "n": 400,
+        "median": 716800.0,
+        "p95": 716800.0,
+        "min": 167936.0,
+        "max": 716800.0
+      }
+    },
+    "v6-one-100": {
+      "raw": "implementation/virtual_machine/.local/run23/v6-one-100/trial/report.json",
+      "source_commit": "94976a178d2e3ac0b42b4a4dba2f729b650595fe",
+      "hops": 200,
+      "missing_pages": 0,
+      "ept_hash_checks": 200,
+      "tier_hash_checks": 600,
+      "changed_dram_pages": 102400,
+      "demoted_pages": 102400,
+      "device_bitmap_pages_in_dram": 0,
+      "ept_used_bytes": {
+        "n": 200,
+        "median": 720896.0,
+        "p95": 720896.0,
+        "min": 716800.0,
+        "max": 720896.0
+      }
+    },
+    "v6-sixteen-100": {
+      "raw": "implementation/virtual_machine/.local/run23/v6-sixteen-100/trial/report.json",
+      "source_commit": "94976a178d2e3ac0b42b4a4dba2f729b650595fe",
+      "hops": 200,
+      "missing_pages": 0,
+      "ept_hash_checks": 200,
+      "tier_hash_checks": 9600,
+      "changed_dram_pages": 1638400,
+      "demoted_pages": 1638400,
+      "device_bitmap_pages_in_dram": 0,
+      "ept_used_bytes": {
+        "n": 200,
+        "median": 704512.0,
+        "p95": 704512.0,
+        "min": 638976.0,
+        "max": 704512.0
+      }
+    },
+    "v6-half-100": {
+      "raw": "implementation/virtual_machine/.local/run23/v6-half-100/trial/report.json",
+      "source_commit": "94976a178d2e3ac0b42b4a4dba2f729b650595fe",
+      "hops": 200,
+      "missing_pages": 0,
+      "ept_hash_checks": 200,
+      "tier_hash_checks": 307200,
+      "changed_dram_pages": 13112470,
+      "demoted_pages": 13634279,
+      "device_bitmap_pages_in_dram": 1200,
+      "ept_used_bytes": {
+        "n": 200,
+        "median": 700416.0,
+        "p95": 700416.0,
+        "min": 155648.0,
+        "max": 700416.0
+      }
+    },
+    "v7-final-lazy-100": {
+      "raw": "implementation/virtual_machine/.local/run23/v7-final-lazy-100/trial/report.json",
+      "source_commit": "eef0a1203636a89eda488058de00f4107cd863a8",
+      "hops": 200,
+      "missing_pages": 0,
+      "ept_hash_checks": 200,
+      "tier_hash_checks": 600,
+      "changed_dram_pages": 102400,
+      "demoted_pages": 102400,
+      "device_bitmap_pages_in_dram": 0,
+      "ept_used_bytes": {
+        "n": 200,
+        "median": 704512.0,
+        "p95": 704512.0,
+        "min": 700416.0,
+        "max": 704512.0
+      }
+    },
+    "v7-final-eager-100": {
+      "raw": "implementation/virtual_machine/.local/run23/v7-final-eager-100/trial/report.json",
+      "source_commit": "eef0a1203636a89eda488058de00f4107cd863a8",
+      "hops": 202,
+      "missing_pages": 0,
+      "ept_hash_checks": 202,
+      "tier_hash_checks": 606,
+      "changed_dram_pages": 103424,
+      "demoted_pages": 103424,
+      "device_bitmap_pages_in_dram": 0,
+      "ept_used_bytes": {
+        "n": 202,
+        "median": 704512.0,
+        "p95": 704512.0,
+        "min": 700416.0,
+        "max": 704512.0
+      }
+    },
+    "v7-final-half": {
+      "raw": "implementation/virtual_machine/.local/run23/v7-final-half/trial/report.json",
+      "source_commit": "31df34a27a2ca155e2e1073379f25fcdd7d9b6e2",
+      "hops": 4,
+      "missing_pages": 0,
+      "ept_hash_checks": 4,
+      "tier_hash_checks": 6144,
+      "changed_dram_pages": 262289,
+      "demoted_pages": 272971,
+      "device_bitmap_pages_in_dram": 12,
+      "ept_used_bytes": {
+        "n": 4,
+        "median": 700416.0,
+        "p95": 700416.0,
+        "min": 155648.0,
+        "max": 700416.0
+      }
+    },
+    "v7-final-swe": {
+      "raw": "implementation/virtual_machine/.local/run23/v7-final-swe/trial/report.json",
+      "source_commit": "31df34a27a2ca155e2e1073379f25fcdd7d9b6e2",
+      "hops": 3,
+      "missing_pages": 0,
+      "ept_hash_checks": 3,
+      "tier_hash_checks": 1995,
+      "changed_dram_pages": 227187,
+      "demoted_pages": 269970,
+      "device_bitmap_pages_in_dram": 57355,
+      "ept_used_bytes": {
+        "n": 3,
+        "median": 745472.0,
+        "p95": 1191936.0,
+        "min": 208896.0,
+        "max": 1191936.0
+      }
+    }
+  },
+  "negative": {
+    "v6-reject-demote-copy": {
+      "raw": "implementation/virtual_machine/.local/run23/v6-reject-demote-copy/trial/report.json",
+      "source_commit": "8f87d79566e4d91ce78966fba12c68e22ac617d9",
+      "oracle_error": "RuntimeError(\"ValueError('Demotion home differs from source DRAM: [0]')\")",
+      "failed_export_resume_probe": null
+    },
+    "v6-reject-demote-record": {
+      "raw": "implementation/virtual_machine/.local/run23/v6-reject-demote-record/trial/report.json",
+      "source_commit": "8f87d79566e4d91ce78966fba12c68e22ac617d9",
+      "oracle_error": "RuntimeError(\"ValueError('Demotion pages missing from the next record')\")",
+      "failed_export_resume_probe": null
+    },
+    "v6-reject-dram-release": {
+      "raw": "implementation/virtual_machine/.local/run23/v6-reject-dram-release/trial/report.json",
+      "source_commit": "3f2572755c3869c7ecd0fdc112be590f7875233d",
+      "oracle_error": null,
+      "failed_export_resume_probe": null
+    },
+    "v7-http-pre-reject-copy": {
+      "raw": "implementation/virtual_machine/.local/run23/v7-http-pre-reject-copy/trial/report.json",
+      "source_commit": "f042730d38dd863a9cc6ce06265ce203791380bc",
+      "oracle_error": "RuntimeError(\"ValueError('Demotion home differs from source DRAM: [0]')\")",
+      "failed_export_resume_probe": {
+        "status": 400,
+        "rejected": true,
+        "file": "0053-failed-export-resume-probe.txt"
+      }
+    },
+    "v7-http-pre-reject-record": {
+      "raw": "implementation/virtual_machine/.local/run23/v7-http-pre-reject-record/trial/report.json",
+      "source_commit": "f042730d38dd863a9cc6ce06265ce203791380bc",
+      "oracle_error": "RuntimeError(\"ValueError('Demotion pages missing from the next record')\")",
+      "failed_export_resume_probe": {
+        "status": 400,
+        "rejected": true,
+        "file": "0053-failed-export-resume-probe.txt"
+      }
+    },
+    "v7-http2-reject-demote-copy": {
+      "raw": "implementation/virtual_machine/.local/run23/v7-http2-reject-demote-copy/trial/report.json",
+      "source_commit": "f042730d38dd863a9cc6ce06265ce203791380bc",
+      "oracle_error": "RuntimeError(\"ValueError('Demotion home differs from source DRAM: [0]')\")",
+      "failed_export_resume_probe": {
+        "rejected": true,
+        "source_exited": true,
+        "file": "0050-failed-export-exit-proof.txt"
+      }
+    },
+    "v7-http2-reject-demote-record": {
+      "raw": "implementation/virtual_machine/.local/run23/v7-http2-reject-demote-record/trial/report.json",
+      "source_commit": "f042730d38dd863a9cc6ce06265ce203791380bc",
+      "oracle_error": "RuntimeError(\"ValueError('Demotion pages missing from the next record')\")",
+      "failed_export_resume_probe": {
+        "rejected": true,
+        "source_exited": true,
+        "file": "0050-failed-export-exit-proof.txt"
+      }
+    },
+    "v7-http2-reject-dram-release": {
+      "raw": "implementation/virtual_machine/.local/run23/v7-http2-reject-dram-release/trial/report.json",
+      "source_commit": "f042730d38dd863a9cc6ce06265ce203791380bc",
+      "oracle_error": null,
+      "failed_export_resume_probe": {
+        "rejected": true,
+        "source_exited": true,
+        "file": "0050-failed-export-exit-proof.txt"
+      }
+    },
+    "v7-reject-bump": {
+      "raw": "implementation/virtual_machine/.local/run23/v7-reject-bump/trial/report.json",
+      "source_commit": "f042730d38dd863a9cc6ce06265ce203791380bc",
+      "oracle_error": null,
+      "failed_export_resume_probe": null
+    },
+    "v7-reject-ept-invalidate": {
+      "raw": "implementation/virtual_machine/.local/run23/v7-reject-ept-invalidate/trial/report.json",
+      "source_commit": "f042730d38dd863a9cc6ce06265ce203791380bc",
+      "oracle_error": "RuntimeError(\"ValueError('Actual kernel invalidation receipt omits the arena')\")",
+      "failed_export_resume_probe": null
+    },
+    "v7-reject-outside": {
+      "raw": "implementation/virtual_machine/.local/run23/v7-reject-outside/trial/report.json",
+      "source_commit": "f042730d38dd863a9cc6ce06265ce203791380bc",
+      "oracle_error": null,
+      "failed_export_resume_probe": null
+    },
+    "v7-reject-ram-invalidate": {
+      "raw": "implementation/virtual_machine/.local/run23/v7-reject-ram-invalidate/trial/report.json",
+      "source_commit": "f042730d38dd863a9cc6ce06265ce203791380bc",
+      "oracle_error": "RuntimeError(\"ValueError('Actual receiver ranges do not cover the log union')\")",
+      "failed_export_resume_probe": null
+    }
+  },
+  "pooled": {
+    "demote/0/lazy": {
+      "body_us": {
+        "n": 40,
+        "median": 21.2295,
+        "p95": 40.749,
+        "min": 18.895,
+        "max": 51.228
+      },
+      "copy_unmap_us": {
+        "n": 40,
+        "median": 1.3855,
+        "p95": 1.539,
+        "min": 0.731,
+        "max": 1.577
+      },
+      "actual_pages": {
+        "n": 40,
+        "median": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    },
+    "demote/0/eager": {
+      "body_us": {
+        "n": 40,
+        "median": 38.767,
+        "p95": 48.119,
+        "min": 35.254,
+        "max": 53.628
+      },
+      "copy_unmap_us": {
+        "n": 40,
+        "median": 12.908,
+        "p95": 13.204,
+        "min": 12.464,
+        "max": 24.361
+      },
+      "actual_pages": {
+        "n": 40,
+        "median": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    },
+    "demote/1/lazy": {
+      "body_us": {
+        "n": 40,
+        "median": 35.19,
+        "p95": 48.594,
+        "min": 27.157,
+        "max": 58.308
+      },
+      "copy_unmap_us": {
+        "n": 40,
+        "median": 4.4935,
+        "p95": 6.956,
+        "min": 3.746,
+        "max": 9.38
+      },
+      "actual_pages": {
+        "n": 40,
+        "median": 1.0,
+        "p95": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      }
+    },
+    "demote/1/eager": {
+      "body_us": {
+        "n": 40,
+        "median": 40.9705,
+        "p95": 55.069,
+        "min": 36.056,
+        "max": 63.599
+      },
+      "copy_unmap_us": {
+        "n": 40,
+        "median": 13.6565,
+        "p95": 16.276,
+        "min": 12.943,
+        "max": 17.325
+      },
+      "actual_pages": {
+        "n": 40,
+        "median": 1.0,
+        "p95": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      }
+    },
+    "demote/512/lazy": {
+      "body_us": {
+        "n": 40,
+        "median": 351.54150000000004,
+        "p95": 470.423,
+        "min": 321.633,
+        "max": 521.502
+      },
+      "copy_unmap_us": {
+        "n": 40,
+        "median": 313.116,
+        "p95": 435.014,
+        "min": 291.838,
+        "max": 472.619
+      },
+      "actual_pages": {
+        "n": 40,
+        "median": 512.0,
+        "p95": 512.0,
+        "min": 512.0,
+        "max": 512.0
+      }
+    },
+    "demote/512/eager": {
+      "body_us": {
+        "n": 40,
+        "median": 370.88599999999997,
+        "p95": 447.956,
+        "min": 345.508,
+        "max": 500.327
+      },
+      "copy_unmap_us": {
+        "n": 40,
+        "median": 341.501,
+        "p95": 418.19,
+        "min": 315.697,
+        "max": 470.747
+      },
+      "actual_pages": {
+        "n": 40,
+        "median": 512.0,
+        "p95": 512.0,
+        "min": 512.0,
+        "max": 512.0
+      }
+    },
+    "demote/64/lazy": {
+      "body_us": {
+        "n": 40,
+        "median": 77.9025,
+        "p95": 117.158,
+        "min": 62.725,
+        "max": 131.468
+      },
+      "copy_unmap_us": {
+        "n": 40,
+        "median": 43.572,
+        "p95": 81.987,
+        "min": 38.301,
+        "max": 89.477
+      },
+      "actual_pages": {
+        "n": 40,
+        "median": 64.0,
+        "p95": 64.0,
+        "min": 64.0,
+        "max": 64.0
+      }
+    },
+    "demote/64/eager": {
+      "body_us": {
+        "n": 40,
+        "median": 79.966,
+        "p95": 116.346,
+        "min": 72.287,
+        "max": 117.994
+      },
+      "copy_unmap_us": {
+        "n": 40,
+        "median": 50.045,
+        "p95": 84.817,
+        "min": 48.291,
+        "max": 92.312
+      },
+      "actual_pages": {
+        "n": 40,
+        "median": 64.0,
+        "p95": 64.0,
+        "min": 64.0,
+        "max": 64.0
+      }
+    },
+    "demote/8/lazy": {
+      "body_us": {
+        "n": 40,
+        "median": 38.5125,
+        "p95": 45.32,
+        "min": 31.244,
+        "max": 52.866
+      },
+      "copy_unmap_us": {
+        "n": 40,
+        "median": 9.265,
+        "p95": 14.393,
+        "min": 8.364,
+        "max": 25.729
+      },
+      "actual_pages": {
+        "n": 40,
+        "median": 8.0,
+        "p95": 8.0,
+        "min": 8.0,
+        "max": 8.0
+      }
+    },
+    "demote/8/eager": {
+      "body_us": {
+        "n": 40,
+        "median": 46.2815,
+        "p95": 55.848,
+        "min": 40.914,
+        "max": 56.296
+      },
+      "copy_unmap_us": {
+        "n": 40,
+        "median": 17.7795,
+        "p95": 22.327,
+        "min": 16.797,
+        "max": 26.16
+      },
+      "actual_pages": {
+        "n": 40,
+        "median": 8.0,
+        "p95": 8.0,
+        "min": 8.0,
+        "max": 8.0
+      }
+    },
+    "promote/lazy": {
+      "body_us": {
+        "n": 100,
+        "median": 372.124,
+        "p95": 529.993,
+        "min": 326.814,
+        "max": 710.132
+      },
+      "copy_unmap_us": {
+        "n": 100,
+        "median": 171.1055,
+        "p95": 183.174,
+        "min": 160.292,
+        "max": 188.121
+      },
+      "api_ms": {
+        "n": 100,
+        "median": 10.5204445,
+        "p95": 11.410299,
+        "min": 9.926856,
+        "max": 14.289135
+      },
+      "first_access_faults": {
+        "n": 100,
+        "median": 512.0,
+        "p95": 512.0,
+        "min": 512.0,
+        "max": 512.0
+      },
+      "vm_tlb_flush": {
+        "n": 100,
+        "median": 1.0,
+        "p95": 1.0,
+        "min": 1.0,
+        "max": 2.0
+      }
+    },
+    "promote/eager": {
+      "body_us": {
+        "n": 100,
+        "median": 716.665,
+        "p95": 869.326,
+        "min": 591.847,
+        "max": 1008.658
+      },
+      "copy_unmap_us": {
+        "n": 100,
+        "median": 173.6155,
+        "p95": 191.796,
+        "min": 159.934,
+        "max": 204.236
+      },
+      "api_ms": {
+        "n": 100,
+        "median": 10.795808000000001,
+        "p95": 11.60091,
+        "min": 10.187153,
+        "max": 14.313014
+      },
+      "first_access_faults": {
+        "n": 100,
+        "median": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "vm_tlb_flush": {
+        "n": 100,
+        "median": 1.0,
+        "p95": 1.0,
+        "min": 1.0,
+        "max": 2.0
+      }
+    },
+    "handoff/0/False": {
+      "ms": {
+        "n": 40,
+        "median": 34.495012,
+        "p95": 38.979237,
+        "min": 29.023045,
+        "max": 64.63446
+      },
+      "receiver_faults": {
+        "n": 40,
+        "median": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    },
+    "handoff/0/True": {
+      "ms": {
+        "n": 40,
+        "median": 32.209604999999996,
+        "p95": 38.2921,
+        "min": 29.853933,
+        "max": 39.609935
+      },
+      "receiver_faults": {
+        "n": 40,
+        "median": 0.0,
+        "p95": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      }
+    },
+    "handoff/1/False": {
+      "ms": {
+        "n": 40,
+        "median": 38.8412165,
+        "p95": 43.460616,
+        "min": 32.524727,
+        "max": 46.637528
+      },
+      "receiver_faults": {
+        "n": 40,
+        "median": 512.0,
+        "p95": 512.0,
+        "min": 512.0,
+        "max": 512.0
+      }
+    },
+    "handoff/1/True": {
+      "ms": {
+        "n": 40,
+        "median": 32.4483945,
+        "p95": 38.22237,
+        "min": 24.329336,
+        "max": 74.038226
+      },
+      "receiver_faults": {
+        "n": 40,
+        "median": 512.0,
+        "p95": 512.0,
+        "min": 512.0,
+        "max": 512.0
+      }
+    },
+    "handoff/16/False": {
+      "ms": {
+        "n": 40,
+        "median": 46.2420715,
+        "p95": 50.462957,
+        "min": 41.96041,
+        "max": 51.575822
+      },
+      "receiver_faults": {
+        "n": 40,
+        "median": 8192.0,
+        "p95": 8192.0,
+        "min": 8192.0,
+        "max": 8192.0
+      }
+    },
+    "handoff/16/True": {
+      "ms": {
+        "n": 40,
+        "median": 26.143318999999998,
+        "p95": 29.721672,
+        "min": 20.235365,
+        "max": 35.208015
+      },
+      "receiver_faults": {
+        "n": 40,
+        "median": 8192.0,
+        "p95": 8192.0,
+        "min": 8192.0,
+        "max": 8192.0
+      }
+    },
+    "handoff/half/False": {
+      "ms": {
+        "n": 40,
+        "median": 121.584159,
+        "p95": 124.483856,
+        "min": 115.91778,
+        "max": 130.113004
+      },
+      "receiver_faults": {
+        "n": 40,
+        "median": 65536.0,
+        "p95": 65536.0,
+        "min": 65536.0,
+        "max": 65536.0
+      }
+    },
+    "handoff/half/True": {
+      "ms": {
+        "n": 40,
+        "median": 27.4966,
+        "p95": 37.574524,
+        "min": 21.486254,
+        "max": 42.995075
+      },
+      "receiver_faults": {
+        "n": 40,
+        "median": 65536.0,
+        "p95": 65536.0,
+        "min": 65536.0,
+        "max": 65536.0
+      }
+    }
+  },
+  "load": {
+    "trials": 40,
+    "external_vm_max": 0,
+    "loadavg_1m_min": 0.56,
+    "loadavg_1m_max": 1.14,
+    "node0_free_mib_min": 18818,
+    "node0_free_mib_max": 19755
+  },
+  "timing_trials": 40,
+  "measured_handoffs": 920,
+  "positive_oracle_shared_ept_handoffs": 1447,
+  "ept_hash_equal": 1447,
+  "missing_pages": 0,
+  "python_tests": 36,
+  "rust_unique_contracts": 14,
+  "raw": "implementation/virtual_machine/.local/run23",
+  "limits": [
+    "nested L0 walks shadow tables; no L1 EPT placement latency conclusion",
+    "CXL backing is L0 DRAM; no CXL device latency",
+    "VM-wide TLB counters cannot isolate a chunk or hardware page walk latency"
+  ],
+  "bare_metal": "Not run; approval required; design at end of README.md"
+}
