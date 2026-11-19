@@ -91,7 +91,7 @@
       "base_sha256": "2c9b22d33f02399d0a1503236b39d96a83e8c6dbe659a706f6ce10424042c64e"
     },
     "virt/kvm/kvm_main.c": {
-      "patched_sha256": "f20c390e7aa2514de39e1c950806b9076b3f496775e021de254edcc2a964f2b0",
+      "patched_sha256": "80e51cdf5a8699982c0d026bbc577339f4ba9d045193f7f4c9a9e60bd7b1c14a",
       "base_sha256": "0f70d265644639479a3fc4c7ecfccd3adb44134b4fe682612f236cae16f3dcf3"
     },
     "arch/x86/kvm/mmu/mmu_internal.h": {

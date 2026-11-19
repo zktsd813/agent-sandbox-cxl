@@ -18,7 +18,8 @@ Adopt는 root 위치, bump, role을 받는다. 상위 표만 읽어 하위 표 �
 모든 표 주소를 VM 영역과 bump 안에서 검증한다. 중복·순환도 거절한다.
 Leaf 표의 칸은 읽지 않는다. 표마다 로컬 장부와 page_private backlink를 만든다.
 Root를 로컬 TDP(Two-Dimensional Paging) MMU(Memory Management Unit) 목록에 넣는다.
-다음 MMU load는 같은 role의 root를 찾는다. 이전 EPT 변환을 무효화한다.
+다음 MMU load는 같은 role의 root를 찾는다. 기본 kvm_mmu_load가 그 EPTP에
+INVEPT(EPT 변환 무효화)를 실행한다. 기존 TLB(Translation Lookaside Buffer) 요청도 보낸다.
 중첩 lab 보완은 adopt에서만 쓰며 기본값은 꺼짐이다. 동일 byte 재쓰기도 내용은 유지한다.
 
 보내는 순서: vCPU pause → 장치 저장·I/O drain → 마지막 dirty log 수집 →
@@ -58,3 +59,6 @@ Native 전송은 기존 worker와 resident-control을 쓴다. 새 상주 제어�
 빠른 왕복에서도 Time Stamp Counter(TSC)가 역행하지 않아야 한다.
 KVM_SET_MSRS의 가까운 TSC 쓰기 합치기를 피하려고 기존 공개 TSC-offset 복원을 쓴다.
 EPT와 로컬 EPT 대조군 모두 같은 semantic 상태 복원 경로를 쓴다.
+
+현재 지원 범위는 단일 RAM memslot과 같은 root role이다.
+Dirty ring, manual protect, 중첩 guest와 NX 큰 page 완화는 거절한다.

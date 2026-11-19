@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Trusted, bounded lab coordinator. Disk preparation precedes this program.
-// One TCP request carries device metadata, never RAM/CPU snapshot data.
+// One TCP request carries bounded device or semantic CPU state, never guest RAM.
 #define _GNU_SOURCE
 #include <arpa/inet.h>
 #include <errno.h>
