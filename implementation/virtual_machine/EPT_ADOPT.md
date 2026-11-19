@@ -62,3 +62,7 @@ EPT와 로컬 EPT 대조군 모두 같은 semantic 상태 복원 경로를 쓴�
 
 현재 지원 범위는 단일 RAM memslot과 같은 root role이다.
 Dirty ring, manual protect, 중첩 guest와 NX 큰 page 완화는 거절한다.
+
+미리 정리는 기존 worker 연결에서 소유자의 수집·내려쓰기·발행 뒤 수신자의
+RAM 선무효화를 이어서 한다. 준비된 수신자는 기존 RAM manifest의 identity로
+쓰기 기록만 읽는다. KVM이나 EPT 표를 건드리지 않는다. 보조 thread는 없다.

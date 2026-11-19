@@ -92,9 +92,20 @@ def handoff(c, s, destination):
 
 
 def clean(c, s):
+    if not getattr(c, "ept_observers_ready", False):
+        require(s.manifest is not None, "Initial RAM manifest missing for observers")
+        manifest_bytes=json.dumps(s.manifest).encode()
+        for role,worker in c.ept_workers.items():
+            c.write_bytes(role,worker.manifest_path,manifest_bytes,"observer-manifest")
+        c.ept_observers_ready=True
+    if c.args.native:
+        from resident_fast import maintain
+        return maintain(c,s)
     start=time.monotonic_ns()
-    result=c.api(s.role,s.directory,'/actions','PUT',{'action_type':'EptAdoptClean'})
-    return dict(role=s.role,epoch=s.epoch,host_ns=time.monotonic_ns()-start,api=result)
+    result=c.api(s.role,s.directory,/actions,PUT,{action_type:EptAdoptClean})
+    role=B if s.role==A else A
+    observer=c.api(role,c.ept_workers[role].directory,/actions,PUT,{action_type:EptAdoptClean})
+    return dict(role=s.role,epoch=s.epoch,host_ns=time.monotonic_ns()-start,api=result,observer=observer)
 
 
 def start_faults(c):
@@ -317,7 +328,7 @@ def validate_arguments(args,p):
     args.trajectory_policy='heavy' if args.heavy_plan else None
     if args.heavy_plan:args.resident_bench=None
     args.mode='ept-adopt';args.noncoherent=True;args.dirty_ledger=True
-    args.restore_timing=True;args.profile=False;args.resume_profile=False
+    args.restore_timing=True;args.profile=False;args.resume_profile=False;args.clean_paused=False
 
 
 def main():

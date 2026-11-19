@@ -5479,7 +5479,7 @@ diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
 +        }
 +        #[cfg(target_arch = "x86_64")]
 +        if self.vmm.lock().expect("Poisoned lock").reuse_prepared.is_some()
-+            && !matches!(&request, LoadSnapshot(_) | PrepareReuse | EptAdoptImport | FlushMetrics
++            && !matches!(&request, LoadSnapshot(_) | PrepareReuse | EptAdoptImport | EptAdoptClean | FlushMetrics
 +                | GetVmInstanceInfo | GetVmMachineConfig | GetFullVmConfig | GetVmmVersion)
 +        {
 +            return Err(VmmActionError::NotSupported(
@@ -6581,7 +6581,7 @@ diff --git a/src/vmm/src/ept_adopt.rs b/src/vmm/src/ept_adopt.rs
 new file mode 100644
 --- /dev/null
 +++ b/src/vmm/src/ept_adopt.rs
-@@ -0,0 +1,251 @@
+@@ -0,0 +1,255 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! CXL RAM/EPT only. Semantic state enters an ordinary prepared KVM worker.
 +use std::fs::OpenOptions;
@@ -6700,11 +6700,15 @@ new file mode 100644
 +}
 +
 +impl Vmm {
-+    /// Harvest and publish the running owner's RAM writes without pausing.
++    /// Publish owner writes, or preinvalidate RAM on the prepared observer.
 +    pub fn ept_clean(&mut self) -> io::Result<()> {
-+        if !enabled() || self.instance_info.state!=VmState::Running || self.reuse_prepared.is_some() {
-+            return Err(invalid("EPT clean requires a running owner"));
++        if !enabled() || self.reuse_restore_failed {return Err(invalid("EPT clean unavailable"));}
++        if self.reuse_prepared.is_some() {
++            let bytes=std::fs::read(std::env::var("FC_POOL_MEMORY_MANIFEST").map_err(invalid)?)?;
++            let manifest=serde_json::from_slice::<crate::pool_memory::Manifest>(&bytes).map_err(invalid)?;
++            return crate::noncoherent::preinvalidate_cold(&manifest);
 +        }
++        if self.instance_info.state!=VmState::Running {return Err(invalid("EPT owner is not running"));}
 +        let vm=self.vm.as_kvm().unwrap();
 +        self.device_manager.mark_virtio_queue_memory_dirty(vm.guest_memory());
 +        let ledger=crate::noncoherent::require(crate::noncoherent::collect(vm));
