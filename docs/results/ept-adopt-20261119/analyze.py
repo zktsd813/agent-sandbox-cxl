@@ -18,7 +18,7 @@ def distribution(values):
     values = sorted(values)
     if not values:
         return {"n": 0}
-    return dict(n=len(values), median=statistics.median(values),
+    return dict(n=len(values), min=values[0], median=statistics.median(values),
                 p95=values[math.ceil(.95 * len(values)) - 1],
                 p99=values[math.ceil(.99 * len(values)) - 1], max=values[-1])
 
@@ -196,8 +196,8 @@ def write_summary(args, repo):
     result = dict(schema="ept-adopt-results-v1", raw=str(raw), trials=trials,
                   source_lines=source_lines(raw, repo))
     race = "timer-race-2" if trials.get("timer-race-2", {}).get("result") == "passed" else "observer-race-2"
-    writer = "observer-fullwrite-2-200" if trials.get("observer-fullwrite-2-200", {}).get("result") == "passed" else "observer-fullwrite-200"
-    names = [writer, race, "observer-gin-2",
+    writer = "final-fullword-2-200" if trials.get("final-fullword-2-200", {}).get("result") == "passed" else "observer-fullwrite-200"
+    names = [writer, "observer-fullwrite-2-200", race, "observer-gin-2",
              "observer-native-smoke", "observer-http-smoke"]
     names += [f"observer-swe-{fixture}-w{wait}" for fixture in
               ("gin-gonic", "php-cs-fixer", "micropython") for wait in (0, 1)]
