@@ -91,12 +91,15 @@ class DirtyOracle:
                     raise ValueError('Line oracle requires kernel cache instruction receipts')
                 ept_proof = {}
                 if self.ept_shared and phase in (2, 3):
-                    digest = hashlib.sha256(self.mem[self.arena:self.arena+used]).hexdigest()
+                    # Include the unused suffix: adoption must not create a table
+                    # beyond the released high-water mark either.
+                    digest = hashlib.sha256(self.mem[self.arena:self.arena+16*MIB]).hexdigest()
                     if phase == 2:
                         self.ept_hash = digest
                     elif digest != self.ept_hash:
                         raise ValueError('Adopt changed the released EPT table contents')
-                    ept_proof = dict(ept_sha256=digest, ept_hash_unchanged=phase==3)
+                    ept_proof = dict(ept_sha256=digest, ept_hash_bytes=16*MIB,
+                                     ept_hash_unchanged=phase==3)
                 if phase in (3, 4, 5):
                     if phase == 4: accumulated |= union
                     row = dict(sequence=request, phase=phase, pages=pages, hash_boundary=False,
