@@ -336,7 +336,7 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
  
  	if (shared)
  		read_lock(&kvm->mmu_lock);
-@@ -1815,3 +1961,401 @@
+@@ -1815,3 +1961,403 @@
  	 */
  	return rcu_dereference(sptep);
  }
@@ -538,6 +538,8 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
 +        /* Previous owner drained RCU before release. Unreachable tables are free. */
 +        bitmap_zero(s->reusable, KVM_EPT_ADOPT_BYTES / PAGE_SIZE);
 +        bitmap_complement(s->reusable, seen, s->bump >> PAGE_SHIFT);
++        bitmap_clear(s->reusable, s->bump >> PAGE_SHIFT,
++                     (KVM_EPT_ADOPT_BYTES - s->bump) >> PAGE_SHIFT);
 +    }
 +    bitmap_free(seen);
 +    if (ret)

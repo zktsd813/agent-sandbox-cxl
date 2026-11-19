@@ -419,7 +419,7 @@ def start(args):
         for role in ("A","B"):
             prefix=run/("vm-"+role.lower());console=str(control/(role.lower()+".console.sock"))
             monitor=str(control/(role.lower()+".qmp.sock"));channel=str(control/(role.lower()+".command.sock"))
-            cmd=[str(qemu),"-name","nested-lab-"+role,"-machine","q35,accel=kvm,cxl=on,max-ram-below-4g=3G"+(",memory-backend=local" if args.tier_oracle else ""),
+            cmd=[str(qemu),"-name","nested-lab-"+role,"-machine","q35,accel=kvm,cxl=on,max-ram-below-4g=2G"+(",memory-backend=local" if args.tier_oracle else ""),
                 "-cpu","host,vmx=on,xfd=off,amx-tile=off,amx-bf16=off,amx-int8=off",
                 "-smp",str(args.vcpus),"-m",f"{args.memory_mib}M,maxmem={args.memory_mib+args.cxl_mib}M,slots=8",
                 "-nodefaults","-no-user-config","-display","none","-monitor","none","-no-reboot",
@@ -452,7 +452,7 @@ def start(args):
             if identity is None:raise RuntimeError(f"QEMU {role} exited at launch")
             vm=dict(pid=process.pid,starttime=identity,command=cmd,console=console,qmp=monitor,
                 serial_log=str(prefix)+".serial.log",control_rpc=channel,control_nonce=nonce,control_rpc_operations=[1,2,3,4],
-                dram_backing=str(memory/(role+"-dram.bin")) if args.tier_oracle else None,dram_low_bytes=3*1024**3)
+                dram_backing=str(memory/(role+"-dram.bin")) if args.tier_oracle else None,dram_low_bytes=min(2*1024**3,args.memory_mib*1024**2))
             config["vms"][role]=vm;save_json(run/"run.json",config)
             deadline=time.monotonic()+20
             while not Path(monitor).exists():

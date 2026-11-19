@@ -46,6 +46,12 @@ class MaintenanceReceipts(unittest.TestCase):
         return self.oracle.check_maintenance(1 if epoch==1 else 2, 1, 64,
             0 if epoch==1 else 4096, self.extra(epoch), self.packet(bitmap, wb=bitmap))
 
+    def test_demotion_requires_a_fresh_record_even_if_preclean_published_the_page(self):
+        self.publish(2, 1)
+        self.oracle.demoted_pending = 1
+        with self.assertRaisesRegex(ValueError, 'Demotion pages missing'):
+            self.publish(3, 2)
+
     def test_source_omitted_writeback_range_is_rejected(self):
         self.publish(2, 3)
         # A physically emitted range is missing even though the published list is intact.
