@@ -180,9 +180,15 @@ def run_existing(args):
     out=args.output.resolve();out.mkdir(parents=True,exist_ok=False)
     c=HandoffController(config,out,args);s=c.sandboxes[0]
     report=dict(result='running',experiment_mode='reuse-prepared' if args.baseline else 'ept-adopt',config=config,transitions=c.transitions,receipts=c.receipts,
-        arguments={k:str(v) if isinstance(v,Path) else v for k,v in vars(args).items()},
+        arguments={k:str(v) if isinstance(v,Path) else v for k,v in vars(args).items() if not callable(v)},
         timing='L0 CLOCK_MONOTONIC; includes HTTP control and packet file transport',
         scope='coherent DRAM-backed CXL emulation; nested lab synchronization enabled')
+    from experiment_sources import record_sources
+    report['source_hashes'],report['source_reference']=record_sources(Path(__file__).resolve().parent,
+        ('ept_adopt.py','handoff_bench.py','dirty_oracle.py','verify_swe_handoff.py','lab.py',
+         'firecracker.patch','kvm-dax-state.patch','kvm-dax-source.json','resident_control.c',
+         'resident_fast.py','resident_proxy.py','control_rpc.py','shared_probe.c'))
+    report['layout']=dict(ept_arena=c.kvm_arena,ept_capacity=16*MIB,metadata=c.metadata_base+s.vm*64*MIB)
     oracle=None
     def save():lab.save_json(out/'report.json',report)
     save()
@@ -246,9 +252,9 @@ def run_existing(args):
         report.update(result='failed',error=repr(exc));raise
     finally:
         for role,worker in getattr(c,'ept_workers',{}).items():
-            for name in ('vmm.log','fc.log','stderr.log','control/log'):
+            for name in ('vmm.log','fc.log','stderr.log')+ (('control/log',) if args.native else ()):
                 try:
-                    raw=c.fetch_bytes(role,worker.directory+'/'+name,'final-'+role+'-'+name)
+                    raw=c.fetch_bytes(role,worker.directory+'/'+name,'final-'+role+'-'+name.replace('/','-'))
                     (out/(role+'-'+name.replace('/','-'))).write_bytes(raw)
                 except Exception as exc:report.setdefault('log_errors',[]).append(repr(exc))
         if oracle:
@@ -280,8 +286,7 @@ def run_existing(args):
     print(json.dumps(dict(result=report['result'],output=str(out))))
 
 
-def main():
-    p=argparse.ArgumentParser(description=__doc__)
+def add_arguments(p):
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--name',default='gin-gonic__gin-3741')
     p.add_argument('--memory-mib',type=int,default=2048)
@@ -300,12 +305,22 @@ def main():
     p.add_argument('--clean-wait',choices=('0','1'),default='0')
     p.add_argument('--heavy-plan',type=Path)
     p.add_argument('--fail',choices=('outside','bump','ept-invalidate','ram-invalidate'))
-    args=p.parse_args()
+
+
+def validate_arguments(args,p):
     if args.dirty_oracle and not args.page_hash:p.error('Oracle needs --page-hash')
+    if args.fail and not args.dirty_oracle:p.error('Fault injection requires --dirty-oracle')
     args.trajectory_policy='heavy' if args.heavy_plan else None
     if args.heavy_plan:args.resident_bench=None
     args.mode='ept-adopt';args.noncoherent=True;args.dirty_ledger=True
     args.restore_timing=True;args.profile=False;args.resume_profile=False
+
+
+def main():
+    p=argparse.ArgumentParser(description=__doc__)
+    add_arguments(p)
+    args=p.parse_args()
+    validate_arguments(args,p)
     run_existing(args)
 
 

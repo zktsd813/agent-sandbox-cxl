@@ -2025,6 +2025,12 @@ def migration_bench(args):
                       "validation": report["validation"], "summary_ms": report["summary_ms"]}, indent=2))
 
 
+def ept_adopt_bench(args):
+    import ept_adopt
+    ept_adopt.validate_arguments(args, argparse.ArgumentParser())
+    ept_adopt.run_existing(args)
+
+
 def handoff_bench(args):
     """State-only Firecracker checkpoints with guest RAM kept in shared DAX."""
     run, config = current_run()
@@ -2730,6 +2736,10 @@ def main():
     p.add_argument("--trace-ept", action="store_true", help="Diagnostic kprobe/EPT traces; perturbs timing, use separate one-round runs")
     p.add_argument("--trace-ept-detail", action="store_true", help="Imply --trace-ept; split fault/map/PFN/cache/root paths with 12 probes and no per-leaf tracepoints")
     p.set_defaults(func=migration_bench)
+    p = subs.add_parser("ept-adopt-bench", help="Adopt CXL EPT tables into ordinary prepared workers")
+    from ept_adopt import add_arguments as ept_arguments
+    ept_arguments(p)
+    p.set_defaults(func=ept_adopt_bench)
     p = subs.add_parser("handoff-bench", help="Measure state-only snapshots and A↔B restore with RAM retained in DAX")
     handoff_parser = p
     p.add_argument("--preset", choices=HANDOFF_PRESETS,

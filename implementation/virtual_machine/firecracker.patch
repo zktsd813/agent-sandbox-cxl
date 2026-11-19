@@ -2850,7 +2850,7 @@ diff --git a/src/vmm/src/noncoherent.rs b/src/vmm/src/noncoherent.rs
 new file mode 100644
 --- /dev/null
 +++ b/src/vmm/src/noncoherent.rs
-@@ -0,0 +1,652 @@
+@@ -0,0 +1,653 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Opt-in dirty ledger and a stopped-boundary lab oracle. Never enabled by default.
 +use std::fs::{File, OpenOptions};
@@ -3158,7 +3158,8 @@ new file mode 100644
 +        if bitmap.len()!=self.id.pages.div_ceil(64) { return Err(invalid("invalidate bitmap geometry")); }
 +        let mut covered=vec![0u64;bitmap.len()];
 +        if invalidate && crate::ept_adopt::enabled()
-+            && std::env::var("FC_EPT_FAIL").as_deref()==Ok("ram-invalidate") {
++            && std::env::var("FC_EPT_FAIL").as_deref()==Ok("ram-invalidate")
++            && bitmap.iter().any(|word|*word!=0) {
 +            self.ram_inv_lines.set(0); return Ok(covered);
 +        }
 +        let skip=std::env::var("FC_NONCOHERENT_SKIP_PAGE").ok().and_then(|s|s.parse::<u64>().ok()).unwrap_or(u64::MAX);
@@ -3816,7 +3817,6 @@ index 71a0345..2dfd978 100644
          let mut vmm = default_vmm();
 diff --git a/src/vmm/src/pool_memory.rs b/src/vmm/src/pool_memory.rs
 new file mode 100644
-index 0000000..5769231
 --- /dev/null
 +++ b/src/vmm/src/pool_memory.rs
 @@ -0,0 +1,799 @@
@@ -4027,7 +4027,7 @@ index 0000000..5769231
 +    }
 +    Ok(())
 +}
-+fn dax_geometry(path: &str) -> io::Result<(u64, u64)> {
++pub(crate) fn dax_geometry(path: &str) -> io::Result<(u64, u64)> {
 +    let name = Path::new(path)
 +        .file_name()
 +        .and_then(|s| s.to_str())
@@ -5242,7 +5242,7 @@ new file mode 100644
 +                "strict_irqfd":true,
 +                "receiver_prepared":was_prepared,
 +                "prepare_generation":was_prepared.then_some(sequence),
-+                "tlb_invalidation":"efer_nx_toggle",
++                "tlb_invalidation":if crate::ept_adopt::retained() {"retained_ept_invept"} else {"efer_nx_toggle"},
 +                "vm_creates":0,"vcpu_creates":0,"thread_creates":0,
 +            })
 +        );
@@ -5365,7 +5365,7 @@ new file mode 100644
 diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
 --- a/src/vmm/src/rpc_interface.rs
 +++ b/src/vmm/src/rpc_interface.rs
-@@ -100,6 +100,28 @@
+@@ -100,6 +100,32 @@
      PatchMMDS(Value),
      /// Pause the guest, by pausing the microVM VCPUs.
      Pause,
@@ -5374,12 +5374,16 @@ diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
 +    /// Hand over the retained KVM graph and device bindings without a CPU snapshot.
 +    DirectExport,
 +    #[cfg(target_arch = "x86_64")]
++    /// Prepare a local EPT-only receiver.
 +    EptAdoptInit,
 +    #[cfg(target_arch = "x86_64")]
++    /// Export semantic state and release shared EPT tables.
 +    EptAdoptExport,
 +    #[cfg(target_arch = "x86_64")]
++    /// Adopt shared EPT tables before semantic state restore.
 +    EptAdoptImport,
 +    #[cfg(target_arch = "x86_64")]
++    /// Publish running-owner RAM writes without pausing.
 +    EptAdoptClean,
 +    /// Prepare the immutable disk backend without guest memory access.
 +    DirectPrepare,
@@ -5394,7 +5398,7 @@ diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
      /// Repopulate the MMDS contents.
      PutMMDS(Value),
      /// Configure the guest vCPU features.
-@@ -133,6 +155,9 @@
+@@ -133,6 +159,9 @@
      /// driver is listening on the guest end, this can be used to shut down the microVM gracefully.
      #[cfg(target_arch = "x86_64")]
      SendCtrlAltDel,
@@ -5404,7 +5408,7 @@ diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
      /// Update the balloon size, after microVM start.
      UpdateBalloon(BalloonUpdateConfig),
      /// Update the balloon statistics polling interval, after microVM start.
-@@ -313,6 +338,8 @@
+@@ -313,6 +342,8 @@
  /// Error type for [`PrebootApiController::load_snapshot`]
  #[derive(Debug, thiserror::Error, displaydoc::Display)]
  pub enum LoadSnapshotError {
@@ -5413,7 +5417,7 @@ diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
      /// Loading a microVM snapshot not allowed after configuring boot-specific resources.
      LoadSnapshotNotAllowed,
      /// Failed to restore from snapshot: {0}
-@@ -495,7 +522,27 @@
+@@ -495,7 +526,27 @@
              SetBalloonDevice(config) => self.set_balloon_device(config),
              SetVsockDevice(config) => self.set_vsock_device(config),
              SetMmdsConfiguration(config) => self.set_mmds_config(config),
@@ -5441,7 +5445,7 @@ diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
              UpdateMachineConfiguration(config) => self.update_machine_config(config),
              SetEntropyDevice(config) => self.set_entropy_device(config),
              SetMemoryHotplugDevice(config) => self.set_memory_hotplug_device(config),
-@@ -503,6 +550,10 @@
+@@ -503,6 +554,10 @@
              CreateSnapshot(_)
              | FlushMetrics
              | Pause
@@ -5452,7 +5456,7 @@ diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
              | Resume
              | GetBalloonStats
              | GetMemoryHotplugStatus
-@@ -517,7 +568,9 @@
+@@ -517,7 +572,9 @@
              | StopFreePageHinting
              | HotUnplugDevice(_) => Err(VmmActionError::OperationNotSupportedPreBoot),
              #[cfg(target_arch = "x86_64")]
@@ -5463,7 +5467,7 @@ diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
          }
      }
  
-@@ -700,6 +753,19 @@
+@@ -700,6 +757,19 @@
          event_manager: &mut EventManager,
      ) -> Result<VmmData, VmmActionError> {
          use self::VmmAction::*;
@@ -5483,7 +5487,7 @@ diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
          match request {
              // Supported operations allowed post-boot.
              CreateSnapshot(snapshot_create_cfg) => self.create_snapshot(&snapshot_create_cfg),
-@@ -786,6 +852,77 @@
+@@ -786,6 +856,77 @@
                  .hot_unplug_device(device_id, event_manager)
                  .map(|()| VmmData::Empty),
              Pause => self.pause(),
@@ -6576,7 +6580,7 @@ diff --git a/src/vmm/src/ept_adopt.rs b/src/vmm/src/ept_adopt.rs
 new file mode 100644
 --- /dev/null
 +++ b/src/vmm/src/ept_adopt.rs
-@@ -0,0 +1,241 @@
+@@ -0,0 +1,251 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! CXL RAM/EPT only. Semantic state enters an ordinary prepared KVM worker.
 +use std::fs::OpenOptions;
@@ -6605,6 +6609,7 @@ new file mode 100644
 +static RECEIPT: Mutex<[u64;8]> = Mutex::new([0;8]);
 +pub(crate) fn receipt() -> [u64;8] { *RECEIPT.lock().unwrap() }
 +pub(crate) fn enabled() -> bool { std::env::var("FC_EPT_ADOPT").as_deref() == Ok("1") }
++pub(crate) fn retained() -> bool {enabled() && !baseline()}
 +fn baseline() -> bool { std::env::var("FC_EPT_BASELINE").as_deref()==Ok("1") }
 +fn invalid(s: impl ToString) -> io::Error { io::Error::other(s.to_string()) }
 +fn number(name: &str) -> io::Result<u64> { std::env::var(name).map_err(invalid)?.parse().map_err(invalid) }
@@ -6628,6 +6633,15 @@ new file mode 100644
 +
 +pub(crate) fn init(vm: &crate::vstate::vm::KvmVm, wait: bool) -> io::Result<()> {
 +    if !enabled() { return Ok(()); }
++    if std::env::var("FC_EPT_FAIL").is_ok_and(|v|!v.is_empty())
++        && std::env::var("FC_DIRTY_ORACLE").as_deref()!=Ok("1") {
++        return Err(invalid("EPT fault injection requires the independent lab oracle"));
++    }
++    let (phys,bytes)=crate::pool_memory::dax_geometry("/dev/dax0.0")?;
++    let offset=number("FC_EPT_OFFSET")?;
++    if offset>bytes || BYTES>bytes-offset || phys.checked_add(offset)!=Some(number("FC_EPT_PHYS")?) {
++        return Err(invalid("EPT maintenance mapping differs from the kernel extent"));
++    }
 +    if !crate::noncoherent::active() || std::env::var("FC_DAX_REUSE").as_deref()!=Ok("1")
 +        || std::env::var("FC_DAX_NO_NESTED_GUEST").as_deref()!=Ok("1") {
 +        return Err(invalid("EPT adoption requires dirty logging, noncoherent RAM, and the reuse CPU profile"));

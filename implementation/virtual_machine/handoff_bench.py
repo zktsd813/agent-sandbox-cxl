@@ -1083,6 +1083,9 @@ def resident_measure(args):
                         return
                     require(time.monotonic()<deadline,'Controlled writer did not complete before next pause')
                     time.sleep(.001)
+        if args.count_faults:
+            from ept_adopt import start_faults
+            start_faults(c)
         for i in range(2*(args.warmup+args.iterations)):
             time.sleep(.02)  # active dwell is excluded from the C interval
             wait_payload()
@@ -1105,7 +1108,15 @@ def resident_measure(args):
                         require(time.monotonic()<deadline,'Race writer did not progress after last clean')
                         time.sleep(.001)
                 report.setdefault('race_progress',[]).append(dict(before=before,after=values,host_ns=time.monotonic_ns()))
-            row = c.direct_handoff(s,'B' if s.role=='A' else 'A')
+            destination='B' if s.role=='A' else 'A'
+            if args.count_faults:
+                from ept_adopt import faults
+                before=faults(c,destination)
+            row = c.direct_handoff(s,destination)
+            if args.count_faults:
+                wait_payload()
+                after=faults(c,destination)
+                row.update(payload_ept_violations=after['count']-before['count'],fault_before=before,fault_after=after)
             row['sample_index'] = i//2
             row['measured'] = i//2 >= args.warmup
             if args.audit_parked and i>=0:

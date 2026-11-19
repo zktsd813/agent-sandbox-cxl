@@ -918,14 +918,32 @@ def verify_suites(paths, *, successful_only=False):
 def verify_suite(path):
     return verify_suites([path])
 
+def verify_ept_trace(path):
+    report=json.loads(path.read_text())
+    need(report['result']=='passed' and report['mode']=='ept-adopt','EPT trace did not finish')
+    result={'result':'passed','trace':verify_trace(Evidence(report,path.parent),report)}
+    rows=report.get('oracle',[])
+    previous=None;proofs=0
+    for row in rows:
+        need(row.get('missing_pages',0)==0 and row.get('other_changed_pages',0)==0,'EPT oracle found missing pages')
+        if row['phase']==2:previous=row['ept_sha256']
+        if row['phase']==3:
+            need(previous is not None and previous==row['ept_sha256'] and row['ept_hash_unchanged'],
+                 'EPT table changed on adoption')
+            proofs+=1;previous=None
+    result.update(oracle_boundaries=len(rows),missing_pages=0,ept_hash_proofs=proofs)
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("report", type=Path, nargs="?")
     parser.add_argument("--suite", type=Path)
+    parser.add_argument("--ept-trace",type=Path,help="Audit EPT-only trace bytes, submission and oracle proofs")
     parser.add_argument("--successful-suites", type=Path, nargs="+", help="Audit the union of passed trials from terminal source suites; report exclusions explicitly")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    if sum(x is not None for x in (args.report,args.suite,args.successful_suites)) != 1:
+    if sum(x is not None for x in (args.report,args.suite,args.successful_suites,args.ept_trace)) != 1:
         parser.error("Choose a report, --suite, or --successful-suites")
     # Full-suite evidence hashing must not contend with another timed trial.
     # Library callers can manage their own lock; this server's CLI joins the
@@ -935,7 +953,7 @@ def main():
         if quiet.exists():
             stream = stack.enter_context(quiet.open('a'))
             fcntl.flock(stream, fcntl.LOCK_SH)
-        result = (verify_suites(args.successful_suites, successful_only=True) if args.successful_suites else
+        result = (verify_ept_trace(args.ept_trace) if args.ept_trace else verify_suites(args.successful_suites, successful_only=True) if args.successful_suites else
                   verify_suite(args.suite) if args.suite else verify(args.report))
         result['audit_source_sha256'] = sha(Path(__file__).read_bytes())
         data = json.dumps(result, indent=2) + "\n"
