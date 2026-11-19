@@ -45,3 +45,31 @@ QEMU의 CXL direct RAM과 4 KiB page metadata 구성도 lab 전용이다.
 지원 범위는 같은 CXL 물리 배치, 단일 RAM memslot, 같은 root role, 읽기 전용 block,
 vCPU 1·2개다. Dirty ring, manual protect, nested guest와 NX 큰 page 완화는 거절한다.
 실제 비일관 장비와 다른 물리 서버는 검증 범위 밖이다.
+
+## EPT 나누기
+
+2 MiB chunk마다 데이터 계층을 고른다. 모든 데이터 page의 집은 기존 CXL offset이다.
+PML4·PDPT·PD 등뼈는 항상 VM의 CXL 영역이다. 4 KiB leaf만 쓴다.
+CXL chunk의 PT는 CXL, DRAM chunk의 PT는 소유 host의 DRAM이다.
+기존 mapper fd에 로컬 page overlay를 두어 HVA·memslot·집 주소를 유지한다.
+계층 bit와 올린 뒤 쓴 page bitmap, DRAM 사본·PT는 공유하거나 직렬화하지 않는다.
+
+올리기: vCPU 정지 → 장치 저장·I/O drain → 기록 수집 → 2 MiB 로컬 복사 →
+mapper 전환 → chunk PT zap → 계층 bit 설정 → 변환 비움. 다음 fault가 로컬 PT를 만든다.
+내리기: 정지·drain → 기록 수집 → 누적 dirty page만 집에 복사·clwb·sfence →
+복사 page를 다음 쓰기 기록에 합침 → 집 mapping 복원 → 로컬 PT zap·해제 →
+계층 bit 해제 → 변환 비움. 미리 내리기도 같은 정지 경계를 쓴다.
+Hand-off는 모든 DRAM chunk를 내린 뒤 기존 export를 따른다.
+Release는 등뼈를 걸어 모든 존재하는 PD 칸의 PT 주소가 VM CXL 영역 안인지 확인한다.
+검증 실패는 guest 진입을 막는다. 받는 host는 전부 CXL로 시작한다.
+
+조건 1: release 전 계층 bitmap이 비고 등뼈의 모든 non-leaf 주소를 검증한다.
+따라서 공유 표에 로컬 PT 주소가 남은 채 넘어갈 수 없다.
+조건 2: 매 KVM·장치 기록 수집 합집합을 DRAM chunk별 누적 bitmap에 OR한다.
+중간 clean으로 원래 bitmap을 지워도 누적 bitmap은 내리기까지 보존한다.
+조건 3: 내리기의 복사 집합을 pending bitmap에 보존하고 다음 record에 OR한다.
+조건 4: 전환 API는 paused·장치 drain 경계만 허용하고 마지막에 KVM 변환을 비운다.
+조건 5: 기존 mapper owner epoch를 검사한다. 로컬 상태는 packet·공유 표에 담지 않는다.
+
+CXL 표의 append-only 16 MiB 한도는 계속 적용된다. 반복 전환 때 PT를 버리므로
+영역이 차면 닫힌 채 실패한다. 재사용 정책은 이 변경에 넣지 않는다.
