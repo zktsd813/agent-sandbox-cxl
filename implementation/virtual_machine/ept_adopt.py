@@ -117,8 +117,10 @@ def wait_ack(memory, offset, epoch, payload=False):
     while True:
         ack, verified = struct.unpack_from('<2Q', memory, offset+24)
         errors=struct.unpack_from('<Q',memory,offset+40)[0]
+        clock_errors=struct.unpack_from('<Q',memory,offset+56)[0]
+        tsc_errors=struct.unpack_from('<Q',memory,offset+72)[0]
         done=struct.unpack_from('<Q',memory,offset+136)[0]
-        require(errors==0, 'Guest checksum failed')
+        require(errors==clock_errors==tsc_errors==0, 'Guest checksum/clock/TSC failed')
         if ack==verified==epoch and (not payload or done==epoch):
             return dict(epoch=ack,verified=verified,errors=errors,payload_done=done)
         require(time.monotonic()<deadline, f'Guest ACK timed out: {epoch=} {ack=} {verified=} {done=}')
@@ -215,6 +217,15 @@ def run_existing(args):
                         report.setdefault('cleans',[]).append(clean(c,s))
                         time.sleep(float(args.clean_wait))
                     wait_ack(memory,offset,s.epoch,args.resident_bench=='dirty')
+                    if args.resident_bench=='race':
+                        before=struct.unpack_from('<Q',memory,offset+PAGE)[0]
+                        deadline=time.monotonic()+30
+                        while True:
+                            values=[struct.unpack_from('<Q',memory,offset+page*PAGE)[0] for page in range(1,17)]
+                            if min(values)>before:break
+                            require(time.monotonic()<deadline,'Race writer stopped progressing after clean')
+                            time.sleep(.001)
+                        report.setdefault('race_progress',[]).append(dict(before=before,after=values))
                     destination='B' if s.role=='A' else 'A'
                     before=faults(c,destination) if args.count_faults else None
                     row=handoff(c,s,destination)
@@ -235,10 +246,10 @@ def run_existing(args):
         report.update(result='failed',error=repr(exc));raise
     finally:
         for role,worker in getattr(c,'ept_workers',{}).items():
-            for name in ('vmm.log','fc.log','stderr.log'):
+            for name in ('vmm.log','fc.log','stderr.log','control/log'):
                 try:
                     raw=c.fetch_bytes(role,worker.directory+'/'+name,'final-'+role+'-'+name)
-                    (out/(role+'-'+name)).write_bytes(raw)
+                    (out/(role+'-'+name.replace('/','-'))).write_bytes(raw)
                 except Exception as exc:report.setdefault('log_errors',[]).append(repr(exc))
         if oracle:
             try:oracle.close()

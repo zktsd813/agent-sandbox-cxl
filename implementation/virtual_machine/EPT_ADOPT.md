@@ -33,3 +33,24 @@ EPT의 A/D bit는 CPU도 쓰므로 목록 없이 사용한 표 영역 전체를 
 실제 비일관 하드웨어는 이번 시험 범위 밖이다.
 
 구현·시험 중 확정한 차이는 진행 기록과 결과에 적는다.
+
+실험 ABI(Application Binary Interface)는 VM fd의 KVM_EPT_RELEASE/KVM_EPT_ADOPT 두 개다.
+Adopt의 INIT flag는 영역 등록, WAIT flag는 준비된 수신자를 뜻한다.
+16 MiB 영역에는 descriptor를 두지 않는다. 첫 표가 offset 0부터 시작한다.
+Bump는 정렬·영역 한계·이전 로컬 값·도달 가능한 모든 표와 대조한다.
+정확한 high-water 값은 소유자가 발행한 packet과 기존 CXL mailbox의 일치로 묶는다.
+읽지 않는 폐기 표의 할당 이력을 수신자가 추측하지 않는다.
+Leaf mapping gauge 세 개(24 byte)도 packet에 넣어 leaf를 읽지 않고 통계를 이어 간다.
+
+기존 fixture는 DRAM boot 뒤 promotion한다. 영역 좌표는 VMM 생성 때 받는다.
+커널 등록은 promotion 직후, 첫 CXL 실행 전에 한다. 그 이전의 로컬 boot EPT만 버린다.
+이 lab은 Intel EPT A/D(Accessed/Dirty) bit와 기본 dirty bitmap을 쓴다.
+실행 금지 큰 page 완화(NX huge-page mitigation)는 기존 lab처럼 끈다.
+그 완화의 별도 장부는 이 모드에서 이전하지 않으므로 켜져 있으면 등록을 거절한다.
+
+비소유 VMM의 RAM mapping을 끊는 기존 mapper 기능은 유지한다.
+이것은 공유 KVM 객체를 parked 상태로 보존하는 direct 장치가 아니다.
+기존 RAM mapper·쓰기 log·mailbox 제어 영역은 유지한다. 새 공유 구조는 없다.
+Native 전송은 기존 worker와 resident-control을 쓴다. 새 상주 제어기는 없다.
+비교용 reuse-prepared arm은 같은 상태·장치 경로를 쓰되 EPT ioctl을 호출하지 않는다.
+표와 장부를 로컬에 두고 이전 translation을 버린 뒤 빈 표를 다시 채운다.

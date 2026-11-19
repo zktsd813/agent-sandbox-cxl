@@ -990,7 +990,7 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
  
  	if (shared)
  		read_lock(&kvm->mmu_lock);
-@@ -1815,3 +1963,276 @@
+@@ -1815,3 +1963,282 @@
  	 */
  	return rcu_dereference(sptep);
  }
@@ -1045,7 +1045,8 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
 +    u64 end;
 +    int i;
 +    if (kvm->arch.ept_adopt || kvm_dax_enabled() || !tdp_mmu_enabled ||
-+        !kvm_ad_enabled() || q->bump || q->root || q->role ||
++        !kvm_ad_enabled() || !boot_cpu_has(X86_FEATURE_VMX) ||
++        is_nx_huge_page_enabled(kvm) || q->bump || q->root || q->role ||
 +        !IS_ALIGNED(q->base, KVM_EPT_ADOPT_BYTES) ||
 +        !IS_ALIGNED(q->data_base, PAGE_SIZE) || !q->data_bytes ||
 +        !IS_ALIGNED(q->data_bytes, PAGE_SIZE) ||
@@ -1111,6 +1112,11 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
 +        write_unlock(&kvm->mmu_lock);
 +        return -EBUSY;
 +    }
++    list_for_each_entry(sp, &s->pages, ept_adopt_link)
++        if (sp->nx_huge_page_disallowed) {
++            write_unlock(&kvm->mmu_lock);
++            return -EOPNOTSUPP;
++        }
 +    q->base = s->base; q->bump = s->bump;
 +    q->root = __pa(root->spt) - s->base; q->role = root->role.word;
 +    q->data_base = s->data_base; q->data_bytes = s->data_bytes; q->flags = 0;

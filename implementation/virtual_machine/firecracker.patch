@@ -395,7 +395,7 @@ diff --git a/src/firecracker/src/api_server_adapter.rs b/src/firecracker/src/api
              api_adapter
                  .lock()
                  .expect("Poisoned lock")
-@@ -84,33 +331,36 @@
+@@ -84,33 +331,37 @@
          Ok(())
      }
  
@@ -427,7 +427,8 @@ diff --git a/src/firecracker/src/api_server_adapter.rs b/src/firecracker/src/api
 -            if request_is_pause {
 +            // `handle_request`.
 +            // A rejected pause must leave UART and block event dispatch running.
-+            if request_is_pause && request_succeeded {
++            if request_is_pause && request_succeeded
++                && std::env::var("FC_EPT_ADOPT").as_deref()!=Ok("1") {
                  // This loop only attempts to process API requests, so things like the
                  // metric flush timerfd handling are frozen as well.
                  loop {
@@ -440,7 +441,7 @@ diff --git a/src/firecracker/src/api_server_adapter.rs b/src/firecracker/src/api
                          break;
                      }
                  }
-@@ -272,3 +522,107 @@
+@@ -272,3 +523,107 @@
  
      result
  }
