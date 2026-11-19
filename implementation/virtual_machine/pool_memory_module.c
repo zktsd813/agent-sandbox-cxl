@@ -25,7 +25,7 @@
 #define CPM_MAGIC 0x43584c504d415034ULL
 #define CPM_ACTIVE 1
 #define CPM_SEALED 2
-#define CPM_RETIRED 3
+#define CPM_CLOSED 3
 
 struct cpm_header {
     u64 magic;
@@ -70,7 +70,7 @@ static int cache_pages(struct cpm *c, void __user *user, bool writeback)
     int ret = -EINVAL;
     if (copy_from_user(&q, user, sizeof(q))) return -EFAULT;
     if (!boot_cpu_has(X86_FEATURE_CLFLUSHOPT) || (writeback && !boot_cpu_has(X86_FEATURE_CLWB))) return -EOPNOTSUPP;
-    if (!q.pages || q.pages > CPM_MAX_PAGES || q.reserved!=0 ||
+    if (!q.pages || q.pages > CPM_MAX_PAGES || q.reserved!=0 || q.skip_page != U64_MAX ||
         (q.phys_base | q.device_bytes | q.metadata_offset) & (PAGE_SIZE-1) ||
         !q.device_bytes || q.phys_base + q.device_bytes < q.phys_base ||
         q.metadata_offset > q.device_bytes ||
@@ -110,7 +110,6 @@ static int cache_pages(struct cpm *c, void __user *user, bool writeback)
     start = ktime_get_ns(); q.lines = 0;
     for_each_set_bit(page, bits, q.pages) {
         void *address = c->observer_base + c->observer_map[page].offset;
-        if (page == q.skip_page) continue;
         for (line = 0; line < PAGE_SIZE; line += 64) {
             if (writeback) asm volatile("clwb (%0)" : : "r" ((char *)address+line) : "memory");
             else asm volatile("clflushopt (%0)" : : "r" ((char *)address+line) : "memory");
@@ -194,7 +193,7 @@ static vm_fault_t cpm_fault(struct vm_fault *vmf)
     mutex_lock(&c->lock);
     if (c->header && (!owns(c) ||
         (write && READ_ONCE(c->state->state) != CPM_ACTIVE) ||
-        (c->local_owner && READ_ONCE(c->state->state) == CPM_RETIRED))) {
+        (c->local_owner && READ_ONCE(c->state->state) == CPM_CLOSED))) {
         ret = VM_FAULT_SIGBUS; goto out;
     }
     if (index >= c->cfg.count) { ret = VM_FAULT_SIGBUS; goto out; }
@@ -331,7 +330,7 @@ static int create_persistent(struct cpm *c, void __user *user)
     ret = configure(c, &p.config);
     if (ret) return ret;
     h = c->base + p.metadata_offset;
-    if (READ_ONCE(h->magic) == CPM_MAGIC && READ_ONCE(h->handle.state) != CPM_RETIRED)
+    if (READ_ONCE(h->magic) == CPM_MAGIC)
         return -EBUSY;
     for (i = 0; i < c->cfg.count; i++)
         if (cpm_in_range(c->map[i].offset, p.metadata_offset, p.metadata_bytes)) return -EINVAL;
@@ -399,7 +398,7 @@ static int mapping_identity(struct vm_area_struct *vma, struct kvm_dax_mapping_i
     mutex_lock(&c->lock);
     h = c->state;
     if (!c->header || !c->ready || c->owner_vma != vma ||
-        !owns(c) || h->state == CPM_RETIRED) goto done;
+        !owns(c) || h->state == CPM_CLOSED) goto done;
     *out = (struct kvm_dax_mapping_identity) {
         .descriptor = h->phys_base + h->metadata_offset,
         .cookie_lo = h->cookie_lo, .cookie_hi = h->cookie_hi,
@@ -479,7 +478,7 @@ static long cpm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         struct cpm_handle h;
         if (!c->header) return -EOPNOTSUPP;
         mutex_lock(&c->lock);
-        if (!owns(c) || c->state->state == CPM_RETIRED) { ret = -ESTALE; goto status_done; }
+        if (!owns(c) || c->state->state == CPM_CLOSED) { ret = -ESTALE; goto status_done; }
         if (cmd == CPM_SEAL && c->state->state == CPM_ACTIVE)
             smp_store_release(&c->state->state, CPM_SEALED);
 
@@ -512,7 +511,7 @@ static int cpm_release(struct inode *inode, struct file *file)
     if (c->observer_base) memunmap(c->observer_base);
     if (c->header) {
         if (c->local_owner && owns(c))
-            cmpxchg(&c->state->state, CPM_ACTIVE, CPM_RETIRED);
+            cmpxchg(&c->state->state, CPM_ACTIVE, CPM_CLOSED);
     } else {
         kvfree(c->map);
     }

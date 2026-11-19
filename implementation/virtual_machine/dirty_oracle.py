@@ -58,7 +58,7 @@ class DirtyOracle:
                 if request != sequence + 1:
                     raise ValueError('Skipped oracle boundary')
                 _, phase, pages, hva, used, collect_ns = struct.unpack_from('<6Q', self.mem, self.gate)
-                if not 0 < pages <= 1 << 20 or phase not in (1, 2, 3, 4, 5, 6):
+                if not 0 < pages <= 1 << 20 or phase not in (1, 2, 3, 4, 5):
                     raise ValueError('Invalid oracle geometry/phase')
                 maintained, node = struct.unpack_from('<2Q', self.mem, self.gate+48)
                 extra = struct.unpack_from('<16Q', self.mem, self.gate+128) if maintained else None
@@ -71,13 +71,13 @@ class DirtyOracle:
                 receipts=kernel_receipt(self.mem,self.gate,pages) if maintained else None
                 if receipts:
                     wb,inv,log,read,control,version,initial,_=receipts
-                    if phase in (1,2,4,6) and wb!=union.bit_count()*64:
+                    if phase in (1,2,4) and wb!=union.bit_count()*64:
                         raise ValueError('Kernel RAM CLWB count differs from listed pages*64')
                     if phase in (3,5) and inv!=coverage['invalidate_lines']:
                         raise ValueError('Kernel RAM invalidation count differs from emitted ranges')
-                    coverage['kernel_emitted_lines']={'ram':wb if phase in (1,2,4,6) else inv,
+                    coverage['kernel_emitted_lines']={'ram':wb if phase in (1,2,4) else inv,
                         'objects':coverage['kernel_writeback_lines'] if phase==2 else coverage['kernel_invalidate_lines'] if phase==3 else 0,
-                        'log':log if phase in (1,2,4,6) else read,'control':control if phase in (1,2,3) else 0,
+                        'log':log if phase in (1,2,4) else read,'control':control if phase in (1,2,3) else 0,
                         'control_init_invalidate':initial if version==2 else None}
                     coverage['instruction_counter_version']=version
                 ept_proof = {}
@@ -180,7 +180,7 @@ class DirtyOracle:
             raise ValueError('Log cookie differs from the persistent mapper')
         if (magic,version,log_pages,slots,stride)!=(0x4e43484c4f473031,1,pages,8,(16+words*8+63)&~63) or next_epoch!=epoch+1:
             raise ValueError('Oracle observed a foreign or incomplete log header')
-        if phase in (1,2,4,6):
+        if phase in (1,2,4):
             if phase==1:
                 self.records.clear()
                 self.consumed.clear()

@@ -67,7 +67,7 @@ Git 추적 파일 전부를 열거했다. `.local/`, `__pycache__`는 생성 자
 | `pointer-audit.json` | 지움 | 옛 비교·감사·성능 증거. 보존 태그에서 열람; docs/results 기록은 보존 |
 | `pool_memory_module.c` | 줄임 | EPT가 쓰는 guest RAM mapper·lease·promotion만; direct 연계/진단 제거 |
 | `pool_memory_smoke.c` | 지움 | 삭제 모드 mapper 단독 실험; 실제 EPT 정확성/계약으로 검증 |
-| `pool_memory_uapi.h` | 남김 | guest RAM mapper lease ABI |
+| `pool_memory_uapi.h` | 줄임 | guest RAM mapper lease/cache ABI만; query·audit·retire·zero 실험 ioctl 제거 |
 | `prefault_probe.c` | 지움 | prefault 비교 전용 |
 | `qemu-cxl-direct-ram.patch` | 남김 | L1 사이 같은 CXL 물리 주소 배치의 QEMU v10.2.2 보완 |
 | `ram-backend-source.json` | 줄임 | 원본 버전·남은 RAM 경로 출처만 |

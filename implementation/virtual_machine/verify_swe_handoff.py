@@ -409,8 +409,8 @@ def verify_cache_receipts(report, root):
         planes=[int.from_bytes(data[i*words*8:(i+1)*words*8],'little')for i in range(6)]
         bitmap,kernel,device,wb,requested,invalidated=planes
         epoch,node=row['epoch'],row['node']
-        need(row['phase'] in (1,2,3,4,5,6),'Unknown maintenance phase')
-        if row['phase'] in (1,2,4,6):
+        need(row['phase'] in (1,2,3,4,5),'Unknown maintenance phase')
+        if row['phase'] in (1,2,4):
             if row['phase']==1:
                 records.clear();consumed.clear()
                 need(bitmap==(1<<row['pages'])-1,'Incomplete full-RAM publication')
@@ -436,7 +436,7 @@ def verify_cache_receipts(report, root):
             consumed[node]=epoch
     return {'events':len(rows),'exports':sum(r['phase']==2 for r in rows),
             'imports':sum(r['phase']==3 for r in rows),
-            'cleans':sum(r['phase'] in (4,6) for r in rows),
+            'cleans':sum(r['phase'] in (4,) for r in rows),
             'preinvalidations':sum(r['phase']==5 for r in rows),'missing_pages':0,'coverage_verified':True}
 
 def verify_ept_trace(path):

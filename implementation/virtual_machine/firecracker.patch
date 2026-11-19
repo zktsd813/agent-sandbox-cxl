@@ -1141,7 +1141,7 @@ new file mode 100644
 +        self.device_manager.mark_virtio_queue_memory_dirty(vm.guest_memory());
 +        let ledger=crate::noncoherent::require(crate::noncoherent::collect(vm));
 +        crate::noncoherent::require(crate::noncoherent::send(vm.guest_memory(),&ledger));
-+        crate::noncoherent::cleaned(vm.guest_memory(),&ledger,false)
++        crate::noncoherent::cleaned(vm.guest_memory(),&ledger)
 +    }
 +
 +    pub(crate) fn ept_prepare(&mut self, events: &mut EventManager) -> io::Result<()> {
@@ -1195,7 +1195,7 @@ new file mode 100644
 +        let bytes=bitcode::serialize(&Packet{version:1,ept:ept.clone(),epoch,state,mapper}).map_err(invalid)?;
 +        if bytes.len()>=65536 {return Err(invalid("EPT packet exceeds mailbox"));}
 +        timing.mark("serialize");
-+        crate::noncoherent::require(crate::noncoherent::complete(vm.guest_memory(),&bytes,epoch,ept.bump,0,&ledger));
++        crate::noncoherent::require(crate::noncoherent::complete(vm.guest_memory(),&bytes,epoch,ept.bump,&ledger));
 +        timing.mark("oracle_export");
 +        // Only the local-EPT comparison retires its old translation context.
 +        if baseline() {
@@ -1237,7 +1237,7 @@ new file mode 100644
 +        crate::pool_memory::import_worker_mapping(vm.guest_memory(),p.mapper)?;
 +        if !baseline() {maintain(&p.ept,true)?;}
 +        // Kernel metadata is still absent. RAM and table invalidation precede ADOPT.
-+        crate::noncoherent::require(crate::noncoherent::received(vm.guest_memory(),p.epoch,p.ept.bump,0));
++        crate::noncoherent::require(crate::noncoherent::received(p.epoch));
 +        timing.mark("invalidate");
 +        match std::env::var("FC_EPT_FAIL").as_deref() {
 +            Ok("outside")=>p.ept.root=BYTES,
@@ -1376,7 +1376,7 @@ diff --git a/src/vmm/src/noncoherent.rs b/src/vmm/src/noncoherent.rs
 new file mode 100644
 --- /dev/null
 +++ b/src/vmm/src/noncoherent.rs
-@@ -0,0 +1,517 @@
+@@ -0,0 +1,513 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Opt-in dirty ledger and a stopped-boundary lab oracle. Never enabled by default.
 +use std::fs::{File, OpenOptions};
@@ -1604,8 +1604,7 @@ new file mode 100644
 +    fn replay(&mut self, last: u64) -> io::Result<Vec<u64>> {
 +        // A packet can arrive before a remote header becomes observable. Each
 +        // retry discards the old line. Never resume on a future packet epoch.
-+        let future=u64::from(std::env::var("FC_NONCOHERENT_FAIL").as_deref()==Ok("epoch"));
-+        let expected=last.checked_add(1+future).ok_or_else(||invalid("epoch overflow"))?;
++        let expected=last.checked_add(1).ok_or_else(||invalid("epoch overflow"))?;
 +        let mut observed=0;
 +        self.read_lines=0;
 +        for _ in 0..4 {
@@ -1621,8 +1620,7 @@ new file mode 100644
 +            let slot=self.slot(epoch);
 +            self.read_lines+=self.cache_metadata(slot,self.stride(),true); fence(true);
 +            let words=unsafe { std::slice::from_raw_parts((self.address+slot+16) as *const u64,self.id.pages.div_ceil(64)) }.to_vec();
-+            let corrupt=u64::from(std::env::var("FC_NONCOHERENT_FAIL").as_deref()==Ok("record"));
-+            Ok((self.read(slot)+corrupt,self.read(slot+8),words))
++            Ok((self.read(slot),self.read(slot+8),words))
 +        })
 +    }
 +    fn maintain(&self, bitmap: &[u64], invalidate: bool) -> io::Result<Vec<u64>> {
@@ -1633,9 +1631,8 @@ new file mode 100644
 +            && bitmap.iter().any(|word|*word!=0) {
 +            self.ram_inv_lines.set(0); return Ok(covered);
 +        }
-+        let skip=std::env::var("FC_NONCOHERENT_SKIP_PAGE").ok().and_then(|s|s.parse::<u64>().ok()).unwrap_or(u64::MAX);
 +        let mut request=[self.id.phys_base,self.id.device_bytes,self.id.metadata,self.id.cookie[0],
-+            self.id.cookie[1],self.id.pages as u64,bitmap.as_ptr() as u64,covered.as_mut_ptr() as u64,0,0,skip,0];
++            self.id.cookie[1],self.id.pages as u64,bitmap.as_ptr() as u64,covered.as_mut_ptr() as u64,0,0,u64::MAX,0];
 +        // CPM_CACHE: independent observer, immutable GPA table, kernel direct map.
 +        if unsafe {libc::ioctl(self.observer.as_raw_fd(),(if invalidate {0xc060507bu32} else {0xc060507eu32}) as _,request.as_mut_ptr())}<0 {
 +            return Err(io::Error::last_os_error());
@@ -1657,10 +1654,9 @@ new file mode 100644
 +fn identity() -> io::Result<Identity> {
 +    crate::pool_memory::manifest_for_profile().ok_or_else(||invalid("shared RAM absent"))?.noncoherent_identity()
 +}
-+fn kernel_stats(_fd: i32, _invalidate: bool, _arena: u64) -> io::Result<[u64;8]> { Ok(crate::ept_adopt::receipt()) }
++
 +pub(crate) fn send(_mem: &GuestMemoryMmap, ledger: &Ledger) -> io::Result<u64> {
 +    if !active() { return Ok(0); }
-+    if std::env::var("FC_NONCOHERENT_FAIL").as_deref()==Ok("writeback") {return Err(invalid("injected writeback failure after harvest"));}
 +    with_shared(identity()?,|s| {
 +        let start=Instant::now();
 +        s.wb=s.maintain(&ledger.union,false)?;
@@ -1693,9 +1689,9 @@ new file mode 100644
 +        s.control_ns=start.elapsed().as_nanos() as u64; Ok(())
 +    })
 +}
-+pub(crate) fn received(_mem: &GuestMemoryMmap, epoch: u64, arena: u64, fd: i32) -> io::Result<()> {
++pub(crate) fn received(epoch: u64) -> io::Result<()> {
 +    if !active() { return Ok(()); }
-+    let stats=kernel_stats(fd,true,arena)?;
++    let stats=crate::ept_adopt::receipt();
 +    with_shared(identity()?,|s| {
 +        s.kernel=stats;
 +        s.inv_from=s.consumed; s.inv_to=epoch; s.epoch=epoch;
@@ -1715,15 +1711,15 @@ new file mode 100644
 +pub(crate) fn adopted(mem: &GuestMemoryMmap, arena: u64) -> io::Result<()> {
 +    boundary(mem,3,arena,None)
 +}
-+pub(crate) fn cleaned(mem: &GuestMemoryMmap, ledger: &Ledger, stopped: bool) -> io::Result<()> {
++pub(crate) fn cleaned(mem: &GuestMemoryMmap, ledger: &Ledger) -> io::Result<()> {
 +    with_shared(identity()?,|s| {
 +        crate::logger::info_unrestricted!("NONCOHERENT_JSON {}",serde_json::json!({
 +            "event":"clean","epoch":s.epoch,"pages":ledger.union.iter().map(|b|b.count_ones() as u64).sum::<u64>(),
-+            "collect_ns":ledger.collect_ns,"writeback_ns":s.wb_ns,"publish_ns":s.log_ns,"stopped":stopped,
++            "collect_ns":ledger.collect_ns,"writeback_ns":s.wb_ns,"publish_ns":s.log_ns,
 +            "ram_lines":s.ram_wb_lines.get(),"publish_lines":s.log_lines}));
 +        Ok(())
 +    })?;
-+    boundary(mem,if stopped {6} else {4},0,Some(ledger))
++    boundary(mem,4,0,Some(ledger))
 +}
 +fn preinvalidate_identity(id: Identity, hva: u64) -> io::Result<()> {
 +    with_shared(id,|s| {
@@ -1747,9 +1743,9 @@ new file mode 100644
 +pub(crate) fn preinvalidate_cold(manifest: &crate::pool_memory::Manifest) -> io::Result<()> {
 +    preinvalidate_identity(manifest.noncoherent_identity()?,0)
 +}
-+pub(crate) fn complete(mem: &GuestMemoryMmap, bytes: &[u8], epoch: u64, arena: u64, fd: i32, ledger: &Ledger) -> io::Result<()> {
++pub(crate) fn complete(mem: &GuestMemoryMmap, bytes: &[u8], epoch: u64, arena: u64, ledger: &Ledger) -> io::Result<()> {
 +    if active() {
-+        let stats=kernel_stats(fd,false,arena)?;
++        let stats=crate::ept_adopt::receipt();
 +        with_shared(identity()?,|s| {
 +            s.kernel=stats; let start=Instant::now(); s.control_lines=s.control(false); s.control_lines+=s.mailbox_write(bytes,epoch)?;
 +            s.control_ns=start.elapsed().as_nanos() as u64;

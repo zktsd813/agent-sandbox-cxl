@@ -86,7 +86,7 @@ class AccumulatedReplay(unittest.TestCase):
             root=Path(directory);(root/'dirty-oracle').mkdir();rows=[]
             def event(phase,epoch,node,bitmap,changed=None,start=0):
                 sequence=len(rows)+1
-                source=phase in (1,2,4,6)
+                source=phase in (1,2,4)
                 planes=[bitmap,0,bitmap,bitmap if source else 0,0 if source else bitmap,0 if source else bitmap]
                 data=struct.pack('<6Q',*planes)
                 (root/'dirty-oracle'/f'{sequence}.bitmap').write_bytes(data)

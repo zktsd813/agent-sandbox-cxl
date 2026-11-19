@@ -402,8 +402,8 @@ def start(args):
     with socket.socket() as listener:
         listener.bind(("127.0.0.1",0));port=listener.getsockname()[1]
     nonce=secrets.token_hex(8)
-    private=run/"home-storage.raw"
-    command(["cp","--reflink=auto","--sparse=always","--",storage,private])
+    private=run/"home-storage.qcow2"
+    command(["qemu-img","create","-q","-f","qcow2","-F","raw","-b",storage,private])
     config=dict(run=str(run),control_dir=str(control),nonce=nonce,rounds=args.rounds,
         l1_vcpus=args.vcpus,l1_memory_mib=args.memory_mib,shared_mib=args.shared_mib,
         backing=str(backing),ephemeral_memory_dir=str(memory),cxl_mib=args.cxl_mib,cxl_backing=str(cxl),
@@ -411,7 +411,7 @@ def start(args):
         ept_adopt=True,prepared=prepared,assets=str(ASSETS),host_kernel=os.uname().release,vms={},
         node0_hardware=hardware,
         home_storage_image=dict(template=str(storage),template_sha256=prepared["artifacts"].get(storage.name),
-            path=str(private),runtime_rehashed=False,owner="A",readonly=False,format="raw",cache="none",guest_device="/dev/vda"),
+            path=str(private),runtime_rehashed=False,owner="A",readonly=False,format="qcow2",cache="none",guest_device="/dev/vda"),
         network=dict(backend="socket",ips={"A":"172.30.0.1","B":"172.30.0.2"},host_port=port),
         source_patches={name:sha256(HERE/name) for name in ("kvm-dax-state.patch","firecracker.patch","qemu-cxl-direct-ram.patch")})
     save_json(run/"run.json",config);save_json(CURRENT,{"run":str(run)})
@@ -438,7 +438,7 @@ def start(args):
                 "-device","cxl-rp,port=0,bus=cxl.0,id=cxl-rp0,chassis=0,slot=2",
                 "-device","cxl-type3,bus=cxl-rp0,volatile-memdev=cxl-shared,id=cxl-mem0,sn=0x100,x-direct-ram=on",
                 "-machine",f"cxl-fmw.0.targets.0=cxl.0,cxl-fmw.0.size={args.cxl_mib}M,cxl-fmw.0.interleave-granularity=256"]
-            if role=="A":cmd += ["-drive",f"file={private},if=none,id=home-storage,format=raw,cache=none","-device","virtio-blk-pci,drive=home-storage,bus=pcie.0"]
+            if role=="A":cmd += ["-drive",f"file={private},if=none,id=home-storage,format=qcow2,cache=none","-device","virtio-blk-pci,drive=home-storage,bus=pcie.0"]
             firmware=next((p for p in (qemu.parent.parent/"share/qemu",qemu.parent.parent/"src/pc-bios",QEMU_ROOT/"usr/share/qemu") if (p/"bios-256k.bin").is_file()),None)
             if firmware is None:raise RuntimeError("QEMU BIOS is missing")
             cmd += ["-L",str(firmware),"-bios",str(firmware/"bios-256k.bin")]

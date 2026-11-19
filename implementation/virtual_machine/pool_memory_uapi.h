@@ -45,7 +45,7 @@ struct cpm_create {
 struct cpm_cache {
     __u64 phys_base, device_bytes, metadata_offset, cookie_lo, cookie_hi, pages;
     __u64 bitmap, covered, lines, elapsed_ns;
-    __u64 skip_page, reserved;
+    __u64 skip_page, reserved; /* Fixed ABI sentinel: U64_MAX, 0. */
 };
 #define CPM_PARK _IO('P', 0x7c)
 #define CPM_WRITEBACK _IOWR('P', 0x7e, struct cpm_cache)
