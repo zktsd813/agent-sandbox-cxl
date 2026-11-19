@@ -164,7 +164,11 @@ def replay(c,s,report,save):
         c.trace_commands.append(row)
         if c.args.preclean:
             report.setdefault('cleans',[]).append(clean(c,s))
-            if index+1 in heavy:time.sleep(float(c.args.clean_wait))
+            if index+1 in heavy:
+                deadline=row['host_receive_ns']+int(float(c.args.clean_wait)*1e9)
+                begin=time.monotonic_ns();time.sleep(max(0,(deadline-begin)/1e9));ended=time.monotonic_ns()
+                report.setdefault('waits',[]).append(dict(after_command=index,planned_s=float(c.args.clean_wait),
+                    actual_ns=ended-row['host_receive_ns'],sleep_ns=ended-begin,late_ns=max(0,ended-deadline)))
         save()
     report['final_identity']=c.command_vm(s,'identity')
     exported=c.trace_command(s,'export',event='trace_export',timeout=180)
