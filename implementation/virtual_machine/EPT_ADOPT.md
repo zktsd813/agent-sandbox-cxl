@@ -54,3 +54,7 @@ Leaf mapping gauge 세 개(24 byte)도 packet에 넣어 leaf를 읽지 않고 �
 Native 전송은 기존 worker와 resident-control을 쓴다. 새 상주 제어기는 없다.
 비교용 reuse-prepared arm은 같은 상태·장치 경로를 쓰되 EPT ioctl을 호출하지 않는다.
 표와 장부를 로컬에 두고 이전 translation을 버린 뒤 빈 표를 다시 채운다.
+
+빠른 왕복에서도 Time Stamp Counter(TSC)가 역행하지 않아야 한다.
+KVM_SET_MSRS의 가까운 TSC 쓰기 합치기를 피하려고 기존 공개 TSC-offset 복원을 쓴다.
+EPT와 로컬 EPT 대조군 모두 같은 semantic 상태 복원 경로를 쓴다.

@@ -562,10 +562,9 @@ index 8baa66a..34177ba 100644
      if let Err(err) = result {
          error_unrestricted!("{err}");
 diff --git a/src/vmm/src/arch/x86_64/vcpu.rs b/src/vmm/src/arch/x86_64/vcpu.rs
-index 26c82dd..b860f84 100644
 --- a/src/vmm/src/arch/x86_64/vcpu.rs
 +++ b/src/vmm/src/arch/x86_64/vcpu.rs
-@@ -16,6 +16,7 @@ use kvm_bindings::{
+@@ -16,6 +16,7 @@
  use kvm_ioctls::{VcpuExit, VcpuFd};
  use serde::{Deserialize, Serialize};
  use vmm_sys_util::fam::{self, FamStruct};
@@ -573,10 +572,11 @@ index 26c82dd..b860f84 100644
  
  use crate::arch::EntryPoint;
  use crate::arch::x86_64::generated::msr_index::{MSR_IA32_TSC, MSR_IA32_TSC_DEADLINE};
-@@ -36,6 +37,15 @@ use crate::vstate::vm::KvmVm;
+@@ -35,6 +36,15 @@
+ // https://bugzilla.redhat.com/show_bug.cgi?id=1839095
  const TSC_KHZ_TOL_NUMERATOR: i64 = 250;
  const TSC_KHZ_TOL_DENOMINATOR: i64 = 1_000_000;
- 
++
 +// kvm-ioctls 0.25 exposes vCPU device attributes only on aarch64. These
 +// definitions match Linux's public x86 TSC-offset migration interface.
 +mod tsc_attrs {
@@ -585,11 +585,10 @@ index 26c82dd..b860f84 100644
 +    ioctl_iow_nr!(KVM_GET_DEVICE_ATTR, KVMIO, 0xe2, kvm_device_attr);
 +    ioctl_iow_nr!(KVM_SET_DEVICE_ATTR, KVMIO, 0xe1, kvm_device_attr);
 +}
-+
+ 
  /// A set of MSRs that should be restored separately after all other MSRs have already been restored
  const DEFERRED_MSRS: [u32; 1] = [
-     // MSR_IA32_TSC_DEADLINE must be restored after MSR_IA32_TSC, otherwise we risk "losing" timer
-@@ -95,6 +105,8 @@ pub enum KvmVcpuError {
+@@ -95,6 +105,8 @@
      VcpuSetMsrs(kvm_ioctls::Error),
      /// Failed to set all KVM MSRs for this vCPU. Only a partial write was done.
      VcpuSetMsrsIncomplete,
@@ -598,7 +597,7 @@ index 26c82dd..b860f84 100644
      /// Failed to set KVM vcpu regs: {0}
      VcpuSetRegs(kvm_ioctls::Error),
      /// Failed to set KVM vcpu sregs: {0}
-@@ -166,6 +178,12 @@ pub struct Peripherals {
+@@ -166,6 +178,12 @@
  }
  
  impl KvmVcpu {
@@ -611,7 +610,7 @@ index 26c82dd..b860f84 100644
      /// Constructs a new kvm vcpu with arch specific functionality.
      ///
      /// # Arguments
-@@ -173,10 +191,17 @@ impl KvmVcpu {
+@@ -173,10 +191,17 @@
      /// * `index` - Represents the 0-based CPU index between [0, max vcpus).
      /// * `vm` - The vm to which this vcpu will get attached.
      pub fn new(index: u8, vm: &KvmVm) -> Result<Self, KvmVcpuError> {
@@ -631,7 +630,7 @@ index 26c82dd..b860f84 100644
  
          Ok(KvmVcpu {
              index,
-@@ -217,7 +242,34 @@ impl KvmVcpu {
+@@ -217,7 +242,34 @@
              u8::from(vcpu_count > 1 && smt),
          )?;
  
@@ -667,7 +666,7 @@ index 26c82dd..b860f84 100644
          self.fd
              .set_cpuid2(&kvm_cpuid)
              .map_err(KvmVcpuConfigureError::SetCpuid)?;
-@@ -631,6 +683,8 @@ impl KvmVcpu {
+@@ -631,6 +683,8 @@
              .get_vcpu_events()
              .map_err(KvmVcpuError::VcpuGetVcpuEvents)?;
  
@@ -676,10 +675,12 @@ index 26c82dd..b860f84 100644
          Ok(VcpuState {
              cpuid,
              saved_msrs,
-@@ -680,6 +734,60 @@ impl KvmVcpu {
+@@ -678,6 +732,60 @@
+     /// Scale the TSC frequency of this vCPU to the one provided as a parameter.
+     pub fn set_tsc_khz(&self, tsc_freq: u32) -> Result<(), SetTscError> {
          self.fd.set_tsc_khz(tsc_freq).map_err(SetTscError)
-     }
- 
++    }
++
 +    fn log_snapshot_cpu_state(&self, phase: &str, cr3: u64, msrs: &[Msrs]) {
 +        if (std::env::var("FC_DAX_SNAPSHOT").as_deref() != Ok("1")
 +            && std::env::var("FC_EXACT_TSC").as_deref() != Ok("1"))
@@ -732,16 +733,17 @@ index 26c82dd..b860f84 100644
 +        }
 +        crate::logger::info!("DAX_TSC_REBASE saved={} observed={}", saved_tsc, current_tsc);
 +        Ok(())
-+    }
-+
+     }
+ 
      /// Use provided state to populate KVM internal state.
-     pub fn restore_state(&self, state: &VcpuState) -> Result<(), KvmVcpuError> {
-         // Ordering requirements:
-@@ -740,6 +848,16 @@ impl KvmVcpu {
+@@ -739,6 +847,18 @@
+             let nmsrs = self.fd.set_msrs(msrs).map_err(KvmVcpuError::VcpuSetMsrs)?;
              if nmsrs < msrs.as_fam_struct_ref().nmsrs as usize {
                  return Err(KvmVcpuError::VcpuSetMsrsIncomplete);
-             }
-+            if std::env::var("FC_EXACT_TSC").as_deref() == Ok("1")
++            }
++            // Prepared EPT workers can return within KVM's near-TSC write window.
++            if crate::ept_adopt::enabled()
++                || std::env::var("FC_EXACT_TSC").as_deref() == Ok("1")
 +                || (std::env::var("FC_DAX_EXACT_TSC").as_deref() == Ok("1")
 +                    && std::env::var("FC_DAX_SNAPSHOT").as_deref() == Ok("1"))
 +            {
@@ -750,10 +752,9 @@ index 26c82dd..b860f84 100644
 +                    // zero write. Restore the exact offset before the deadline chunk.
 +                    self.restore_exact_tsc(tsc.data)?;
 +                }
-+            }
+             }
          }
          self.fd
-             .set_vcpu_events(&state.vcpu_events)
 diff --git a/src/vmm/src/arch/x86_64/vm.rs b/src/vmm/src/arch/x86_64/vm.rs
 index c480164..1faf624 100644
 --- a/src/vmm/src/arch/x86_64/vm.rs
