@@ -12,6 +12,7 @@ import struct
 import subprocess
 import threading
 import time
+import zlib
 
 PAGE = 4096
 MIB = 1024 * 1024
@@ -40,6 +41,7 @@ class DirtyOracle:
         self.mem = mmap.mmap(self.file.fileno(), 0)
         self.binary = str(Path(binary).resolve(strict=True))
         self.rows, self.error = [], None
+        self.events=(self.output/"events.jsonl").open("w")
         self.records, self.consumed = {}, {}
         self.mapping = None
         self.dram = {}
@@ -108,9 +110,8 @@ class DirtyOracle:
                     row = dict(sequence=request, phase=phase, pages=pages, hash_boundary=False,
                         missing_pages=0, other_changed_pages=0, listed_pages=union.bit_count(),
                         collect_ns=collect_ns, **coverage, **ept_proof)
-                    self.rows.append(row)
+                    self.record(row)
                     (self.output/f'{request}.bitmap').write_bytes(bitmaps)
-                    (self.output/'summary.json').write_text(json.dumps(self.rows,indent=2)+'\n')
                     sequence=request
                     struct.pack_into('<Q',self.mem,self.gate+72,1)
                     struct.pack_into('<Q',self.mem,self.gate+64,request)
@@ -162,9 +163,8 @@ class DirtyOracle:
                 (self.output/f'{request}.changed').write_bytes(changed_bitmap)
                 row['changed_bitmap_sha256']=hashlib.sha256(changed_bitmap).hexdigest()
                 row['bitmap_sha256']=hashlib.sha256(bitmaps).hexdigest()
-                self.rows.append(row)
+                self.record(row)
                 (self.output/f'{request}.bitmap').write_bytes(bitmaps)
-                (self.output/'summary.json').write_text(json.dumps(self.rows, indent=2)+'\n')
                 if missing or other:
                     raise ValueError(f'Missing guest pages {missing[:16]}, unexplained outside pages {sorted(other)[:16]}')
                 if previous is None and phase != 1:
@@ -254,7 +254,7 @@ class DirtyOracle:
             if any(p==0 or p>=len(memory)//PAGE for p in [o//PAGE for o in offsets_dram]):
                 raise ValueError('DRAM PFN outside L1 RAM')
             actual=[hashlib.sha256(memory[o:o+PAGE]).digest() for o in offsets_dram]
-            (self.output/f'{sequence}.dram-hashes').write_bytes(b''.join(actual))
+            (self.output/f'{sequence}.dram-hashes.z').write_bytes(zlib.compress(b''.join(actual)))
             if phase==6:
                 if actual!=homes:raise ValueError('Promotion local copy differs from CXL home')
                 self.tier_baseline[key]=actual
@@ -272,9 +272,13 @@ class DirtyOracle:
             if missing:raise ValueError('Demotion home differs from source DRAM: '+str(missing[:16]))
             self.demoted_pending |= bits << (chunk*512)
             del self.tier_baseline[key]
-        self.rows.append(row)
+        self.record(row)
         (self.output/f'{sequence}.bitmap').write_bytes(self.mem[self.gate+4352:self.gate+4416])
-        (self.output/'summary.json').write_text(json.dumps(self.rows,indent=2)+'\n')
+
+    def record(self,row):
+        self.rows.append(row)
+        self.events.write(json.dumps(row)+'\n')
+        if row['phase'] in (1,2,3):self.events.flush()
 
     def close(self):
         self.stop_event.set()
@@ -283,6 +287,8 @@ class DirtyOracle:
             raise RuntimeError('Oracle failed to stop')
         for file,memory,_ in self.dram.values():
             memory.close();file.close()
+        self.events.close()
+        (self.output/"summary.json").write_text(json.dumps(self.rows,indent=2)+"\n")
         self.mem.close()
         self.file.close()
         if self.error:
