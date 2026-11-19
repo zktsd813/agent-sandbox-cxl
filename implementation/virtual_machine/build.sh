@@ -136,7 +136,7 @@ build_kernel() (
 )
 
 build_qemu() (
-    base_source="${1:-/home/ijkim/Trenv-openwhisk/labs/niagara-vm/host/state/qemu-src}"
+    base_source="${1:-${CXL_LAB_QEMU_SOURCE:-$lab_dir/.local/qemu-cxl/src}}"
     qemu_root="$lab_dir/.local/qemu-cxl"
     mkdir -p "$qemu_root/src" "$qemu_root/build"
     if [[ ! -f "$qemu_root/src/configure" ]]; then
@@ -153,12 +153,16 @@ build_qemu() (
             --disable-sdl --disable-vnc --disable-spice --disable-opengl \
             --enable-kvm --disable-debug-info
     fi
-    ninja -j"${JOBS:-16}" qemu-system-x86_64
+    ninja_command="${CXL_LAB_NINJA:-ninja}"
+    if [[ -x "$lab_dir/.local/qemu-venv/bin/ninja" && -z "${CXL_LAB_NINJA:-}" ]]; then
+        ninja_command="$lab_dir/.local/qemu-venv/bin/ninja"
+    fi
+    "$ninja_command" -j"${JOBS:-16}" qemu-system-x86_64
     printf 'QEMU: %s\n' "$qemu_root/build/qemu-system-x86_64"
 )
 
 test_sources() {
-    python3 -m py_compile "$lab_dir/lab.py" "$lab_dir/ept_adopt.py"
+    python3 -m unittest discover -s "$lab_dir" -p 'test_*.py'
     local probe_test
     probe_test="$(mktemp "${TMPDIR:-/tmp}/cxl-shared-probe.XXXXXX")"
     if ! gcc -O2 -Wall -Wextra -Werror -static -pthread \
@@ -193,6 +197,7 @@ Optional environment: JOBS=16, CXL_EMULATION_TEST=1, KVM_EPT_ADOPT=1.
 Isolated kernel paths: CXL_LAB_KERNEL_BUILD, CXL_LAB_KERNEL_MODULES,
                       CXL_LAB_KERNEL_CONFIG, CXL_LAB_KERNEL_SOURCE.
 Firecracker source: CXL_LAB_FC_SOURCE (defaults to repo/firecracker).
+QEMU source: CXL_LAB_QEMU_SOURCE (defaults to .local/qemu-cxl/src).
 USAGE
 }
 
@@ -208,7 +213,7 @@ case "${1:---help}" in
         ;;
     qemu)
         [[ $# -le 2 ]] || { usage >&2; exit 2; }
-        build_qemu "${2:-/home/ijkim/Trenv-openwhisk/labs/niagara-vm/host/state/qemu-src}"
+        build_qemu "${2:-${CXL_LAB_QEMU_SOURCE:-$lab_dir/.local/qemu-cxl/src}}"
         ;;
     -h|--help) usage ;;
     *) usage >&2; exit 2 ;;
