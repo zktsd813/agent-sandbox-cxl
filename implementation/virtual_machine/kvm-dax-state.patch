@@ -187,7 +187,7 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
  	free_page((unsigned long)sp->spt);
  	kmem_cache_free(mmu_page_header_cache, sp);
  }
-@@ -178,13 +269,25 @@
+@@ -178,13 +269,26 @@
  		    kvm_mmu_page_as_id(_root) != _as_id) {		\
  		} else
  
@@ -202,6 +202,7 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
 +#ifdef CONFIG_KVM_EPT_ADOPT
 +    sp->ept_adopt = vcpu->kvm->arch.ept_adopt;
 +    if (sp->ept_adopt && !(level == PG_LEVEL_4K &&
++        gfn < (sp->ept_adopt->data_bytes >> PAGE_SHIFT) &&
 +        test_bit(gfn >> 9, sp->ept_adopt->dram))) {
 +        free_page((unsigned long)sp->spt); /* Unused native reserve page. */
 +        sp->spt = ept_adopt_alloc(sp->ept_adopt);
@@ -215,7 +216,7 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
  	return sp;
  }
  
-@@ -199,6 +302,15 @@
+@@ -199,6 +303,15 @@
  	sp->gfn = gfn;
  	sp->ptep = sptep;
  	sp->tdp_mmu_page = true;
@@ -231,7 +232,7 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
  
  	trace_kvm_mmu_get_page(sp, true);
  }
-@@ -235,7 +347,10 @@
+@@ -235,7 +348,10 @@
  			goto out;
  	}
  
@@ -243,7 +244,7 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
  	tdp_mmu_init_sp(root, NULL, 0, role);
  
  	/*
-@@ -284,6 +399,9 @@
+@@ -284,6 +400,9 @@
  			      bool shared)
  {
  	tdp_unaccount_mmu_page(kvm, sp);
@@ -253,7 +254,7 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
  
  	if (!sp->nx_huge_page_disallowed)
  		return;
-@@ -1047,6 +1165,23 @@
+@@ -1047,6 +1166,23 @@
  	int ret = RET_PF_RETRY;
  
  	kvm_mmu_hugepage_adjust(vcpu, fault);
@@ -277,7 +278,7 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
  
  	trace_kvm_mmu_spte_requested(fault);
  
-@@ -1077,7 +1212,8 @@
+@@ -1077,7 +1213,8 @@
  		 * The SPTE is either non-present or points to a huge page that
  		 * needs to be split.
  		 */
@@ -287,7 +288,7 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
  		tdp_mmu_init_child_sp(sp, &iter);
  
  		sp->nx_huge_page_disallowed = fault->huge_page_disallowed;
-@@ -1321,17 +1457,27 @@
+@@ -1321,17 +1458,27 @@
  	return spte_set;
  }
  
@@ -318,7 +319,7 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
  	if (!sp->spt) {
  		kmem_cache_free(mmu_page_header_cache, sp);
  		return NULL;
-@@ -1355,7 +1501,7 @@
+@@ -1355,7 +1502,7 @@
  	 * If this allocation fails we drop the lock and retry with reclaim
  	 * allowed.
  	 */
@@ -327,7 +328,7 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
  	if (sp)
  		return sp;
  
-@@ -1367,7 +1513,7 @@
+@@ -1367,7 +1514,7 @@
  		write_unlock(&kvm->mmu_lock);
  
  	iter->yielded = true;
@@ -336,7 +337,7 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
  
  	if (shared)
  		read_lock(&kvm->mmu_lock);
-@@ -1815,3 +1961,404 @@
+@@ -1815,3 +1962,404 @@
  	 */
  	return rcu_dereference(sptep);
  }
@@ -396,7 +397,7 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
 +        !IS_ALIGNED(q->base, KVM_EPT_ADOPT_BYTES) ||
 +        !IS_ALIGNED(q->data_base, PAGE_SIZE) || !q->data_bytes ||
 +        !IS_ALIGNED(q->data_bytes, SZ_2M) ||
-+        q->data_bytes > (4ULL << 30) ||
++        q->data_bytes > (64ULL << 30) ||
 +        check_add_overflow(q->base, KVM_EPT_ADOPT_BYTES - 1, &end))
 +        return -EINVAL;
 +    pgmap = get_dev_pagemap(q->base >> PAGE_SHIFT, NULL);
@@ -627,7 +628,7 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
 +    if (q.dram && (q.flags & 1)) {
 +        struct kvm_vcpu *vcpu = vcpus[0];
 +        vcpu_load(vcpu);
-+        ret = kvm_mmu_load(vcpu);
++        ret = kvm_mmu_reload(vcpu);
 +        if (!ret) {
 +            for (i = 0; i < 512; i++) {
 +                int tries;

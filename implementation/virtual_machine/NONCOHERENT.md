@@ -29,3 +29,18 @@ Adopt 전후와 비소유 host 종료 전후의 전체 16 MiB 표 hash도 비교
 Line hash 회계, perf·schedstat 꼬리 진단과 수동 보호 최적화는 없다.
 정답지 gate는 lab용 관찰 장치이며 hand-off protocol에는 들어가지 않는다.
 DRAM으로 에뮬레이트한 일관성 있는 lab의 검증이다. 실제 비일관 장비의 전기적 동작을 뜻하지 않는다.
+
+## EPT 나누기
+
+Chunk의 DRAM 사본은 mapper fd에만 있고 공유 GPA 표는 계속 CXL 집 주소다.
+매 기록 수집의 KVM·장치 합집합을 로컬 chunk 누적 bitmap에 OR한다.
+미리 정리로 현재 기록을 비워도 이 누적 집합은 내릴 때까지 남는다.
+내리기에서 복사한 page를 로컬 pending bitmap에 넣는다. 다음 record 발행 후에만 지운다.
+이미 앞 record에 있던 page도 다시 넣는다. 앞 record를 소비한 host도 새 집 값을 보아야 한다.
+Eager fault는 guest 정지 중 RAM 값을 바꾸지 않는다. 이때 생긴 보수적 dirty bit는
+최종 수집 뒤 새 chunk의 시작 경계에서 지운다. 그 뒤 guest·장치 쓰기는 모두 누적한다.
+
+Lab은 L1 RAM도 파일로 backing하여 L0가 mapper의 실제 DRAM PFN을 읽는다.
+올린 사본 = 집, 올린 뒤 변경 ⊆ 누적 bitmap, 내린 집 = 직전 DRAM을 각각 hash로 비교한다.
+내리기 page가 바로 다음 record에 있는지도 별도로 검사한다.
+Q35 RAM의 2~4 GiB hole을 보정한다. L1 mmap·KVM leaf와 독립인 읽기 전용 경로다.

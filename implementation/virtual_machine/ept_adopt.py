@@ -119,7 +119,12 @@ def faults(c,role):
     raw,file=c.shell(role,'cat /sys/kernel/tracing/events/kvm/kvm_page_fault/hist','payload-fault-count')
     matches=re.findall(r'Totals:\s*Hits:\s*(\d+)\s+Entries:\s*(\d+)\s+Dropped:\s*(\d+)',raw)
     require(len(matches)==1 and int(matches[0][2])==0,'Missing/dropped EPT fault histogram')
-    return dict(count=int(matches[0][0]),file=file)
+    stats,stats_file=c.shell(role,'mount -t debugfs debugfs /sys/kernel/debug 2>/dev/null || true\n'
+        'for p in /sys/kernel/debug/kvm/*/tlb_flush /sys/kernel/debug/kvm/*/remote_tlb_flush; do\n'
+        '  if [ -f "$p" ]; then echo "${p##*/} $(cat "$p")"; fi\ndone','vm-tlb-count')
+    values={key:sum(int(v) for v in re.findall(r'^'+key+r' (\d+)$',stats,re.M))
+        for key in ('tlb_flush','remote_tlb_flush')}
+    return dict(count=int(matches[0][0]),file=file,tlb=values,tlb_file=stats_file)
 
 
 def wait_ack(memory, offset, epoch, payload=False):
@@ -290,6 +295,7 @@ def run_existing(args):
                         if tier_before is not None:
                             tier_after=faults(c,s.role)
                             report['tiers'][-1]['first_access_faults']=tier_after['count']-tier_before['count']
+                            report['tiers'][-1]['vm_tlb_delta']={k:tier_after['tlb'][k]-tier_before['tlb'][k] for k in tier_before['tlb']}
                         if args.preclean:
                             report.setdefault('cleans',[]).append(clean(c,s))
                         if args.tier_pre_demote:
