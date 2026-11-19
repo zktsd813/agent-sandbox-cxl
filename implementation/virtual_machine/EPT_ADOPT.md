@@ -3,6 +3,7 @@
 Compute Express Link(CXL)에 guest RAM과 Extended Page Tables(EPT) 표 page만 둔다.
 VM마다 16 MiB EPT 영역을 받는다. 소유 host의 로컬 bump로 표를 할당한다.
 표는 VM 생존 중 재사용하지 않는다. 부족하면 실패한다.
+Direct의 전역 CXL 객체 allocator는 꺼야 한다. 켜져 있으면 등록을 거절한다.
 Virtual Machine Control Structure(VMCS), KVM(Kernel-based Virtual Machine) 객체,
 vCPU, Page Modification Logging(PML) page, dirty bitmap, EPT 장부는 로컬 DRAM이다.
 
@@ -10,6 +11,7 @@ Release는 멈춘 모든 vCPU의 root 참조와 로컬 EPT 장부를 제거한�
 표의 칸은 지우지 않는다. 일반 zap 경로를 쓰지 않는다.
 Read-Copy Update(RCU) reader가 끝난 뒤 로컬 장부를 반납한다.
 그 뒤 root 목록과 vCPU root는 비어 있다.
+Adopt 전 guest 진입은 거절하므로 새 CXL root를 만들 수도 없다.
 메모리 notifier, memslot 변경, fd 종료는 일반 로컬 객체만 본다.
 공유 표에 이르는 KVM 경로가 없으므로 비소유 host 진입 감사와 공유 refcount가 필요 없다.
 이 성질은 release 뒤 munmap·fd·VMM 종료 전후의 표 hash로 검사한다.

@@ -19,6 +19,7 @@ Guest RAM은 2 GiB다. VM별 EPT 영역은 16 MiB다.
 Block 장치는 읽기 전용이다.
 단일 RAM memslot과 같은 root role을 쓴다.
 Page Modification Logging(PML)과 기본 dirty bitmap을 켰다.
+Direct의 전역 CXL 객체 allocator는 껐다. 켜져 있으면 ept-adopt 등록을 거절한다.
 실행 금지 큰 page 완화는 껐다.
 Dirty ring, manual protect와 중첩 guest는 거절한다.
 
@@ -151,6 +152,21 @@ Guest boot가 만진 메모리도 표에 포함된다.
 세 조건 모두 외부 Firecracker·QEMU는 0개였다.
 시작 전 1분 load average는 0.77~1.02였다.
 
+## 이동 뒤 첫 무거운 명령
+
+SWE 원본 명령을 바꾸지 않았다. 각 비교는 ABAB다.
+블록마다 새 lab 22개에서 101회 이동했다. 각 모드 합계는 202회다.
+아래는 fixture별로 같은 명령 구성을 합친 host 관찰 시간의 중앙값이다.
+단위는 ms다. 요청 전송과 완료 관찰 비용도 포함한다.
+Guest 실행 시간과 명령별 분포는 JSON에 따로 있다.
+Guest 시간의 기록 해상도는 10 ms다.
+
+| 비교 | Fixture | 표본/모드 | ept-adopt | 대조군 |
+|---|---|---:|---:|---:|
+| direct | gin-gonic | 48 | 2,885.20 | 2,902.12 |
+| direct | php-cs-fixer | 70 | 495.95 | 488.05 |
+| direct | micropython | 84 | 603.71 | 601.80 |
+
 ## 코드 크기
 
 시작 commit `8de3e8e`의 소스와 비교한 추가 줄 수다.
@@ -173,6 +189,7 @@ Direct 수치는 공유 RAM·cache·준비 worker 코드와 흩어진 hook을 �
 이 모드는 VMCS(Virtual Machine Control Structure), KVM·vCPU 객체, PML page와 dirty bitmap을 공유하지 않는다.
 EPT 장부도 각 host의 로컬 slab에서 만든다.
 Release 뒤에는 로컬 root 목록과 vCPU root 참조가 모두 비어 있다.
+Adopt 전 guest 진입도 거절한다.
 그래서 비소유 host의 notifier·memslot 변경·종료가 공유 표에 도달할 경로가 없다.
 Direct의 15경로 진입 감사, 공유 refcount 지연, 공유 객체 parking과 재사용 규칙이 필요 없다.
 Direct용 KVM keepalive도 띄우지 않는다.
