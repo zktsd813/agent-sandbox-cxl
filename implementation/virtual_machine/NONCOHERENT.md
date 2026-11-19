@@ -44,3 +44,7 @@ Lab은 L1 RAM도 파일로 backing하여 L0가 mapper의 실제 DRAM PFN을 읽�
 올린 사본 = 집, 올린 뒤 변경 ⊆ 누적 bitmap, 내린 집 = 직전 DRAM을 각각 hash로 비교한다.
 내리기 page가 바로 다음 record에 있는지도 별도로 검사한다.
 Q35 RAM의 2~4 GiB hole을 보정한다. L1 mmap·KVM leaf와 독립인 읽기 전용 경로다.
+
+DRAM 사용 중 미리 발행한 기록은 무효화할 page의 안내다. 집이 최신이라는 완료 표시는 아니다.
+내릴 때 복사 page를 새 record에 다시 넣어, 앞 기록을 이미 소비한 host도 새 집 값을 무효화한다.
+부분 내리기나 export에 실패하면 VMM도 재개를 막는다. HTTP와 native 경로 모두 같은 조건이다.

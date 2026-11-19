@@ -317,7 +317,19 @@ def run_existing(args):
             oracle.close();report['oracle']=oracle.rows;oracle=None
         report['result']='passed'
     except BaseException as exc:
-        report.update(result='failed',error=repr(exc));raise
+        report.update(result='failed',error=repr(exc))
+        if not args.native and args.fail in ('dram-release','demote-copy','demote-record'):
+            import control_rpc
+            try:
+                raw=control_rpc.http(c.vms[s.role],s.directory+'/api.sock','PATCH','/vm',{'state':'Resumed'})
+                file=c.raw('failed-export-resume-probe',raw)
+                from handoff_bench import json_lines
+                status=json_lines(raw,'LAB_API_JSON ')[0]['status']
+                report['failed_export_resume_probe']=dict(status=status,rejected=status==400,file=file)
+                require(status==400,'Failed export allowed guest resume')
+            except Exception as probe:
+                report['resume_probe_error']=repr(probe)
+        raise
     finally:
         for role,worker in getattr(c,'ept_workers',{}).items():
             for name in ('vmm.log','fc.log','stderr.log')+ (('control/log',) if args.native else ()):

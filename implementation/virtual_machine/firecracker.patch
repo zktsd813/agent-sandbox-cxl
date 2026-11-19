@@ -1170,6 +1170,7 @@ new file mode 100644
 +        let devices=self.device_manager.save();
 +        self.check_block_snapshot_preparation().map_err(invalid)?;
 +        if !self.machine_config.track_dirty_pages || !devices_ok(&devices) {return Err(invalid("EPT device/dirty contract"));}
++        self.worker_restore_failed=true; // Fence every error after the stopped/drained boundary.
 +        let vm=self.vm.as_kvm().unwrap();
 +        if let Ok(gpa)=std::env::var("FC_BENCH_EPOCH_GPA") {
 +            let gpa=gpa.parse::<u64>().map_err(invalid)?;
@@ -1181,7 +1182,6 @@ new file mode 100644
 +        let ledger=crate::noncoherent::require(crate::noncoherent::collect(vm));
 +        let epoch=crate::noncoherent::require(crate::noncoherent::send(vm.guest_memory(),&ledger));
 +        timing.mark("ram_writeback_publish");
-+        self.worker_restore_failed=true;
 +        let mut ept=Ept::default();
 +        if !baseline() {ioctl(vm,RELEASE,&mut ept)?;}
 +        timing.mark("release");

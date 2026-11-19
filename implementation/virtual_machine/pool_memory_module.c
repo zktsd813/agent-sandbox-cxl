@@ -461,6 +461,7 @@ static long tier_chunk(struct cpm *c, void __user *user)
     struct cpm_tier q;
     DECLARE_BITMAP(dirty, 512);
     void *local = NULL;
+    u64 *pfns = NULL;
     struct vm_area_struct *vma;
     u64 page, first, start;
     int ret = -EINVAL;
@@ -478,14 +479,12 @@ static long tier_chunk(struct cpm *c, void __user *user)
         !vma || vma->vm_mm != current->mm || c->cfg.count % 512 ||
         q.chunk >= c->cfg.count / 512) goto out;
     if (q.dram == 2) {
-        u64 *pfns;
         if (!c->dram || !c->dram[q.chunk]) goto out;
         pfns = kmalloc_array(512, sizeof(u64), GFP_KERNEL);
         if (!pfns) { ret = -ENOMEM; goto out; }
         for (page = 0; page < 512; page++)
             pfns[page] = vmalloc_to_pfn(c->dram[q.chunk] + page * PAGE_SIZE);
-        ret = copy_to_user(u64_to_user_ptr(q.dirty), pfns, 512 * sizeof(u64)) ? -EFAULT : 0;
-        kfree(pfns);
+        ret = 0;
         goto out;
     }
     if (!c->dram) {
@@ -519,6 +518,9 @@ out:
     mutex_unlock(&c->lock);
     mmap_write_unlock(current->mm);
     vfree(local);
+    /* A user fault may acquire mmap_lock; never copy while holding it. */
+    if (!ret && pfns && copy_to_user(u64_to_user_ptr(q.dirty), pfns, 512 * sizeof(u64))) ret = -EFAULT;
+    kfree(pfns);
     return ret ? ret : copy_to_user(user, &q, sizeof(q)) ? -EFAULT : 0;
 }
 
