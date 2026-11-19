@@ -50,4 +50,8 @@ struct cpm_cache {
 #define CPM_PARK _IO('P', 0x7c)
 #define CPM_WRITEBACK _IOWR('P', 0x7e, struct cpm_cache)
 #define CPM_CACHE _IOWR('P', 0x7b, struct cpm_cache)
+/* Stopped-owner local overlay. The persistent GPA -> home table is immutable.
+ * dirty is a pointer to eight u64 words (512 pages). */
+struct cpm_tier { __u64 chunk, dram, dirty, copied, elapsed_ns, reserved; };
+#define CPM_TIER _IOWR('P', 0x82, struct cpm_tier)
 #endif

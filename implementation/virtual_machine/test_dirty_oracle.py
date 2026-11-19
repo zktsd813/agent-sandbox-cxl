@@ -25,6 +25,7 @@ class MaintenanceReceipts(unittest.TestCase):
         self.oracle = object.__new__(DirtyOracle)
         self.oracle.metadata = 0
         self.oracle.mem = bytearray(32*MIB+1024)
+        self.oracle.demoted_pending = 0
         self.oracle.records, self.oracle.consumed = {}, {}
         struct.pack_into('<2Q', self.oracle.mem, 48, 1, 2)
         self.full = (1 << 64)-1

@@ -1,7 +1,7 @@
 {
   "base": "Linux 6.6.0-rc6 DCD; kernel-source.json",
   "config": "CONFIG_KVM_EPT_ADOPT",
-  "scope": "CXL RAM and EPT tables only; all KVM objects and bookkeeping in local DRAM",
+  "scope": "CXL spine and CXL-chunk PTs; host-local DRAM-chunk PTs and data overlays",
   "files": {
     "arch/x86/include/asm/kvm_host.h": {
       "patched_sha256": "c2d3af1db32edf7ccd53ba2ce21eb80dad10c660a622d3cfd8d1b1236e62ccad",
@@ -20,15 +20,15 @@
       "base_sha256": "89ef9181bab9d9fc7acfbb67c4bbfbd967dd33da7d823de2f07bd9c3b8db621b"
     },
     "arch/x86/kvm/mmu/tdp_mmu.c": {
-      "patched_sha256": "fc5cf9e51ada93bb245e8571ffac14daa15aa0f9416794a269cecaf0aed2643d",
+      "patched_sha256": "210c09c7e8836248ffac6ebda2f83607a854ed598a4dc8d7a1d9e6ae8584407f",
       "base_sha256": "416eb7932f2e3e12a039293eba4a958e173046ec62d786aa69f8b96217fb293a"
     },
     "arch/x86/kvm/x86.c": {
-      "patched_sha256": "e0b051d3de17e2786e8cebae8ce651b38e352caae1e0e42a0fb03db2a1a21dfb",
+      "patched_sha256": "764026a5a18f0b03bfe863f544596e06bf1ac9a4e3c4018e2bce2d305e4cef1a",
       "base_sha256": "fe9ae905263db74ef5876a2ae49e0ce1d82a6e15866703b64fd6586c39eed2a4"
     },
     "include/linux/kvm_dax.h": {
-      "patched_sha256": "84929a6bb1b87c484eb4bdf4ac4b81051ff9edd67dab9988677e99a4c8e7a3f7",
+      "patched_sha256": "d29049c165139142c17036b0a8d2c5ba8e6a936716849ad94a45ce003323f028",
       "new": true
     },
     "include/linux/kvm_host.h": {
@@ -36,18 +36,19 @@
       "base_sha256": "166219e363e1462216d5b753032bd8179b6a639b9e63ef966f9923cc51aa83f6"
     },
     "include/uapi/linux/kvm_dax.h": {
-      "patched_sha256": "cc2781e2aa30461c51e2f938862c2da37be8f3aa8a7d9aba511a65ea27291cd8",
+      "patched_sha256": "f06dde71c104d39d52af1a9d8d3d8e446e290134ddf5a75bc9e82c0f2337b1d2",
       "new": true
     },
     "virt/kvm/kvm_main.c": {
-      "patched_sha256": "2120908bc26e65c098c45dc03f6f5e781a2fea54ba14260de9555d45468355d9",
+      "patched_sha256": "7ef8fda2beb9fd5caa377a84daa0d49776a70e5af0a66f50be62754ff966179b",
       "base_sha256": "0f70d265644639479a3fc4c7ecfccd3adb44134b4fe682612f236cae16f3dcf3"
     }
   },
   "ept_adopt": {
     "ioctls": [
       "KVM_EPT_RELEASE",
-      "KVM_EPT_ADOPT"
+      "KVM_EPT_ADOPT",
+      "KVM_EPT_TIER"
     ],
     "extent_bytes": 16777216,
     "nested_lab_option": "dax_nested_root_sync (default off)"

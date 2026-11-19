@@ -318,7 +318,7 @@ def stop_config(config):
     if memory_dir and not any(alive(vm) for vm in config["vms"].values()):
         directory = Path(memory_dir)
         if directory.exists() and directory.name.startswith("cxl-lab-") and not directory.is_symlink():
-            for name in ("shared-memory.bin", "cxl-memory.bin"):
+            for name in ("shared-memory.bin", "cxl-memory.bin", "A-dram.bin", "B-dram.bin"):
                 (directory / name).unlink(missing_ok=True)
             directory.rmdir()
 
@@ -419,7 +419,7 @@ def start(args):
         for role in ("A","B"):
             prefix=run/("vm-"+role.lower());console=str(control/(role.lower()+".console.sock"))
             monitor=str(control/(role.lower()+".qmp.sock"));channel=str(control/(role.lower()+".command.sock"))
-            cmd=[str(qemu),"-name","nested-lab-"+role,"-machine","q35,accel=kvm,cxl=on",
+            cmd=[str(qemu),"-name","nested-lab-"+role,"-machine","q35,accel=kvm,cxl=on,max-ram-below-4g=3G"+(",memory-backend=local" if args.tier_oracle else ""),
                 "-cpu","host,vmx=on,xfd=off,amx-tile=off,amx-bf16=off,amx-int8=off",
                 "-smp",str(args.vcpus),"-m",f"{args.memory_mib}M,maxmem={args.memory_mib+args.cxl_mib}M,slots=8",
                 "-nodefaults","-no-user-config","-display","none","-monitor","none","-no-reboot",
@@ -438,6 +438,10 @@ def start(args):
                 "-device","cxl-rp,port=0,bus=cxl.0,id=cxl-rp0,chassis=0,slot=2",
                 "-device","cxl-type3,bus=cxl-rp0,volatile-memdev=cxl-shared,id=cxl-mem0,sn=0x100,x-direct-ram=on",
                 "-machine",f"cxl-fmw.0.targets.0=cxl.0,cxl-fmw.0.size={args.cxl_mib}M,cxl-fmw.0.interleave-granularity=256"]
+            if args.tier_oracle:
+                local=memory/(role+"-dram.bin")
+                with local.open("xb") as stream:stream.truncate(args.memory_mib*1024**2)
+                cmd += ["-object",f"memory-backend-file,id=local,size={args.memory_mib}M,mem-path={local},share=on"]
             if role=="A":cmd += ["-drive",f"file={private},if=none,id=home-storage,format=qcow2,cache=none","-device","virtio-blk-pci,drive=home-storage,bus=pcie.0"]
             firmware=next((p for p in (qemu.parent.parent/"share/qemu",qemu.parent.parent/"src/pc-bios",QEMU_ROOT/"usr/share/qemu") if (p/"bios-256k.bin").is_file()),None)
             if firmware is None:raise RuntimeError("QEMU BIOS is missing")
@@ -447,7 +451,8 @@ def start(args):
             identity=process_identity(process.pid)
             if identity is None:raise RuntimeError(f"QEMU {role} exited at launch")
             vm=dict(pid=process.pid,starttime=identity,command=cmd,console=console,qmp=monitor,
-                serial_log=str(prefix)+".serial.log",control_rpc=channel,control_nonce=nonce,control_rpc_operations=[1,2,3,4])
+                serial_log=str(prefix)+".serial.log",control_rpc=channel,control_nonce=nonce,control_rpc_operations=[1,2,3,4],
+                dram_backing=str(memory/(role+"-dram.bin")) if args.tier_oracle else None,dram_low_bytes=3*1024**3)
             config["vms"][role]=vm;save_json(run/"run.json",config)
             deadline=time.monotonic()+20
             while not Path(monitor).exists():
@@ -532,6 +537,7 @@ def main():
     q.add_argument("--shared-mib",type=int,default=64);q.add_argument("--cxl-mib",type=int,choices=(4096,8192,16384),default=4096)
     q.add_argument("--memory-backing-dir",type=Path,default=Path("/dev/shm"));q.add_argument("--qemu",type=Path)
     q.add_argument("--home-storage-image",type=Path,required=True);q.add_argument("--rounds",type=int,default=1000)
+    q.add_argument("--tier-oracle",action="store_true")
     q.add_argument("--pml",choices=("on","off"),default="on");q.set_defaults(func=start)
     q=subs.add_parser("verify");q.add_argument("--timeout",type=float,default=180);q.set_defaults(func=verify)
     for name,function in [("status",status),("stop",stop),("configure",configure)]:subs.add_parser(name).set_defaults(func=function)

@@ -2,7 +2,7 @@
 
 CXL에는 guest RAM과 VM별 16 MiB EPT 표 영역만 둔다.
 VMCS, KVM·vCPU 객체, PML page, dirty bitmap, `kvm_run`, EPT 장부는 로컬 DRAM이다.
-표는 소유 host의 로컬 bump로 할당한다. 같은 VM 생존 중 재사용하지 않는다.
+표는 소유 host의 로컬 bump와 회수 bitmap으로 할당한다.
 영역이 차거나 검증에 실패하면 guest 진입을 막는다.
 
 실험용 VM-fd ioctl은 `KVM_EPT_RELEASE`, `KVM_EPT_ADOPT` 두 개다.
@@ -71,5 +71,8 @@ Release는 등뼈를 걸어 모든 존재하는 PD 칸의 PT 주소가 VM CXL �
 조건 4: 전환 API는 paused·장치 drain 경계만 허용하고 마지막에 KVM 변환을 비운다.
 조건 5: 기존 mapper owner epoch를 검사한다. 로컬 상태는 packet·공유 표에 담지 않는다.
 
-CXL 표의 append-only 16 MiB 한도는 계속 적용된다. 반복 전환 때 PT를 버리므로
-영역이 차면 닫힌 채 실패한다. 재사용 정책은 이 변경에 넣지 않는다.
+16 MiB 한도는 유지한다. 기존 append-only 방식은 절반 chunk의 반복 왕복 전에 소진된다.
+따라서 변환 비움과 RCU(읽기 경로의 지연 회수) 종료 뒤 도달 불가능한 표를 재사용한다.
+재사용 bitmap도 소유 host 로컬이다. Adopt는 상위 표 순회로 도달 집합을 구하고
+그 밖의 이전 할당 page만 free로 만든다. Release는 이전 owner의 RCU까지 비운다.
+붙이는 순간 공유 EPT byte는 바꾸지 않는다. 실행 중 새 fault의 할당만 재사용한다.

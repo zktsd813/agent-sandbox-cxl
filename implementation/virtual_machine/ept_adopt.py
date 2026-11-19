@@ -19,7 +19,7 @@ def environment(c, s):
     return dict(FC_EPT_ADOPT='1',
         FC_EPT_PHYS=str(c.ept_phys[s.role]+c.kvm_arena), FC_EPT_OFFSET=str(c.kvm_arena),
         FC_EPT_DATA_BASE=str(c.ept_phys[s.role]), FC_EPT_DATA_BYTES=str(c.data_bytes),
-        FC_EPT_PACKET=s.directory+'/ept.packet', FC_EPT_FAIL=c.args.fail or '',
+        FC_EPT_TIER_REQUEST=s.directory+'/tier.json', FC_EPT_PACKET=s.directory+'/ept.packet', FC_EPT_FAIL=c.args.fail or '',
         FC_RESIDENT_NATIVE='1' if c.args.native else '0',
         FC_EPT_BASELINE='1' if c.args.baseline else '0')
 
@@ -149,6 +149,34 @@ def release_exit_proof(c,s,memory):
         operations=['RAM munmap after release','Firecracker exit','VM/vCPU/mapper fd release'])
 
 
+def tier_chunks(c,command=None):
+    arg=c.args.tier_chunks
+    if arg=='written':
+        require(c.args.tier_history is not None and command is not None,'written tier needs prior SWE records')
+        history=c.args.tier_history
+        old=json.loads(history.read_text())
+        rows=[r for r in old['oracle'] if r['phase']==4]
+        row=rows[command]
+        data=(history.parent/'dirty-oracle'/f"{row['sequence']}.bitmap").read_bytes()
+        words=(row['pages']+63)//64
+        union=int.from_bytes(data[:words*8],'little')
+        return [chunk for chunk in range(c.args.memory_mib//2) if union>>(chunk*512)&((1<<512)-1)]
+    count=c.args.memory_mib//4 if arg=='half' else int(arg)
+    chunks=list(range(c.args.tier_start,c.args.tier_start+count))
+    # The existing ACK transport reads GPA 64MiB from its CXL home.
+    if c.args.workload and 32 in chunks:
+        chunks.remove(32);chunks.append(c.args.tier_start+count)
+    return chunks
+
+def set_tiers(c,s,chunks):
+    started=time.monotonic_ns()
+    c.pause(s)
+    c.write_bytes(s.role,s.directory+'/tier.json',json.dumps({'chunks':chunks}).encode(),'tier-request')
+    c.api(s.role,s.directory,'/actions','PUT',{'action_type':'MemoryTier'})
+    c.resume(s)
+    return dict(role=s.role,chunks=chunks,host_ns=time.monotonic_ns()-started)
+
+
 def replay(c,s,report,save):
     source=Path(c.config['assets'])/'traces'/f'{c.args.name}.traj.json'
     shutil.copy2(source,c.out/'source.traj.json')
@@ -165,12 +193,14 @@ def replay(c,s,report,save):
         if index in heavy:
             hop=handoff(c,s,'B' if s.role=='A' else 'A')
             hop['before_command']=index
+            if c.args.tier_chunks!='0':report.setdefault('tiers',[]).append(set_tiers(c,s,tier_chunks(c,index)))
         row=c.trace_command(s,'run',index,event='trace_end',
             timeout=int(c.trace['environment'].get('timeout',60))+30)
         end=row['receipt']
         require(not end['timed_out'] and end['rc']==(command['expected_returncode'] or 0)
             and end['command_sha256']==command['command_sha256'],f'Trace diverged at {index}')
         row['guest_duration_s']=end['end_s']-end['start_s']
+        if index in heavy and c.args.tier_chunks!='0':report.setdefault('tiers',[]).append(set_tiers(c,s,[]))
         c.trace_commands.append(row)
         if c.args.preclean:
             report.setdefault('cleans',[]).append(clean(c,s))
@@ -247,6 +277,16 @@ def run_existing(args):
                             require(time.monotonic()<deadline,'Race writer stopped progressing after clean')
                             time.sleep(.001)
                         report.setdefault('race_progress',[]).append(dict(before=before,after=values))
+                    if args.tier_chunks!='0':
+                        report.setdefault('tiers',[]).append(set_tiers(c,s,tier_chunks(c)))
+                        # Request another full guest write/verify while its selected chunks are local.
+                        s.epoch+=1
+                        struct.pack_into('<Q',memory,offset+16,s.epoch)
+                        wait_ack(memory,offset,s.epoch,args.workload=='dirty')
+                        if args.preclean:
+                            report.setdefault('cleans',[]).append(clean(c,s))
+                        if args.tier_pre_demote:
+                            report['tiers'].append(set_tiers(c,s,[]))
                     destination='B' if s.role=='A' else 'A'
                     before=faults(c,destination) if args.count_faults else None
                     row=handoff(c,s,destination)
@@ -317,13 +357,18 @@ def add_arguments(p):
     p.add_argument('--preclean',action='store_true')
     p.add_argument('--clean-wait',choices=('0','1'),default='0')
     p.add_argument('--heavy-plan',type=Path)
-    p.add_argument('--fail',choices=('outside','bump','ept-invalidate','ram-invalidate'))
+    p.add_argument('--tier-chunks',default='0')
+    p.add_argument('--tier-start',type=int,default=0)
+    p.add_argument('--tier-pre-demote',action='store_true')
+    p.add_argument('--tier-history',type=Path)
+    p.add_argument('--fail',choices=('outside','bump','ept-invalidate','ram-invalidate','dram-release','demote-copy','demote-record'))
 
 
 def validate_arguments(args,p):
     if args.preclean and not args.cache_maintenance:p.error('Preclean needs cache maintenance')
     if args.dirty_oracle and not args.page_hash:p.error('Oracle needs --page-hash')
     if args.fail and not args.dirty_oracle:p.error('Fault injection requires --dirty-oracle')
+    if args.tier_chunks!='0' and (args.baseline or not args.cache_maintenance):p.error('tier split needs retained EPT and cache maintenance')
     args.trajectory_policy='heavy' if args.heavy_plan else None
     if args.heavy_plan:args.workload=None
     args.noncoherent=args.cache_maintenance

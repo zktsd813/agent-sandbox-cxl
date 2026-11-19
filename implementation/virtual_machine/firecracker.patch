@@ -1010,7 +1010,7 @@ diff --git a/src/vmm/src/ept_adopt.rs b/src/vmm/src/ept_adopt.rs
 new file mode 100644
 --- /dev/null
 +++ b/src/vmm/src/ept_adopt.rs
-@@ -0,0 +1,248 @@
+@@ -0,0 +1,249 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! CXL RAM/EPT only. Semantic state enters an ordinary prepared KVM worker.
 +use std::fs::OpenOptions;
@@ -1177,6 +1177,7 @@ new file mode 100644
 +            vm.guest_memory().write_obj(if old==0 {number("FC_BENCH_INITIAL_EPOCH")?+1} else {old+1},GuestAddress(gpa+16)).map_err(invalid)?;
 +        }
 +        self.device_manager.mark_virtio_queue_memory_dirty(vm.guest_memory());
++        crate::ept_tier::demote_all(vm)?;
 +        let ledger=crate::noncoherent::require(crate::noncoherent::collect(vm));
 +        let epoch=crate::noncoherent::require(crate::noncoherent::send(vm.guest_memory(),&ledger));
 +        timing.mark("ram_writeback_publish");
@@ -1259,10 +1260,116 @@ new file mode 100644
 +        Ok(())
 +    }
 +}
+diff --git a/src/vmm/src/ept_tier.rs b/src/vmm/src/ept_tier.rs
+new file mode 100644
+--- /dev/null
++++ b/src/vmm/src/ept_tier.rs
+@@ -0,0 +1,101 @@
++// SPDX-License-Identifier: Apache-2.0
++//! Stopped-owner 2 MiB overlays. No tier or dirty state enters a handoff packet.
++use std::collections::{BTreeMap, BTreeSet};
++use std::io;
++use std::os::fd::AsRawFd;
++use std::sync::Mutex;
++use std::time::Instant;
++use serde::Deserialize;
++use crate::vstate::vm::KvmVm;
++use crate::snapshot::Persist;
++
++#[derive(Default)]
++struct Tiers { chunks: BTreeMap<u64, [u64;8]>, pending: Vec<u64> }
++static STATE: Mutex<Tiers> = Mutex::new(Tiers {chunks:BTreeMap::new(),pending:Vec::new()});
++fn invalid(s: impl ToString) -> io::Error {io::Error::other(s.to_string())}
++fn fail(name: &str) -> bool {std::env::var("FC_EPT_FAIL").as_deref()==Ok(name)}
++#[derive(Deserialize)]
++#[serde(deny_unknown_fields)]
++struct Request { chunks: BTreeSet<u64> }
++
++/// Called at every KVM/device harvest, including intermediate running cleans.
++pub(crate) fn accumulate(union: &mut [u64]) {
++    let mut s=STATE.lock().unwrap();
++    for (chunk,dirty) in &mut s.chunks {
++        for (a,b) in dirty.iter_mut().zip(&union[*chunk as usize*8..][..8]) {*a|=*b;}
++    }
++    for (a,b) in union.iter_mut().zip(&s.pending) {*a|=*b;}
++}
++pub(crate) fn published() {STATE.lock().unwrap().pending.fill(0);}
++fn kernel(vm: &KvmVm, chunk: u64, dram: bool) -> io::Result<()> {
++    let mut q=[chunk,u64::from(dram),0];
++    if unsafe {libc::ioctl(vm.fd().as_raw_fd(),0x4018aefcu32 as _,q.as_mut_ptr())}<0 {
++        return Err(io::Error::last_os_error());
++    }
++    Ok(())
++}
++fn publish(vm: &KvmVm) -> io::Result<()> {
++    let ledger=crate::noncoherent::collect(vm)?;
++    crate::noncoherent::send(vm.guest_memory(),&ledger)?;
++    crate::noncoherent::cleaned(vm.guest_memory(),&ledger)
++}
++fn change(vm: &KvmVm, target: &BTreeSet<u64>) -> io::Result<()> {
++    use vm_memory::{GuestMemoryBackend, GuestMemoryRegion};
++    let mem=vm.guest_memory();
++    let pages=mem.iter().next().ok_or_else(||invalid("RAM absent"))?.len()/4096;
++    if target.iter().any(|c|*c>=pages/512) {return Err(invalid("tier chunk outside RAM"));}
++    publish(vm)?; // Preserve CXL dirty pages harvested at the stopped boundary.
++    let current: BTreeSet<_>=STATE.lock().unwrap().chunks.keys().copied().collect();
++    for chunk in current.difference(target) {
++        let start=Instant::now();
++        let dirty=STATE.lock().unwrap().chunks[chunk];
++        crate::noncoherent::tier_boundary(mem,*chunk,7,&dirty)?;
++        let mut copied=dirty;
++        if fail("demote-copy") { if let Some(w)=copied.iter_mut().find(|w|**w!=0) {*w &= *w-1;} }
++        let stats=crate::pool_memory::tier_chunk(*chunk,false,&mut copied)?;
++        kernel(vm,*chunk,false)?;
++        crate::noncoherent::tier_boundary(mem,*chunk,8,&dirty)?;
++        let mut s=STATE.lock().unwrap();
++        s.chunks.remove(chunk);
++        s.pending.resize(pages.div_ceil(64) as usize,0);
++        let mut record=dirty;
++        if fail("demote-record") {if let Some(w)=record.iter_mut().find(|w|**w!=0) {*w &= *w-1;}}
++        for (a,b) in s.pending[*chunk as usize*8..][..8].iter_mut().zip(record) {*a|=b;}
++        crate::logger::info_unrestricted!("EPT_TIER_JSON {}",serde_json::json!({"chunk":chunk,"dram":false,
++            "dirty_pages":dirty.iter().map(|w|w.count_ones()).sum::<u32>(),"copied_pages":stats[3],
++            "copy_unmap_ns":stats[4],"ns":start.elapsed().as_nanos() as u64}));
++    }
++    for chunk in target.difference(&current) {
++        let start=Instant::now();let mut bits=[0;8];
++        let stats=crate::pool_memory::tier_chunk(*chunk,true,&mut bits)?;
++        kernel(vm,*chunk,true)?;
++        STATE.lock().unwrap().chunks.insert(*chunk,[0;8]);
++        crate::noncoherent::tier_boundary(mem,*chunk,6,&bits)?;
++        crate::logger::info_unrestricted!("EPT_TIER_JSON {}",serde_json::json!({"chunk":chunk,"dram":true,
++            "copied_pages":stats[3],"copy_unmap_ns":stats[4],"ns":start.elapsed().as_nanos() as u64}));
++    }
++    publish(vm)
++}
++pub(crate) fn demote_all(vm: &KvmVm) -> io::Result<()> {
++    if STATE.lock().unwrap().chunks.is_empty() || fail("dram-release") {return Ok(());}
++    change(vm,&BTreeSet::new())
++}
++impl crate::Vmm {
++    pub(crate) fn ept_tier_request(&mut self) -> io::Result<()> {
++        if !crate::ept_adopt::retained() || self.worker_prepared.is_some() || self.worker_restore_failed
++            || self.instance_info.state!=crate::vmm_config::instance_info::VmState::Paused {
++            return Err(invalid("tier change requires a paused owning EPT VM"));
++        }
++        let request:Request=serde_json::from_slice(&std::fs::read(std::env::var("FC_EPT_TIER_REQUEST").map_err(invalid)?)?).map_err(invalid)?;
++        let devices=self.device_manager.save();
++        self.check_block_snapshot_preparation().map_err(invalid)?;
++        if !crate::ept_adopt::devices_ok(&devices) {return Err(invalid("tier device contract"));}
++        let vm=self.vm.as_kvm().unwrap();
++        self.device_manager.mark_virtio_queue_memory_dirty(vm.guest_memory());
++        // A failure after the first remap fences this worker until restart.
++        self.worker_restore_failed=true;
++        change(vm,&request.chunks)?;
++        self.worker_restore_failed=false;
++        Ok(())
++    }
++}
 diff --git a/src/vmm/src/lib.rs b/src/vmm/src/lib.rs
 --- a/src/vmm/src/lib.rs
 +++ b/src/vmm/src/lib.rs
-@@ -81,6 +81,10 @@
+@@ -81,6 +81,11 @@
  /// Emulates virtual and hardware devices.
  #[allow(missing_docs)]
  pub mod devices;
@@ -1270,10 +1377,11 @@ diff --git a/src/vmm/src/lib.rs b/src/vmm/src/lib.rs
 +pub(crate) mod pool_memory;
 +pub(crate) mod worker;
 +pub(crate) mod ept_adopt;
++pub(crate) mod ept_tier;
  /// minimalist HTTP/TCP/IPv4 stack named DUMBO
  pub mod dumbo;
  /// Support for GDB debugging the guest
-@@ -217,6 +221,12 @@
+@@ -217,6 +222,12 @@
  /// have permissions to open the KVM fd).
  #[derive(Debug, thiserror::Error, displaydoc::Display)]
  pub enum VmmError {
@@ -1286,7 +1394,7 @@ diff --git a/src/vmm/src/lib.rs b/src/vmm/src/lib.rs
      #[cfg(target_arch = "aarch64")]
      /// Invalid command line error.
      Cmdline,
-@@ -303,6 +313,8 @@
+@@ -303,6 +314,8 @@
      pub machine_config: MachineConfig,
      boot_source_config: BootSourceConfig,
      shutdown_exit_code: Option<FcExitCode>,
@@ -1295,7 +1403,7 @@ diff --git a/src/vmm/src/lib.rs b/src/vmm/src/lib.rs
  
      /// VM object.
      pub vm: Vm,
-@@ -459,8 +471,76 @@
+@@ -459,8 +472,79 @@
          }
      }
  
@@ -1323,6 +1431,9 @@ diff --git a/src/vmm/src/lib.rs b/src/vmm/src/lib.rs
 +        }
 +        if self.instance_info.state != VmState::Paused {
 +            return Err(VmmError::MemoryTier(io::Error::other("MemoryTier requires a paused VM")));
++        }
++        if crate::ept_adopt::retained() && pool_memory::active() {
++            return self.ept_tier_request().map_err(VmmError::MemoryTier);
 +        }
 +        let mut unsupported_memory_device = false;
 +        self.device_manager.for_each_virtio_device(|kind, _| {
@@ -1376,7 +1487,7 @@ diff --git a/src/vmm/src/noncoherent.rs b/src/vmm/src/noncoherent.rs
 new file mode 100644
 --- /dev/null
 +++ b/src/vmm/src/noncoherent.rs
-@@ -0,0 +1,513 @@
+@@ -0,0 +1,543 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Opt-in dirty ledger and a stopped-boundary lab oracle. Never enabled by default.
 +use std::fs::{File, OpenOptions};
@@ -1415,7 +1526,11 @@ new file mode 100644
 +    // also the reset: a concurrent mark falls in this snapshot or the next.
 +    let device = bitmap.get_and_reset();
 +    if device.len()!=kvm.len() {return Err(invalid("device bitmap geometry"));}
-+    let union = kvm.iter().zip(&device).map(|(k,d)| k | d).collect();
++    let mut union:Vec<u64> = kvm.iter().zip(&device).map(|(k,d)| k | d).collect();
++    crate::ept_tier::accumulate(&mut union);
++    // Tier copies are VMM writes outside the vm-memory bitmap.
++    let mut device=device;
++    for ((d,u),k) in device.iter_mut().zip(&union).zip(&kvm) {*d|=*u & !*k;}
 +    let collect_ns=start.elapsed().as_nanos() as u64;
 +
 +    Ok(Ledger { kvm, device, union, collect_ns })
@@ -1664,6 +1779,7 @@ new file mode 100644
 +
 +        let start=Instant::now(); let epoch=s.publish(&ledger.union,false)?;
 +        s.log_ns=start.elapsed().as_nanos() as u64;
++        crate::ept_tier::published();
 +        Ok(epoch)
 +    })
 +}
@@ -1792,10 +1908,10 @@ new file mode 100644
 +    let region = mem.iter().next().ok_or_else(|| invalid("oracle RAM absent"))?;
 +    boundary_identity(identity()?,region.len() as usize/4096,region.as_ptr() as u64,phase,arena,ledger)
 +}
++static GATE: OnceLock<Mutex<Option<Gate>>> = OnceLock::new();
 +fn boundary_identity(id: Identity, pages: usize, hva: u64, phase: u64, arena: u64, ledger: Option<&Ledger>) -> io::Result<()> {
 +    if std::env::var("FC_DIRTY_ORACLE").as_deref() != Ok("1") {return Ok(());}
 +    let oracle_started=Instant::now();
-+    static GATE: OnceLock<Mutex<Option<Gate>>> = OnceLock::new();
 +    let mut guard = GATE.get_or_init(|| Mutex::new(None)).lock().unwrap();
 +    if guard.is_none() { *guard = Some(Gate::new()?); }
 +    let gate = guard.as_ref().unwrap();
@@ -1890,6 +2006,31 @@ new file mode 100644
 +        std::arch::x86_64::_mm_sfence();
 +    }
 +}
++
++/// Lab gate: L0 reads the actual source DRAM frames from its QEMU RAM file.
++pub(crate) fn tier_boundary(mem: &GuestMemoryMmap, chunk: u64, phase: u64, dirty: &[u64;8]) -> io::Result<()> {
++    if std::env::var("FC_DIRTY_ORACLE").as_deref()!=Ok("1") {return Ok(());}
++    let mut guard=GATE.get_or_init(||Mutex::new(None)).lock().unwrap();
++    if guard.is_none() {*guard=Some(Gate::new()?);}
++    let gate=guard.as_ref().unwrap();
++    let mut pfns=[0u64;512];
++    if phase!=8 {crate::pool_memory::tier_pfns(chunk,&mut pfns)?;}
++    unsafe {
++        std::ptr::copy_nonoverlapping(pfns.as_ptr(),(gate.address+256) as *mut u64,512);
++        std::ptr::copy_nonoverlapping(dirty.as_ptr(),(gate.address+4352) as *mut u64,8);
++    }
++    let seq=gate.read(0)+1;
++    gate.write(1,phase);gate.write(2,mem.iter().next().unwrap().len()/4096);gate.write(3,chunk);
++    gate.write(7,std::env::var("FC_NONCOHERENT_NODE").map_err(invalid)?.parse().map_err(invalid)?);
++    std::sync::atomic::fence(std::sync::atomic::Ordering::SeqCst);gate.write(0,seq);
++    let start=Instant::now();
++    while gate.read(8)!=seq {
++        if start.elapsed()>Duration::from_secs(120) {return Err(invalid("tier oracle timeout"));}
++        std::thread::sleep(Duration::from_millis(1));
++    }
++    if gate.read(9)!=1 {return Err(invalid("tier oracle rejected transition"));}
++    Ok(())
++}
 diff --git a/src/vmm/src/persist.rs b/src/vmm/src/persist.rs
 --- a/src/vmm/src/persist.rs
 +++ b/src/vmm/src/persist.rs
@@ -1947,7 +2088,7 @@ diff --git a/src/vmm/src/pool_memory.rs b/src/vmm/src/pool_memory.rs
 new file mode 100644
 --- /dev/null
 +++ b/src/vmm/src/pool_memory.rs
-@@ -0,0 +1,540 @@
+@@ -0,0 +1,555 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! VM-private persistent CXL logical RAM and whole-RAM tier changes.
 +//! Private controller plans assign exclusive frames. The kernel owns the mapping
@@ -2487,6 +2628,21 @@ new file mode 100644
 +        assert_eq!(std::mem::size_of::<Config>(), 56);
 +        assert_eq!(std::mem::size_of::<Handle>(), 152);
 +    }
++}
++
++/// Local mapper overlay at the same HVA; persistent home entries stay unchanged.
++pub(crate) fn tier_chunk(chunk: u64, dram: bool, dirty: &mut [u64;8]) -> io::Result<[u64;6]> {
++    let guard=state().lock().unwrap();
++    let a=guard.as_ref().ok_or_else(||invalid("tier without mapper"))?;
++    let mut q=[chunk,u64::from(dram),dirty.as_mut_ptr() as u64,0,0,0];
++    ioctl(&a.file,0x82,true,&mut q)?;
++    Ok(q)
++}
++pub(crate) fn tier_pfns(chunk: u64, pfns: &mut [u64;512]) -> io::Result<()> {
++    let guard=state().lock().unwrap();
++    let a=guard.as_ref().ok_or_else(||invalid("tier without mapper"))?;
++    let mut q=[chunk,2,pfns.as_mut_ptr() as u64,0,0,0];
++    ioctl(&a.file,0x82,true,&mut q)
 +}
 diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
 --- a/src/vmm/src/rpc_interface.rs

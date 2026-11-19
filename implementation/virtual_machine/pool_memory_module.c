@@ -42,6 +42,7 @@ struct cpm {
     void *base;
     bool ready, mapped, local_owner;
     struct vm_area_struct *owner_vma;
+    void **dram; /* Host-local vmalloc chunks, never in persistent metadata. */
     /* Host DRAM only. Observer never changes the owner's CXL metadata. */
     struct cpm_cache observer;
     struct cpm_entry *observer_map;
@@ -204,7 +205,9 @@ static vm_fault_t cpm_fault(struct vm_fault *vmf)
     if (vmf->vma->vm_flags & VM_WRITE)
         prot = __pgprot(pgprot_val(prot) | _PAGE_RW);
     ret = vmf_insert_pfn_prot(vmf->vma, vmf->address & PAGE_MASK,
-                            PHYS_PFN(c->cfg.phys_base + c->map[index].offset), prot);
+        c->dram && c->dram[index >> 9] ?
+        vmalloc_to_pfn(c->dram[index >> 9] + (index & 511) * PAGE_SIZE) :
+        PHYS_PFN(c->cfg.phys_base + c->map[index].offset), prot);
 out:
     mutex_unlock(&c->lock);
     return ret;
@@ -399,6 +402,8 @@ static int mapping_identity(struct vm_area_struct *vma, struct kvm_dax_mapping_i
     h = c->state;
     if (!c->header || !c->ready || c->owner_vma != vma ||
         !owns(c) || h->state == CPM_CLOSED) goto done;
+    {
+    u64 page = out->query_page;
     *out = (struct kvm_dax_mapping_identity) {
         .descriptor = h->phys_base + h->metadata_offset,
         .cookie_lo = h->cookie_lo, .cookie_hi = h->cookie_hi,
@@ -406,6 +411,9 @@ static int mapping_identity(struct vm_area_struct *vma, struct kvm_dax_mapping_i
         .allocation_generation = h->allocation_generation,
         .ram_bytes = h->count << PAGE_SHIFT, .sealed = h->state == CPM_SEALED,
     };
+    out->local_pfn = page < c->cfg.count && c->dram && c->dram[page >> 9] ?
+        vmalloc_to_pfn(c->dram[page >> 9] + (page & 511) * PAGE_SIZE) : 0;
+    }
     ret = 0;
 done:
     mutex_unlock(&c->lock);
@@ -446,6 +454,74 @@ out:
     return ret;
 }
 
+/* Caller VMM has stopped vCPUs and drained I/O. mmap write excludes host
+ * faults; notifier invalidation removes KVM leaves before a local page is freed. */
+static long tier_chunk(struct cpm *c, void __user *user)
+{
+    struct cpm_tier q;
+    DECLARE_BITMAP(dirty, 512);
+    void *local = NULL;
+    struct vm_area_struct *vma;
+    u64 page, first, start;
+    int ret = -EINVAL;
+    if (copy_from_user(&q, user, sizeof(q))) return -EFAULT;
+    if (q.dram > 2 || q.reserved || !boot_cpu_has(X86_FEATURE_CLWB)) return -EINVAL;
+    if (!q.dram && copy_from_user(dirty, u64_to_user_ptr(q.dirty), sizeof(dirty))) return -EFAULT;
+    if (q.dram == 1) {
+        local = vzalloc(SZ_2M);
+        if (!local) return -ENOMEM;
+    }
+    mmap_write_lock(current->mm);
+    mutex_lock(&c->lock);
+    vma = c->owner_vma;
+    if (!c->ready || !c->header || !owns(c) || c->state->state != CPM_ACTIVE ||
+        !vma || vma->vm_mm != current->mm || c->cfg.count % 512 ||
+        q.chunk >= c->cfg.count / 512) goto out;
+    if (q.dram == 2) {
+        u64 *pfns;
+        if (!c->dram || !c->dram[q.chunk]) goto out;
+        pfns = kmalloc_array(512, sizeof(u64), GFP_KERNEL);
+        if (!pfns) { ret = -ENOMEM; goto out; }
+        for (page = 0; page < 512; page++)
+            pfns[page] = vmalloc_to_pfn(c->dram[q.chunk] + page * PAGE_SIZE);
+        ret = copy_to_user(u64_to_user_ptr(q.dirty), pfns, 512 * sizeof(u64)) ? -EFAULT : 0;
+        kfree(pfns);
+        goto out;
+    }
+    if (!c->dram) {
+        c->dram = kvcalloc(c->cfg.count / 512, sizeof(void *), GFP_KERNEL);
+        if (!c->dram) { ret = -ENOMEM; goto out; }
+    }
+    if (!!c->dram[q.chunk] == !!q.dram) goto out;
+    first = q.chunk * 512; q.copied = 0; start = ktime_get_ns();
+    if (q.dram) {
+        for (page = 0; page < 512; page++)
+            memcpy(local + page * PAGE_SIZE, c->base + c->map[first + page].offset, PAGE_SIZE);
+        q.copied = 512;
+    } else {
+        for_each_set_bit(page, dirty, 512) {
+            u64 line;
+            void *home = c->base + c->map[first + page].offset;
+            memcpy(home, c->dram[q.chunk] + page * PAGE_SIZE, PAGE_SIZE);
+            for (line = 0; line < PAGE_SIZE; line += 64)
+                asm volatile("clwb (%0)" : : "r" (home + line) : "memory");
+            q.copied++;
+        }
+        asm volatile("sfence" : : : "memory");
+    }
+    /* Zap calls KVM's notifier while lock ordering stays mmap -> cpm -> MMU. */
+    zap_vma_ptes(vma, vma->vm_start + first * PAGE_SIZE, SZ_2M);
+    if (q.dram) { c->dram[q.chunk] = local; local = NULL; }
+    else { local = c->dram[q.chunk]; c->dram[q.chunk] = NULL; }
+    q.elapsed_ns = ktime_get_ns() - start;
+    ret = 0;
+out:
+    mutex_unlock(&c->lock);
+    mmap_write_unlock(current->mm);
+    vfree(local);
+    return ret ? ret : copy_to_user(user, &q, sizeof(q)) ? -EFAULT : 0;
+}
+
 static long cpm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
     struct cpm *c = file->private_data;
@@ -453,6 +529,7 @@ static long cpm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     long ret = 0;
     if (!capable(CAP_SYS_RAWIO))
         return -EPERM;
+    if (cmd == CPM_TIER) return tier_chunk(c, user);
     if (cmd == CPM_CACHE_INIT_STATS) {
         u64 lines;
         mutex_lock(&c->lock);
@@ -479,6 +556,11 @@ static long cpm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         if (!c->header) return -EOPNOTSUPP;
         mutex_lock(&c->lock);
         if (!owns(c) || c->state->state == CPM_CLOSED) { ret = -ESTALE; goto status_done; }
+        if (cmd == CPM_SEAL && c->dram) {
+            u64 chunk;
+            for (chunk = 0; chunk < c->cfg.count / 512; chunk++)
+                if (c->dram[chunk]) { ret = -EBUSY; goto status_done; }
+        }
         if (cmd == CPM_SEAL && c->state->state == CPM_ACTIVE)
             smp_store_release(&c->state->state, CPM_SEALED);
 
@@ -507,6 +589,11 @@ static int cpm_open(struct inode *inode, struct file *file)
 static int cpm_release(struct inode *inode, struct file *file)
 {
     struct cpm *c = file->private_data;
+    if (c->dram) {
+        u64 chunk;
+        for (chunk = 0; chunk < c->cfg.count / 512; chunk++) vfree(c->dram[chunk]);
+        kvfree(c->dram);
+    }
     kvfree(c->observer_map);
     if (c->observer_base) memunmap(c->observer_base);
     if (c->header) {

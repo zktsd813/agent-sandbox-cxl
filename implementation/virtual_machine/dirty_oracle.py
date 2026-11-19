@@ -42,6 +42,12 @@ class DirtyOracle:
         self.rows, self.error = [], None
         self.records, self.consumed = {}, {}
         self.mapping = None
+        self.dram = {}
+        self.tier_baseline, self.tier_expected, self.demoted_pending = {}, {}, 0
+        for role,vm in config["vms"].items():
+            if vm.get("dram_backing"):
+                file=Path(vm["dram_backing"]).open("rb")
+                self.dram[1 if role=="A" else 2]=(file,mmap.mmap(file.fileno(),0,access=mmap.ACCESS_READ),vm["dram_low_bytes"])
         self.stop_event = threading.Event()
         self.thread = threading.Thread(target=self.run, name='dirty-oracle', daemon=True)
         self.thread.start()
@@ -58,8 +64,14 @@ class DirtyOracle:
                 if request != sequence + 1:
                     raise ValueError('Skipped oracle boundary')
                 _, phase, pages, hva, used, collect_ns = struct.unpack_from('<6Q', self.mem, self.gate)
-                if not 0 < pages <= 1 << 20 or phase not in (1, 2, 3, 4, 5):
+                if not 0 < pages <= 1 << 20 or phase not in (1, 2, 3, 4, 5, 6, 7, 8):
                     raise ValueError('Invalid oracle geometry/phase')
+                if phase in (6,7,8):
+                    self.check_tier(request,phase,pages,hva)
+                    sequence=request
+                    struct.pack_into('<Q',self.mem,self.gate+72,1)
+                    struct.pack_into('<Q',self.mem,self.gate+64,request)
+                    continue
                 maintained, node = struct.unpack_from('<2Q', self.mem, self.gate+48)
                 extra = struct.unpack_from('<16Q', self.mem, self.gate+128) if maintained else None
                 words = (pages+63)//64
@@ -193,6 +205,9 @@ class DirtyOracle:
                 raise ValueError('Bulk initialization omitted RAM')
             if actual_epoch!=epoch or record!=bitmap or count!=record.bit_count():
                 raise ValueError('Published log does not equal the harvested list')
+            if self.demoted_pending & ~record:
+                raise ValueError('Demotion pages missing from the next record')
+            self.demoted_pending=0
             if bitmap & ~wb:
                 raise ValueError('Actual guest writeback ranges omit a listed page')
             if phase==2 and (kwb_ok!=1 or kwb_bytes<arena or kwb_lines!=(kwb_bytes+63)//64):
@@ -220,11 +235,54 @@ class DirtyOracle:
             writeback_lines=wb.bit_count()*64,invalidate_lines=invalidated.bit_count()*64,
             coverage_verified=True,full_invalidate_fallback=phase in (3,5) and epoch-inv_from>8)
 
+    def check_tier(self,sequence,phase,pages,chunk):
+        node=struct.unpack_from('<Q',self.mem,self.gate+56)[0]
+        if not 0 <= chunk < pages//512 or node not in self.dram:
+            raise ValueError('Tier oracle needs the owning L1 DRAM backing')
+        table=self.mapping
+        if table is None:raise ValueError('Missing mapper baseline for tier oracle')
+        offsets=[struct.unpack_from('<Q',table,(chunk*512+i)*16)[0] for i in range(512)]
+        homes=[hashlib.sha256(self.mem[o:o+PAGE]).digest() for o in offsets]
+        key=(node,chunk)
+        dirty=int.from_bytes(self.mem[self.gate+4352:self.gate+4416],'little')
+        row=dict(sequence=sequence,phase=phase,pages=pages,chunk=chunk,node=node,
+                 hash_boundary=True,missing_pages=0,listed_pages=dirty.bit_count())
+        if phase in (6,7):
+            pfns=struct.unpack_from('<512Q',self.mem,self.gate+256)
+            _,memory,low=self.dram[node]
+            offsets_dram=[p*PAGE if p*PAGE<low else p*PAGE-(2**32-low) for p in pfns]
+            if any(p==0 or p>=len(memory)//PAGE for p in [o//PAGE for o in offsets_dram]):
+                raise ValueError('DRAM PFN outside L1 RAM')
+            actual=[hashlib.sha256(memory[o:o+PAGE]).digest() for o in offsets_dram]
+            (self.output/f'{sequence}.dram-hashes').write_bytes(b''.join(actual))
+            if phase==6:
+                if actual!=homes:raise ValueError('Promotion local copy differs from CXL home')
+                self.tier_baseline[key]=actual
+            else:
+                before=self.tier_baseline[key]
+                changed=[i for i,(a,b) in enumerate(zip(before,actual)) if a!=b]
+                missing=[i for i in changed if not dirty>>i&1]
+                row.update(changed_guest_pages=len(changed),missing_pages=len(missing),missing_chunk_pages=missing[:32])
+                if missing:raise ValueError('DRAM dirty union misses changed local pages: '+str(missing[:16]))
+                self.tier_expected[key]=(actual,dirty)
+        else:
+            expected,bits=self.tier_expected.pop(key)
+            missing=[i for i,(a,b) in enumerate(zip(expected,homes)) if a!=b]
+            row.update(missing_pages=len(missing),missing_chunk_pages=missing[:32],demotion_home_verified=not missing)
+            if missing:raise ValueError('Demotion home differs from source DRAM: '+str(missing[:16]))
+            self.demoted_pending |= bits << (chunk*512)
+            del self.tier_baseline[key]
+        self.rows.append(row)
+        (self.output/f'{sequence}.bitmap').write_bytes(self.mem[self.gate+4352:self.gate+4416])
+        (self.output/'summary.json').write_text(json.dumps(self.rows,indent=2)+'\n')
+
     def close(self):
         self.stop_event.set()
         self.thread.join(timeout=120)
         if self.thread.is_alive():
             raise RuntimeError('Oracle failed to stop')
+        for file,memory,_ in self.dram.values():
+            memory.close();file.close()
         self.mem.close()
         self.file.close()
         if self.error:

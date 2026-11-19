@@ -42,7 +42,11 @@ def arguments():
     p.add_argument('--page-hash', type=Path)
     p.add_argument('--count-faults', action='store_true')
     p.add_argument('--measure', action='store_true', help='Take the exclusive quiet lock and record host load')
-    p.add_argument('--fail', choices=('outside', 'bump', 'ept-invalidate', 'ram-invalidate'))
+    p.add_argument('--fail', choices=('outside', 'bump', 'ept-invalidate', 'ram-invalidate','dram-release','demote-copy','demote-record'))
+    p.add_argument('--tier-chunks', default='0', help='Count, half, or written (previous SWE dirty records)')
+    p.add_argument('--tier-start', type=int, default=0)
+    p.add_argument('--tier-pre-demote', action='store_true')
+    p.add_argument('--tier-history', type=Path)
     p.add_argument('--output', type=Path, required=True)
     args = p.parse_args()
     if not re.fullmatch(r'[a-z0-9_-]{1,32}', args.session):
@@ -82,14 +86,17 @@ def run(args):
         try:
             command([*prefix, 'start', '--qemu', str(args.qemu.resolve()), '--vcpus', str(max(4, args.vcpus+2)),
                 '--memory-mib', str(args.l1_memory_mib), '--cxl-mib', str(args.cxl_mib),
-                '--home-storage-image', str(args.assets.resolve()/'storage.raw'), '--pml', 'on'], 'start', 180).check_returncode()
+                '--home-storage-image', str(args.assets.resolve()/'storage.raw'), '--pml', 'on', *(['--tier-oracle'] if args.dirty_oracle and args.tier_chunks!='0' else [])], 'start', 180).check_returncode()
             current = HERE/'.local'/('current-'+args.session+'.json')
             folder = Path(json.loads(current.read_text())['run'])
             config = json.loads((folder/'run.json').read_text())
             bench = [*prefix, 'ept-adopt-bench', '--output', str(out/'trial'), '--name', args.name,
                 '--vcpus', str(args.vcpus), '--iterations', str(args.iterations), '--warmup', str(args.warmup),
                 '--dirty-mib', str(args.dirty_mib), '--dirty-lines', str(args.dirty_lines), '--clean-wait', args.clean_wait]
-            bench += ['--workload', args.workload] if args.workload else ['--heavy-plan', str(args.heavy_plan.resolve())]
+            bench += ['--tier-chunks',args.tier_chunks,'--tier-start',str(args.tier_start)]
+            if args.tier_pre_demote:bench+=['--tier-pre-demote']
+            if args.tier_history:bench+=['--tier-history',str(args.tier_history.resolve())]
+            bench += ['--workload' , args.workload] if args.workload else ['--heavy-plan', str(args.heavy_plan.resolve())]
             for name in ('baseline', 'native', 'preclean', 'dirty_oracle', 'count_faults'):
                 if getattr(args, name):
                     bench += ['--'+name.replace('_', '-')]
