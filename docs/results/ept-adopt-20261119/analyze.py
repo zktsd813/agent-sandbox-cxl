@@ -151,6 +151,9 @@ def source_lines(raw, repo):
     files = {line.split("\t")[2]: dict(added=int(line.split("\t")[0]), removed=int(line.split("\t")[1])) for line in diff.splitlines()}
     result["test_tools"] = dict(files=files, added=sum(f["added"] for f in files.values()), removed=sum(f["removed"] for f in files.values()))
     result["analysis_tool_lines"] = len(Path(__file__).read_text().splitlines())
+    runners = ("experiment.py", "final-measure.py", "verify-results.py", "replay-legacy.py", "final-provenance.py")
+    result["experiment_scripts"] = {name: len((raw/name).read_text().splitlines()) for name in runners}
+    result["experiment_script_lines"] = sum(result["experiment_scripts"].values())
     # Conservative direct-only core count. Shared mapper/noncoherent/reuse
     # code and dispersed allocation/audit hooks are intentionally excluded.
     direct = {"virt/kvm/dax_pool.c": {"whole_file": len((raw/"baseline-linux/virt/kvm/dax_pool.c").read_text().splitlines())}}
@@ -227,7 +230,7 @@ def write_summary(args, repo):
                 all_hops=trials[tag]["payload_faults"], warm=distribution(trials[tag]["measured_payload_faults"]))
     result["scaling"] = {str(size): trials[f"adopt-{size}"] for size in (16, 256, 1024)
                          if f"adopt-{size}" in trials and trials[f"adopt-{size}"]["result"] == "passed"}
-    for name in ("unit-tests", "independent-verification", "build-provenance", "exclusions", "legacy-oracle-replay"):
+    for name in ("unit-tests", "independent-verification", "build-provenance", "exclusions", "legacy-oracle-replay", "completion"):
         path = raw / (name+".json")
         if path.exists():
             result[name.replace("-", "_")] = json.loads(path.read_text())

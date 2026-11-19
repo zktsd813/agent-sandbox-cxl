@@ -3,6 +3,7 @@
 Compute Express Link(CXL)에 가상기계(Virtual Machine, VM)의 주메모리(Random Access Memory, RAM)와 Extended Page Tables(EPT) 표 page만 둔다.
 나머지 Kernel-based Virtual Machine(KVM) 객체는 로컬 동적 메모리(Dynamic Random Access Memory, DRAM)에 둔다.
 기존 RAM 쓰기 기록과 mailbox는 유지한다.
+기계 판독 요약은 JavaScript Object Notation(JSON) 형식의 [summary.json](summary.json)이다.
 
 설계의 자세한 순서는 [EPT_ADOPT.md](../../../implementation/virtual_machine/EPT_ADOPT.md)에 있다.
 구현은 누적 [KVM patch](../../../implementation/virtual_machine/kvm-dax-state.patch)와 [Firecracker patch](../../../implementation/virtual_machine/firecracker.patch)에 있다.
@@ -41,10 +42,12 @@ Software Engineering(SWE) 무거운 명령은 원본 명령 그대로 실행한�
 
 한 page는 4 KiB다. 정답지는 L0에서 RAM page hash와 실제 cache 명령 영수증을 확인한다.
 표 hash는 release 뒤와 adopt 직후의 전체 16 MiB를 비교한다.
+아래 시험과 SWE 조건을 합친 대표 12조건은 903회 이동이다.
+누락 page는 0이며 표 hash는 903/903 일치했다.
 
 | 시험 | 완료한 한 방향 이동 | 누락 page | 표 hash 불변 |
 |---|---:|---:|---:|
-| 256 MiB 전체 word 쓰기, 1 vCPU 200왕복 | 400 | 0 | 400/400 |
+| 256 MiB 전체 word 쓰기, 2 vCPU 200왕복 | 400 | 0 | 400/400 |
 | 256 MiB 모든 cache line 갱신, 2 vCPU 200왕복 | 400 | 0 | 400/400 |
 | Native 미리 정리 | 6 | 0 | 6/6 |
 | Hypertext Transfer Protocol(HTTP) 미리 정리 | 6 | 0 | 6/6 |
@@ -166,6 +169,16 @@ Guest 시간의 기록 해상도는 10 ms다.
 | direct | gin-gonic | 48 | 2,885.20 | 2,902.12 |
 | direct | php-cs-fixer | 70 | 495.95 | 488.05 |
 | direct | micropython | 84 | 603.71 | 601.80 |
+| reuse-prepared | gin-gonic | 48 | 2,925.30 | 3,529.19 |
+| reuse-prepared | php-cs-fixer | 70 | 489.79 | 544.41 |
+| reuse-prepared | micropython | 84 | 602.56 | 729.20 |
+
+이 조건에서는 빈 EPT 대조군보다 첫 무거운 명령의 중앙값이 작았다.
+Direct와 비교한 첫 명령 시간은 비슷했다.
+187개 성능 lab 전체의 시작 전 다른 Firecracker·QEMU는 모두 0개였다.
+1분 load average는 0.77~1.93이었다. Node 0 여유 메모리는 최소 44.0 GiB였다.
+201개 SWE 실행의 결과를 독립 재검증했다.
+명령 반환값·시험 요약·제출물·CPU flag가 fixture·vCPU 수별로 모두 일치했다.
 
 ## 코드 크기
 
@@ -180,7 +193,8 @@ Guest 시간의 기록 해상도는 10 ms다.
 
 KVM과 Firecracker는 각각 수백 줄이다.
 시험 도구에는 새 명령, 표 hash·오류 주입·비소유 host 종료 검증을 포함한다.
-결과 분석 도구는 별도다. 정확한 파일별 수치는 `summary.json`에 있다.
+일회 실험 실행·검증 스크립트 5개는 별도로 255줄이다.
+결과 분석기는 별도로 290줄이다. 정확한 파일별 수치는 `summary.json`에 있다.
 Direct 수치는 공유 RAM·cache·준비 worker 코드와 흩어진 hook을 제외한 하한이다.
 핵심 KVM direct 함수와 `direct.rs` 본문이 그대로인 것도 소스 비교로 확인한다.
 
