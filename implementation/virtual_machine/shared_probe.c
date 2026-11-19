@@ -1018,7 +1018,7 @@ static void guest_heartbeat(int sleeping, int quiet)
     atomic_store(&hb->warm_done, 0);
     const char *dirty_setting=getenv("LAB_HEARTBEAT_DIRTY_MIB");
     unsigned dirty_mib=dirty_setting?strtoul(dirty_setting,NULL,10):0;
-    if(dirty_setting && dirty_mib!=0 && dirty_mib!=16 && dirty_mib!=64 && dirty_mib!=256) {
+    if(dirty_setting && dirty_mib!=0 && dirty_mib!=16 && dirty_mib!=64 && dirty_mib!=256 && dirty_mib!=1024) {
         fprintf(stderr,"Unsupported controlled dirty size\n");exit(1);
     }
     size_t dirty_words=(size_t)dirty_mib*1024*1024/8;

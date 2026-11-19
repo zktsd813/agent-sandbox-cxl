@@ -43,6 +43,7 @@ def prepare_servers(c):
         if role == 'B':
             command += ' 172.30.0.1'
             command += f'\ncat {control}/log'
+        if c.mode == 'ept-adopt':command='export RESIDENT_EPT_ADOPT=1\n'+command
         if getattr(c.args,'restore_timing',False):
             command='export FC_RESIDENT_PROFILE=1\n'+command
         if hasattr(c, 'bench_offset'):

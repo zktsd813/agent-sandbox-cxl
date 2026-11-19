@@ -456,6 +456,8 @@ class HandoffController(Controller):
                 'boot_args': 'console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init' + ((' memmap=2M$64M nmi_watchdog=0'+(' memmap=256M$128M' if getattr(self.args,'dirty_lines',0) else '')) if getattr(self.args,'resident_bench',None) else '')},
             '/drives/data': {'drive_id': 'data', 'path_on_host': '/disk/sandbox.raw', 'is_root_device': False,
                 'is_read_only': True, 'cache_type': 'Writeback', 'io_engine': self.io_engine}}
+        if self.mode == 'ept-adopt' and getattr(self.args,'dirty_mib',0)==1024:
+            components['/boot-source']['boot_args']=components['/boot-source']['boot_args'].replace('memmap=256M$128M','memmap=1024M$128M')
         if getattr(self.args, 'dirty_ledger', False):
             components['/machine-config']['track_dirty_pages'] = True
         if getattr(self.args, 'mixed_io', False):

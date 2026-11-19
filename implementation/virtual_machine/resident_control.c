@@ -47,6 +47,7 @@ struct metadata_file { int fd; size_t length; };
 static struct metadata_file import_file={.fd=-1}, manifest_file={.fd=-1};
 static char peer_ip[16];
 static int profile_enabled;
+static int ept_adopt;
 static void fail(const char *s) { perror(s); exit(1); }
 static uint64_t ns(void) { struct timespec t; if(clock_gettime(CLOCK_MONOTONIC,&t))fail("clock");return (uint64_t)t.tv_sec*1000000000+t.tv_nsec; }
 static void check(int ok,const char *s) { if(!ok){fprintf(stderr,"resident-control: %s\n",s);exit(1);} }
@@ -69,6 +70,7 @@ static void bench_map(void) {
  int fd=open("/dev/dax0.0",O_RDWR|O_CLOEXEC);if(fd<0)fail("benchmark DAX");
  heartbeat=mmap(NULL,4096,PROT_READ|PROT_WRITE,MAP_SHARED,fd,strtoull(offset,NULL,10));
  check(heartbeat!=MAP_FAILED&&atomic_load(&heartbeat->magic)==UINT64_C(0x48424d4943524f56),"benchmark heartbeat identity");
+ if(ept_adopt){close(fd);return;}
  const char *arena=getenv("RESIDENT_BENCH_ARENA");check(arena!=NULL,"benchmark arena");
  void *page=mmap(NULL,4096,PROT_READ,MAP_SHARED,fd,strtoull(arena,NULL,10));check(page!=MAP_FAILED,"benchmark profile map");close(fd);
  if(getenv("RESIDENT_BENCH_PROFILE"))kernel_profile=(void *)((char *)page+KVM_DAX_PROFILE_OFFSET);
@@ -177,6 +179,7 @@ static void prepare_owner(void) {
  prepared_owner_pid=pid;owner_fd=fd;(void)owner_pid();
 }
 static void select_owner(int pid) {
+ if(ept_adopt)return;
  char b[32];int n=snprintf(b,sizeof(b),"%d\n",pid);
  if(selector_fd>=0) {
   ssize_t written;do {written=pwrite(selector_fd,b,n,0);}while(written<0&&errno==EINTR);
@@ -281,7 +284,7 @@ static struct outcome handoff(struct request q,const char *peer,int client,char 
  uint64_t start=ns();
  if(memory) {
   check(connect_native(),"memory sender not ready");
-  unsigned char command=3;uint64_t response[2];
+  unsigned char command=ept_adopt?9:3;uint64_t response[2];
   send_all(native_fd,&command,1);recv_all(native_fd,response,sizeof(response));
   check(response[0]==0&&response[1]>0&&response[1]<CAP,"memory export response");
   q.state_len=response[1];q.manifest_len=0;recv_all(native_fd,state,q.state_len);
@@ -327,6 +330,7 @@ static uint64_t sysfs_number(const char *path) {
  FILE *f=fopen(path,"r");char line[128];check(f&&fgets(line,sizeof(line),f),"sysfs read");fclose(f);return strtoull(line,NULL,0);
 }
 int main(int argc,char **argv) {
+ ept_adopt=getenv("RESIDENT_EPT_ADOPT") && !strcmp(getenv("RESIDENT_EPT_ADOPT"),"1");
  const char *profile_env=getenv("FC_RESIDENT_PROFILE");profile_enabled=profile_env&&!strcmp(profile_env,"1");
  check(argc==5||argc==6||argc==8||argc==10||argc==12,"usage: serve DIR IP NONCE | request DIR LOCAL_IP NONCE FIRST LABEL PEER VM EPOCH START BYTES");
  check(strlen(argv[2])<sizeof(directory)&&!strncmp(argv[2],"/run/swe-handoff-",17),"owned directory required");strcpy(directory,argv[2]);path(socket_path,sizeof(socket_path),"api.sock");
@@ -418,12 +422,14 @@ int main(int argc,char **argv) {
   check(argc==5||argc==6,"serve arguments");int listener=tcp(argv[3],1),local=local_socket(1);
   bench_map();
   prepare_owner();
-  selector_fd=open("/sys/module/kvm/parameters/dax_owner_pid",O_WRONLY|O_CLOEXEC);
-  if(selector_fd<0)fail("prepare owner parameter");
+  if(!ept_adopt)selector_fd=open("/sys/module/kvm/parameters/dax_owner_pid",O_WRONLY|O_CLOEXEC);
+  if(selector_fd<0 && !ept_adopt)fail("prepare owner parameter");
   connect_api();
   (void)connect_native();
-  import_file=prepare_metadata("direct-import.json");
-  manifest_file=prepare_metadata("restore-manifest.json");
+  if(!ept_adopt) {
+   import_file=prepare_metadata("direct-import.json");
+   manifest_file=prepare_metadata("restore-manifest.json");
+  }
   if(argc==6) {
    // Destination launch follows source readiness. Warm TCP/ARP while the VM
    // still runs on its source; this message never selects an execution owner.
@@ -506,7 +512,7 @@ int main(int argc,char **argv) {
 
    if(!q.manifest_len) {
     check(connect_native(),"memory receiver not ready");uint64_t begin=ns(),response[2];
-    unsigned char wire[5+CAP]={4};memcpy(wire+1,&q.state_len,4);memcpy(wire+5,state,q.state_len);
+    unsigned char wire[5+CAP]={0};wire[0]=ept_adopt?10:4;memcpy(wire+1,&q.state_len,4);memcpy(wire+5,state,q.state_len);
     send_all(native_fd,wire,5+q.state_len);recv_all(native_fd,response,sizeof(response));
     check(response[0]==0,"memory import failed");r.receive=(struct api_result){.status=204,.us=(ns()-begin)/1000.};
    } else { r.receive=api("PUT","/actions","{\"action_type\": \"DirectReceive\"}"); }

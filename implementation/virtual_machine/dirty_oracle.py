@@ -36,6 +36,7 @@ class DirtyOracle:
         self.output.mkdir()
         self.metadata, self.arena = metadata, arena
         self.ept_adopt = config.get("ept_adopt", False)
+        self.ept_shared = config.get("ept_shared", self.ept_adopt)
         self.ept_hash = None
         self.gate = metadata + 40 * MIB
         self.backing = Path(config['cxl_backing'])
@@ -89,7 +90,7 @@ class DirtyOracle:
                 elif self.line_mode:
                     raise ValueError('Line oracle requires kernel cache instruction receipts')
                 ept_proof = {}
-                if self.ept_adopt and phase in (2, 3):
+                if self.ept_shared and phase in (2, 3):
                     digest = hashlib.sha256(self.mem[self.arena:self.arena+used]).hexdigest()
                     if phase == 2:
                         self.ept_hash = digest

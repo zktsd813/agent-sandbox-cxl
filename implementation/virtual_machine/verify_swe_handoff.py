@@ -184,11 +184,21 @@ def serial_proof(e, report):
         _, name = min(following)
         need(name not in logs.values(), "reused final guest log")
         logs[cleanup["directory"]] = name
-    text = "\n".join(e.text(logs[launch["directory"]]).replace("\r", "")
+    def execution_log(launch):
+        data=e.read(logs[launch['directory']])
+        if report['mode']=='ept-adopt' and launch['directory']==report['prepared_seed']['directory']:
+            seed=report['prepared_seed'];prefix=e.read(seed['file'])
+            need(len(prefix)==seed['bytes'] and sha(prefix)==seed['sha256'] and data.startswith(prefix),
+                 'prepared worker serial prefix changed')
+            rows=[json.loads(line) for line in prefix.decode().splitlines() if line.startswith('{"event":')]
+            need(rows==[guest(e,seed['ready'],'trace_ready')], 'seed executed unexpected trace commands')
+            data=data[len(prefix):]
+        return data.decode().replace('\r','')
+    text = "\n".join(execution_log(launch)
                      for launch in sorted(report["launches"], key=lambda row: row["epoch"]))
     need(not FATAL_KERNEL.search(text) and "TRACE_FATAL" not in text, "fatal guest error in full serial log")
     rows = [json.loads(line) for line in text.splitlines() if line.startswith('{"event":')]
-    if report["mode"] == "direct":
+    if report["mode"] in ("direct", "ept-adopt"):
         # Each resident serial file contains disjoint visits. Validate ordering inside
         # every file, then merge using the controller's unique command sequence labels.
         def serial_order(row):

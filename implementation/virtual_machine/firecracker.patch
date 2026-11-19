@@ -110,7 +110,6 @@ diff --git a/src/firecracker/src/api_server/request/actions.rs b/src/firecracker
              parse_put_actions(&Body::new("invalid_body")).unwrap_err();
  
 diff --git a/src/firecracker/src/api_server_adapter.rs b/src/firecracker/src/api_server_adapter.rs
-index 70abff4..bd05a6c 100644
 --- a/src/firecracker/src/api_server_adapter.rs
 +++ b/src/firecracker/src/api_server_adapter.rs
 @@ -2,10 +2,13 @@
@@ -127,7 +126,7 @@ index 70abff4..bd05a6c 100644
  
  use event_manager::{EventOps, Events, MutEventSubscriber, SubscriberOps};
  use vmm::logger::{ProcessTimeReporter, error_unrestricted, info_unrestricted, warn_unrestricted};
-@@ -48,6 +51,212 @@ struct ApiServerAdapter {
+@@ -48,6 +51,223 @@
      request: Option<ApiRequest>,
  }
  
@@ -143,8 +142,9 @@ index 70abff4..bd05a6c 100644
 +impl ResidentControl {
 +    fn new() -> Option<Self> {
 +        if std::env::var("FC_RESIDENT_NATIVE").as_deref() != Ok("1") { return None; }
-+        assert_eq!(std::env::var("FC_DAX_RESIDENT").as_deref(), Ok("1"));
-+        let export = PathBuf::from(std::env::var_os("FC_DAX_DIRECT_EXPORT").unwrap());
++        let ept=std::env::var("FC_EPT_ADOPT").as_deref()==Ok("1");
++        if !ept {assert_eq!(std::env::var("FC_DAX_RESIDENT").as_deref(), Ok("1"));}
++        let export = PathBuf::from(std::env::var_os(if ept {"FC_EPT_PACKET"} else {"FC_DAX_DIRECT_EXPORT"}).unwrap());
 +        let listener = UnixListener::bind(export.parent().unwrap().join("resident.sock")).unwrap();
 +        listener.set_nonblocking(true).unwrap();
 +        Some(Self { listener, stream: None, request: None, input: Vec::new() })
@@ -181,6 +181,16 @@ index 70abff4..bd05a6c 100644
 +                    Err(error) => { error_unrestricted!("Resident command failed: {error}"); libc::EIO as u64 }
 +                }
 +            }
++            9 | 10 | 11 => {
++                let mut vm=vmm.lock().unwrap();
++                let result=match command {
++                    9 => vm.ept_send_memory(events).map(|bytes|payload=bytes),
++                    10 => vm.ept_receive_memory(events,&input),
++                    _ => vm.ept_clean(),
++                };
++                if let Err(error)=result {error_unrestricted!("EPT handoff failed: {error}");std::process::abort();}
++                0
++            }
 +            3 | 4 | 5 | 6 | 7 | 8 => {
 +                let mut vm = vmm.lock().unwrap();
 +                let result = match command {
@@ -199,7 +209,7 @@ index 70abff4..bd05a6c 100644
 +        };
 +        let mut response = [0u8; 16];
 +        response[..8].copy_from_slice(&status.to_le_bytes());
-+        let value = if command == 3 { payload.len() as u64 } else { start.elapsed().as_nanos() as u64 };
++        let value = if matches!(command,3|9) { payload.len() as u64 } else { start.elapsed().as_nanos() as u64 };
 +        response[8..].copy_from_slice(&value.to_le_bytes());
 +        // This bounded reply must fit immediately; a stalled/broken controller
 +        // must not block device dispatch or cause a partially completed retry.
@@ -249,10 +259,10 @@ index 70abff4..bd05a6c 100644
 +        }
 +        if !closed && !self.input.is_empty() {
 +            let command = self.input[0];
-+            let (header, length) = if command != 4 { (1, 0) }
++            let (header, length) = if !matches!(command,4|10) { (1, 0) }
 +                else if self.input.len() < 5 { return; }
 +                else { (5, u32::from_le_bytes(self.input[1..5].try_into().unwrap()) as usize) };
-+            if length >= 65536 || (command == 4 && length == 0) || self.input.len() > header + length {
++            if length >= 65536 || (matches!(command,4|10) && length == 0) || self.input.len() > header + length {
 +                closed = true;
 +            } else if self.input.len() == header + length {
 +                self.request = Some((command, self.input[header..].to_vec()));
@@ -340,7 +350,7 @@ index 70abff4..bd05a6c 100644
  impl ApiServerAdapter {
      /// Runs the vmm to completion, while any arising control events are deferred
      /// to a `RuntimeApiController`.
-@@ -58,6 +267,9 @@ impl ApiServerAdapter {
+@@ -58,6 +278,9 @@
          vmm: Arc<Mutex<Vmm>>,
          event_manager: &mut EventManager,
      ) -> Result<(), ApiServerError> {
@@ -350,7 +360,7 @@ index 70abff4..bd05a6c 100644
          let api_adapter = Arc::new(Mutex::new(Self {
              api_event_fd,
              from_api,
-@@ -66,10 +278,34 @@ impl ApiServerAdapter {
+@@ -66,10 +289,34 @@
              request: None,
          }));
          event_manager.add_subscriber(api_adapter.clone());
@@ -385,7 +395,7 @@ index 70abff4..bd05a6c 100644
              api_adapter
                  .lock()
                  .expect("Poisoned lock")
-@@ -84,33 +320,36 @@ impl ApiServerAdapter {
+@@ -84,33 +331,36 @@
          Ok(())
      }
  
@@ -405,9 +415,10 @@ index 70abff4..bd05a6c 100644
          if let Some(api_request) = self.request.take() {
              let request_is_pause = *api_request == VmmAction::Pause;
 -            self._handle_request(*api_request, event_manager);
-+            let request_succeeded = self._handle_request(*api_request, event_manager);
- 
+-
 -            // If the latest req is a pause request, temporarily switch to a mode where we
++            let request_succeeded = self._handle_request(*api_request, event_manager);
++
 +            // After an accepted pause request, temporarily switch to a mode where we
              // do blocking `recv`s on the `from_api` receiver in a loop, until we get
              // unpaused. The device emulation is implicitly paused since we do not
@@ -429,7 +440,7 @@ index 70abff4..bd05a6c 100644
                          break;
                      }
                  }
-@@ -272,3 +511,107 @@ pub(crate) fn run_with_api(
+@@ -272,3 +522,107 @@
  
      result
  }
@@ -6564,7 +6575,7 @@ diff --git a/src/vmm/src/ept_adopt.rs b/src/vmm/src/ept_adopt.rs
 new file mode 100644
 --- /dev/null
 +++ b/src/vmm/src/ept_adopt.rs
-@@ -0,0 +1,219 @@
+@@ -0,0 +1,241 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! CXL RAM/EPT only. Semantic state enters an ordinary prepared KVM worker.
 +use std::fs::OpenOptions;
@@ -6593,6 +6604,7 @@ new file mode 100644
 +static RECEIPT: Mutex<[u64;8]> = Mutex::new([0;8]);
 +pub(crate) fn receipt() -> [u64;8] { *RECEIPT.lock().unwrap() }
 +pub(crate) fn enabled() -> bool { std::env::var("FC_EPT_ADOPT").as_deref() == Ok("1") }
++fn baseline() -> bool { std::env::var("FC_EPT_BASELINE").as_deref()==Ok("1") }
 +fn invalid(s: impl ToString) -> io::Error { io::Error::other(s.to_string()) }
 +fn number(name: &str) -> io::Result<u64> { std::env::var(name).map_err(invalid)?.parse().map_err(invalid) }
 +fn packet_path() -> io::Result<String> { std::env::var("FC_EPT_PACKET").map_err(invalid) }
@@ -6619,6 +6631,7 @@ new file mode 100644
 +        || std::env::var("FC_DAX_NO_NESTED_GUEST").as_deref()!=Ok("1") {
 +        return Err(invalid("EPT adoption requires dirty logging, noncoherent RAM, and the reuse CPU profile"));
 +    }
++    if baseline() { let mut r=RECEIPT.lock().unwrap();r[6]=1;r[7]=1;return Ok(()); }
 +    let mut q=Ept {base:number("FC_EPT_PHYS")?,data_base:number("FC_EPT_DATA_BASE")?,
 +        data_bytes:number("FC_EPT_DATA_BYTES")?,flags:1|if wait {2} else {0},..Default::default()};
 +    ioctl(vm,ADOPT,&mut q)
@@ -6671,7 +6684,8 @@ new file mode 100644
 +}
 +
 +impl Vmm {
-+    pub(crate) fn ept_clean(&mut self) -> io::Result<()> {
++    /// Harvest and publish the running owner's RAM writes without pausing.
++    pub fn ept_clean(&mut self) -> io::Result<()> {
 +        if !enabled() || self.instance_info.state!=VmState::Running || self.reuse_prepared.is_some() {
 +            return Err(invalid("EPT clean requires a running owner"));
 +        }
@@ -6696,6 +6710,12 @@ new file mode 100644
 +    }
 +
 +    pub(crate) fn ept_export(&mut self, events: &mut EventManager) -> io::Result<()> {
++        let bytes=self.ept_send_memory(events)?;
++        std::fs::write(packet_path()?,bytes)
++    }
++
++    /// Export semantic CPU/device state and a retained EPT root to the existing worker transport.
++    pub fn ept_send_memory(&mut self, events: &mut EventManager) -> io::Result<Vec<u8>> {
 +        if !enabled() || self.reuse_prepared.is_some() || self.reuse_restore_failed {return Err(invalid("EPT source unavailable"));}
 +        self.pause_vm().map_err(invalid)?;
 +        let mut timing=RestoreTiming::new("ept_export");
@@ -6714,9 +6734,9 @@ new file mode 100644
 +        timing.mark("ram_writeback_publish");
 +        self.reuse_restore_failed=true;
 +        let mut ept=Ept::default();
-+        ioctl(vm,RELEASE,&mut ept)?;
++        if !baseline() {ioctl(vm,RELEASE,&mut ept)?;}
 +        timing.mark("release");
-+        maintain(&ept,false)?;
++        if !baseline() {maintain(&ept,false)?;}
 +        timing.mark("ept_writeback");
 +        let state=MicrovmState {vm_info:VmInfo::from(&*self),device_states:devices,
 +            vcpu_states:vm.save_vcpu_states_without_kick().map_err(invalid)?,
@@ -6727,6 +6747,15 @@ new file mode 100644
 +        timing.mark("serialize");
 +        crate::noncoherent::require(crate::noncoherent::complete(vm.guest_memory(),&bytes,epoch,ept.bump,0,&ledger));
 +        timing.mark("oracle_export");
++        // Only the local-EPT comparison retires its old translation context.
++        if baseline() {
++            let mut handles=vm.vcpus_handles();
++            for handle in handles.iter_mut() {
++                handle.prepare_reuse_without_kick();
++                if !matches!(handle.response_receiver().recv_timeout(crate::RECV_TIMEOUT_SEC),
++                    Ok(crate::VcpuResponse::PreparedReuse)) {return Err(invalid("baseline EPT retirement failed"));}
++            }
++        }
 +        // Prepare the retired local worker without touching architectural CPU state.
 +        let irqfds=self.reuse_irqfds().map_err(invalid)?;
 +        vm.quiesce_reused_pit().map_err(invalid)?;
@@ -6737,22 +6766,26 @@ new file mode 100644
 +        crate::pool_memory::park_resident(vm.guest_memory())?;
 +        self.reuse_prepared=Some(crate::reuse::ReusePrepared{irqfds,generation:epoch});
 +        self.reuse_restore_failed=false;
-+        std::fs::write(packet_path()?,bytes)?;
 +        timing.finish();
-+        Ok(())
++        Ok(bytes)
 +    }
 +
 +    pub(crate) fn ept_import(&mut self, events: &mut EventManager) -> io::Result<()> {
++        let bytes=std::fs::read(packet_path()?)?;
++        self.ept_receive_memory(events,&bytes)
++    }
++
++    /// Import into a prepared local VM/vCPU. No direct-graph ioctl is used.
++    pub fn ept_receive_memory(&mut self, events: &mut EventManager, bytes: &[u8]) -> io::Result<()> {
 +        if !enabled() || self.reuse_prepared.is_none() || self.reuse_restore_failed {return Err(invalid("EPT receiver unprepared"));}
 +        let mut timing=RestoreTiming::new("ept_import");
-+        let bytes=std::fs::read(packet_path()?)?;
 +        if bytes.len()>=65536 {return Err(invalid("EPT packet too large"));}
 +        let mut p:Packet=bitcode::deserialize(&bytes).map_err(invalid)?;
-+        if p.version!=1 || p.ept.base!=number("FC_EPT_PHYS")? {return Err(invalid("foreign EPT packet"));}
++        if p.version!=1 || (!baseline() && p.ept.base!=number("FC_EPT_PHYS")?) {return Err(invalid("foreign EPT packet"));}
 +        let vm=self.vm.as_kvm().unwrap();
 +        crate::noncoherent::require(crate::noncoherent::prepare(&p.mapper,&bytes,p.epoch));
 +        crate::pool_memory::import_resident_state(vm.guest_memory(),p.mapper)?;
-+        maintain(&p.ept,true)?;
++        if !baseline() {maintain(&p.ept,true)?;}
 +        // Kernel metadata is still absent. RAM and table invalidation precede ADOPT.
 +        crate::noncoherent::require(crate::noncoherent::received(vm.guest_memory(),p.epoch,p.ept.bump,0));
 +        timing.mark("invalidate");
@@ -6761,7 +6794,7 @@ new file mode 100644
 +            Ok("bump")=>p.ept.bump=0,
 +            _=>(),
 +        }
-+        ioctl(vm,ADOPT,&mut p.ept)?;
++        if !baseline() {ioctl(vm,ADOPT,&mut p.ept)?;}
 +        timing.mark("adopt");
 +        crate::noncoherent::require(crate::noncoherent::adopted(vm.guest_memory(),p.ept.bump));
 +        let params=crate::vmm_config::snapshot::LoadSnapshotParams {

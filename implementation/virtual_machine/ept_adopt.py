@@ -7,6 +7,7 @@ import json
 import mmap
 from pathlib import Path
 import struct
+import shutil
 import time
 
 import lab
@@ -18,7 +19,9 @@ def environment(c, s):
     return dict(FC_EPT_ADOPT='1', FC_DAX_REUSE='1', FC_DAX_NO_NESTED_GUEST='1',
         FC_EPT_PHYS=str(c.ept_phys[s.role]+c.kvm_arena), FC_EPT_OFFSET=str(c.kvm_arena),
         FC_EPT_DATA_BASE=str(c.ept_phys[s.role]), FC_EPT_DATA_BYTES=str(c.data_bytes),
-        FC_EPT_PACKET=s.directory+'/ept.packet', FC_EPT_FAIL=c.args.fail or '')
+        FC_EPT_PACKET=s.directory+'/ept.packet', FC_EPT_FAIL=c.args.fail or '',
+        FC_RESIDENT_NATIVE='1' if c.args.native else '0',
+        FC_EPT_BASELINE='1' if c.args.baseline else '0')
 
 
 def configure(c):
@@ -43,13 +46,32 @@ def prepare(c, s):
     """Boot a disposable DRAM seed, then prepare its ordinary VM/vCPU/memslots."""
     target = copy.copy(s)
     target.role, target.epoch = 'B', s.epoch + 1
-    c.boot_vm(target)
+    ready=c.boot_vm(target)
     c.pause(target)
     c.api(target.role, target.directory, '/actions', 'PUT', {'action_type':'EptAdoptInit'})
+    prefix=c.fetch_bytes(target.role,target.directory+'/fc.log','prepared-seed-log')
+    c.prepared_seed=dict(directory=target.directory,file=c.receipts[-1]['file'],
+        bytes=len(prefix),sha256=hashlib.sha256(prefix).hexdigest(),ready=ready)
     remember(c, target)
 
 
+def prepare_native(c,offset=None):
+    from resident_fast import prepare_servers
+    if offset is not None:c.bench_offset=offset
+    c.resident_workers={role:{**{key:getattr(w,key) for key in ('directory','plan','report','manifest_path')},'imported':True}
+        for role,w in c.ept_workers.items()}
+    prepare_servers(c)
+    c.resident_readiness={role:dict(directory=w['directory'],ready_file=c.resident_servers[role]['file'])
+        for role,w in c.resident_workers.items()}
+
+
 def handoff(c, s, destination):
+    if c.args.native:
+        from resident_fast import handoff as native_handoff
+        row=native_handoff(c,s,destination)
+        row.update(kind='ept-adopt',packet_bytes=row['fast']['state_bytes'],
+            pause_to_ack_ns=row['fast']['guest_ack_ns'])
+        return row
     source, old_dir, old_epoch = s.role, s.directory, s.epoch
     target = c.ept_workers[destination]
     started = time.monotonic_ns()
@@ -73,6 +95,21 @@ def clean(c, s):
     start=time.monotonic_ns()
     result=c.api(s.role,s.directory,'/actions','PUT',{'action_type':'EptAdoptClean'})
     return dict(role=s.role,epoch=s.epoch,host_ns=time.monotonic_ns()-start,api=result)
+
+
+def start_faults(c):
+    for role in ('A','B'):
+        c.shell(role,'mount -t tracefs tracefs /sys/kernel/tracing 2>/dev/null || true\n'
+            f"echo 'hist:keys=common_pid if fault_address >= {128*MIB} && fault_address < {(128+c.args.dirty_mib)*MIB}' > "
+            '/sys/kernel/tracing/events/kvm/kvm_page_fault/trigger','payload-fault-start')
+
+
+def faults(c,role):
+    import re
+    raw,file=c.shell(role,'cat /sys/kernel/tracing/events/kvm/kvm_page_fault/hist','payload-fault-count')
+    matches=re.findall(r'Totals:\s*Hits:\s*(\d+)\s+Entries:\s*(\d+)\s+Dropped:\s*(\d+)',raw)
+    require(len(matches)==1 and int(matches[0][2])==0,'Missing/dropped EPT fault histogram')
+    return dict(count=int(matches[0][0]),file=file)
 
 
 def wait_ack(memory, offset, epoch, payload=False):
@@ -100,12 +137,47 @@ def release_exit_proof(c,s,memory):
         operations=['RAM munmap after release','Firecracker exit','VM/vCPU/mapper fd release'])
 
 
+def replay(c,s,report,save):
+    source=Path(c.config['assets'])/'traces'/f'{c.args.name}.traj.json'
+    shutil.copy2(source,c.out/'source.traj.json')
+    report.update(schema='ept-adopt-trace-v1',mode='ept-adopt',trace=c.trace,fixture=c.fixture,
+        commands=c.trace_commands,control_commands=c.commands,launches=c.launches,
+        source_trace={'file':'source.traj.json','sha256':lab.sha256(source)})
+    report['initial_identity']=c.command_vm(s,'identity')
+    heavy=json.loads(c.args.heavy_plan.read_text())['indices'][c.args.name]
+    report['boundaries']=heavy
+    c.promote(s)
+    if c.args.native:prepare_native(c)
+    for command in c.trace['commands']:
+        index=command['index']
+        if index in heavy:
+            hop=handoff(c,s,'B' if s.role=='A' else 'A')
+            hop['before_command']=index
+        row=c.trace_command(s,'run',index,event='trace_end',
+            timeout=int(c.trace['environment'].get('timeout',60))+30)
+        end=row['receipt']
+        require(not end['timed_out'] and end['rc']==(command['expected_returncode'] or 0)
+            and end['command_sha256']==command['command_sha256'],f'Trace diverged at {index}')
+        row['guest_duration_s']=end['end_s']-end['start_s']
+        c.trace_commands.append(row)
+        if c.args.preclean:
+            report.setdefault('cleans',[]).append(clean(c,s))
+            if index+1 in heavy:time.sleep(float(c.args.clean_wait))
+        save()
+    report['final_identity']=c.command_vm(s,'identity')
+    exported=c.trace_command(s,'export',event='trace_export',timeout=180)
+    _,archive=c.frame(s,exported,'TRACE_EXPORT','guest-archive')
+    report.update(guest_archive=archive,guest_archive_sha256=exported['receipt']['sha256'],
+        guest_export=exported,guest_duration_s=sum(x['guest_duration_s'] for x in c.trace_commands),
+        prepared_seed=c.prepared_seed)
+
+
 def run_existing(args):
     _,config=lab.current_run()
-    config=dict(config,ept_adopt=True)
+    config=dict(config,ept_adopt=True,ept_shared=not args.baseline)
     out=args.output.resolve();out.mkdir(parents=True,exist_ok=False)
     c=HandoffController(config,out,args);s=c.sandboxes[0]
-    report=dict(result='running',config=config,transitions=c.transitions,receipts=c.receipts,
+    report=dict(result='running',experiment_mode='reuse-prepared' if args.baseline else 'ept-adopt',config=config,transitions=c.transitions,receipts=c.receipts,
         arguments={k:str(v) if isinstance(v,Path) else v for k,v in vars(args).items()},
         timing='L0 CLOCK_MONOTONIC; includes HTTP control and packet file transport',
         scope='coherent DRAM-backed CXL emulation; nested lab synchronization enabled')
@@ -121,26 +193,41 @@ def run_existing(args):
         prepare(c,s)
         report['boot']=c.boot_vm(s)
         remember(c,s)
-        workload='dirty'+str(args.dirty_mib) if args.resident_bench=='dirty' else args.resident_bench
-        report['heartbeat']=c.trace_command(s,'heartbeat',workload,event='trace_heartbeat')
-        c.promote(s)
-        frames=sorted(c.allocator.grants[s.owner].frames)
-        require(frames==list(range(2*MIB,(2+args.memory_mib)*MIB,PAGE)), 'Contiguous test grant absent')
-        offset=frames[64*MIB//PAGE]
-        with Path(config['cxl_backing']).open('r+b') as backing, mmap.mmap(backing.fileno(),0) as memory:
-            wait_ack(memory,offset,s.epoch,args.resident_bench=='dirty')
-            for i in range(2*(args.warmup+args.iterations)):
-                time.sleep(.02)
-                if args.preclean:
-                    report.setdefault('cleans',[]).append(clean(c,s))
-                    time.sleep(float(args.clean_wait))
+        workload=('dirty'+str(args.dirty_mib)+(f':{args.dirty_lines}:change' if args.dirty_lines else '')) if args.resident_bench=='dirty' else args.resident_bench
+        if args.heavy_plan:
+            replay(c,s,report,save)
+        else:
+            report['heartbeat']=c.trace_command(s,'heartbeat',workload,event='trace_heartbeat')
+        if not args.heavy_plan:
+            c.promote(s)
+            frames=sorted(c.allocator.grants[s.owner].frames)
+            require(frames==list(range(2*MIB,(2+args.memory_mib)*MIB,PAGE)), 'Contiguous test grant absent')
+            offset=frames[64*MIB//PAGE]
+            if args.native:
+                prepare_native(c,offset)
+                report['timing']='source L1 CLOCK_MONOTONIC; existing native worker transport, pause to guest ACK'
+            if args.count_faults:start_faults(c)
+            with Path(config['cxl_backing']).open('r+b') as backing, mmap.mmap(backing.fileno(),0) as memory:
                 wait_ack(memory,offset,s.epoch,args.resident_bench=='dirty')
-                row=handoff(c,s,'B' if s.role=='A' else 'A')
-                row['ack']=wait_ack(memory,offset,s.epoch,args.resident_bench=='dirty')
-                row['ack_ns']=time.monotonic_ns();row['pause_to_ack_ns']=row['ack_ns']-row['request_ns']
-                row['measured']=i//2>=args.warmup
-                save()
-            report['released_source_exit']=release_exit_proof(c,s,memory)
+                for i in range(2*(args.warmup+args.iterations)):
+                    time.sleep(.02)
+                    if args.preclean:
+                        report.setdefault('cleans',[]).append(clean(c,s))
+                        time.sleep(float(args.clean_wait))
+                    wait_ack(memory,offset,s.epoch,args.resident_bench=='dirty')
+                    destination='B' if s.role=='A' else 'A'
+                    before=faults(c,destination) if args.count_faults else None
+                    row=handoff(c,s,destination)
+                    row['ack']=wait_ack(memory,offset,s.epoch,args.resident_bench=='dirty')
+                    if before is not None:
+                        after=faults(c,destination)
+                        row['payload_ept_violations']=after['count']-before['count']
+                        row['fault_before'],row['fault_after']=before,after
+                    row['ack_ns']=time.monotonic_ns()
+                    if not args.native:row['pause_to_ack_ns']=row['ack_ns']-row['request_ns']
+                    row['measured']=i//2>=args.warmup
+                    save()
+                report['released_source_exit']=release_exit_proof(c,s,memory)
         if oracle:
             oracle.close();report['oracle']=oracle.rows;oracle=None
         report['result']='passed'
@@ -157,12 +244,27 @@ def run_existing(args):
             try:oracle.close()
             except Exception as exc:report['oracle_error']=repr(exc)
         report.update(trace_commands=c.trace_commands,api_events=c.api_events,memory_events=c.memory_events)
+        for role,server in getattr(c,'resident_servers',{}).items():
+            try:nfs.stop_fc(c.vms[role],server['directory'])
+            except Exception as exc:report.setdefault('cleanup_errors',[]).append(repr(exc))
+        report['cleanup']=[]
+        from handoff_bench import source_fence_script
         for role,directory in reversed(c.active):
-            try:nfs.stop_fc(c.vms[role],directory)
+            try:
+                nfs.stop_fc(c.vms[role],directory)
+                raw,file=c.shell(role,source_fence_script(directory),'final-fence')
+                c.fetch_bytes(role,directory+'/fc.log','final-guest-log')
+                c.fetch_bytes(role,directory+'/vmm.log','final-vmm-log')
+                report['cleanup'].append(dict(role=role,directory=directory,file=file,fenced='FENCED ' in raw))
             except Exception as exc:report.setdefault('cleanup_errors',[]).append(repr(exc))
         for keeper in getattr(c,'keepalives',[]):
             try:nfs.stop_fc(c.vms[keeper['role']],keeper['directory'])
             except Exception as exc:report.setdefault('cleanup_errors',[]).append(repr(exc))
+        if args.heavy_plan and report['result']=='passed':
+            from verify_swe_handoff import Evidence,verify_trace
+            try:report['independent_trace_verification']=verify_trace(Evidence(report,out),report)
+            except Exception as exc:
+                report.update(result='failed',verification_error=repr(exc));save();raise
         save()
     print(json.dumps(dict(result=report['result'],output=str(out))))
 
@@ -177,13 +279,20 @@ def main():
     p.add_argument('--warmup',type=int,default=0)
     p.add_argument('--resident-bench',choices=('idle','busy','dirty','race'),default='dirty')
     p.add_argument('--dirty-mib',type=int,default=256)
+    p.add_argument('--dirty-lines',type=int,choices=(0,1,8,64),default=0)
+    p.add_argument('--count-faults',action='store_true')
+    p.add_argument('--native',action='store_true')
+    p.add_argument('--baseline',action='store_true',help='Comparison: native local EPT, prepared semantic restore, no EPT ioctls')
     p.add_argument('--dirty-oracle',action='store_true')
     p.add_argument('--page-hash',type=Path)
     p.add_argument('--preclean',action='store_true')
     p.add_argument('--clean-wait',choices=('0','1'),default='0')
+    p.add_argument('--heavy-plan',type=Path)
     p.add_argument('--fail',choices=('outside','bump','ept-invalidate','ram-invalidate'))
     args=p.parse_args()
     if args.dirty_oracle and not args.page_hash:p.error('Oracle needs --page-hash')
+    args.trajectory_policy='heavy' if args.heavy_plan else None
+    if args.heavy_plan:args.resident_bench=None
     args.mode='ept-adopt';args.noncoherent=True;args.dirty_ledger=True
     args.restore_timing=True;args.profile=False;args.resume_profile=False
     run_existing(args)
