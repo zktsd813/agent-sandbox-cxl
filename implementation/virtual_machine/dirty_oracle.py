@@ -35,6 +35,8 @@ class DirtyOracle:
         self.output = Path(output) / 'dirty-oracle'
         self.output.mkdir()
         self.metadata, self.arena = metadata, arena
+        self.ept_adopt = config.get("ept_adopt", False)
+        self.ept_hash = None
         self.gate = metadata + 40 * MIB
         self.backing = Path(config['cxl_backing'])
         self.file = self.backing.open('r+b')
@@ -86,11 +88,19 @@ class DirtyOracle:
                     coverage['instruction_counter_version']=version
                 elif self.line_mode:
                     raise ValueError('Line oracle requires kernel cache instruction receipts')
+                ept_proof = {}
+                if self.ept_adopt and phase in (2, 3):
+                    digest = hashlib.sha256(self.mem[self.arena:self.arena+used]).hexdigest()
+                    if phase == 2:
+                        self.ept_hash = digest
+                    elif digest != self.ept_hash:
+                        raise ValueError('Adopt changed the released EPT table contents')
+                    ept_proof = dict(ept_sha256=digest, ept_hash_unchanged=phase==3)
                 if phase in (3, 4, 5):
                     if phase == 4: accumulated |= union
                     row = dict(sequence=request, phase=phase, pages=pages, hash_boundary=False,
                         missing_pages=0, other_changed_pages=0, listed_pages=union.bit_count(),
-                        collect_ns=collect_ns, **coverage)
+                        collect_ns=collect_ns, **coverage, **ept_proof)
                     self.rows.append(row)
                     (self.output/f'{request}.bitmap').write_bytes(bitmaps)
                     (self.output/'summary.json').write_text(json.dumps(self.rows,indent=2)+'\n')
@@ -133,17 +143,17 @@ class DirtyOracle:
                 missing = [i for i in changed_gpa if not (checked_bitmap[i//8] >> (i%8)) & 1]
                 # KVM bump cannot shrink. First baseline may precede export, so
                 # classify the whole reserved arena then use actual used bytes.
-                root_bump, root_vm = struct.unpack_from('<2Q', self.mem, self.arena+8)
+                root_bump, root_vm = (0, 0) if self.ept_adopt else struct.unpack_from('<2Q', self.mem, self.arena+8)
                 # This lab admits one graph and starts its first private slot
                 # at +16 MiB. Reuse keeps that slot. Legacy roots hold the VM.
                 private = root_vm == 0 and root_bump >= 32*MIB
                 arena_start = self.arena + (16*MIB if private else 0)
-                arena_end = arena_start + (used or (16 if private else 128)*MIB)
+                arena_end = arena_start + (used or (16 if private or self.ept_adopt else 128)*MIB)
                 outside = changed - guest
                 objects = {i for i in outside if arena_start <= i*PAGE < arena_end}
                 control = {i for i in outside if self.metadata <= i*PAGE < self.metadata+64*MIB}
                 other = outside - objects - control
-                row = dict(sequence=request, phase=phase, pages=pages, ram_hva=hva, hash_boundary=True, **coverage,
+                row = dict(sequence=request, phase=phase, pages=pages, ram_hva=hva, hash_boundary=True, **coverage, **ept_proof,
                            changed_guest_pages=len(changed_gpa), checked_pages=accumulated.bit_count(), missing_pages=len(missing),
                            missing_gpa_pages=missing[:32], listed_pages=union.bit_count(),
                            unchanged_listed_pages=union.bit_count()-sum((bitmaps[i//8] >> (i%8))&1 for i in changed_gpa),
@@ -250,7 +260,7 @@ class DirtyOracle:
                     expected |= self.records[e]
             if requested!=expected or bitmap!=expected or expected & ~invalidated:
                 raise ValueError('Actual receiver ranges do not cover the log union')
-            if phase==3 and (kinv_ok!=1 or kinv_bytes<arena or kinv_lines!=(kinv_bytes+63)//64+64):
+            if phase==3 and (kinv_ok!=1 or kinv_bytes<arena or kinv_lines!=(kinv_bytes+63)//64+(0 if getattr(self,"ept_adopt",False) else 64)):
                 raise ValueError('Actual kernel invalidation receipt omits the arena')
             self.consumed[node]=epoch
         return dict(node=node,epoch=epoch,inv_from=inv_from,inv_to=inv_to,

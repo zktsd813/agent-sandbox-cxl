@@ -3,7 +3,7 @@
   "scope": "DAX KVM allocator and ABI v2 single-owner direct cross-kernel VM with up to 8 per-vCPU/VMCS/run identities; identical x86 VMX kernels/mappings required",
   "files": {
     "arch/x86/include/asm/kvm_host.h": {
-      "patched_sha256": "323d0853c4cedd2c0b4d39552d9654341e7b4ee8a954973aec48578390ffbc66",
+      "patched_sha256": "7ed9997498ffd6d7fee8cd7f7973c1970415c619605302d16da09db696abba15",
       "base_sha256": "26ccfcd86dca8c421a0441dce5c7cd45b8d715012b2d44b8b441d9b1d3edd050"
     },
     "arch/x86/kvm/Kconfig": {
@@ -43,11 +43,11 @@
       "base_sha256": "c60ba2cfdcb935509d37b861b3a65f6ccf7e43a328e6c671d32fba72975b2ed0"
     },
     "arch/x86/kvm/mmu/mmu.c": {
-      "patched_sha256": "2597eae495f1cab6ec0c3deb3bed8e8293185b3edb0c80ea57dcd586b16fb9b4",
+      "patched_sha256": "ac46d31fc62e26cfda28df2f72c3d6f79ed31488b104adf6871dce8b4c251a26",
       "base_sha256": "e687fdf436053dd0d41ffc403e89a82bc70663a519629da38ee4bd5a52d569a8"
     },
     "arch/x86/kvm/mmu/tdp_mmu.c": {
-      "patched_sha256": "18fb81356a0ab035e293d6eebf71085ae919cdcf82a19a1399a03d630ba64090",
+      "patched_sha256": "a03f458be073628e110663f8f80a350de79cb3712119b17f683e5c4175631ce9",
       "base_sha256": "416eb7932f2e3e12a039293eba4a958e173046ec62d786aa69f8b96217fb293a"
     },
     "arch/x86/kvm/vmx/vmx.c": {
@@ -55,11 +55,11 @@
       "base_sha256": "c54419b71478ec971c57dab1df7b0cebf3168989a27f3f65540d8d036d05c4ce"
     },
     "arch/x86/kvm/x86.c": {
-      "patched_sha256": "cce33f02abd5cc64fec593ed08c849e779bb4916eb7770839c5b57a2c6863ebc",
+      "patched_sha256": "3dd0061cc1ea10959610449d4159fe93368fcdda12f799d684dc89a10f49e3be",
       "base_sha256": "fe9ae905263db74ef5876a2ae49e0ce1d82a6e15866703b64fd6586c39eed2a4"
     },
     "include/linux/kvm_dax.h": {
-      "patched_sha256": "d896a09a0694faf2241092be95171eb909d197915b4194f52dfb4209c1fb6b48",
+      "patched_sha256": "af75b199bf190cff438f5a79f84b76fc98c73fdf052e1a195261b54e7e10c346",
       "new": true
     },
     "include/linux/kvm_host.h": {
@@ -67,7 +67,7 @@
       "base_sha256": "166219e363e1462216d5b753032bd8179b6a639b9e63ef966f9923cc51aa83f6"
     },
     "include/uapi/linux/kvm_dax.h": {
-      "patched_sha256": "b50a10a7985a27242d3df745497d50dde59ee09af401553f1c779a0cbb150004",
+      "patched_sha256": "9de48ce97dd36fd05e0e66f873e23a31dc0b45a33e6a245e239feec26271ac97",
       "new": true
     },
     "virt/kvm/Makefile.kvm": {
@@ -95,7 +95,7 @@
       "base_sha256": "0f70d265644639479a3fc4c7ecfccd3adb44134b4fe682612f236cae16f3dcf3"
     },
     "arch/x86/kvm/mmu/mmu_internal.h": {
-      "patched_sha256": "ebe7ed2a01614382e7b462471b27da73e3c3bdac8838c4ae55f7d62f9fdc0ecf",
+      "patched_sha256": "c785f78b08ed4ab7d9b2e37b6bfb85e49d7f85bbab631234d9dc3dff578ffac6",
       "base_sha256": "89ef9181bab9d9fc7acfbb67c4bbfbd967dd33da7d823de2f07bd9c3b8db621b"
     },
     "kernel/module/main.c": {
@@ -192,5 +192,13 @@
     "cpu_handoffs": 20,
     "handoff_full_scan_pages": 0,
     "nested_scope": "Explicit retained-root byte write plus guest TLB invalidation; outer KVM lab accommodation, not physical CXL coherence"
+  },
+  "ept_adopt": {
+    "ioctls": [
+      "KVM_EPT_RELEASE",
+      "KVM_EPT_ADOPT"
+    ],
+    "placement": "CXL EPT tables only; native local KVM/VMCS/vCPU/PML/bitmap/metadata",
+    "extent_bytes": 16777216
   }
 }

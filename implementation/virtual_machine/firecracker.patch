@@ -42,15 +42,22 @@ index ecc1118..672acec 100644
              && let Some((metric, action)) = metric_with_action
          {
 diff --git a/src/firecracker/src/api_server/request/actions.rs b/src/firecracker/src/api_server/request/actions.rs
-index a3b3f3f..c339f7c 100644
 --- a/src/firecracker/src/api_server/request/actions.rs
 +++ b/src/firecracker/src/api_server/request/actions.rs
-@@ -16,8 +16,17 @@ use super::StatusCode;
+@@ -16,8 +16,25 @@
  #[derive(Debug, Deserialize, Serialize)]
  enum ActionType {
      FlushMetrics,
 +    MemoryTier,
 +    DirectExport,
++    #[cfg(target_arch = "x86_64")]
++    EptAdoptInit,
++    #[cfg(target_arch = "x86_64")]
++    EptAdoptExport,
++    #[cfg(target_arch = "x86_64")]
++    EptAdoptImport,
++    #[cfg(target_arch = "x86_64")]
++    EptAdoptClean,
 +    DirectPrepare,
 +    DirectSend,
 +    DirectClean,
@@ -63,10 +70,19 @@ index a3b3f3f..c339f7c 100644
  }
  
  // The model of the json body from a sync request. We use Serde to transform each associated
-@@ -35,8 +44,17 @@ pub(crate) fn parse_put_actions(body: &Body) -> Result<ParsedRequest, RequestErr
+@@ -35,8 +52,26 @@
      })?;
  
      match action_body.action_type {
++        #[cfg(target_arch = "x86_64")]
++        ActionType::EptAdoptInit => Ok(ParsedRequest::new_sync(VmmAction::EptAdoptInit)),
++        #[cfg(target_arch = "x86_64")]
++        ActionType::EptAdoptExport => Ok(ParsedRequest::new_sync(VmmAction::EptAdoptExport)),
++        #[cfg(target_arch = "x86_64")]
++        ActionType::EptAdoptImport => Ok(ParsedRequest::new_sync(VmmAction::EptAdoptImport)),
++        #[cfg(target_arch = "x86_64")]
++        ActionType::EptAdoptClean => Ok(ParsedRequest::new_sync(VmmAction::EptAdoptClean)),
++
 +        ActionType::MemoryTier => Ok(ParsedRequest::new_sync(VmmAction::MemoryTier)),
 +        ActionType::DirectPrepare => Ok(ParsedRequest::new_sync(VmmAction::DirectPrepare)),
 +        ActionType::DirectObserve => Ok(ParsedRequest::new_sync(VmmAction::DirectObserve)),
@@ -81,7 +97,7 @@ index a3b3f3f..c339f7c 100644
          ActionType::SendCtrlAltDel => {
              // SendCtrlAltDel not supported on aarch64.
              #[cfg(target_arch = "aarch64")]
-@@ -57,6 +75,11 @@ mod tests {
+@@ -57,6 +92,11 @@
  
      #[test]
      fn test_parse_put_actions_request() {
@@ -1224,10 +1240,9 @@ index 2f1b6b9..4292146 100644
      pub fn new(reset_evt: EventFd) -> Result<I8042Device, std::io::Error> {
          Ok(I8042Device {
 diff --git a/src/vmm/src/devices/legacy/serial.rs b/src/vmm/src/devices/legacy/serial.rs
-index e384801..3b67920 100644
 --- a/src/vmm/src/devices/legacy/serial.rs
 +++ b/src/vmm/src/devices/legacy/serial.rs
-@@ -94,7 +94,7 @@ impl<EV: SerialEvents + Debug, W: Write + Debug> RawIOHandler for Serial<EventFd
+@@ -94,7 +94,7 @@
  #[derive(Debug)]
  pub struct SerialEventsWrapper {
      /// Buffer ready event.
@@ -1236,13 +1251,13 @@ index e384801..3b67920 100644
  }
  
  impl SerialEvents for SerialEventsWrapper {
-@@ -265,6 +265,24 @@ impl<I: Read + AsRawFd + Send + Debug> SerialWrapper<EventFdTrigger, SerialEvent
+@@ -265,6 +265,24 @@
  pub type SerialDevice = SerialWrapper<EventFdTrigger, SerialEventsWrapper, Stdin>;
  
  impl SerialDevice {
 +    /// Restore UART registers while retaining the host's epoll registration.
 +    pub(crate) fn restore_reused(&mut self, state: &SerialState) -> io::Result<()> {
-+        assert!(self.input.is_none() || crate::direct::resident_enabled());
++        assert!(self.input.is_none() || crate::direct::resident_enabled() || crate::ept_adopt::enabled());
 +        let interrupt = self.serial.interrupt_evt().try_clone()?;
 +        // dup() preserves the eventfd counter, but changes the numeric FD stored
 +        // in epoll's event data. Keep the same owned FD across reconstruction so
@@ -1261,7 +1276,7 @@ index e384801..3b67920 100644
      pub fn new(
          serial_in: Option<Stdin>,
          serial_out: SerialOut,
-@@ -273,7 +291,7 @@ impl SerialDevice {
+@@ -273,7 +291,7 @@
          let interrupt_evt = EventFdTrigger::new(EventFd::new(EFD_NONBLOCK)?);
          let buffer_read_event_fd = EventFdTrigger::new(EventFd::new(EFD_NONBLOCK)?);
          let events = SerialEventsWrapper {
@@ -1270,11 +1285,10 @@ index e384801..3b67920 100644
          };
  
          let serial =
-@@ -501,6 +519,27 @@ mod tests {
-         assert_eq!(buf[0], b'c');
+@@ -502,6 +520,27 @@
      }
  
-+    #[test]
+     #[test]
 +    fn test_repeated_restore_retains_registered_buffer_event() {
 +        use vmm_sys_util::epoll::{ControlOperation, Epoll, EpollEvent};
 +        let mut serial = SerialDevice::new(None, test_serial_out_sink(), None).unwrap();
@@ -1295,9 +1309,10 @@ index e384801..3b67920 100644
 +        }
 +    }
 +
-     #[test]
++    #[test]
      fn test_is_fifo() {
          // invalid file descriptors arent fifos
+         let invalid = -1;
 diff --git a/src/vmm/src/devices/virtio/block/virtio/device.rs b/src/vmm/src/devices/virtio/block/virtio/device.rs
 index 78c1add..e104986 100644
 --- a/src/vmm/src/devices/virtio/block/virtio/device.rs
@@ -2560,10 +2575,9 @@ index 0000000..72422ec
 +    }
 +}
 diff --git a/src/vmm/src/lib.rs b/src/vmm/src/lib.rs
-index 41b7b8d..e546e3f 100644
 --- a/src/vmm/src/lib.rs
 +++ b/src/vmm/src/lib.rs
-@@ -78,6 +78,10 @@ pub mod builder;
+@@ -78,6 +78,10 @@
  /// Types for guest configuration.
  pub mod cpu_config;
  pub(crate) mod device_manager;
@@ -2574,16 +2588,18 @@ index 41b7b8d..e546e3f 100644
  /// Emulates virtual and hardware devices.
  #[allow(missing_docs)]
  pub mod devices;
-@@ -96,6 +100,8 @@ pub mod pci;
+@@ -96,6 +100,10 @@
  pub mod persist;
  /// Resource store for configured microVM resources.
  pub mod resources;
 +#[cfg(target_arch = "x86_64")]
 +mod reuse;
++#[cfg(target_arch = "x86_64")]
++pub(crate) mod ept_adopt;
  /// microVM RPC API adapters.
  pub mod rpc_interface;
  /// Seccomp filter utilities.
-@@ -169,6 +175,9 @@ pub use crate::vstate::vm::{StartVcpusError, Vm};
+@@ -169,6 +177,9 @@
  
  /// Shorthand type for the EventManager flavour used by Firecracker.
  pub type EventManager = BaseEventManager<Arc<Mutex<dyn MutEventSubscriber>>>;
@@ -2593,7 +2609,7 @@ index 41b7b8d..e546e3f 100644
  
  // Since the exit code names e.g. `SIGBUS` are most appropriate yet trigger a test error with the
  // clippy lint `upper_case_acronyms` we have disabled this lint for this enum.
-@@ -217,6 +226,16 @@ pub const HTTP_MAX_PAYLOAD_SIZE: usize = 51200;
+@@ -217,6 +228,16 @@
  /// have permissions to open the KVM fd).
  #[derive(Debug, thiserror::Error, displaydoc::Display)]
  pub enum VmmError {
@@ -2610,7 +2626,7 @@ index 41b7b8d..e546e3f 100644
      #[cfg(target_arch = "aarch64")]
      /// Invalid command line error.
      Cmdline,
-@@ -303,6 +322,10 @@ pub struct Vmm {
+@@ -303,6 +324,10 @@
      pub machine_config: MachineConfig,
      boot_source_config: BootSourceConfig,
      shutdown_exit_code: Option<FcExitCode>,
@@ -2621,7 +2637,7 @@ index 41b7b8d..e546e3f 100644
  
      /// VM object.
      pub vm: Vm,
-@@ -461,23 +484,149 @@ impl Vmm {
+@@ -461,23 +486,151 @@
  
      /// Sends a resume command to the vCPUs.
      pub fn resume_vm(&mut self) -> Result<(), VmmError> {
@@ -2656,9 +2672,9 @@ index 41b7b8d..e546e3f 100644
 +            slot.store(value, std::sync::atomic::Ordering::Relaxed);
 +        }
          self.instance_info.state = VmState::Running;
-         Ok(())
-     }
- 
++        Ok(())
++    }
++
 +    /// Reject unsupported direct devices before changing vCPU or IRQFD state.
 +    #[cfg(target_arch = "x86_64")]
 +    pub(crate) fn check_direct_handoff_configuration(&self) -> Result<(), VmmError> {
@@ -2729,6 +2745,8 @@ index 41b7b8d..e546e3f 100644
 +        }
 +        pool_memory::apply(vm.guest_memory()).map_err(VmmError::MemoryTier)?;
 +        if crate::noncoherent::take_bulk_reset() {
++            #[cfg(target_arch = "x86_64")]
++            crate::ept_adopt::init(vm,false).map_err(VmmError::MemoryTier)?;
 +            crate::noncoherent::require(vm.get_dirty_bitmap().map_err(|e|io::Error::other(e.to_string())));
 +            for region in vm.guest_memory().iter() {
 +                if let Some(bitmap)=(**region).bitmap() { bitmap.reset(); }
@@ -2739,9 +2757,9 @@ index 41b7b8d..e546e3f 100644
 +        if crate::direct::io_enabled() && crate::pool_memory::enabled() {
 +            vm.direct_set_local_ram(!crate::pool_memory::active()).map_err(VmmError::DaxHandoff)?;
 +        }
-+        Ok(())
-+    }
-+
+         Ok(())
+     }
+ 
      /// Sends a pause command to the vCPUs.
      pub fn pause_vm(&mut self) -> Result<(), VmmError> {
 +        #[cfg(target_arch = "x86_64")]
@@ -2772,7 +2790,7 @@ index 41b7b8d..e546e3f 100644
          self.instance_info.state = VmState::Paused;
          Ok(())
      }
-@@ -498,6 +647,15 @@ impl Vmm {
+@@ -498,6 +651,15 @@
  
      /// Saves the state of a paused Microvm.
      pub fn save_state(&mut self, vm_info: &VmInfo) -> Result<MicrovmState, MicrovmStateError> {
@@ -2788,7 +2806,7 @@ index 41b7b8d..e546e3f 100644
          self.check_unsnapshottable_devices()?;
  
          // We need to save device state before saving KVM state.
-@@ -506,11 +664,17 @@ impl Vmm {
+@@ -506,11 +668,17 @@
          // state before we save device state, that interrupt will never be delivered to the guest
          // upon resuming from the snapshot.
          let device_states = self.device_manager.save();
@@ -2807,7 +2825,7 @@ index 41b7b8d..e546e3f 100644
          let kvm_state = kvm_vm.kvm().save_state();
          let vm_state = {
              #[cfg(target_arch = "x86_64")]
-@@ -528,6 +692,8 @@ impl Vmm {
+@@ -528,6 +696,8 @@
                      .map_err(MicrovmStateError::SaveVmState)?
              }
          };
@@ -2818,10 +2836,9 @@ index 41b7b8d..e546e3f 100644
              vm_info: vm_info.clone(),
 diff --git a/src/vmm/src/noncoherent.rs b/src/vmm/src/noncoherent.rs
 new file mode 100644
-index 0000000..76748a9
 --- /dev/null
 +++ b/src/vmm/src/noncoherent.rs
-@@ -0,0 +1,644 @@
+@@ -0,0 +1,652 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Opt-in dirty ledger and a stopped-boundary lab oracle. Never enabled by default.
 +use std::fs::{File, OpenOptions};
@@ -3128,6 +3145,10 @@ index 0000000..76748a9
 +    fn maintain(&self, bitmap: &[u64], invalidate: bool) -> io::Result<Vec<u64>> {
 +        if bitmap.len()!=self.id.pages.div_ceil(64) { return Err(invalid("invalidate bitmap geometry")); }
 +        let mut covered=vec![0u64;bitmap.len()];
++        if invalidate && crate::ept_adopt::enabled()
++            && std::env::var("FC_EPT_FAIL").as_deref()==Ok("ram-invalidate") {
++            self.ram_inv_lines.set(0); return Ok(covered);
++        }
 +        let skip=std::env::var("FC_NONCOHERENT_SKIP_PAGE").ok().and_then(|s|s.parse::<u64>().ok()).unwrap_or(u64::MAX);
 +        let mut request=[self.id.phys_base,self.id.device_bytes,self.id.metadata,self.id.cookie[0],
 +            self.id.cookie[1],self.id.pages as u64,bitmap.as_ptr() as u64,covered.as_mut_ptr() as u64,0,0,skip,0];
@@ -3153,6 +3174,7 @@ index 0000000..76748a9
 +    crate::pool_memory::manifest_for_profile().ok_or_else(||invalid("shared RAM absent"))?.noncoherent_identity()
 +}
 +fn kernel_stats(fd: i32, invalidate: bool, arena: u64) -> io::Result<[u64;8]> {
++    if crate::ept_adopt::enabled() { return Ok(crate::ept_adopt::receipt()); }
 +    let mut stats=[0u64;8];
 +    if unsafe { libc::ioctl(fd,0x8040aef8u32 as _,stats.as_mut_ptr()) }<0 { return Err(io::Error::last_os_error()); }
 +    let index=usize::from(invalidate);
@@ -3240,6 +3262,9 @@ index 0000000..76748a9
 +            "lines":s.inv.iter().map(|b|b.count_ones() as u64*64).sum::<u64>(),"kernel":s.kernel,"control_ns":s.control_ns,"read_lines":s.read_lines,"control_lines":s.control_lines}));
 +        Ok(())
 +    })?;
++    if crate::ept_adopt::enabled() { Ok(()) } else { boundary(mem,3,arena,None) }
++}
++pub(crate) fn adopted(mem: &GuestMemoryMmap, arena: u64) -> io::Result<()> {
 +    boundary(mem,3,arena,None)
 +}
 +pub(crate) fn cleaned(mem: &GuestMemoryMmap, ledger: &Ledger, stopped: bool) -> io::Result<()> {
@@ -4620,10 +4645,9 @@ index 55f784a..e64bb70 100644
          // if a vhost-user-blk device is configured in the VM, otherwise we fall back to
 diff --git a/src/vmm/src/reuse.rs b/src/vmm/src/reuse.rs
 new file mode 100644
-index 0000000..1f118dc
 --- /dev/null
 +++ b/src/vmm/src/reuse.rs
-@@ -0,0 +1,682 @@
+@@ -0,0 +1,696 @@
 +// Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 +// SPDX-License-Identifier: Apache-2.0
 +
@@ -4654,8 +4678,8 @@ index 0000000..1f118dc
 +/// replacement. No snapshot bytes, guest RAM, or remote pointers are stored here.
 +#[derive(Debug)]
 +pub(crate) struct ReusePrepared {
-+    irqfds: [(EventFdTrigger, u32); 4],
-+    generation: u64,
++    pub(crate) irqfds: [(EventFdTrigger, u32); 4],
++    pub(crate) generation: u64,
 +}
 +
 +/// Captured before first KVM_RUN. KVM forbids changing this CPU model after use;
@@ -4708,7 +4732,7 @@ index 0000000..1f118dc
 +        })
 +    }
 +
-+    fn validate(&self, state: &crate::vstate::vcpu::VcpuState) -> Result<(), String> {
++    pub(crate) fn validate(&self, state: &crate::vstate::vcpu::VcpuState) -> Result<(), String> {
 +        ensure(
 +            self.cpuid == cpuid_contract(state.cpuid.clone()),
 +            "reuse CPUID model mismatch",
@@ -4769,7 +4793,7 @@ index 0000000..1f118dc
 +    cpuid
 +}
 +
-+fn controlled_cpu(state: &crate::vstate::vcpu::VcpuState) -> bool {
++pub(crate) fn controlled_cpu(state: &crate::vstate::vcpu::VcpuState) -> bool {
 +    state.sregs.cr4 & (1 << 13) == 0
 +        && state.sregs.efer & (1 << 12) == 0
 +        && state.sregs.efer & (1 << 10) != 0
@@ -4791,7 +4815,7 @@ index 0000000..1f118dc
 +}
 +
 +impl Vmm {
-+    fn reuse_irqfds(&self) -> Result<[(EventFdTrigger, u32); 4], String> {
++    pub(crate) fn reuse_irqfds(&self) -> Result<[(EventFdTrigger, u32); 4], String> {
 +        let legacy = self
 +            .device_manager
 +            .legacy_devices
@@ -4864,8 +4888,8 @@ index 0000000..1f118dc
 +        let mut timing = RestoreTiming::new("reuse_prepare");
 +        ensure(
 +            std::env::var("FC_DAX_NO_NESTED_GUEST").as_deref() == Ok("1")
-+                && self.machine_config.vcpu_count == 1
-+                && !self.machine_config.track_dirty_pages
++                && (self.machine_config.vcpu_count == 1 || crate::ept_adopt::enabled())
++                && (!self.machine_config.track_dirty_pages || crate::ept_adopt::enabled())
 +                && self.machine_config.huge_pages == HugePageConfig::None,
 +            "reuse preparation requires the one-vCPU, no-nested, non-dirty DAX pool",
 +        )?;
@@ -4880,7 +4904,7 @@ index 0000000..1f118dc
 +        )?;
 +        let devices = self.device_manager.save();
 +        ensure(
-+            diskless(&devices),
++            diskless(&devices) || crate::ept_adopt::devices_ok(&devices),
 +            "reuse supports diskless MMIO workers only",
 +        )?;
 +        let serial = self
@@ -4891,8 +4915,9 @@ index 0000000..1f118dc
 +            .stdio_serial
 +            .lock()
 +            .expect("Poisoned lock");
-+        ensure(serial.input.is_none(), "reuse requires output-only UART")?;
++        ensure(serial.input.is_none() || crate::ept_adopt::enabled(), "reuse requires output-only UART")?;
 +        drop(serial);
++        if !crate::ept_adopt::enabled() {
 +        let path =
 +            std::env::var_os("FC_DAX_RAM").ok_or("reuse preparation needs configured DAX")?;
 +        let path = Path::new(&path);
@@ -4908,14 +4933,14 @@ index 0000000..1f118dc
 +            "reuse preparation requires DRAM memslots",
 +        )?;
 +        crate::vstate::memory::validate_dax_backing(vm.guest_memory(), path, offset)?;
++        }
 +        {
 +            let handles = vm.vcpus_handles();
 +            ensure(
-+                handles.len() == 1
-+                    && handles[0]
-+                        .reuse_cpu_contract
-+                        .as_ref()
-+                        .is_some_and(|contract| controlled_cpuid(&contract.cpuid)),
++                !handles.is_empty()
++                    && (handles.len() == 1 || crate::ept_adopt::enabled())
++                    && handles.iter().all(|h| h.reuse_cpu_contract.as_ref()
++                        .is_some_and(|contract| controlled_cpuid(&contract.cpuid))),
 +                "reuse preparation requires clock-only PV/no-PMU/no-nested CPU profile",
 +            )?;
 +        }
@@ -4938,13 +4963,12 @@ index 0000000..1f118dc
 +        timing.mark("drain_old_events");
 +        {
 +            let mut handles = vm.vcpus_handles();
-+            handles[0].prepare_reuse_without_kick();
-+            match handles[0]
-+                .response_receiver()
-+                .recv_timeout(crate::RECV_TIMEOUT_SEC)
-+            {
-+                Ok(VcpuResponse::PreparedReuse) => (),
-+                response => return Err(format!("reuse vCPU preparation failed: {response:?}")),
++            for handle in handles.iter_mut() {
++                handle.prepare_reuse_without_kick();
++                match handle.response_receiver().recv_timeout(crate::RECV_TIMEOUT_SEC) {
++                    Ok(VcpuResponse::PreparedReuse) => (),
++                    response => return Err(format!("reuse vCPU preparation failed: {response:?}")),
++                }
 +            }
 +        }
 +        timing.mark("vcpu_prepare");
@@ -4968,7 +4992,8 @@ index 0000000..1f118dc
 +        state: &MicrovmState,
 +    ) -> Result<(), String> {
 +        ensure(
-+            state.vcpu_states.len() == 1 && self.machine_config.vcpu_count == 1,
++            state.vcpu_states.len() == self.machine_config.vcpu_count as usize
++                && (state.vcpu_states.len() == 1 || crate::ept_adopt::enabled()),
 +            "reuse currently requires one vCPU",
 +        )?;
 +        crate::persist::snapshot_state_sanity_check(state).map_err(|e| e.to_string())?;
@@ -4995,8 +5020,8 @@ index 0000000..1f118dc
 +            "reuse VM hardware configuration mismatch",
 +        )?;
 +        ensure(
-+            !params.track_dirty_pages
-+                && !self.machine_config.track_dirty_pages
++            (!params.track_dirty_pages && !self.machine_config.track_dirty_pages
++                    || crate::ept_adopt::enabled() && params.track_dirty_pages && self.machine_config.track_dirty_pages)
 +                && params.network_overrides.is_empty()
 +                && params.vsock_override.is_none()
 +                && params.mem_backend.backend_type == MemBackendType::File,
@@ -5022,7 +5047,7 @@ index 0000000..1f118dc
 +            "reuse currently requires a disabled PIT",
 +        )?;
 +        ensure(
-+            controlled_cpu(&state.vcpu_states[0]),
++            state.vcpu_states.iter().all(controlled_cpu),
 +            "reuse requires clock-only PV/no-PMU/no-nested CPU profile",
 +        )?;
 +        let offset = dax_snapshot_offset(&params.mem_backend.backend_path)
@@ -5031,7 +5056,8 @@ index 0000000..1f118dc
 +        crate::vstate::memory::validate_dax_backing(vm.guest_memory(), &params.mem_backend.backend_path, offset)?;
 +        let devices = self.device_manager.save();
 +        ensure(
-+            diskless(&devices) && diskless(&state.device_states),
++            diskless(&devices) && diskless(&state.device_states)
++                || crate::ept_adopt::devices_ok(&devices) && crate::ept_adopt::devices_ok(&state.device_states),
 +            "reuse supports diskless MMIO workers only",
 +        )?;
 +        let old_acpi = &devices.acpi_state;
@@ -5052,7 +5078,7 @@ index 0000000..1f118dc
 +            .lock()
 +            .expect("Poisoned lock");
 +        ensure(
-+            serial.input.is_none()
++            (serial.input.is_none() || crate::ept_adopt::enabled())
 +                && state
 +                    .device_states
 +                    .serial_state
@@ -5067,22 +5093,24 @@ index 0000000..1f118dc
 +            "reuse resource allocation mismatch",
 +        )?;
 +        let handles = vm.vcpus_handles();
-+        ensure(handles.len() == 1, "reuse worker vCPU handle mismatch")?;
-+        let mut incoming_indices: Vec<_> = state.vcpu_states[0]
++        ensure(handles.len() == state.vcpu_states.len(), "reuse worker vCPU handle mismatch")?;
++        for (handle, incoming) in handles.iter().zip(&state.vcpu_states) {
++        let mut incoming_indices: Vec<_> = incoming
 +            .saved_msrs
 +            .iter()
 +            .flat_map(|chunk| chunk.as_slice().iter().map(|msr| msr.index))
 +            .collect();
 +        incoming_indices.sort_unstable();
 +        ensure(
-+            incoming_indices == handles[0].reuse_msr_indices,
++            incoming_indices == handle.reuse_msr_indices,
 +            "reuse snapshot MSR index schema mismatch",
 +        )?;
-+        handles[0]
++        handle
 +            .reuse_cpu_contract
 +            .as_ref()
 +            .ok_or("reuse worker has no immutable CPU contract")?
-+            .validate(&state.vcpu_states[0])?;
++            .validate(&incoming)?;
++        }
 +        ensure(
 +            crate::vstate::vm::KvmVm::reuse_pit_disabled(
 +                &vm.save_state().map_err(|e| e.to_string())?,
@@ -5096,10 +5124,13 @@ index 0000000..1f118dc
 +        &mut self,
 +        params: &LoadSnapshotParams,
 +    ) -> Result<(), String> {
++        let state = snapshot_state_from_file(&params.snapshot_path).map_err(|e| e.to_string())?;
++        self.restore_reused_state(params, state)
++    }
++
++    pub(crate) fn restore_reused_state(&mut self, params: &LoadSnapshotParams,
++        mut state: MicrovmState) -> Result<(), String> {
 +        let mut timing = RestoreTiming::new("reuse");
-+        let mut state =
-+            snapshot_state_from_file(&params.snapshot_path).map_err(|e| e.to_string())?;
-+        timing.mark("state_file_deserialize");
 +        self.validate_reuse(params, &state)?;
 +        let was_prepared = self.reuse_prepared.is_some();
 +        let (irqfds, sequence) = if let Some(prepared) = self.reuse_prepared.take() {
@@ -5139,13 +5170,12 @@ index 0000000..1f118dc
 +        timing.mark("drain_old_events");
 +        {
 +            let mut handles = vm.vcpus_handles();
-+            handles[0].restore_without_kick(state.vcpu_states.pop().unwrap(), was_prepared);
-+            match handles[0]
-+                .response_receiver()
-+                .recv_timeout(crate::RECV_TIMEOUT_SEC)
-+            {
-+                Ok(VcpuResponse::RestoredState) => (),
-+                response => return Err(format!("reuse vCPU restore failed: {response:?}")),
++            for (handle, incoming) in handles.iter_mut().zip(state.vcpu_states.drain(..)) {
++                handle.restore_without_kick(incoming, was_prepared || crate::ept_adopt::enabled());
++                match handle.response_receiver().recv_timeout(crate::RECV_TIMEOUT_SEC) {
++                    Ok(VcpuResponse::RestoredState) => (),
++                    response => return Err(format!("reuse vCPU restore failed: {response:?}")),
++                }
 +            }
 +        }
 +        timing.mark("vcpu_state_restore");
@@ -5171,10 +5201,18 @@ index 0000000..1f118dc
 +            .restore_reused(&state.device_states.serial_state.as_ref().unwrap().into())
 +            .map_err(|e| e.to_string())?;
 +        legacy.i8042.lock().unwrap().reset_reused();
-+        self.device_manager
-+            .acpi_devices
-+            .restore_reused(&state.device_states.acpi_state, vm.guest_memory())
-+            .map_err(|e| e.to_string())?;
++        if crate::ept_adopt::enabled() {
++            // CPU-neutral device queue/clock restore, also used by direct.
++            self.device_manager.acpi_devices.restore_direct_resident(
++                &state.device_states.acpi_state, vm.guest_memory()).map_err(|e| e.to_string())?;
++            let (crate::device_manager::VirtioDevices::Mmio(mmio),
++                VirtioDevicesState::Mmio(saved)) = (&mut self.device_manager.virtio_devices,
++                    &state.device_states.virtio_state) else { unreachable!() };
++            mmio.restore_direct_resident(vm.guest_memory(), saved)?;
++        } else {
++            self.device_manager.acpi_devices.restore_reused(
++                &state.device_states.acpi_state, vm.guest_memory()).map_err(|e| e.to_string())?;
++        }
 +        self.boot_source_config = state.vm_info.boot_source;
 +        timing.mark("devices_restore");
 +        let handles = vm.vcpus_handles();
@@ -5307,10 +5345,9 @@ index 0000000..1f118dc
 +    }
 +}
 diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
-index ca743fa..dfa9c4a 100644
 --- a/src/vmm/src/rpc_interface.rs
 +++ b/src/vmm/src/rpc_interface.rs
-@@ -100,6 +100,20 @@ pub enum VmmAction {
+@@ -100,6 +100,28 @@
      PatchMMDS(Value),
      /// Pause the guest, by pausing the microVM VCPUs.
      Pause,
@@ -5318,6 +5355,14 @@ index ca743fa..dfa9c4a 100644
 +    MemoryTier,
 +    /// Hand over the retained KVM graph and device bindings without a CPU snapshot.
 +    DirectExport,
++    #[cfg(target_arch = "x86_64")]
++    EptAdoptInit,
++    #[cfg(target_arch = "x86_64")]
++    EptAdoptExport,
++    #[cfg(target_arch = "x86_64")]
++    EptAdoptImport,
++    #[cfg(target_arch = "x86_64")]
++    EptAdoptClean,
 +    /// Prepare the immutable disk backend without guest memory access.
 +    DirectPrepare,
 +    /// Pause and export the current owner in one dispatch.
@@ -5331,7 +5376,7 @@ index ca743fa..dfa9c4a 100644
      /// Repopulate the MMDS contents.
      PutMMDS(Value),
      /// Configure the guest vCPU features.
-@@ -133,6 +147,9 @@ pub enum VmmAction {
+@@ -133,6 +155,9 @@
      /// driver is listening on the guest end, this can be used to shut down the microVM gracefully.
      #[cfg(target_arch = "x86_64")]
      SendCtrlAltDel,
@@ -5341,7 +5386,7 @@ index ca743fa..dfa9c4a 100644
      /// Update the balloon size, after microVM start.
      UpdateBalloon(BalloonUpdateConfig),
      /// Update the balloon statistics polling interval, after microVM start.
-@@ -313,6 +330,8 @@ impl fmt::Debug for PrebootApiController<'_> {
+@@ -313,6 +338,8 @@
  /// Error type for [`PrebootApiController::load_snapshot`]
  #[derive(Debug, thiserror::Error, displaydoc::Display)]
  pub enum LoadSnapshotError {
@@ -5350,7 +5395,7 @@ index ca743fa..dfa9c4a 100644
      /// Loading a microVM snapshot not allowed after configuring boot-specific resources.
      LoadSnapshotNotAllowed,
      /// Failed to restore from snapshot: {0}
-@@ -495,7 +514,27 @@ impl<'a> PrebootApiController<'a> {
+@@ -495,7 +522,27 @@
              SetBalloonDevice(config) => self.set_balloon_device(config),
              SetVsockDevice(config) => self.set_vsock_device(config),
              SetMmdsConfiguration(config) => self.set_mmds_config(config),
@@ -5378,7 +5423,7 @@ index ca743fa..dfa9c4a 100644
              UpdateMachineConfiguration(config) => self.update_machine_config(config),
              SetEntropyDevice(config) => self.set_entropy_device(config),
              SetMemoryHotplugDevice(config) => self.set_memory_hotplug_device(config),
-@@ -503,6 +542,10 @@ impl<'a> PrebootApiController<'a> {
+@@ -503,6 +550,10 @@
              CreateSnapshot(_)
              | FlushMetrics
              | Pause
@@ -5389,16 +5434,18 @@ index ca743fa..dfa9c4a 100644
              | Resume
              | GetBalloonStats
              | GetMemoryHotplugStatus
-@@ -517,7 +560,7 @@ impl<'a> PrebootApiController<'a> {
+@@ -517,7 +568,9 @@
              | StopFreePageHinting
              | HotUnplugDevice(_) => Err(VmmActionError::OperationNotSupportedPreBoot),
              #[cfg(target_arch = "x86_64")]
 -            SendCtrlAltDel => Err(VmmActionError::OperationNotSupportedPreBoot),
 +            SendCtrlAltDel | PrepareReuse => Err(VmmActionError::OperationNotSupportedPreBoot),
++            #[cfg(target_arch = "x86_64")]
++            EptAdoptInit | EptAdoptExport | EptAdoptImport | EptAdoptClean => Err(VmmActionError::OperationNotSupportedPreBoot),
          }
      }
  
-@@ -700,6 +743,19 @@ impl RuntimeApiController {
+@@ -700,6 +753,19 @@
          event_manager: &mut EventManager,
      ) -> Result<VmmData, VmmActionError> {
          use self::VmmAction::*;
@@ -5409,7 +5456,7 @@ index ca743fa..dfa9c4a 100644
 +        }
 +        #[cfg(target_arch = "x86_64")]
 +        if self.vmm.lock().expect("Poisoned lock").reuse_prepared.is_some()
-+            && !matches!(&request, LoadSnapshot(_) | PrepareReuse | FlushMetrics
++            && !matches!(&request, LoadSnapshot(_) | PrepareReuse | EptAdoptImport | FlushMetrics
 +                | GetVmInstanceInfo | GetVmMachineConfig | GetFullVmConfig | GetVmmVersion)
 +        {
 +            return Err(VmmActionError::NotSupported(
@@ -5418,7 +5465,7 @@ index ca743fa..dfa9c4a 100644
          match request {
              // Supported operations allowed post-boot.
              CreateSnapshot(snapshot_create_cfg) => self.create_snapshot(&snapshot_create_cfg),
-@@ -786,6 +842,53 @@ impl RuntimeApiController {
+@@ -786,6 +852,77 @@
                  .hot_unplug_device(device_id, event_manager)
                  .map(|()| VmmData::Empty),
              Pause => self.pause(),
@@ -5431,6 +5478,30 @@ index ca743fa..dfa9c4a 100644
 +                Ok(VmmData::Empty)
 +            }
 +
++            #[cfg(target_arch = "x86_64")]
++            EptAdoptInit => {
++                let mut vmm=self.vmm.lock().expect("Poisoned lock");
++                crate::noncoherent::require(vmm.ept_prepare(event_manager));
++                Ok(VmmData::Empty)
++            }
++            #[cfg(target_arch = "x86_64")]
++            EptAdoptClean => {
++                let mut vmm=self.vmm.lock().expect("Poisoned lock");
++                crate::noncoherent::require(vmm.ept_clean());
++                Ok(VmmData::Empty)
++            }
++            #[cfg(target_arch = "x86_64")]
++            EptAdoptExport => {
++                let mut vmm=self.vmm.lock().expect("Poisoned lock");
++                crate::noncoherent::require(vmm.ept_export(event_manager));
++                Ok(VmmData::Empty)
++            }
++            #[cfg(target_arch = "x86_64")]
++            EptAdoptImport => {
++                let mut vmm=self.vmm.lock().expect("Poisoned lock");
++                crate::noncoherent::require(vmm.ept_import(event_manager));
++                Ok(VmmData::Empty)
++            }
 +            DirectExport => {
 +                self.vmm.lock().expect("Poisoned lock").direct_export(event_manager)?;
 +                Ok(VmmData::Empty)
@@ -6483,3 +6554,227 @@ index cfa8470..353f404 100644
              },
              SerialOut::new(SerialOutInner::Stdout(std::io::stdout()), None),
          ),
+diff --git a/src/vmm/src/ept_adopt.rs b/src/vmm/src/ept_adopt.rs
+new file mode 100644
+--- /dev/null
++++ b/src/vmm/src/ept_adopt.rs
+@@ -0,0 +1,219 @@
++// SPDX-License-Identifier: Apache-2.0
++//! CXL RAM/EPT only. Semantic state enters an ordinary prepared KVM worker.
++use std::fs::OpenOptions;
++use std::io;
++use std::os::fd::AsRawFd;
++use std::sync::Mutex;
++use std::time::Instant;
++use serde::{Deserialize, Serialize};
++use vm_memory::{Bytes, GuestAddress};
++use crate::device_manager::{DevicesState, VirtioDevices, VirtioDevicesState};
++use crate::snapshot::Persist;
++use crate::persist::{MicrovmState, RestoreTiming, VmInfo};
++use crate::vmm_config::instance_info::VmState;
++use crate::{EventManager, Vmm};
++
++const BYTES: u64 = 16 << 20;
++const RELEASE: libc::c_ulong = 0xc048aefa;
++const ADOPT: libc::c_ulong = 0xc048aefb;
++#[repr(C)]
++#[derive(Default, Clone, Debug, Serialize, Deserialize)]
++struct Ept { base: u64, bump: u64, root: u64, data_base: u64, data_bytes: u64,
++    pages: [u64;3], role: u32, flags: u32 }
++#[derive(Serialize, Deserialize)]
++struct Packet { version: u32, ept: Ept, epoch: u64, state: MicrovmState,
++    mapper: crate::pool_memory::Manifest }
++static RECEIPT: Mutex<[u64;8]> = Mutex::new([0;8]);
++pub(crate) fn receipt() -> [u64;8] { *RECEIPT.lock().unwrap() }
++pub(crate) fn enabled() -> bool { std::env::var("FC_EPT_ADOPT").as_deref() == Ok("1") }
++fn invalid(s: impl ToString) -> io::Error { io::Error::other(s.to_string()) }
++fn number(name: &str) -> io::Result<u64> { std::env::var(name).map_err(invalid)?.parse().map_err(invalid) }
++fn packet_path() -> io::Result<String> { std::env::var("FC_EPT_PACKET").map_err(invalid) }
++fn ioctl(vm: &crate::vstate::vm::KvmVm, cmd: libc::c_ulong, ept: &mut Ept) -> io::Result<()> {
++    if unsafe { libc::ioctl(vm.fd().as_raw_fd(), cmd as _, ept) } < 0 { return Err(io::Error::last_os_error()); }
++    Ok(())
++}
++
++pub(crate) fn devices_ok(state: &DevicesState) -> bool {
++    if !enabled() { return false; }
++    let VirtioDevicesState::Mmio(s) = &state.virtio_state else {return false;};
++    s.net_devices.is_empty() && s.vsock_device.is_none() && s.balloon_device.is_none()
++        && s.entropy_device.is_none() && s.pmem_devices.is_empty() && s.memory_device.is_none()
++        && s.mmds.is_none() && s.block_devices.iter().all(|d| match &d.device_state {
++            crate::devices::virtio::block::persist::BlockState::Virtio(b) =>
++                b.virtio_state.avail_features & (1<<5) != 0 && b.virtio_state.activated,
++            _ => false,
++        })
++}
++
++pub(crate) fn init(vm: &crate::vstate::vm::KvmVm, wait: bool) -> io::Result<()> {
++    if !enabled() { return Ok(()); }
++    if !crate::noncoherent::active() || std::env::var("FC_DAX_REUSE").as_deref()!=Ok("1")
++        || std::env::var("FC_DAX_NO_NESTED_GUEST").as_deref()!=Ok("1") {
++        return Err(invalid("EPT adoption requires dirty logging, noncoherent RAM, and the reuse CPU profile"));
++    }
++    let mut q=Ept {base:number("FC_EPT_PHYS")?,data_base:number("FC_EPT_DATA_BASE")?,
++        data_bytes:number("FC_EPT_DATA_BYTES")?,flags:1|if wait {2} else {0},..Default::default()};
++    ioctl(vm,ADOPT,&mut q)
++}
++
++fn maintain(ept: &Ept, invalidate: bool) -> io::Result<()> {
++    if ept.bump==0 || ept.bump>BYTES || ept.bump%4096!=0 {return Err(invalid("EPT bump geometry"));}
++    if std::arch::x86_64::__cpuid_count(7,0).ebx & (3<<23) != 3<<23 {return Err(invalid("cache instructions absent"));}
++    let file=OpenOptions::new().read(true).write(true).open("/dev/dax0.0")?;
++    let offset=number("FC_EPT_OFFSET")?;
++    let address=unsafe {libc::mmap(std::ptr::null_mut(),BYTES as usize,libc::PROT_READ|libc::PROT_WRITE,
++        libc::MAP_SHARED,file.as_raw_fd(),offset as libc::off_t)};
++    if address==libc::MAP_FAILED {return Err(io::Error::last_os_error());}
++    let start=Instant::now();let mut emitted=0;
++    let skip=invalidate && std::env::var("FC_EPT_FAIL").as_deref()==Ok("ept-invalidate");
++    if !skip {
++        for byte in (0..ept.bump as usize).step_by(64) {
++            let p=unsafe {address.cast::<u8>().add(byte)};
++            unsafe {
++                if invalidate {std::arch::asm!("clflushopt [{p}]",p=in(reg)p,options(nostack,preserves_flags));}
++                else {std::arch::asm!("clwb [{p}]",p=in(reg)p,options(nostack,preserves_flags));}
++            }
++            emitted+=1;
++        }
++    }
++    unsafe {
++        if invalidate {std::arch::asm!("mfence",options(nostack,preserves_flags));}
++        else {std::arch::asm!("sfence",options(nostack,preserves_flags));}
++        libc::munmap(address,BYTES as usize);
++    }
++    let mut r=RECEIPT.lock().unwrap();let i=usize::from(invalidate);
++    r[i]=start.elapsed().as_nanos() as u64;r[2+i]=ept.bump;r[4+i]=emitted;r[6+i]=1;
++    crate::logger::info_unrestricted!("EPT_CACHE_JSON {}",serde_json::json!({"invalidate":invalidate,
++        "bytes":ept.bump,"lines":emitted,"ns":r[i]}));
++    // The independent L0 oracle checks this receipt before granting resume.
++    Ok(())
++}
++
++fn block_irqs(vmm: &Vmm, bind: bool) -> io::Result<()> {
++    let vm=vmm.vm.as_kvm().ok_or_else(||invalid("KVM absent"))?;
++    let VirtioDevices::Mmio(mmio)=&vmm.device_manager.virtio_devices else {return Err(invalid("MMIO required"));};
++    for d in mmio.virtio_devices.values() {
++        let t=d.inner.lock().unwrap();
++        let gsi=d.resources.gsi.ok_or_else(||invalid("block GSI absent"))?;
++        if bind {vm.fd().register_irqfd(&t.interrupt.irq_evt,gsi)}
++        else {vm.fd().unregister_irqfd(&t.interrupt.irq_evt,gsi)}.map_err(invalid)?;
++        if !bind {while t.interrupt.irq_evt.read().is_ok() {}}
++    }
++    Ok(())
++}
++
++impl Vmm {
++    pub(crate) fn ept_clean(&mut self) -> io::Result<()> {
++        if !enabled() || self.instance_info.state!=VmState::Running || self.reuse_prepared.is_some() {
++            return Err(invalid("EPT clean requires a running owner"));
++        }
++        let vm=self.vm.as_kvm().unwrap();
++        self.device_manager.mark_virtio_queue_memory_dirty(vm.guest_memory());
++        let ledger=crate::noncoherent::require(crate::noncoherent::collect(vm));
++        crate::noncoherent::require(crate::noncoherent::send(vm.guest_memory(),&ledger));
++        crate::noncoherent::cleaned(vm.guest_memory(),&ledger,false)
++    }
++
++    pub(crate) fn ept_prepare(&mut self, events: &mut EventManager) -> io::Result<()> {
++        if !enabled() || self.instance_info.state!=VmState::Paused || !self.machine_config.track_dirty_pages {
++            return Err(invalid("EPT prepare requires a paused dirty-logged worker"));
++        }
++        self.prepare_reused_worker().map_err(invalid)?;
++        block_irqs(self,false)?;
++        let vm=self.vm.as_kvm().unwrap();
++        let VirtioDevices::Mmio(mmio)=&mut self.device_manager.virtio_devices else {unreachable!()};
++        mmio.unbind_direct_ioevents(vm).map_err(invalid)?;
++        mmio.park_direct(events);
++        init(vm,true)
++    }
++
++    pub(crate) fn ept_export(&mut self, events: &mut EventManager) -> io::Result<()> {
++        if !enabled() || self.reuse_prepared.is_some() || self.reuse_restore_failed {return Err(invalid("EPT source unavailable"));}
++        self.pause_vm().map_err(invalid)?;
++        let mut timing=RestoreTiming::new("ept_export");
++        let devices=self.device_manager.save();
++        self.check_block_snapshot_preparation().map_err(invalid)?;
++        if !self.machine_config.track_dirty_pages || !devices_ok(&devices) {return Err(invalid("EPT device/dirty contract"));}
++        let vm=self.vm.as_kvm().unwrap();
++        if let Ok(gpa)=std::env::var("FC_BENCH_EPOCH_GPA") {
++            let gpa=gpa.parse::<u64>().map_err(invalid)?;
++            let old:u64=vm.guest_memory().read_obj(GuestAddress(gpa+16)).map_err(invalid)?;
++            vm.guest_memory().write_obj(if old==0 {number("FC_BENCH_INITIAL_EPOCH")?+1} else {old+1},GuestAddress(gpa+16)).map_err(invalid)?;
++        }
++        self.device_manager.mark_virtio_queue_memory_dirty(vm.guest_memory());
++        let ledger=crate::noncoherent::require(crate::noncoherent::collect(vm));
++        let epoch=crate::noncoherent::require(crate::noncoherent::send(vm.guest_memory(),&ledger));
++        timing.mark("ram_writeback_publish");
++        self.reuse_restore_failed=true;
++        let mut ept=Ept::default();
++        ioctl(vm,RELEASE,&mut ept)?;
++        timing.mark("release");
++        maintain(&ept,false)?;
++        timing.mark("ept_writeback");
++        let state=MicrovmState {vm_info:VmInfo::from(&*self),device_states:devices,
++            vcpu_states:vm.save_vcpu_states_without_kick().map_err(invalid)?,
++            kvm_state:vm.kvm().save_state(),vm_state:vm.save_state().map_err(invalid)?};
++        let mapper=crate::pool_memory::seal_for_handoff_memory(vm.guest_memory())?;
++        let bytes=bitcode::serialize(&Packet{version:1,ept:ept.clone(),epoch,state,mapper}).map_err(invalid)?;
++        if bytes.len()>=65536 {return Err(invalid("EPT packet exceeds mailbox"));}
++        timing.mark("serialize");
++        crate::noncoherent::require(crate::noncoherent::complete(vm.guest_memory(),&bytes,epoch,ept.bump,0,&ledger));
++        timing.mark("oracle_export");
++        // Prepare the retired local worker without touching architectural CPU state.
++        let irqfds=self.reuse_irqfds().map_err(invalid)?;
++        vm.quiesce_reused_pit().map_err(invalid)?;
++        for (event,gsi) in &irqfds {vm.fd().unregister_irqfd(event,*gsi).map_err(invalid)?;while event.read().is_ok() {}}
++        block_irqs(self,false)?;
++        let VirtioDevices::Mmio(mmio)=&mut self.device_manager.virtio_devices else {unreachable!()};
++        mmio.unbind_direct_ioevents(vm).map_err(invalid)?;mmio.park_direct(events);
++        crate::pool_memory::park_resident(vm.guest_memory())?;
++        self.reuse_prepared=Some(crate::reuse::ReusePrepared{irqfds,generation:epoch});
++        self.reuse_restore_failed=false;
++        std::fs::write(packet_path()?,bytes)?;
++        timing.finish();
++        Ok(())
++    }
++
++    pub(crate) fn ept_import(&mut self, events: &mut EventManager) -> io::Result<()> {
++        if !enabled() || self.reuse_prepared.is_none() || self.reuse_restore_failed {return Err(invalid("EPT receiver unprepared"));}
++        let mut timing=RestoreTiming::new("ept_import");
++        let bytes=std::fs::read(packet_path()?)?;
++        if bytes.len()>=65536 {return Err(invalid("EPT packet too large"));}
++        let mut p:Packet=bitcode::deserialize(&bytes).map_err(invalid)?;
++        if p.version!=1 || p.ept.base!=number("FC_EPT_PHYS")? {return Err(invalid("foreign EPT packet"));}
++        let vm=self.vm.as_kvm().unwrap();
++        crate::noncoherent::require(crate::noncoherent::prepare(&p.mapper,&bytes,p.epoch));
++        crate::pool_memory::import_resident_state(vm.guest_memory(),p.mapper)?;
++        maintain(&p.ept,true)?;
++        // Kernel metadata is still absent. RAM and table invalidation precede ADOPT.
++        crate::noncoherent::require(crate::noncoherent::received(vm.guest_memory(),p.epoch,p.ept.bump,0));
++        timing.mark("invalidate");
++        match std::env::var("FC_EPT_FAIL").as_deref() {
++            Ok("outside")=>p.ept.root=BYTES,
++            Ok("bump")=>p.ept.bump=0,
++            _=>(),
++        }
++        ioctl(vm,ADOPT,&mut p.ept)?;
++        timing.mark("adopt");
++        crate::noncoherent::require(crate::noncoherent::adopted(vm.guest_memory(),p.ept.bump));
++        let params=crate::vmm_config::snapshot::LoadSnapshotParams {
++            snapshot_path: "/unused".into(),
++            mem_backend: crate::vmm_config::snapshot::MemBackendConfig {
++                backend_type: crate::vmm_config::snapshot::MemBackendType::File,
++                backend_path: "/dev/dax0.0".into(),
++            }, track_dirty_pages:true, resume_vm:false, network_overrides:vec![],
++            vsock_override:None, clock_realtime:false, huge_pages:Default::default(),
++        };
++        self.restore_reused_state(&params,p.state).map_err(invalid)?;
++        timing.mark("set_state");
++        block_irqs(self,true)?;
++        let vm=self.vm.as_kvm().unwrap();
++        let VirtioDevices::Mmio(mmio)=&mut self.device_manager.virtio_devices else {unreachable!()};
++        mmio.rebind_direct(vm,events).map_err(invalid)?;
++        timing.mark("devices");
++        self.resume_vm().map_err(invalid)?;
++        timing.mark("resume");timing.finish();
++        Ok(())
++    }
++}

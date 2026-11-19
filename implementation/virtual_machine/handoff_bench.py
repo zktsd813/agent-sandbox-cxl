@@ -335,6 +335,9 @@ class HandoffController(Controller):
             "FC_POOL_MEMORY_MANIFEST": s.manifest_path, "FC_POOL_MEMORY_DEVICE": "/dev/cxl_pool",
             "FC_DAX_FIXED_HVA": "0x400000000000", "FC_DAX_SNAPSHOT": "1",
             "FC_DAX_SNAPSHOT_COMPAT": "1"}
+        if self.mode == 'ept-adopt':
+            from ept_adopt import environment
+            env.update(environment(self, s))
         if getattr(self.args,'resident_bench',None):
             env.update(FC_BENCH_EPOCH_GPA=str(64*MIB),FC_BENCH_INITIAL_EPOCH=str(s.epoch))
         if getattr(self.args, 'noncoherent', False):

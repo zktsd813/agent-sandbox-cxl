@@ -1,8 +1,17 @@
 diff --git a/arch/x86/include/asm/kvm_host.h b/arch/x86/include/asm/kvm_host.h
-index 70d1394..1cd58f4 100644
 --- a/arch/x86/include/asm/kvm_host.h
 +++ b/arch/x86/include/asm/kvm_host.h
-@@ -1550,6 +1550,9 @@ static inline u16 kvm_lapic_irq_dest_mode(bool dest_mode_logical)
+@@ -1244,6 +1244,9 @@
+ };
+ 
+ struct kvm_arch {
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++    struct kvm_ept_adopt_state *ept_adopt;
++#endif
+ 	unsigned long n_used_mmu_pages;
+ 	unsigned long n_requested_mmu_pages;
+ 	unsigned long n_max_mmu_pages;
+@@ -1550,6 +1553,9 @@
  
  struct kvm_x86_ops {
  	const char *name;
@@ -12,7 +21,7 @@ index 70d1394..1cd58f4 100644
  
  	int (*check_processor_compatibility)(void);
  
-@@ -1806,6 +1809,8 @@ void kvm_x86_vendor_exit(void);
+@@ -1806,6 +1812,8 @@
  #define __KVM_HAVE_ARCH_VM_ALLOC
  static inline struct kvm *kvm_arch_alloc_vm(void)
  {
@@ -437,10 +446,9 @@ index 253fb20..cc813a8 100644
  #define PT_WRITABLE_SHIFT 1
  #define PT_USER_SHIFT 2
 diff --git a/arch/x86/kvm/mmu/mmu.c b/arch/x86/kvm/mmu/mmu.c
-index f7901cb..41f7f05 100644
 --- a/arch/x86/kvm/mmu/mmu.c
 +++ b/arch/x86/kvm/mmu/mmu.c
-@@ -713,7 +713,7 @@ static void mmu_free_memory_caches(struct kvm_vcpu *vcpu)
+@@ -713,7 +713,7 @@
  
  static void mmu_free_pte_list_desc(struct pte_list_desc *pte_list_desc)
  {
@@ -449,7 +457,7 @@ index f7901cb..41f7f05 100644
  }
  
  static bool sp_has_gptes(struct kvm_mmu_page *sp);
-@@ -1734,10 +1734,11 @@ static void kvm_mmu_free_shadow_page(struct kvm_mmu_page *sp)
+@@ -1734,10 +1734,11 @@
  
  	hlist_del(&sp->hash_link);
  	list_del(&sp->link);
@@ -464,7 +472,15 @@ index f7901cb..41f7f05 100644
  }
  
  static unsigned kvm_page_table_hashfn(gfn_t gfn)
-@@ -3924,17 +3925,17 @@ static int mmu_alloc_special_roots(struct kvm_vcpu *vcpu)
+@@ -3672,6 +3673,7 @@
+ 
+ 	if (tdp_mmu_enabled) {
+ 		root = kvm_tdp_mmu_get_vcpu_root_hpa(vcpu);
++        if (!VALID_PAGE(root)) { r = -ENOMEM; goto out_unlock; }
+ 		mmu->root.hpa = root;
+ 	} else if (shadow_root_level >= PT64_ROOT_4LEVEL) {
+ 		root = mmu_alloc_root(vcpu, 0, 0, shadow_root_level);
+@@ -3924,17 +3926,17 @@
  	 * Unlike 32-bit NPT, the PDP table doesn't need to be in low mem, and
  	 * doesn't need to be decrypted.
  	 */
@@ -485,7 +501,7 @@ index f7901cb..41f7f05 100644
  		if (!pml5_root)
  			goto err_pml5;
  	}
-@@ -3948,9 +3949,9 @@ static int mmu_alloc_special_roots(struct kvm_vcpu *vcpu)
+@@ -3948,9 +3950,9 @@
  
  #ifdef CONFIG_X86_64
  err_pml5:
@@ -497,7 +513,7 @@ index f7901cb..41f7f05 100644
  	return -ENOMEM;
  #endif
  }
-@@ -5958,9 +5959,9 @@ static void free_mmu_pages(struct kvm_mmu *mmu)
+@@ -5958,9 +5960,9 @@
  {
  	if (!tdp_enabled && mmu->pae_root)
  		set_memory_encrypted((unsigned long)mmu->pae_root, 1);
@@ -510,7 +526,7 @@ index f7901cb..41f7f05 100644
  }
  
  static int __kvm_mmu_create(struct kvm_vcpu *vcpu, struct kvm_mmu *mmu)
-@@ -5991,7 +5992,7 @@ static int __kvm_mmu_create(struct kvm_vcpu *vcpu, struct kvm_mmu *mmu)
+@@ -5991,7 +5993,7 @@
  	if (tdp_enabled && kvm_mmu_get_tdp_level(vcpu) > PT32E_ROOT_LEVEL)
  		return 0;
  
@@ -519,10 +535,11 @@ index f7901cb..41f7f05 100644
  	if (!page)
  		return -ENOMEM;
  
-@@ -6045,6 +6046,141 @@ int kvm_mmu_create(struct kvm_vcpu *vcpu)
+@@ -6044,6 +6046,149 @@
+ 	free_mmu_pages(&vcpu->arch.guest_mmu);
  	return ret;
  }
- 
++
 +#ifdef CONFIG_KVM_DAX_POOL_TEST
 +static bool dax_nested_root_sync;
 +module_param(dax_nested_root_sync, bool, 0600);
@@ -535,6 +552,14 @@ index f7901cb..41f7f05 100644
 +	vcpu->arch.mmu_page_header_cache.kmem_cache = mmu_page_header_cache;
 +	vcpu->kvm->arch.split_page_header_cache.kmem_cache = mmu_page_header_cache;
 +	vcpu->kvm->arch.split_desc_cache.kmem_cache = pte_list_desc_cache;
++}
++
++void kvm_ept_adopt_nested_sync(u64 root)
++{
++    if (dax_nested_root_sync) {
++        u8 *byte = (u8 *)__va(root) + 1;
++        WRITE_ONCE(*byte, READ_ONCE(*byte));
++    }
 +}
 +
 +static noinline void kvm_dax_nested_root_sync(struct kvm_vcpu *vcpu)
@@ -657,25 +682,25 @@ index f7901cb..41f7f05 100644
 +	 * Keep normal RCU retirement, but do not wait for callback execution. */
 +}
 +#endif
-+
+ 
  #define BATCH_ZAP_PAGES	10
  static void kvm_zap_obsolete_pages(struct kvm *kvm)
- {
 diff --git a/arch/x86/kvm/mmu/mmu_internal.h b/arch/x86/kvm/mmu/mmu_internal.h
-index decc1f1..86e9819 100644
 --- a/arch/x86/kvm/mmu/mmu_internal.h
 +++ b/arch/x86/kvm/mmu/mmu_internal.h
-@@ -130,6 +130,10 @@ struct kvm_mmu_page {
+@@ -129,6 +129,12 @@
+ #ifdef CONFIG_X86_64
  	/* Used for freeing the page asynchronously if it is a TDP MMU page. */
  	struct rcu_head rcu_head;
- #endif
++#endif
 +#ifdef CONFIG_KVM_DAX_POOL_TEST
 +	/* Shared, immutable registry; arena allocations are never reused. */
 +	u64 dax_next;
-+#endif
++    struct kvm_ept_adopt_state *ept_adopt;
++    struct list_head ept_adopt_link;
+ #endif
  };
  
- extern struct kmem_cache *mmu_page_header_cache;
 diff --git a/arch/x86/kvm/mmu/spte.c b/arch/x86/kvm/mmu/spte.c
 index 4a59913..200a53b 100644
 --- a/arch/x86/kvm/mmu/spte.c
@@ -689,22 +714,100 @@ index 4a59913..200a53b 100644
  
  	*new_spte = spte;
 diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
-index 6cd4dd6..145995a 100644
 --- a/arch/x86/kvm/mmu/tdp_mmu.c
 +++ b/arch/x86/kvm/mmu/tdp_mmu.c
-@@ -53,8 +53,9 @@ void kvm_mmu_uninit_tdp_mmu(struct kvm *kvm)
+@@ -10,6 +10,64 @@
+ 
+ #include <asm/cmpxchg.h>
+ #include <trace/events/kvm.h>
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++#include <linux/memremap.h>
++#include <linux/uaccess.h>
++#include <linux/capability.h>
++#include "../smm.h"
++
++/* Only EPT tables are shared. All lifetime state below is host-local DRAM. */
++struct kvm_ept_adopt_state {
++    struct dev_pagemap *pgmap;
++    u64 base, bump, data_base, data_bytes;
++    bool released, failed;
++    spinlock_t lock;
++    struct list_head pages;
++};
++
++bool kvm_ept_adopt_can_run(struct kvm *kvm)
++{
++    struct kvm_ept_adopt_state *s = kvm->arch.ept_adopt;
++    return !s || (!READ_ONCE(s->released) && !READ_ONCE(s->failed));
++}
++
++static void *ept_adopt_alloc(struct kvm_ept_adopt_state *s)
++{
++    void *table = NULL;
++    unsigned long flags;
++    spin_lock_irqsave(&s->lock, flags);
++    if (!s->released && !s->failed && s->bump < KVM_EPT_ADOPT_BYTES) {
++        table = __va(s->base + s->bump);
++        s->bump += PAGE_SIZE;
++    } else {
++        s->failed = true;
++    }
++    spin_unlock_irqrestore(&s->lock, flags);
++    if (table)
++        clear_page(table);
++    return table;
++}
++
++static void ept_adopt_forget(struct kvm_mmu_page *sp)
++{
++    unsigned long flags;
++    if (!sp->ept_adopt)
++        return;
++    spin_lock_irqsave(&sp->ept_adopt->lock, flags);
++    list_del_init(&sp->ept_adopt_link);
++    spin_unlock_irqrestore(&sp->ept_adopt->lock, flags);
++}
++
++static bool ept_adopt_free(struct kvm_mmu_page *sp)
++{
++    if (!sp->ept_adopt)
++        return false;
++    ept_adopt_forget(sp);
++    set_page_private(virt_to_page(sp->spt), 0);
++    kmem_cache_free(mmu_page_header_cache, sp);
++    return true; /* The table is discarded, never freed or reused. */
++}
++#endif
+ 
+ /* Initializes the TDP MMU for the VM, if enabled. */
+ void kvm_mmu_init_tdp_mmu(struct kvm *kvm)
+@@ -49,12 +107,23 @@
+ 	 * zapped roots will create new callbacks.
+ 	 */
+ 	rcu_barrier();
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++    if (kvm->arch.ept_adopt) {
++        put_dev_pagemap(kvm->arch.ept_adopt->pgmap);
++        kfree(kvm->arch.ept_adopt);
++    }
++#endif
+ }
  
  static void tdp_mmu_free_sp(struct kvm_mmu_page *sp)
  {
 -	free_page((unsigned long)sp->spt);
 -	kmem_cache_free(mmu_page_header_cache, sp);
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++    if (ept_adopt_free(sp))
++        return;
++#endif
 +	kvm_dax_put_page((unsigned long)sp->spt);
 +	if (!kvm_dax_free(sp))
 +		kvm_dax_cache_free(mmu_page_header_cache, sp);
  }
  
  /*
-@@ -91,7 +92,8 @@ void kvm_tdp_mmu_put_root(struct kvm *kvm, struct kvm_mmu_page *root,
+@@ -91,7 +160,8 @@
  	spin_lock(&kvm->arch.tdp_mmu_pages_lock);
  	list_del_rcu(&root->link);
  	spin_unlock(&kvm->arch.tdp_mmu_pages_lock);
@@ -714,10 +817,39 @@ index 6cd4dd6..145995a 100644
  }
  
  /*
-@@ -200,6 +202,18 @@ static void tdp_mmu_init_sp(struct kvm_mmu_page *sp, tdp_ptep_t sptep,
+@@ -184,7 +254,18 @@
+ 
+ 	sp = kvm_mmu_memory_cache_alloc(&vcpu->arch.mmu_page_header_cache);
+ 	sp->spt = kvm_mmu_memory_cache_alloc(&vcpu->arch.mmu_shadow_page_cache);
+-
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++    sp->ept_adopt = vcpu->kvm->arch.ept_adopt;
++    if (sp->ept_adopt) {
++        free_page((unsigned long)sp->spt); /* Unused native reserve page. */
++        sp->spt = ept_adopt_alloc(sp->ept_adopt);
++        if (!sp->spt) {
++            kmem_cache_free(mmu_page_header_cache, sp);
++            return NULL;
++        }
++        INIT_LIST_HEAD(&sp->ept_adopt_link);
++    }
++#endif
+ 	return sp;
+ }
+ 
+@@ -199,6 +280,26 @@
+ 	sp->gfn = gfn;
  	sp->ptep = sptep;
  	sp->tdp_mmu_page = true;
- 
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++    if (sp->ept_adopt) {
++        unsigned long flags;
++        spin_lock_irqsave(&sp->ept_adopt->lock, flags);
++        list_add(&sp->ept_adopt_link, &sp->ept_adopt->pages);
++        spin_unlock_irqrestore(&sp->ept_adopt->lock, flags);
++    }
++#endif
++
 +#ifdef CONFIG_KVM_DAX_POOL_TEST
 +	if (kvm_dax_shared() && kvm_dax_contains(sp)) {
 +		struct kvm_dax_shared *s = kvm_dax_shared();
@@ -729,11 +861,30 @@ index 6cd4dd6..145995a 100644
 +		__sync_fetch_and_add(&s->ept_page_count, 1);
 +	}
 +#endif
-+
+ 
  	trace_kvm_mmu_get_page(sp, true);
  }
+@@ -236,6 +337,9 @@
+ 	}
  
-@@ -397,7 +411,8 @@ static void handle_removed_pt(struct kvm *kvm, tdp_ptep_t pt, bool shared)
+ 	root = tdp_mmu_alloc_sp(vcpu);
++    if (!root) {
++        return INVALID_PAGE;
++    }
+ 	tdp_mmu_init_sp(root, NULL, 0, role);
+ 
+ 	/*
+@@ -284,6 +388,9 @@
+ 			      bool shared)
+ {
+ 	tdp_unaccount_mmu_page(kvm, sp);
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++    ept_adopt_forget(sp);
++#endif
+ 
+ 	if (!sp->nx_huge_page_disallowed)
+ 		return;
+@@ -397,7 +504,8 @@
  				    old_spte, REMOVED_SPTE, level, shared);
  	}
  
@@ -743,10 +894,23 @@ index 6cd4dd6..145995a 100644
  }
  
  /**
-@@ -1048,6 +1063,20 @@ int kvm_tdp_mmu_map(struct kvm_vcpu *vcpu, struct kvm_page_fault *fault)
+@@ -1047,6 +1155,32 @@
+ 	int ret = RET_PF_RETRY;
  
  	kvm_mmu_hugepage_adjust(vcpu, fault);
- 
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++    if (kvm->arch.ept_adopt && !is_error_noslot_pfn(fault->pfn)) {
++        struct kvm_ept_adopt_state *s = kvm->arch.ept_adopt;
++        u64 first = s->data_base >> PAGE_SHIFT;
++        u64 count = s->data_bytes >> PAGE_SHIFT;
++        u64 pages = KVM_PAGES_PER_HPAGE(fault->goal_level);
++        /* Same admission rule as direct: new leaves must point into CXL RAM. */
++        if (!kvm_ept_adopt_can_run(kvm) || fault->pfn < first ||
++            fault->pfn - first >= count || pages > count - (fault->pfn - first))
++            return -EXDEV;
++    }
++#endif
++
 +#ifdef CONFIG_KVM_DAX_POOL_TEST
 +	if (kvm_dax_shared() && kvm_dax_shared()->ept_validated &&
 +	    !(kvm_dax_shared()->scattered && READ_ONCE(kvm_dax_shared()->local_ram)) &&
@@ -760,11 +924,25 @@ index 6cd4dd6..145995a 100644
 +			return -EXDEV;
 +	}
 +#endif
-+
+ 
  	trace_kvm_mmu_spte_requested(fault);
  
- 	rcu_read_lock();
-@@ -1327,13 +1356,16 @@ static struct kvm_mmu_page *__tdp_mmu_alloc_sp_for_split(gfp_t gfp)
+@@ -1078,6 +1212,7 @@
+ 		 * needs to be split.
+ 		 */
+ 		sp = tdp_mmu_alloc_sp(vcpu);
++        if (!sp) { ret = -ENOMEM; goto retry; }
+ 		tdp_mmu_init_child_sp(sp, &iter);
+ 
+ 		sp->nx_huge_page_disallowed = fault->huge_page_disallowed;
+@@ -1321,19 +1456,32 @@
+ 	return spte_set;
+ }
+ 
+-static struct kvm_mmu_page *__tdp_mmu_alloc_sp_for_split(gfp_t gfp)
++static struct kvm_mmu_page *__tdp_mmu_alloc_sp_for_split(struct kvm *kvm, gfp_t gfp)
+ {
+ 	struct kvm_mmu_page *sp;
  
  	gfp |= __GFP_ZERO;
  
@@ -776,7 +954,17 @@ index 6cd4dd6..145995a 100644
  		return NULL;
  
 -	sp->spt = (void *)__get_free_page(gfp);
-+	sp->spt = (void *)kvm_dax_get_page(gfp, "ept_page");
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++    sp->ept_adopt = kvm->arch.ept_adopt;
++    INIT_LIST_HEAD(&sp->ept_adopt_link);
++    if (sp->ept_adopt)
++        sp->spt = ept_adopt_alloc(sp->ept_adopt);
++    else {
++        sp->spt = (void *)kvm_dax_get_page(gfp, "ept_page");
++    }
++#else
++    sp->spt = (void *)kvm_dax_get_page(gfp, "ept_page");
++#endif
  	if (!sp->spt) {
 -		kmem_cache_free(mmu_page_header_cache, sp);
 +		if (!kvm_dax_free(sp))
@@ -784,6 +972,296 @@ index 6cd4dd6..145995a 100644
  		return NULL;
  	}
  
+@@ -1355,7 +1503,7 @@
+ 	 * If this allocation fails we drop the lock and retry with reclaim
+ 	 * allowed.
+ 	 */
+-	sp = __tdp_mmu_alloc_sp_for_split(GFP_NOWAIT | __GFP_ACCOUNT);
++	sp = __tdp_mmu_alloc_sp_for_split(kvm, GFP_NOWAIT | __GFP_ACCOUNT);
+ 	if (sp)
+ 		return sp;
+ 
+@@ -1367,7 +1515,7 @@
+ 		write_unlock(&kvm->mmu_lock);
+ 
+ 	iter->yielded = true;
+-	sp = __tdp_mmu_alloc_sp_for_split(GFP_KERNEL_ACCOUNT);
++	sp = __tdp_mmu_alloc_sp_for_split(kvm, GFP_KERNEL_ACCOUNT);
+ 
+ 	if (shared)
+ 		read_lock(&kvm->mmu_lock);
+@@ -1815,3 +1963,271 @@
+ 	 */
+ 	return rcu_dereference(sptep);
+ }
++
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++/* Walk only non-leaf tables. Leaf contents never participate in adoption. */
++static int ept_adopt_walk(struct kvm_ept_adopt_state *s, u64 offset,
++                         union kvm_mmu_page_role role, gfn_t gfn,
++                         tdp_ptep_t parent, unsigned long *seen,
++                         struct list_head *pages)
++{
++    struct kvm_mmu_page *sp;
++    int i, ret;
++    if (!IS_ALIGNED(offset, PAGE_SIZE) || offset >= s->bump ||
++        test_and_set_bit(offset >> PAGE_SHIFT, seen))
++        return -EINVAL;
++    sp = kmem_cache_zalloc(mmu_page_header_cache, GFP_KERNEL_ACCOUNT);
++    if (!sp)
++        return -ENOMEM;
++    sp->spt = __va(s->base + offset);
++    sp->role = role;
++    sp->gfn = gfn;
++    sp->ptep = parent;
++    sp->tdp_mmu_page = true;
++    sp->ept_adopt = s;
++    INIT_LIST_HEAD(&sp->possible_nx_huge_page_link);
++    list_add_tail(&sp->ept_adopt_link, pages);
++    if (role.level == PG_LEVEL_4K)
++        return 0;
++    for (i = 0; i < SPTE_ENT_PER_PAGE; i++) {
++        u64 entry = READ_ONCE(sp->spt[i]);
++        u64 phys = spte_to_pfn(entry) << PAGE_SHIFT;
++        union kvm_mmu_page_role child = role;
++        if (!is_shadow_present_pte(entry) || is_large_pte(entry))
++            continue;
++        if (phys < s->base || phys - s->base >= s->bump)
++            return -EXDEV;
++        child.level--;
++        ret = ept_adopt_walk(s, phys - s->base, child,
++            gfn + i * KVM_PAGES_PER_HPAGE(role.level),
++            (tdp_ptep_t)&sp->spt[i], seen, pages);
++        if (ret)
++            return ret;
++    }
++    return 0;
++}
++
++static int ept_adopt_init(struct kvm *kvm, struct kvm_ept_adopt *q)
++{
++    struct kvm_ept_adopt_state *s;
++    struct dev_pagemap *pgmap;
++    u64 end;
++    int i;
++    if (kvm->arch.ept_adopt || kvm_dax_enabled() || !tdp_mmu_enabled ||
++        !kvm_ad_enabled() || q->bump || q->root || q->role ||
++        !IS_ALIGNED(q->base, KVM_EPT_ADOPT_BYTES) ||
++        !IS_ALIGNED(q->data_base, PAGE_SIZE) || !q->data_bytes ||
++        !IS_ALIGNED(q->data_bytes, PAGE_SIZE) ||
++        check_add_overflow(q->base, KVM_EPT_ADOPT_BYTES - 1, &end))
++        return -EINVAL;
++    pgmap = get_dev_pagemap(q->base >> PAGE_SHIFT, NULL);
++    if (!pgmap)
++        return -EXDEV;
++    if (pgmap->type != MEMORY_DEVICE_GENERIC || pgmap->vmemmap_shift)
++        goto bad;
++    for (i = 0; i < pgmap->nr_range; i++)
++        if (q->base >= pgmap->ranges[i].start && end <= pgmap->ranges[i].end)
++            break;
++    if (i == pgmap->nr_range)
++        goto bad;
++    for (i = 0; i < KVM_EPT_ADOPT_BYTES / PAGE_SIZE; i++) {
++        unsigned long pfn = (q->base >> PAGE_SHIFT) + i;
++        if (!pfn_valid(pfn) || !is_zone_device_page(pfn_to_page(pfn)) ||
++            !virt_addr_valid(__va(pfn << PAGE_SHIFT)))
++            goto bad;
++    }
++    if (check_add_overflow(q->data_base, q->data_bytes - 1, &end) ||
++        !(end < q->base || q->data_base >= q->base + KVM_EPT_ADOPT_BYTES))
++        goto bad;
++    s = kzalloc(sizeof(*s), GFP_KERNEL_ACCOUNT);
++    if (!s) { put_dev_pagemap(pgmap); return -ENOMEM; }
++    s->pgmap = pgmap;
++    s->base = q->base;
++    s->data_base = q->data_base;
++    s->data_bytes = q->data_bytes;
++    s->released = !!(q->flags & KVM_EPT_ADOPT_WAIT);
++    spin_lock_init(&s->lock);
++    INIT_LIST_HEAD(&s->pages);
++    /* This is the sole pre-sharing initialization. Old native tables may be
++     * zapped here; neither release nor adopt below uses the zap path. */
++    write_lock(&kvm->mmu_lock);
++    kvm_tdp_mmu_invalidate_all_roots(kvm);
++    write_unlock(&kvm->mmu_lock);
++    kvm_tdp_mmu_zap_invalidated_roots(kvm);
++    rcu_barrier();
++    kvm->arch.ept_adopt = s;
++    return 0;
++bad:
++    put_dev_pagemap(pgmap);
++    return -EXDEV;
++}
++
++static int ept_adopt_release(struct kvm *kvm, struct kvm_ept_adopt *q)
++{
++    struct kvm_ept_adopt_state *s = kvm->arch.ept_adopt;
++    struct kvm_mmu_page *root, *sp, *next;
++    LIST_HEAD(pages);
++    int i;
++    write_lock(&kvm->mmu_lock);
++    if (list_empty(&kvm->arch.tdp_mmu_roots) ||
++        !list_is_singular(&kvm->arch.tdp_mmu_roots)) {
++        write_unlock(&kvm->mmu_lock);
++        return -EOPNOTSUPP;
++    }
++    root = list_first_entry(&kvm->arch.tdp_mmu_roots, struct kvm_mmu_page, link);
++    if (root->role.invalid || root->ept_adopt != s ||
++        refcount_read(&root->tdp_mmu_root_count) != 1) {
++        write_unlock(&kvm->mmu_lock);
++        return -EBUSY;
++    }
++    q->base = s->base; q->bump = s->bump;
++    q->root = __pa(root->spt) - s->base; q->role = root->role.word;
++    q->data_base = s->data_base; q->data_bytes = s->data_bytes; q->flags = 0;
++    for (i = 0; i < KVM_NR_PAGE_SIZES; i++)
++        q->pages[i] = atomic64_xchg(&kvm->stat.pages[i], 0);
++    /* No SPTE store, dirty-bit harvest, zap, or shared-page free here. */
++    list_del_rcu(&root->link);
++    spin_lock(&s->lock);
++    list_splice_init(&s->pages, &pages);
++    spin_unlock(&s->lock);
++    list_for_each_entry(sp, &pages, ept_adopt_link)
++        if (sp->ptep)
++            tdp_unaccount_mmu_page(kvm, sp);
++    write_unlock(&kvm->mmu_lock);
++    synchronize_rcu();
++    list_for_each_entry_safe(sp, next, &pages, ept_adopt_link) {
++        set_page_private(virt_to_page(sp->spt), 0);
++        kmem_cache_free(mmu_page_header_cache, sp);
++    }
++    /* Prior ordinary unlinks can have callbacks. None may survive release. */
++    rcu_barrier();
++    return 0;
++}
++
++static int ept_adopt_import(struct kvm *kvm, struct kvm_ept_adopt *q)
++{
++    struct kvm_ept_adopt_state *s = kvm->arch.ept_adopt;
++    union kvm_mmu_page_role role = { .word = q->role };
++    struct kvm_mmu_page *sp, *next, *root;
++    unsigned long *seen;
++    LIST_HEAD(pages);
++    int ret, i;
++    if (q->flags || q->base != s->base || q->data_base != s->data_base ||
++        q->data_bytes != s->data_bytes || !q->bump ||
++        q->bump > KVM_EPT_ADOPT_BYTES || q->bump < s->bump ||
++        !IS_ALIGNED(q->bump, PAGE_SIZE) || !role.direct || role.invalid ||
++        role.guest_mode || role.smm || role.ad_disabled ||
++        role.level < PG_LEVEL_4K || role.level > PT64_ROOT_5LEVEL)
++        return -EINVAL;
++    seen = bitmap_zalloc(KVM_EPT_ADOPT_BYTES / PAGE_SIZE, GFP_KERNEL);
++    if (!seen)
++        return -ENOMEM;
++    s->bump = q->bump; /* Packet high-water mark; only the owner changes it. */
++    ret = ept_adopt_walk(s, q->root, role, 0, NULL, seen, &pages);
++    bitmap_free(seen);
++    if (ret)
++        goto fail;
++    root = list_first_entry(&pages, struct kvm_mmu_page, ept_adopt_link);
++    refcount_set(&root->tdp_mmu_root_count, 1); /* TDP reference only. */
++    write_lock(&kvm->mmu_lock);
++    if (!list_empty(&kvm->arch.tdp_mmu_roots)) {
++        write_unlock(&kvm->mmu_lock); ret = -EBUSY; goto fail;
++    }
++    list_for_each_entry(sp, &pages, ept_adopt_link) {
++        set_page_private(virt_to_page(sp->spt), (unsigned long)sp);
++        if (sp->ptep)
++            tdp_account_mmu_page(kvm, sp);
++    }
++    list_splice_init(&pages, &s->pages);
++    list_add_rcu(&root->link, &kvm->arch.tdp_mmu_roots);
++    for (i = 0; i < KVM_NR_PAGE_SIZES; i++)
++        atomic64_set(&kvm->stat.pages[i], q->pages[i]);
++    write_unlock(&kvm->mmu_lock);
++    kvm_ept_adopt_nested_sync(s->base + q->root);
++    s->released = false;
++    return 0;
++fail:
++    list_for_each_entry_safe(sp, next, &pages, ept_adopt_link)
++        kmem_cache_free(mmu_page_header_cache, sp);
++    return ret;
++}
++
++int kvm_ept_adopt_ioctl(struct kvm *kvm, unsigned int cmd, unsigned long arg)
++{
++    struct kvm_ept_adopt q;
++    struct kvm_vcpu *vcpus[KVM_DAX_MAX_VCPUS];
++    struct kvm_ept_adopt_state *s;
++    struct kvm_memory_slot *slot;
++    struct kvm_memslots *slots;
++    int ret = -EINVAL, nr, locked = 0, bkt, i;
++    if (!capable(CAP_SYS_ADMIN))
++        return -EPERM;
++    if (copy_from_user(&q, (void __user *)arg, sizeof(q)))
++        return -EFAULT;
++    mutex_lock(&kvm->slots_lock);
++    nr = atomic_read(&kvm->online_vcpus);
++    if (!nr || nr > KVM_DAX_MAX_VCPUS || kvm_dax_contains(kvm) ||
++        kvm->dirty_ring_size || kvm->manual_dirty_log_protect)
++        goto out;
++    for (i = 0; i < nr; i++) {
++        vcpus[i] = kvm_get_vcpu(kvm, i);
++        if (!mutex_trylock(&vcpus[i]->mutex)) { ret = -EBUSY; goto out; }
++        locked++;
++        if (is_guest_mode(vcpus[i]) || is_smm(vcpus[i]) ||
++            vcpus[i]->arch.root_mmu.root_role.guest_mode)
++            goto out;
++    }
++    slots = kvm_memslots(kvm);
++    kvm_for_each_memslot(slot, bkt, slots)
++        if (!(slot->flags & KVM_MEM_LOG_DIRTY_PAGES))
++            goto out;
++    s = kvm->arch.ept_adopt;
++    if (cmd == KVM_EPT_ADOPT && q.flags & KVM_EPT_ADOPT_INIT) {
++        if (q.flags & ~(KVM_EPT_ADOPT_INIT | KVM_EPT_ADOPT_WAIT))
++            goto out;
++    } else if (!s || s->failed ||
++               (cmd == KVM_EPT_RELEASE ? s->released : !s->released)) {
++        ret = -EIO; goto out;
++    }
++    if (cmd == KVM_EPT_ADOPT && !q.flags) {
++        for (i = 0; i < nr; i++)
++            if (vcpus[i]->arch.root_mmu.root_role.word != q.role)
++                goto out;
++    }
++    /* Slot operations and all RUNs are excluded. Drop each vCPU's roots using
++     * ordinary reference release; valid TDP roots retain their MMU reference. */
++    for (i = 0; i < nr; i++) {
++        kvm_mmu_free_roots(kvm, &vcpus[i]->arch.root_mmu, KVM_MMU_ROOTS_ALL);
++        kvm_mmu_free_roots(kvm, &vcpus[i]->arch.guest_mmu, KVM_MMU_ROOTS_ALL);
++    }
++    if (cmd == KVM_EPT_ADOPT && q.flags & KVM_EPT_ADOPT_INIT) {
++        ret = ept_adopt_init(kvm, &q);
++    } else if (cmd == KVM_EPT_RELEASE) {
++        s->released = true;
++        kvm_for_each_memslot(slot, bkt, slots)
++            if (!bitmap_empty(slot->dirty_bitmap, slot->npages)) {
++                ret = -EBUSY; goto failed;
++            }
++        ret = ept_adopt_release(kvm, &q);
++    } else {
++        kvm_for_each_memslot(slot, bkt, slots)
++            bitmap_zero(slot->dirty_bitmap, slot->npages * 2);
++        ret = ept_adopt_import(kvm, &q);
++    }
++failed:
++    s = kvm->arch.ept_adopt;
++    if (ret && s)
++        s->failed = true;
++    for (i = 0; i < nr; i++)
++        kvm_make_request(KVM_REQ_TLB_FLUSH_CURRENT, vcpus[i]);
++    if (!ret && copy_to_user((void __user *)arg, &q, sizeof(q))) {
++        if (s) s->failed = true;
++        ret = -EFAULT;
++    }
++out:
++    while (locked)
++        mutex_unlock(&vcpus[--locked]->mutex);
++    mutex_unlock(&kvm->slots_lock);
++    return ret;
++}
++#endif
 diff --git a/arch/x86/kvm/vmx/vmx.c b/arch/x86/kvm/vmx/vmx.c
 index 72e3943..b61c265 100644
 --- a/arch/x86/kvm/vmx/vmx.c
@@ -1021,10 +1499,9 @@ index 72e3943..b61c265 100644
  
  	.check_processor_compatibility = vmx_check_processor_compat,
 diff --git a/arch/x86/kvm/x86.c b/arch/x86/kvm/x86.c
-index 41cce50..ba06cbf 100644
 --- a/arch/x86/kvm/x86.c
 +++ b/arch/x86/kvm/x86.c
-@@ -4408,7 +4408,7 @@ static int msr_io(struct kvm_vcpu *vcpu, struct kvm_msrs __user *user_msrs,
+@@ -4408,7 +4408,7 @@
  	if (writeback && copy_to_user(user_msrs->entries, entries, size))
  		r = -EFAULT;
  
@@ -1033,7 +1510,7 @@ index 41cce50..ba06cbf 100644
  out:
  	return r;
  }
-@@ -5662,8 +5662,8 @@ long kvm_arch_vcpu_ioctl(struct file *filp,
+@@ -5662,8 +5662,8 @@
  		r = -EINVAL;
  		if (!lapic_in_kernel(vcpu))
  			goto out;
@@ -1044,7 +1521,7 @@ index 41cce50..ba06cbf 100644
  
  		r = -ENOMEM;
  		if (!u.lapic)
-@@ -5854,7 +5854,7 @@ long kvm_arch_vcpu_ioctl(struct file *filp,
+@@ -5854,7 +5854,7 @@
  		if (vcpu->arch.guest_fpu.uabi_size > sizeof(struct kvm_xsave))
  			break;
  
@@ -1053,7 +1530,7 @@ index 41cce50..ba06cbf 100644
  		r = -ENOMEM;
  		if (!u.xsave)
  			break;
-@@ -5883,7 +5883,7 @@ long kvm_arch_vcpu_ioctl(struct file *filp,
+@@ -5883,7 +5883,7 @@
  	case KVM_GET_XSAVE2: {
  		int size = vcpu->arch.guest_fpu.uabi_size;
  
@@ -1062,7 +1539,7 @@ index 41cce50..ba06cbf 100644
  		r = -ENOMEM;
  		if (!u.xsave)
  			break;
-@@ -5899,7 +5899,7 @@ long kvm_arch_vcpu_ioctl(struct file *filp,
+@@ -5899,7 +5899,7 @@
  	}
  
  	case KVM_GET_XCRS: {
@@ -1071,7 +1548,7 @@ index 41cce50..ba06cbf 100644
  		r = -ENOMEM;
  		if (!u.xcrs)
  			break;
-@@ -6046,7 +6046,7 @@ long kvm_arch_vcpu_ioctl(struct file *filp,
+@@ -6046,7 +6046,7 @@
  	}
  #endif
  	case KVM_GET_SREGS2: {
@@ -1080,7 +1557,7 @@ index 41cce50..ba06cbf 100644
  		r = -ENOMEM;
  		if (!u.sregs2)
  			goto out;
-@@ -6076,7 +6076,7 @@ long kvm_arch_vcpu_ioctl(struct file *filp,
+@@ -6076,7 +6076,7 @@
  		r = -EINVAL;
  	}
  out:
@@ -1089,7 +1566,7 @@ index 41cce50..ba06cbf 100644
  out_nofree:
  	vcpu_put(vcpu);
  	return r;
-@@ -6516,7 +6516,7 @@ static struct kvm_x86_msr_filter *kvm_alloc_msr_filter(bool default_allow)
+@@ -6516,7 +6516,7 @@
  {
  	struct kvm_x86_msr_filter *msr_filter;
  
@@ -1098,19 +1575,32 @@ index 41cce50..ba06cbf 100644
  	if (!msr_filter)
  		return NULL;
  
-@@ -6532,9 +6532,9 @@ static void kvm_free_msr_filter(struct kvm_x86_msr_filter *msr_filter)
+@@ -6532,9 +6532,9 @@
  		return;
  
  	for (i = 0; i < msr_filter->count; i++)
 -		kfree(msr_filter->ranges[i].bitmap);
-+		kvm_dax_kvfree(msr_filter->ranges[i].bitmap);
- 
+-
 -	kfree(msr_filter);
++		kvm_dax_kvfree(msr_filter->ranges[i].bitmap);
++
 +	kvm_dax_kvfree(msr_filter);
  }
  
  static int kvm_add_msr_filter(struct kvm_x86_msr_filter *msr_filter,
-@@ -6878,7 +6878,7 @@ int kvm_arch_vm_ioctl(struct file *filp, unsigned int ioctl, unsigned long arg)
+@@ -6781,6 +6781,11 @@
+ 	} u;
+ 
+ 	switch (ioctl) {
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++    case KVM_EPT_RELEASE:
++    case KVM_EPT_ADOPT:
++        return kvm_ept_adopt_ioctl(kvm, ioctl, arg);
++#endif
+ 	case KVM_SET_TSS_ADDR:
+ 		r = kvm_vm_ioctl_set_tss_addr(kvm, arg);
+ 		break;
+@@ -6878,7 +6883,7 @@
  			goto get_irqchip_out;
  		r = 0;
  	get_irqchip_out:
@@ -1119,7 +1609,7 @@ index 41cce50..ba06cbf 100644
  		break;
  	}
  	case KVM_SET_IRQCHIP: {
-@@ -6896,7 +6896,7 @@ int kvm_arch_vm_ioctl(struct file *filp, unsigned int ioctl, unsigned long arg)
+@@ -6896,7 +6901,7 @@
  			goto set_irqchip_out;
  		r = kvm_vm_ioctl_set_irqchip(kvm, chip);
  	set_irqchip_out:
@@ -1128,7 +1618,7 @@ index 41cce50..ba06cbf 100644
  		break;
  	}
  	case KVM_GET_PIT: {
-@@ -8401,7 +8401,7 @@ static struct x86_emulate_ctxt *alloc_emulate_ctxt(struct kvm_vcpu *vcpu)
+@@ -8401,7 +8406,7 @@
  {
  	struct x86_emulate_ctxt *ctxt;
  
@@ -1137,7 +1627,18 @@ index 41cce50..ba06cbf 100644
  	if (!ctxt) {
  		pr_err("failed to allocate vcpu's emulator\n");
  		return NULL;
-@@ -11845,10 +11845,25 @@ int kvm_arch_vcpu_precreate(struct kvm *kvm, unsigned int id)
+@@ -11105,6 +11110,10 @@
+ 	struct kvm_run *kvm_run = vcpu->run;
+ 	int r;
+ 
++#ifdef CONFIG_KVM_DAX_POOL_TEST
++    if (!kvm_ept_adopt_can_run(vcpu->kvm) && !kvm_run->immediate_exit)
++        return -EIO;
++#endif
+ 	vcpu_load(vcpu);
+ 	kvm_sigset_activate(vcpu);
+ 	kvm_run->flags = 0;
+@@ -11845,10 +11854,25 @@
  	return static_call(kvm_x86_vcpu_precreate)(kvm);
  }
  
@@ -1163,7 +1664,7 @@ index 41cce50..ba06cbf 100644
  
  	vcpu->arch.last_vmentry_cpu = -1;
  	vcpu->arch.regs_avail = ~0;
-@@ -11889,15 +11904,15 @@ int kvm_arch_vcpu_create(struct kvm_vcpu *vcpu)
+@@ -11889,15 +11913,15 @@
  
  	r = -ENOMEM;
  
@@ -1184,10 +1685,11 @@ index 41cce50..ba06cbf 100644
  	if (!vcpu->arch.mce_banks || !vcpu->arch.mci_ctl2_banks)
  		goto fail_free_mce_banks;
  	vcpu->arch.mcg_cap = KVM_MAX_MCE_BANKS;
-@@ -11913,6 +11928,19 @@ int kvm_arch_vcpu_create(struct kvm_vcpu *vcpu)
+@@ -11912,6 +11936,19 @@
+ 	if (!fpu_alloc_guest_fpstate(&vcpu->arch.guest_fpu)) {
  		pr_err("failed to allocate vcpu's fpu\n");
  		goto free_emulate_ctxt;
- 	}
++	}
 +	if (kvm_dax_enabled()) {
 +		struct fpstate *old = vcpu->arch.guest_fpu.fpstate;
 +		size_t bytes = old->user_size + ALIGN(offsetof(struct fpstate, regs), 64);
@@ -1200,11 +1702,10 @@ index 41cce50..ba06cbf 100644
 +		memcpy(state, old, bytes);
 +		vcpu->arch.guest_fpu.fpstate = state;
 +		vfree(old);
-+	}
+ 	}
  
  	vcpu->arch.maxphyaddr = cpuid_query_maxphyaddr(vcpu);
- 	vcpu->arch.reserved_gpa_bits = kvm_vcpu_reserved_gpa_bits_raw(vcpu);
-@@ -11947,15 +11975,15 @@ int kvm_arch_vcpu_create(struct kvm_vcpu *vcpu)
+@@ -11947,15 +11984,15 @@
  	return 0;
  
  free_guest_fpu:
@@ -1225,7 +1726,7 @@ index 41cce50..ba06cbf 100644
  fail_free_lapic:
  	kvm_free_lapic(vcpu);
  fail_mmu_destroy:
-@@ -11991,21 +12019,21 @@ void kvm_arch_vcpu_destroy(struct kvm_vcpu *vcpu)
+@@ -11991,21 +12028,21 @@
  
  	static_call(kvm_x86_vcpu_free)(vcpu);
  
@@ -1253,7 +1754,7 @@ index 41cce50..ba06cbf 100644
  	if (!lapic_in_kernel(vcpu))
  		static_branch_dec(&kvm_has_noapic_vcpu);
  }
-@@ -12302,7 +12330,7 @@ void kvm_arch_sched_in(struct kvm_vcpu *vcpu, int cpu)
+@@ -12302,7 +12339,7 @@
  
  void kvm_arch_free_vm(struct kvm *kvm)
  {
@@ -1262,10 +1763,11 @@ index 41cce50..ba06cbf 100644
  	__kvm_arch_free_vm(kvm);
  }
  
-@@ -12374,6 +12402,132 @@ int kvm_arch_post_init_vm(struct kvm *kvm)
+@@ -12373,6 +12410,132 @@
+ {
  	return kvm_mmu_post_init_vm(kvm);
  }
- 
++
 +#ifdef CONFIG_KVM_DAX_POOL_TEST
 +void kvm_arch_dax_rebase_tsc(struct kvm_vcpu *vcpu)
 +{
@@ -1391,11 +1893,10 @@ index 41cce50..ba06cbf 100644
 +}
 +EXPORT_SYMBOL_GPL(kvm_arch_dax_vm_resume);
 +#endif
-+
+ 
  static void kvm_unload_vcpu_mmu(struct kvm_vcpu *vcpu)
  {
- 	vcpu_load(vcpu);
-@@ -12501,8 +12655,8 @@ void kvm_arch_destroy_vm(struct kvm *kvm)
+@@ -12501,8 +12664,8 @@
  	kvm_pic_destroy(kvm);
  	kvm_ioapic_destroy(kvm);
  	kvm_destroy_vcpus(kvm);
@@ -1406,7 +1907,7 @@ index 41cce50..ba06cbf 100644
  	kvm_mmu_uninit_vm(kvm);
  	kvm_page_track_cleanup(kvm);
  	kvm_xen_destroy_vm(kvm);
-@@ -12514,7 +12668,7 @@ static void memslot_rmap_free(struct kvm_memory_slot *slot)
+@@ -12514,7 +12677,7 @@
  	int i;
  
  	for (i = 0; i < KVM_NR_PAGE_SIZES; ++i) {
@@ -1415,7 +1916,7 @@ index 41cce50..ba06cbf 100644
  		slot->arch.rmap[i] = NULL;
  	}
  }
-@@ -12526,7 +12680,7 @@ void kvm_arch_free_memslot(struct kvm *kvm, struct kvm_memory_slot *slot)
+@@ -12526,7 +12689,7 @@
  	memslot_rmap_free(slot);
  
  	for (i = 1; i < KVM_NR_PAGE_SIZES; ++i) {
@@ -1424,7 +1925,7 @@ index 41cce50..ba06cbf 100644
  		slot->arch.lpage_info[i - 1] = NULL;
  	}
  
-@@ -12545,7 +12699,9 @@ int memslot_rmap_alloc(struct kvm_memory_slot *slot, unsigned long npages)
+@@ -12545,7 +12708,9 @@
  		if (slot->arch.rmap[i])
  			continue;
  
@@ -1435,7 +1936,7 @@ index 41cce50..ba06cbf 100644
  		if (!slot->arch.rmap[i]) {
  			memslot_rmap_free(slot);
  			return -ENOMEM;
-@@ -12582,7 +12738,9 @@ static int kvm_alloc_memslot_metadata(struct kvm *kvm,
+@@ -12582,7 +12747,9 @@
  
  		lpages = __kvm_mmu_slot_lpages(slot, npages, level);
  
@@ -1446,7 +1947,7 @@ index 41cce50..ba06cbf 100644
  		if (!linfo)
  			goto out_free;
  
-@@ -12614,7 +12772,7 @@ static int kvm_alloc_memslot_metadata(struct kvm *kvm,
+@@ -12614,7 +12781,7 @@
  	memslot_rmap_free(slot);
  
  	for (i = 1; i < KVM_NR_PAGE_SIZES; ++i) {
@@ -1457,10 +1958,9 @@ index 41cce50..ba06cbf 100644
  	return -ENOMEM;
 diff --git a/include/linux/kvm_dax.h b/include/linux/kvm_dax.h
 new file mode 100644
-index 0000000..91bbb09
 --- /dev/null
 +++ b/include/linux/kvm_dax.h
-@@ -0,0 +1,200 @@
+@@ -0,0 +1,204 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +#ifndef __LINUX_KVM_DAX_H
 +#define __LINUX_KVM_DAX_H
@@ -1474,6 +1974,10 @@ index 0000000..91bbb09
 +#ifdef CONFIG_KVM_DAX_POOL_TEST
 +struct kvm;
 +struct kvm_vcpu;
++struct kvm_ept_adopt_state;
++int kvm_ept_adopt_ioctl(struct kvm *kvm, unsigned int cmd, unsigned long arg);
++bool kvm_ept_adopt_can_run(struct kvm *kvm);
++void kvm_ept_adopt_nested_sync(u64 root);
 +/* A registered kernel mapper owns the table, not a userspace claim or Bloom
 + * hint. The descriptor is VM-private; only its fenced execution owner writes. */
 +struct kvm_dax_mapping_identity {
@@ -1686,10 +2190,9 @@ index fb6c610..c24948a 100644
  #ifndef __KVM_HAVE_ARCH_VM_FREE
 diff --git a/include/uapi/linux/kvm_dax.h b/include/uapi/linux/kvm_dax.h
 new file mode 100644
-index 0000000..cffeee0
 --- /dev/null
 +++ b/include/uapi/linux/kvm_dax.h
-@@ -0,0 +1,58 @@
+@@ -0,0 +1,72 @@
 +/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 +#ifndef _UAPI_LINUX_KVM_DAX_H
 +#define _UAPI_LINUX_KVM_DAX_H
@@ -1747,6 +2250,20 @@ index 0000000..cffeee0
 +	__u64 exit_ready, exit_ns, exit_reason, entry_failed;
 +	__u64 entry_l1_tsc, last_exit_l1_tsc, l1_tsc_khz;
 +};
++/* EPT-only mode. VM-fd ioctls, separate from the direct graph ABI.
++ * INIT registers this VM's private 16 MiB extent before shared execution.
++ * WAIT leaves a prepared receiver unable to run until an ADOPT succeeds. */
++#define KVM_EPT_ADOPT_INIT 1
++#define KVM_EPT_ADOPT_WAIT 2
++#define KVM_EPT_ADOPT_BYTES (16ULL << 20)
++struct kvm_ept_adopt {
++    __u64 base, bump, root; /* Physical extent base; byte offsets bump/root. */
++    __u64 data_base, data_bytes;
++    __u64 pages[3]; /* Local mapping gauges; avoid a leaf walk on import. */
++    __u32 role, flags;
++};
++#define KVM_EPT_RELEASE _IOWR(0xae, 0xfa, struct kvm_ept_adopt)
++#define KVM_EPT_ADOPT _IOWR(0xae, 0xfb, struct kvm_ept_adopt)
 +#endif
 diff --git a/kernel/module/main.c b/kernel/module/main.c
 index 98fedfd..0642a6e 100644
