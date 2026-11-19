@@ -5,7 +5,7 @@ VMCS, KVM·vCPU 객체, PML page, dirty bitmap, `kvm_run`, EPT 장부는 로컬 
 표는 소유 host의 로컬 bump와 회수 bitmap으로 할당한다.
 영역이 차거나 검증에 실패하면 guest 진입을 막는다.
 
-실험용 VM-fd ioctl은 `KVM_EPT_RELEASE`, `KVM_EPT_ADOPT` 두 개다.
+실험용 VM-fd ioctl은 `KVM_EPT_RELEASE`, `KVM_EPT_ADOPT`, `KVM_EPT_TIER`다.
 ADOPT의 INIT은 영역 등록, WAIT는 준비된 수신자다. 공유 descriptor는 없다.
 Packet은 공개 KVM CPU·VM 상태, 장치 상태, RAM lease와 EPT 위치·bump·role을 담는다.
 RAM·EPT 내용과 kernel pointer는 직렬화하지 않는다.
@@ -76,3 +76,17 @@ Release는 등뼈를 걸어 모든 존재하는 PD 칸의 PT 주소가 VM CXL �
 재사용 bitmap도 소유 host 로컬이다. Adopt는 상위 표 순회로 도달 집합을 구하고
 그 밖의 이전 할당 page만 free로 만든다. Release는 이전 owner의 RCU까지 비운다.
 붙이는 순간 공유 EPT byte는 바꾸지 않는다. 실행 중 새 fault의 할당만 재사용한다.
+
+`KVM_EPT_TIER`는 한 chunk의 PT를 떼고 계층을 바꾸거나 PT 위치를 조회한다.
+DRAM leaf PFN은 mapper의 같은 chunk에서 조회한 로컬 PFN과 대조한다.
+EPT fault 중 mmap lock을 잡지 않도록 이 PFN 목록도 정지 경계에서 로컬에 보관한다.
+Eager 옵션은 정지한 vCPU 문맥에서 기존 KVM fault 경로로 512 page를 채운다.
+유효한 root는 reload 검사로 보존한다. 새 root 참조를 중복 획득하지 않는다.
+비동기 RCU callback이 끝난 표만 재사용 가능하므로 chunk마다 RCU를 기다릴 필요는 없다.
+Release는 모든 callback을 기다린 뒤 소유권을 보낸다.
+
+시험 driver는 `MemoryTier`에 기존 요청 파일을 사용한다.
+`FC_EPT_TIER_REQUEST`가 가리킨 JSON의 `chunks`가 DRAM 목표 집합이고 `eager`는 선택이다.
+요청 파일은 한 번 소비한다. 기존 전체 promotion·checkpoint 요청과 구분한다.
+API는 paused 상태를 검사하고 장치 저장·I/O drain 뒤 전환한다.
+실패 후에는 worker를 다시 실행하지 않는다.
