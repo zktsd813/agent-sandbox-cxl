@@ -53,6 +53,13 @@ class RunnerLaunchTest(unittest.TestCase):
             self.assertIn('FC_POOL_MEMORY=1',script)
             self.assertNotIn('FC_DAX_DIRECT',script)
             self.assertNotIn('FC_DAX_SNAPSHOT',script)
+            c.trace['command_count']=0
+            c.api=Mock()
+            c.event=Mock(return_value={'receipt':{'command_count':0}})
+            c.boot_vm(c.sandboxes[0])
+            machine=next(call.args[4] for call in c.api.call_args_list if call.args[2]=='/machine-config')
+            self.assertIs(machine['track_dirty_pages'],True)
+
 
 
 if __name__=='__main__':unittest.main()

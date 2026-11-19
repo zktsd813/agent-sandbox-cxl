@@ -268,7 +268,7 @@ class HandoffController(Controller):
 
     def boot_vm(self, s):
         self.start_vm(s)
-        components = {'/machine-config': {'vcpu_count': self.vcpus, 'mem_size_mib': self.memory_mib},
+        components = {'/machine-config': {'vcpu_count': self.vcpus, 'mem_size_mib': self.memory_mib, 'track_dirty_pages': True},
             '/boot-source': {'kernel_image_path': '/lab/l2-vmlinux',
                 'initrd_path': f'/lab/{self.trace["name"]}-initramfs.cpio',
                 'boot_args': 'console=ttyS0 loglevel=4 reboot=k panic=1 pci=off rdinit=/init' + ((' memmap=2M$64M nmi_watchdog=0'+(' memmap=256M$128M' if getattr(self.args,'dirty_lines',0) else '')) if getattr(self.args,'workload',None) else '')},
@@ -276,8 +276,6 @@ class HandoffController(Controller):
                 'is_read_only': True, 'cache_type': 'Writeback', 'io_engine': self.io_engine}}
         if getattr(self.args,'dirty_mib',0)==1024:
             components['/boot-source']['boot_args']=components['/boot-source']['boot_args'].replace('memmap=256M$128M','memmap=1024M$128M')
-        if getattr(self.args, 'dirty_ledger', False):
-            components['/machine-config']['track_dirty_pages'] = True
         for path, body in components.items():
             self.api(s.role, s.directory, path, 'PUT', body)
         self.api(s.role, s.directory, '/actions', 'PUT', {'action_type': 'InstanceStart'})
