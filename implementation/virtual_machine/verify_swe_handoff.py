@@ -30,8 +30,6 @@ PAGE = 4096
 MIB = 1024**2
 PRIVATE_START, PRIVATE_END = 2*MIB, 3072*MIB
 TRACE_NAMES = {"gin-gonic__gin-3741", "php-cs-fixer__php-cs-fixer-8331", "micropython__micropython-13039"}
-MODES = {"baseline", "state-only", "direct"}
-
 def need(ok, message):
     if not ok:
         raise ValueError(message)
@@ -143,8 +141,7 @@ def execution_identity(report):
         "runtime_artifacts": {key: fixture["artifacts"][key] for key in
                               ("firecracker", "l1-kernel", "l2-vmlinux", "pool_memory_module.ko")},
         "host_modules": fixture["inputs"]["kvm_modules"],
-        "configuration": {key: config[key] for key in ("host_kernel", "qemu_sha256", "l1_vcpus", "l1_memory_mib",
-                                                       "shared_mib", "cxl_mib", "dax_guest", "dax_4k")},
+        "configuration": {key: config[key] for key in ("host_kernel", "qemu_sha256", "l1_vcpus", "l1_memory_mib", "shared_mib", "cxl_mib")},
         "storage_template_sha256": config["home_storage_image"]["template_sha256"],
         "memory_mib": report["arguments"]["memory_mib"], "vcpus": report["arguments"].get("vcpus",1),
         "restore_timing": report["arguments"].get("restore_timing", False)}
@@ -198,17 +195,17 @@ def serial_proof(e, report):
                      for launch in sorted(report["launches"], key=lambda row: row["epoch"]))
     need(not FATAL_KERNEL.search(text) and "TRACE_FATAL" not in text, "fatal guest error in full serial log")
     rows = [json.loads(line) for line in text.splitlines() if line.startswith('{"event":')]
-    if report["mode"] in ("direct", "ept-adopt"):
-        # Each resident serial file contains disjoint visits. Validate ordering inside
+    if report["mode"] == "ept-adopt":
+        # Each worker serial file contains disjoint visits. Validate ordering inside
         # every file, then merge using the controller's unique command sequence labels.
         def serial_order(row):
             if row["event"] == "trace_ready": return (-1, 0)
             match = re.fullmatch(r"v1e([0-9]+)c([0-9]+)", row.get("label", ""))
-            need(match is not None, "resident serial command label missing")
+            need(match is not None, "worker serial command label missing")
             return (int(match[2]), 0 if row["event"] == "trace_start" else 1)
         for name in logs.values():
             local = [json.loads(line) for line in e.text(name).splitlines() if line.startswith('{"event":')]
-            need([serial_order(r) for r in local] == sorted(serial_order(r) for r in local), "resident serial reordered locally")
+            need([serial_order(r) for r in local] == sorted(serial_order(r) for r in local), "worker serial reordered locally")
         rows.sort(key=serial_order)
     need(not any(row["event"] in ("trace_error", "trace_protocol_error") for row in rows), "guest protocol error")
     ready = [row for row in rows if row["event"] == "trace_ready"]
@@ -232,11 +229,6 @@ def serial_proof(e, report):
     need(data == e.read(report["guest_archive"]) and len(data) == int(size) == export["bytes"]
          and sha(data) == checksum == export["sha256"], "guest archive differs from full serial frame")
     return ready[0]
-
-def nfs_reads(e, name):
-    records = [line.split() for line in e.text(name).splitlines() if line.startswith("proc3 ")]
-    need(len(records) == 1, "NFS counter missing")
-    return int(records[0][8])
 
 def verify_trace(e, report):
     plan, root = report["trace"], e.root
@@ -298,18 +290,9 @@ def verify_trace(e, report):
              "readonly root image received writes")
         need(after["read_ios"] >= before["read_ios"], "block read counter reversed")
         read_ios += after["read_ios"] - before["read_ios"]
-        expected_role = "B" if report["mode"] != "baseline" and plan["handoff_before"] <= index < len(commands) - 2 else "A"
-        trajectory = report['arguments'].get('trajectory_policy')
-        if trajectory:
-            expected_role = 'B' if sum(x <= index for x in report['boundaries']) % 2 else 'A'
+        expected_role = 'B' if sum(x <= index for x in report['boundaries']) % 2 else 'A'
         need(event["role"] == expected_role, "command executed on wrong node")
-        need(event["vm"] == 1 and event["tier"] == ("cxl" if trajectory or expected_role == "B" else "dram"), "command ran on wrong memory tier")
-        if "network" in event:
-            network = event["network"]
-            delta = nfs_reads(e, network["after_file"]) - nfs_reads(e, network["before_file"])
-            need(delta == network["nfs_read_delta"] >= 0, "NFS counter delta")
-            if expected_role == "B":
-                remote_reads += delta
+        need(event["vm"] == 1 and event["tier"] == "cxl", "command ran on wrong memory tier")
     final = files[f"results/{len(commands) - 1:03d}.out"].splitlines(keepends=True)
     markers = [i for i, line in enumerate(final) if line.strip() == SUBMIT]
     need(len(markers) == 1, "submission marker absent/duplicate")
@@ -335,8 +318,6 @@ def verify_trace(e, report):
     boot, pid, inode = (identities[0][k] for k in ("boot_id", "pid", "fd_inode"))
     need((boot, pid) == (ready["boot_id"], ready["pid"]) and ready["command_count"] == len(commands), "boot workload identity")
     need([row["fd_ordinal"] for row in identities] == list(range(len(identities))), "FD observation sequence reset/gap")
-    auxiliary = report.get('parallel_build')
-    aux_end = guest(e, auxiliary['ended'], 'trace_build_end') if auxiliary else None
     for identity in identities:
         need((identity["boot_id"], identity["pid"], identity["fd_inode"]) == (boot, pid, inode)
              and identity["fd_deleted"] is True and inode > 0, "guest process or open FD replaced")
@@ -346,32 +327,9 @@ def verify_trace(e, report):
         complete = identity["next_index"]
         need(0 <= complete <= len(commands), "identity progress range")
         state = f"{boot} {complete} {raw_ends[complete - 1]['output_sha256']}\n" if complete else f"{boot} 0\n"
-        if aux_end and int(identity['label'].rsplit('c',1)[1]) > int(aux_end['label'].rsplit('c',1)[1]):
-            state = f"{boot} {complete} {aux_end['output_sha256']}\n"
         need(identity["sentinel_sha256"] == sha(state.encode()), "mutable trace state changed")
-    final_hash = aux_end['output_sha256'] if aux_end else raw_ends[-1]['output_sha256']
+    final_hash = raw_ends[-1]['output_sha256']
     need(files["results/state"] == f"{boot} {len(commands)} {final_hash}\n".encode(), "final guest state")
-    if auxiliary:
-        start = guest(e, auxiliary['started'], 'trace_async_started')
-        need(aux_end['index'] == len(commands) == start['index'] == aux_end['next_index'] and
-             aux_end['rc'] == 0 and aux_end['timed_out'] is False and aux_end['run_label'] == start['label'],
-             'auxiliary build failed or changed trace progress')
-        prefix='results/parallel-build'
-        need(json.loads(files[prefix+'.json']) == aux_end and sha(files[prefix+'.out']) == aux_end['output_sha256']
-             and sha(files[prefix+'.command']) == aux_end['command_sha256']
-             and auxiliary['command'].encode() in files[prefix+'.command'], 'auxiliary build bytes changed')
-        observations=auxiliary['observations']
-        need(len(observations)==7, 'incomplete build observations')
-        for observation in observations:
-            live=guest(e,observation,'trace_running')
-            need(live['active'] is True and live['process_state'] not in ('Z','X','x','missing') and
-                 all(live[k]==start[k] for k in ('index','command_pid','start_ticks')), 'build process replaced or stopped')
-        snapshots=[files[prefix+'.cpu-'+suffix] for suffix in
-                   ['before', *[o['receipt']['label'] for o in observations], 'after']]
-        counters=[[list(map(int,line.split()[1:8+1])) for line in sample.decode().splitlines()] for sample in snapshots]
-        need(all(len(sample)==report['arguments']['vcpus'] for sample in counters), 'build CPU count changed')
-        for before,after in zip(counters,counters[1:]):
-            need(all(all(b>=a for a,b in zip(x,y)) for x,y in zip(before,after)), 'build CPU counters went backwards')
     need(math.isclose(duration, report["guest_duration_s"], abs_tol=1e-8), "aggregate command duration changed")
     return {"commands": len(commands), "returncodes": [r["rc"] for r in raw_ends], "submission": submitted,
             'guest_cpu_flags_sha256': sha(files['results/cpu-flags.txt']) if 'results/cpu-flags.txt' in files else None,
@@ -381,16 +339,6 @@ def verify_trace(e, report):
 def integer(value, name, limit=(1 << 64) - 1):
     need(type(value) is int and 0 <= value <= limit, "invalid integer " + name)
     return value
-
-def ranges(items):
-    out = set()
-    for item in items:
-        start, count = integer(item["offset"], "range offset"), integer(item["pages"], "range pages")
-        need(start % PAGE == 0 and 0 < count <= 1 << 20, "bad allocation range")
-        new = set(range(start, start + count * PAGE, PAGE))
-        need(not out & new, "duplicate allocation ranges")
-        out.update(new)
-    return out
 
 class Evidence:
     def __init__(self, report, root):
@@ -422,7 +370,6 @@ class Evidence:
         need(len(rows) == 1, "missing/ambiguous raw record " + name)
         return rows[0]
 
-
 def handle(raw, memory):
     need(raw['version'] == 4 and not raw.get('mappings') and not raw.get('credits'), 'full mapping in normal export')
     h = raw['handle']
@@ -432,7 +379,6 @@ def handle(raw, memory):
          and h['phys_base'] == raw['phys_base'] and h['device_bytes'] == raw['device_bytes']
          and h['exhausted'] == 0 and h['reserved'] == [0, 0, 0, 0], 'invalid ownership handle')
     return h
-
 
 def placement(e, name, memory, requested):
     value = e.json(name)
@@ -449,41 +395,9 @@ def placement(e, name, memory, requested):
         private.add(offset)
     return value, private
 
-
-def kernel_intervals(text):
-    """Reparse raw ftrace independently of the runtime probe collector."""
-    need(not any(int(n) for n in re.findall(r'^overrun:\s*(\d+)', text, re.M)), 'Kernel trace overflow')
-    stacks, rows, epoch = {}, [], None
-    names = {'arch', 'ept', 'vmx', 'pit', 'lapic', 'nested_root', 'tlb_current', 'tlb_all', 'tlb_guest'}
-    for line in text.splitlines():
-        match = re.match(r'^.*?-(\d+)\s+\[(\d+)\]\s+\S+\s+(\d+)\.(\d+):\s+(\w+):\s*(.*)$', line.strip())
-        if match is None:
-            continue
-        pid, cpu, seconds, fraction, event, fields = match.groups()
-        stamp = int(seconds)*10**9 + int((fraction+'0'*9)[:9])
-        marker = re.search(r'RESIDENT_KERNEL_EPOCH=(\d+)', fields)
-        if marker:
-            epoch = int(marker[1])
-            continue
-        name, _, action = event.rpartition('_')
-        if name not in names or action not in ('enter', 'exit'):
-            continue
-        key = (name, pid)
-        if action == 'enter':
-            value = re.search(r'attach=(0x[0-9a-f]+|\d+)', fields)
-            stacks.setdefault(key, []).append((stamp, epoch, bool(int(value[1], 0)) if value else None))
-        else:
-            need(stacks.get(key), 'Unmatched kernel trace return')
-            start, generation, attach = stacks[key].pop()
-            need(stamp >= start, 'Kernel clock reversed')
-            rows.append({'epoch': generation, 'function': name, 'attach': attach, 'duration_ns': stamp-start})
-    need(rows and not any(stacks.values()), 'Incomplete kernel trace')
-    return rows
-
-
 def verify_cache_receipts(report, root):
     """Replay saved page sets independently of the online oracle and VMM."""
-    rows=report.get('dirty_oracle',[])
+    rows=report.get('oracle',report.get('dirty_oracle',[]))
     need(rows and all(x.get('coverage_verified') for x in rows), 'Missing cache coverage receipts')
     records, consumed={},{}
     pending=0
@@ -525,402 +439,10 @@ def verify_cache_receipts(report, root):
             'cleans':sum(r['phase'] in (4,6) for r in rows),
             'preinvalidations':sum(r['phase']==5 for r in rows),'missing_pages':0,'coverage_verified':True}
 
-
-def verify(path):
-    path = Path(path)
-    r = json.loads(path.read_bytes())
-    need(r['schema'] == 'swe-handoff-trace-v1' and r['result'] == 'passed', 'Incomplete runtime trial')
-    e = Evidence(r, path.parent)
-    memory = r['arguments']['memory_mib'] * MIB
-    need(memory == 2048*MIB and r['mode'] in ('baseline', 'state-only', 'direct'), 'Unexpected runtime geometry')
-    verify_sources(r, path.parent)
-    workload = verify_trace(e, r)
-    if r['arguments'].get('noncoherent') and r['arguments'].get('dirty_oracle'):
-        verify_cache_receipts(r,path.parent)
-    launches = {}
-    for launch in r['launches']:
-        pids = re.findall(r'^EXEC_PROCESS (\d+) (\d+)\s*$', e.text(launch['file']), re.M)
-        need(len(pids) == 1 and launch['directory'] not in launches, 'Duplicate/missing runtime incarnation')
-        launches[launch['directory']] = (pids[0], launch['role'])
-    for row in r['cleanup']:
-        need(row.get('fenced') and row['directory'] in launches, 'Unfenced runtime')
-        pid, role = launches[row['directory']]
-        need(row['role'] == role and re.findall(r'^FENCED (\d+) (\d+)\s*$', e.text(row['file']), re.M) == [pid],
-             'Cleanup fenced a different process')
-    need(len(r['cleanup']) == len(launches), 'Runtime cleanup missing')
-    configs = [a['request'] for a in r['api_events'] if a['path'] == '/machine-config']
-    vcpus = r['arguments'].get('vcpus',1)
-    expected_config = {'vcpu_count': vcpus, 'mem_size_mib': 2048}
-    if r['arguments'].get('dirty_ledger'):
-        expected_config['track_dirty_pages'] = True
-    need(vcpus in (1,2,4,8) and configs == [expected_config], 'Wrong VM configuration')
-    disks = [a['request'] for a in r['api_events'] if a['path'] == '/drives/data']
-    need(len(disks) == 1 and disks[0]['is_read_only'] and disks[0]['path_on_host'] == '/disk/sandbox.raw',
-         'Wrong immutable block device')
-    for api in r['api_events']:
-        need(e.record(api['file'], 'LAB_API_JSON ') == api['response'] and api['response']['status'] in (200,204),
-             'Failed/altered API result')
-        if api['path'] == '/snapshot/create':
-            need(r['mode'] == 'state-only' and api['request']['mem_file_path'] == '/dev/dax0.0', 'Full-RAM snapshot')
-        if api['path'] == '/snapshot/load':
-            need(r['mode'] == 'state-only' and api['request']['mem_backend']['backend_path'] == '/dev/dax0.0',
-                 'Wrong snapshot RAM backend')
-    grants, initial = {}, {}
-    for event in r['allocator_events']:
-        owner, frames = event['owner'], ranges(event['ranges'])
-        need(len(frames) == event['pages'] and all(PRIVATE_START <= x < PRIVATE_END for x in frames), 'Bad grant')
-        if event['operation'] == 'allocate':
-            need(not any(frames & old for old in grants.values()), 'Private allocation alias')
-            grants.setdefault(owner,set()).update(frames)
-            initial.setdefault(event['generation'],set()).update(frames)
-        else:
-            need(event['operation'] == 'release' and grants.get(owner) == frames and
-                 event['fenced'] and event['detached'], 'Released live/foreign grant')
-            del grants[owner]
-    need(not grants, 'Leaked pool grant')
-    counts = collections.Counter()
-    handoffs = []
-    for transition in r['transitions']:
-        kind = transition['kind']; counts[kind] += 1
-        need(transition['result'] == 'passed', 'Failed transition')
-        if kind in ('promotion','demotion'):
-            operation = transition['operation']; raw = e.json(operation['file'])
-            need(raw == operation['report'] and raw['result'] == 'passed' and
-                 raw['ram_snapshot_bytes'] == 0, 'Invalid tier-change operation')
-            if kind == 'promotion':
-                value, private = placement(e, transition['export']['file'], memory,
-                                                    e.json(operation['plan_file']))
-                need(private == initial[value['allocation_generation']], 'Promotion escaped grant')
-                need(len(private)*PAGE == raw['copied_private_bytes'] == memory, 'Promotion accounting')
-                identity_pair(e, transition['before'], transition['after'])
-            else:
-                need(raw['copied_private_bytes'] == memory, 'Demotion did not materialize RAM')
-                h = handle(e.json(transition['previous']['file']), memory)
-                returned = ranges(transition['returned_ranges'])
-                need(returned == initial[h['allocation_generation']] and raw['module'] is None,
-                     'Demotion released wrong grant or retained mapper')
-                covered = 0
-                for region in raw['dram_vmas']:
-                    need(region['bytes'] > 0, 'Empty DRAM region')
-                    for line in region['maps']:
-                        fields = line.split()
-                        need(len(fields) == 5 and fields[1] == 'rw-p' and fields[4] == '0', 'Nonprivate DRAM mapping')
-                    covered += region['bytes']
-                need(covered == memory, 'Demotion RAM coverage')
-                identity_pair(e,transition['before'],transition['after'])
-        elif kind == 'direct':
-            need(transition.get('runtime_path') == 'resident-v2', 'Unexpected direct runtime')
-            fast = e.record(transition['fast_file'],'RESIDENT_FAST_JSON ')
-            from resident_proxy import verify_receipt
-            verify_receipt(e.text(transition['fast_file']),fast)
-            need(fast == transition['fast'] and fast['version'] == 2 and fast['ack'] is None and
-                 set(fast['apis']) == {'send','receive'} and all(x['status'] == 204 for x in fast['apis'].values()),
-                 'Runtime retained diagnostic API/guest probe or handoff failed')
-            need(0 < fast['pause_to_resume_response_ns'] <= fast['handoff_ns'] <= fast['request_ns']
-                 and fast['pause_to_resume_response_ns'] <= fast['request_to_resume_response_ns'] <= fast['request_ns']
-                 and sum(api['duration_us'] for api in fast['apis'].values())*1000 <= fast['handoff_ns']+1000,
-                 'Request timing excludes measured work')
-            handoffs.append(transition)
-        elif kind == 'state-only':
-            state=e.read(transition['state_file']);manifest=e.json(transition['manifest_file'])
-            h = handle(manifest, memory)
-            need(h['state'] == 2 and h['owner_epoch'] == transition['source_epoch'], 'Unsealed/foreign source mapper')
-            need(0 < len(state) < MIB and sha(state) == manifest['state_sha256'] and
-                 transition['ram_transfer_bytes'] == transition['ram_snapshot_bytes'] == 0, 'Bad state-only transfer')
-            if transition.get('runtime_path') == 'state-v2':
-                need('stop_snapshot_process' in e.text(transition['source_stop_file']), 'Source stop absent')
-                need(transition['load_api']['request']['resume_vm'] is True, 'Restore did not resume')
-                if r['arguments'].get('trajectory_policy'):
-                    prep = transition['preparation']
-                    need(prep['source_paused'] is False and prep['ready_ns'] < transition['request_ns'],
-                         'Snapshot receiver not prepared before pause')
-                    need('kvm-vm' not in e.text(prep['file']) and 'kvm-vcpu' not in e.text(prep['file']),
-                         'Prepared receiver already had KVM objects')
-            else:
-                identity_pair(e,transition['before'],transition['after'])
-            handoffs.append(transition)
-        else:raise ValueError('Unknown transition')
-    if r['mode'] == 'direct':
-        need(len(launches) == 2 and {role for pid, role in launches.values()} == {'A', 'B'}, 'Resident VMM relaunch')
-        preps = r['resident_preparations']
-        need(len(preps) == 1 and preps[0]['fresh'] is True and preps[0]['phase'] == 'post-promotion-prewarm',
-             'Readiness repeated inside request')
-        prep = preps[0]
-        boot = e.record(prep['native_boot_file'], 'RESIDENT_BOOT_JSON ')
-        need(boot == prep['native_boot'] and boot['native_ready_ns'] >= boot['fork_to_api_ready_ns']+boot['prepare_api_ns']
-             and boot['fork_to_api_ready_ns'] >= boot['fork_ns'] > 0, 'Native readiness timing changed')
-        need([str(boot['pid']), str(boot['starttime'])] == list(launches[prep['directory']][0]), 'Native prepared PID changed')
-        need(prep['source_paused'] is False, 'Preparation was on paused path')
-        need(set(prep['servers']) == {'A', 'B'} and prep['full_prewarm_controller_ns'] >=
-             prep['controller_wall_ns']+prep['control_server_prepare_ns'], 'Prewarm interval excludes work')
-        for server in prep['servers'].values():
-            boot = e.record(server['file'], 'RESIDENT_SERVER_BOOT_JSON ')
-            need(boot == server['native_boot'] and boot['native_ready_ns'] >= boot['fork_to_ready_ns'] > 0,
-                 'Native server readiness changed')
-            closed = [row for row in r['controller_cleanup'] if row['prepare_file'] == server['file']]
-            need(len(closed) == 1 and closed[0]['fenced'] is True and
-                 re.findall(r'^FENCED (\d+) (\d+)\s*$', e.text(closed[0]['file']), re.M) ==
-                 [(str(boot['pid']), str(boot['starttime']))], 'Native control server identity changed')
-        for hop in handoffs:
-            ready = r['resident_readiness'][hop['destination']]
-            prepared = hop['preparation']
-            need(prepared.get('cached') is True and prepared['api'] is None and prepared['fresh'] is False
-                 and prepared['ready_file'] == ready['ready_file'] and prepared['directory'] == ready['directory']
-                 == hop['destination_directory'], 'Cached readiness changed')
-            need(prepared['source_paused'] is False and e.order[prepared['ready_file']] < e.order[hop['fast_file']],
-                 'Preparation was on paused path')
-            need(prepared['control_server_prepare_ns'] == 0, 'Ready request created servers')
-        home = [row for row in r['receipts'] if row['kind'] == 'home-storage']
-        remote = [row for row in r['receipts'] if row['kind'] == 'remote-storage']
-        need(len(home) == len(remote) == 1 and 'nocto' in e.text(remote[0]['file']), 'Immutable NFS cache missing')
-        mounts = [line.split() for line in e.text(home[0]['file']).splitlines()]
-        need(any(len(row) == 6 and row[1:3] == ['/storage', 'ext4'] and 'ro' in row[3].split(',')
-                 for row in mounts), 'Image filesystem is writable')
-    traces = r.get('kernel_trace', [])
-    need(len(traces) == (len(handoffs) if r['arguments'].get('kernel_trace') else 0), 'Kernel trace coverage')
-    for trace, hop in zip(traces, handoffs):
-        need(trace['epoch'] == hop['destination_epoch'] and trace['destination'] == hop['destination'], 'Kernel trace epoch')
-        need({node['role'] for node in trace['nodes']} == {'A', 'B'}, 'Kernel trace node coverage')
-        for node in trace['nodes']:
-            parsed = kernel_intervals(e.text(node['file']))
-            need(parsed == node['intervals'] and all(row['epoch'] == trace['epoch'] for row in parsed), 'Kernel trace changed')
-    for preparation in r.get('resident_preparations',[]):
-        server=preparation.get('servers',{}).get('B',{})
-        if 'peer_ready' in server:
-            peer=e.record(server['file'],'RESIDENT_PEER_READY_JSON ')
-            need(peer==server['peer_ready'] and peer['owner_changed'] is False and
-                 0<peer['connection_prepare_ns']<=server['native_boot']['native_ready_ns'],
-                 'Peer connection preparation changed')
-            need(all(hop['fast']['connection_prepare_ns']==0 for hop in handoffs),
-                 'Prepared peer reconnected during handoff')
-    events = {}
-    for name,item in e.items.items():
-        if item['kind'] != 'final-vmm-log':continue
-        for line in e.text(name).splitlines():
-            if 'DIRECT_HANDOFF_JSON ' in line:
-                event=json.loads(line.split('DIRECT_HANDOFF_JSON ',1)[1])
-                key=(event['event'],event['token']['generation'])
-                need(key not in events,'Repeated handoff event');events[key]=event
-    if r['mode'] == 'direct' and r['arguments'].get('restore_timing'):
-        need(len(events) == 2*len(handoffs),'Missing profiled handoff')
-        retained=None
-        for i,hop in enumerate(handoffs,1):
-            exp,imp=events[('export',i)],events[('import',i)]
-            keys=('vm_offset','vcpu_offset','vmcs_offset','run_offset','ram_hva','ram_bytes','vm_creates','vcpu_creates')
-            if 'abi_version' in exp['token']:
-                keys += ('abi_version','vcpu_count','vcpus')
-                need(exp['token']['abi_version'] == 2 and exp['token']['vcpu_count'] == vcpus, 'Wrong SMP token ABI/topology')
-                need(len(exp['token']['vcpus']) == 8 and
-                     [c['id'] for c in exp['token']['vcpus'][:vcpus]] == list(range(vcpus)), 'Missing per-vCPU identities')
-            graph={k:exp['token'][k] for k in keys}
-            need(all(imp['token'][k] == v for k,v in graph.items()) and
-                 exp['token']['flags'] == 2 and imp['token']['flags'] == 1,'Changed kernel graph/owner')
-            need(graph['vm_creates'] == 1 and graph['vcpu_creates'] == vcpus and
-                 exp['snapshot_bytes'] == exp['ram_transfer_bytes'] == imp['snapshot_bytes'] == imp['ram_transfer_bytes'] == 0,
-                 'Snapshot or RAM copy on direct handoff')
-            if retained is not None:need(graph == retained,'Recreated kernel graph')
-            retained=graph
-            need(imp['mapper']['handle']['state'] == 1 and int(imp['mapper']['run_epoch']) == hop['destination_epoch'],
-                 'Wrong imported mapper epoch')
-    if r['arguments'].get('trajectory_policy'):
-        policy = r['arguments']['trajectory_policy']
-        heavy = e.json(r['heavy_plan_file'])['indices'][r['name']]
-        expected_boundaries = ([] if r['mode'] == 'baseline' else
-            [i for i in range(len(r['commands'])) if policy == 'all' or i in heavy])
-        need(r['boundaries'] == expected_boundaries, 'Changed heavy/all migration policy')
-        nhops = len(r['boundaries'])
-        expected = {'promotion': 1, 'demotion': 1}
-        if nhops: expected[r['mode']] = nhops
-        need(counts == expected, 'Trajectory lifecycle coverage')
-        need([(x['source'],x['destination'],x['source_epoch'],x['destination_epoch']) for x in handoffs] ==
-             [('A' if i%2==0 else 'B','B' if i%2==0 else 'A',i,i+1) for i in range(nhops)], 'Trajectory itinerary')
-        need([x['before_command'] for x in handoffs] == r['boundaries'], 'Trajectory policy boundaries')
-        if r['arguments'].get('prefault'):
-            for hop in handoffs:
-                receipt = e.json(hop['prefault_file'])
-                need(receipt == hop['prefault'] and receipt['result'] == 'passed' and
-                     receipt['mode'] == r['arguments']['prefault'] and
-                     receipt['activate'] == r['arguments']['prefault_activate'] and
-                     receipt['processed_pages'] == receipt['expected_pages'], 'Prefault receipt mismatch')
-                if receipt['mode'] == 'all':
-                    need(receipt['expected_pages'] == memory//PAGE, 'Incomplete all-RAM prefault')
-                else:
-                    source = hop['source_ranges']
-                    queries = [x for x in r['memory_events'] if x['operation'] == 'prefault-ranges' and
-                               x['vm'] == hop['vm'] and x['epoch'] == hop['source_epoch'] and x['role'] == hop['source']]
-                    need(len(queries) == 1 and e.json(queries[0]['file']) == source == queries[0]['report'],
-                         'Mapped range list differs from raw source query')
-                    previous = 0
-                    for span in source['ranges']:
-                        end = span['gpa']+span['bytes']
-                        need(span['bytes'] > 0 and (span['gpa'] | span['bytes']) % PAGE == 0 and
-                             previous <= span['gpa'] < end <= memory, 'Invalid source RAM range ordering/geometry')
-                        previous = end
-                    need(source['vm_id'] == str(hop['vm']) and int(source['run_epoch']) == hop['source_epoch'] and
-                         source['mapped_pages'] == receipt['expected_pages'] and source['ram_snapshot_bytes'] == 0,
-                         'Mapped source identity/coverage mismatch')
-                    need(sum(x['bytes']//PAGE for x in source['ranges']) == source['mapped_pages'], 'Mapped range sum')
-        for row in r['commands']:
-            need(row['host_send_ns'] < row['host_receive_ns'], 'Host command clock')
-            if r['arguments'].get('count_faults'):
-                for role in ('A','B'):
-                    for key in ('ept_violation', 'page_fault', 'ram_ept_violation', 'mmio_ept_violation'):
-                        before, after = row['fault_before'][role], row['fault_after'][role]
-                        for sample in (before, after):
-                            text = e.text(sample[key+'_file'])
-                            totals = re.findall(r'Totals:\s*Hits:\s*(\d+)\s+Entries:\s*(\d+)\s+Dropped:\s*(\d+)', text)
-                            need(len(totals) == 1 and int(totals[0][2]) == 0, 'Missing/dropped histogram')
-                            actual = int(totals[0][0])
-                            if key in ('ram_ept_violation', 'mmio_ept_violation'):
-                                ram = sum(int(n) for n in re.findall(r'fault_address:\s*~\s*0-2147483647\s*}[^\n]*hitcount:\s*(\d+)', text))
-                                actual = ram if key == 'ram_ept_violation' else actual-ram
-                            need(actual == sample[key],
-                                 'Altered or dropped fault histogram')
-                        need(row['faults'][role][key] == after[key]-before[key] >= 0, 'Fault count delta')
-        need(all(x['fenced'] for x in r['keepalive_cleanup']) and len(r['keepalive_cleanup']) == 2,
-             'Keepalive VM cleanup')
-        if r['arguments'].get('count_faults'):
-            fully_prefilled = (r['arguments'].get('prefault') == 'all' and
-                               r['boundaries'] and r['boundaries'][0] == 0)
-            need(fully_prefilled or sum(r['fault_final'][role]['ram_ept_violation'] for role in ('A','B')) > 0,
-                 'No RAM address bucket observed without initial all-RAM prefault')
-            for key in ('create_vm', 'create_vcpu'):
-                created = sum(r['fault_final'][role][key]-r['fault_initial'][role][key] for role in ('A','B'))
-                need(created == (nhops if r['mode'] == 'state-only' else 0), 'Fresh KVM creation coverage')
-            for sizes in (r['spte_final'], r['spte_final']['inactive']):
-                parsed = {key:int(value) for key,value in re.findall(r'^(pages_[421][kmg]) (\d+)\s*$', e.text(sizes['file']), re.M)}
-                need(parsed == {key:sizes[key] for key in ('pages_4k','pages_2m','pages_1g')}, 'Changed actual SPTE counters')
-    elif r['mode'] == 'baseline':
-        need(not counts and not grants,'Baseline changed memory tier')
-    else:
-        extra=2 if r['arguments'].get('resident_repromote_handoff') else 0
-        if r['arguments'].get('inflight_handoff_index') is not None: extra += 2
-        if r['arguments'].get('parallel_build'): extra += 6
-        nhops=2+2*r['arguments'].get('direct_profile_roundtrips',0)+extra
-        need(counts == {'promotion':2,'demotion':2,r['mode']:nhops},'Missing lifecycle case')
-        need([(x['source'],x['destination'],x['source_epoch'],x['destination_epoch']) for x in handoffs] ==
-             [('A' if i%2==0 else 'B','B' if i%2==0 else 'A',i,i+1) for i in range(nhops)],'Wrong itinerary')
-        need(r['allocator_final']['allocated_bytes'] == 0,'Allocator not empty')
-    need(len(r['audits']) == (2 if r['arguments'].get('full_audit') and r['mode'] != 'baseline' else 0),
-         'Explicit audit coverage')
-    for audit in r['audits']:
-        raw = e.json(audit['file'])
-        need(raw['operation'] == 'audit' and len(raw['pages'])*PAGE == memory, 'Audit coverage')
-        for index, page in enumerate(raw['pages']):
-            need(page['gpa'] == index*PAGE and PRIVATE_START <= page['offset'] < PRIVATE_END, 'Audit GPA/frame')
-            if page['present']:
-                need(page['writable'] and page['actual_pfn']*PAGE == raw['phys_base']+page['offset'], 'Private PTE mismatch')
-    inflight = [command for command in r['commands'] if 'inflight' in command]
-    requested = r['arguments'].get('inflight_handoff_index')
-    need(len(inflight) == (0 if requested is None else 1), 'Missing/extra in-flight command')
-    for command in inflight:
-        proof = command['inflight']; start = guest(e,proof['started'],'trace_async_started')
-        end = guest(e,command,'trace_end')
-        need(start['index'] == end['index'] == requested and end['run_label'] == start['label'],
-             'In-flight command identity mismatch')
-        observed = proof['observations']; files = proof['handoff_files']
-        need(len(observed) == 3 and len(files) == 2, 'Incomplete in-flight itinerary')
-        selected = [hop for hop in handoffs if hop['fast_file'] in files]
-        need([hop['fast_file'] for hop in selected] == files and
-             [(hop['source'],hop['destination']) for hop in selected] == [('B','A'),('A','B')],
-             'Wrong in-flight handoffs')
-        for i, observation in enumerate(observed):
-            live = guest(e,observation,'trace_running')
-            need(live['active'] is True and live['process_state'] not in ('Z','X','x','missing') and
-                 live['start_ticks'] > 0 and all(live[key] == start[key] for key in
-                    ('index','command_pid','start_ticks')) and observation['role'] == ('A' if i==1 else 'B'),
-                 'Command not alive across handoff')
-        order = [proof['started']['file'],observed[0]['file'],files[0],observed[1]['file'],
-                 files[1],observed[2]['file'],command['file']]
-        need([e.order[f] for f in order] == sorted(e.order[f] for f in order), 'In-flight evidence reordered')
-    if r['arguments'].get('parallel_build'):
-        build=r['parallel_build']; selected=[h for h in handoffs if h['fast_file'] in build['hops']]
-        need(len(selected)==(6 if r['mode']=='direct' else 0), 'parallel build handoff count')
-        need([h['fast_file'] for h in selected]==build['hops'], 'parallel build handoffs reordered')
-        order=[build['started']['file']]
-        for i,observation in enumerate(build['observations']):
-            need(observation['role']==('B' if r['mode']=='direct' and i%2 else 'A'), 'parallel build endpoint')
-            order.append(observation['file'])
-            if i<len(selected): order.append(selected[i]['fast_file'])
-        order.append(build['ended']['file'])
-        need([e.order[f] for f in order]==sorted(e.order[f] for f in order), 'parallel build evidence reordered')
-    return {'result':'passed','mode':r['mode'],'trace':r['trace']['name'],
-        'report_sha256':sha(path.read_bytes()),**execution_identity(r),**workload,
-        'transitions':dict(counts),'inflight_commands':len(inflight),
-        'runtime_image_rehash':False,'remote_nfs_reads':None,
-        'per_handoff_guest_probes':any('before' in hop or 'after' in hop for hop in handoffs),
-        'profiled_kernel_handoffs':len(events)//2,
-        'limitations':['Coherent nested lab; immutable fixture identity comes from build records, not runtime rehash',
-                       'No per-handoff source fault probes; owner rejection tests run separately',
-                       'Per-command NFS counter polling removed; NFS read count was not measured']}
-
-def verify_suites(paths, *, successful_only=False):
-    rows, groups = [], collections.defaultdict(dict)
-    sources, requested_sets = [], []
-    for path in map(Path, paths):
-        suite = json.loads(path.read_bytes())
-        need(suite["schema"] == "swe-handoff-suite-v1" and suite["trials"], "unknown/empty suite")
-        if successful_only:
-            need(suite['result'] in ('passed','failed'), 'Recovery source suite is still running')
-        verify_sources(suite, path.parent)
-        requested = set(suite['arguments']['modes']) | {'prefault-'+p for p in (suite['arguments'].get('prefault_variants') or [])}
-        if suite['arguments'].get('prefault'):
-            requested = {'prefault-'+suite['arguments']['prefault']}
-        requested_sets.append(requested)
-        selected = [t for t in suite['trials'] if not successful_only or t['result'] == 'passed']
-        sources.append({'path':str(path),'sha256':sha(path.read_bytes()),'result':suite['result'],
-            'selected_trials':len(selected),'excluded_trials':[{'id':t['id'],'result':t['result'],'error':t.get('error')}
-                for t in suite['trials'] if t not in selected]})
-        for trial in selected:
-            report = local(path.parent, trial["report_file"])
-            need(sha(report.read_bytes()) == trial["report_sha256"], "suite report hash")
-            result = verify(report)
-            need(result["trace"] == trial["trace"] and result["mode"] == trial["mode"], "suite trial identity")
-            need(set(trial["outer_cleanup"]) == {"A", "B"} and
-                 all(entry["fenced"] is True for entry in trial["outer_cleanup"].values())
-                 and trial["memory_backing_removed"] is True and all(trial["network_removed"].values()), "outer resources not cleaned")
-            group = result['trace']
-            if trial.get('policy'):
-                group += ':'+trial['policy']+':'+str(trial['repeat'])
-            method = trial.get("method", result["mode"])
-            arguments = json.loads(report.read_bytes())['arguments']
-            expected_method = 'prefault-'+arguments['prefault'] if arguments.get('prefault') else result['mode']
-            need(method == expected_method, 'Suite method tag differs from executed restore')
-            need(method not in groups[group], "duplicate trace/method trial")
-            groups[group][method] = result
-            rows.append(result)
-    need(len({row["execution_inputs_sha256"] for row in rows}) == 1, "suite mixes execution source/runtime/configuration")
-    need(len({row.get('guest_cpu_flags_sha256') for row in rows}) == 1, 'Suite guest CPU flags differ')
-    need(all(value == requested_sets[0] for value in requested_sets), 'Recovery suites requested different methods')
-    requested = requested_sets[0]
-    comparison = []
-    for name, modes in groups.items():
-        need(len({row["workload_inputs_sha256"] for row in modes.values()}) == 1,
-             "trace modes use different immutable inputs or guest command environment")
-        baseline = modes.get("baseline")
-        for mode, result in modes.items():
-            if mode == "baseline":
-                continue
-            if baseline:
-                need(result["returncodes"] == baseline["returncodes"] and result["tests"] == baseline["tests"] and
-                     result["submission"]["without_startup_warning_sha256"] == baseline["submission"]["without_startup_warning_sha256"],
-                     "baseline and lifecycle workload results differ")
-            comparison.append({"trace": name, "mode": mode, "baseline_present": baseline is not None,
-                               "workload_results_match": True if baseline else None})
-    return {"result": "passed", "trials": rows, "source_suites":sources,
-            "successful_trials_only":successful_only, "comparisons": comparison,
-            "execution_inputs_sha256": rows[0]["execution_inputs_sha256"],
-            "coverage": {name: sorted(modes) for name, modes in groups.items()},
-            "complete_requested_matrix": all(set(modes) == requested for modes in groups.values()),
-            "complete_three_mode_matrix": all(set(modes) == MODES for modes in groups.values()),
-            "complete_nine_trial_matrix": set(groups) == TRACE_NAMES and all(set(modes) == MODES for modes in groups.values())}
-
-def verify_suite(path):
-    return verify_suites([path])
-
 def verify_ept_trace(path):
     report=json.loads(path.read_text())
     need(report['result']=='passed' and report['mode']=='ept-adopt','EPT trace did not finish')
+    verify_sources(report,path.parent)
     result={'result':'passed','trace':verify_trace(Evidence(report,path.parent),report)}
     rows=report.get('oracle',[])
     previous=None;proofs=0
@@ -931,36 +453,21 @@ def verify_ept_trace(path):
             need(previous is not None and previous==row['ept_sha256'] and row['ept_hash_unchanged'],
                  'EPT table changed on adoption')
             proofs+=1;previous=None
+    if rows and report['arguments'].get('cache_maintenance',True):result['cache_receipts']=verify_cache_receipts(report,path.parent)
     result.update(oracle_boundaries=len(rows),missing_pages=0,ept_hash_proofs=proofs)
     return result
 
-
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("report", type=Path, nargs="?")
-    parser.add_argument("--suite", type=Path)
-    parser.add_argument("--ept-trace",type=Path,help="Audit EPT-only trace bytes, submission and oracle proofs")
-    parser.add_argument("--successful-suites", type=Path, nargs="+", help="Audit the union of passed trials from terminal source suites; report exclusions explicitly")
-    parser.add_argument("--output", type=Path)
-    args = parser.parse_args()
-    if sum(x is not None for x in (args.report,args.suite,args.successful_suites,args.ept_trace)) != 1:
-        parser.error("Choose a report, --suite, or --successful-suites")
-    # Full-suite evidence hashing must not contend with another timed trial.
-    # Library callers can manage their own lock; this server's CLI joins the
-    # existing shared build lock and leaves repository use elsewhere unchanged.
-    quiet = Path(__file__).resolve().parents[2]/'.codex-runs/quiet.lock'
-    with contextlib.ExitStack() as stack:
-        if quiet.exists():
-            stream = stack.enter_context(quiet.open('a'))
-            fcntl.flock(stream, fcntl.LOCK_SH)
-        result = (verify_ept_trace(args.ept_trace) if args.ept_trace else verify_suites(args.successful_suites, successful_only=True) if args.successful_suites else
-                  verify_suite(args.suite) if args.suite else verify(args.report))
-        result['audit_source_sha256'] = sha(Path(__file__).read_bytes())
-        data = json.dumps(result, indent=2) + "\n"
-        if args.output:
-            args.output.write_text(data)
-        print(data, end="")
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("report",type=Path)
+    parser.add_argument("--output",type=Path)
+    args=parser.parse_args()
+    quiet=Path(__file__).resolve().parents[2]/".codex-runs/quiet.lock"
+    with quiet.open("a") as lock:
+        fcntl.flock(lock,fcntl.LOCK_SH)
+        result=verify_ept_trace(args.report)
+    data=json.dumps(result,indent=2)+"\n"
+    if args.output:args.output.write_text(data)
+    print(data,end="")
 
-
-if __name__ == '__main__':
-    main()
+if __name__=="__main__":main()

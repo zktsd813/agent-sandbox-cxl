@@ -38,9 +38,3 @@ def request(vm,directory,nonce,first,label,peer,vm_id,epoch,reserved_start,reser
     return 'RESIDENT_PROXY_WIRE '+data.hex()+'\nRESIDENT_FAST_JSON '+json.dumps(value,separators=(',',':'))+'\n'
 
 
-def verify_receipt(text, expected):
-    """Offline evidence check; never called by the handoff path."""
-    records=[line.removeprefix('RESIDENT_PROXY_WIRE ') for line in text.splitlines()
-             if line.startswith('RESIDENT_PROXY_WIRE ')]
-    if records and (len(records)!=1 or decode(bytes.fromhex(records[0]))!=expected):
-        raise ValueError('Resident wire differs from recorded JSON')

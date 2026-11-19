@@ -12,16 +12,6 @@ struct cpm_config {
     __u64 abi, phys_base, device_bytes, reserved[2];
     __u64 count, entries;
 };
-struct cpm_query {
-    __u64 count, entries;
-    __u64 generation, reserved[2], faults, exhausted;
-};
-/* Read-only, no-prefault observation of actual native PTEs (not the map table).
- * flags: bit0 present, bit1 writable. A missing PTE has pfn=flags=0. */
-struct cpm_pte { __u64 pfn, flags; };
-struct cpm_audit { __u64 address, count, ptes; };
-#define CPM_QUERY _IOWR('P', 0x71, struct cpm_query)
-#define CPM_AUDIT _IOWR('P', 0x74, struct cpm_audit)
 /* Cache instructions for this observer's reserved 64MiB metadata extent.
  * offset is relative to metadata_offset; operation: 0=writeback, 1=invalidate.
  * lines is incremented at each instruction, never inferred from a bitmap. */
@@ -49,7 +39,6 @@ struct cpm_create {
 #define CPM_STATUS _IOWR('P', 0x76, struct cpm_handle)
 #define CPM_SEAL _IOWR('P', 0x77, struct cpm_handle)
 #define CPM_IMPORT _IOWR('P', 0x78, struct cpm_handle)
-#define CPM_RETIRE _IOWR('P', 0x7a, struct cpm_handle)
 /* Read-only observer. No lease, epoch, statistics or guest PTE updates.
  * Bitmap and receipt use one bit per GPA page. The receipt is produced while
  * issuing cache instructions, then copied out after MFENCE. */
@@ -60,6 +49,5 @@ struct cpm_cache {
 };
 #define CPM_PARK _IO('P', 0x7c)
 #define CPM_WRITEBACK _IOWR('P', 0x7e, struct cpm_cache)
-#define CPM_ZERO _IOWR('P', 0x7d, struct cpm_cache)
 #define CPM_CACHE _IOWR('P', 0x7b, struct cpm_cache)
 #endif

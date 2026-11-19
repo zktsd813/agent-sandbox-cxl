@@ -13,14 +13,6 @@
 #include <stdint.h>
 #include <stdatomic.h>
 #include <sys/mman.h>
-/* Read-only mirrors of the optional kernel timing records (kvm_dax.h). */
-#define KVM_DAX_PROFILE_OFFSET 2048
-#define KVM_DAX_RESUME_PROFILE_OFFSET 2176
-struct kvm_dax_profile { uint64_t detach[8], attach[8]; };
-struct kvm_dax_resume_profile {
- uint64_t enabled, generation, run_ns, entry_ready, entry_ns, guest_tsc, virtual_tsc_khz, sample_span_ns, entry_rip;
- uint64_t exit_ready, exit_ns, exit_reason, entry_failed, entry_l1_tsc, last_exit_l1_tsc, l1_tsc_khz;
-};
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,7 +23,6 @@ struct kvm_dax_resume_profile {
 #include <time.h>
 #include <unistd.h>
 #include "resident_wire.h"
-#include "pool_memory_uapi.h"
 #include <sys/ioctl.h>
 
 #define CAP (64*1024)
@@ -39,15 +30,11 @@ struct kvm_dax_resume_profile {
 #define MAGIC RESIDENT_MAGIC
 static char directory[160], socket_path[192];
 static int readiness_pipe = -1;
-static int api_fd = -1;
 static int native_fd = -1;
 static int peer_fd = -1;
-static int owner_fd = -1, prepared_owner_pid, selector_fd = -1;
-struct metadata_file { int fd; size_t length; };
-static struct metadata_file import_file={.fd=-1}, manifest_file={.fd=-1};
+static int owner_fd = -1, prepared_owner_pid;
 static char peer_ip[16];
 static int profile_enabled;
-static int ept_adopt;
 static void fail(const char *s) { perror(s); exit(1); }
 static uint64_t ns(void) { struct timespec t; if(clock_gettime(CLOCK_MONOTONIC,&t))fail("clock");return (uint64_t)t.tv_sec*1000000000+t.tv_nsec; }
 static void check(int ok,const char *s) { if(!ok){fprintf(stderr,"resident-control: %s\n",s);exit(1);} }
@@ -63,18 +50,12 @@ struct bench_heartbeat {
 };
 _Static_assert(sizeof(struct bench_heartbeat)==672,"guest heartbeat layout");
 static struct bench_heartbeat *heartbeat;
-static struct kvm_dax_profile *kernel_profile;
-static struct kvm_dax_resume_profile *resume_profile;
 static void bench_map(void) {
  const char *offset=getenv("RESIDENT_BENCH_HEARTBEAT");if(!offset)return;
  int fd=open("/dev/dax0.0",O_RDWR|O_CLOEXEC);if(fd<0)fail("benchmark DAX");
  heartbeat=mmap(NULL,4096,PROT_READ|PROT_WRITE,MAP_SHARED,fd,strtoull(offset,NULL,10));
  check(heartbeat!=MAP_FAILED&&atomic_load(&heartbeat->magic)==UINT64_C(0x48424d4943524f56),"benchmark heartbeat identity");
- if(ept_adopt){close(fd);return;}
- const char *arena=getenv("RESIDENT_BENCH_ARENA");check(arena!=NULL,"benchmark arena");
- void *page=mmap(NULL,4096,PROT_READ,MAP_SHARED,fd,strtoull(arena,NULL,10));check(page!=MAP_FAILED,"benchmark profile map");close(fd);
- if(getenv("RESIDENT_BENCH_PROFILE"))kernel_profile=(void *)((char *)page+KVM_DAX_PROFILE_OFFSET);
- if(getenv("RESIDENT_BENCH_RESUME_PROFILE"))resume_profile=(void *)((char *)page+KVM_DAX_RESUME_PROFILE_OFFSET);
+ close(fd);
 }
 static void bench_wait(_Atomic uint64_t *value,uint64_t epoch) {
  uint64_t deadline=ns()+30000000000ull;
@@ -92,18 +73,8 @@ static unsigned bench_reply(char *ack,uint64_t epoch) {
   n+=snprintf(ack+n,4096-n,"%s[%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64"]",i?",":"",atomic_load(&c->sequence),atomic_load(&c->acknowledged),atomic_load(&c->timer),atomic_load(&c->ipi),atomic_load(&c->ping));
  }
  n+=snprintf(ack+n,4096-n,"]");
- if(kernel_profile) {
-  n+=snprintf(ack+n,4096-n,",\"detach_ns\":[");
-  for(unsigned i=0;i<8;i++)n+=snprintf(ack+n,4096-n,"%s%llu",i?",":"",(unsigned long long)kernel_profile->detach[i]);
-  n+=snprintf(ack+n,4096-n,"],\"attach_ns\":[");
-  for(unsigned i=0;i<8;i++)n+=snprintf(ack+n,4096-n,"%s%llu",i?",":"",(unsigned long long)kernel_profile->attach[i]);
-  n+=snprintf(ack+n,4096-n,"]");
- }
- if(resume_profile) {
-  n+=snprintf(ack+n,4096-n,",\"epoch_detect_guest_tsc\":%"PRIu64",\"writers_ready_guest_tsc\":%"PRIu64,atomic_load(&heartbeat->epoch_detect_tsc),atomic_load(&heartbeat->writers_ready_tsc));
-  check(__atomic_load_n(&resume_profile->entry_ready,__ATOMIC_ACQUIRE)&&atomic_load(&heartbeat->ack_epoch)==epoch,"benchmark entry profile absent");
-  n+=snprintf(ack+n,4096-n,",\"run_ns\":%llu,\"entry_ns\":%llu,\"entry_guest_tsc\":%llu,\"ack_guest_tsc\":%"PRIu64",\"tsc_khz\":%llu,\"pair_span_ns\":%llu",(unsigned long long)resume_profile->run_ns,(unsigned long long)resume_profile->entry_ns,(unsigned long long)resume_profile->guest_tsc,atomic_load(&heartbeat->ack_tsc),(unsigned long long)resume_profile->virtual_tsc_khz,(unsigned long long)resume_profile->sample_span_ns);
- }
+
+
  n+=snprintf(ack+n,4096-n,"}");check(n<4096,"benchmark reply bound");return n;
 }
 struct phase_profile { uint64_t last; unsigned count; struct { const char *name; uint64_t ns; } stages[10]; };
@@ -124,35 +95,14 @@ static void recv_all(int fd,void *p,size_t n) { while(n){ssize_t k=read(fd,p,n);
 static void write_all(int fd,const void *p,size_t n) { while(n){ssize_t k=write(fd,p,n);if(k<0&&errno==EINTR)continue;if(k<=0)fail("write");p=(const char *)p+k;n-=k;} }
 static void timeout(int fd) { struct timeval t={.tv_sec=30};if(setsockopt(fd,SOL_SOCKET,SO_RCVTIMEO,&t,sizeof(t))||setsockopt(fd,SOL_SOCKET,SO_SNDTIMEO,&t,sizeof(t)))fail("timeout"); }
 static void path(char *out,size_t cap,const char *name) { check(snprintf(out,cap,"%s/%s",directory,name)>0,"path"); }
-static size_t read_file(const char *name,char *data) {
- char p[256];path(p,sizeof(p),name);int fd=open(p,O_RDONLY|O_CLOEXEC|O_NOFOLLOW);if(fd<0)fail("read file");
- struct stat s;if(fstat(fd,&s))fail("stat");check(S_ISREG(s.st_mode)&&s.st_size>0&&s.st_size<CAP,"metadata size");
- recv_all(fd,data,s.st_size);close(fd);return s.st_size;
-}
+
 static void write_file(const char *name,const char *data,size_t len) {
  char p[256],tmp[272];path(p,sizeof(p),name);check(snprintf(tmp,sizeof(tmp),"%s.tmp",p)>0,"temp path");
  int fd=open(tmp,O_WRONLY|O_CREAT|O_TRUNC|O_CLOEXEC|O_NOFOLLOW,0600);if(fd<0)fail("write file");write_all(fd,data,len);
  if(close(fd)||rename(tmp,p))fail("publish file");
 }
-static struct metadata_file prepare_metadata(const char *name) {
- char p[256];path(p,sizeof(p),name);
- int fd=open(p,O_WRONLY|O_CREAT|O_CLOEXEC|O_NOFOLLOW|O_NONBLOCK,0600);if(fd<0)fail("prepare metadata");
- struct stat st;if(fstat(fd,&st))fail("metadata stat");
- check(S_ISREG(st.st_mode)&&st.st_nlink==1&&st.st_size>=0&&st.st_size<CAP,"private metadata file");
- return (struct metadata_file){.fd=fd,.length=(size_t)st.st_size};
-}
-static void overwrite_metadata(struct metadata_file *file,const char *data,size_t len) {
- check(file->fd>=0&&len>0&&len<CAP,"metadata write bounds");
- size_t done=0;
- while(done<len) {
-  ssize_t n=pwrite(file->fd,data+done,len-done,done);
-  if(n<0&&errno==EINTR)continue;
-  if(n<=0)fail("metadata write");
-  done+=n;
- }
- if(len<file->length&&ftruncate(file->fd,len))fail("metadata shrink");
- file->length=len;
-}
+
+
 static unsigned long long process_start(int pid) {
  char p[64],line[4096];snprintf(p,sizeof(p),"/proc/%d/stat",pid);FILE *f=fopen(p,"r");if(!f||!fgets(line,sizeof(line),f))fail("process stat");fclose(f);
  char *s=strrchr(line,')'),*save=NULL;check(s!=NULL,"process stat format");char *v=strtok_r(s+1," ",&save);
@@ -178,29 +128,8 @@ static void prepare_owner(void) {
  check(read_owner_pid()==pid,"owner changed during preparation");
  prepared_owner_pid=pid;owner_fd=fd;(void)owner_pid();
 }
-static void select_owner(int pid) {
- if(ept_adopt)return;
- char b[32];int n=snprintf(b,sizeof(b),"%d\n",pid);
- if(selector_fd>=0) {
-  ssize_t written;do {written=pwrite(selector_fd,b,n,0);}while(written<0&&errno==EINTR);
-  check(written==n,"prepared owner parameter write");return;
- }
- int fd=open("/sys/module/kvm/parameters/dax_owner_pid",O_WRONLY|O_CLOEXEC);if(fd<0)fail("owner parameter");
- write_all(fd,b,n);close(fd);
-}
-static void connect_api(void) {
- if(api_fd<0) {
- int fd=socket(AF_UNIX,SOCK_STREAM|SOCK_CLOEXEC,0);if(fd<0)fail("API socket");timeout(fd);
- struct sockaddr_un a={.sun_family=AF_UNIX};check(strlen(socket_path)<sizeof(a.sun_path),"API path");strcpy(a.sun_path,socket_path);
- if(connect(fd,(void*)&a,sizeof(a))) { fail("API connect"); }
- if(owner_fd>=0) {
-  struct ucred peer;socklen_t size=sizeof(peer);
-  if(getsockopt(fd,SOL_SOCKET,SO_PEERCRED,&peer,&size))fail("API peer identity");
-  check(peer.pid==owner_pid(),"API belongs to another process");
- }
- api_fd=fd;
- }
-}
+
+
 static int connect_native(void) {
  if(native_fd>=0)return 1;
  int fd=socket(AF_UNIX,SOCK_STREAM|SOCK_CLOEXEC,0);if(fd<0)fail("native socket");timeout(fd);
@@ -219,22 +148,7 @@ static int connect_native(void) {
  send_all(fd,&command,1);recv_all(fd,response,sizeof(response));check(response[0]==0,"native ready");
  return 1;
 }
-static struct api_result api(const char *method,const char *route,const char *body) {
- if(connect_native()) {
-  unsigned char command=!strcmp(body,"{\"action_type\": \"DirectSend\"}")?1:2;
-  check(command==1||!strcmp(body,"{\"action_type\": \"DirectReceive\"}"),"native action");
-  uint64_t start=ns(),response[2];send_all(native_fd,&command,1);recv_all(native_fd,response,sizeof(response));
-  check(response[0]==0,"native handoff failed");
-  return (struct api_result){.status=204,.us=(ns()-start)/1000.};
- }
- struct api_result result={0};uint64_t start=ns();connect_api();
- int fd=api_fd;
- char q[2048];int len=snprintf(q,sizeof(q),"%s %s HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: %zu\r\n\r\n%s",method,route,strlen(body),body);
- check(len>0&&(size_t)len<sizeof(q),"API request bound");send_all(fd,q,len);size_t got=0;
- char response[1024];
- while(got<sizeof(response)-1){ssize_t n=read(fd,response+got,sizeof(response)-1-got);if(n<=0)fail("API response");got+=n;response[got]=0;if(strstr(response,"\r\n\r\n"))break;}
- result.us=(ns()-start)/1000.;check(sscanf(response,"HTTP/1.1 %d",&result.status)==1&&result.status==204,"API did not return 204");return result;
-}
+
 static int tcp(const char *ip,int listen_mode) {
  int fd=socket(AF_INET,SOCK_STREAM|SOCK_CLOEXEC,0);if(fd<0)fail("TCP socket");
  // A parked VM may stay away for an arbitrarily long workload. Bound active
@@ -261,7 +175,7 @@ static void print_api(const char *name,const struct api_result *a) {
 
 static void validate_request(const struct request *q,const char *nonce) {
  check(q->magic==MAGIC && q->nonce[32]==0 && !strcmp(q->nonce,nonce)
-       && q->label[95]==0 && q->label[0] && q->first<=1 && q->operation<=6 && !q->reserved && q->persistent<=1,"request identity");
+       && q->label[95]==0 && q->label[0] && !q->first && !q->manifest_len && q->operation<=4 && !q->reserved && q->persistent<=1,"request identity");
  check(strlen(q->label)<90 && strspn(q->label,"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-:.")==strlen(q->label),"request label");
  if(q->operation==1 || q->operation==2) {
   struct in_addr address;
@@ -279,28 +193,22 @@ static struct outcome handoff(struct request q,const char *peer,int client,char 
   if(q.persistent){peer_fd=fd;strcpy(peer_ip,peer);}
  }
  phase_mark(&profile,"peer_connection");
- char wire[sizeof(q)+2*CAP],*state=wire+sizeof(q),*manifest;
- int memory=!q.first;
+ char wire[sizeof(q)+CAP],*state=wire+sizeof(q);
  uint64_t start=ns();
- if(memory) {
+ {
   check(connect_native(),"memory sender not ready");
-  unsigned char command=ept_adopt?9:3;uint64_t response[2];
+  unsigned char command=9;uint64_t response[2];
   send_all(native_fd,&command,1);recv_all(native_fd,response,sizeof(response));
   check(response[0]==0&&response[1]>0&&response[1]<CAP,"memory export response");
   q.state_len=response[1];q.manifest_len=0;recv_all(native_fd,state,q.state_len);
   o.send=(struct api_result){.status=204,.us=(ns()-start)/1000.};
- } else { o.send=api("PUT","/actions","{\"action_type\": \"DirectSend\"}"); }
+ }
  if(heartbeat) {
-  const char *tracked=getenv("RESIDENT_BENCH_TRACKED_EPOCH");
-  if(tracked && !strcmp(tracked,"1"))check(atomic_load(&heartbeat->epoch)==q.epoch,"tracked VMM benchmark epoch");
-  else atomic_store_explicit(&heartbeat->epoch,q.epoch,memory_order_release);
+  check(atomic_load(&heartbeat->epoch)==q.epoch,"VMM benchmark epoch");
  }
  phase_mark(&profile,"export_api");
- select_owner(2147483647);phase_mark(&profile,"source_fence");q.operation=0;
- if(!memory) {
-  q.state_len=read_file("direct-export.json",state);manifest=state+q.state_len;
-  q.manifest_len=read_file("memory-manifest.json",manifest);
- }
+ q.operation=0;
+
  o.state_len=q.state_len;o.manifest_len=q.manifest_len;
  phase_mark(&profile,"metadata_read");
  memcpy(wire,&q,sizeof(q));send_all(fd,wire,sizeof(q)+q.state_len+q.manifest_len);
@@ -326,66 +234,17 @@ static uint64_t number(const char *s) {
  char *end;errno=0;unsigned long long n=strtoull(s,&end,10);
  check(s[0] && strspn(s,"0123456789")==strlen(s) && !errno && !*end,"integer argument");return n;
 }
-static uint64_t sysfs_number(const char *path) {
- FILE *f=fopen(path,"r");char line[128];check(f&&fgets(line,sizeof(line),f),"sysfs read");fclose(f);return strtoull(line,NULL,0);
-}
+
 int main(int argc,char **argv) {
- ept_adopt=getenv("RESIDENT_EPT_ADOPT") && !strcmp(getenv("RESIDENT_EPT_ADOPT"),"1");
  const char *profile_env=getenv("FC_RESIDENT_PROFILE");profile_enabled=profile_env&&!strcmp(profile_env,"1");
- check(argc==5||argc==6||argc==8||argc==10||argc==12,"usage: serve DIR IP NONCE | request DIR LOCAL_IP NONCE FIRST LABEL PEER VM EPOCH START BYTES");
+ check(argc==5||argc==6||argc==12,"usage: serve DIR IP NONCE | request DIR LOCAL_IP NONCE FIRST LABEL PEER VM EPOCH START BYTES");
  check(strlen(argv[2])<sizeof(directory)&&!strncmp(argv[2],"/run/swe-handoff-",17),"owned directory required");strcpy(directory,argv[2]);path(socket_path,sizeof(socket_path),"api.sock");
  check(strlen(argv[4])==32&&strspn(argv[4],"0123456789abcdef")==32,"session nonce");signal(SIGPIPE,SIG_IGN);
 
- if(!strcmp(argv[1],"service-probe")) {
-  setvbuf(stdout,NULL,_IOLBF,0);connect_api();
-  const char *query="GET / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 0\r\n\r\n";
-  for(unsigned iteration=0;iteration<1000000;iteration++) {
-   char reply[2048]={0};size_t got=0,needed=sizeof(reply);uint64_t begin=ns();
-   send_all(api_fd,query,strlen(query));
-   while(got<needed) {
-    ssize_t n=read(api_fd,reply+got,sizeof(reply)-1-got);if(n<=0)fail("probe response");got+=n;reply[got]=0;
-    char *end=strstr(reply,"\r\n\r\n"),*length=strcasestr(reply,"content-length:");
-    if(end&&length) needed=(size_t)(end+4-reply)+strtoul(length+15,NULL,10);
-    check(needed<sizeof(reply)||!end,"probe response bound");
-   }
-   check(!strncmp(reply,"HTTP/1.1 200",12),"probe status");
-   printf("SERVICE_PROBE_JSON {\"begin_ns\":%"PRIu64",\"end_ns\":%"PRIu64"}\n",begin,ns());usleep(1000);
-  }
-  return 0;
- }
- if(!strcmp(argv[1],"cache")) {
-  check(argc==10,"cache DIR IP NONCE METADATA COOKIE_LO COOKIE_HI PAGES MODE");
-  uint64_t pages=number(argv[8]);check(pages&&pages<=(1U<<20),"cache pages");
-  size_t words=(pages+63)/64;uint64_t *bits=calloc(words,8),*covered=calloc(words,8);check(bits&&covered,"cache bits");
-  for(size_t i=0;i<words;i++)bits[i]=UINT64_MAX;
-  if(pages%64)bits[words-1]=(UINT64_C(1)<<(pages%64))-1;
-  int zero=!strcmp(argv[9],"zero");check(zero||!strcmp(argv[9],"invalidate"),"cache mode");
-  struct cpm_cache q={.phys_base=sysfs_number("/sys/bus/dax/devices/dax0.0/resource"),
-   .device_bytes=sysfs_number("/sys/bus/dax/devices/dax0.0/size"),.metadata_offset=number(argv[5]),
-   .cookie_lo=number(argv[6]),.cookie_hi=number(argv[7]),.pages=pages,.bitmap=(uintptr_t)bits,
-   .covered=(uintptr_t)covered,.skip_page=UINT64_MAX,.reserved=zero?3:0};
-  int fd=open("/dev/cxl_pool",O_RDWR|O_CLOEXEC);check(fd>=0,"cache open");
-  check(ioctl(fd,zero?CPM_ZERO:CPM_CACHE,&q)==0,"cache ioctl");
-  check(q.lines==pages*64&&!memcmp(bits,covered,words*8),"cache coverage");close(fd);free(bits);free(covered);
-  printf("NONCOHERENT_CACHE_JSON {\"pages\":%"PRIu64",\"lines\":%"PRIu64",\"ns\":%"PRIu64",\"zero\":%d}\n",pages,(uint64_t)q.lines,(uint64_t)q.elapsed_ns,zero);
-  return 0;
- }
- if(!strcmp(argv[1],"arena")) {
-  check(argc==8,"arena DIR IP NONCE OFFSET STAGE ACKS");
-  uint64_t q[6]={number(argv[5]),0,0,0,number(argv[6]),number(argv[7])};
-  int fd=open("/dev/kvm",O_RDWR|O_CLOEXEC);check(fd>=0,"arena open");
-  check(ioctl(fd,0xc030aef9UL,q)==0,"arena ioctl");close(fd);
-  printf("NONCOHERENT_ARENA_JSON {\"offset\":%"PRIu64",\"capacity\":%"PRIu64",\"used\":%"PRIu64",\"lines\":%"PRIu64",\"stage\":%"PRIu64",\"acks\":%"PRIu64"}\n",q[0],q[1],q[2],q[3],q[4],q[5]);
-  return 0;
- }
- if(!strcmp(argv[1],"retire")||!strcmp(argv[1],"audit")) {
-  check(argc==5,"retire/audit DIR IP NONCE");
-  struct request q={.magic=MAGIC,.operation=!strcmp(argv[1],"retire")?5:6};
-  strcpy(q.nonce,argv[4]);strcpy(q.label,argv[1]);validate_request(&q,argv[4]);
-  int fd=local_socket(0);uint64_t response[2];send_all(fd,&q,sizeof(q));recv_all(fd,response,sizeof(response));close(fd);
-  check(response[0]==0,"retire/audit failed");
-  printf("NONCOHERENT_ADMIN_JSON {\"operation\":%u,\"ns\":%"PRIu64"}\n",q.operation,response[1]);return 0;
- }
+
+
+
+
  if(!strcmp(argv[1],"maintain")) {
   check(argc==6,"maintain DIR IP NONCE PAUSED");
   struct request q={.magic=MAGIC,.operation=3,.first=(uint32_t)number(argv[5])};
@@ -422,14 +281,8 @@ int main(int argc,char **argv) {
   check(argc==5||argc==6,"serve arguments");int listener=tcp(argv[3],1),local=local_socket(1);
   bench_map();
   prepare_owner();
-  if(!ept_adopt)selector_fd=open("/sys/module/kvm/parameters/dax_owner_pid",O_WRONLY|O_CLOEXEC);
-  if(selector_fd<0 && !ept_adopt)fail("prepare owner parameter");
-  connect_api();
   (void)connect_native();
-  if(!ept_adopt) {
-   import_file=prepare_metadata("direct-import.json");
-   manifest_file=prepare_metadata("restore-manifest.json");
-  }
+
   if(argc==6) {
    // Destination launch follows source readiness. Warm TCP/ARP while the VM
    // still runs on its source; this message never selects an execution owner.
@@ -449,28 +302,18 @@ int main(int argc,char **argv) {
    else {fd=accept4(trigger?local:listener,NULL,NULL,SOCK_CLOEXEC);if(fd<0)fail("accept");timeout(fd);
     if(!trigger){int one=1;if(setsockopt(fd,IPPROTO_TCP,TCP_NODELAY,&one,sizeof(one)))fail("accepted TCP_NODELAY");}}
    struct request q;recv_all(fd,&q,sizeof(q));validate_request(&q,argv[4]);
-   if(q.operation==5 || q.operation==6) {
-    check(trigger && !q.state_len && !q.manifest_len,"admin request channel");
-    check(connect_native(),"admin endpoint absent");
-    unsigned char command=q.operation==5?3:8;uint64_t response[2],begin=ns();
-    send_all(native_fd,&command,1);recv_all(native_fd,response,sizeof(response));
-    if(!response[0] && command==3) {char packet[CAP];check(response[1]>0&&response[1]<CAP,"retire packet bound");recv_all(native_fd,packet,response[1]);}
-    response[1]=ns()-begin;send_all(fd,response,sizeof(response));close(fd);continue;
-   }
+
    if(q.operation==3 || q.operation==4) {
     check(!q.state_len && !q.manifest_len && !q.epoch &&
           (q.operation==3 ? trigger : (!trigger && fd==peer_fd)),"maintenance request channel");
     uint64_t response[3]={0};
     if(connect_native()) {
-     unsigned char command=ept_adopt?11:(q.operation==3 ? (q.first?7:5) : 6);
+     unsigned char command=11;
      uint64_t begin=ns();
      send_all(native_fd,&command,1);recv_all(native_fd,response,2*sizeof(uint64_t));
      printf("CLEAN_QUEUE_JSON {\"command\":%u,\"begin_ns\":%"PRIu64",\"reply_ns\":%"PRIu64",\"dispatch_duration_ns\":%"PRIu64"}\n",command,begin,ns(),response[1]);fflush(stdout);
-    } else {
-     check(q.operation==4,"owner clean endpoint absent");
-     struct api_result result=api("PUT","/actions","{\"action_type\": \"DirectObserve\"}");
-     response[1]=(uint64_t)(result.us*1000.);
-    }
+    } else {check(0,"native maintenance endpoint absent");}
+
     if(q.operation==3 && !response[0] && peer_fd>=0) {
      q.operation=4;uint64_t remote[3];send_all(peer_fd,&q,sizeof(q));recv_all(peer_fd,remote,sizeof(remote));
      response[0]=remote[0];response[2]=remote[1];
@@ -497,25 +340,19 @@ int main(int argc,char **argv) {
     peer_fd=fd;
    }
    check(!q.persistent||peer_fd==fd,"multiple peer connections");
-   check(q.state_len>0&&q.state_len<CAP&&q.manifest_len<CAP&&(q.manifest_len>0||!q.first),"request bounds");
+   check(q.state_len>0&&q.state_len<CAP&&q.manifest_len==0&&!q.first,"request bounds");
    struct phase_profile profile;phase_start(&profile);
-   char state[CAP],manifest[CAP];recv_all(fd,state,q.state_len);recv_all(fd,manifest,q.manifest_len);
+   char state[CAP];check(q.manifest_len==0,"packet contains retired metadata");recv_all(fd,state,q.state_len);
    phase_mark(&profile,"metadata_receive");
-   // The parked VMM reads these private staging files only in DirectReceive.
-   // This serialized controller is their sole writer. Complete both writes
-   // before selecting the owner or sending that API; any error exits here.
-   // Thus the API publishes the pair, without per-handoff inode replacement.
-   if(q.manifest_len) { overwrite_metadata(&import_file,state,q.state_len);overwrite_metadata(&manifest_file,manifest,q.manifest_len); }
-   phase_mark(&profile,"metadata_publish");
-   int owner=owner_pid();phase_mark(&profile,"owner_check");select_owner(owner);phase_mark(&profile,"owner_select");
+   (void)owner_pid();
    struct reply r={.magic=MAGIC};
 
-   if(!q.manifest_len) {
+   {
     check(connect_native(),"memory receiver not ready");uint64_t begin=ns(),response[2];
-    unsigned char wire[5+CAP]={0};wire[0]=ept_adopt?10:4;memcpy(wire+1,&q.state_len,4);memcpy(wire+5,state,q.state_len);
+    unsigned char wire[5+CAP]={0};wire[0]=10;memcpy(wire+1,&q.state_len,4);memcpy(wire+5,state,q.state_len);
     send_all(native_fd,wire,5+q.state_len);recv_all(native_fd,response,sizeof(response));
     check(response[0]==0,"memory import failed");r.receive=(struct api_result){.status=204,.us=(ns()-begin)/1000.};
-   } else { r.receive=api("PUT","/actions","{\"action_type\": \"DirectReceive\"}"); }
+   }
    phase_mark(&profile,"import_api");
    uint32_t marker=MAGIC;send_all(fd,&marker,sizeof(marker));
    if(heartbeat)r.ack_len=bench_reply(ack,q.epoch);
@@ -525,7 +362,7 @@ int main(int argc,char **argv) {
  }
 
  check(!strcmp(argv[1],"request")&&argc==12,"command arguments");
- check(!strcmp(argv[5],"0")||!strcmp(argv[5],"1"),"first import flag");
+ check(!strcmp(argv[5],"0"),"reserved first flag");
  struct request q={.magic=MAGIC,.first=(uint32_t)atoi(argv[5])};strcpy(q.nonce,argv[4]);check(strlen(argv[6])<sizeof(q.label),"label length");strcpy(q.label,argv[6]);
  char ack[4096];struct outcome o;
  {

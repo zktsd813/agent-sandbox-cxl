@@ -26,13 +26,7 @@
 #define CPM_ACTIVE 1
 #define CPM_SEALED 2
 #define CPM_RETIRED 3
-static atomic64_t nonowner_ioctl, nonowner_release;
-static int cpm_audit_get(char *buffer,const struct kernel_param *kp)
-{
-    return scnprintf(buffer,PAGE_SIZE,"ioctl=%lld release=%lld\n",atomic64_read(&nonowner_ioctl),atomic64_read(&nonowner_release));
-}
-static const struct kernel_param_ops cpm_audit_ops={.get=cpm_audit_get};
-module_param_cb(nonowner_counts,&cpm_audit_ops,NULL,0400);
+
 struct cpm_header {
     u64 magic;
     struct cpm_handle handle;
@@ -66,7 +60,7 @@ static u64 invalidate_range(void *address, u64 bytes)
     return emitted;
 }
 
-static int cache_pages(struct cpm *c, void __user *user, bool zero, bool writeback)
+static int cache_pages(struct cpm *c, void __user *user, bool writeback)
 {
     struct cpm_cache q;
     struct cpm_header *header;
@@ -75,8 +69,8 @@ static int cache_pages(struct cpm *c, void __user *user, bool zero, bool writeba
     size_t bytes;
     int ret = -EINVAL;
     if (copy_from_user(&q, user, sizeof(q))) return -EFAULT;
-    if (!boot_cpu_has(X86_FEATURE_CLFLUSHOPT) || ((zero || writeback) && !boot_cpu_has(X86_FEATURE_CLWB))) return -EOPNOTSUPP;
-    if (!q.pages || q.pages > CPM_MAX_PAGES || (zero ? q.reserved!=3 : q.reserved!=0) ||
+    if (!boot_cpu_has(X86_FEATURE_CLFLUSHOPT) || (writeback && !boot_cpu_has(X86_FEATURE_CLWB))) return -EOPNOTSUPP;
+    if (!q.pages || q.pages > CPM_MAX_PAGES || q.reserved!=0 ||
         (q.phys_base | q.device_bytes | q.metadata_offset) & (PAGE_SIZE-1) ||
         !q.device_bytes || q.phys_base + q.device_bytes < q.phys_base ||
         q.metadata_offset > q.device_bytes ||
@@ -113,32 +107,18 @@ static int cache_pages(struct cpm *c, void __user *user, bool zero, bool writeba
     if (!covered) { ret = -ENOMEM; goto out; }
     if (q.pages % BITS_PER_LONG && bits[BITS_TO_LONGS(q.pages)-1] >> (q.pages % BITS_PER_LONG))
         goto out;
-    if (zero && !bitmap_full(bits,q.pages)) goto out;
     start = ktime_get_ns(); q.lines = 0;
     for_each_set_bit(page, bits, q.pages) {
         void *address = c->observer_base + c->observer_map[page].offset;
         if (page == q.skip_page) continue;
         for (line = 0; line < PAGE_SIZE; line += 64) {
-            if (zero) {
-                unsigned int word;
-                for (word=0;word<64;word+=8)
-                    asm volatile("movnti %1,(%0)" : : "r" ((char *)address+line+word),"r" (0ULL) : "memory");
-            } else if (writeback) asm volatile("clwb (%0)" : : "r" ((char *)address+line) : "memory");
+            if (writeback) asm volatile("clwb (%0)" : : "r" ((char *)address+line) : "memory");
             else asm volatile("clflushopt (%0)" : : "r" ((char *)address+line) : "memory");
             q.lines++;
         }
         __set_bit(page, covered);
     }
-    if (zero) {
-        asm volatile("sfence" : : : "memory");
-        header=c->observer_base+q.metadata_offset;
-        /* All participating hosts acknowledged invalidation before zeroing.
-         * The trusted lab coordinator is the only allocator writer here. */
-        WRITE_ONCE(header->handle.state,CPM_RETIRED);
-        for (line=0;line<PAGE_SIZE;line+=64)
-            asm volatile("clwb (%0)" : : "r" ((char *)header+line) : "memory");
-        asm volatile("sfence" : : : "memory");
-    } else if (writeback) asm volatile("sfence" : : : "memory");
+    if (writeback) asm volatile("sfence" : : : "memory");
     else asm volatile("mfence" : : : "memory");
     q.elapsed_ns = ktime_get_ns()-start;
     if (!bitmap_equal(bits, covered, q.pages)) { ret = -EIO; goto out; }
@@ -483,7 +463,7 @@ static long cpm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         return ret ? ret : copy_to_user(user, &lines, sizeof(lines)) ? -EFAULT : 0;
     }
     if (cmd == CPM_CACHE_RANGE) return cache_metadata_range(c,user);
-    if (cmd == CPM_CACHE || cmd == CPM_ZERO || cmd == CPM_WRITEBACK) return cache_pages(c,user,cmd==CPM_ZERO,cmd==CPM_WRITEBACK);
+    if (cmd == CPM_CACHE || cmd == CPM_WRITEBACK) return cache_pages(c,user,cmd==CPM_WRITEBACK);
     if (cmd == CPM_PARK) { c->local_owner=false; return 0; }
     if (cmd == CPM_CREATE || cmd == CPM_IMPORT) {
         mutex_lock(&c->lock);
@@ -493,78 +473,24 @@ static long cpm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     }
     if (!smp_load_acquire(&c->ready))
         return -EINVAL;
-    if (c->header && !c->local_owner) { atomic64_inc(&nonowner_ioctl); return -ESTALE; }
+    if (c->header && !c->local_owner) return -ESTALE;
     if (c->header && !owns(c)) return -ESTALE;
-    if (cmd == CPM_STATUS || cmd == CPM_SEAL || cmd == CPM_RETIRE) {
+    if (cmd == CPM_STATUS || cmd == CPM_SEAL) {
         struct cpm_handle h;
         if (!c->header) return -EOPNOTSUPP;
         mutex_lock(&c->lock);
         if (!owns(c) || c->state->state == CPM_RETIRED) { ret = -ESTALE; goto status_done; }
         if (cmd == CPM_SEAL && c->state->state == CPM_ACTIVE)
             smp_store_release(&c->state->state, CPM_SEALED);
-        if (cmd == CPM_RETIRE) {
-            if (c->mapped || c->state->state != CPM_ACTIVE) { ret = -EBUSY; goto status_done; }
-            smp_store_release(&c->state->state, CPM_RETIRED);
-        }
+
         h = *c->state;
 status_done:
         mutex_unlock(&c->lock);
         if (ret) return ret;
         return copy_to_user(user, &h, sizeof(h)) ? -EFAULT : 0;
     }
-    if (cmd == CPM_AUDIT) {
-        struct cpm_audit a;
-        struct cpm_pte *out;
-        struct vm_area_struct *vma;
-        u64 i;
-        if (copy_from_user(&a, user, sizeof(a))) return -EFAULT;
-        if (!a.count || a.count > c->cfg.count || a.address & (PAGE_SIZE - 1) ||
-            a.address + a.count * PAGE_SIZE < a.address) return -EINVAL;
-        out = kvcalloc(a.count, sizeof(*out), GFP_KERNEL);
-        if (!out) return -ENOMEM;
-        mmap_read_lock(current->mm);
-        mutex_lock(&c->lock);
-        vma = find_vma(current->mm, a.address);
-        if (!vma || vma != c->owner_vma || vma->vm_start > a.address ||
-            vma->vm_end < a.address + a.count * PAGE_SIZE) {
-            ret = -EINVAL;
-        } else for (i = 0; i < a.count; i++) {
-            c->state->full_scan_pages++;
-            pte_t *pte, value;
-            spinlock_t *ptl;
-            if (follow_pte(current->mm, a.address + i * PAGE_SIZE, &pte, &ptl)) continue;
-            value = ptep_get(pte);
-            if (pte_present(value)) {
-                out[i].pfn = pte_pfn(value);
-                out[i].flags = 1 | (pte_write(value) ? 2 : 0);
-            }
-            pte_unmap_unlock(pte, ptl);
-        }
-        mutex_unlock(&c->lock);
-        mmap_read_unlock(current->mm);
-        if (!ret && copy_to_user(u64_to_user_ptr(a.ptes), out, a.count * sizeof(*out))) ret = -EFAULT;
-        kvfree(out);
-        return ret;
-    }
-    if (cmd == CPM_QUERY) {
-        struct cpm_query q;
-        struct cpm_entry *map;
-        if (copy_from_user(&q, user, sizeof(q))) return -EFAULT;
-        if (q.count < c->cfg.count) return -ENOSPC;
-        map = kvmalloc_array(c->cfg.count, sizeof(*map), GFP_KERNEL);
-        if (!map) return -ENOMEM;
-        mutex_lock(&c->lock);
-        c->state->full_scan_pages += c->cfg.count;
-        q.count = c->cfg.count;
-        q.generation = c->state->generation;
-        q.reserved[0] = q.reserved[1] = 0; q.faults = c->state->faults; q.exhausted = c->state->exhausted;
-        memcpy(map, c->map, q.count * sizeof(*map));
-        mutex_unlock(&c->lock);
-        if (copy_to_user(u64_to_user_ptr(q.entries), map, q.count * sizeof(*map)) ||
-            copy_to_user(user, &q, sizeof(q))) ret = -EFAULT;
-        kvfree(map);
-        return ret;
-    }
+
+
     return -ENOTTY;
 }
 
@@ -585,7 +511,6 @@ static int cpm_release(struct inode *inode, struct file *file)
     kvfree(c->observer_map);
     if (c->observer_base) memunmap(c->observer_base);
     if (c->header) {
-        if (!c->local_owner) atomic64_inc(&nonowner_release);
         if (c->local_owner && owns(c))
             cmpxchg(&c->state->state, CPM_ACTIVE, CPM_RETIRED);
     } else {

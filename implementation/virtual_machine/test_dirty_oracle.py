@@ -6,13 +6,6 @@ from dirty_oracle import DirtyOracle, MIB, kernel_receipt
 
 
 class InstructionReceiptVersions(unittest.TestCase):
-    def test_both_v1_locations_remain_readable(self):
-        values=(4096,0,1026,0,74,1)
-        for offset in (80,MIB-64):
-            memory=bytearray(MIB)
-            struct.pack_into('<6Q',memory,offset,*values)
-            self.assertEqual(kernel_receipt(memory,0,64)[:6],values)
-
     def test_initial_invalidation_is_separate_from_sender_writeback(self):
         memory=bytearray(MIB)
         values=(4096,0,1026,0,74,2,80,0)
@@ -41,7 +34,7 @@ class MaintenanceReceipts(unittest.TestCase):
         return struct.pack('<6Q', bitmap, 0, bitmap, wb, requested, invalidated)
 
     def extra(self, epoch, start=0, end=0):
-        return [epoch, start, end, 0, 0, 0, 0, 0, 0, 4096, 4096, 64, 128, 1, 1, 0]
+        return [epoch, start, end, 0, 0, 0, 0, 0, 0, 4096, 4096, 64, 64, 1, 1, 0]
 
     def publish(self, epoch, bitmap):
         base = 32*MIB

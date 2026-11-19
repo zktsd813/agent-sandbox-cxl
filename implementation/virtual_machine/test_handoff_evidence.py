@@ -82,12 +82,12 @@ class WorkloadEvidence(unittest.TestCase):
         (self.root/'source.traj.json').write_text(json.dumps(source))
         source_hash = sha((self.root/'source.traj.json').read_bytes())
         ready = {'event': 'trace_ready', 'boot_id': 'boot', 'pid': 1, 'command_count': 1}
-        start = {'event': 'trace_start', 'label': 'run', 'index': 0, 'command_sha256': sha(command.encode()), 'start_s': 1}
-        end = {'event': 'trace_end', 'label': 'run', 'index': 0, 'next_index': 1, 'command_sha256': start['command_sha256'],
+        start = {'event': 'trace_start', 'label': 'v1e0c2', 'index': 0, 'command_sha256': sha(command.encode()), 'start_s': 1}
+        end = {'event': 'trace_end', 'label': 'v1e0c2', 'index': 0, 'next_index': 1, 'command_sha256': start['command_sha256'],
                'start_s': 1, 'end_s': 2, 'rc': 0, 'timed_out': False, 'output_sha256': sha(output)}
         identities = []
         for index in (0, 1):
-            identities.append({'event': 'trace_identity', 'label': f'id{index}', 'boot_id': 'boot', 'pid': 1,
+            identities.append({'event': 'trace_identity', 'label': f'v1e0c{index*2+1}', 'boot_id': 'boot', 'pid': 1,
                 'next_index': index, 'sentinel_sha256': sha((f'boot 1 {sha(output)}\n' if index else 'boot 0\n').encode()),
                 'fd_inode': 7, 'fd_deleted': True, 'fd_ordinal': index, 'fd_line': f'FD-boot-{index}',
                 'fd_position': sum(len(f'FD-boot-{i}\n') for i in range(index+1))})
@@ -103,14 +103,14 @@ class WorkloadEvidence(unittest.TestCase):
                 item = tarfile.TarInfo(name); item.size = len(data)
                 tar.addfile(item, io.BytesIO(data))
         data = archive.getvalue()
-        exported = {'event': 'trace_export', 'label': 'export', 'bytes': len(data), 'sha256': sha(data)}
+        exported = {'event': 'trace_export', 'label': 'v1e0c4', 'bytes': len(data), 'sha256': sha(data)}
         for name, row in (('ready', ready), ('id0', identities[0]), ('end', end), ('id1', identities[1]), ('export', exported)):
             evidence(name, encode(row))
         evidence('launch', 'EXEC_PROCESS 12 34\n')
         evidence('archive', data)
         fence = evidence('fence', 'FENCED 12 34\n')
         serial = ''.join(encode(row) for row in (ready, identities[0], start, end, identities[1], exported))
-        serial += f'TRACE_EXPORT_BEGIN export {len(data)} {sha(data)}\n'+base64.b64encode(data).decode()+'\nTRACE_EXPORT_END export\n'
+        serial += f'TRACE_EXPORT_BEGIN v1e0c4 {len(data)} {sha(data)}\n'+base64.b64encode(data).decode()+'\nTRACE_EXPORT_END v1e0c4\n'
         evidence('serial', serial, 'final-guest-log')
         apis = []
         for index, (path, body) in enumerate((('/machine-config', {'vcpu_count': 1, 'mem_size_mib': 2048}),
@@ -121,13 +121,13 @@ class WorkloadEvidence(unittest.TestCase):
         measured = self.root/'measured-sources'; measured.mkdir()
         (measured/'fixture.py').write_bytes(b'fixture')
         artifacts = {name: 'hash' for name in ('firecracker', 'l1-kernel', 'l2-vmlinux', 'pool_memory_module.ko', 'sample-initramfs.cpio')}
-        self.report = {'schema': 'swe-handoff-trace-v1', 'result': 'passed', 'mode': 'baseline',
+        self.report = {'schema': 'swe-handoff-trace-v1', 'result': 'passed', 'mode': 'ept-adopt', 'boundaries': [], 'prepared_seed': {'directory':'/run/unseen'},
             'arguments': {'memory_mib': 2048}, 'source_hashes': {'fixture.py': sha(b'fixture')},
             'source_trace': {'file': 'source.traj.json', 'sha256': source_hash},
             'trace': {'name': 'sample', 'trace_sha256': source_hash, 'environment': environment, 'image_sha256': 'hash',
                       'image_bytes': 4096, 'command_count': 1, 'commands': [{'command': command}],
                       'handoff_before': 0, 'effective_environment': {}},
-            'commands': [{'receipt': end, 'file': 'end', 'vm': 1, 'role': 'A', 'tier': 'dram', 'guest_duration_s': 1}],
+            'commands': [{'receipt': end, 'file': 'end', 'vm': 1, 'role': 'A', 'tier': 'cxl', 'guest_duration_s': 1}],
             'control_commands': [{'receipt': row, 'file': name} for name, row in
                                  (('id0', identities[0]), ('end', end), ('id1', identities[1]), ('export', exported))],
             'boot': {'receipt': ready, 'file': 'ready'}, 'launches': [{'directory': '/run/example', 'epoch': 0, 'role': 'A', 'file': 'launch'}],
@@ -140,10 +140,10 @@ class WorkloadEvidence(unittest.TestCase):
                        'home_storage_image': {'template_sha256': 'hash'}}}
 
     def verify(self):
-        from verify_swe_handoff import verify
+        from verify_swe_handoff import Evidence,verify_trace
         path = self.root/'report.json'
         path.write_text(json.dumps(self.report))
-        return verify(path)
+        return verify_trace(Evidence(self.report,self.root),self.report)
 
     def test_complete_raw_command_and_diff(self):
         self.assertEqual(self.verify()['commands'], 1)

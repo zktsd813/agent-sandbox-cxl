@@ -397,42 +397,11 @@ static double bench_api(const char *method, const char *path, const char *body)
     return duration_us;
 }
 
-static uint64_t migration_tsc(void)
+static uint64_t sample_tsc(void)
 {
     unsigned low, high;
     __asm__ __volatile__("lfence; rdtsc" : "=a"(low), "=d"(high) :: "memory");
     return ((uint64_t)high << 32) | low;
-}
-
-static uint64_t migration_available(void)
-{
-    FILE *file = fopen("/proc/meminfo", "r");
-    if (!file) die("migration guest meminfo");
-    char line[256];
-    uint64_t kib = 0;
-    while (fgets(line, sizeof(line), file))
-        if (sscanf(line, "MemAvailable: %" SCNu64 " kB", &kib) == 1) break;
-    fclose(file);
-    if (!kib) { fprintf(stderr, "Guest MemAvailable missing\n"); exit(1); }
-    return kib * 1024;
-}
-
-static uint64_t migration_word(uint64_t instance, size_t page, unsigned word)
-{
-    return instance ^ ((page + 1) * UINT64_C(0x9e3779b97f4a7c15)) ^
-           ((word + 1) * UINT64_C(0xd6e8feb86659fd93));
-}
-
-static uint64_t migration_sweep(unsigned char *memory, size_t length, uint64_t instance,
-                                 uint64_t *errors)
-{
-    uint64_t start = monotonic_ns();
-    for (size_t offset = 0; offset < length; offset += 4096) {
-        volatile uint64_t *words = (void *)(memory + offset);
-        for (unsigned word = 0; word < 8; word++)
-            if (words[word] != migration_word(instance, offset / 4096, word)) (*errors)++;
-    }
-    return monotonic_ns() - start;
 }
 
 /* SMP correctness workload: one checksum writer plus one futex ring thread
@@ -477,7 +446,7 @@ static void *smp_write(void *arg)
         }
         generation++;
         atomic_fetch_add(&s->errors, errors);
-        uint64_t now_ns = monotonic_ns(), now_tsc = migration_tsc();
+        uint64_t now_ns = monotonic_ns(), now_tsc = sample_tsc();
         if (now_ns < old_ns) atomic_fetch_add(&s->clock_errors, 1);
         if (now_tsc < old_tsc) atomic_fetch_add(&s->tsc_errors, 1);
         old_ns = now_ns; old_tsc = now_tsc;
@@ -540,10 +509,10 @@ static void guest_smp_heartbeat(unsigned count)
                 *(volatile uint64_t *)((char *)smp_hb+page*4096)=value;
         }
         if (epoch != previous) {
-            atomic_store(&smp_hb->epoch_detect_tsc, migration_tsc());
+            atomic_store(&smp_hb->epoch_detect_tsc, sample_tsc());
             for (unsigned cpu = 0; cpu < count; cpu++)
                 while (atomic_load_explicit(&smp_hb->cpus[cpu].acknowledged, memory_order_acquire) != epoch) usleep(50);
-            atomic_store(&smp_hb->writers_ready_tsc, migration_tsc());
+            atomic_store(&smp_hb->writers_ready_tsc, sample_tsc());
             for (unsigned cpu = 0; cpu < count; cpu++) atomic_store(&smp_hb->cpus[cpu].ipi, 0);
             smp_interrupts();
             for (unsigned cpu = 0; cpu < count; cpu++) {
@@ -551,7 +520,7 @@ static void guest_smp_heartbeat(unsigned count)
                 if (atomic_load(&s->errors) || atomic_load(&s->clock_errors) || atomic_load(&s->tsc_errors))
                     atomic_fetch_add(&smp_hb->errors, 1);
             }
-            atomic_store(&smp_hb->ack_tsc, migration_tsc());
+            atomic_store(&smp_hb->ack_tsc, sample_tsc());
             atomic_store(&smp_hb->ack_epoch, epoch);
             atomic_store_explicit(&smp_hb->acknowledged, epoch, memory_order_release);
             atomic_store_explicit(&smp_hb->verified, epoch, memory_order_release);
@@ -570,33 +539,10 @@ static void guest_heartbeat(int sleeping, int quiet)
     struct heartbeat *hb = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 64 * 1024 * 1024);
     if (hb == MAP_FAILED) die("guest heartbeat mmap");
     close(fd);
-    int dense = env_enabled("LAB_HEARTBEAT_DENSE");
     size_t size = 16 * 1024 * 1024;
-    uint64_t available = 0, instance = 0;
-    unsigned char *state;
-    if (dense) {
-        available = migration_available();
-        const uint64_t headroom = 16 * UINT64_C(1024) * 1024;
-        if (available < headroom + 16 * UINT64_C(1024) * 1024) {
-            fprintf(stderr, "Insufficient guest memory for dense heartbeat\n"); exit(1);
-        }
-        size = (available - headroom) & ~(size_t)4095;
-        state = mmap(NULL, size, PROT_READ | PROT_WRITE,
-                     MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        if (state == MAP_FAILED || madvise(state, size, MADV_NOHUGEPAGE))
-            die("dense heartbeat memory");
-        instance = migration_tsc() ^ monotonic_ns() ^ UINT64_C(0x6461786865617274);
-        if (!instance) instance = 1;
-        for (size_t offset = 0; offset < size; offset += 4096) {
-            uint64_t *words = (void *)(state + offset);
-            for (unsigned word = 0; word < 8; word++)
-                words[word] = migration_word(instance, offset / 4096, word);
-        }
-    } else {
-        state = malloc(size);
-        if (!state) die("heartbeat retained heap");
-        for (size_t i = 0; i < size; i++) state[i] = (unsigned char)(i * 31u + 77u);
-    }
+    unsigned char *state=malloc(size);
+    if (!state) die("heartbeat retained heap");
+    for (size_t i=0;i<size;i++) state[i]=(unsigned char)(i*31u+77u);
     atomic_store(&hb->sequence, 0);
     atomic_store(&hb->epoch, 0);
     atomic_store(&hb->acknowledged, 0);
@@ -605,10 +551,6 @@ static void guest_heartbeat(int sleeping, int quiet)
     atomic_store(&hb->clock_ns,0);atomic_store(&hb->clock_errors,0);
     atomic_store(&hb->tsc,0);atomic_store(&hb->tsc_errors,0);
     atomic_store(&hb->ack_tsc,0);atomic_store(&hb->ack_epoch,0);
-    atomic_store(&hb->working_set_bytes, size);
-    atomic_store(&hb->available_bytes, available);
-    atomic_store(&hb->instance_id, instance);
-    atomic_store(&hb->first_sweep_ns, 0);atomic_store(&hb->warm_sweep_ns, 0);
     atomic_store(&hb->warm_done, 0);
     const char *dirty_setting=getenv("LAB_HEARTBEAT_DIRTY_MIB");
     unsigned dirty_mib=dirty_setting?strtoul(dirty_setting,NULL,10):0;
@@ -637,18 +579,7 @@ static void guest_heartbeat(int sleeping, int quiet)
     uint64_t dirty_epoch=0;
     int timing=env_enabled("LAB_HEARTBEAT_TIMING");
     const unsigned spins=128;
-    int churn=env_enabled("LAB_HEARTBEAT_CHURN");
-    if (dense && churn) {
-        fprintf(stderr, "Dense heartbeat does not combine with changing-memory stress\n"); exit(1);
-    }
-    unsigned char *changing=churn?mmap(NULL,32*1024*1024,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0):NULL;
-    uint64_t written[32]={0},previous_clock=0,previous_tsc=0;
-    if(churn && changing==MAP_FAILED)die("heartbeat changing memory");
-    if (dense) {
-        printf("L2_DENSE_READY working_set_bytes=%zu available_bytes=%" PRIu64
-               " headroom_mib=16 instance_id=%" PRIu64 "\n", size, available, instance);
-        fflush(stdout);
-    }
+    uint64_t previous_clock=0,previous_tsc=0;
     atomic_store_explicit(&hb->magic, HB_MAGIC, memory_order_release);
     if(dirty_setting){printf("L2_DIRTY_READY mib=%u\n",dirty_mib);fflush(stdout);}
     uint64_t previous = 0;
@@ -661,7 +592,7 @@ static void guest_heartbeat(int sleeping, int quiet)
             atomic_store_explicit(&hb->ack_tsc,((uint64_t)high<<32)|low,memory_order_relaxed);
             atomic_store_explicit(&hb->ack_epoch,epoch,memory_order_relaxed);
         }
-        if (!dense) atomic_store_explicit(&hb->acknowledged, epoch, memory_order_release);
+        atomic_store_explicit(&hb->acknowledged, epoch, memory_order_release);
         if (epoch != previous) {
             unsigned low,high;
             __asm__ __volatile__("lfence; rdtsc":"=a"(low),"=d"(high)::"memory");
@@ -673,41 +604,18 @@ static void guest_heartbeat(int sleeping, int quiet)
             uint64_t ns=(uint64_t)now.tv_sec*1000000000+now.tv_nsec;
             if(previous_clock && ns<previous_clock)atomic_fetch_add(&hb->clock_errors,1);
             previous_clock=ns;atomic_store(&hb->clock_ns,ns);
-            if (dense) {
-                /* One ACK before W; no further ACK writes occur while either
-                 * sweep is running. The source must wait for warm_done before
-                 * requesting another pause. */
-                atomic_store_explicit(&hb->acknowledged, epoch, memory_order_release);
-                uint64_t errors = 0;
-                uint64_t first_ns = migration_sweep(state, size, instance, &errors);
-                atomic_store(&hb->first_sweep_ns, first_ns);
-                atomic_fetch_add(&hb->errors, errors);
-                atomic_store_explicit(&hb->verified, epoch, memory_order_release);
-                errors = 0;
-                uint64_t warm_ns = migration_sweep(state, size, instance, &errors);
-                atomic_store(&hb->warm_sweep_ns, warm_ns);
-                atomic_fetch_add(&hb->errors, errors);
-                atomic_store_explicit(&hb->warm_done, epoch, memory_order_release);
-            } else {
+
                 for (size_t i = 0; i < size; i++) {
                     if (state[i] != (unsigned char)(i * 31u + 77u)) atomic_fetch_add(&hb->errors, 1);
                 }
-            }
-            if(churn){
-                unsigned block=epoch%32;
-                unsigned char *region=changing+block*1024*1024;
-                for(size_t i=0;i<1024*1024;i++){
-                    if(written[block] && region[i]!=(unsigned char)(i*17+written[block]))atomic_fetch_add(&hb->errors,1);
-                    region[i]=(unsigned char)(i*17+epoch);
-                }
-                written[block]=epoch;
-            }
+
+
             if(!quiet){
                 printf("L2_HANDOFF epoch=%" PRIu64 " sequence=%" PRIu64 " errors=%" PRIu64 "\n",
                        epoch, atomic_load(&hb->sequence), atomic_load(&hb->errors));
                 fflush(stdout);
             }
-            if (!dense) atomic_store_explicit(&hb->verified, epoch, memory_order_release);
+            atomic_store_explicit(&hb->verified, epoch, memory_order_release);
             if(dirty_setting) {
                 /* Outside pause-to-ACK: validate the previous epoch, then write
                  * the full requested payload before allowing the next pause. */

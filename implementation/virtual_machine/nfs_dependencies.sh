@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build/extract dependencies for isolated L1 NFS experiments; no host services.
+# Build/extract dependencies for the EPT fixture's isolated L1 NFSv3 backend; no host services.
 set -euo pipefail
 
 lab_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

@@ -60,9 +60,9 @@ Git 추적 파일 전부를 열거했다. `.local/`, `__pycache__`는 생성 자
 | `network-fairness-comparison.json` | 지움 | 옛 비교·감사·성능 증거. 보존 태그에서 열람; docs/results 기록은 보존 |
 | `nfs-l2-init.sh` | 지움 | 삭제 NFS 비교 실험 |
 | `nfs_bench.py` | 줄임 | SWE/EPT가 호출하는 API·pid·stop helper만; NFS 실험 삭제 |
-| `nfs_dependencies.sh` | 지움 | 삭제 NFS 비교 준비 |
+| `nfs_dependencies.sh` | 줄임 | EPT 읽기 전용 block backend를 두 L1에 공급하는 NFSv3 runtime 준비. 비교 실험은 제거 |
 | `nfs_probe.c` | 지움 | 삭제 NFS 비교 probe |
-| `page_hash.c` | 남김 | L0 RAM page hash 정답지 |
+| `page_hash.c` | 줄임 | L0 page hash 정답지만; line hash 회계 옵션 제거 |
 | `physical_ept_cost.c` | 지움 | 삭제 모드 EPT 비용 측정 |
 | `pointer-audit.json` | 지움 | 옛 비교·감사·성능 증거. 보존 태그에서 열람; docs/results 기록은 보존 |
 | `pool_memory_module.c` | 줄임 | EPT가 쓰는 guest RAM mapper·lease·promotion만; direct 연계/진단 제거 |
@@ -213,7 +213,7 @@ Git 추적 파일 전부를 열거했다. `.local/`, `__pycache__`는 생성 자
 | `test_resident_owner.py` | 지움 | direct owner selector·pidfd 감사 |
 | `test_resident_proxy.py` | 지움 | direct relay 비교 전용 시험; 남은 relay 계약은 control_rpc 시험에 보존 |
 | `test_swe_inflight_evidence.py` | 지움 | direct 실행 중 이동 증거 |
-| `trace_prepare.py` | 지움 | 옛 단독 trace driver; 필요한 fixture 준비는 swe_handoff_prepare로 이동 |
+| `trace_prepare.py` | 줄임 | EPT SWE가 실제 쓰는 원본 명령·이미지 fixture 준비. NFS probe 복사 제거 |
 | `used-kvm-reuse-comparison.json` | 지움 | 옛 비교·감사·성능 증거. 보존 태그에서 열람; docs/results 기록은 보존 |
 | `verify_swe_handoff.py` | 줄임 | EPT SWE 결과·상태/표 hash 검증만; direct/resident/state-only 감사 제거 |
 
@@ -251,3 +251,5 @@ Git 추적 파일 전부를 열거했다. `.local/`, `__pycache__`는 생성 자
 기능별 커밋 전에 해당 C/kernel/Firecracker 빌드와 Python·Rust 계약 시험을 통과시킨다. 원본에 fuzz 0 dry-run을 확인한다. node 0·lab/quiet 잠금을 지키며 새 binary로 256 MiB 전체 쓰기·2 vCPU·200왕복·SWE heavy·EPT violation·ABAB 각 50회를 검증한다.
 
 기존 native transport bridge는 VM별 packet 운반과 guest ACK 시간 경계 때문에 최소한만 남긴다. `control_rpc`는 L0에서 SSH 없는 L1 initramfs에 명령을 전달하는 lab 채널이며 제품 daemon이 아니다. `resident_proxy.py`는 이 채널의 client 함수이며 별도 프로세스를 띄우지 않는다. 정확성 시험은 선택적 hash gate로 멈춘 경계에서만 표를 읽는다.
+
+실제 호출을 확인한 뒤 보완: EPT fixture의 읽기 전용 disk는 L1 A의 NFSv3 export로 B에도 공급된다. 따라서 NFS runtime 준비와 원본 SWE 이미지·명령 포장 도구는 남은 경로의 의존성이다. NFS 성능 비교 probe와 runner는 제거한다.

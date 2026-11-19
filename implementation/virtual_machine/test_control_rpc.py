@@ -214,7 +214,7 @@ class Client(unittest.TestCase):
         def reply(sock, header):
             sock.sendall(rpc.REPLY.pack(rpc.MAGIC, 0, header[2], len(compressed), 100) + compressed)
         thread = self.serve(reply)
-        data, integrity = lab.migration_trace_fetch(self.vm, {}, "/tmp/log with spaces")
+        data, integrity = lab.fetch_file(self.vm, "/tmp/log with spaces")
         self.check_server(thread)
         self.assertEqual(data, payload)
         self.assertEqual(integrity['bytes'], len(payload))

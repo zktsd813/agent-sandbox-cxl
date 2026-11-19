@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package trace assets for private RAM tier changes and resident handoff.
+"""Package trace assets for EPT worker boot and CXL promotion.
 
 Inputs remain read-only. The output directory must be new. Original command
 bytes, environment and image hashes come from trace_prepare.py's manifest.
@@ -40,7 +40,6 @@ def main():
     parser.add_argument('--mapper-module', type=Path, required=True)
     parser.add_argument('--kvm-module-dir', type=Path, required=True)
     parser.add_argument('--l1-kernel', type=Path, required=True)
-    parser.add_argument('--io-fixture', type=Path)
     parser.add_argument('--shared-probe', type=Path)
     parser.add_argument('--l1-config', type=Path, help='Require built-in NFS server support and record the L1 config')
     args = parser.parse_args()
@@ -79,8 +78,7 @@ def main():
         shutil.copy2(args.l1_config, dest/'l1-kernel.config')
     shutil.copy2(args.guest_config, dest/'l2-handoff.config')
     commands = {}
-    for source, binary in (('resident_control.c', 'resident-control'), ('control_rpc.c', 'control-rpc'),
-                           ('resident_bootstrap.c', 'resident-bootstrap')):
+    for source, binary in (('resident_control.c', 'resident-control'), ('control_rpc.c', 'control-rpc')):
         commands[binary] = ['gcc', '-O2', '-Wall', '-Wextra', '-Werror', '-static', HERE/source, '-o', dest/binary]
         run(commands[binary])
     if args.shared_probe:
@@ -89,11 +87,12 @@ def main():
         temporary = Path(tmp)
         host = temporary/'l1'
         unpack(base/'l1-initramfs.cpio', host)
+        shutil.copy2(HERE/'guest-init.sh',host/'init')
+        (host/'init').chmod(0o755)
         for name in ('firecracker', 'l2-vmlinux', 'pool_memory_module.ko',
-                     'resident-control', 'resident-bootstrap', 'control-rpc'):
+                     'resident-control', 'control-rpc'):
             shutil.copy2(dest/name, host/'lab'/name)
         shutil.copy2(dest/'shared-probe', host/'lab/shared-probe')
-        if args.io_fixture: shutil.copy2(args.io_fixture, host/'lab/io-mix')
         shutil.copy2(HERE/'guest-init.sh', host/'init')
         (host/'init').chmod(0o755)
         modules = {}
@@ -106,16 +105,9 @@ def main():
             archive = name+'-initramfs.cpio'
             unpack(base/archive, guest)
             shutil.copy2(dest/'shared-probe', guest/'lab/shared-probe')
-            if args.io_fixture: shutil.copy2(args.io_fixture, guest/'lab/io-mix')
             shutil.copy2(HERE/'swe-handoff-l2-init.sh', guest/'init')
             (guest/'init').chmod(0o755)
             shutil.copy2(HERE/'swe-handoff-guest-run.sh', guest/'lab/swe-handoff-guest-run.sh')
-            build = 'go build -a -p "$(getconf _NPROCESSORS_ONLN)" ./...'
-            argv = ["/trace/busybox", "env", "-i", *[f"{k}={v}" for k,v in trace['effective_environment'].items()],
-                    *trace['environment']['interpreter'], build]
-            build_path = guest/'lab/trace/parallel-build.sh'
-            build_path.write_text('#!/trace/busybox sh\ncd /testbed || exit 125\nexec '+shlex.join(argv)+'\n')
-            build_path.chmod(0o755)
             for command in trace['commands']:
                 path = guest/'lab/trace/cmd'/f"{command['index']:03d}.command"
                 if path.read_text() != command['command'] or lab.sha256(path) != command['command_sha256']:
@@ -137,14 +129,12 @@ def main():
         manifest['source_hashes'].pop('shared_probe.c', None)
         manifest['inputs']['shared_probe_binary'] = {
             'path': str(args.shared_probe.resolve()), 'sha256': lab.sha256(args.shared_probe)}
-    if args.io_fixture:
-        manifest['inputs']['io_fixture'] = {'path':str(args.io_fixture.resolve()),'sha256':lab.sha256(args.io_fixture),'source_sha256':lab.sha256(HERE/'io_mix.c')}
     manifest['handoff'] = {'inputs': {name: {'path': str(path.resolve()), 'sha256': lab.sha256(path)}
                                      for name, path in replacements.items()}}
     manifest['resident_control'] = {'source_sha256': lab.sha256(HERE/'resident_control.c'),
         'wire_sha256': lab.sha256(HERE/'resident_wire.h'), 'binary_sha256': lab.sha256(dest/'resident-control'),
         'build_argv': [str(x) for x in commands['resident-control']]}
-    manifest['control_rpc'] = {'operations': [1, 2, 3], 'binary_sha256': lab.sha256(dest/'control-rpc')}
+    manifest['control_rpc'] = {'operations': [1, 2, 3, 4], 'binary_sha256': lab.sha256(dest/'control-rpc')}
     manifest['source_hashes'].update({name: lab.sha256(HERE/name) for name in
         ('swe_handoff_prepare.py', 'swe-handoff-l2-init.sh', 'swe-handoff-guest-run.sh')})
     manifest['artifacts'] = {p.name: lab.sha256(p) for p in dest.iterdir() if p.is_file()}

@@ -49,25 +49,7 @@ fc_cargo() (
         cargo "$@" --offline --locked --release --target x86_64-unknown-linux-musl
 )
 
-apply_layer() {
-    local tree="$1" layer="$2"
-    if patch --silent --dry-run --reverse -p1 -d "$tree" -i "$layer" >/dev/null 2>&1; then
-        return
-    fi
-    patch --dry-run -p1 -d "$tree" -i "$layer"
-    patch -p1 -d "$tree" -i "$layer"
-}
-
 build_firecracker() {
-    # Default builds preserve current sources. Explicit isolated prefault builds
-    # apply the base once, then the independent experiment overlay.
-    if [[ "${CXL_LAB_PREFAULT:-0}" == 1 ]]; then
-        if ! patch --silent --dry-run --reverse -p1 -d "$fc_source" \
-                -i "$lab_dir/firecracker-prefault.patch" >/dev/null 2>&1; then
-            apply_layer "$fc_source" "$lab_dir/firecracker.patch"
-        fi
-        apply_layer "$fc_source" "$lab_dir/firecracker-prefault.patch"
-    fi
     fc_cargo build --bin firecracker
     printf 'Firecracker: %s\n' "$fc_source/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker"
 }
@@ -79,34 +61,21 @@ build_kernel() (
     kernel_config="${CXL_LAB_KERNEL_CONFIG:-$lab_dir/kernel.config}"
     build_jobs="${JOBS:-16}"
     cxl_emulation_test="${CXL_EMULATION_TEST:-1}"
-    kvm_dax_test="${KVM_DAX_TEST:-1}"
+    kvm_ept_adopt="${KVM_EPT_ADOPT:-1}"
     mkdir -p "$kernel_build" "$kernel_modules"
     # The supplied DCD archive needs the static-capacity fixes before the KVM
     # experiment patch. Accept an already patched source tree on later builds.
-    if ! patch --silent --dry-run --reverse -p1 -d "$kernel_source" \
+    if ! patch --silent --fuzz=0 --dry-run --reverse -p1 -d "$kernel_source" \
             -i "$lab_dir/cxl-static-capacity.patch" >/dev/null 2>&1; then
-        patch --dry-run -p1 -d "$kernel_source" -i "$lab_dir/cxl-static-capacity.patch"
+        patch --dry-run --fuzz=0 -p1 -d "$kernel_source" -i "$lab_dir/cxl-static-capacity.patch"
         patch -p1 -d "$kernel_source" -i "$lab_dir/cxl-static-capacity.patch"
     fi
-    if [[ "${CXL_LAB_PREFAULT:-0}" == 1 && "$kvm_dax_test" != 1 ]]; then
-        echo 'Prefault requires KVM_DAX_TEST=1 and its base patch.' >&2
-        exit 1
-    fi
-    prefault_applied=0
-    if [[ "${CXL_LAB_PREFAULT:-0}" == 1 ]] && patch --silent --dry-run --reverse -p1 \
-            -d "$kernel_source" -i "$lab_dir/kvm-prefault.patch" >/dev/null 2>&1; then
-        prefault_applied=1
-    fi
-    if [[ "$prefault_applied" == 0 && "$kvm_dax_test" == 1 && -f "$lab_dir/kvm-dax-state.patch" ]]; then
-        if ! patch --silent --dry-run --reverse -p1 -d "$kernel_source" \
+    if [[ "$kvm_ept_adopt" == 1 ]]; then
+        if ! patch --silent --fuzz=0 --dry-run --reverse -p1 -d "$kernel_source" \
                 -i "$lab_dir/kvm-dax-state.patch" >/dev/null 2>&1; then
-            patch --dry-run -p1 -d "$kernel_source" -i "$lab_dir/kvm-dax-state.patch"
-            patch -p1 -d "$kernel_source" -i "$lab_dir/kvm-dax-state.patch"
+            patch --dry-run --fuzz=0 -p1 -d "$kernel_source" -i "$lab_dir/kvm-dax-state.patch"
+            patch --fuzz=0 -p1 -d "$kernel_source" -i "$lab_dir/kvm-dax-state.patch"
         fi
-    fi
-
-    if [[ "${CXL_LAB_PREFAULT:-0}" == 1 ]]; then
-        apply_layer "$kernel_source" "$lab_dir/kvm-prefault.patch"
     fi
 
     if [[ ! -f "$kernel_build/.config" ]]; then
@@ -141,10 +110,10 @@ build_kernel() (
     else
         "$kernel_source/scripts/config" --file "$kernel_build/.config" --disable CXL_REGION_INVALIDATION_TEST
     fi
-    if [[ "$kvm_dax_test" == 1 ]]; then
-        "$kernel_source/scripts/config" --file "$kernel_build/.config" --enable KVM_DAX_POOL_TEST
+    if [[ "$kvm_ept_adopt" == 1 ]]; then
+        "$kernel_source/scripts/config" --file "$kernel_build/.config" --enable KVM_EPT_ADOPT
     else
-        "$kernel_source/scripts/config" --file "$kernel_build/.config" --disable KVM_DAX_POOL_TEST
+        "$kernel_source/scripts/config" --file "$kernel_build/.config" --disable KVM_EPT_ADOPT
     fi
     make -C "$kernel_source" O="$kernel_build" LOCALVERSION= olddefconfig
     for symbol in BLK_DEV_INITRD DEVTMPFS SERIAL_8250_CONSOLE DEVMEM NUMA \
@@ -173,7 +142,7 @@ build_qemu() (
     if [[ ! -f "$qemu_root/src/configure" ]]; then
         cp -a --reflink=auto "$base_source/." "$qemu_root/src/"
     fi
-    if ! patch --silent --dry-run --reverse -p1 -d "$qemu_root/src" \
+    if ! patch --silent --fuzz=0 --dry-run --reverse -p1 -d "$qemu_root/src" \
             -i "$lab_dir/qemu-cxl-direct-ram.patch" >/dev/null 2>&1; then
         patch -p1 -d "$qemu_root/src" -i "$lab_dir/qemu-cxl-direct-ram.patch"
     fi
@@ -200,30 +169,27 @@ test_sources() {
     fi
     rm -f "$probe_test"
     # Filter to the modified pure contracts and the actions API parser.
-    fc_cargo test -p vmm reuse::tests
+    fc_cargo test -p vmm worker::tests
     fc_cargo test -p firecracker test_parse_put_actions
-    fc_cargo test -p firecracker test_rejected_pause_returns_to_device_event_dispatch
-    fc_cargo test -p vmm test_direct_handoff_preflight_rejects_devices_and_excess_vcpus
-    fc_cargo test -p vmm direct::tests
+    fc_cargo test -p firecracker resident_control_reassembles_fragments_and_rejects_oversized_frames
+    fc_cargo test -p vmm test_repeated_restore_retains_registered_buffer_event
+    fc_cargo test -p vmm test_prepare_save_flush_failure_is_reported_and_retryable
     fc_cargo test -p vmm pool_memory::tests
     fc_cargo test -p vmm noncoherent::tests
-    if [[ "${CXL_LAB_PREFAULT:-0}" == 1 ]]; then
-        fc_cargo test -p vmm prefault::tests
-    fi
+
 }
 
 usage() {
     cat <<'USAGE'
 Usage: build.sh {firecracker|kernel|qemu [SOURCE]|all|test}
 
-firecracker  Compile current sources; CXL_LAB_PREFAULT=1 applies base + overlay.
+firecracker  Compile the patched Firecracker sources.
 kernel       Build the DCD lab kernel and stage its modules.
 qemu         Build an isolated QEMU copy (optionally from SOURCE).
 all          Build kernel, QEMU and Firecracker.
 test         Check Python/C and the related Firecracker unit tests.
 
-Optional environment: JOBS=16, CXL_EMULATION_TEST=1, KVM_DAX_TEST=1.
-CXL_LAB_PREFAULT=1 opts isolated sources into ordered prefault overlays.
+Optional environment: JOBS=16, CXL_EMULATION_TEST=1, KVM_EPT_ADOPT=1.
 Isolated kernel paths: CXL_LAB_KERNEL_BUILD, CXL_LAB_KERNEL_MODULES,
                       CXL_LAB_KERNEL_CONFIG, CXL_LAB_KERNEL_SOURCE.
 Firecracker source: CXL_LAB_FC_SOURCE (defaults to repo/firecracker).

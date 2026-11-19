@@ -87,7 +87,7 @@ def prepare(args):
     (destination / "traces").mkdir()
     for name, trace in traces.items():
         shutil.copy2(trace["source_trace"], destination / "traces" / f"{name}.traj.json")
-    for name in ("l1-kernel", "l2-initramfs.cpio", "shared-probe", "nfs-probe"):
+    for name in ("l1-kernel", "l2-initramfs.cpio", "shared-probe"):
         shutil.copy2(baseline / name, destination / name)
     if args.shared_probe:
         shutil.copy2(args.shared_probe, destination / "shared-probe")

@@ -16,7 +16,7 @@ from handoff_bench import HandoffController, MIB, PAGE, require
 
 
 def environment(c, s):
-    return dict(FC_EPT_ADOPT='1', FC_DAX_REUSE='1', FC_DAX_NO_NESTED_GUEST='1',
+    return dict(FC_EPT_ADOPT='1',
         FC_EPT_PHYS=str(c.ept_phys[s.role]+c.kvm_arena), FC_EPT_OFFSET=str(c.kvm_arena),
         FC_EPT_DATA_BASE=str(c.ept_phys[s.role]), FC_EPT_DATA_BYTES=str(c.data_bytes),
         FC_EPT_PACKET=s.directory+'/ept.packet', FC_EPT_FAIL=c.args.fail or '',
@@ -28,8 +28,7 @@ def configure(c):
     c.ept_phys = {}
     for role in ('A', 'B'):
         raw, _ = c.shell(role, 'cat /sys/bus/dax/devices/dax0.0/resource\n'
-            'echo 1 > /sys/module/kvm/parameters/dax_nested_root_sync\n'
-            "grep -q '^enabled=0 ' /sys/module/kvm/parameters/dax_pool", 'ept-configure')
+            'echo 1 > /sys/module/kvm/parameters/dax_nested_root_sync', 'ept-configure')
         values = [int(line, 0) for line in raw.splitlines() if line.startswith('0x')]
         require(len(values) == 1, 'DAX physical base missing')
         c.ept_phys[role] = values[0]
@@ -194,7 +193,7 @@ def run_existing(args):
     config=dict(config,ept_adopt=True,ept_shared=not args.baseline)
     out=args.output.resolve();out.mkdir(parents=True,exist_ok=False)
     c=HandoffController(config,out,args);s=c.sandboxes[0]
-    report=dict(result='running',experiment_mode='reuse-prepared' if args.baseline else 'ept-adopt',config=config,transitions=c.transitions,receipts=c.receipts,
+    report=dict(result='running',experiment_mode='ept-adopt',baseline=args.baseline,config=config,transitions=c.transitions,receipts=c.receipts,
         arguments={k:str(v) if isinstance(v,Path) else v for k,v in vars(args).items() if not callable(v)},
         timing='L0 CLOCK_MONOTONIC; includes HTTP control and packet file transport',
         scope='coherent DRAM-backed CXL emulation; nested lab synchronization enabled')
@@ -202,7 +201,8 @@ def run_existing(args):
     report['source_hashes'],report['source_reference']=record_sources(Path(__file__).resolve().parent,
         ('ept_adopt.py','handoff_bench.py','dirty_oracle.py','verify_swe_handoff.py','lab.py',
          'firecracker.patch','kvm-dax-state.patch','kvm-dax-source.json','resident_control.c',
-         'resident_fast.py','resident_proxy.py','control_rpc.py','shared_probe.c'))
+         'resident_fast.py','resident_proxy.py','resident_wire.h','control_rpc.py','control_rpc.c','shared_probe.c',
+         'pool_memory_module.c','pool_memory_uapi.h','guest-init.sh','swe-handoff-guest-run.sh','swe_handoff_run.py'))
     report['layout']=dict(ept_arena=c.kvm_arena,ept_capacity=16*MIB,metadata=c.metadata_base+s.vm*64*MIB)
     oracle=None
     def save():lab.save_json(out/'report.json',report)
@@ -216,7 +216,7 @@ def run_existing(args):
         prepare(c,s)
         report['boot']=c.boot_vm(s)
         remember(c,s)
-        workload=('dirty'+str(args.dirty_mib)+(f':{args.dirty_lines}:change' if args.dirty_lines else '')) if args.resident_bench=='dirty' else args.resident_bench
+        workload=('dirty'+str(args.dirty_mib)+(f':{args.dirty_lines}:change' if args.dirty_lines else '')) if args.workload=='dirty' else args.workload
         if args.heavy_plan:
             replay(c,s,report,save)
         else:
@@ -231,14 +231,14 @@ def run_existing(args):
                 report['timing']='source L1 CLOCK_MONOTONIC; existing native worker transport, pause to guest ACK'
             if args.count_faults:start_faults(c)
             with Path(config['cxl_backing']).open('r+b') as backing, mmap.mmap(backing.fileno(),0) as memory:
-                wait_ack(memory,offset,s.epoch,args.resident_bench=='dirty')
+                wait_ack(memory,offset,s.epoch,args.workload=='dirty')
                 for i in range(2*(args.warmup+args.iterations)):
                     time.sleep(.02)
                     if args.preclean:
                         report.setdefault('cleans',[]).append(clean(c,s))
                         time.sleep(float(args.clean_wait))
-                    wait_ack(memory,offset,s.epoch,args.resident_bench=='dirty')
-                    if args.resident_bench=='race':
+                    wait_ack(memory,offset,s.epoch,args.workload=='dirty')
+                    if args.workload=='race':
                         before=struct.unpack_from('<Q',memory,offset+PAGE)[0]
                         deadline=time.monotonic()+30
                         while True:
@@ -250,7 +250,7 @@ def run_existing(args):
                     destination='B' if s.role=='A' else 'A'
                     before=faults(c,destination) if args.count_faults else None
                     row=handoff(c,s,destination)
-                    row['ack']=wait_ack(memory,offset,s.epoch,args.resident_bench=='dirty')
+                    row['ack']=wait_ack(memory,offset,s.epoch,args.workload=='dirty')
                     if before is not None:
                         after=faults(c,destination)
                         row['payload_ept_violations']=after['count']-before['count']
@@ -289,9 +289,6 @@ def run_existing(args):
                 c.fetch_bytes(role,directory+'/vmm.log','final-vmm-log')
                 report['cleanup'].append(dict(role=role,directory=directory,file=file,fenced='FENCED ' in raw))
             except Exception as exc:report.setdefault('cleanup_errors',[]).append(repr(exc))
-        for keeper in getattr(c,'keepalives',[]):
-            try:nfs.stop_fc(c.vms[keeper['role']],keeper['directory'])
-            except Exception as exc:report.setdefault('cleanup_errors',[]).append(repr(exc))
         if args.heavy_plan and report['result']=='passed':
             from verify_swe_handoff import Evidence,verify_trace
             try:report['independent_trace_verification']=verify_trace(Evidence(report,out),report)
@@ -308,11 +305,12 @@ def add_arguments(p):
     p.add_argument('--vcpus',type=int,choices=(1,2),default=1)
     p.add_argument('--iterations',type=int,default=2)
     p.add_argument('--warmup',type=int,default=0)
-    p.add_argument('--resident-bench',choices=('idle','busy','dirty','race'),default='dirty')
+    p.add_argument('--workload',choices=('idle','busy','dirty','race'),default='dirty')
     p.add_argument('--dirty-mib',type=int,default=256)
     p.add_argument('--dirty-lines',type=int,choices=(0,1,8,64),default=0)
     p.add_argument('--count-faults',action='store_true')
     p.add_argument('--native',action='store_true')
+    p.add_argument('--cache-maintenance',action=argparse.BooleanOptionalAction,default=True)
     p.add_argument('--baseline',action='store_true',help='Comparison: native local EPT, prepared semantic restore, no EPT ioctls')
     p.add_argument('--dirty-oracle',action='store_true')
     p.add_argument('--page-hash',type=Path)
@@ -323,12 +321,13 @@ def add_arguments(p):
 
 
 def validate_arguments(args,p):
+    if args.preclean and not args.cache_maintenance:p.error('Preclean needs cache maintenance')
     if args.dirty_oracle and not args.page_hash:p.error('Oracle needs --page-hash')
     if args.fail and not args.dirty_oracle:p.error('Fault injection requires --dirty-oracle')
     args.trajectory_policy='heavy' if args.heavy_plan else None
-    if args.heavy_plan:args.resident_bench=None
-    args.mode='ept-adopt';args.noncoherent=True;args.dirty_ledger=True
-    args.restore_timing=True;args.profile=False;args.resume_profile=False;args.clean_paused=False
+    if args.heavy_plan:args.workload=None
+    args.noncoherent=args.cache_maintenance
+    args.restore_timing=True
 
 
 def main():
