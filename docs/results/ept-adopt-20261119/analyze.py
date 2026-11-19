@@ -4,6 +4,8 @@ import argparse
 import ast
 from collections import defaultdict
 import difflib
+import fcntl
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -36,24 +38,33 @@ def summarize(folder):
     oracle = report.get("oracle", report.get("dirty_oracle", []))
     if not oracle and (folder / "dirty-oracle/summary.json").exists():
         oracle = json.loads((folder / "dirty-oracle/summary.json").read_text())
+    prepared = report["config"].get("prepared", {})
+    host = report.get("measurement_host")
+    parameters = ("mode", "name", "baseline", "memory_mib", "vcpus", "iterations", "warmup",
+                  "dirty_mib", "dirty_lines", "resident_bench", "preclean", "clean_wait", "native", "fail")
     result = dict(result=report["result"], raw=str(folder), hops=len(hops),
-        measured_hops=len(measured), arguments=report["arguments"],
-        source_reference=report.get("source_reference"),
-        inputs=report["config"].get("prepared", {}).get("inputs"),
+        measured_hops=len(measured), arguments={k: report["arguments"][k] for k in parameters if k in report["arguments"]},
+        source_commit=report.get("source_reference", {}).get("commit"),
+        inputs_sha256=hashlib.sha256(json.dumps(prepared.get("inputs"), sort_keys=True).encode()).hexdigest(),
         missing_pages=sum(r.get("missing_pages", 0) for r in oracle) if oracle else None,
         other_changed_pages=sum(r.get("other_changed_pages", 0) for r in oracle) if oracle else None,
         oracle_boundaries=len(oracle),
         adopt_hash_checks=sum(r["phase"] == 3 and r.get("ept_hash_unchanged", False) for r in oracle),
+        full_extent_hash_checks=sum(r["phase"] == 3 and r.get("ept_hash_unchanged", False)
+                                   and r.get("ept_hash_bytes") == 16*1024**2 for r in oracle),
+        preinvalidate_epochs=sum(r["phase"] == 5 for r in oracle),
+        import_full_fallbacks=sum(r["phase"] == 3 and r.get("full_invalidate_fallback", False) for r in oracle),
         released_source_exit=report.get("released_source_exit"),
-        independent_trace_verification=report.get("independent_trace_verification"),
-        host=report.get("measurement_host"), error=report.get("error"),
+        independent_trace_verification=compact_verification(report.get("independent_trace_verification")),
+        host={k:v for k,v in host.items() if k not in ("processes", "numa_hardware")} if host else None,
+        error=report.get("error"),
         oracle_error=report.get("oracle_error"),
         payload_faults=[h["payload_ept_violations"] for h in hops if "payload_ept_violations" in h],
         measured_payload_faults=[h["payload_ept_violations"] for h in measured if "payload_ept_violations" in h],
         packet_bytes=distribution([h.get("packet_bytes", h.get("fast", {}).get("state_bytes", 0)) for h in hops]),
         pause_to_ack_ms=distribution([h["fast"]["guest_ack_ns"] / 1e6 for h in measured if "fast" in h]))
     if (folder / "verification.json").exists():
-        result["external_verification"] = json.loads((folder / "verification.json").read_text())
+        result["external_verification"] = compact_verification(json.loads((folder / "verification.json").read_text()))
     # Join per-role log order to transitions, including warm-up before filtering.
     timings = events(folder, "RESTORE_TIMING ")
     result["stages_ms"] = {}
@@ -92,6 +103,16 @@ def summarize(folder):
     return result
 
 
+def compact_verification(value):
+    if value is None:
+        return None
+    keys = ("result", "commands", "submission", "guest_cpu_flags_sha256", "guest_command_seconds")
+    result = {k: value[k] for k in keys if k in value}
+    for key in ("tests", "returncodes"):
+        result[key+"_sha256"] = hashlib.sha256(json.dumps(value.get(key), sort_keys=True).encode()).hexdigest()
+    return result
+
+
 def c_function(text, name):
     # Mask comments and literals, preserving line positions and braces in code.
     masked = re.sub(r'/\*.*?\*/|//[^\n]*|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'',
@@ -123,7 +144,7 @@ def source_lines(raw, repo):
         if category == "firecracker":
             files["src/vmm/src/ept_adopt.rs"] = dict(added=len((raw/tree/"src/vmm/src/ept_adopt.rs").read_text().splitlines()), removed=0)
         result[category] = dict(files=files, added=sum(f["added"] for f in files.values()), removed=sum(f["removed"] for f in files.values()))
-    paths = ["ept_adopt.py", "dirty_oracle.py", "handoff_bench.py", "lab.py", "resident_control.c", "resident_fast.py", "shared_probe.c", "verify_swe_handoff.py"]
+    paths = ["build.sh", "ept_adopt.py", "dirty_oracle.py", "handoff_bench.py", "lab.py", "resident_control.c", "resident_fast.py", "shared_probe.c", "verify_swe_handoff.py"]
     diff = subprocess.check_output(["git", "-C", str(repo), "diff", "--numstat", "8de3e8e", "--", *["implementation/virtual_machine/"+p for p in paths]], text=True)
     files = {line.split("\t")[2]: dict(added=int(line.split("\t")[0]), removed=int(line.split("\t")[1])) for line in diff.splitlines()}
     result["test_tools"] = dict(files=files, added=sum(f["added"] for f in files.values()), removed=sum(f["removed"] for f in files.values()))
@@ -160,10 +181,49 @@ def main():
     parser.add_argument("--raw", type=Path, default=Path("implementation/virtual_machine/.local/run21"))
     parser.add_argument("--output", type=Path, default=Path(__file__).with_name("summary.json"))
     args = parser.parse_args()
+    repo = Path(__file__).resolve().parents[3]
+    with (repo / ".codex-runs/quiet.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_SH)
+        write_summary(args, repo)
+
+
+def write_summary(args, repo):
     raw = args.raw.resolve()
     trials = {p.parent.name: summarize(p.parent) for p in sorted(raw.glob("*/report.json"))}
     result = dict(schema="ept-adopt-results-v1", raw=str(raw), trials=trials,
-                  source_lines=source_lines(raw, Path(__file__).resolve().parents[3]))
+                  source_lines=source_lines(raw, repo))
+    names = ["observer-fullwrite-200", "observer-race-2", "observer-gin-2",
+             "observer-native-smoke", "observer-http-smoke"]
+    names += [f"observer-swe-{fixture}-w{wait}" for fixture in
+              ("gin-gonic", "php-cs-fixer", "micropython") for wait in (0, 1)]
+    checked = {tag: trials[tag] for tag in names if tag in trials and trials[tag]["result"] == "passed"}
+    result["accuracy"] = dict(trials=list(checked), hops=sum(t["hops"] for t in checked.values()),
+        missing_pages=sum(t["missing_pages"] for t in checked.values()),
+        full_extent_hash_checks=sum(t["full_extent_hash_checks"] for t in checked.values()),
+        released_source_exit_checks=sum(bool(t["released_source_exit"]) for t in checked.values()),
+        preinvalidate_epochs=sum(t["preinvalidate_epochs"] for t in checked.values()),
+        import_full_fallbacks=sum(t["import_full_fallbacks"] for t in checked.values()))
+    result["fault_injections"] = {}
+    for fault in ("outside", "bump", "ept-invalidate", "ram-invalidate"):
+        tag = "observer-fail-"+fault
+        if tag in trials:
+            trial = trials[tag]
+            logs = "\n".join(p.read_text() for p in (raw/tag).glob("?-vmm.log"))
+            reason = "\n".join(line for line in logs.splitlines() if "NONCOHERENT_FATAL" in line)
+            result["fault_injections"][fault] = dict(trial=tag, no_completed_handoff=trial["hops"] == 0,
+                result=trial["result"], kernel_or_vmm_error=reason, oracle_error=trial["oracle_error"])
+    result["ept_violations"] = {}
+    for mode in ("ept-adopt", "direct", "reuse-prepared"):
+        tag = "observer-faults-"+mode
+        if tag in trials and trials[tag]["result"] == "passed":
+            result["ept_violations"][mode] = dict(trial=tag,
+                all_hops=trials[tag]["payload_faults"], warm=distribution(trials[tag]["measured_payload_faults"]))
+    result["scaling"] = {str(size): trials[f"adopt-{size}"] for size in (16, 256, 1024)
+                         if f"adopt-{size}" in trials and trials[f"adopt-{size}"]["result"] == "passed"}
+    for name in ("unit-tests", "independent-verification", "build-provenance"):
+        path = raw / (name+".json")
+        if path.exists():
+            result[name.replace("-", "_")] = json.loads(path.read_text())
     result["latency_abab"] = {}
     for pair, other in (("direct", "direct"), ("reuse", "reuse-prepared")):
         blocks = []
