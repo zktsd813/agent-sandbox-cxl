@@ -6581,7 +6581,7 @@ diff --git a/src/vmm/src/ept_adopt.rs b/src/vmm/src/ept_adopt.rs
 new file mode 100644
 --- /dev/null
 +++ b/src/vmm/src/ept_adopt.rs
-@@ -0,0 +1,255 @@
+@@ -0,0 +1,257 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! CXL RAM/EPT only. Semantic state enters an ordinary prepared KVM worker.
 +use std::fs::OpenOptions;
@@ -6761,7 +6761,9 @@ new file mode 100644
 +        let state=MicrovmState {vm_info:VmInfo::from(&*self),device_states:devices,
 +            vcpu_states:vm.save_vcpu_states_without_kick().map_err(invalid)?,
 +            kvm_state:vm.kvm().save_state(),vm_state:vm.save_state().map_err(invalid)?};
++        timing.mark("get_state");
 +        let mapper=crate::pool_memory::seal_for_handoff_memory(vm.guest_memory())?;
++        timing.mark("seal_mapper");
 +        let bytes=bitcode::serialize(&Packet{version:1,ept:ept.clone(),epoch,state,mapper}).map_err(invalid)?;
 +        if bytes.len()>=65536 {return Err(invalid("EPT packet exceeds mailbox"));}
 +        timing.mark("serialize");
