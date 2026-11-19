@@ -18,7 +18,7 @@ Guest RAM은 2 GiB다. VM별 EPT 영역은 16 MiB다.
 가상 처리기(virtual Central Processing Unit, vCPU) 1·2개를 시험한다.
 Block 장치는 읽기 전용이다.
 단일 RAM memslot과 같은 root role을 쓴다.
-PML과 기본 dirty bitmap을 켰다.
+Page Modification Logging(PML)과 기본 dirty bitmap을 켰다.
 실행 금지 큰 page 완화는 껐다.
 Dirty ring, manual protect와 중첩 guest는 거절한다.
 
@@ -32,9 +32,26 @@ Adopt 전에 두 host의 물리 배치와 현재 mapper를 검사한다.
 시간의 전체 구간은 소유 host의 단조 시계로 정지 요청 직전부터 guest 응답(Acknowledgment, ACK) 관찰까지다.
 Guest ACK 뒤 payload 쓰기·검증을 마친 다음 이동을 요청한다.
 정답지 실행 시간은 성능 표본에 넣지 않는다.
-단계 시간은 VMM의 단조 시계다.
+단계 시간은 가상기계 모니터(Virtual Machine Monitor, VMM)의 단조 시계다.
 Software Engineering(SWE) 무거운 명령은 원본 명령 그대로 실행한다.
 명령 시간은 guest 실행 시간과 host 관찰 시간을 함께 남긴다.
+
+## 정확성
+
+한 page는 4 KiB다. 정답지는 L0에서 RAM page hash와 실제 cache 명령 영수증을 확인한다.
+표 hash는 release 뒤와 adopt 직후의 전체 16 MiB를 비교한다.
+
+| 시험 | 완료한 한 방향 이동 | 누락 page | 표 hash 불변 |
+|---|---:|---:|---:|
+| 256 MiB 전체 word 쓰기, 200왕복 | 400 | 0 | 400/400 |
+| Native 미리 정리 | 6 | 0 | 6/6 |
+| Hypertext Transfer Protocol(HTTP) 미리 정리 | 6 | 0 | 6/6 |
+| keepalive 없는 2 vCPU 경합 | 60 | 0 | 60/60 |
+
+미리 정리 두 경로는 수신 선무효화를 실제로 실행했다.
+두 smoke의 import 전체 RAM 무효화 fallback은 0회다.
+이전 host의 RAM munmap, VM·vCPU·mapper fd 종료와 VMM 종료 뒤에도 표 hash가 같았다.
+이때 현재 소유 guest도 멈춰 두어 CPU의 accessed/dirty bit 변경을 배제했다.
 
 ## 재현 자료
 

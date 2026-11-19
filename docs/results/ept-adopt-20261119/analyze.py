@@ -192,7 +192,8 @@ def write_summary(args, repo):
     trials = {p.parent.name: summarize(p.parent) for p in sorted(raw.glob("*/report.json"))}
     result = dict(schema="ept-adopt-results-v1", raw=str(raw), trials=trials,
                   source_lines=source_lines(raw, repo))
-    names = ["observer-fullwrite-200", "observer-race-2", "observer-gin-2",
+    race = "timer-race-2" if trials.get("timer-race-2", {}).get("result") == "passed" else "observer-race-2"
+    names = ["observer-fullwrite-200", race, "observer-gin-2",
              "observer-native-smoke", "observer-http-smoke"]
     names += [f"observer-swe-{fixture}-w{wait}" for fixture in
               ("gin-gonic", "php-cs-fixer", "micropython") for wait in (0, 1)]
@@ -203,6 +204,8 @@ def write_summary(args, repo):
         released_source_exit_checks=sum(bool(t["released_source_exit"]) for t in checked.values()),
         preinvalidate_epochs=sum(t["preinvalidate_epochs"] for t in checked.values()),
         import_full_fallbacks=sum(t["import_full_fallbacks"] for t in checked.values()))
+    if "timer-fast-200" in trials:
+        result["fast_checksum_continuity"] = trials["timer-fast-200"]
     result["fault_injections"] = {}
     for fault in ("outside", "bump", "ept-invalidate", "ram-invalidate"):
         tag = "observer-fail-"+fault
@@ -220,7 +223,7 @@ def write_summary(args, repo):
                 all_hops=trials[tag]["payload_faults"], warm=distribution(trials[tag]["measured_payload_faults"]))
     result["scaling"] = {str(size): trials[f"adopt-{size}"] for size in (16, 256, 1024)
                          if f"adopt-{size}" in trials and trials[f"adopt-{size}"]["result"] == "passed"}
-    for name in ("unit-tests", "independent-verification", "build-provenance"):
+    for name in ("unit-tests", "independent-verification", "build-provenance", "exclusions"):
         path = raw / (name+".json")
         if path.exists():
             result[name.replace("-", "_")] = json.loads(path.read_text())

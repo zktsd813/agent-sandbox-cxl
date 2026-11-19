@@ -53,6 +53,7 @@ Leaf mapping gauge 세 개(24 byte)도 packet에 넣어 leaf를 읽지 않고 �
 이것은 공유 KVM 객체를 parked 상태로 보존하는 direct 장치가 아니다.
 기존 RAM mapper·쓰기 log·mailbox 제어 영역은 유지한다. 새 공유 구조는 없다.
 Native 전송은 기존 worker와 resident-control을 쓴다. 새 상주 제어기는 없다.
+Direct용 KVM keepalive도 이 모드에서는 띄우지 않는다.
 비교용 reuse-prepared arm은 같은 상태·장치 경로를 쓰되 EPT ioctl을 호출하지 않는다.
 표와 장부를 로컬에 두고 이전 translation을 버린 뒤 빈 표를 다시 채운다.
 
