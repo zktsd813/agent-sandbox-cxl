@@ -497,7 +497,7 @@ class HandoffController(Controller):
         for role in ('A', 'B'):
             self.shell(role, 'sync\necho 3 > /proc/sys/vm/drop_caches', 'initial-host-cache-drop')
         self.keepalives = []
-        for role in ('A', 'B'):
+        for role in (() if self.mode == 'ept-adopt' else ('A', 'B')):
             directory = self.root+'/keepalive'
             raw, name = self.shell(role, f'mkdir {directory}\n'
                 f'/lab/shared-probe kvm-keepalive > {directory}/log 2>&1 &\n'+nfs.record_pid(directory)+

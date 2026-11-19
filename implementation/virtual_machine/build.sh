@@ -189,7 +189,7 @@ build_qemu() (
 )
 
 test_sources() {
-    python3 -m py_compile "$lab_dir/lab.py"
+    python3 -m py_compile "$lab_dir/lab.py" "$lab_dir/ept_adopt.py"
     local probe_test
     probe_test="$(mktemp "${TMPDIR:-/tmp}/cxl-shared-probe.XXXXXX")"
     if ! gcc -O2 -Wall -Wextra -Werror -static -pthread \
