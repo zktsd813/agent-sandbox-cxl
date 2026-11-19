@@ -364,9 +364,33 @@ def verify_cache_receipts(report, root):
     records, consumed={},{}
     pending=0
     demoted=0
+    tier_baseline,tier_expected={},{}
+    tier_hash_checks=0
     for row in rows:
         if row["phase"] in (6,7,8):
             need(row["missing_pages"]==0,"Tier oracle reported an omission")
+            bits=(root/"dirty-oracle"/f"{row['sequence']}.bitmap").read_bytes()
+            if row.get('tier_hash_format')==1:
+                import zlib
+                def hashes(kind):
+                    data=zlib.decompress((root/'dirty-oracle'/f"{row['sequence']}.{kind}-hashes.z").read_bytes())
+                    need(len(data)==512*32,'Tier page hash geometry')
+                    return data
+                key=row['node'],row['chunk']
+                if row['phase']==6:
+                    actual=hashes('dram')
+                    need(actual==hashes('home'),'Promotion copy differs from home')
+                    tier_baseline[key]=actual
+                elif row['phase']==7:
+                    actual=hashes('dram');before=tier_baseline[key]
+                    dirty=int.from_bytes(bits,'little')
+                    need(all(before[i*32:(i+1)*32]==actual[i*32:(i+1)*32] or dirty>>i&1
+                             for i in range(512)),'Changed DRAM page omitted from cumulative bitmap')
+                    tier_expected[key]=actual
+                else:
+                    need(hashes('home')==tier_expected.pop(key),'Demotion home differs from DRAM')
+                    del tier_baseline[key]
+                tier_hash_checks+=1
             if row["phase"]==8:
                 bits=(root/"dirty-oracle"/f"{row['sequence']}.bitmap").read_bytes()
                 need(len(bits)==64 and row.get("demotion_home_verified"),"Missing tier proof")
@@ -406,7 +430,7 @@ def verify_cache_receipts(report, root):
                 for e in range(start+1,epoch+1):expected|=records[e]
             need(requested==bitmap==expected and expected & ~invalidated==0,'Incomplete receiver invalidation')
             consumed[node]=epoch
-    return {'events':len(rows),'exports':sum(r['phase']==2 for r in rows),
+    return {'tier_hash_checks':tier_hash_checks,'events':len(rows),'exports':sum(r['phase']==2 for r in rows),
             'imports':sum(r['phase']==3 for r in rows),
             'cleans':sum(r['phase'] in (4,) for r in rows),
             'preinvalidations':sum(r['phase']==5 for r in rows),'missing_pages':0,'coverage_verified':True}
