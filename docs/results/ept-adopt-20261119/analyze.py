@@ -251,19 +251,34 @@ def write_summary(args, repo):
             stages_ms={mode: {scope: {name: distribution(v) for name, v in columns.items()}
                              for scope, columns in scopes.items()} for mode, scopes in pooled_stages.items()})
     result["heavy_abab"] = {}
+    result["heavy_pooled"] = {}
+    result["heavy_blocks"] = {}
     for pair, other in (("direct", "direct"), ("reuse", "reuse-prepared")):
         groups = defaultdict(list)
+        fixtures = defaultdict(list)
+        blocks = defaultdict(list)
         for tag, trial in trials.items():
             match = re.fullmatch(r"heavy-"+pair+r"-([0-3])-\d+-([\w-]+)", tag)
             if not match or trial["result"] != "passed":
                 continue
             mode = "ept-adopt" if int(match[1]) % 2 == 0 else other
+            blocks[int(match[1])].append(tag)
+            fixtures[mode, match[2]].extend(trial["heavy_commands"])
+            fixtures[mode, "all"].extend(trial["heavy_commands"])
             for command in trial["heavy_commands"]:
                 groups[(mode, match[2], command["index"])].append(command)
         result["heavy_abab"][pair] = [dict(mode=m, fixture=f, command=i,
             guest_s=distribution([v["guest_s"] for v in values]),
             host_s=distribution([v["host_s"] for v in values]))
             for (m, f, i), values in sorted(groups.items())]
+        result["heavy_pooled"][pair] = [dict(mode=m, fixture=f,
+            guest_s=distribution([v["guest_s"] for v in values]),
+            host_s=distribution([v["host_s"] for v in values]))
+            for (m, f), values in sorted(fixtures.items())]
+        result["heavy_blocks"][pair] = [dict(arm=arm,
+            mode="ept-adopt" if arm % 2 == 0 else other, trials=tags,
+            measured_moves=sum(len(trials[tag]["heavy_commands"]) for tag in tags))
+            for arm, tags in sorted(blocks.items())]
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     print(args.output)
 
