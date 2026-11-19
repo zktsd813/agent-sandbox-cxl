@@ -152,4 +152,3 @@ CXL 파일도 L0 DRAM이다. 실제 CXL 지연을 반영하지 않는다.
 3. Guest에서 TLB 범위를 넘는 무작위 pointer chase를 실행한다. 재사용 거리와 접근 수를 고정한다. Guest cycle, 첫 접근 fault, 명령 지연, 지원되는 EPT·주소 변환 성능 counter를 함께 기록한다. 지원하지 않는 counter를 추정하지 않는다.
 4. PT 위치만의 효과를 가리려면 데이터는 같은 로컬 DRAM에 두고 PT만 CXL 또는 DRAM에 두는 시험 전용 대조군이 추가로 필요하다. 이 대조군도 승인 뒤 만든다. 단순 CXL/DRAM 비교로 데이터 지연과 표 지연을 분리했다고 주장하지 않는다.
 5. 두 host 왕복에서 dirty 목록, 내려쓰기·무효화 명령 수, release/adopt 표 hash, guest 검증을 함께 확인한다. 부하와 CPU·메모리 배치, kernel·binary hash, 성능 event 이름과 raw 설정을 보존한다.
-
