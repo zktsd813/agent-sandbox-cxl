@@ -201,7 +201,7 @@ def write_summary(args, repo):
     result["accuracy"] = dict(trials=list(checked), hops=sum(t["hops"] for t in checked.values()),
         missing_pages=sum(t["missing_pages"] for t in checked.values()),
         full_extent_hash_checks=sum(t["full_extent_hash_checks"] for t in checked.values()),
-        released_source_exit_checks=sum(bool(t["released_source_exit"]) for t in checked.values()),
+        released_source_exit_checks=sum(bool((t["released_source_exit"] or {}).get("unchanged")) for t in checked.values()),
         preinvalidate_epochs=sum(t["preinvalidate_epochs"] for t in checked.values()),
         import_full_fallbacks=sum(t["import_full_fallbacks"] for t in checked.values()))
     if "timer-fast-200" in trials:

@@ -53,6 +53,70 @@ Software Engineering(SWE) 무거운 명령은 원본 명령 그대로 실행한�
 이전 host의 RAM munmap, VM·vCPU·mapper fd 종료와 VMM 종료 뒤에도 표 hash가 같았다.
 이때 현재 소유 guest도 멈춰 두어 CPU의 accessed/dirty bit 변경을 배제했다.
 
+SWE 세 fixture의 무거운 명령 정책에서 W=0·1초를 모두 통과했다.
+W는 미리 정리 뒤 이동까지 기다린 시간이다.
+Gin 2 vCPU 조건도 통과했다.
+Gin은 조건당 3회, PHP-CS-Fixer는 5회, MicroPython은 6회 이동했다.
+
+| 오류 주입 | 검출 결과 |
+|---|---|
+| 영역 밖 root | 커널이 재개 전에 `EINVAL`로 거절 |
+| 잘못된 bump | 커널이 재개 전에 `EINVAL`로 거절 |
+| EPT 영역 무효화 생략 | 실제 명령 영수증의 영역 누락을 정답지가 검출 |
+| RAM 무효화 생략 | 실제 수신 범위가 쓰기 log 합집합을 덮지 못함을 정답지가 검출 |
+
+네 조건 모두 완료된 hand-off는 0회다.
+`EINVAL`은 잘못된 인자 오류다.
+
+## EPT를 다시 채우는가
+
+이미 매핑된 256 MiB payload를 재개 뒤 다시 썼다.
+각 모드는 warm-up 뒤 6회 이동을 비교했다.
+
+| 모드 | 이동당 L1 EPT violation |
+|---|---:|
+| ept-adopt | 0 |
+| direct | 0 |
+| reuse-prepared | 65,536 |
+
+새로 접근한 guest page의 fault까지 0이라는 뜻은 아니다.
+비교 대상은 이전 host가 이미 매핑한 payload다.
+
+## 코드 크기
+
+시작 commit `8de3e8e`의 소스와 비교한 추가 줄 수다.
+빈 줄과 주석도 센다. 누적 patch 전체 크기는 세지 않는다.
+
+| 구분 | ept-adopt 추가 | direct 전용 핵심 |
+|---|---:|---:|
+| KVM | 474 | 최소 1,260 |
+| Firecracker | 416 | 975 |
+| 시험 도구 | 443 | 최소 268 |
+
+KVM과 Firecracker는 각각 수백 줄이다.
+시험 도구에는 새 명령, 표 hash·오류 주입·비소유 host 종료 검증을 포함한다.
+결과 분석 도구는 별도다. 정확한 파일별 수치는 `summary.json`에 있다.
+Direct 수치는 공유 RAM·cache·준비 worker 코드와 흩어진 hook을 제외한 하한이다.
+핵심 KVM direct 함수와 `direct.rs` 본문이 그대로인 것도 소스 비교로 확인한다.
+
+## 없앤 것과 남은 제약
+
+이 모드는 VMCS(Virtual Machine Control Structure), KVM·vCPU 객체, PML page와 dirty bitmap을 공유하지 않는다.
+EPT 장부도 각 host의 로컬 slab에서 만든다.
+Release 뒤에는 로컬 root 목록과 vCPU root 참조가 모두 비어 있다.
+그래서 비소유 host의 notifier·memslot 변경·종료가 공유 표에 도달할 경로가 없다.
+Direct의 15경로 진입 감사, 공유 refcount 지연, 공유 객체 parking과 재사용 규칙이 필요 없다.
+Direct용 KVM keepalive도 띄우지 않는다.
+기존 RAM mapper, 쓰기 log, mailbox와 준비된 worker는 유지한다.
+
+EPT 영역은 append-only다. 버린 표도 같은 VM 생존 중 재사용하지 않는다.
+16 MiB를 넘으면 닫힌 실패로 끝난다.
+Adopt는 leaf 칸을 읽지 않지만, 도달 가능한 모든 표의 로컬 장부를 다시 만든다.
+따라서 그 비용은 표 page 수에 비례한다.
+현재 검증한 상태 packet은 1·2 vCPU 범위다.
+실제 비일관 cache의 전기적 동작은 이 DRAM 실험으로 검증할 수 없다.
+무효화 생략 시험은 정답지가 실제 발행 명령의 범위 누락을 검출하는 시험이다.
+
 ## 재현 자료
 
 원시는 `implementation/virtual_machine/.local/run21/`에 있다.
