@@ -438,7 +438,7 @@ def start(args):
                 "-device","cxl-rp,port=0,bus=cxl.0,id=cxl-rp0,chassis=0,slot=2",
                 "-device","cxl-type3,bus=cxl-rp0,volatile-memdev=cxl-shared,id=cxl-mem0,sn=0x100,x-direct-ram=on",
                 "-machine",f"cxl-fmw.0.targets.0=cxl.0,cxl-fmw.0.size={args.cxl_mib}M,cxl-fmw.0.interleave-granularity=256"]
-            if role=="A":cmd += ["-drive",f"file={private},if=none,id=home-storage,format=raw,cache=none","-device","virtio-blk-pci,drive=home-storage"]
+            if role=="A":cmd += ["-drive",f"file={private},if=none,id=home-storage,format=raw,cache=none","-device","virtio-blk-pci,drive=home-storage,bus=pcie.0"]
             firmware=next((p for p in (qemu.parent.parent/"share/qemu",qemu.parent.parent/"src/pc-bios",QEMU_ROOT/"usr/share/qemu") if (p/"bios-256k.bin").is_file()),None)
             if firmware is None:raise RuntimeError("QEMU BIOS is missing")
             cmd += ["-L",str(firmware),"-bios",str(firmware/"bios-256k.bin")]
