@@ -6,8 +6,6 @@ submission are checked independently, including process/FD continuity.
 """
 import argparse
 import base64
-import collections
-import contextlib
 import fcntl
 import hashlib
 import json
@@ -122,33 +120,6 @@ def test_summary(command, output):
         need(result["passed"] + result["failed"]["count"] == result["tests"], "MicroPython test counts disagree")
         return result
     return None
-
-def document_sha(value):
-    return sha(json.dumps(value, sort_keys=True, separators=(",", ":")).encode())
-
-def execution_identity(report):
-    """Compare measured execution inputs while allowing audit-only revisions.
-
-    Trial measured-sources contains execution code, not this offline verifier.
-    Mode-specific handoff flags and each trace's immutable image are compared
-    separately, so they do not hide a changed kernel, controller or VM size.
-    """
-    fixture, config, plan = report["fixture"], report["config"], report["trace"]
-    common = {"source_hashes": report["source_hashes"],
-        'l1_cpu_models': {role:vm['command'][vm['command'].index('-cpu')+1] for role,vm in config.get('vms',{}).items()},
-        'kvm_parameters': {role:row['values'] for role,row in report.get('storage_setup',{}).get('kvm_parameters',{}).items()},
-        "runtime_inputs": {key: fixture["inputs"][key]["sha256"] for key in ("firecracker", "l1_kernel", "l2_kernel")},
-        "runtime_artifacts": {key: fixture["artifacts"][key] for key in
-                              ("firecracker", "l1-kernel", "l2-vmlinux", "pool_memory_module.ko")},
-        "host_modules": fixture["inputs"]["kvm_modules"],
-        "configuration": {key: config[key] for key in ("host_kernel", "qemu_sha256", "l1_vcpus", "l1_memory_mib", "shared_mib", "cxl_mib")},
-        "storage_template_sha256": config["home_storage_image"]["template_sha256"],
-        "memory_mib": report["arguments"]["memory_mib"], "vcpus": report["arguments"].get("vcpus",1),
-        "restore_timing": report["arguments"].get("restore_timing", False)}
-    workload = {key: plan[key] for key in ("name", "trace_sha256", "image_sha256", "image_bytes", "command_count",
-        "commands", "handoff_before", "environment", "effective_environment")}
-    workload["initramfs_sha256"] = fixture["artifacts"][plan["name"] + "-initramfs.cpio"]
-    return {"execution_inputs_sha256": document_sha(common), "workload_inputs_sha256": document_sha(workload)}
 
 def local(root, name):
     need(isinstance(name, str) and not Path(name).is_absolute() and ".." not in Path(name).parts,
@@ -361,15 +332,6 @@ class Evidence:
     def json(self, name):
         return json.loads(self.read(name))
 
-    def rows(self, name, prefix):
-        return [json.loads(line.split(prefix, 1)[1]) for line in self.text(name).splitlines()
-                if prefix in line and not line.lstrip().startswith(">")]
-
-    def record(self, name, prefix):
-        rows = self.rows(name, prefix)
-        need(len(rows) == 1, "missing/ambiguous raw record " + name)
-        return rows[0]
-
 def handle(raw, memory):
     need(raw['version'] == 4 and not raw.get('mappings') and not raw.get('credits'), 'full mapping in normal export')
     h = raw['handle']
@@ -443,7 +405,14 @@ def verify_ept_trace(path):
     report=json.loads(path.read_text())
     need(report['result']=='passed' and report['mode']=='ept-adopt','EPT trace did not finish')
     verify_sources(report,path.parent)
-    result={'result':'passed','trace':verify_trace(Evidence(report,path.parent),report)}
+    evidence=Evidence(report,path.parent)
+    promotions=[row for row in report['transitions'] if row['kind']=='promotion']
+    need(len(promotions)==1,'Expected one DRAM-to-CXL promotion')
+    promotion=promotions[0]
+    placement(evidence,promotion['export']['file'],report['arguments']['memory_mib']*MIB,
+              evidence.json(promotion['operation']['plan_file']))
+    identity_pair(evidence,promotion['before'],promotion['after'])
+    result={'result':'passed','trace':verify_trace(evidence,report)}
     rows=report.get('oracle',[])
     previous=None;proofs=0
     for row in rows:
