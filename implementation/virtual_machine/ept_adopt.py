@@ -247,6 +247,9 @@ def run_existing(args):
         report['boot']=c.boot_vm(s)
         remember(c,s)
         workload=('dirty'+str(args.dirty_mib)+(f':{args.dirty_lines}:change' if args.dirty_lines else '')) if args.workload=='dirty' else args.workload
+        if args.dirty_pages is not None:
+            require(args.dirty_lines>0,'dirty-pages requires a physical payload (dirty-lines > 0)')
+            workload+=':'+str(args.dirty_pages)
         if args.heavy_plan:
             replay(c,s,report,save)
         else:
@@ -351,6 +354,7 @@ def add_arguments(p):
     p.add_argument('--warmup',type=int,default=0)
     p.add_argument('--workload',choices=('idle','busy','dirty','race'),default='dirty')
     p.add_argument('--dirty-mib',type=int,default=256)
+    p.add_argument('--dirty-pages',type=int,help='Limit touched payload pages; checksum verifies those pages')
     p.add_argument('--dirty-lines',type=int,choices=(0,1,8,64),default=0)
     p.add_argument('--count-faults',action='store_true')
     p.add_argument('--native',action='store_true')

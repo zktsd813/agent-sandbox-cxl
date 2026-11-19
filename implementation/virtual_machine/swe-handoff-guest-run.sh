@@ -54,14 +54,16 @@ while read -r OP ARG TOKEN EXTRA; do
             VCPUS=$(awk '/^cpu[0-9]+ / {n++} END {print n}' /proc/stat)
             MODE=1; SLEEP=0
             if [ "$EXTRA" = idle ]; then MODE=0; VCPUS=1; SLEEP=2; fi
-            unset LAB_HEARTBEAT_RACE_PAGES
+            unset LAB_HEARTBEAT_RACE_PAGES LAB_HEARTBEAT_DIRTY_PAGES
             [ "$EXTRA" != race ] || export LAB_HEARTBEAT_RACE_PAGES=1
             case "$EXTRA" in
                 dirty*) MODE=0; VCPUS=1; SLEEP=2
                     dirty_spec=${EXTRA#dirty}
                     export LAB_HEARTBEAT_DIRTY_MIB=${dirty_spec%%:*}
                     case "$dirty_spec" in
-                        *:*) dirty_spec=${dirty_spec#*:}; export LAB_HEARTBEAT_DIRTY_LINES=${dirty_spec%%:*} LAB_HEARTBEAT_DIRTY_MODE=${dirty_spec#*:} ;;
+                        *:*) dirty_spec=${dirty_spec#*:}; export LAB_HEARTBEAT_DIRTY_LINES=${dirty_spec%%:*}
+                            dirty_spec=${dirty_spec#*:}; export LAB_HEARTBEAT_DIRTY_MODE=${dirty_spec%%:*}
+                            case "$dirty_spec" in *:*) export LAB_HEARTBEAT_DIRTY_PAGES=${dirty_spec#*:} ;; esac ;;
                         *) unset LAB_HEARTBEAT_DIRTY_LINES LAB_HEARTBEAT_DIRTY_MODE ;;
                     esac ;;
                 *) unset LAB_HEARTBEAT_DIRTY_MIB ;;

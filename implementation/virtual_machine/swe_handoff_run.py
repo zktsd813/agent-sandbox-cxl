@@ -32,6 +32,7 @@ def arguments():
     p.add_argument('--iterations', type=int, default=2)
     p.add_argument('--warmup', type=int, default=0)
     p.add_argument('--dirty-mib', type=int, choices=(16, 256, 1024), default=256)
+    p.add_argument('--dirty-pages',type=int,help='Limit touched payload pages; checksum verifies those pages')
     p.add_argument('--dirty-lines', type=int, choices=(0, 1, 8, 64), default=0)
     p.add_argument('--baseline', action='store_true', help='Same worker path; rebuild an empty local EPT')
     p.add_argument('--cache-maintenance', action=argparse.BooleanOptionalAction, default=True)
@@ -105,6 +106,7 @@ def run(args):
                 bench += ['--no-cache-maintenance']
             if args.page_hash:
                 bench += ['--page-hash', str(args.page_hash.resolve())]
+            if args.dirty_pages is not None:bench+=['--dirty-pages',str(args.dirty_pages)]
             if args.fail:
                 bench += ['--fail', args.fail]
             result = command(bench, 'trial', 3600)

@@ -1264,7 +1264,7 @@ diff --git a/src/vmm/src/ept_tier.rs b/src/vmm/src/ept_tier.rs
 new file mode 100644
 --- /dev/null
 +++ b/src/vmm/src/ept_tier.rs
-@@ -0,0 +1,105 @@
+@@ -0,0 +1,110 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Stopped-owner 2 MiB overlays. No tier or dirty state enters a handoff packet.
 +use std::collections::{BTreeMap, BTreeSet};
@@ -1343,7 +1343,12 @@ new file mode 100644
 +        crate::logger::info_unrestricted!("EPT_TIER_JSON {}",serde_json::json!({"chunk":chunk,"dram":true,
 +            "eager_pages":pt[5],"eager":eager,"copied_pages":stats[3],"copy_unmap_ns":stats[4],"ns":start.elapsed().as_nanos() as u64}));
 +    }
-+    publish(vm)
++    publish(vm)?;
++    // Eager faults mark new writable leaves dirty without changing RAM. All
++    // writers are still stopped; establish the post-copy baseline after harvest.
++    let mut s=STATE.lock().unwrap();
++    for chunk in target.difference(&current) {*s.chunks.get_mut(chunk).unwrap()=[0;8];}
++    Ok(())
 +}
 +pub(crate) fn demote_all(vm: &KvmVm) -> io::Result<()> {
 +    if STATE.lock().unwrap().chunks.is_empty() || fail("dram-release") {return Ok(());}

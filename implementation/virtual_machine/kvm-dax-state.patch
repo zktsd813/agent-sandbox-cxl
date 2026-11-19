@@ -336,7 +336,7 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
  
  	if (shared)
  		read_lock(&kvm->mmu_lock);
-@@ -1815,3 +1961,403 @@
+@@ -1815,3 +1961,404 @@
  	 */
  	return rcu_dereference(sptep);
  }
@@ -621,7 +621,8 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
 +    /* Includes hardware EPT contexts and nested-lab shadow invalidation. */
 +    if (!(q.flags & 2)) kvm_flush_remote_tlbs(kvm);
 +    write_unlock(&kvm->mmu_lock);
-+    rcu_barrier();
++    /* Existing unlink callbacks free pages after RCU. Allocation sees a table
++     * as reusable only in that callback. Release drains all callbacks. */
 +    ret = 0;
 +    if (q.dram && (q.flags & 1)) {
 +        struct kvm_vcpu *vcpu = vcpus[0];

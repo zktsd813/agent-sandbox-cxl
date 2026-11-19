@@ -576,6 +576,9 @@ static void guest_heartbeat(int sleeping, int quiet)
         if ((void *)dirty==MAP_FAILED) die("controlled dirty memory");
     }
     for(size_t i=0;i<dirty_words;i++) dirty[i]=i;
+    const char *page_setting=getenv("LAB_HEARTBEAT_DIRTY_PAGES");
+    size_t changed_pages=page_setting?strtoul(page_setting,NULL,10):dirty_words/512;
+    if(changed_pages>dirty_words/512) {fprintf(stderr,"dirty page count outside payload\n");exit(1);}
     uint64_t dirty_epoch=0;
     int timing=env_enabled("LAB_HEARTBEAT_TIMING");
     const unsigned spins=128;
@@ -619,14 +622,14 @@ static void guest_heartbeat(int sleeping, int quiet)
             if(dirty_setting) {
                 /* Outside pause-to-ACK: validate the previous epoch, then write
                  * the full requested payload before allowing the next pause. */
-                for(size_t i=0;i<dirty_words;i++) {
-                    int changed=!dirty_lines || (!read_only && !same_value && i%512<dirty_lines*8 && i%8==0);
+                for(size_t i=0;i<changed_pages*512;i++) {
+                    int changed=i/512<changed_pages && (!dirty_lines || (!read_only && !same_value && i%512<dirty_lines*8 && i%8==0));
                     uint64_t expected=i^(changed?dirty_epoch:0);
                     if(dirty[i]!=expected) atomic_fetch_add(&hb->errors,1);
                 }
-                if (!dirty_lines) for(size_t i=0;i<dirty_words;i++) dirty[i]=i^epoch;
+                if (!dirty_lines) for(size_t i=0;i<changed_pages*512;i++) dirty[i]=i^epoch;
                 else if (!read_only) {
-                    for(size_t page=0;page<dirty_words;page+=512)
+                    for(size_t page=0;page<changed_pages*512;page+=512)
                         for(unsigned line=0;line<dirty_lines;line++) {
                             size_t i=page+line*8;
                             dirty[i]=i^(same_value?0:epoch);
