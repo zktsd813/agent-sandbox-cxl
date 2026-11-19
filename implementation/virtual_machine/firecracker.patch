@@ -1264,7 +1264,7 @@ diff --git a/src/vmm/src/ept_tier.rs b/src/vmm/src/ept_tier.rs
 new file mode 100644
 --- /dev/null
 +++ b/src/vmm/src/ept_tier.rs
-@@ -0,0 +1,101 @@
+@@ -0,0 +1,105 @@
 +// SPDX-License-Identifier: Apache-2.0
 +//! Stopped-owner 2 MiB overlays. No tier or dirty state enters a handoff packet.
 +use std::collections::{BTreeMap, BTreeSet};
@@ -1283,7 +1283,7 @@ new file mode 100644
 +fn fail(name: &str) -> bool {std::env::var("FC_EPT_FAIL").as_deref()==Ok(name)}
 +#[derive(Deserialize)]
 +#[serde(deny_unknown_fields)]
-+struct Request { chunks: BTreeSet<u64> }
++struct Request { chunks: BTreeSet<u64>, #[serde(default)] eager: bool }
 +
 +/// Called at every KVM/device harvest, including intermediate running cleans.
 +pub(crate) fn accumulate(union: &mut [u64]) {
@@ -1294,19 +1294,20 @@ new file mode 100644
 +    for (a,b) in union.iter_mut().zip(&s.pending) {*a|=*b;}
 +}
 +pub(crate) fn published() {STATE.lock().unwrap().pending.fill(0);}
-+fn kernel(vm: &KvmVm, chunk: u64, dram: bool) -> io::Result<()> {
-+    let mut q=[chunk,u64::from(dram),0];
-+    if unsafe {libc::ioctl(vm.fd().as_raw_fd(),0x4018aefcu32 as _,q.as_mut_ptr())}<0 {
++fn kernel(vm: &KvmVm, chunk: u64, dram: u64, eager: bool) -> io::Result<[u64;6]> {
++    let flags=u64::from(eager) | if fail("tier-flush") && dram!=2 {2} else {0};
++    let mut q=[chunk,dram,flags,0,0,0];
++    if unsafe {libc::ioctl(vm.fd().as_raw_fd(),0xc030aefcu32 as _,q.as_mut_ptr())}<0 {
 +        return Err(io::Error::last_os_error());
 +    }
-+    Ok(())
++    Ok(q)
 +}
 +fn publish(vm: &KvmVm) -> io::Result<()> {
 +    let ledger=crate::noncoherent::collect(vm)?;
 +    crate::noncoherent::send(vm.guest_memory(),&ledger)?;
 +    crate::noncoherent::cleaned(vm.guest_memory(),&ledger)
 +}
-+fn change(vm: &KvmVm, target: &BTreeSet<u64>) -> io::Result<()> {
++fn change(vm: &KvmVm, target: &BTreeSet<u64>, eager: bool) -> io::Result<()> {
 +    use vm_memory::{GuestMemoryBackend, GuestMemoryRegion};
 +    let mem=vm.guest_memory();
 +    let pages=mem.iter().next().ok_or_else(||invalid("RAM absent"))?.len()/4096;
@@ -1316,11 +1317,12 @@ new file mode 100644
 +    for chunk in current.difference(target) {
 +        let start=Instant::now();
 +        let dirty=STATE.lock().unwrap().chunks[chunk];
++        let pt=kernel(vm,*chunk,2,false)?;
 +        crate::noncoherent::tier_boundary(mem,*chunk,7,&dirty)?;
 +        let mut copied=dirty;
 +        if fail("demote-copy") { if let Some(w)=copied.iter_mut().find(|w|**w!=0) {*w &= *w-1;} }
 +        let stats=crate::pool_memory::tier_chunk(*chunk,false,&mut copied)?;
-+        kernel(vm,*chunk,false)?;
++        kernel(vm,*chunk,0,false)?;
 +        crate::noncoherent::tier_boundary(mem,*chunk,8,&dirty)?;
 +        let mut s=STATE.lock().unwrap();
 +        s.chunks.remove(chunk);
@@ -1329,23 +1331,23 @@ new file mode 100644
 +        if fail("demote-record") {if let Some(w)=record.iter_mut().find(|w|**w!=0) {*w &= *w-1;}}
 +        for (a,b) in s.pending[*chunk as usize*8..][..8].iter_mut().zip(record) {*a|=b;}
 +        crate::logger::info_unrestricted!("EPT_TIER_JSON {}",serde_json::json!({"chunk":chunk,"dram":false,
-+            "dirty_pages":dirty.iter().map(|w|w.count_ones()).sum::<u32>(),"copied_pages":stats[3],
++            "local_pt":pt[3],"cxl_pt":pt[4],"dirty_pages":dirty.iter().map(|w|w.count_ones()).sum::<u32>(),"copied_pages":stats[3],
 +            "copy_unmap_ns":stats[4],"ns":start.elapsed().as_nanos() as u64}));
 +    }
 +    for chunk in target.difference(&current) {
 +        let start=Instant::now();let mut bits=[0;8];
 +        let stats=crate::pool_memory::tier_chunk(*chunk,true,&mut bits)?;
-+        kernel(vm,*chunk,true)?;
++        let pt=kernel(vm,*chunk,1,eager)?;
 +        STATE.lock().unwrap().chunks.insert(*chunk,[0;8]);
 +        crate::noncoherent::tier_boundary(mem,*chunk,6,&bits)?;
 +        crate::logger::info_unrestricted!("EPT_TIER_JSON {}",serde_json::json!({"chunk":chunk,"dram":true,
-+            "copied_pages":stats[3],"copy_unmap_ns":stats[4],"ns":start.elapsed().as_nanos() as u64}));
++            "eager_pages":pt[5],"eager":eager,"copied_pages":stats[3],"copy_unmap_ns":stats[4],"ns":start.elapsed().as_nanos() as u64}));
 +    }
 +    publish(vm)
 +}
 +pub(crate) fn demote_all(vm: &KvmVm) -> io::Result<()> {
 +    if STATE.lock().unwrap().chunks.is_empty() || fail("dram-release") {return Ok(());}
-+    change(vm,&BTreeSet::new())
++    change(vm,&BTreeSet::new(),false)
 +}
 +impl crate::Vmm {
 +    pub(crate) fn ept_tier_request(&mut self) -> io::Result<()> {
@@ -1353,7 +1355,9 @@ new file mode 100644
 +            || self.instance_info.state!=crate::vmm_config::instance_info::VmState::Paused {
 +            return Err(invalid("tier change requires a paused owning EPT VM"));
 +        }
-+        let request:Request=serde_json::from_slice(&std::fs::read(std::env::var("FC_EPT_TIER_REQUEST").map_err(invalid)?)?).map_err(invalid)?;
++        let path=std::env::var("FC_EPT_TIER_REQUEST").map_err(invalid)?;
++        let request:Request=serde_json::from_slice(&std::fs::read(&path)?).map_err(invalid)?;
++        std::fs::remove_file(path)?;
 +        let devices=self.device_manager.save();
 +        self.check_block_snapshot_preparation().map_err(invalid)?;
 +        if !crate::ept_adopt::devices_ok(&devices) {return Err(invalid("tier device contract"));}
@@ -1361,7 +1365,7 @@ new file mode 100644
 +        self.device_manager.mark_virtio_queue_memory_dirty(vm.guest_memory());
 +        // A failure after the first remap fences this worker until restart.
 +        self.worker_restore_failed=true;
-+        change(vm,&request.chunks)?;
++        change(vm,&request.chunks,request.eager)?;
 +        self.worker_restore_failed=false;
 +        Ok(())
 +    }
@@ -1403,7 +1407,7 @@ diff --git a/src/vmm/src/lib.rs b/src/vmm/src/lib.rs
  
      /// VM object.
      pub vm: Vm,
-@@ -459,8 +472,79 @@
+@@ -459,8 +472,80 @@
          }
      }
  
@@ -1432,7 +1436,8 @@ diff --git a/src/vmm/src/lib.rs b/src/vmm/src/lib.rs
 +        if self.instance_info.state != VmState::Paused {
 +            return Err(VmmError::MemoryTier(io::Error::other("MemoryTier requires a paused VM")));
 +        }
-+        if crate::ept_adopt::retained() && pool_memory::active() {
++        if crate::ept_adopt::retained() && pool_memory::active()
++            && std::env::var("FC_EPT_TIER_REQUEST").is_ok_and(|p|std::path::Path::new(&p).is_file()) {
 +            return self.ept_tier_request().map_err(VmmError::MemoryTier);
 +        }
 +        let mut unsupported_memory_device = false;

@@ -42,8 +42,9 @@ def arguments():
     p.add_argument('--page-hash', type=Path)
     p.add_argument('--count-faults', action='store_true')
     p.add_argument('--measure', action='store_true', help='Take the exclusive quiet lock and record host load')
-    p.add_argument('--fail', choices=('outside', 'bump', 'ept-invalidate', 'ram-invalidate','dram-release','demote-copy','demote-record'))
+    p.add_argument('--fail', choices=('outside', 'bump', 'ept-invalidate', 'ram-invalidate','dram-release','demote-copy','demote-record','tier-flush'))
     p.add_argument('--tier-chunks', default='0', help='Count, half, or written (previous SWE dirty records)')
+    p.add_argument('--tier-refault',choices=('lazy','eager'),default='lazy')
     p.add_argument('--tier-start', type=int, default=0)
     p.add_argument('--tier-pre-demote', action='store_true')
     p.add_argument('--tier-history', type=Path)
@@ -93,7 +94,7 @@ def run(args):
             bench = [*prefix, 'ept-adopt-bench', '--output', str(out/'trial'), '--name', args.name,
                 '--vcpus', str(args.vcpus), '--iterations', str(args.iterations), '--warmup', str(args.warmup),
                 '--dirty-mib', str(args.dirty_mib), '--dirty-lines', str(args.dirty_lines), '--clean-wait', args.clean_wait]
-            bench += ['--tier-chunks',args.tier_chunks,'--tier-start',str(args.tier_start)]
+            bench += ['--tier-refault',args.tier_refault,'--tier-chunks',args.tier_chunks,'--tier-start',str(args.tier_start)]
             if args.tier_pre_demote:bench+=['--tier-pre-demote']
             if args.tier_history:bench+=['--tier-history',str(args.tier_history.resolve())]
             bench += ['--workload' , args.workload] if args.workload else ['--heavy-plan', str(args.heavy_plan.resolve())]

@@ -246,7 +246,7 @@ class DirtyOracle:
         key=(node,chunk)
         dirty=int.from_bytes(self.mem[self.gate+4352:self.gate+4416],'little')
         row=dict(sequence=sequence,phase=phase,pages=pages,chunk=chunk,node=node,
-                 hash_boundary=True,missing_pages=0,listed_pages=dirty.bit_count())
+                 hash_boundary=True,missing_pages=0,other_changed_pages=0,listed_pages=dirty.bit_count())
         if phase in (6,7):
             pfns=struct.unpack_from('<512Q',self.mem,self.gate+256)
             _,memory,low=self.dram[node]

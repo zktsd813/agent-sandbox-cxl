@@ -360,10 +360,18 @@ def placement(e, name, memory, requested):
 def verify_cache_receipts(report, root):
     """Replay saved page sets independently of the online oracle and VMM."""
     rows=report.get('oracle',report.get('dirty_oracle',[]))
-    need(rows and all(x.get('coverage_verified') for x in rows), 'Missing cache coverage receipts')
+    need(rows and all(x.get('coverage_verified') or x['phase'] in (6,7,8) for x in rows), 'Missing cache coverage receipts')
     records, consumed={},{}
     pending=0
+    demoted=0
     for row in rows:
+        if row["phase"] in (6,7,8):
+            need(row["missing_pages"]==0,"Tier oracle reported an omission")
+            if row["phase"]==8:
+                bits=(root/"dirty-oracle"/f"{row['sequence']}.bitmap").read_bytes()
+                need(len(bits)==64 and row.get("demotion_home_verified"),"Missing tier proof")
+                demoted |= int.from_bytes(bits,"little") << (row["chunk"]*512)
+            continue
         need(row['missing_pages']==0 and row['other_changed_pages']==0, 'Oracle reported an omission')
         words=(row['pages']+63)//64
         data=(root/'dirty-oracle'/f"{row['sequence']}.bitmap").read_bytes()
@@ -377,6 +385,8 @@ def verify_cache_receipts(report, root):
                 records.clear();consumed.clear()
                 need(bitmap==(1<<row['pages'])-1,'Incomplete full-RAM publication')
             need(epoch==len(records)+1 and bitmap==kernel|device and bitmap & ~wb==0,'Writeback coverage or epoch mismatch')
+            need(demoted & ~bitmap==0,'Demotion pages omitted from next record')
+            demoted=0
             records[epoch]=bitmap
             consumed[node]=epoch
             pending |= bitmap

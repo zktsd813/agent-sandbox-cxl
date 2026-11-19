@@ -336,7 +336,7 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
  
  	if (shared)
  		read_lock(&kvm->mmu_lock);
-@@ -1815,3 +1961,365 @@
+@@ -1815,3 +1961,401 @@
  	 */
  	return rcu_dereference(sptep);
  }
@@ -580,11 +580,23 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
 +    mutex_lock(&kvm->slots_lock);
 +    nr = atomic_read(&kvm->online_vcpus);
 +    if (!s || s->failed || s->released || q.chunk >= s->data_bytes >> 21 ||
-+        q.dram > 1 || q.flags || nr < 1 || nr > KVM_EPT_MAX_VCPUS) goto out;
++        q.dram > 2 || q.flags & ~3ULL || nr < 1 || nr > KVM_EPT_MAX_VCPUS) goto out;
 +    for (i = 0; i < nr; i++) {
 +        vcpus[i] = kvm_get_vcpu(kvm, i);
 +        if (!mutex_trylock(&vcpus[i]->mutex)) { ret = -EBUSY; goto out; }
 +        locked++;
++    }
++    q.local_pt = q.cxl_pt = q.eager_pages = 0;
++    if (q.dram == 2) {
++        read_lock(&kvm->mmu_lock);
++        list_for_each_entry(sp, &s->pages, ept_adopt_link)
++            if (sp->role.level == PG_LEVEL_4K && (sp->gfn >> 9) == q.chunk) {
++                if (__pa(sp->spt) >= s->base && __pa(sp->spt) - s->base < KVM_EPT_ADOPT_BYTES)
++                    q.cxl_pt++;
++                else q.local_pt++;
++            }
++        read_unlock(&kvm->mmu_lock);
++        ret = 0; goto result;
 +    }
 +    ret = kvm_ept_adopt_mapped(kvm);
 +    if (ret) goto failed;
@@ -605,10 +617,34 @@ diff --git a/arch/x86/kvm/mmu/tdp_mmu.c b/arch/x86/kvm/mmu/tdp_mmu.c
 +    else __clear_bit(q.chunk, s->dram);
 +    rcu_read_unlock();
 +    /* Includes hardware EPT contexts and nested-lab shadow invalidation. */
-+    kvm_flush_remote_tlbs(kvm);
++    if (!(q.flags & 2)) kvm_flush_remote_tlbs(kvm);
 +    write_unlock(&kvm->mmu_lock);
 +    rcu_barrier();
 +    ret = 0;
++    if (q.dram && (q.flags & 1)) {
++        struct kvm_vcpu *vcpu = vcpus[0];
++        vcpu_load(vcpu);
++        ret = kvm_mmu_load(vcpu);
++        if (!ret) {
++            for (i = 0; i < 512; i++) {
++                int tries;
++                for (tries = 0; tries < 16; tries++) {
++                    ret = kvm_mmu_do_page_fault(vcpu, (q.chunk * 512 + i) << PAGE_SHIFT,
++                                               PFERR_WRITE_MASK, true, NULL);
++                    if (ret != RET_PF_RETRY) break;
++                }
++                if (ret != RET_PF_FIXED && ret != RET_PF_SPURIOUS) {
++                    ret = ret < 0 ? ret : -EIO;
++                    break;
++                }
++                q.eager_pages++;
++                ret = 0;
++            }
++        }
++        vcpu_put(vcpu);
++    }
++result:
++    if (!ret && copy_to_user((void __user *)arg, &q, sizeof(q))) ret = -EFAULT;
 +failed:
 +    if (ret) s->failed = true;
 +out:
@@ -776,7 +812,7 @@ diff --git a/include/uapi/linux/kvm_dax.h b/include/uapi/linux/kvm_dax.h
 new file mode 100644
 --- /dev/null
 +++ b/include/uapi/linux/kvm_dax.h
-@@ -0,0 +1,21 @@
+@@ -0,0 +1,22 @@
 +/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 +#ifndef _UAPI_LINUX_KVM_DAX_H
 +#define _UAPI_LINUX_KVM_DAX_H
@@ -795,8 +831,9 @@ new file mode 100644
 +};
 +#define KVM_EPT_RELEASE _IOWR(0xae, 0xfa, struct kvm_ept_adopt)
 +#define KVM_EPT_ADOPT _IOWR(0xae, 0xfb, struct kvm_ept_adopt)
-+struct kvm_ept_tier { __u64 chunk, dram, flags; };
-+#define KVM_EPT_TIER _IOW(0xae, 0xfc, struct kvm_ept_tier)
++/* dram: 0=CXL, 1=DRAM, 2=query PT placement. flags: 1=eager, 2=lab skip final flush. */
++struct kvm_ept_tier { __u64 chunk, dram, flags, local_pt, cxl_pt, eager_pages; };
++#define KVM_EPT_TIER _IOWR(0xae, 0xfc, struct kvm_ept_tier)
 +#endif
 diff --git a/virt/kvm/kvm_main.c b/virt/kvm/kvm_main.c
 --- a/virt/kvm/kvm_main.c

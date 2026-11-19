@@ -171,7 +171,7 @@ def tier_chunks(c,command=None):
 def set_tiers(c,s,chunks):
     started=time.monotonic_ns()
     c.pause(s)
-    c.write_bytes(s.role,s.directory+'/tier.json',json.dumps({'chunks':chunks}).encode(),'tier-request')
+    c.write_bytes(s.role,s.directory+'/tier.json',json.dumps({'chunks':chunks,'eager':c.args.tier_refault=='eager'}).encode(),'tier-request')
     c.api(s.role,s.directory,'/actions','PUT',{'action_type':'MemoryTier'})
     c.resume(s)
     return dict(role=s.role,chunks=chunks,host_ns=time.monotonic_ns()-started)
@@ -278,11 +278,15 @@ def run_existing(args):
                             time.sleep(.001)
                         report.setdefault('race_progress',[]).append(dict(before=before,after=values))
                     if args.tier_chunks!='0':
+                        tier_before=faults(c,s.role) if args.count_faults else None
                         report.setdefault('tiers',[]).append(set_tiers(c,s,tier_chunks(c)))
                         # Request another full guest write/verify while its selected chunks are local.
                         s.epoch+=1
                         struct.pack_into('<Q',memory,offset+16,s.epoch)
                         wait_ack(memory,offset,s.epoch,args.workload=='dirty')
+                        if tier_before is not None:
+                            tier_after=faults(c,s.role)
+                            report['tiers'][-1]['first_access_faults']=tier_after['count']-tier_before['count']
                         if args.preclean:
                             report.setdefault('cleans',[]).append(clean(c,s))
                         if args.tier_pre_demote:
@@ -358,10 +362,11 @@ def add_arguments(p):
     p.add_argument('--clean-wait',choices=('0','1'),default='0')
     p.add_argument('--heavy-plan',type=Path)
     p.add_argument('--tier-chunks',default='0')
+    p.add_argument('--tier-refault',choices=('lazy','eager'),default='lazy')
     p.add_argument('--tier-start',type=int,default=0)
     p.add_argument('--tier-pre-demote',action='store_true')
     p.add_argument('--tier-history',type=Path)
-    p.add_argument('--fail',choices=('outside','bump','ept-invalidate','ram-invalidate','dram-release','demote-copy','demote-record'))
+    p.add_argument('--fail',choices=('outside','bump','ept-invalidate','ram-invalidate','dram-release','demote-copy','demote-record','tier-flush'))
 
 
 def validate_arguments(args,p):
