@@ -329,6 +329,13 @@ def run_existing(args):
                 require(status==400,'Failed export allowed guest resume')
             except Exception as probe:
                 report['resume_probe_error']=repr(probe)
+                try:
+                    from handoff_bench import source_fence_script
+                    raw,file=c.shell(s.role,source_fence_script(s.directory),'failed-export-exit-proof')
+                    require('FENCED ' in raw,'Failed export source still alive')
+                    report['failed_export_resume_probe']=dict(rejected=True,source_exited=True,file=file)
+                except Exception as fence:
+                    report['resume_fence_error']=repr(fence)
         raise
     finally:
         for role,worker in getattr(c,'ept_workers',{}).items():
