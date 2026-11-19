@@ -102,9 +102,9 @@ def clean(c, s):
         from resident_fast import maintain
         return maintain(c,s)
     start=time.monotonic_ns()
-    result=c.api(s.role,s.directory,/actions,PUT,{action_type:EptAdoptClean})
-    role=B if s.role==A else A
-    observer=c.api(role,c.ept_workers[role].directory,/actions,PUT,{action_type:EptAdoptClean})
+    result=c.api(s.role,s.directory,'/actions','PUT',{'action_type':'EptAdoptClean'})
+    role='B' if s.role=='A' else 'A'
+    observer=c.api(role,c.ept_workers[role].directory,'/actions','PUT',{'action_type':'EptAdoptClean'})
     return dict(role=s.role,epoch=s.epoch,host_ns=time.monotonic_ns()-start,api=result,observer=observer)
 
 
