@@ -116,6 +116,7 @@ def run_existing(args):
         if args.dirty_oracle:
             from dirty_oracle import DirtyOracle
             oracle=DirtyOracle(config,out,c.metadata_base+s.vm*64*MIB,c.kvm_arena,args.page_hash)
+        lab.verify(argparse.Namespace(timeout=180))
         c.setup();configure(c)
         prepare(c,s)
         report['boot']=c.boot_vm(s)
@@ -156,7 +157,13 @@ def run_existing(args):
             try:oracle.close()
             except Exception as exc:report['oracle_error']=repr(exc)
         report.update(trace_commands=c.trace_commands,api_events=c.api_events,memory_events=c.memory_events)
-        c.cleanup();save()
+        for role,directory in reversed(c.active):
+            try:nfs.stop_fc(c.vms[role],directory)
+            except Exception as exc:report.setdefault('cleanup_errors',[]).append(repr(exc))
+        for keeper in getattr(c,'keepalives',[]):
+            try:nfs.stop_fc(c.vms[keeper['role']],keeper['directory'])
+            except Exception as exc:report.setdefault('cleanup_errors',[]).append(repr(exc))
+        save()
     print(json.dumps(dict(result=report['result'],output=str(out))))
 
 

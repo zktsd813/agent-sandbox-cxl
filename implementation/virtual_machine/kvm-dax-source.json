@@ -47,7 +47,7 @@
       "base_sha256": "e687fdf436053dd0d41ffc403e89a82bc70663a519629da38ee4bd5a52d569a8"
     },
     "arch/x86/kvm/mmu/tdp_mmu.c": {
-      "patched_sha256": "a03f458be073628e110663f8f80a350de79cb3712119b17f683e5c4175631ce9",
+      "patched_sha256": "3fde025625ee97636c3b9b492204838feab980e5b0156912ae8e44db9f0b72a1",
       "base_sha256": "416eb7932f2e3e12a039293eba4a958e173046ec62d786aa69f8b96217fb293a"
     },
     "arch/x86/kvm/vmx/vmx.c": {
@@ -59,7 +59,7 @@
       "base_sha256": "fe9ae905263db74ef5876a2ae49e0ce1d82a6e15866703b64fd6586c39eed2a4"
     },
     "include/linux/kvm_dax.h": {
-      "patched_sha256": "af75b199bf190cff438f5a79f84b76fc98c73fdf052e1a195261b54e7e10c346",
+      "patched_sha256": "a2c8cd447547f5709ddaf07ef09eaa45e4a4bb26f32b1ae487c6f495658c7851",
       "new": true
     },
     "include/linux/kvm_host.h": {
@@ -91,7 +91,7 @@
       "base_sha256": "2c9b22d33f02399d0a1503236b39d96a83e8c6dbe659a706f6ce10424042c64e"
     },
     "virt/kvm/kvm_main.c": {
-      "patched_sha256": "35ef7cb2790a1896412eb63c780f30c758d9306d517b3ea267688895328eeb98",
+      "patched_sha256": "f20c390e7aa2514de39e1c950806b9076b3f496775e021de254edcc2a964f2b0",
       "base_sha256": "0f70d265644639479a3fc4c7ecfccd3adb44134b4fe682612f236cae16f3dcf3"
     },
     "arch/x86/kvm/mmu/mmu_internal.h": {

@@ -4647,7 +4647,7 @@ diff --git a/src/vmm/src/reuse.rs b/src/vmm/src/reuse.rs
 new file mode 100644
 --- /dev/null
 +++ b/src/vmm/src/reuse.rs
-@@ -0,0 +1,696 @@
+@@ -0,0 +1,702 @@
 +// Copyright 2026 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 +// SPDX-License-Identifier: Apache-2.0
 +
@@ -5053,7 +5053,13 @@ new file mode 100644
 +        let offset = dax_snapshot_offset(&params.mem_backend.backend_path)
 +            .map_err(|e| e.to_string())?
 +            .ok_or("reuse requires the configured DAX backend")?;
++        if crate::ept_adopt::enabled() {
++            ensure(crate::pool_memory::active() && crate::pool_memory::backing_matches(&params.mem_backend.backend_path),
++                "EPT worker has no imported persistent RAM")?;
++            crate::pool_memory::check_execution_owner().map_err(|e|e.to_string())?;
++        } else {
 +        crate::vstate::memory::validate_dax_backing(vm.guest_memory(), &params.mem_backend.backend_path, offset)?;
++        }
 +        let devices = self.device_manager.save();
 +        ensure(
 +            diskless(&devices) && diskless(&state.device_states)
