@@ -1,0 +1,948 @@
+{
+  "tag": "vm-pre-ept-adopt-cleanup-20261119",
+  "before_head": "04ef44aca7f6c7496ccefa59de7fd1fdb45968fa",
+  "final_code_commit": "cdcf9694d89423af30e99f08560d72a754bf5320",
+  "line_counts": {
+    "method": "Tracked files, newline bytes (wc -l), includes config/patch/docs/evidence; untracked .local excluded. EPT core is named KVM ept_adopt functions + FC ept_adopt.rs additions + ept_adopt.py; shared worker/cache/RAM support excluded.",
+    "before": {
+      "files": 205,
+      "newlines": 276572,
+      "patch_additions": {
+        "kvm-dax-state.patch": 2789,
+        "firecracker.patch": 5515
+      },
+      "ept_core": {
+        "total": 945,
+        "kvm_named_function_lines": 346,
+        "functions": {
+          "kvm_ept_adopt_nested_sync": 7,
+          "kvm_ept_adopt_can_run": 5,
+          "ept_adopt_alloc": 16,
+          "ept_adopt_forget": 9,
+          "ept_adopt_free": 9,
+          "ept_adopt_walk": 40,
+          "ept_adopt_init": 55,
+          "ept_adopt_release": 46,
+          "ept_adopt_import": 47,
+          "kvm_ept_adopt_ioctl": 83,
+          "kvm_ept_adopt_mapped": 29
+        },
+        "fc_ept_adopt_rs": 257,
+        "python_ept_adopt_py": 342
+      }
+    },
+    "after": {
+      "files": 45,
+      "newlines": 16296,
+      "patch_additions": {
+        "kvm-dax-state.patch": 567,
+        "firecracker.patch": 2964
+      },
+      "ept_core": {
+        "total": 935,
+        "kvm_named_function_lines": 346,
+        "functions": {
+          "kvm_ept_adopt_nested_sync": 7,
+          "kvm_ept_adopt_can_run": 5,
+          "ept_adopt_alloc": 16,
+          "ept_adopt_forget": 9,
+          "ept_adopt_free": 9,
+          "ept_adopt_walk": 40,
+          "ept_adopt_init": 55,
+          "ept_adopt_release": 46,
+          "ept_adopt_import": 47,
+          "kvm_ept_adopt_ioctl": 83,
+          "kvm_ept_adopt_mapped": 29
+        },
+        "fc_ept_adopt_rs": 248,
+        "python_ept_adopt_py": 341
+      }
+    }
+  },
+  "patch_checks": {
+    "kvm-dax-state.patch": {
+      "result": "passed",
+      "fuzz": 0,
+      "original": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run18/linux/.git",
+      "archive_root": "original imported Linux DCD commit 28ec38566cdda02c9854918b4baea85ee104c4d1",
+      "base_files": {
+        "arch/x86/include/asm/kvm_host.h": "26ccfcd86dca8c421a0441dce5c7cd45b8d715012b2d44b8b441d9b1d3edd050",
+        "arch/x86/kvm/Kconfig": "848c86e55cc3255ba8e4fe47d5afef1adbfd1a79e2e41d5956e13470ea7a13b3",
+        "arch/x86/kvm/mmu/mmu.c": "e687fdf436053dd0d41ffc403e89a82bc70663a519629da38ee4bd5a52d569a8",
+        "arch/x86/kvm/mmu/mmu_internal.h": "89ef9181bab9d9fc7acfbb67c4bbfbd967dd33da7d823de2f07bd9c3b8db621b",
+        "arch/x86/kvm/mmu/tdp_mmu.c": "416eb7932f2e3e12a039293eba4a958e173046ec62d786aa69f8b96217fb293a",
+        "arch/x86/kvm/x86.c": "fe9ae905263db74ef5876a2ae49e0ce1d82a6e15866703b64fd6586c39eed2a4",
+        "include/linux/kvm_host.h": "166219e363e1462216d5b753032bd8179b6a639b9e63ef966f9923cc51aa83f6",
+        "virt/kvm/kvm_main.c": "0f70d265644639479a3fc4c7ecfccd3adb44134b4fe682612f236cae16f3dcf3"
+      }
+    },
+    "firecracker.patch": {
+      "result": "passed",
+      "fuzz": 0,
+      "original": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/dl/fc.tar.gz",
+      "archive_root": "firecracker-95f868c8e345b1cc8faccd1a3c910b4989dc3f58/",
+      "base_files": {
+        "src/firecracker/src/api_server/request/actions.rs": "c6d8eff19e9add6b51b6b945aac3a9324f66c8b8195078294cfbfd9664e49031",
+        "src/firecracker/src/api_server_adapter.rs": "54650093cbf2fd01ffe5b66c94aef5a3a191c36b6098d07328c77eceb43e45d9",
+        "src/vmm/src/arch/x86_64/vcpu.rs": "33151cde412457e49b90243385aa35db2d978c84ee96c8c4187095a9f400e2c7",
+        "src/vmm/src/arch/x86_64/vm.rs": "1dcee514ec1dcfe69cc17f0bd79a8dfc0e221124903c5be7d864a2742a74b517",
+        "src/vmm/src/builder.rs": "8c0325e39f6cfc3d5ace5c59d85d22a723e575ea81cc65628f2a56b5f2b2d945",
+        "src/vmm/src/device_manager/acpi.rs": "f252fdb95a8bc261aa480b590d93566d1917a66ae371713f565f113cb57190bc",
+        "src/vmm/src/device_manager/mmio.rs": "7fc9b488a182e2580e5cb6c2654749c4cfe8083bb5bca97c2d19085cd6ad707a",
+        "src/vmm/src/device_manager/mod.rs": "d702259874ec67f35eed54ed389fd0cebc2f55483df903a4e8db56ac0a52bbac",
+        "src/vmm/src/device_manager/persist.rs": "f0a2e1fc6572bbd419ed1d56459d4bede7c93f29d1a2d378fc9e0864161a8cb6",
+        "src/vmm/src/devices/acpi/vmclock.rs": "78ea4ae4239b38103566a419b577f10829cfc94e567a10bf399deb1d7f7e0474",
+        "src/vmm/src/devices/legacy/i8042.rs": "9734644de71ee37331259d7b9787ddc987e3a7803083a0d39dc202d8f0098e9c",
+        "src/vmm/src/devices/legacy/serial.rs": "c0d550298c248e434763abf297b147d8ea1dfd5476d26b8b61bc74f42291ec02",
+        "src/vmm/src/devices/virtio/block/virtio/device.rs": "9b58d18db30c0acf97cd5d0d2842c1b714bb1fe544e4e0ad196a135d1f457872",
+        "src/vmm/src/devices/virtio/block/virtio/persist.rs": "fc34cc54b9df1d2ca5e9d9da9e1b2204fca093aee24db5c7f8a7203f5118e67e",
+        "src/vmm/src/devices/virtio/persist.rs": "d23d587161a4523b9983657757332c20f94338407a310580434dd34fb2c57ac4",
+        "src/vmm/src/lib.rs": "53af3419431390d17f7c14601fa48a6a2149adc2a3af0ce9b4c98e6639f4b0e5",
+        "src/vmm/src/persist.rs": "e23128d37907f04c4241b45aa75fa77ea9c1274998511e524764bd0c813e43a6",
+        "src/vmm/src/rpc_interface.rs": "5555181815144d34b8f6659cbc07319728720364dd30a09d724a80a38bad1309",
+        "src/vmm/src/vstate/memory.rs": "a4a148b73fc5b68e230d3b0f06a6e88a2dfa0700f3d3f16367229cc341fc83b3",
+        "src/vmm/src/vstate/vcpu.rs": "b623b624b00d175f052c0540811683aad3a9e58c18896a50855feb6bf1839006",
+        "src/vmm/src/vstate/vm.rs": "efde675dccb5b1558b9afb40194fcec3874db6d0645262f3f0cc84dd6595bae9",
+        "src/vmm/tests/devices.rs": "51b2a997d1b22a1c9defbcb16228d33cef0beb3c2b0103095531e7937a2e6a95"
+      }
+    },
+    "qemu-cxl-direct-ram.patch": {
+      "result": "passed",
+      "fuzz": 0,
+      "original": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/dl/qemu-10.2.2.tar.xz",
+      "archive_root": "qemu-10.2.2/",
+      "base_files": {
+        "hw/mem/cxl_type3.c": "6628230c915a6c22246339ed29df0cfe9348e61afe5a8d8babac29ee96ea08a3",
+        "include/hw/cxl/cxl_device.h": "c49da512ac099e04da2068e4926c808fccac0365a931b1b9f2d5bc5ef87e7d0c"
+      }
+    }
+  },
+  "tests": {
+    "python": 35,
+    "rust_invocations": 15,
+    "rust_unique": 14,
+    "skipped": 0,
+    "rust_tests": [
+      "api_server::request::actions::tests::test_parse_put_actions_request",
+      "api_server_adapter::tests::resident_control_reassembles_fragments_and_rejects_oversized_frames",
+      "devices::legacy::serial::tests::test_repeated_restore_retains_registered_buffer_event",
+      "devices::virtio::block::virtio::device::tests::test_prepare_save_flush_failure_is_reported_and_retryable",
+      "noncoherent::tests::bitmap_tail_must_not_escape_guest_ram",
+      "noncoherent::tests::delayed_reader_invalidates_full_ram_without_reading_overwritten_records",
+      "noncoherent::tests::exactly_k_records_survive_wrap",
+      "noncoherent::tests::stale_future_and_corrupt_records_fail_closed",
+      "pool_memory::tests::persistent_handle_rejects_old_abi_and_foreign_lease",
+      "pool_memory::tests::private_promotion_needs_exact_ram_coverage",
+      "pool_memory::tests::uapi_sizes_match_private_mapper",
+      "worker::tests::cached_contract_rejects_immutable_values_and_frequency_changes",
+      "worker::tests::cpuid_contract_ignores_only_kernel_runtime_fields",
+      "worker::tests::worker_rejects_nested_and_host_bound_features"
+    ]
+  },
+  "artifacts": {
+    "inputs": {
+      "l1_kernel": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run22/kernel/arch/x86/boot/bzImage",
+        "sha256": "efc1491c380e853f3cc419d8c0cddfcf8bb15d21dfe0c51ea6ed1d6796f25152"
+      },
+      "firecracker": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run22/firecracker/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker",
+        "sha256": "d48ba083b21e12e95a12a2a723b7e0ccad85ef64485ab150a0e343f1e8d75925"
+      },
+      "l2_kernel": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/guest-swe-build/vmlinux",
+        "sha256": "e9f738cb2567c81405d3813718cd79b5c561842a680aafb2ac97fb5bcde64108"
+      },
+      "busybox": {
+        "path": "/usr/bin/busybox",
+        "sha256": "dbac288c29ba568459550a2da9e7ae0ded6b1fc728ee9fad3044c44e62d6ac14"
+      },
+      "l1_init": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/guest-init.sh",
+        "sha256": "5d724e1071aa91e7f2ff8b5a22ab52bfcab4c34861996794684772722a36d7d4"
+      },
+      "l2_init": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/l2-init.sh",
+        "sha256": "e765c182267aa04db6a57878edacafcfb157cc17caa8bf270c63aea3bf319370"
+      },
+      "cxl_init": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/guest-cxl.sh",
+        "sha256": "a80b7d0b1c8edb4adc613dec7a140d0723a3388eca96cdda1eccd713ff0c7136"
+      },
+      "kvm_modules": {
+        "kvm.ko": "c6dd7b6d378beafac6be255d57f6da0a1a0ce308d842ccd304b41f55f6040831",
+        "kvm-intel.ko": "6dfa3e1f68b4654b4d31fc9abadc986537a523bbf9df4fd93373a528486af3f7"
+      },
+      "base_probe_source": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/shared_probe.c",
+        "sha256": "b5eb4088fd2eb65f367f299b9110427a6c05065bbc5da77c363b8ae6c9899b5e"
+      },
+      "shared_probe_binary": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run22/shared-probe",
+        "sha256": "79d88bba80b52360a40c9790542e45cdcadd466dff100262bfca5db074ab27ba"
+      }
+    },
+    "handoff": {
+      "firecracker": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run22/firecracker/build/cargo_target/x86_64-unknown-linux-musl/release/firecracker",
+        "sha256": "d48ba083b21e12e95a12a2a723b7e0ccad85ef64485ab150a0e343f1e8d75925"
+      },
+      "l2-vmlinux": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/guest-swe-build/vmlinux",
+        "sha256": "e9f738cb2567c81405d3813718cd79b5c561842a680aafb2ac97fb5bcde64108"
+      },
+      "l1-kernel": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run22/kernel/arch/x86/boot/bzImage",
+        "sha256": "efc1491c380e853f3cc419d8c0cddfcf8bb15d21dfe0c51ea6ed1d6796f25152"
+      },
+      "pool_memory_module.ko": {
+        "path": "/home/ijkim/agent-sandbox-cxl-latest/implementation/virtual_machine/.local/run22/mapper/pool_memory_module.ko",
+        "sha256": "322087ef38180c785dcc3941dab6087ca53b29b4c5c488201c6ae7b6ac6dbb8f"
+      }
+    },
+    "storage_template_sha256": "5676ebb3ec3d8795c75a47cdd2f0d679ca0ab4d4852946b16a04d67eaedbbb43"
+  },
+  "accuracy": {
+    "fullword-2-200": {
+      "result": "passed",
+      "expected_result": "passed",
+      "raw": ".local/run22/fullword-2-200/trial/report.json",
+      "source_commit": "537bf296f411785fdae03c84866c40ab1257d7d2",
+      "arguments": {
+        "memory_mib": 2048,
+        "vcpus": 2,
+        "dirty_mib": 256,
+        "dirty_lines": 0,
+        "iterations": 200,
+        "warmup": 0,
+        "baseline": false,
+        "preclean": false,
+        "native": true,
+        "cache_maintenance": true,
+        "fail": null
+      },
+      "hops": 400,
+      "oracle_boundaries": 801,
+      "missing_pages": 0,
+      "full_extent_hash_checks": 400,
+      "released_source_exit": {
+        "sha256": "6dae13ce40a0ded91fb8cecd27947a874f959dc6daa826d4a3eebd464c48277d",
+        "unchanged": true,
+        "source": "B",
+        "file": "0449-released-source-exit.txt",
+        "operations": [
+          "RAM munmap after release",
+          "Firecracker exit",
+          "VM/vCPU/mapper fd release"
+        ]
+      },
+      "error": null,
+      "oracle_error": null,
+      "independent_cache_receipts": {
+        "events": 801,
+        "exports": 400,
+        "imports": 400,
+        "cleans": 0,
+        "preinvalidations": 0,
+        "missing_pages": 0,
+        "coverage_verified": true
+      },
+      "owned_lab_stopped": true,
+      "independent_hash_pairs": 400
+    },
+    "race-2-preclean": {
+      "result": "passed",
+      "expected_result": "passed",
+      "raw": ".local/run22/race-2-preclean/trial/report.json",
+      "source_commit": "cdcf9694d89423af30e99f08560d72a754bf5320",
+      "arguments": {
+        "memory_mib": 2048,
+        "vcpus": 2,
+        "dirty_mib": 256,
+        "dirty_lines": 0,
+        "iterations": 3,
+        "warmup": 0,
+        "baseline": false,
+        "preclean": true,
+        "native": true,
+        "cache_maintenance": true,
+        "fail": null
+      },
+      "hops": 6,
+      "oracle_boundaries": 25,
+      "missing_pages": 0,
+      "full_extent_hash_checks": 6,
+      "released_source_exit": {
+        "sha256": "18f5cb29bc4b301d9cd2482488fd77c5be81e9e114a64bb7ce3ec179407ef379",
+        "unchanged": true,
+        "source": "B",
+        "file": "0063-released-source-exit.txt",
+        "operations": [
+          "RAM munmap after release",
+          "Firecracker exit",
+          "VM/vCPU/mapper fd release"
+        ]
+      },
+      "error": null,
+      "oracle_error": null,
+      "independent_cache_receipts": {
+        "events": 25,
+        "exports": 6,
+        "imports": 6,
+        "cleans": 6,
+        "preinvalidations": 6,
+        "missing_pages": 0,
+        "coverage_verified": true
+      },
+      "owned_lab_stopped": true,
+      "independent_hash_pairs": 6
+    },
+    "swe-gin-heavy": {
+      "result": "passed",
+      "expected_result": "passed",
+      "raw": ".local/run22/swe-gin-heavy/trial/report.json",
+      "source_commit": "cdcf9694d89423af30e99f08560d72a754bf5320",
+      "arguments": {
+        "memory_mib": 2048,
+        "vcpus": 1,
+        "dirty_mib": 256,
+        "dirty_lines": 0,
+        "iterations": 3,
+        "warmup": 0,
+        "baseline": false,
+        "preclean": true,
+        "native": true,
+        "cache_maintenance": true,
+        "fail": null
+      },
+      "hops": 3,
+      "oracle_boundaries": 61,
+      "missing_pages": 0,
+      "full_extent_hash_checks": 3,
+      "released_source_exit": null,
+      "error": null,
+      "oracle_error": null,
+      "independent_cache_receipts": {
+        "events": 61,
+        "exports": 3,
+        "imports": 3,
+        "cleans": 27,
+        "preinvalidations": 27,
+        "missing_pages": 0,
+        "coverage_verified": true
+      },
+      "independent_trace": {
+        "result": "passed",
+        "trace": {
+          "commands": 27,
+          "returncodes": [
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            127,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "submission": {
+            "sha256": "0e5003e771851819a41c7b1281f10fea23b077b0724221f1cb9859d1d80ac313",
+            "without_startup_warning_sha256": "a8e6329d6d9a7ad739cc2fb1272c3282935a7419383c710e34e20e0fd0b9c151",
+            "startup_warning_count": 1
+          },
+          "guest_cpu_flags_sha256": "e1f41f5ed6b13e3822ae62064cc3f9f90cc6772cb244e8a6567b6f5300a5a262",
+          "tests": [
+            {
+              "index": 4,
+              "kind": "go",
+              "packages": [
+                [
+                  "?",
+                  "github.com/gin-gonic/gin/ginS"
+                ],
+                [
+                  "?",
+                  "github.com/gin-gonic/gin/internal/json"
+                ],
+                [
+                  "ok",
+                  "github.com/gin-gonic/gin"
+                ],
+                [
+                  "ok",
+                  "github.com/gin-gonic/gin/binding"
+                ],
+                [
+                  "ok",
+                  "github.com/gin-gonic/gin/internal/bytesconv"
+                ],
+                [
+                  "ok",
+                  "github.com/gin-gonic/gin/render"
+                ]
+              ]
+            },
+            {
+              "index": 12,
+              "kind": "go",
+              "packages": [
+                [
+                  "?",
+                  "github.com/gin-gonic/gin/ginS"
+                ],
+                [
+                  "?",
+                  "github.com/gin-gonic/gin/internal/json"
+                ],
+                [
+                  "ok",
+                  "github.com/gin-gonic/gin"
+                ],
+                [
+                  "ok",
+                  "github.com/gin-gonic/gin/binding"
+                ],
+                [
+                  "ok",
+                  "github.com/gin-gonic/gin/internal/bytesconv"
+                ],
+                [
+                  "ok",
+                  "github.com/gin-gonic/gin/render"
+                ]
+              ]
+            },
+            {
+              "index": 16,
+              "kind": "go",
+              "packages": [
+                [
+                  "?",
+                  "github.com/gin-gonic/gin/ginS"
+                ],
+                [
+                  "?",
+                  "github.com/gin-gonic/gin/internal/json"
+                ],
+                [
+                  "ok",
+                  "github.com/gin-gonic/gin"
+                ],
+                [
+                  "ok",
+                  "github.com/gin-gonic/gin/binding"
+                ],
+                [
+                  "ok",
+                  "github.com/gin-gonic/gin/internal/bytesconv"
+                ],
+                [
+                  "ok",
+                  "github.com/gin-gonic/gin/render"
+                ]
+              ]
+            }
+          ],
+          "guest_command_seconds": 13.750000000000005,
+          "block_read_ios": 12695,
+          "remote_nfs_reads": 0,
+          "boot_id": "9d3cf9bf-96a2-4b3d-a322-d36b04166bbb",
+          "identity_observations": 4
+        },
+        "cache_receipts": {
+          "events": 61,
+          "exports": 3,
+          "imports": 3,
+          "cleans": 27,
+          "preinvalidations": 27,
+          "missing_pages": 0,
+          "coverage_verified": true
+        },
+        "oracle_boundaries": 61,
+        "missing_pages": 0,
+        "ept_hash_proofs": 3
+      },
+      "owned_lab_stopped": true,
+      "independent_hash_pairs": 3
+    },
+    "faults-adopt": {
+      "result": "passed",
+      "expected_result": "passed",
+      "raw": ".local/run22/faults-adopt/trial/report.json",
+      "source_commit": "cdcf9694d89423af30e99f08560d72a754bf5320",
+      "arguments": {
+        "memory_mib": 2048,
+        "vcpus": 1,
+        "dirty_mib": 256,
+        "dirty_lines": 64,
+        "iterations": 3,
+        "warmup": 2,
+        "baseline": false,
+        "preclean": false,
+        "native": true,
+        "cache_maintenance": true,
+        "fail": null
+      },
+      "hops": 10,
+      "oracle_boundaries": 21,
+      "missing_pages": 0,
+      "full_extent_hash_checks": 10,
+      "released_source_exit": {
+        "sha256": "7717958a4d57dc38af05b9dc4834286782614c463c38f90eb40ba40cecf80c13",
+        "unchanged": true,
+        "source": "B",
+        "file": "0081-released-source-exit.txt",
+        "operations": [
+          "RAM munmap after release",
+          "Firecracker exit",
+          "VM/vCPU/mapper fd release"
+        ]
+      },
+      "error": null,
+      "oracle_error": null,
+      "independent_cache_receipts": {
+        "events": 21,
+        "exports": 10,
+        "imports": 10,
+        "cleans": 0,
+        "preinvalidations": 0,
+        "missing_pages": 0,
+        "coverage_verified": true
+      },
+      "measured_payload_ept_violations": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "owned_lab_stopped": true,
+      "independent_hash_pairs": 10
+    },
+    "faults-empty": {
+      "result": "passed",
+      "expected_result": "passed",
+      "raw": ".local/run22/faults-empty/trial/report.json",
+      "source_commit": "cdcf9694d89423af30e99f08560d72a754bf5320",
+      "arguments": {
+        "memory_mib": 2048,
+        "vcpus": 1,
+        "dirty_mib": 256,
+        "dirty_lines": 64,
+        "iterations": 3,
+        "warmup": 2,
+        "baseline": true,
+        "preclean": false,
+        "native": true,
+        "cache_maintenance": true,
+        "fail": null
+      },
+      "hops": 10,
+      "oracle_boundaries": 21,
+      "missing_pages": 0,
+      "full_extent_hash_checks": 0,
+      "released_source_exit": {
+        "sha256": "080acf35a507ac9849cfcba47dc2ad83e01b75663a516279c8b9d243b719643e",
+        "unchanged": true,
+        "source": "B",
+        "file": "0081-released-source-exit.txt",
+        "operations": [
+          "RAM munmap after release",
+          "Firecracker exit",
+          "VM/vCPU/mapper fd release"
+        ]
+      },
+      "error": null,
+      "oracle_error": null,
+      "independent_cache_receipts": {
+        "events": 21,
+        "exports": 10,
+        "imports": 10,
+        "cleans": 0,
+        "preinvalidations": 0,
+        "missing_pages": 0,
+        "coverage_verified": true
+      },
+      "measured_payload_ept_violations": [
+        65536,
+        65536,
+        65536,
+        65536,
+        65536,
+        65536
+      ],
+      "owned_lab_stopped": true
+    },
+    "cache-off": {
+      "result": "passed",
+      "expected_result": "passed",
+      "raw": ".local/run22/cache-off/trial/report.json",
+      "source_commit": "cdcf9694d89423af30e99f08560d72a754bf5320",
+      "arguments": {
+        "memory_mib": 2048,
+        "vcpus": 1,
+        "dirty_mib": 256,
+        "dirty_lines": 0,
+        "iterations": 2,
+        "warmup": 1,
+        "baseline": false,
+        "preclean": false,
+        "native": true,
+        "cache_maintenance": false,
+        "fail": null
+      },
+      "hops": 6,
+      "oracle_boundaries": 0,
+      "missing_pages": null,
+      "full_extent_hash_checks": 0,
+      "released_source_exit": {
+        "sha256": "1852bfdb427d72f0e39eef35602af1f9bb77ae37e265b456e4147ec9486b4726",
+        "unchanged": true,
+        "source": "B",
+        "file": "0055-released-source-exit.txt",
+        "operations": [
+          "RAM munmap after release",
+          "Firecracker exit",
+          "VM/vCPU/mapper fd release"
+        ]
+      },
+      "error": null,
+      "oracle_error": null,
+      "owned_lab_stopped": true,
+      "independent_hash_pairs": 0
+    },
+    "http-preclean": {
+      "result": "passed",
+      "expected_result": "passed",
+      "raw": ".local/run22/http-preclean/trial/report.json",
+      "source_commit": "cdcf9694d89423af30e99f08560d72a754bf5320",
+      "arguments": {
+        "memory_mib": 2048,
+        "vcpus": 1,
+        "dirty_mib": 256,
+        "dirty_lines": 0,
+        "iterations": 2,
+        "warmup": 0,
+        "baseline": false,
+        "preclean": true,
+        "native": false,
+        "cache_maintenance": true,
+        "fail": null
+      },
+      "hops": 4,
+      "oracle_boundaries": 17,
+      "missing_pages": 0,
+      "full_extent_hash_checks": 4,
+      "released_source_exit": {
+        "sha256": "c4baf04d7f7443338b98b8c5b91afe0a632291668b617dfd041e66b3e79c2038",
+        "unchanged": true,
+        "source": "B",
+        "file": "0073-released-source-exit.txt",
+        "operations": [
+          "RAM munmap after release",
+          "Firecracker exit",
+          "VM/vCPU/mapper fd release"
+        ]
+      },
+      "error": null,
+      "oracle_error": null,
+      "independent_cache_receipts": {
+        "events": 17,
+        "exports": 4,
+        "imports": 4,
+        "cleans": 4,
+        "preinvalidations": 4,
+        "missing_pages": 0,
+        "coverage_verified": true
+      },
+      "owned_lab_stopped": true,
+      "independent_hash_pairs": 4
+    },
+    "reject-outside": {
+      "result": "failed",
+      "expected_result": "failed",
+      "raw": ".local/run22/reject-outside/trial/report.json",
+      "source_commit": "cdcf9694d89423af30e99f08560d72a754bf5320",
+      "arguments": {
+        "memory_mib": 2048,
+        "vcpus": 1,
+        "dirty_mib": 256,
+        "dirty_lines": 0,
+        "iterations": 1,
+        "warmup": 0,
+        "baseline": false,
+        "preclean": false,
+        "native": true,
+        "cache_maintenance": true,
+        "fail": "outside"
+      },
+      "hops": 0,
+      "oracle_boundaries": 0,
+      "missing_pages": null,
+      "full_extent_hash_checks": 0,
+      "released_source_exit": null,
+      "error": "RuntimeError('Guest RPC command failed (1):\\nreceive: Success\\n')",
+      "oracle_error": null,
+      "owned_lab_stopped": true
+    },
+    "reject-bump": {
+      "result": "failed",
+      "expected_result": "failed",
+      "raw": ".local/run22/reject-bump/trial/report.json",
+      "source_commit": "cdcf9694d89423af30e99f08560d72a754bf5320",
+      "arguments": {
+        "memory_mib": 2048,
+        "vcpus": 1,
+        "dirty_mib": 256,
+        "dirty_lines": 0,
+        "iterations": 1,
+        "warmup": 0,
+        "baseline": false,
+        "preclean": false,
+        "native": true,
+        "cache_maintenance": true,
+        "fail": "bump"
+      },
+      "hops": 0,
+      "oracle_boundaries": 0,
+      "missing_pages": null,
+      "full_extent_hash_checks": 0,
+      "released_source_exit": null,
+      "error": "RuntimeError('Guest RPC command failed (1):\\nreceive: Success\\n')",
+      "oracle_error": null,
+      "owned_lab_stopped": true
+    },
+    "reject-ept-invalidate": {
+      "result": "failed",
+      "expected_result": "failed",
+      "raw": ".local/run22/reject-ept-invalidate/trial/report.json",
+      "source_commit": "cdcf9694d89423af30e99f08560d72a754bf5320",
+      "arguments": {
+        "memory_mib": 2048,
+        "vcpus": 1,
+        "dirty_mib": 256,
+        "dirty_lines": 0,
+        "iterations": 1,
+        "warmup": 0,
+        "baseline": false,
+        "preclean": false,
+        "native": true,
+        "cache_maintenance": true,
+        "fail": "ept-invalidate"
+      },
+      "hops": 0,
+      "oracle_boundaries": 0,
+      "missing_pages": null,
+      "full_extent_hash_checks": 0,
+      "released_source_exit": null,
+      "error": "RuntimeError('Guest RPC command failed (1):\\nreceive: Success\\n')",
+      "oracle_error": "RuntimeError(\"ValueError('Actual kernel invalidation receipt omits the arena')\")",
+      "owned_lab_stopped": true
+    },
+    "reject-ram-invalidate": {
+      "result": "failed",
+      "expected_result": "failed",
+      "raw": ".local/run22/reject-ram-invalidate/trial/report.json",
+      "source_commit": "cdcf9694d89423af30e99f08560d72a754bf5320",
+      "arguments": {
+        "memory_mib": 2048,
+        "vcpus": 1,
+        "dirty_mib": 256,
+        "dirty_lines": 0,
+        "iterations": 1,
+        "warmup": 0,
+        "baseline": false,
+        "preclean": false,
+        "native": true,
+        "cache_maintenance": true,
+        "fail": "ram-invalidate"
+      },
+      "hops": 0,
+      "oracle_boundaries": 0,
+      "missing_pages": null,
+      "full_extent_hash_checks": 0,
+      "released_source_exit": null,
+      "error": "RuntimeError('Guest RPC command failed (1):\\nreceive: Success\\n')",
+      "oracle_error": "RuntimeError(\"ValueError('Actual receiver ranges do not cover the log union')\")",
+      "owned_lab_stopped": true
+    }
+  },
+  "timing": {
+    "order": "ABAB",
+    "measured_per_block": 50,
+    "warmup_per_block": 10,
+    "blocks": [
+      {
+        "tag": "abab-0",
+        "mode": "adopt",
+        "pause_to_ack_ms": {
+          "n": 50,
+          "median": 31.578556,
+          "p95": 38.527332,
+          "min": 29.476181,
+          "max": 39.077963
+        },
+        "host": {
+          "time": 1795089968.1626108,
+          "loadavg": "0.87 0.99 0.99 1/2327 2602213\n",
+          "node0_free_mib": 30234,
+          "processes": [],
+          "measured": true
+        },
+        "source_commit": "cdcf9694d89423af30e99f08560d72a754bf5320"
+      },
+      {
+        "tag": "abab-1",
+        "mode": "empty",
+        "pause_to_ack_ms": {
+          "n": 50,
+          "median": 31.3679125,
+          "p95": 34.966292,
+          "min": 29.072525,
+          "max": 37.161
+        },
+        "host": {
+          "time": 1795089991.3615227,
+          "loadavg": "0.84 0.97 0.99 1/2308 2602319\n",
+          "node0_free_mib": 30217,
+          "processes": [],
+          "measured": true
+        },
+        "source_commit": "cdcf9694d89423af30e99f08560d72a754bf5320"
+      },
+      {
+        "tag": "abab-2",
+        "mode": "adopt",
+        "pause_to_ack_ms": {
+          "n": 50,
+          "median": 30.5362,
+          "p95": 37.590921,
+          "min": 29.311703,
+          "max": 39.280731
+        },
+        "host": {
+          "time": 1795090032.6879497,
+          "loadavg": "0.85 0.96 0.98 1/2337 2602488\n",
+          "node0_free_mib": 30193,
+          "processes": [],
+          "measured": true
+        },
+        "source_commit": "cdcf9694d89423af30e99f08560d72a754bf5320"
+      },
+      {
+        "tag": "abab-3",
+        "mode": "empty",
+        "pause_to_ack_ms": {
+          "n": 50,
+          "median": 30.7472685,
+          "p95": 36.094863,
+          "min": 29.400608,
+          "max": 36.326076
+        },
+        "host": {
+          "time": 1795090055.6384084,
+          "loadavg": "0.90 0.96 0.99 1/2323 2602587\n",
+          "node0_free_mib": 30171,
+          "processes": [],
+          "measured": true
+        },
+        "source_commit": "cdcf9694d89423af30e99f08560d72a754bf5320"
+      }
+    ],
+    "pooled": {
+      "adopt": {
+        "n": 100,
+        "median": 31.089135,
+        "p95": 37.590921,
+        "min": 29.311703,
+        "max": 39.280731
+      },
+      "empty": {
+        "n": 100,
+        "median": 30.825958999999997,
+        "p95": 35.60808,
+        "min": 29.072525,
+        "max": 37.161
+      }
+    },
+    "run21_medians_ms": {
+      "adopt": 34.31,
+      "empty": 31.4
+    }
+  },
+  "local_size_bytes": 165595926528,
+  "research_references": {
+    "read_only": true,
+    "sha256": "9115161b0eb5dc1926a4d28ac15563552e070d8a34c58f21cb40075f0ea2444e",
+    "line_groups": [
+      {
+        "lines": "209, 225",
+        "action": "옛 snapshot fault/복원 수치: 과거 비교임과 보존 태그를 명시"
+      },
+      {
+        "lines": "318, 323, 332–338",
+        "action": "VMCS·vCPU·장치 상태도 CXL에 둔다는 현재 구현 설명과 demotion 용어: EPT/RAM만 CXL, 상태 직렬화·로컬 객체로 갱신"
+      },
+      {
+        "lines": "349–350",
+        "action": "direct CPU/device 제한을 남은 EPT 범위와 구분"
+      },
+      {
+        "lines": "367–372",
+        "action": "두 patch의 기능·파일/줄 수·8개 ioctl·dax_handoff_mode 설명 갱신"
+      },
+      {
+        "lines": "380–386",
+        "action": "snapshot/reuse/reuse-prepared/direct/resident/migration 모드 표를 보존 태그 기록으로 이동 또는 표시"
+      },
+      {
+        "lines": "396–409, 429–438",
+        "action": "옛 모드 성능·direct 세부 수치의 실행 가능한 tree를 보존 태그로 명시"
+      },
+      {
+        "lines": "418–424, 581",
+        "action": "삭제된 JSON/results 링크를 보존 태그 blob 또는 남은 docs/results 기록으로 연결"
+      },
+      {
+        "lines": "448–457",
+        "action": "cache 정리 미구현·EPT/VMCS 효과 미분리·direct 1~8vCPU 지원을 현재 EPT 1·2vCPU와 구분"
+      },
+      {
+        "lines": "568–570, 585",
+        "action": "M4를 지운 snapshot 모드에 연결한 부분, direct 장치 연속성 상태를 현재 경로와 구분"
+      },
+      {
+        "lines": "629–630, 649, 653",
+        "action": "삭제 prefault/snapshot 실험 경로와 snapshot→reuse-prepared→direct 사다리 설명 갱신"
+      },
+      {
+        "lines": "699, 709–716",
+        "action": "FragVisor 비교의 direct/reuse-prepared 수치·프로토콜은 보존 태그의 역사임을 표시"
+      },
+      {
+        "lines": "722–729",
+        "action": "direct/reuse/snapshot fault·first-visit·비직렬화 주장을 현재 EPT 및 빈 EPT 결과와 구분"
+      }
+    ]
+  }
+}

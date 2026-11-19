@@ -236,3 +236,60 @@ numactl --cpunodebind=0 --membind=0 python3 \
 ```
 
 분석은 측정과 겹치지 않도록 기존 공유 quiet 잠금을 쓴다.
+
+
+## 정리
+
+2026-11-19, `ept-adopt`와 같은 코드의 빈 EPT 비교 스위치(`--baseline`)만 남겼다.
+KVM은 EPT 표만 CXL에 할당하고, Firecracker는 준비 worker·상태/장치 복원·cache 정리를 유지한다.
+DRAM boot→promotion, L0 정답지, SWE runner/verifier와 필요한 lab 운반만 남겼다.
+`resident_*`는 기존 lab의 packet·ACK 채널이며 별도 proxy 프로세스나 공유 kernel 객체는 없다.
+Direct/resident direct, snapshot/state-only, reuse 계열 모드와 그 할당·detach/attach·retire·감사,
+prefault/migration 비교·꼬리/line-hash 진단·옛 구현 디렉터리의 증거는 제거했다.
+
+정리 전 annotated tag는 `vm-pre-ept-adopt-cleanup-20261119`다. Push하지 않았다.
+기존 `vm-pre-cleanup-20261111`, `docs/results/` 기록과 `.local/` 원시는 보존했다.
+이 문서의 앞부분은 21의 기록이다. 옛 모드·옛 analyzer 재현에는 보존 태그의 tree를 쓴다.
+
+| 집계 | 정리 전 | 정리 뒤 |
+|---|---:|---:|
+| 구현 디렉터리 추적 파일 | 205 | 45 |
+| 총 줄 수 | 276,572 | 16,296 |
+| KVM patch 추가줄 | 2,789 | 567 |
+| Firecracker patch 추가줄 | 5,515 | 2,964 |
+| EPT 전용 핵심 | 945 | 935 |
+
+총 줄은 `wc -l`과 같은 newline 수로 설정·patch·문서·증거도 포함한다. `.local/`은 제외한다.
+전용 핵심은 KVM의 이름이 `ept_adopt_*`/`kvm_ept_adopt_*`인 11함수,
+FC `ept_adopt.rs`, Python `ept_adopt.py`의 합이다. 공통 worker·RAM/cache 지원은 이 소계 밖이다.
+핵심은 보존하고 주변을 줄였다. 파일별 판단은 `.codex-runs/22-keep-delete.md`에 있다.
+
+정리한 소스로 kernel·KVM 모듈·RAM mapper·Firecracker를 새로 빌드했다.
+Python 35개, Rust 고유 계약 14개(실행 15회), C 빌드가 통과했다. Skip은 없다.
+KVM·Firecracker·QEMU patch는 원본에 fuzz 0·offset 0 dry-run을 통과했다.
+Linux 원본 zip 경로는 현재 없어 기존 원본 DCD import commit `28ec385`의 blob을 썼다.
+
+| 재확인 | 결과 |
+|---|---|
+| 256 MiB 전체 쓰기·2 vCPU·200왕복 | 400회 이동, L0 경계 801개, 누락 page 0, 전체 16 MiB 표 hash 400/400 불변 |
+| 동시 쓰기·미리 정리·2 vCPU | 6회 이동, 누락 0, hash 6/6 |
+| Gin SWE 원본 heavy 정책 | 27명령·3이동·27선정리, 원본 return code·Go 결과·제출·FD 연속성 독립 검증 통과, 누락 0 |
+| 이미 매핑한 256 MiB payload | 6측정 이동 모두 adopt 0 / 빈 EPT 65,536 EPT violation |
+| Cache off·HTTP+미리 정리 | 통과 |
+| 영역 밖 root·bump·EPT/RAM 무효화 생략 | 네 오류 모두 예상대로 거절/검출 |
+
+Fault 비교는 warm-up 4이동 뒤 6이동이다. 새 page의 최초 접근까지 fault 0이라는 뜻은 아니다.
+각 성공 oracle 시험의 page 집합 영수증과 export/import 표 hash 쌍도 offline으로 다시 검증했다.
+이전 host의 RAM munmap·VM/vCPU/mapper fd 해제·Firecracker 종료 전후 EPT hash도 유지됐다.
+
+ABAB 각 블록은 warm-up 10이동 뒤 50이동이다. 모드마다 100표본이며,
+256 MiB 모든 cache line의 첫 8 byte 쓰기, native 경로, cache 정리 on, oracle off다.
+정지→guest ACK 중앙값/p95는 adopt **31.09/37.59 ms**, 빈 EPT **30.83/35.61 ms**다.
+21의 같은 비교 중앙값 34.31/31.40 ms보다 각각 9.4%/1.8% 낮아 큰 퇴행은 관찰하지 않았다.
+빈 EPT의 payload 재충전은 ACK 뒤에 일어나므로 ACK 시간만으로 그 비용을 판단하지 않는다.
+시작 전 다른 Firecracker·QEMU는 4블록 모두 0, L0 1분 부하 0.84~0.90,
+node 0 free 29.46~29.53 GiB였다. 실제 비일관 장비·다른 물리 서버 검증은 남았다.
+
+원시는 `implementation/virtual_machine/.local/run22/`, 요약은 [cleanup.json](cleanup.json)이다.
+`.local/` 전체는 약 154.2 GiB이며 기존 원시는 지우지 않았다.
+모든 소유 lab VM과 `/dev/shm` backing은 종료·정리했다.
