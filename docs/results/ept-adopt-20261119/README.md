@@ -9,7 +9,7 @@ Compute Express Link(CXL)에 가상기계(Virtual Machine, VM)의 주메모리(R
 
 ## 시험 환경과 범위
 
-서버는 bud05다. CPU와 메모리는 node 0만 썼다.
+서버는 bud05다. 중앙 처리 장치(Central Processing Unit, CPU)와 메모리는 node 0만 썼다.
 바깥 host(L0) 위의 두 실험 host(L1) 사이에서 guest(L2)를 넘겼다.
 일관성이 있는 DRAM 위에 CXL을 에뮬레이트했다.
 실제 비일관 장비, 다른 물리 서버와 node 2 DCD(Dynamic Capacity Device)는 시험하지 않았다.
@@ -50,7 +50,7 @@ Software Engineering(SWE) 무거운 명령은 원본 명령 그대로 실행한�
 
 미리 정리 두 경로는 수신 선무효화를 실제로 실행했다.
 두 smoke의 import 전체 RAM 무효화 fallback은 0회다.
-이전 host의 RAM munmap, VM·vCPU·mapper fd 종료와 VMM 종료 뒤에도 표 hash가 같았다.
+이전 host의 RAM munmap, VM·vCPU·mapper 파일 기술자(file descriptor, fd) 종료와 VMM 종료 뒤에도 표 hash가 같았다.
 이때 현재 소유 guest도 멈춰 두어 CPU의 accessed/dirty bit 변경을 배제했다.
 
 SWE 세 fixture의 무거운 명령 정책에서 W=0·1초를 모두 통과했다.
@@ -68,6 +68,14 @@ Gin은 조건당 3회, PHP-CS-Fixer는 5회, MicroPython은 6회 이동했다.
 네 조건 모두 완료된 hand-off는 0회다.
 `EINVAL`은 잘못된 인자 오류다.
 
+기존 Python 시험은 65개 중 57개 통과, 입력 fixture가 필요한 8개는 skip했다.
+Rust 계약 시험은 24개 통과, 별도 resident packet fixture가 필요한 1개는 ignored다.
+18~20의 저장된 정답지 79조건도 현재 cache 영수증 검증기로 재생했다.
+2,707개 hash 경계에서 누락 page는 0이었다.
+기존 bitmap과 변경 page 자료를 다시 읽어 포함 관계도 독립 확인했다.
+최종 direct SWE 자료의 기존 resident 증거 변조 8종도 모두 거절했다.
+원본 자료는 수정하지 않았다.
+
 ## EPT를 다시 채우는가
 
 이미 매핑된 256 MiB payload를 재개 뒤 다시 썼다.
@@ -81,6 +89,46 @@ Gin은 조건당 3회, PHP-CS-Fixer는 5회, MicroPython은 6회 이동했다.
 
 새로 접근한 guest page의 fault까지 0이라는 뜻은 아니다.
 비교 대상은 이전 host가 이미 매핑한 payload다.
+
+## 정지부터 guest ACK까지
+
+각 비교는 독립된 ABAB다. 블록마다 warm-up 20회 뒤 400회를 측정했다.
+각 모드의 합계는 800회다. 단위는 ms다.
+
+| 비교 | 모드 | 중앙값 | 95백분위 |
+|---|---|---:|---:|
+| direct 비교 | ept-adopt | 33.58 | 39.01 |
+| direct 비교 | direct | 21.09 | 21.99 |
+| reuse 비교 | ept-adopt | 34.31 | 38.83 |
+| reuse 비교 | reuse-prepared | 31.40 | 35.22 |
+
+외부 측정 VM은 없었다. 시작 전 다른 Firecracker·QEMU는 8블록 모두 0개였다.
+L0의 1분 load average는 0.85~1.93이었다.
+Node 0 여유 메모리는 49.2~52.5 GiB였다.
+전체 프로세스와 1·5·15분 부하는 각 원시에 있다.
+
+`ept-adopt`는 이 lab에서 `direct`보다 느렸다.
+로컬 장부를 RCU(Read-Copy Update)로 정리하는 release와 상태 복원 비용이 있다.
+`reuse-prepared`의 payload EPT 재충전은 ACK 뒤 payload 쓰기 때 일어난다.
+따라서 이 표와 이동 뒤 무거운 명령 시간을 함께 봐야 한다.
+
+아래는 direct 비교의 ept-adopt 두 블록을 합친 단계 중앙값이다.
+각 단계는 800개 표본이다. 단위는 ms다. 단계 중앙값의 합은 전체 중앙값과 다르다.
+
+| 단계 | 중앙값 |
+|---|---:|
+| RAM 내려쓰기·기록 발행 | 8.264 |
+| release | 5.849 |
+| EPT 내려쓰기 | 0.277 |
+| vCPU·VM 상태 읽기 | 0.242 |
+| 순수 직렬화 | 0.144 |
+| RAM·EPT 무효화와 mapper 붙이기 | 7.904 |
+| adopt, lab 중첩 보완 포함 | 2.317 |
+| 상태 넣기 | 0.429 |
+| 장치 복원 | 0.119 |
+
+상태 packet은 1 vCPU에서 약 14.1 kB다.
+2 vCPU에서는 약 25.7 kB다. RAM 내용은 packet에 넣지 않는다.
 
 ## 코드 크기
 

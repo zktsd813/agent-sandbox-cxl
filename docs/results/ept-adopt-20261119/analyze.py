@@ -31,7 +31,7 @@ def events(folder, marker):
             for line in file.read_text().splitlines() if marker in line]
 
 
-def summarize(folder):
+def summarize(folder, stage_samples):
     report = json.loads((folder / "report.json").read_text())
     hops = [h for h in report["transitions"] if h["kind"] in ("direct", "ept-adopt")]
     measured = [h for h in hops if h.get("measured", False)]
@@ -86,8 +86,10 @@ def summarize(folder):
         if not measured:
             selected = rows
         names = sorted({k for r in selected for k in r["stages_us"]})
-        result["stages_ms"][scope] = {k: distribution([r["stages_us"][k] / 1000 for r in selected if k in r["stages_us"]]) for k in names}
-        result["stages_ms"][scope]["total"] = distribution([r["total_us"] / 1000 for r in selected])
+        samples = {k: [r["stages_us"][k] / 1000 for r in selected if k in r["stages_us"]] for k in names}
+        samples["total"] = [r["total_us"] / 1000 for r in selected]
+        stage_samples[scope] = samples
+        result["stages_ms"][scope] = {k: distribution(v) for k, v in samples.items()}
     result["table_pages"] = distribution([r["bytes"] // 4096 for r in events(folder, "EPT_CACHE_JSON ") if r["invalidate"]])
     commands = report.get("trace_commands", report.get("commands", []))
     result["heavy_commands"] = []
@@ -189,11 +191,13 @@ def main():
 
 def write_summary(args, repo):
     raw = args.raw.resolve()
-    trials = {p.parent.name: summarize(p.parent) for p in sorted(raw.glob("*/report.json"))}
+    stage_samples = defaultdict(dict)
+    trials = {p.parent.name: summarize(p.parent, stage_samples[p.parent.name]) for p in sorted(raw.glob("*/report.json"))}
     result = dict(schema="ept-adopt-results-v1", raw=str(raw), trials=trials,
                   source_lines=source_lines(raw, repo))
     race = "timer-race-2" if trials.get("timer-race-2", {}).get("result") == "passed" else "observer-race-2"
-    names = ["observer-fullwrite-200", race, "observer-gin-2",
+    writer = "observer-fullwrite-2-200" if trials.get("observer-fullwrite-2-200", {}).get("result") == "passed" else "observer-fullwrite-200"
+    names = [writer, race, "observer-gin-2",
              "observer-native-smoke", "observer-http-smoke"]
     names += [f"observer-swe-{fixture}-w{wait}" for fixture in
               ("gin-gonic", "php-cs-fixer", "micropython") for wait in (0, 1)]
@@ -223,7 +227,7 @@ def write_summary(args, repo):
                 all_hops=trials[tag]["payload_faults"], warm=distribution(trials[tag]["measured_payload_faults"]))
     result["scaling"] = {str(size): trials[f"adopt-{size}"] for size in (16, 256, 1024)
                          if f"adopt-{size}" in trials and trials[f"adopt-{size}"]["result"] == "passed"}
-    for name in ("unit-tests", "independent-verification", "build-provenance", "exclusions"):
+    for name in ("unit-tests", "independent-verification", "build-provenance", "exclusions", "legacy-oracle-replay"):
         path = raw / (name+".json")
         if path.exists():
             result[name.replace("-", "_")] = json.loads(path.read_text())
@@ -231,6 +235,7 @@ def write_summary(args, repo):
     for pair, other in (("direct", "direct"), ("reuse", "reuse-prepared")):
         blocks = []
         pooled = defaultdict(list)
+        pooled_stages = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         for arm, mode in enumerate(("ept-adopt", other, "ept-adopt", other)):
             tag = f"lat-{pair}-{arm}"
             if tag not in trials or trials[tag]["result"] != "passed":
@@ -238,8 +243,13 @@ def write_summary(args, repo):
             report = json.loads((raw/tag/"report.json").read_text())
             values = [h["fast"]["guest_ack_ns"] / 1e6 for h in report["transitions"] if h.get("measured")]
             pooled[mode].extend(values)
+            for scope, columns in stage_samples[tag].items():
+                for name, samples in columns.items():
+                    pooled_stages[mode][scope][name].extend(samples)
             blocks.append(dict(arm=arm, mode=mode, trial=tag, pause_to_ack_ms=distribution(values), host=trials[tag]["host"]))
-        result["latency_abab"][pair] = dict(blocks=blocks, pooled_ms={mode: distribution(v) for mode, v in pooled.items()})
+        result["latency_abab"][pair] = dict(blocks=blocks, pooled_ms={mode: distribution(v) for mode, v in pooled.items()},
+            stages_ms={mode: {scope: {name: distribution(v) for name, v in columns.items()}
+                             for scope, columns in scopes.items()} for mode, scopes in pooled_stages.items()})
     result["heavy_abab"] = {}
     for pair, other in (("direct", "direct"), ("reuse", "reuse-prepared")):
         groups = defaultdict(list)
