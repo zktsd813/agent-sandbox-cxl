@@ -1,0 +1,38 @@
+{
+ "run": ".local/queue/20261118T2014/2-rl-100",
+ "workload": "rl",
+ "gap_scale": 1.0,
+ "cpus": 120,
+ "physical_cores": 60,
+ "budget_gib": 77.0,
+ "baseline_commands": 23029,
+ "steps": [
+  {
+   "target": 392,
+   "seconds": 718,
+   "live_mean": 328.4,
+   "live_max": 361,
+   "cpu_util": 0.028,
+   "busy_cpus": 3.4,
+   "busy_cpus_per_sandbox": 0.0103,
+   "anon_gib": 58.87,
+   "nonfile_gib": 62.74,
+   "file_gib": 10.36,
+   "gib_per_sandbox": 0.191,
+   "room_min_gib": 10.2,
+   "admission_blocked": 0.0,
+   "psi_mem_some": 0.0,
+   "psi_mem_full": 0.0,
+   "refault_file_per_s": 26.5,
+   "refault_anon_per_s": 0.0,
+   "majfault_per_s": 0.0,
+   "oom_kills": 0,
+   "commands": 10414,
+   "cpu_weighted_slowdown": 0.996,
+   "heavy_p99": 1.342,
+   "median_slowdown": 0.988,
+   "memory_ceiling": false
+  }
+ ],
+ "memory_per_busy_cpu_gib_last_step": 18.54
+}

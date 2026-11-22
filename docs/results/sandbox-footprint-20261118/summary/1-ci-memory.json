@@ -1,0 +1,104 @@
+{
+ "run": ".local/queue/20261118T2014/1-ci",
+ "workload": "ci",
+ "idle": {
+  "rows": 11308,
+  "present_mib_mean": 82.9,
+  "cold30_share": 0.293,
+  "cold120_share": 0.013,
+  "accessed_share_per_round": 0.188,
+  "written_mib_per_round": 4.59,
+  "scan_ms_p50": 48.2
+ },
+ "compress": {
+  "hot": {
+   "pages": 380569,
+   "lz4_ratio": 0.436,
+   "zlib1_ratio": 0.312
+  },
+  "cold": {
+   "pages": 23558,
+   "lz4_ratio": 0.421,
+   "zlib1_ratio": 0.294
+  }
+ },
+ "dedup": [
+  {
+   "bin_start_s": 0,
+   "vms": 59,
+   "pages": 1360090,
+   "zero_share": 0.11,
+   "dup_within_vm": 0.049,
+   "dup_within_group": 0.0,
+   "dup_across_groups": 0.61,
+   "saving_if_merged": 0.696,
+   "cold_saving_if_merged": 0.613
+  },
+  {
+   "bin_start_s": 300,
+   "vms": 158,
+   "pages": 3476208,
+   "zero_share": 0.115,
+   "dup_within_vm": 0.052,
+   "dup_within_group": 0.0,
+   "dup_across_groups": 0.648,
+   "saving_if_merged": 0.735,
+   "cold_saving_if_merged": 0.724
+  },
+  {
+   "bin_start_s": 600,
+   "vms": 172,
+   "pages": 3725312,
+   "zero_share": 0.116,
+   "dup_within_vm": 0.052,
+   "dup_within_group": 0.0,
+   "dup_across_groups": 0.647,
+   "saving_if_merged": 0.735,
+   "cold_saving_if_merged": 0.714
+  },
+  {
+   "bin_start_s": 900,
+   "vms": 157,
+   "pages": 3390322,
+   "zero_share": 0.117,
+   "dup_within_vm": 0.052,
+   "dup_within_group": 0.0,
+   "dup_across_groups": 0.646,
+   "saving_if_merged": 0.733,
+   "cold_saving_if_merged": 0.753
+  },
+  {
+   "bin_start_s": 1200,
+   "vms": 161,
+   "pages": 3376647,
+   "zero_share": 0.12,
+   "dup_within_vm": 0.055,
+   "dup_within_group": 0.0,
+   "dup_across_groups": 0.659,
+   "saving_if_merged": 0.748,
+   "cold_saving_if_merged": 0.702
+  },
+  {
+   "bin_start_s": 1500,
+   "vms": 154,
+   "pages": 3424352,
+   "zero_share": 0.114,
+   "dup_within_vm": 0.052,
+   "dup_within_group": 0.0,
+   "dup_across_groups": 0.644,
+   "saving_if_merged": 0.731,
+   "cold_saving_if_merged": 0.696
+  },
+  {
+   "bin_start_s": 1800,
+   "vms": 117,
+   "pages": 2624767,
+   "zero_share": 0.113,
+   "dup_within_vm": 0.05,
+   "dup_within_group": 0.0,
+   "dup_across_groups": 0.631,
+   "saving_if_merged": 0.718,
+   "cold_saving_if_merged": 0.566
+  }
+ ]
+}

@@ -1,0 +1,27 @@
+workload  run       cores budget  live  bound  m GiB  c CPU   util  crossover GiB/core  slowdown p99
+RL        1-rl         60    139    397 False   0.195 0.0115  0.038       24.4         0.981 1.612
+RL        1-rl-hi      60    114    547 True    0.201 0.0206  0.094       14.1         1.116 None
+RL        3-rl-38      38    114    572 True    0.193 0.0129  0.097       21.5         1.032 1.283
+          reductions: {'cold30': 0.814, 'cold120': 0.627, 'lz4_cold': 0.414, 'merged_saving': 0.586, 'zero': 0.07, 'dup_within_group': 0.434, 'dup_across': 0.086, 'remaining_after_all': 0.217, 'remaining_compress_only': 0.523}
+          snapshot T>= 0s: freed 0.92, delay mean 73.0 ms/cmd, snapshotted p50/p90 45.6/132.8 ms, diff 0.689 MiB/s per sandbox
+          snapshot T>= 5s: freed 0.898, delay mean 54.2 ms/cmd, snapshotted p50/p90 45.5/131.9 ms, diff 0.547 MiB/s per sandbox
+          snapshot T>=10s: freed 0.839, delay mean 39.7 ms/cmd, snapshotted p50/p90 46.3/131.4 ms, diff 0.404 MiB/s per sandbox
+          snapshot T>=30s: freed 0.541, delay mean 15.7 ms/cmd, snapshotted p50/p90 52.9/131.2 ms, diff 0.153 MiB/s per sandbox
+SWE       1-swe        60    140     72 False   0.458 0.1094  0.065        6.0         1.02 1.235
+SWE       1-swe-hi     60    113    221 True    0.444 0.1068  0.197        6.0         2.487 29.777
+SWE       3-swe-38     38    114    229 True    0.436 0.1319  0.397        4.8         1.646 12.72
+          reductions: {'cold30': 0.445, 'cold120': 0.052, 'lz4_cold': 0.467, 'merged_saving': 0.589, 'zero': 0.044, 'dup_within_group': 0.0, 'dup_across': 0.493, 'remaining_after_all': 0.314, 'remaining_compress_only': 0.763}
+          snapshot T>= 0s: freed 0.584, delay mean 136.2 ms/cmd, snapshotted p50/p90 63.7/298.0 ms, diff 8.243 MiB/s per sandbox
+          snapshot T>= 5s: freed 0.426, delay mean 21.3 ms/cmd, snapshotted p50/p90 53.0/207.5 ms, diff 2.276 MiB/s per sandbox
+          snapshot T>=10s: freed 0.216, delay mean 3.8 ms/cmd, snapshotted p50/p90 57.7/111.3 ms, diff 0.725 MiB/s per sandbox
+          snapshot T>=30s: freed 0.047, delay mean 0.1 ms/cmd, snapshotted p50/p90 44.6/46.3 ms, diff 0.177 MiB/s per sandbox
+CI        1-ci         60    114   1047 True    0.092 0.0128  0.111       10.3         1.054 1.003
+CI        3-ci-38      38    114   1055 True    0.092 0.0119  0.165       11.1         0.996 1.0
+          reductions: {'cold30': 0.293, 'cold120': 0.015, 'lz4_cold': 0.422, 'merged_saving': 0.735, 'zero': 0.115, 'dup_within_group': 0.0, 'dup_across': 0.647, 'remaining_after_all': 0.22, 'remaining_compress_only': 0.831}
+          snapshot T>= 0s: freed 0.881, delay mean 47.4 ms/cmd, snapshotted p50/p90 45.0/56.4 ms, diff 0.261 MiB/s per sandbox
+          snapshot T>= 5s: freed 0.881, delay mean 47.4 ms/cmd, snapshotted p50/p90 45.0/56.4 ms, diff 0.261 MiB/s per sandbox
+          snapshot T>=10s: freed 0.43, delay mean 15.1 ms/cmd, snapshotted p50/p90 45.1/59.1 ms, diff 0.079 MiB/s per sandbox
+          snapshot T>=30s: freed 0.102, delay mean 1.4 ms/cmd, snapshotted p50/p90 45.1/58.6 ms, diff 0.003 MiB/s per sandbox
+overflow 100%: {'level': 100, 'budget': 77.0, 'live': 328.4, 'slowdown': 0.996, 'p99': 1.342, 'oom': 0, 'psi_mem_full': 0.0, 'refault_file_per_s': 26.5, 'refault_anon_per_s': 0.0, 'majfault_per_s': 0.0}
+overflow 80%: {'level': 80, 'budget': 62.0, 'live': 328.6, 'slowdown': 1.005, 'p99': 1.974, 'oom': 0, 'psi_mem_full': 0.0029, 'refault_file_per_s': 399.8, 'refault_anon_per_s': 129.5, 'majfault_per_s': 48.5}
+overflow 65%: {'level': 65, 'budget': 50.0, 'live': 326.5, 'slowdown': 1.012, 'p99': 1.458, 'oom': 3, 'psi_mem_full': 0.0071, 'refault_file_per_s': 112.3, 'refault_anon_per_s': 380.4, 'majfault_per_s': 200.5}

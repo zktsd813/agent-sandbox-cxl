@@ -1,0 +1,324 @@
+{
+ "RL": {
+  "rows": [
+   {
+    "run": "1-rl",
+    "cores": 60,
+    "budget": 139,
+    "live": 397.1,
+    "bound": false,
+    "m": 0.195,
+    "c": 0.0115,
+    "util": 0.038,
+    "crossover": 24.417391304347827,
+    "slowdown": 0.981,
+    "p99": 1.612
+   },
+   {
+    "run": "1-rl-hi",
+    "cores": 60,
+    "budget": 114,
+    "live": 547.1,
+    "bound": true,
+    "m": 0.201,
+    "c": 0.0206,
+    "util": 0.094,
+    "crossover": 14.050485436893204,
+    "slowdown": 1.116,
+    "p99": null
+   },
+   {
+    "run": "3-rl-38",
+    "cores": 38,
+    "budget": 114,
+    "live": 572.3,
+    "bound": true,
+    "m": 0.193,
+    "c": 0.0129,
+    "util": 0.097,
+    "crossover": 21.544186046511626,
+    "slowdown": 1.032,
+    "p99": 1.283
+   }
+  ],
+  "reductions": {
+   "cold30": 0.814,
+   "cold120": 0.627,
+   "lz4_cold": 0.414,
+   "merged_saving": 0.586,
+   "zero": 0.07,
+   "dup_within_group": 0.434,
+   "dup_across": 0.086,
+   "remaining_after_all": 0.217,
+   "remaining_compress_only": 0.523
+  },
+  "snapshot": {
+   "run": "1-rl",
+   "waits": 3638,
+   "wait_s_p50": 13.1,
+   "reread_mib_p50": 12.56,
+   "reread_mib_p90": 52.19,
+   "policies": [
+    {
+     "T_s": 0,
+     "waits_snapshotted": 1.0,
+     "memory_freed_share": 0.92,
+     "delay_ms_per_command_mean": 73.0,
+     "delay_ms_per_snapshotted_command_p50": 45.6,
+     "delay_ms_per_snapshotted_command_p90": 132.8,
+     "diff_snapshot_mib_per_s": 0.689
+    },
+    {
+     "T_s": 5,
+     "waits_snapshotted": 0.744,
+     "memory_freed_share": 0.898,
+     "delay_ms_per_command_mean": 54.2,
+     "delay_ms_per_snapshotted_command_p50": 45.5,
+     "delay_ms_per_snapshotted_command_p90": 131.9,
+     "diff_snapshot_mib_per_s": 0.547
+    },
+    {
+     "T_s": 10,
+     "waits_snapshotted": 0.562,
+     "memory_freed_share": 0.839,
+     "delay_ms_per_command_mean": 39.7,
+     "delay_ms_per_snapshotted_command_p50": 46.3,
+     "delay_ms_per_snapshotted_command_p90": 131.4,
+     "diff_snapshot_mib_per_s": 0.404
+    },
+    {
+     "T_s": 30,
+     "waits_snapshotted": 0.218,
+     "memory_freed_share": 0.541,
+     "delay_ms_per_command_mean": 15.7,
+     "delay_ms_per_snapshotted_command_p50": 52.9,
+     "delay_ms_per_snapshotted_command_p90": 131.2,
+     "diff_snapshot_mib_per_s": 0.153
+    }
+   ]
+  }
+ },
+ "SWE": {
+  "rows": [
+   {
+    "run": "1-swe",
+    "cores": 60,
+    "budget": 140,
+    "live": 71.8,
+    "bound": false,
+    "m": 0.458,
+    "c": 0.1094,
+    "util": 0.065,
+    "crossover": 6.028519195612431,
+    "slowdown": 1.02,
+    "p99": 1.235
+   },
+   {
+    "run": "1-swe-hi",
+    "cores": 60,
+    "budget": 113,
+    "live": 221.3,
+    "bound": true,
+    "m": 0.444,
+    "c": 0.1068,
+    "util": 0.197,
+    "crossover": 5.986516853932584,
+    "slowdown": 2.487,
+    "p99": 29.777
+   },
+   {
+    "run": "3-swe-38",
+    "cores": 38,
+    "budget": 114,
+    "live": 228.8,
+    "bound": true,
+    "m": 0.436,
+    "c": 0.1319,
+    "util": 0.397,
+    "crossover": 4.759969673995451,
+    "slowdown": 1.646,
+    "p99": 12.72
+   }
+  ],
+  "reductions": {
+   "cold30": 0.445,
+   "cold120": 0.052,
+   "lz4_cold": 0.467,
+   "merged_saving": 0.589,
+   "zero": 0.044,
+   "dup_within_group": 0.0,
+   "dup_across": 0.493,
+   "remaining_after_all": 0.314,
+   "remaining_compress_only": 0.763
+  },
+  "snapshot": {
+   "run": "1-swe",
+   "waits": 11893,
+   "wait_s_p50": 1.72,
+   "reread_mib_p50": 20.77,
+   "reread_mib_p90": 127.26,
+   "policies": [
+    {
+     "T_s": 0,
+     "waits_snapshotted": 1.0,
+     "memory_freed_share": 0.584,
+     "delay_ms_per_command_mean": 136.2,
+     "delay_ms_per_snapshotted_command_p50": 63.7,
+     "delay_ms_per_snapshotted_command_p90": 298.0,
+     "diff_snapshot_mib_per_s": 8.243
+    },
+    {
+     "T_s": 5,
+     "waits_snapshotted": 0.182,
+     "memory_freed_share": 0.426,
+     "delay_ms_per_command_mean": 21.3,
+     "delay_ms_per_snapshotted_command_p50": 53.0,
+     "delay_ms_per_snapshotted_command_p90": 207.5,
+     "diff_snapshot_mib_per_s": 2.276
+    },
+    {
+     "T_s": 10,
+     "waits_snapshotted": 0.048,
+     "memory_freed_share": 0.216,
+     "delay_ms_per_command_mean": 3.8,
+     "delay_ms_per_snapshotted_command_p50": 57.7,
+     "delay_ms_per_snapshotted_command_p90": 111.3,
+     "diff_snapshot_mib_per_s": 0.725
+    },
+    {
+     "T_s": 30,
+     "waits_snapshotted": 0.003,
+     "memory_freed_share": 0.047,
+     "delay_ms_per_command_mean": 0.1,
+     "delay_ms_per_snapshotted_command_p50": 44.6,
+     "delay_ms_per_snapshotted_command_p90": 46.3,
+     "diff_snapshot_mib_per_s": 0.177
+    }
+   ]
+  }
+ },
+ "CI": {
+  "rows": [
+   {
+    "run": "1-ci",
+    "cores": 60,
+    "budget": 114,
+    "live": 1046.7,
+    "bound": true,
+    "m": 0.092,
+    "c": 0.0128,
+    "util": 0.111,
+    "crossover": 10.349999999999998,
+    "slowdown": 1.054,
+    "p99": 1.003
+   },
+   {
+    "run": "3-ci-38",
+    "cores": 38,
+    "budget": 114,
+    "live": 1054.6,
+    "bound": true,
+    "m": 0.092,
+    "c": 0.0119,
+    "util": 0.165,
+    "crossover": 11.132773109243695,
+    "slowdown": 0.996,
+    "p99": 1.0
+   }
+  ],
+  "reductions": {
+   "cold30": 0.293,
+   "cold120": 0.015,
+   "lz4_cold": 0.422,
+   "merged_saving": 0.735,
+   "zero": 0.115,
+   "dup_within_group": 0.0,
+   "dup_across": 0.647,
+   "remaining_after_all": 0.22,
+   "remaining_compress_only": 0.831
+  },
+  "snapshot": {
+   "run": "1-ci",
+   "waits": 2046,
+   "wait_s_p50": 8.82,
+   "reread_mib_p50": 12.29,
+   "reread_mib_p90": 17.45,
+   "policies": [
+    {
+     "T_s": 0,
+     "waits_snapshotted": 1.0,
+     "memory_freed_share": 0.881,
+     "delay_ms_per_command_mean": 47.4,
+     "delay_ms_per_snapshotted_command_p50": 45.0,
+     "delay_ms_per_snapshotted_command_p90": 56.4,
+     "diff_snapshot_mib_per_s": 0.261
+    },
+    {
+     "T_s": 5,
+     "waits_snapshotted": 1.0,
+     "memory_freed_share": 0.881,
+     "delay_ms_per_command_mean": 47.4,
+     "delay_ms_per_snapshotted_command_p50": 45.0,
+     "delay_ms_per_snapshotted_command_p90": 56.4,
+     "diff_snapshot_mib_per_s": 0.261
+    },
+    {
+     "T_s": 10,
+     "waits_snapshotted": 0.314,
+     "memory_freed_share": 0.43,
+     "delay_ms_per_command_mean": 15.1,
+     "delay_ms_per_snapshotted_command_p50": 45.1,
+     "delay_ms_per_snapshotted_command_p90": 59.1,
+     "diff_snapshot_mib_per_s": 0.079
+    },
+    {
+     "T_s": 30,
+     "waits_snapshotted": 0.029,
+     "memory_freed_share": 0.102,
+     "delay_ms_per_command_mean": 1.4,
+     "delay_ms_per_snapshotted_command_p50": 45.1,
+     "delay_ms_per_snapshotted_command_p90": 58.6,
+     "diff_snapshot_mib_per_s": 0.003
+    }
+   ]
+  }
+ },
+ "overflow": [
+  {
+   "level": 100,
+   "budget": 77.0,
+   "live": 328.4,
+   "slowdown": 0.996,
+   "p99": 1.342,
+   "oom": 0,
+   "psi_mem_full": 0.0,
+   "refault_file_per_s": 26.5,
+   "refault_anon_per_s": 0.0,
+   "majfault_per_s": 0.0
+  },
+  {
+   "level": 80,
+   "budget": 62.0,
+   "live": 328.6,
+   "slowdown": 1.005,
+   "p99": 1.974,
+   "oom": 0,
+   "psi_mem_full": 0.0029,
+   "refault_file_per_s": 399.8,
+   "refault_anon_per_s": 129.5,
+   "majfault_per_s": 48.5
+  },
+  {
+   "level": 65,
+   "budget": 50.0,
+   "live": 326.5,
+   "slowdown": 1.012,
+   "p99": 1.458,
+   "oom": 3,
+   "psi_mem_full": 0.0071,
+   "refault_file_per_s": 112.3,
+   "refault_anon_per_s": 380.4,
+   "majfault_per_s": 200.5
+  }
+ ]
+}

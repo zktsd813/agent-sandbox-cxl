@@ -1,0 +1,73 @@
+{
+ "run": ".local/queue/20261118T2014/3-swe-38",
+ "waits": 7026,
+ "sandboxes": 252,
+ "wait_s_p50": 1.7,
+ "present_mib_p50": 226.8,
+ "reread_mib_p50": 21.62,
+ "reread_mib_p90": 120.42,
+ "reread_share_of_present": 0.137,
+ "policies": [
+  {
+   "T_s": 0,
+   "waits_snapshotted": 1.0,
+   "memory_freed_share": 0.542,
+   "delay_ms_per_command_mean": 133.8,
+   "delay_ms_per_snapshotted_command_p50": 65.6,
+   "delay_ms_per_snapshotted_command_p90": 282.9,
+   "diff_snapshot_mib_per_s": 8.061,
+   "full_snapshot_mib_per_s": 89.408
+  },
+  {
+   "T_s": 2,
+   "waits_snapshotted": 0.421,
+   "memory_freed_share": 0.514,
+   "delay_ms_per_command_mean": 55.5,
+   "delay_ms_per_snapshotted_command_p50": 63.3,
+   "delay_ms_per_snapshotted_command_p90": 289.3,
+   "diff_snapshot_mib_per_s": 3.912,
+   "full_snapshot_mib_per_s": 43.348
+  },
+  {
+   "T_s": 5,
+   "waits_snapshotted": 0.174,
+   "memory_freed_share": 0.377,
+   "delay_ms_per_command_mean": 20.0,
+   "delay_ms_per_snapshotted_command_p50": 52.4,
+   "delay_ms_per_snapshotted_command_p90": 261.7,
+   "diff_snapshot_mib_per_s": 2.016,
+   "full_snapshot_mib_per_s": 16.267
+  },
+  {
+   "T_s": 10,
+   "waits_snapshotted": 0.048,
+   "memory_freed_share": 0.19,
+   "delay_ms_per_command_mean": 3.8,
+   "delay_ms_per_snapshotted_command_p50": 64.2,
+   "delay_ms_per_snapshotted_command_p90": 112.9,
+   "diff_snapshot_mib_per_s": 0.589,
+   "full_snapshot_mib_per_s": 4.384
+  },
+  {
+   "T_s": 30,
+   "waits_snapshotted": 0.003,
+   "memory_freed_share": 0.038,
+   "delay_ms_per_command_mean": 0.1,
+   "delay_ms_per_snapshotted_command_p50": 44.1,
+   "delay_ms_per_snapshotted_command_p90": 46.3,
+   "diff_snapshot_mib_per_s": 0.13,
+   "full_snapshot_mib_per_s": 0.376
+  },
+  {
+   "T_s": 60,
+   "waits_snapshotted": 0.0,
+   "memory_freed_share": 0.0,
+   "delay_ms_per_command_mean": 0.0,
+   "delay_ms_per_snapshotted_command_p50": null,
+   "delay_ms_per_snapshotted_command_p90": null,
+   "diff_snapshot_mib_per_s": 0.0,
+   "full_snapshot_mib_per_s": 0.0
+  }
+ ],
+ "note": "per-wait times at memscan's round resolution; delay uses the 11-18 disk-restore cost; *_mib_per_s are per scanned sandbox"
+}

@@ -1,0 +1,71 @@
+{
+ "run": ".local/queue/20261118T2014/3-swe-38",
+ "workload": "swe",
+ "idle": {
+  "rows": 6307,
+  "present_mib_mean": 423.8,
+  "cold30_share": 0.4,
+  "cold120_share": 0.041,
+  "accessed_share_per_round": 0.182,
+  "written_mib_per_round": 49.15,
+  "scan_ms_p50": 129.4
+ },
+ "compress": {
+  "hot": {
+   "pages": 422407,
+   "lz4_ratio": 0.426,
+   "zlib1_ratio": 0.312
+  },
+  "cold": {
+   "pages": 91206,
+   "lz4_ratio": 0.47,
+   "zlib1_ratio": 0.347
+  }
+ },
+ "dedup": [
+  {
+   "bin_start_s": 0,
+   "vms": 81,
+   "pages": 6307518,
+   "zero_share": 0.044,
+   "dup_within_vm": 0.085,
+   "dup_within_group": 0.0,
+   "dup_across_groups": 0.556,
+   "saving_if_merged": 0.657,
+   "cold_saving_if_merged": 0.491
+  },
+  {
+   "bin_start_s": 300,
+   "vms": 97,
+   "pages": 7897043,
+   "zero_share": 0.044,
+   "dup_within_vm": 0.071,
+   "dup_within_group": 0.0,
+   "dup_across_groups": 0.484,
+   "saving_if_merged": 0.574,
+   "cold_saving_if_merged": 0.473
+  },
+  {
+   "bin_start_s": 600,
+   "vms": 89,
+   "pages": 7472123,
+   "zero_share": 0.044,
+   "dup_within_vm": 0.07,
+   "dup_within_group": 0.0,
+   "dup_across_groups": 0.52,
+   "saving_if_merged": 0.608,
+   "cold_saving_if_merged": 0.576
+  },
+  {
+   "bin_start_s": 900,
+   "vms": 53,
+   "pages": 5094122,
+   "zero_share": 0.044,
+   "dup_within_vm": 0.092,
+   "dup_within_group": 0.0,
+   "dup_across_groups": 0.46,
+   "saving_if_merged": 0.572,
+   "cold_saving_if_merged": 0.487
+  }
+ ]
+}

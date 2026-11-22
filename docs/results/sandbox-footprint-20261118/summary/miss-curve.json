@@ -1,0 +1,560 @@
+{
+ "/home/ijkim/agent-sandbox-cxl-latest/experiments/footprint/.local/queue/20261118T2014/1-rl": {
+  "workload": "rl",
+  "sandboxes": 61,
+  "sandbox_hours": 21.74,
+  "commands": 3906,
+  "present_mib": 154.3,
+  "curve": [
+   {
+    "A_s": 10,
+    "freed_share": 0.881,
+    "swap_capacity_x": 8.42,
+    "fault_mib_per_sandbox_s": 0.6856,
+    "fault_share_in_commands": 0.929,
+    "per_cmd_mib_p50": 4.19,
+    "per_cmd_mib_p90": 44.86,
+    "per_cmd_mib_p99": 120.33,
+    "cmds_ge10mib": 0.267,
+    "cmds_ge50mib": 0.054
+   },
+   {
+    "A_s": 20,
+    "freed_share": 0.838,
+    "swap_capacity_x": 6.17,
+    "fault_mib_per_sandbox_s": 0.5261,
+    "fault_share_in_commands": 0.939,
+    "per_cmd_mib_p50": 1.12,
+    "per_cmd_mib_p90": 31.44,
+    "per_cmd_mib_p99": 108.13,
+    "cmds_ge10mib": 0.211,
+    "cmds_ge50mib": 0.04
+   },
+   {
+    "A_s": 30,
+    "freed_share": 0.804,
+    "swap_capacity_x": 5.09,
+    "fault_mib_per_sandbox_s": 0.4044,
+    "fault_share_in_commands": 0.941,
+    "per_cmd_mib_p50": 0.53,
+    "per_cmd_mib_p90": 21.68,
+    "per_cmd_mib_p99": 97.68,
+    "cmds_ge10mib": 0.162,
+    "cmds_ge50mib": 0.029
+   },
+   {
+    "A_s": 60,
+    "freed_share": 0.732,
+    "swap_capacity_x": 3.73,
+    "fault_mib_per_sandbox_s": 0.2249,
+    "fault_share_in_commands": 0.941,
+    "per_cmd_mib_p50": 0.16,
+    "per_cmd_mib_p90": 7.18,
+    "per_cmd_mib_p99": 63.12,
+    "cmds_ge10mib": 0.083,
+    "cmds_ge50mib": 0.015
+   },
+   {
+    "A_s": 120,
+    "freed_share": 0.641,
+    "swap_capacity_x": 2.78,
+    "fault_mib_per_sandbox_s": 0.1053,
+    "fault_share_in_commands": 0.955,
+    "per_cmd_mib_p50": 0.06,
+    "per_cmd_mib_p90": 1.44,
+    "per_cmd_mib_p99": 39.92,
+    "cmds_ge10mib": 0.038,
+    "cmds_ge50mib": 0.006
+   },
+   {
+    "A_s": 300,
+    "freed_share": 0.487,
+    "swap_capacity_x": 1.95,
+    "fault_mib_per_sandbox_s": 0.024,
+    "fault_share_in_commands": 0.965,
+    "per_cmd_mib_p50": 0.01,
+    "per_cmd_mib_p90": 0.24,
+    "per_cmd_mib_p99": 11.39,
+    "cmds_ge10mib": 0.012,
+    "cmds_ge50mib": 0.001
+   },
+   {
+    "A_s": 600,
+    "freed_share": 0.326,
+    "swap_capacity_x": 1.48,
+    "fault_mib_per_sandbox_s": 0.01,
+    "fault_share_in_commands": 0.977,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.07,
+    "per_cmd_mib_p99": 3.72,
+    "cmds_ge10mib": 0.006,
+    "cmds_ge50mib": 0.0
+   }
+  ]
+ },
+ "/home/ijkim/agent-sandbox-cxl-latest/experiments/footprint/.local/queue/20261118T2014/3-rl-38": {
+  "workload": "rl",
+  "sandboxes": 44,
+  "sandbox_hours": 12.51,
+  "commands": 2407,
+  "present_mib": 184.9,
+  "curve": [
+   {
+    "A_s": 10,
+    "freed_share": 0.891,
+    "swap_capacity_x": 9.16,
+    "fault_mib_per_sandbox_s": 0.8167,
+    "fault_share_in_commands": 0.936,
+    "per_cmd_mib_p50": 4.31,
+    "per_cmd_mib_p90": 51.37,
+    "per_cmd_mib_p99": 110.46,
+    "cmds_ge10mib": 0.275,
+    "cmds_ge50mib": 0.104
+   },
+   {
+    "A_s": 20,
+    "freed_share": 0.845,
+    "swap_capacity_x": 6.47,
+    "fault_mib_per_sandbox_s": 0.6333,
+    "fault_share_in_commands": 0.946,
+    "per_cmd_mib_p50": 1.09,
+    "per_cmd_mib_p90": 38.35,
+    "per_cmd_mib_p99": 106.92,
+    "cmds_ge10mib": 0.221,
+    "cmds_ge50mib": 0.085
+   },
+   {
+    "A_s": 30,
+    "freed_share": 0.809,
+    "swap_capacity_x": 5.23,
+    "fault_mib_per_sandbox_s": 0.4628,
+    "fault_share_in_commands": 0.945,
+    "per_cmd_mib_p50": 0.52,
+    "per_cmd_mib_p90": 26.73,
+    "per_cmd_mib_p99": 95.85,
+    "cmds_ge10mib": 0.166,
+    "cmds_ge50mib": 0.058
+   },
+   {
+    "A_s": 60,
+    "freed_share": 0.728,
+    "swap_capacity_x": 3.68,
+    "fault_mib_per_sandbox_s": 0.2637,
+    "fault_share_in_commands": 0.954,
+    "per_cmd_mib_p50": 0.15,
+    "per_cmd_mib_p90": 8.7,
+    "per_cmd_mib_p99": 82.08,
+    "cmds_ge10mib": 0.094,
+    "cmds_ge50mib": 0.033
+   },
+   {
+    "A_s": 120,
+    "freed_share": 0.617,
+    "swap_capacity_x": 2.61,
+    "fault_mib_per_sandbox_s": 0.1315,
+    "fault_share_in_commands": 0.968,
+    "per_cmd_mib_p50": 0.05,
+    "per_cmd_mib_p90": 1.49,
+    "per_cmd_mib_p99": 68.97,
+    "cmds_ge10mib": 0.05,
+    "cmds_ge50mib": 0.015
+   },
+   {
+    "A_s": 300,
+    "freed_share": 0.437,
+    "swap_capacity_x": 1.78,
+    "fault_mib_per_sandbox_s": 0.0238,
+    "fault_share_in_commands": 0.971,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.15,
+    "per_cmd_mib_p99": 10.73,
+    "cmds_ge10mib": 0.011,
+    "cmds_ge50mib": 0.002
+   },
+   {
+    "A_s": 600,
+    "freed_share": 0.281,
+    "swap_capacity_x": 1.39,
+    "fault_mib_per_sandbox_s": 0.0094,
+    "fault_share_in_commands": 0.978,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.03,
+    "per_cmd_mib_p99": 2.37,
+    "cmds_ge10mib": 0.005,
+    "cmds_ge50mib": 0.0
+   }
+  ]
+ },
+ "/home/ijkim/agent-sandbox-cxl-latest/experiments/footprint/.local/queue/20261118T2014/1-swe-hi": {
+  "workload": "swe",
+  "sandboxes": 335,
+  "sandbox_hours": 11.99,
+  "commands": 12121,
+  "present_mib": 438.7,
+  "curve": [
+   {
+    "A_s": 10,
+    "freed_share": 0.686,
+    "swap_capacity_x": 3.19,
+    "fault_mib_per_sandbox_s": 4.5237,
+    "fault_share_in_commands": 0.984,
+    "per_cmd_mib_p50": 0.15,
+    "per_cmd_mib_p90": 16.97,
+    "per_cmd_mib_p99": 400.24,
+    "cmds_ge10mib": 0.134,
+    "cmds_ge50mib": 0.056
+   },
+   {
+    "A_s": 20,
+    "freed_share": 0.534,
+    "swap_capacity_x": 2.15,
+    "fault_mib_per_sandbox_s": 3.1523,
+    "fault_share_in_commands": 0.983,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 7.18,
+    "per_cmd_mib_p99": 290.65,
+    "cmds_ge10mib": 0.088,
+    "cmds_ge50mib": 0.042
+   },
+   {
+    "A_s": 30,
+    "freed_share": 0.412,
+    "swap_capacity_x": 1.7,
+    "fault_mib_per_sandbox_s": 2.2424,
+    "fault_share_in_commands": 0.985,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 2.8,
+    "per_cmd_mib_p99": 208.21,
+    "cmds_ge10mib": 0.061,
+    "cmds_ge50mib": 0.032
+   },
+   {
+    "A_s": 60,
+    "freed_share": 0.221,
+    "swap_capacity_x": 1.28,
+    "fault_mib_per_sandbox_s": 0.616,
+    "fault_share_in_commands": 0.994,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.38,
+    "per_cmd_mib_p99": 28.1,
+    "cmds_ge10mib": 0.019,
+    "cmds_ge50mib": 0.006
+   },
+   {
+    "A_s": 120,
+    "freed_share": 0.055,
+    "swap_capacity_x": 1.06,
+    "fault_mib_per_sandbox_s": 0.0108,
+    "fault_share_in_commands": 0.988,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.0,
+    "per_cmd_mib_p99": 0.94,
+    "cmds_ge10mib": 0.0,
+    "cmds_ge50mib": 0.0
+   },
+   {
+    "A_s": 300,
+    "freed_share": 0.0,
+    "swap_capacity_x": 1.0,
+    "fault_mib_per_sandbox_s": 0.0,
+    "fault_share_in_commands": null,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.0,
+    "per_cmd_mib_p99": 0.0,
+    "cmds_ge10mib": 0.0,
+    "cmds_ge50mib": 0.0
+   },
+   {
+    "A_s": 600,
+    "freed_share": 0.0,
+    "swap_capacity_x": 1.0,
+    "fault_mib_per_sandbox_s": 0.0,
+    "fault_share_in_commands": null,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.0,
+    "per_cmd_mib_p99": 0.0,
+    "cmds_ge10mib": 0.0,
+    "cmds_ge50mib": 0.0
+   }
+  ]
+ },
+ "/home/ijkim/agent-sandbox-cxl-latest/experiments/footprint/.local/queue/20261118T2014/3-swe-38": {
+  "workload": "swe",
+  "sandboxes": 252,
+  "sandbox_hours": 8.37,
+  "commands": 8855,
+  "present_mib": 437.2,
+  "curve": [
+   {
+    "A_s": 10,
+    "freed_share": 0.67,
+    "swap_capacity_x": 3.03,
+    "fault_mib_per_sandbox_s": 4.5815,
+    "fault_share_in_commands": 0.991,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 19.7,
+    "per_cmd_mib_p99": 373.71,
+    "cmds_ge10mib": 0.136,
+    "cmds_ge50mib": 0.058
+   },
+   {
+    "A_s": 20,
+    "freed_share": 0.52,
+    "swap_capacity_x": 2.08,
+    "fault_mib_per_sandbox_s": 3.0508,
+    "fault_share_in_commands": 0.989,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 8.3,
+    "per_cmd_mib_p99": 230.96,
+    "cmds_ge10mib": 0.088,
+    "cmds_ge50mib": 0.042
+   },
+   {
+    "A_s": 30,
+    "freed_share": 0.403,
+    "swap_capacity_x": 1.68,
+    "fault_mib_per_sandbox_s": 2.0664,
+    "fault_share_in_commands": 0.988,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 2.71,
+    "per_cmd_mib_p99": 203.77,
+    "cmds_ge10mib": 0.058,
+    "cmds_ge50mib": 0.031
+   },
+   {
+    "A_s": 60,
+    "freed_share": 0.205,
+    "swap_capacity_x": 1.26,
+    "fault_mib_per_sandbox_s": 0.5659,
+    "fault_share_in_commands": 0.997,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.34,
+    "per_cmd_mib_p99": 27.74,
+    "cmds_ge10mib": 0.014,
+    "cmds_ge50mib": 0.006
+   },
+   {
+    "A_s": 120,
+    "freed_share": 0.042,
+    "swap_capacity_x": 1.04,
+    "fault_mib_per_sandbox_s": 0.0067,
+    "fault_share_in_commands": 0.992,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.0,
+    "per_cmd_mib_p99": 0.67,
+    "cmds_ge10mib": 0.0,
+    "cmds_ge50mib": 0.0
+   },
+   {
+    "A_s": 300,
+    "freed_share": 0.0,
+    "swap_capacity_x": 1.0,
+    "fault_mib_per_sandbox_s": 0.0,
+    "fault_share_in_commands": null,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.0,
+    "per_cmd_mib_p99": 0.0,
+    "cmds_ge10mib": 0.0,
+    "cmds_ge50mib": 0.0
+   },
+   {
+    "A_s": 600,
+    "freed_share": 0.0,
+    "swap_capacity_x": 1.0,
+    "fault_mib_per_sandbox_s": 0.0,
+    "fault_share_in_commands": null,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.0,
+    "per_cmd_mib_p99": 0.0,
+    "cmds_ge10mib": 0.0,
+    "cmds_ge50mib": 0.0
+   }
+  ]
+ },
+ "/home/ijkim/agent-sandbox-cxl-latest/experiments/footprint/.local/queue/20261118T2014/1-ci": {
+  "workload": "ci",
+  "sandboxes": 1037,
+  "sandbox_hours": 14.53,
+  "commands": 5119,
+  "present_mib": 83.5,
+  "curve": [
+   {
+    "A_s": 10,
+    "freed_share": 0.645,
+    "swap_capacity_x": 2.82,
+    "fault_mib_per_sandbox_s": 0.2656,
+    "fault_share_in_commands": 0.948,
+    "per_cmd_mib_p50": 0.15,
+    "per_cmd_mib_p90": 7.51,
+    "per_cmd_mib_p99": 16.87,
+    "cmds_ge10mib": 0.058,
+    "cmds_ge50mib": 0.001
+   },
+   {
+    "A_s": 20,
+    "freed_share": 0.457,
+    "swap_capacity_x": 1.84,
+    "fault_mib_per_sandbox_s": 0.0971,
+    "fault_share_in_commands": 0.942,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 1.21,
+    "per_cmd_mib_p99": 13.3,
+    "cmds_ge10mib": 0.027,
+    "cmds_ge50mib": 0.0
+   },
+   {
+    "A_s": 30,
+    "freed_share": 0.305,
+    "swap_capacity_x": 1.44,
+    "fault_mib_per_sandbox_s": 0.0477,
+    "fault_share_in_commands": 0.94,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.16,
+    "per_cmd_mib_p99": 12.64,
+    "cmds_ge10mib": 0.012,
+    "cmds_ge50mib": 0.0
+   },
+   {
+    "A_s": 60,
+    "freed_share": 0.092,
+    "swap_capacity_x": 1.1,
+    "fault_mib_per_sandbox_s": 0.008,
+    "fault_share_in_commands": 0.911,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.0,
+    "per_cmd_mib_p99": 0.41,
+    "cmds_ge10mib": 0.003,
+    "cmds_ge50mib": 0.0
+   },
+   {
+    "A_s": 120,
+    "freed_share": 0.014,
+    "swap_capacity_x": 1.01,
+    "fault_mib_per_sandbox_s": 0.0019,
+    "fault_share_in_commands": 0.978,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.0,
+    "per_cmd_mib_p99": 0.0,
+    "cmds_ge10mib": 0.001,
+    "cmds_ge50mib": 0.0
+   },
+   {
+    "A_s": 300,
+    "freed_share": 0.0,
+    "swap_capacity_x": 1.0,
+    "fault_mib_per_sandbox_s": 0.0,
+    "fault_share_in_commands": null,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.0,
+    "per_cmd_mib_p99": 0.0,
+    "cmds_ge10mib": 0.0,
+    "cmds_ge50mib": 0.0
+   },
+   {
+    "A_s": 600,
+    "freed_share": 0.0,
+    "swap_capacity_x": 1.0,
+    "fault_mib_per_sandbox_s": 0.0,
+    "fault_share_in_commands": null,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.0,
+    "per_cmd_mib_p99": 0.0,
+    "cmds_ge10mib": 0.0,
+    "cmds_ge50mib": 0.0
+   }
+  ]
+ },
+ "/home/ijkim/agent-sandbox-cxl-latest/experiments/footprint/.local/queue/20261118T2014/3-ci-38": {
+  "workload": "ci",
+  "sandboxes": 693,
+  "sandbox_hours": 9.48,
+  "commands": 3412,
+  "present_mib": 83.4,
+  "curve": [
+   {
+    "A_s": 10,
+    "freed_share": 0.689,
+    "swap_capacity_x": 3.22,
+    "fault_mib_per_sandbox_s": 0.2953,
+    "fault_share_in_commands": 0.954,
+    "per_cmd_mib_p50": 0.19,
+    "per_cmd_mib_p90": 7.81,
+    "per_cmd_mib_p99": 17.21,
+    "cmds_ge10mib": 0.063,
+    "cmds_ge50mib": 0.0
+   },
+   {
+    "A_s": 20,
+    "freed_share": 0.486,
+    "swap_capacity_x": 1.94,
+    "fault_mib_per_sandbox_s": 0.1044,
+    "fault_share_in_commands": 0.949,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 2.6,
+    "per_cmd_mib_p99": 13.32,
+    "cmds_ge10mib": 0.026,
+    "cmds_ge50mib": 0.0
+   },
+   {
+    "A_s": 30,
+    "freed_share": 0.321,
+    "swap_capacity_x": 1.47,
+    "fault_mib_per_sandbox_s": 0.0458,
+    "fault_share_in_commands": 0.938,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.18,
+    "per_cmd_mib_p99": 11.3,
+    "cmds_ge10mib": 0.011,
+    "cmds_ge50mib": 0.0
+   },
+   {
+    "A_s": 60,
+    "freed_share": 0.099,
+    "swap_capacity_x": 1.11,
+    "fault_mib_per_sandbox_s": 0.0074,
+    "fault_share_in_commands": 0.892,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.0,
+    "per_cmd_mib_p99": 0.4,
+    "cmds_ge10mib": 0.002,
+    "cmds_ge50mib": 0.0
+   },
+   {
+    "A_s": 120,
+    "freed_share": 0.019,
+    "swap_capacity_x": 1.02,
+    "fault_mib_per_sandbox_s": 0.0017,
+    "fault_share_in_commands": 0.967,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.0,
+    "per_cmd_mib_p99": 0.0,
+    "cmds_ge10mib": 0.001,
+    "cmds_ge50mib": 0.0
+   },
+   {
+    "A_s": 300,
+    "freed_share": 0.0,
+    "swap_capacity_x": 1.0,
+    "fault_mib_per_sandbox_s": 0.0,
+    "fault_share_in_commands": null,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.0,
+    "per_cmd_mib_p99": 0.0,
+    "cmds_ge10mib": 0.0,
+    "cmds_ge50mib": 0.0
+   },
+   {
+    "A_s": 600,
+    "freed_share": 0.0,
+    "swap_capacity_x": 1.0,
+    "fault_mib_per_sandbox_s": 0.0,
+    "fault_share_in_commands": null,
+    "per_cmd_mib_p50": 0.0,
+    "per_cmd_mib_p90": 0.0,
+    "per_cmd_mib_p99": 0.0,
+    "cmds_ge10mib": 0.0,
+    "cmds_ge50mib": 0.0
+   }
+  ]
+ }
+}
