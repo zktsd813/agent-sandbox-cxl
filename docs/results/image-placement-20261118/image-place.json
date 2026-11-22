@@ -1,0 +1,111 @@
+{
+  "tasks": 264,
+  "repos": 38,
+  "lower_images": 17,
+  "rollouts": 8,
+  "nodes": 16,
+  "seeds": 3,
+  "working_set_mib": {
+    "p10": 60.044921875,
+    "p50": 138.98046875,
+    "p90": 565.869921875,
+    "mean": 248.3178858901515
+  },
+  "sum_over_tasks_gib": {
+    "cross-repo": 23.14437484741211,
+    "repo": 4.314380645751953,
+    "task": 36.560699462890625
+  },
+  "single_copy_gib": {
+    "cross-repo": 1.8676567077636719,
+    "repo": 0.9921417236328125,
+    "task": 36.560699462890625
+  },
+  "no_sharing_gib": 512.1556396484375,
+  "placements": {
+    "spread": {
+      "cache_gib": 274.34618377685547,
+      "node_max_gib": 19.681379954020183,
+      "node_min_gib": 14.606074015299479,
+      "per_sandbox_mib": 133.01633152817234,
+      "by_class_gib": {
+        "cross-repo": 27.723041534423828,
+        "repo": 13.711494445800781,
+        "task": 232.91164779663086
+      },
+      "same_task_max_per_node": 3.125,
+      "tasks_per_node": 105.875,
+      "top_lower_share": 0.18181818181818185
+    },
+    "task-2": {
+      "cache_gib": 168.07930755615234,
+      "node_max_gib": 12.968551635742188,
+      "node_min_gib": 8.521803538004557,
+      "per_sandbox_mib": 81.49299760298295,
+      "by_class_gib": {
+        "cross-repo": 24.633658091227215,
+        "repo": 10.203919728597006,
+        "task": 133.24172973632812
+      },
+      "same_task_max_per_node": 4.541666666666667,
+      "tasks_per_node": 59.895833333333336,
+      "top_lower_share": 0.20517676767676765
+    },
+    "task-4": {
+      "cache_gib": 97.79652531941731,
+      "node_max_gib": 8.20833969116211,
+      "node_min_gib": 4.2009226481119795,
+      "per_sandbox_mib": 47.41649712456597,
+      "by_class_gib": {
+        "cross-repo": 20.20154062906901,
+        "repo": 6.723223368326823,
+        "task": 70.87176132202148
+      },
+      "same_task_max_per_node": 6.666666666666667,
+      "tasks_per_node": 32.041666666666664,
+      "top_lower_share": 0.21843434343434343
+    },
+    "task-8": {
+      "cache_gib": 54.587632497151695,
+      "node_max_gib": 5.454694112141927,
+      "node_min_gib": 1.8988227844238281,
+      "per_sandbox_mib": 26.466730907709913,
+      "by_class_gib": {
+        "cross-repo": 14.089364369710287,
+        "repo": 3.9375686645507812,
+        "task": 36.560699462890625
+      },
+      "same_task_max_per_node": 8.0,
+      "tasks_per_node": 16.5,
+      "top_lower_share": 0.24992340686274508
+    },
+    "lower-forced": {
+      "cache_gib": 42.03793716430664,
+      "node_max_gib": 6.9163869222005205,
+      "node_min_gib": 0.4714851379394531,
+      "per_sandbox_mib": 20.382030140269887,
+      "by_class_gib": {
+        "cross-repo": 3.5139694213867188,
+        "repo": 1.2668927510579426,
+        "task": 37.25707499186198
+      },
+      "same_task_max_per_node": 8.0,
+      "tasks_per_node": 17.0,
+      "top_lower_share": 0.8112373737373737
+    },
+    "repo-forced": {
+      "cache_gib": 44.816505432128906,
+      "node_max_gib": 6.765983581542969,
+      "node_min_gib": 0.6289469401041666,
+      "per_sandbox_mib": 21.729214754971593,
+      "by_class_gib": {
+        "cross-repo": 5.4872080485026045,
+        "repo": 1.037213643391927,
+        "task": 38.292083740234375
+      },
+      "same_task_max_per_node": 8.0,
+      "tasks_per_node": 17.0,
+      "top_lower_share": 0.5366161616161617
+    }
+  }
+}

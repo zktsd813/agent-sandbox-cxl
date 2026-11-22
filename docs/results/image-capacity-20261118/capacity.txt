@@ -1,0 +1,72 @@
+
+== 96 cores, LLM wait x1, sibling jitter 0 s  (sandboxes/core under SLO and memory)
+config                                   b=1             b=2             b=4             b=8   best vs b=1
+DRAM 2                          0.877    cpu    0.729    cpu    0.419    cpu    <grid          b=1 1.00x
+DRAM 4                          0.877    cpu    0.729    cpu    0.419    cpu    <grid          b=1 1.00x
+DRAM 2 + CXL 1                  0.877    cpu    0.729    cpu    0.419    cpu    <grid          b=1 1.00x
+DRAM 2 + CXL 2                  0.877    cpu    0.729    cpu    0.419    cpu    <grid          b=1 1.00x
+DRAM 2 + CXL 1, hand-off        0.992    cpu    1.004    cpu    0.804    cpu    <grid          b=2 1.01x
+DRAM 2 + CXL 2, hand-off        0.992    cpu    1.004    cpu    0.804    cpu    <grid          b=2 1.01x
+  CPU-weighted slowdown / heavy p99 / first-read s per sandbox at one density, by b:
+    dram          density 1.2: b=1 1.312/2.55/0.11  b=2 1.391/2.89/0.12  b=4 1.616/3.68/0.13  b=8 2.125/5.41/0.14
+    handoff-notax density 1.2: b=1 1.189/1.92/0.40  b=2 1.233/2.10/0.43  b=4 1.235/2.05/0.49  b=8 1.299/2.19/0.51
+
+== 96 cores, LLM wait x1, sibling jitter 60 s  (sandboxes/core under SLO and memory)
+config                                   b=1             b=2             b=4             b=8   best vs b=1
+DRAM 2                          1.009    cpu    0.917    cpu    0.779    cpu    0.489    cpu   b=1 1.00x
+DRAM 4                          1.009    cpu    0.917    cpu    0.779    cpu    0.489    cpu   b=1 1.00x
+DRAM 2 + CXL 1                  1.009    cpu    0.917    cpu    0.779    cpu    0.489    cpu   b=1 1.00x
+DRAM 2 + CXL 2                  1.009    cpu    0.917    cpu    0.779    cpu    0.489    cpu   b=1 1.00x
+DRAM 2 + CXL 1, hand-off        1.150    cpu    1.171    cpu    1.146    cpu    1.070    cpu   b=2 1.02x
+DRAM 2 + CXL 2, hand-off        1.150    cpu    1.171    cpu    1.146    cpu    1.070    cpu   b=2 1.02x
+  CPU-weighted slowdown / heavy p99 / first-read s per sandbox at one density, by b:
+    dram          density 1.2: b=1 1.089/1.67/0.09  b=2 1.132/1.94/0.06  b=4 1.249/2.57/0.03  b=8 1.409/3.23/0.02
+    handoff-notax density 1.2: b=1 1.039/1.33/0.21  b=2 1.039/1.34/0.20  b=4 1.044/1.37/0.19  b=8 1.041/1.35/0.18
+
+== 96 cores, LLM wait x2, sibling jitter 0 s  (sandboxes/core under SLO and memory)
+config                                   b=1             b=2             b=4             b=8   best vs b=1
+DRAM 2                          1.503 memory    1.162    cpu    0.663    cpu    <grid          b=1 1.00x
+DRAM 4                          1.505    cpu    1.162    cpu    0.663    cpu    <grid          b=1 1.00x
+DRAM 2 + CXL 1                  1.495    cpu    1.162    cpu    0.663    cpu    <grid          b=1 1.00x
+DRAM 2 + CXL 2                  1.495    cpu    1.162    cpu    0.663    cpu    <grid          b=1 1.00x
+DRAM 2 + CXL 1, hand-off        1.725    cpu    1.700    cpu    1.419    cpu    <grid          b=1 1.00x
+DRAM 2 + CXL 2, hand-off        1.725    cpu    1.700    cpu    1.419    cpu    <grid          b=1 1.00x
+  CPU-weighted slowdown / heavy p99 / first-read s per sandbox at one density, by b:
+    dram          density 2.2: b=1 1.465/3.04/0.08  b=2 1.706/3.77/0.10  b=4 2.171/5.39/0.12  b=8 2.647/7.12/0.14
+    handoff-notax density 2.2: b=1 1.394/2.45/0.39  b=2 1.314/2.24/0.42  b=4 1.385/2.56/0.46  b=8 1.515/2.72/0.50
+
+== 96 cores, LLM wait x2, sibling jitter 60 s  (sandboxes/core under SLO and memory)
+config                                   b=1             b=2             b=4             b=8   best vs b=1
+DRAM 2                          1.565 memory    1.507    cpu    1.258    cpu    0.891    cpu   b=1 1.00x
+DRAM 4                          1.720    cpu    1.507    cpu    1.258    cpu    0.891    cpu   b=1 1.00x
+DRAM 2 + CXL 1                  1.699    cpu    1.508    cpu    1.258    cpu    0.891    cpu   b=1 1.00x
+DRAM 2 + CXL 2                  1.699    cpu    1.508    cpu    1.258    cpu    0.891    cpu   b=1 1.00x
+DRAM 2 + CXL 1, hand-off        1.906    cpu    1.932    cpu    1.892    cpu    1.941    cpu   b=8 1.02x
+DRAM 2 + CXL 2, hand-off        1.906    cpu    1.932    cpu    1.892    cpu    1.941    cpu   b=8 1.02x
+  CPU-weighted slowdown / heavy p99 / first-read s per sandbox at one density, by b:
+    dram          density 2.2: b=1 1.252/2.40/0.07  b=2 1.362/2.85/0.05  b=4 1.602/3.78/0.03  b=8 1.918/5.35/0.02
+    handoff-notax density 2.2: b=1 1.121/1.65/0.24  b=2 1.104/1.62/0.23  b=4 1.137/1.75/0.25  b=8 1.099/1.59/0.23
+
+== 96 cores, LLM wait x4, sibling jitter 0 s  (sandboxes/core under SLO and memory)
+config                                   b=1             b=2             b=4             b=8   best vs b=1
+DRAM 2                          1.720 memory    1.755 memory    1.129    cpu    <grid          b=2 1.02x
+DRAM 4                          2.559    cpu    2.135    cpu    1.129    cpu    <grid          b=1 1.00x
+DRAM 2 + CXL 1                  2.514 memory    2.105    cpu    1.129    cpu    <grid          b=1 1.00x
+DRAM 2 + CXL 2                  2.532    cpu    2.105    cpu    1.129    cpu    <grid          b=1 1.00x
+DRAM 2 + CXL 1, hand-off        2.508 memory    2.660 memory    2.389    cpu    <grid          b=2 1.06x
+DRAM 2 + CXL 2, hand-off        3.063    cpu    2.887    cpu    2.389    cpu    <grid          b=1 1.00x
+  CPU-weighted slowdown / heavy p99 / first-read s per sandbox at one density, by b:
+    dram          density 4.4: b=1 2.496/5.35/0.05  b=2 2.720/5.88/0.08  b=4 3.121/7.73/0.10  b=8 4.019/10.00/0.12
+    handoff-notax density 4.4: b=1 2.836/4.62/0.30  b=2 2.733/4.59/0.36  b=4 2.557/4.92/0.40  b=8 3.064/4.90/0.47
+
+== 96 cores, LLM wait x4, sibling jitter 60 s  (sandboxes/core under SLO and memory)
+config                                   b=1             b=2             b=4             b=8   best vs b=1
+DRAM 2                          1.629 memory    1.697 memory    1.801 memory    1.547    cpu   b=4 1.11x
+DRAM 4                          2.865    cpu    2.579    cpu    2.249    cpu    1.547    cpu   b=1 1.00x
+DRAM 2 + CXL 1                  2.472 memory    2.539    cpu    2.210    cpu    1.546    cpu   b=2 1.03x
+DRAM 2 + CXL 2                  2.742    cpu    2.539    cpu    2.210    cpu    1.546    cpu   b=1 1.00x
+DRAM 2 + CXL 1, hand-off        2.526 memory    2.618 memory    2.721 memory    2.731 memory   b=8 1.08x
+DRAM 2 + CXL 2, hand-off        3.189    cpu    3.214    cpu    3.208    cpu    3.248    cpu   b=8 1.02x
+  CPU-weighted slowdown / heavy p99 / first-read s per sandbox at one density, by b:
+    dram          density 4.4: b=1 2.063/4.66/0.04  b=2 2.290/5.51/0.04  b=4 2.733/7.11/0.02  b=8 3.160/8.14/0.02
+    handoff-notax density 4.4: b=1 1.898/4.08/0.19  b=2 2.024/3.87/0.20  b=4 2.069/4.04/0.19  b=8 2.005/4.02/0.20
