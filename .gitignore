@@ -35,6 +35,10 @@ __pycache__/
 
 # Contention experiment images, runs and copied binaries
 /experiments/contention/.local
+# Capacity simulator inputs and raw runs
+/experiments/capsim/.local
+# Footprint measurement data, converted traces, images and runs
+/experiments/footprint/.local
 
 # Raw VM experiment evidence stays local; commit code and compact summaries only.
 /implementation/virtual_machine/results/**/*.tar
